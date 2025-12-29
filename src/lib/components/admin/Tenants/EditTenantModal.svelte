@@ -185,7 +185,11 @@ let initializedTenantId: string | null = null;
 							<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
 								{$i18n.t('Tenant Logo')}
 							</label>
-							<TenantLogoImage bind:logoImageUrl name={tenant.name} />
+							<TenantLogoImage
+								bind:logoImageUrl
+								name={tenant.name}
+								imageClassName="max-h-28 w-auto rounded-xl border border-gray-200 object-contain dark:border-gray-700"
+							/>
 						</div>
 
 						<div class="flex-1 space-y-3">

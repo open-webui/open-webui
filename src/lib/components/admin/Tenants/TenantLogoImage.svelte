@@ -45,26 +45,15 @@
 				const ctx = canvas.getContext('2d');
 				if (!ctx) return;
 
-				const aspectRatio = img.width / img.height;
-				let newWidth;
-				let newHeight;
+				const targetHeight = 250;
+				const targetWidth = (img.width / img.height) * targetHeight;
 
-				if (aspectRatio > 1) {
-					newWidth = 250 * aspectRatio;
-					newHeight = 250;
-				} else {
-					newWidth = 250;
-					newHeight = 250 / aspectRatio;
-				}
+				canvas.width = targetWidth;
+				canvas.height = targetHeight;
 
-				canvas.width = 250;
-				canvas.height = 250;
+				ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-				const offsetX = (250 - newWidth) / 2;
-				const offsetY = (250 - newHeight) / 2;
-				ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
-
-				setLogo(canvas.toDataURL('image/jpeg'));
+				setLogo(canvas.toDataURL('image/png'));
 				fileInput.value = '';
 			};
 		};

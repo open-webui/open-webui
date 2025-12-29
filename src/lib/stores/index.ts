@@ -303,4 +303,5 @@ export type SessionUser = {
 	expires_at?: number;
 	tenant_id?: string | null;
 	tenant_s3_bucket?: string | null;
+	tenant_logo_image_url?: string | null;
 };

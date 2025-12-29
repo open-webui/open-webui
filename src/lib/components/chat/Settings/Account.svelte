@@ -77,10 +77,23 @@
 			<!-- <div class=" text-sm font-medium">{$i18n.t('Account')}</div> -->
 
 			<div class="flex space-x-5 my-4">
-				<UserProfileImage bind:profileImageUrl user={$user} />
+				<div class="flex flex-col items-center gap-3">
+					<UserProfileImage bind:profileImageUrl user={$user} />
+					{#if $user?.tenant_logo_image_url}
+						<div class="flex flex-col items-center space-y-1">
+							<div class="max-h-16 max-w-[10rem] rounded-xl border border-gray-100 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
+								<img
+									src={$user.tenant_logo_image_url}
+									alt={$i18n.t('Tenant Logo')}
+									class="max-h-12 w-auto object-contain"
+								/>
+							</div>
+						</div>
+					{/if}
+				</div>
 
 				<div class="flex flex-1 flex-col">
-					<div class=" flex-1">
+					<div class=" flex-1 w-full">
 						<div class="flex flex-col w-full">
 							<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
 

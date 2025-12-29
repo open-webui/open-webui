@@ -6,6 +6,7 @@ export type TenantInfo = {
 	s3_bucket: string;
 	table_name?: string | null;
 	system_config_client_name?: string | null;
+	logo_image_url?: string | null;
 	created_at?: number;
 	updated_at?: number;
 };
@@ -14,6 +15,7 @@ export type TenantCreatePayload = {
 	name: string;
 	table_name?: string | null;
 	system_config_client_name?: string | null;
+	logo_image_url?: string | null;
 };
 
 export type TenantUpdatePayload = Partial<{
@@ -21,6 +23,7 @@ export type TenantUpdatePayload = Partial<{
 	s3_bucket: string;
 	table_name: string | null;
 	system_config_client_name: string | null;
+	logo_image_url: string | null;
 }>;
 
 export type TenantPromptFile = {
