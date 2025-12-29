@@ -391,6 +391,7 @@ def process_file_job(
     embedding_api_key: Optional[str] = None,
     _otel_trace_context: Optional[dict] = None,
 ) -> dict:
+    log.info(f"[JOB] START | file_id={file_id} | user_id={user_id} | knowledge_id={knowledge_id}")
     """
     Process a file job. This function is called by RQ workers.
     
@@ -620,37 +621,19 @@ def process_file_job(
                                         try:
                                             file_path = Storage.get_file(file_path)
                                             if file_path and os.path.exists(file_path):
-                                                # Extract using Loader
-                                                # Safely get config values with defaults
-                                                # Use hasattr() first because AppConfig.__getattr__ raises KeyError for missing keys
-                                                extraction_engine_val = (getattr(request.app.state.config, 'CONTENT_EXTRACTION_ENGINE', None) if hasattr(request.app.state.config, 'CONTENT_EXTRACTION_ENGINE') else None) or os.environ.get('CONTENT_EXTRACTION_ENGINE', '') or "default (PyPDF)"
-                                                
-                                                # Only access engine-specific config if that engine is actually being used
-                                                tika_url_val = None
-                                                doc_intel_endpoint_val = None
-                                                doc_intel_key_val = None
-                                                
-                                                if extraction_engine_val and extraction_engine_val.lower() == 'tika':
-                                                    tika_url_val = (getattr(request.app.state.config, 'TIKA_SERVER_URL', None) if hasattr(request.app.state.config, 'TIKA_SERVER_URL') else None) or os.environ.get('TIKA_SERVER_URL', '')
-                                                elif extraction_engine_val and extraction_engine_val.lower() == 'document_intelligence':
-                                                    doc_intel_endpoint_val = (getattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_ENDPOINT', None) if hasattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_ENDPOINT') else None) or os.environ.get('DOCUMENT_INTELLIGENCE_ENDPOINT', '')
-                                                    doc_intel_key_val = (getattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_KEY', None) if hasattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_KEY') else None) or os.environ.get('DOCUMENT_INTELLIGENCE_KEY', '')
-                                                
+                                                file_size = os.path.getsize(file_path)
+                                                log.info(f"[FILE] id={file.id} | name={file.filename} | size={file_size}B | path={file_path}")
+                                                extraction_engine_val = ""  # Force PyPDF for PDFs (OpenShift requirement)
                                                 pdf_extract_images_val = getattr(request.app.state.config, 'PDF_EXTRACT_IMAGES', False) if hasattr(request.app.state.config, 'PDF_EXTRACT_IMAGES') else False
-                                                
-                                                loader = Loader(
-                                                    engine=extraction_engine_val,
-                                                    TIKA_SERVER_URL=tika_url_val if tika_url_val else None,
-                                                    PDF_EXTRACT_IMAGES=pdf_extract_images_val,
-                                                    DOCUMENT_INTELLIGENCE_ENDPOINT=doc_intel_endpoint_val if doc_intel_endpoint_val else None,
-                                                    DOCUMENT_INTELLIGENCE_KEY=doc_intel_key_val if doc_intel_key_val else None,
-                                                )
+                                                log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val}")
+                                                loader = Loader(engine=extraction_engine_val, PDF_EXTRACT_IMAGES=pdf_extract_images_val)
                                                 try:
-                                                    docs = loader.load(
-                                                        file.filename, file.meta.get("content_type"), file_path
-                                                    )
+                                                    docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
+                                                    total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
+                                                    non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
+                                                    log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
                                                 except Exception as load_error:
-                                                    log.error(f"loader.load() failed in knowledge collection path: {load_error}", exc_info=True)
+                                                    log.error(f"[EXTRACT] FAILED | file_id={file.id} | error={type(load_error).__name__}: {load_error}", exc_info=True)
                                                     docs = []
                                                 
                                                 # Log extraction results
@@ -752,64 +735,23 @@ def process_file_job(
                                     try:
                                         file_path = Storage.get_file(file_path)
                                         if file_path and os.path.exists(file_path):
-                                            # Extract using Loader
-                                            # Safely get config values with defaults
-                                            # Use hasattr() first because AppConfig.__getattr__ raises KeyError for missing keys
-                                            extraction_engine_val = (getattr(request.app.state.config, 'CONTENT_EXTRACTION_ENGINE', None) if hasattr(request.app.state.config, 'CONTENT_EXTRACTION_ENGINE') else None) or os.environ.get('CONTENT_EXTRACTION_ENGINE', '') or "default (PyPDF)"
-                                            
-                                            # Only access engine-specific config if that engine is actually being used
-                                            tika_url_val = None
-                                            doc_intel_endpoint_val = None
-                                            doc_intel_key_val = None
-                                            
-                                            if extraction_engine_val and extraction_engine_val.lower() == 'tika':
-                                                tika_url_val = (getattr(request.app.state.config, 'TIKA_SERVER_URL', None) if hasattr(request.app.state.config, 'TIKA_SERVER_URL') else None) or os.environ.get('TIKA_SERVER_URL', '')
-                                            elif extraction_engine_val and extraction_engine_val.lower() == 'document_intelligence':
-                                                doc_intel_endpoint_val = (getattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_ENDPOINT', None) if hasattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_ENDPOINT') else None) or os.environ.get('DOCUMENT_INTELLIGENCE_ENDPOINT', '')
-                                                doc_intel_key_val = (getattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_KEY', None) if hasattr(request.app.state.config, 'DOCUMENT_INTELLIGENCE_KEY') else None) or os.environ.get('DOCUMENT_INTELLIGENCE_KEY', '')
-                                            
+                                            file_size = os.path.getsize(file_path)
+                                            log.info(f"[FILE] id={file.id} | name={file.filename} | size={file_size}B | path={file_path}")
+                                            extraction_engine_val = ""  # Force PyPDF for PDFs (OpenShift requirement)
                                             pdf_extract_images_val = getattr(request.app.state.config, 'PDF_EXTRACT_IMAGES', False) if hasattr(request.app.state.config, 'PDF_EXTRACT_IMAGES') else False
-                                            
-                                            loader = Loader(
-                                                engine=extraction_engine_val,
-                                                TIKA_SERVER_URL=tika_url_val if tika_url_val else None,
-                                                PDF_EXTRACT_IMAGES=pdf_extract_images_val,
-                                                DOCUMENT_INTELLIGENCE_ENDPOINT=doc_intel_endpoint_val if doc_intel_endpoint_val else None,
-                                                DOCUMENT_INTELLIGENCE_KEY=doc_intel_key_val if doc_intel_key_val else None,
-                                            )
+                                            log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val}")
+                                            loader = Loader(engine=extraction_engine_val, PDF_EXTRACT_IMAGES=pdf_extract_images_val)
                                             try:
-                                                docs = loader.load(
-                                                    file.filename, file.meta.get("content_type"), file_path
-                                                )
+                                                docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
+                                                total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
+                                                non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
+                                                log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
+                                                safe_add_span_event("job.file.extracted", {"content_length": total_chars, "document.count": len(docs)})
+                                                docs = [Document(page_content=doc.page_content, metadata={**doc.metadata, "name": file.filename, "created_by": file.user_id, "file_id": file.id, "source": file.filename}) for doc in docs]
+                                                text_content = " ".join([doc.page_content for doc in docs])
                                             except Exception as load_error:
-                                                log.error(f"loader.load() failed in knowledge collection path: {load_error}", exc_info=True)
+                                                log.error(f"[EXTRACT] FAILED | file_id={file.id} | error={type(load_error).__name__}: {load_error}", exc_info=True)
                                                 docs = []
-                                            
-                                            # Log extraction results
-                                            total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
-                                            non_empty_docs = [doc for doc in docs if doc.page_content.strip()] if docs else []
-                                            
-                                            # Add event for file extraction
-                                            safe_add_span_event("job.file.extracted", {
-                                                "content_length": total_chars,
-                                                "document.count": len(docs),
-                                            })
-                                            
-                                            # Create documents with metadata
-                                            docs = [
-                                                Document(
-                                                    page_content=doc.page_content,
-                                                    metadata={
-                                                        **doc.metadata,
-                                                        "name": file.filename,
-                                                        "created_by": file.user_id,
-                                                        "file_id": file.id,
-                                                        "source": file.filename,
-                                                    },
-                                                )
-                                                for doc in docs
-                                            ]
-                                            text_content = " ".join([doc.page_content for doc in docs])
                                         else:
                                             log.warning(f"File path is None or does not exist, using empty content")
                                             docs = [
@@ -903,16 +845,7 @@ def process_file_job(
                     # Consolidated error handling - log and update status
                     elapsed_time = time.time() - start_time
                     error_msg = str(e)
-                    log.error("=" * 80)
-                    log.error(f"[JOB FAILED] Error in file processing job")
-                    log.error(f"  file_id={file_id}")
-                    log.error(f"  user_id={user_id}")
-                    log.error(f"  elapsed_time={elapsed_time:.2f}s")
-                    log.error(f"  error_type={type(e).__name__}")
-                    log.error(f"  error_message={error_msg}")
-                    log.error(f"  END_TIME={time.time()}")
-                    log.error("=" * 80)
-                    log.error(f"Full traceback:", exc_info=True)
+                    log.error(f"[JOB] FAILED | file_id={file_id} | user_id={user_id} | elapsed={elapsed_time:.2f}s | error={type(e).__name__}: {error_msg}", exc_info=True)
                     
                     safe_add_span_event("job.failed", {
                         "error.type": type(e).__name__,
@@ -941,31 +874,24 @@ def process_file_job(
                 # Validate that we have content to process
                 from open_webui.constants import ERROR_MESSAGES
                 
+                total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
+                non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
+                log.info(f"[VALIDATE] START | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
+                
                 if not docs or len(docs) == 0:
                     error_msg = ERROR_MESSAGES.EMPTY_CONTENT
-                    log.error(f"No documents extracted for file_id={file.id} | filename={file.filename}")
-                    Files.update_file_metadata_by_id(
-                        file.id,
-                        {
-                            "processing_status": "error",
-                            "processing_error": error_msg,
-                        },
-                    )
+                    log.error(f"[VALIDATE] FAILED | file_id={file.id} | reason=NO_DOCS | loader returned empty list")
+                    Files.update_file_metadata_by_id(file.id, {"processing_status": "error", "processing_error": error_msg})
                     raise ValueError(error_msg)
                 
-                # Also check if all docs are empty (no actual content)
-                total_chars = sum(len(doc.page_content) for doc in docs)
                 if total_chars == 0:
                     error_msg = ERROR_MESSAGES.EMPTY_CONTENT
-                    log.error(f"All extracted content is empty for file_id={file.id} | filename={file.filename}")
-                    Files.update_file_metadata_by_id(
-                        file.id,
-                        {
-                            "processing_status": "error",
-                            "processing_error": error_msg,
-                        },
-                    )
+                    log.error(f"[VALIDATE] FAILED | file_id={file.id} | reason=EMPTY_CONTENT | docs={len(docs)} but all page_content empty")
+                    log.error(f"[VALIDATE] DIAGNOSIS | Possible: image-only PDF, corrupted file, extraction failed silently")
+                    Files.update_file_metadata_by_id(file.id, {"processing_status": "error", "processing_error": error_msg})
                     raise ValueError(error_msg)
+                
+                log.info(f"[VALIDATE] PASSED | file_id={file.id} | docs={len(docs)} | chars={total_chars} | non_empty={non_empty}")
 
                 Files.update_file_data_by_id(
                     file.id,
@@ -999,6 +925,7 @@ def process_file_job(
 
                             # Use file collection name for file metadata
                             if result:
+                                log.info(f"[EMBED] SUCCESS | file_id={file.id} | collections={collections}")
                                 safe_add_span_event("job.embedding.completed", {"status": "success", "collection_name": file_collection})
                                 Files.update_file_metadata_by_id(
                                     file.id,
@@ -1009,7 +936,7 @@ def process_file_job(
                                     },
                                 )
                             else:
-                                log.error(f"Failed to save to vector DB for file_id={file.id}")
+                                log.error(f"[EMBED] FAILED | file_id={file.id} | reason=SAVE_TO_VDB_FAILED")
                                 Files.update_file_metadata_by_id(
                                     file.id,
                                     {
@@ -1018,6 +945,8 @@ def process_file_job(
                                     },
                                 )
                         else:
+                            file_collection = f"file-{file.id}"
+                            log.info(f"[EMBED] SINGLE_COLLECTION | file_id={file.id} | collection={file_collection}")
                             result = save_docs_to_vector_db(
                                 request,
                                 docs=docs,
@@ -1041,7 +970,7 @@ def process_file_job(
                                     },
                                 )
                             else:
-                                log.error(f"Failed to save to vector DB for file_id={file.id}")
+                                log.error(f"[EMBED] FAILED | file_id={file.id} | reason=SAVE_TO_VDB_FAILED")
                                 Files.update_file_metadata_by_id(
                                     file.id,
                                     {
@@ -1051,11 +980,7 @@ def process_file_job(
                                 )
                     except Exception as e:
                         error_msg = str(e)
-                        log.error(
-                            f"Error saving file to vector DB: file_id={file.id}, "
-                            f"filename={file.filename}, user_id={user_id}, error={error_msg}",
-                            exc_info=True
-                        )
+                        log.error(f"[EMBED] FAILED | file_id={file.id} | error={type(e).__name__}: {error_msg}", exc_info=True)
                         try:
                             Files.update_file_metadata_by_id(
                                 file.id,
@@ -1097,11 +1022,7 @@ def process_file_job(
         # Consolidated error handling - log and update status
         elapsed_time = time.time() - start_time
         error_msg = str(e)
-        log.error(
-            f"Error in file processing job: file_id={file_id}, user_id={user_id}, "
-            f"elapsed_time={elapsed_time:.2f}s, error_type={type(e).__name__}, error_message={error_msg}",
-            exc_info=True
-        )
+        log.error(f"[JOB] FAILED | file_id={file_id} | user_id={user_id} | elapsed={elapsed_time:.2f}s | error={type(e).__name__}: {error_msg}", exc_info=True)
         
         safe_add_span_event("job.failed", {
             "error.type": type(e).__name__,
