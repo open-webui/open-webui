@@ -1722,6 +1722,7 @@ async def chat_completion(
                             metadata["chat_id"],
                             metadata["message_id"],
                             {
+                                "role": "assistant",
                                 "parentId": metadata.get("parent_message_id", None),
                                 "error": {"content": str(e)},
                             },

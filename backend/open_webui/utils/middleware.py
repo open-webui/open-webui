@@ -1909,6 +1909,7 @@ async def process_chat_response(
                             metadata["chat_id"],
                             metadata["message_id"],
                             {
+                                "role": "assistant",
                                 "error": {"content": error},
                             },
                         )

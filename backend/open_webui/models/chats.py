@@ -281,6 +281,7 @@ class ChatTable:
 
         return changed
 
+
     def insert_new_chat(self, user_id: str, form_data: ChatForm, db: Optional[Session] = None) -> Optional[ChatModel]:
         with get_db_context(db) as db:
             id = str(uuid.uuid4())
@@ -429,8 +430,20 @@ class ChatTable:
         if isinstance(message.get("content"), str):
             message["content"] = sanitize_text_for_db(message["content"])
 
+        # Ensure the message has required fields to prevent corruption
+        if "id" not in message:
+            message["id"] = message_id
+        if "childrenIds" not in message:
+            message["childrenIds"] = []
+        # parentId should be set by the caller, but ensure it exists
+        if "parentId" not in message:
+            message["parentId"] = None
+
         chat = chat.chat
         history = chat.get("history", {})
+        
+        if "messages" not in history:
+            history["messages"] = {}
 
         if message_id in history.get("messages", {}):
             history["messages"][message_id] = {
@@ -439,6 +452,15 @@ class ChatTable:
             }
         else:
             history["messages"][message_id] = message
+            
+            # If this is a new message and it has a parentId, update parent's childrenIds
+            parent_id = message.get("parentId")
+            if parent_id and parent_id in history["messages"]:
+                parent_msg = history["messages"][parent_id]
+                if "childrenIds" not in parent_msg:
+                    parent_msg["childrenIds"] = []
+                if message_id not in parent_msg["childrenIds"]:
+                    parent_msg["childrenIds"].append(message_id)
 
         history["currentId"] = message_id
 

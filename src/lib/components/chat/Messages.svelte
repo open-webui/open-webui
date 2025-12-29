@@ -75,11 +75,24 @@
 
 	$: if (history.currentId) {
 		let _messages = [];
+		// Track visited messages to prevent infinite loops from circular references
+		const visited = new Set<string>();
 
-		let message = history.messages[history.currentId];
-		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
+		let message = history.messages?.[history.currentId];
+		while (
+			message &&
+			!visited.has(message.id) &&
+			(messagesCount !== null ? _messages.length <= messagesCount : true)
+		) {
+			visited.add(message.id);
 			_messages.unshift({ ...message });
-			message = message.parentId !== null ? history.messages[message.parentId] : null;
+			// Prevent self-referential parentId and ensure parent exists
+			message =
+				message.parentId !== null &&
+				message.parentId !== message.id &&
+				history.messages?.[message.parentId]
+					? history.messages[message.parentId]
+					: null;
 		}
 
 		messages = _messages;
