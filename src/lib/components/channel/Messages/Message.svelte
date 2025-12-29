@@ -338,21 +338,20 @@
 						<Skeleton />
 					</div>
 				{:else if (message?.data?.files ?? []).length > 0}
-					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
+					<div
+						class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap"
+						dir={$settings?.chatDirection ?? 'auto'}
+					>
 						{#each message?.data?.files as file}
+							{@const fileUrl =
+								file.url.startsWith('data') || file.url.startsWith('http')
+									? file.url
+									: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 							<div>
 								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
-									<Image
-										src={`${file.url}${file?.content_type ? '/content' : ''}`}
-										alt={file.name}
-										imageClassName=" max-h-96 rounded-lg"
-									/>
+									<Image src={fileUrl} alt={file.name} imageClassName=" max-h-96 rounded-lg" />
 								{:else if file.type === 'video' || (file?.content_type ?? '').startsWith('video/')}
-									<video
-										src={`${file.url}${file?.content_type ? '/content' : ''}`}
-										controls
-										class=" max-h-96 rounded-lg"
-									></video>
+									<video src={fileUrl} controls class=" max-h-96 rounded-lg"></video>
 								{:else}
 									<FileItem
 										item={file}

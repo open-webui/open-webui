@@ -24,10 +24,12 @@ from open_webui.utils.auth import (
     get_verified_user,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
+
+
+from sqlalchemy.orm import Session
+from open_webui.internal.db import get_session
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 router = APIRouter()
 
@@ -298,7 +300,7 @@ def get_scim_auth(
         )
 
 
-def user_to_scim(user: UserModel, request: Request) -> SCIMUser:
+def user_to_scim(user: UserModel, request: Request, db=None) -> SCIMUser:
     """Convert internal User model to SCIM User"""
     # Parse display name into name components
     name_parts = user.name.split(" ", 1) if user.name else ["", ""]
@@ -306,7 +308,7 @@ def user_to_scim(user: UserModel, request: Request) -> SCIMUser:
     family_name = name_parts[1] if len(name_parts) > 1 else ""
 
     # Get user's groups
-    user_groups = Groups.get_groups_by_member_id(user.id)
+    user_groups = Groups.get_groups_by_member_id(user.id, db=db)
     groups = [
         {
             "value": group.id,
@@ -347,13 +349,13 @@ def user_to_scim(user: UserModel, request: Request) -> SCIMUser:
     )
 
 
-def group_to_scim(group: GroupModel, request: Request) -> SCIMGroup:
+def group_to_scim(group: GroupModel, request: Request, db=None) -> SCIMGroup:
     """Convert internal Group model to SCIM Group"""
-    member_ids = Groups.get_group_user_ids_by_id(group.id)
+    member_ids = Groups.get_group_user_ids_by_id(group.id, db) or []
     members = []
 
     for user_id in member_ids:
-        user = Users.get_user_by_id(user_id)
+        user = Users.get_user_by_id(user_id, db=db)
         if user:
             members.append(
                 SCIMGroupMember(
@@ -485,6 +487,7 @@ async def get_users(
     count: int = Query(20, ge=1, le=100),
     filter: Optional[str] = None,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """List SCIM Users"""
     skip = startIndex - 1
@@ -496,20 +499,20 @@ async def get_users(
         # In production, you'd want a more robust filter parser
         if "userName eq" in filter:
             email = filter.split('"')[1]
-            user = Users.get_user_by_email(email)
+            user = Users.get_user_by_email(email, db=db)
             users_list = [user] if user else []
             total = 1 if user else 0
         else:
-            response = Users.get_users(skip=skip, limit=limit)
+            response = Users.get_users(skip=skip, limit=limit, db=db)
             users_list = response["users"]
             total = response["total"]
     else:
-        response = Users.get_users(skip=skip, limit=limit)
+        response = Users.get_users(skip=skip, limit=limit, db=db)
         users_list = response["users"]
         total = response["total"]
 
     # Convert to SCIM format
-    scim_users = [user_to_scim(user, request) for user in users_list]
+    scim_users = [user_to_scim(user, request, db=db) for user in users_list]
 
     return SCIMListResponse(
         totalResults=total,
@@ -524,15 +527,16 @@ async def get_user(
     user_id: str,
     request: Request,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Get SCIM User by ID"""
-    user = Users.get_user_by_id(user_id)
+    user = Users.get_user_by_id(user_id, db=db)
     if not user:
         return scim_error(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} not found"
         )
 
-    return user_to_scim(user, request)
+    return user_to_scim(user, request, db=db)
 
 
 @router.post("/Users", response_model=SCIMUser, status_code=status.HTTP_201_CREATED)
@@ -540,10 +544,11 @@ async def create_user(
     request: Request,
     user_data: SCIMUserCreateRequest,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Create SCIM User"""
     # Check if user already exists
-    existing_user = Users.get_user_by_email(user_data.userName)
+    existing_user = Users.get_user_by_email(user_data.userName, db=db)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -574,6 +579,7 @@ async def create_user(
         email=email,
         profile_image_url=profile_image,
         role="user" if user_data.active else "pending",
+        db=db,
     )
 
     if not new_user:
@@ -582,7 +588,7 @@ async def create_user(
             detail="Failed to create user",
         )
 
-    return user_to_scim(new_user, request)
+    return user_to_scim(new_user, request, db=db)
 
 
 @router.put("/Users/{user_id}", response_model=SCIMUser)
@@ -591,9 +597,10 @@ async def update_user(
     request: Request,
     user_data: SCIMUserUpdateRequest,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Update SCIM User (full update)"""
-    user = Users.get_user_by_id(user_id)
+    user = Users.get_user_by_id(user_id, db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -626,14 +633,14 @@ async def update_user(
         update_data["profile_image_url"] = user_data.photos[0].value
 
     # Update user
-    updated_user = Users.update_user_by_id(user_id, update_data)
+    updated_user = Users.update_user_by_id(user_id, update_data, db=db)
     if not updated_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update user",
         )
 
-    return user_to_scim(updated_user, request)
+    return user_to_scim(updated_user, request, db=db)
 
 
 @router.patch("/Users/{user_id}", response_model=SCIMUser)
@@ -642,9 +649,10 @@ async def patch_user(
     request: Request,
     patch_data: SCIMPatchRequest,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Update SCIM User (partial update)"""
-    user = Users.get_user_by_id(user_id)
+    user = Users.get_user_by_id(user_id, db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -672,7 +680,7 @@ async def patch_user(
 
     # Update user
     if update_data:
-        updated_user = Users.update_user_by_id(user_id, update_data)
+        updated_user = Users.update_user_by_id(user_id, update_data, db=db)
         if not updated_user:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -681,7 +689,7 @@ async def patch_user(
     else:
         updated_user = user
 
-    return user_to_scim(updated_user, request)
+    return user_to_scim(updated_user, request, db=db)
 
 
 @router.delete("/Users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -689,16 +697,17 @@ async def delete_user(
     user_id: str,
     request: Request,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Delete SCIM User"""
-    user = Users.get_user_by_id(user_id)
+    user = Users.get_user_by_id(user_id, db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User {user_id} not found",
         )
 
-    success = Users.delete_user_by_id(user_id)
+    success = Users.delete_user_by_id(user_id, db=db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -716,10 +725,11 @@ async def get_groups(
     count: int = Query(20, ge=1, le=100),
     filter: Optional[str] = None,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """List SCIM Groups"""
     # Get all groups
-    groups_list = Groups.get_all_groups()
+    groups_list = Groups.get_all_groups(db=db)
 
     # Apply pagination
     total = len(groups_list)
@@ -728,7 +738,7 @@ async def get_groups(
     paginated_groups = groups_list[start:end]
 
     # Convert to SCIM format
-    scim_groups = [group_to_scim(group, request) for group in paginated_groups]
+    scim_groups = [group_to_scim(group, request, db=db) for group in paginated_groups]
 
     return SCIMListResponse(
         totalResults=total,
@@ -743,16 +753,17 @@ async def get_group(
     group_id: str,
     request: Request,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Get SCIM Group by ID"""
-    group = Groups.get_group_by_id(group_id)
+    group = Groups.get_group_by_id(group_id, db=db)
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Group {group_id} not found",
         )
 
-    return group_to_scim(group, request)
+    return group_to_scim(group, request, db=db)
 
 
 @router.post("/Groups", response_model=SCIMGroup, status_code=status.HTTP_201_CREATED)
@@ -760,6 +771,7 @@ async def create_group(
     request: Request,
     group_data: SCIMGroupCreateRequest,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Create SCIM Group"""
     # Extract member IDs
@@ -777,14 +789,14 @@ async def create_group(
     )
 
     # Need to get the creating user's ID - we'll use the first admin
-    admin_user = Users.get_super_admin_user()
+    admin_user = Users.get_super_admin_user(db=db)
     if not admin_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No admin user found",
         )
 
-    new_group = Groups.insert_new_group(admin_user.id, form)
+    new_group = Groups.insert_new_group(admin_user.id, form, db=db)
     if not new_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -800,12 +812,12 @@ async def create_group(
             description=new_group.description,
         )
 
-        Groups.update_group_by_id(new_group.id, update_form)
-        Groups.set_group_user_ids_by_id(new_group.id, member_ids)
+        Groups.update_group_by_id(new_group.id, update_form, db=db)
+        Groups.set_group_user_ids_by_id(new_group.id, member_ids, db=db)
 
-        new_group = Groups.get_group_by_id(new_group.id)
+        new_group = Groups.get_group_by_id(new_group.id, db=db)
 
-    return group_to_scim(new_group, request)
+    return group_to_scim(new_group, request, db=db)
 
 
 @router.put("/Groups/{group_id}", response_model=SCIMGroup)
@@ -814,9 +826,10 @@ async def update_group(
     request: Request,
     group_data: SCIMGroupUpdateRequest,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Update SCIM Group (full update)"""
-    group = Groups.get_group_by_id(group_id)
+    group = Groups.get_group_by_id(group_id, db=db)
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -834,17 +847,17 @@ async def update_group(
     # Handle members if provided
     if group_data.members is not None:
         member_ids = [member.value for member in group_data.members]
-        Groups.set_group_user_ids_by_id(group_id, member_ids)
+        Groups.set_group_user_ids_by_id(group_id, member_ids, db=db)
 
     # Update group
-    updated_group = Groups.update_group_by_id(group_id, update_form)
+    updated_group = Groups.update_group_by_id(group_id, update_form, db=db)
     if not updated_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update group",
         )
 
-    return group_to_scim(updated_group, request)
+    return group_to_scim(updated_group, request, db=db)
 
 
 @router.patch("/Groups/{group_id}", response_model=SCIMGroup)
@@ -853,9 +866,10 @@ async def patch_group(
     request: Request,
     patch_data: SCIMPatchRequest,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Update SCIM Group (partial update)"""
-    group = Groups.get_group_by_id(group_id)
+    group = Groups.get_group_by_id(group_id, db=db)
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -880,7 +894,7 @@ async def patch_group(
             elif path == "members":
                 # Replace all members
                 Groups.set_group_user_ids_by_id(
-                    group_id, [member["value"] for member in value]
+                    group_id, [member["value"] for member in value], db=db
                 )
 
         elif op == "add":
@@ -889,22 +903,24 @@ async def patch_group(
                 if isinstance(value, list):
                     for member in value:
                         if isinstance(member, dict) and "value" in member:
-                            Groups.add_users_to_group(group_id, [member["value"]])
+                            Groups.add_users_to_group(
+                                group_id, [member["value"]], db=db
+                            )
         elif op == "remove":
             if path and path.startswith("members[value eq"):
                 # Remove specific member
                 member_id = path.split('"')[1]
-                Groups.remove_users_from_group(group_id, [member_id])
+                Groups.remove_users_from_group(group_id, [member_id], db=db)
 
     # Update group
-    updated_group = Groups.update_group_by_id(group_id, update_form)
+    updated_group = Groups.update_group_by_id(group_id, update_form, db=db)
     if not updated_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update group",
         )
 
-    return group_to_scim(updated_group, request)
+    return group_to_scim(updated_group, request, db=db)
 
 
 @router.delete("/Groups/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -912,16 +928,17 @@ async def delete_group(
     group_id: str,
     request: Request,
     _: bool = Depends(get_scim_auth),
+    db: Session = Depends(get_session),
 ):
     """Delete SCIM Group"""
-    group = Groups.get_group_by_id(group_id)
+    group = Groups.get_group_by_id(group_id, db=db)
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Group {group_id} not found",
         )
 
-    success = Groups.delete_group_by_id(group_id)
+    success = Groups.delete_group_by_id(group_id, db=db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

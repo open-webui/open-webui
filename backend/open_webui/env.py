@@ -85,32 +85,7 @@ if "cuda_error" in locals():
     log.exception(cuda_error)
     del cuda_error
 
-log_sources = [
-    "AUDIO",
-    "COMFYUI",
-    "CONFIG",
-    "DB",
-    "IMAGES",
-    "MAIN",
-    "MODELS",
-    "OLLAMA",
-    "OPENAI",
-    "RAG",
-    "WEBHOOK",
-    "SOCKET",
-    "OAUTH",
-]
-
-SRC_LOG_LEVELS = {}
-
-for source in log_sources:
-    log_env_var = source + "_LOG_LEVEL"
-    SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
-    if SRC_LOG_LEVELS[source] not in logging.getLevelNamesMapping():
-        SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
-    log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
-
-log.setLevel(SRC_LOG_LEVELS["CONFIG"])
+SRC_LOG_LEVELS = {}  # Legacy variable, do not remove
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 if WEBUI_NAME != "Open WebUI":
@@ -141,6 +116,8 @@ VERSION = PACKAGE_DATA["version"]
 
 DEPLOYMENT_ID = os.environ.get("DEPLOYMENT_ID", "")
 INSTANCE_ID = os.environ.get("INSTANCE_ID", str(uuid4()))
+
+ENABLE_DB_MIGRATIONS = os.environ.get("ENABLE_DB_MIGRATIONS", "True").lower() == "true"
 
 
 # Function to parse each section
@@ -364,6 +341,11 @@ if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
     except Exception:
         DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = 0.0
 
+# Enable public visibility of active user count (when disabled, only admins can see it)
+ENABLE_PUBLIC_ACTIVE_USERS_COUNT = (
+    os.environ.get("ENABLE_PUBLIC_ACTIVE_USERS_COUNT", "True").lower() == "true"
+)
+
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
@@ -446,7 +428,13 @@ PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
     "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
 )
 
-PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(PASSWORD_VALIDATION_REGEX_PATTERN)
+try:
+    PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(PASSWORD_VALIDATION_REGEX_PATTERN)
+except Exception as e:
+    log.error(f"Invalid PASSWORD_VALIDATION_REGEX_PATTERN: {e}")
+    PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(
+        "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"
+    )
 
 
 BYPASS_MODEL_ACCESS_CONTROL = (
@@ -552,6 +540,10 @@ if LICENSE_PUBLIC_KEY:
 ####################################
 # MODELS
 ####################################
+
+ENABLE_CUSTOM_MODEL_FALLBACK = (
+    os.environ.get("ENABLE_CUSTOM_MODEL_FALLBACK", "False").lower() == "true"
+)
 
 MODELS_CACHE_TTL = os.environ.get("MODELS_CACHE_TTL", "1")
 if MODELS_CACHE_TTL == "":

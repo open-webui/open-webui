@@ -57,7 +57,8 @@ jobs:
           git lfs install
           git lfs track "*.ttf"
           git lfs track "*.jpg"
-          rm demo.gif
+          rm demo.png
+          rm banner.png
           git add .
           git commit -m "GitHub deploy: ${{ github.sha }}"
           git push --force https://open-webui:${HF_TOKEN}@huggingface.co/spaces/open-webui/open-webui main

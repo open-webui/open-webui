@@ -19,6 +19,7 @@ from authlib.integrations.starlette_client import OAuth
 from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
+    ENABLE_DB_MIGRATIONS,
     ENV,
     REDIS_URL,
     REDIS_KEY_PREFIX,
@@ -67,7 +68,8 @@ def run_migrations():
         log.exception(f"Error running migrations: {e}")
 
 
-run_migrations()
+if ENABLE_DB_MIGRATIONS:
+    run_migrations()
 
 
 class Config(Base):
@@ -1306,7 +1308,7 @@ USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING = (
 
 USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING = (
     os.environ.get(
-        "USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING", "False"
+        "USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_SHARING", "False"
     ).lower()
     == "true"
 )
@@ -1345,8 +1347,7 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING = (
 
 
 USER_PERMISSIONS_NOTES_ALLOW_SHARING = (
-    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING", "False").lower()
-    == "true"
+    os.environ.get("USER_PERMISSIONS_NOTES_ALLOW_SHARING", "False").lower() == "true"
 )
 
 USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
@@ -2341,6 +2342,51 @@ else:
     except Exception:
         PGVECTOR_IVFFLAT_LISTS = 100
 
+# openGauss
+OPENGAUSS_DB_URL = os.environ.get("OPENGAUSS_DB_URL", DATABASE_URL)
+
+OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH = int(
+    os.environ.get("OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
+)
+
+OPENGAUSS_POOL_SIZE = os.environ.get("OPENGAUSS_POOL_SIZE", None)
+
+if OPENGAUSS_POOL_SIZE != None:
+    try:
+        OPENGAUSS_POOL_SIZE = int(OPENGAUSS_POOL_SIZE)
+    except Exception:
+        OPENGAUSS_POOL_SIZE = None
+
+OPENGAUSS_POOL_MAX_OVERFLOW = os.environ.get("OPENGAUSS_POOL_MAX_OVERFLOW", 0)
+
+if OPENGAUSS_POOL_MAX_OVERFLOW == "":
+    OPENGAUSS_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        OPENGAUSS_POOL_MAX_OVERFLOW = int(OPENGAUSS_POOL_MAX_OVERFLOW)
+    except Exception:
+        OPENGAUSS_POOL_MAX_OVERFLOW = 0
+
+OPENGAUSS_POOL_TIMEOUT = os.environ.get("OPENGAUSS_POOL_TIMEOUT", 30)
+
+if OPENGAUSS_POOL_TIMEOUT == "":
+    OPENGAUSS_POOL_TIMEOUT = 30
+else:
+    try:
+        OPENGAUSS_POOL_TIMEOUT = int(OPENGAUSS_POOL_TIMEOUT)
+    except Exception:
+        OPENGAUSS_POOL_TIMEOUT = 30
+
+OPENGAUSS_POOL_RECYCLE = os.environ.get("OPENGAUSS_POOL_RECYCLE", 3600)
+
+if OPENGAUSS_POOL_RECYCLE == "":
+    OPENGAUSS_POOL_RECYCLE = 3600
+else:
+    try:
+        OPENGAUSS_POOL_RECYCLE = int(OPENGAUSS_POOL_RECYCLE)
+    except Exception:
+        OPENGAUSS_POOL_RECYCLE = 3600
+
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT", None)
@@ -2522,6 +2568,12 @@ MINERU_API_URL = PersistentConfig(
     "MINERU_API_URL",
     "rag.mineru_api_url",
     os.environ.get("MINERU_API_URL", "http://localhost:8000"),
+)
+
+MINERU_API_TIMEOUT = PersistentConfig(
+    "MINERU_API_TIMEOUT",
+    "rag.mineru_api_timeout",
+    os.environ.get("MINERU_API_TIMEOUT", "300"),
 )
 
 MINERU_API_KEY = PersistentConfig(
@@ -2797,6 +2849,12 @@ RAG_EXTERNAL_RERANKER_API_KEY = PersistentConfig(
     os.environ.get("RAG_EXTERNAL_RERANKER_API_KEY", ""),
 )
 
+RAG_EXTERNAL_RERANKER_TIMEOUT = PersistentConfig(
+    "RAG_EXTERNAL_RERANKER_TIMEOUT",
+    "rag.external_reranker_timeout",
+    os.environ.get("RAG_EXTERNAL_RERANKER_TIMEOUT", ""),
+)
+
 
 RAG_TEXT_SPLITTER = PersistentConfig(
     "RAG_TEXT_SPLITTER",
@@ -2983,7 +3041,7 @@ WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
 WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     "WEB_SEARCH_CONCURRENT_REQUESTS",
     "rag.web.search.concurrent_requests",
-    int(os.getenv("WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
+    int(os.getenv("WEB_SEARCH_CONCURRENT_REQUESTS", "0")),
 )
 
 
@@ -3030,6 +3088,12 @@ SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
     "rag.web.search.searxng_query_url",
     os.getenv("SEARXNG_QUERY_URL", ""),
+)
+
+SEARXNG_LANGUAGE = PersistentConfig(
+    "SEARXNG_LANGUAGE",
+    "rag.web.search.searxng_language",
+    os.getenv("SEARXNG_LANGUAGE", "all"),
 )
 
 YACY_QUERY_URL = PersistentConfig(
@@ -3462,10 +3526,16 @@ COMFYUI_WORKFLOW = PersistentConfig(
     os.getenv("COMFYUI_WORKFLOW", COMFYUI_DEFAULT_WORKFLOW),
 )
 
+comfyui_workflow_nodes = os.getenv("COMFYUI_WORKFLOW_NODES", "")
+try:
+    comfyui_workflow_nodes = json.loads(comfyui_workflow_nodes)
+except json.JSONDecodeError:
+    comfyui_workflow_nodes = []
+
 COMFYUI_WORKFLOW_NODES = PersistentConfig(
-    "COMFYUI_WORKFLOW",
+    "COMFYUI_WORKFLOW_NODES",
     "image_generation.comfyui.nodes",
-    [],
+    comfyui_workflow_nodes,
 )
 
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
@@ -3582,10 +3652,16 @@ IMAGES_EDIT_COMFYUI_WORKFLOW = PersistentConfig(
     os.getenv("IMAGES_EDIT_COMFYUI_WORKFLOW", ""),
 )
 
+images_edit_comfyui_workflow_nodes = os.getenv("IMAGES_EDIT_COMFYUI_WORKFLOW_NODES", "")
+try:
+    images_edit_comfyui_workflow_nodes = json.loads(images_edit_comfyui_workflow_nodes)
+except json.JSONDecodeError:
+    images_edit_comfyui_workflow_nodes = []
+
 IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = PersistentConfig(
     "IMAGES_EDIT_COMFYUI_WORKFLOW_NODES",
     "images.edit.comfyui.nodes",
-    [],
+    images_edit_comfyui_workflow_nodes,
 )
 
 ####################################
@@ -3599,6 +3675,7 @@ WHISPER_MODEL = PersistentConfig(
     os.getenv("WHISPER_MODEL", "base"),
 )
 
+WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
 WHISPER_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE
