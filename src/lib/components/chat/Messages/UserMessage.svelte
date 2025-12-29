@@ -221,7 +221,7 @@
 					{#if (editedFiles ?? []).length > 0}
 						<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
 							{#each editedFiles as file, fileIdx}
-								{#if file.type === 'image'}
+								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
 									<div class=" relative group">
 										<div class="relative flex items-center">
 											<Image

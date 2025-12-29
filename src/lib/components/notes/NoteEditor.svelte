@@ -777,7 +777,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		await tick();
 
 		for (const file of files) {
-			if (file.type === 'image') {
+			if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) {
 				const e = new CustomEvent('data', { files: files });
 
 				const img = document.getElementById(`image:${file.id}`);
