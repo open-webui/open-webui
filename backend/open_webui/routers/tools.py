@@ -169,7 +169,8 @@ async def get_tool_list(user=Depends(get_verified_user), db: Session = Depends(g
         ToolAccessResponse(
             **tool.model_dump(),
             write_access=(
-                user.id == tool.user_id
+                (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                or user.id == tool.user_id
                 or has_access(user.id, "write", tool.access_control, db=db)
             ),
         )

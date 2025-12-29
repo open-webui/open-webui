@@ -80,7 +80,8 @@ async def get_knowledge_bases(
             KnowledgeAccessResponse(
                 **knowledge_base.model_dump(),
                 write_access=(
-                    user.id == knowledge_base.user_id
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == knowledge_base.user_id
                     or has_access(
                         user.id, "write", knowledge_base.access_control, db=db
                     )
@@ -126,7 +127,8 @@ async def search_knowledge_bases(
             KnowledgeAccessResponse(
                 **knowledge_base.model_dump(),
                 write_access=(
-                    user.id == knowledge_base.user_id
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == knowledge_base.user_id
                     or has_access(
                         user.id, "write", knowledge_base.access_control, db=db
                     )
@@ -302,7 +304,8 @@ async def get_knowledge_by_id(
             return KnowledgeFilesResponse(
                 **knowledge.model_dump(),
                 write_access=(
-                    user.id == knowledge.user_id
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == knowledge.user_id
                     or has_access(user.id, "write", knowledge.access_control, db=db)
                 ),
             )

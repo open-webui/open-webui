@@ -44,7 +44,8 @@ async def get_prompt_list(user=Depends(get_verified_user), db: Session = Depends
         PromptAccessResponse(
             **prompt.model_dump(),
             write_access=(
-                user.id == prompt.user_id
+                (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                or user.id == prompt.user_id
                 or has_access(user.id, "write", prompt.access_control, db=db)
             ),
         )

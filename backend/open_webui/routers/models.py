@@ -97,7 +97,8 @@ async def get_models(
             ModelAccessResponse(
                 **model.model_dump(),
                 write_access=(
-                    user.id == model.user_id
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == model.user_id
                     or has_access(user.id, "write", model.access_control, db=db)
                 ),
             )
