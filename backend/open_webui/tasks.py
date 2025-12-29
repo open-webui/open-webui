@@ -23,13 +23,30 @@ REDIS_ITEM_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks:item"
 REDIS_PUBSUB_CHANNEL = f"{REDIS_KEY_PREFIX}:tasks:commands"
 
 
+def _is_redis_cluster(redis_client) -> bool:
+    """
+    Check if the redis client is a RedisCluster instance.
+    RedisCluster has a 'nodes_manager' attribute that regular Redis clients don't have.
+    """
+    return hasattr(redis_client, 'nodes_manager')
+
+
 async def redis_task_command_listener(app):
     redis: Redis = app.state.redis
     pubsub = redis.pubsub()
-    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+    
+    # Use sharded pub/sub for Redis Cluster, regular pub/sub otherwise
+    # In Redis Cluster, regular PUBLISH only reaches subscribers on a single node,
+    # but Sharded Pub/Sub (SSUBSCRIBE/SPUBLISH) properly broadcasts to all nodes.
+    if _is_redis_cluster(redis):
+        await pubsub.ssubscribe(REDIS_PUBSUB_CHANNEL)
+        expected_message_type = "smessage"
+    else:
+        await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+        expected_message_type = "message"
 
     async for message in pubsub.listen():
-        if message["type"] != "message":
+        if message["type"] != expected_message_type:
             continue
         try:
             command = json.loads(message["data"])
@@ -74,7 +91,16 @@ async def redis_list_item_tasks(redis: Redis, item_id: str) -> List[str]:
 
 
 async def redis_send_command(redis: Redis, command: dict):
-    await redis.publish(REDIS_PUBSUB_CHANNEL, json.dumps(command))
+    command_json = json.dumps(command)
+    
+    # Use sharded pub/sub for Redis Cluster, regular pub/sub otherwise
+    # In Redis Cluster, regular PUBLISH only reaches subscribers on a single node,
+    # but Sharded Pub/Sub (SPUBLISH) properly broadcasts to all nodes.
+    if _is_redis_cluster(redis):
+        # RedisCluster may not expose spublish as a method, use execute_command
+        await redis.execute_command('SPUBLISH', REDIS_PUBSUB_CHANNEL, command_json)
+    else:
+        await redis.publish(REDIS_PUBSUB_CHANNEL, command_json)
 
 
 async def cleanup_task(redis, task_id: str, id=None):
