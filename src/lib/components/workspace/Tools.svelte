@@ -36,7 +36,7 @@
 	import XMark from '../icons/XMark.svelte';
 	import AddToolMenu from './Tools/AddToolMenu.svelte';
 	import ImportModal from '../ImportModal.svelte';
-	import ImportModal from '../ImportModal.svelte';
+
 	import ViewSelector from './common/ViewSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 

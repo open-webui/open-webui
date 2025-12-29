@@ -25,8 +25,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
-	import XMark from '../icons/XMark.svelte';
-	import GarbageBin from '../icons/GarbageBin.svelte';
+
 	import ViewSelector from './common/ViewSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 

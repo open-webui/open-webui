@@ -43,7 +43,7 @@
 	import Eye from '../icons/Eye.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
-	import TagSelector from './common/TagSelector.svelte';
+
 	import Pagination from '../common/Pagination.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 
