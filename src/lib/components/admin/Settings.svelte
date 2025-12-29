@@ -95,18 +95,26 @@
 	onMount(() => {
 		const containerElement = document.getElementById('admin-settings-tabs-container');
 
+		const onWheel = (event) => {
+			if (event.deltaY !== 0 && containerElement) {
+				// Adjust horizontal scroll position based on vertical scroll
+				containerElement.scrollLeft += event.deltaY;
+			}
+		};
+
 		if (containerElement) {
-			containerElement.addEventListener('wheel', function (event) {
-				if (event.deltaY !== 0) {
-					// Adjust horizontal scroll position based on vertical scroll
-					containerElement.scrollLeft += event.deltaY;
-				}
-			});
+			containerElement.addEventListener('wheel', onWheel);
 		}
 
 		setFilteredSettings();
 		// Scroll to the selected tab on mount
 		scrollToTab(selectedTab);
+
+		return () => {
+			if (containerElement) {
+				containerElement.removeEventListener('wheel', onWheel);
+			}
+		};
 	});
 </script>
 
