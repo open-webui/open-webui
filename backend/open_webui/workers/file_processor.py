@@ -391,7 +391,6 @@ def process_file_job(
     embedding_api_key: Optional[str] = None,
     _otel_trace_context: Optional[dict] = None,
 ) -> dict:
-    log.info(f"[JOB] START | file_id={file_id} | user_id={user_id} | knowledge_id={knowledge_id}")
     """
     Process a file job. This function is called by RQ workers.
     
@@ -407,6 +406,7 @@ def process_file_job(
     Returns:
         Dictionary with processing result
     """
+    log.info(f"[JOB] START | file_id={file_id} | user_id={user_id} | knowledge_id={knowledge_id}")
     start_time = time.time()
     
     # Restore trace context from job metadata if available
@@ -578,11 +578,13 @@ def process_file_job(
                             collection_name = vector_collection_name
                     elif collection_name:
                         # File is from a knowledge collection - check if already processed
+                        log.info(f"[JOB] KNOWLEDGE_COLLECTION | file_id={file.id} | collection={collection_name} | checking if already processed")
                         result = VECTOR_DB_CLIENT.query(
                             collection_name=vector_collection_name, filter={"file_id": file.id}
                         )
 
                         if result is not None and result.ids and len(result.ids) > 0 and len(result.ids[0]) > 0:
+                            log.info(f"[JOB] ALREADY_PROCESSED | file_id={file.id} | found {len(result.ids[0])} existing documents")
                             # File already processed - extract from vector DB
                             try:
                                 # Safely access result structure
@@ -691,23 +693,12 @@ def process_file_job(
                                                     },
                                                 )
                                             ]
-                                            text_content = ""
-                                    else:
-                                        print(f"    file.path is None, using empty content", flush=True)
-                                        log.warning(f"    file.path is None, using empty content")
-                                        docs = [
-                                            Document(
-                                                page_content="",
-                                                metadata={
-                                                    **file.meta,
-                                                    "name": file.filename,
-                                                    "created_by": file.user_id,
-                                                    "file_id": file.id,
-                                                    "source": file.filename,
-                                                },
-                                            )
-                                        ]
                                         text_content = ""
+                                    else:
+                                        log.error(f"[JOB] FILE_PATH_MISSING | file_id={file.id} | filename={file.filename} | file.path is None - cannot extract content")
+                                        error_msg = "File path is missing. Cannot extract content from file system."
+                                        Files.update_file_metadata_by_id(file.id, {"processing_status": "error", "processing_error": error_msg})
+                                        raise ValueError(error_msg)
                                 else:
                                     # Use content from file.data
                                     docs = [
@@ -784,21 +775,10 @@ def process_file_job(
                                         ]
                                         text_content = ""
                                 else:
-                                    print(f"    file.path is None, using empty content", flush=True)
-                                    log.warning(f"    file.path is None, using empty content")
-                                    docs = [
-                                        Document(
-                                            page_content="",
-                                            metadata={
-                                                **file.meta,
-                                                "name": file.filename,
-                                                "created_by": file.user_id,
-                                                "file_id": file.id,
-                                                "source": file.filename,
-                                            },
-                                        )
-                                    ]
-                                    text_content = ""
+                                    log.error(f"[JOB] FILE_PATH_MISSING | file_id={file.id} | filename={file.filename} | file.path is None - cannot extract content")
+                                    error_msg = "File path is missing. Cannot extract content from file system."
+                                    Files.update_file_metadata_by_id(file.id, {"processing_status": "error", "processing_error": error_msg})
+                                    raise ValueError(error_msg)
                             else:
                                 # Use content from file.data
                                 docs = [
@@ -816,23 +796,66 @@ def process_file_job(
                                 text_content = file_content
                         sys.stdout.flush()
                     else:
-                        # Use content from file.data
+                        # Regular file upload (not from knowledge collection) - extract from file system
+                        log.info(f"[JOB] REGULAR_UPLOAD | file_id={file.id} | filename={file.filename} | file.path={file.path}")
                         file_content = file.data.get("content", "") if file.data else ""
-                        print(f"  [STEP 5.2.2] Using content from file.data ({len(file_content)} chars)", flush=True)
-                        log.info(f"  [STEP 5.2.2] Using content from file.data ({len(file_content)} chars)")
-                        docs = [
-                            Document(
-                            page_content=file_content,
-                            metadata={
-                                **file.meta,
-                                "name": file.filename,
-                                "created_by": file.user_id,
-                                "file_id": file.id,
-                                "source": file.filename,
-                            },
-                            )
-                        ]
-                        text_content = file_content
+                        
+                        # If file.data has no content, extract from file system
+                        if not file_content or len(file_content.strip()) == 0:
+                            file_path = file.path
+                            if file_path:
+                                log.info(f"[JOB] FILE_PATH_EXISTS | file_id={file.id} | path={file_path}")
+                                try:
+                                    file_path = Storage.get_file(file_path)
+                                    if file_path and os.path.exists(file_path):
+                                        file_size = os.path.getsize(file_path)
+                                        log.info(f"[FILE] id={file.id} | name={file.filename} | size={file_size}B | path={file_path}")
+                                        extraction_engine_val = ""  # Force PyPDF for PDFs (OpenShift requirement)
+                                        pdf_extract_images_val = getattr(request.app.state.config, 'PDF_EXTRACT_IMAGES', False) if hasattr(request.app.state.config, 'PDF_EXTRACT_IMAGES') else False
+                                        log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val}")
+                                        loader = Loader(engine=extraction_engine_val, PDF_EXTRACT_IMAGES=pdf_extract_images_val)
+                                        try:
+                                            docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
+                                            total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
+                                            non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
+                                            log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
+                                            safe_add_span_event("job.file.extracted", {"content_length": total_chars, "document.count": len(docs)})
+                                            docs = [Document(page_content=doc.page_content, metadata={**doc.metadata, "name": file.filename, "created_by": file.user_id, "file_id": file.id, "source": file.filename}) for doc in docs]
+                                            text_content = " ".join([doc.page_content for doc in docs])
+                                        except Exception as load_error:
+                                            log.error(f"[EXTRACT] FAILED | file_id={file.id} | error={type(load_error).__name__}: {load_error}", exc_info=True)
+                                            docs = []
+                                    else:
+                                        log.error(f"[JOB] FILE_NOT_FOUND | file_id={file.id} | resolved_path={file_path} | file does not exist")
+                                        error_msg = f"File not found at path: {file_path}"
+                                        Files.update_file_metadata_by_id(file.id, {"processing_status": "error", "processing_error": error_msg})
+                                        raise ValueError(error_msg)
+                                except Exception as storage_error:
+                                    log.error(f"[JOB] STORAGE_ERROR | file_id={file.id} | error={type(storage_error).__name__}: {storage_error}", exc_info=True)
+                                    error_msg = f"Failed to retrieve file from storage: {storage_error}"
+                                    Files.update_file_metadata_by_id(file.id, {"processing_status": "error", "processing_error": error_msg})
+                                    raise ValueError(error_msg)
+                            else:
+                                log.error(f"[JOB] FILE_PATH_MISSING | file_id={file.id} | filename={file.filename} | file.path is None - cannot extract content")
+                                error_msg = "File path is missing. Cannot extract content from file system."
+                                Files.update_file_metadata_by_id(file.id, {"processing_status": "error", "processing_error": error_msg})
+                                raise ValueError(error_msg)
+                        else:
+                            # Use content from file.data
+                            log.info(f"[JOB] USING_FILE_DATA | file_id={file.id} | content_length={len(file_content)}")
+                            docs = [
+                                Document(
+                                    page_content=file_content,
+                                    metadata={
+                                        **file.meta,
+                                        "name": file.filename,
+                                        "created_by": file.user_id,
+                                        "file_id": file.id,
+                                        "source": file.filename,
+                                    },
+                                )
+                            ]
+                            text_content = file_content
 
                     # Ensure text_content is defined (defensive check)
                     if 'text_content' not in locals() or text_content is None:
