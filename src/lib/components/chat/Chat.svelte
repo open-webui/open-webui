@@ -76,7 +76,8 @@
 		chatAction,
 		generateMoACompletion,
 		stopTask,
-		getTaskIdsByChatId
+		getTaskIdsByChatId,
+		getBackendConfig
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 import { uploadFile } from '$lib/apis/files';
@@ -164,6 +165,7 @@ let tenantLoadError: string | null = null;
 let selectedTenantId: string | null = null;
 let adminTenantInit = false;
 let tenantFetchInitiated = false;
+let lastConfigTenantId: string | null = null;
 
 const isBrowser = () => typeof window !== 'undefined';
 
@@ -193,8 +195,28 @@ const updateSelectedTenantId = (tenantId: string | null, persist = true) => {
 	}
 };
 
+const refreshBackendConfigForTenant = async (tenantId: string | null) => {
+	if (!isBrowser()) {
+		return;
+	}
+	if (lastConfigTenantId === tenantId) {
+		return;
+	}
+
+	try {
+		const backendConfig = await getBackendConfig(tenantId);
+		if (backendConfig) {
+			lastConfigTenantId = tenantId;
+			await config.set(backendConfig);
+		}
+	} catch (err) {
+		console.error('Failed to refresh backend config', err);
+	}
+};
+
 const handleTenantOverrideChange = (tenantId: string | null) => {
 	updateSelectedTenantId(tenantId);
+	refreshBackendConfigForTenant(tenantId);
 };
 
 const loadTenantOptionsForAdmin = async () => {
@@ -235,6 +257,7 @@ $: if ($user?.role === 'admin') {
 	if (!adminTenantInit && isBrowser()) {
 		updateSelectedTenantId(getStoredTenantOverride(), false);
 		adminTenantInit = true;
+		refreshBackendConfigForTenant(selectedTenantId);
 	}
 
 	if (!tenantFetchInitiated && isBrowser()) {

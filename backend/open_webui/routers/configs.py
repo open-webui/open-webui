@@ -1,5 +1,6 @@
 import logging
 import copy
+import time
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 import aiohttp
@@ -9,11 +10,17 @@ from typing import Optional
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import get_config, save_config
 from open_webui.config import BannerModel
+from open_webui.config import DEFAULT_PROMPT_SUGGESTIONS_LIST
 
 from open_webui.utils.tools import (
     get_tool_server_data,
     get_tool_server_url,
     set_tool_servers,
+)
+from open_webui.utils.prompt_suggestions import (
+    DEFAULT_PROMPT_SUGGESTIONS_KEY,
+    build_prompt_suggestions_entry,
+    normalize_prompt_suggestions,
 )
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.models.oauth_sessions import OAuthSessions
@@ -478,8 +485,21 @@ async def set_default_suggestions(
     user=Depends(get_admin_user),
 ):
     data = form_data.model_dump()
-    request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS = data["suggestions"]
-    return request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS
+    suggestions_map = normalize_prompt_suggestions(
+        request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+        DEFAULT_PROMPT_SUGGESTIONS_LIST,
+    )
+    existing_default = suggestions_map.get(DEFAULT_PROMPT_SUGGESTIONS_KEY, {})
+    doc_hash = (
+        existing_default.get("doc_hash", "")
+        if isinstance(existing_default, dict)
+        else ""
+    )
+    suggestions_map[DEFAULT_PROMPT_SUGGESTIONS_KEY] = build_prompt_suggestions_entry(
+        data["suggestions"], generated_at=int(time.time()), doc_hash=doc_hash
+    )
+    request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS = suggestions_map
+    return suggestions_map[DEFAULT_PROMPT_SUGGESTIONS_KEY].get("suggestions", [])
 
 
 ############################

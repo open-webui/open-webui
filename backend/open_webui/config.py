@@ -1173,10 +1173,18 @@ if default_prompt_suggestions == []:
         },
     ]
 
+DEFAULT_PROMPT_SUGGESTIONS_LIST = default_prompt_suggestions
+
 DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",
     "ui.prompt_suggestions",
-    default_prompt_suggestions,
+    {
+        "default": {
+            "suggestions": DEFAULT_PROMPT_SUGGESTIONS_LIST,
+            "generated_at": 0,
+            "doc_hash": "",
+        }
+    },
 )
 
 MODEL_ORDER_LIST = PersistentConfig(
