@@ -110,7 +110,7 @@ export let onTenantChange: (tenantId: string | null) => void = () => {};
 				>
 					<div class="flex flex-col gap-2 md:flex-row md:items-end md:gap-3">
 						{#if showModelSelector}
-							<div class="flex-1 min-w-0">
+							<div class="flex-1 min-w-0 md:self-start md:translate-y-[6px]">
 								<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 							</div>
 						{/if}
