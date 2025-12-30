@@ -735,8 +735,23 @@
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-									<option value="markdown_header">{$i18n.t('Markdown (Header)')}</option>
 								</select>
+							</div>
+						</div>
+
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								<Tooltip
+									placement="top-start"
+									content={$i18n.t(
+										'Split documents by markdown headers before applying character/token splitting.'
+									)}
+								>
+									{$i18n.t('Markdown Header Text Splitter')}
+								</Tooltip>
+							</div>
+							<div class="flex items-center relative">
+								<Switch bind:state={RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER} />
 							</div>
 						</div>
 

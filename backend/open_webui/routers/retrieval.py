@@ -496,6 +496,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "RAG_EXTERNAL_RERANKER_TIMEOUT": request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
+        "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
         # File upload settings
@@ -685,6 +686,7 @@ class ConfigForm(BaseModel):
 
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
+    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: Optional[bool] = None
     CHUNK_SIZE: Optional[int] = None
     CHUNK_OVERLAP: Optional[int] = None
 
@@ -1190,6 +1192,7 @@ async def update_rag_config(
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
+        "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
