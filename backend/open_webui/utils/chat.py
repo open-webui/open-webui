@@ -20,6 +20,7 @@ from open_webui.socket.main import (
     sio,
     get_event_call,
     get_event_emitter,
+    DIRECT_CHAT_QUEUES,
 )
 from open_webui.functions import generate_function_chat_completion
 
@@ -84,14 +85,10 @@ async def generate_direct_chat_completion(
     if form_data.get("stream"):
         q = asyncio.Queue()
 
-        async def message_listener(sid, data):
-            """
-            Handle received socket messages and push them into the queue.
-            """
-            await q.put(data)
-
-        # Register the listener
-        sio.on(channel, message_listener)
+        # Register queue in global registry (NO dynamic handler registration!)
+        # The global @sio.on("direct-chat-stream") handler will route messages here
+        DIRECT_CHAT_QUEUES[channel] = q
+        log.debug(f"Registered queue for channel {channel}")
 
         # Start processing chat completion in background
         res = await event_caller(
@@ -129,19 +126,25 @@ async def generate_direct_chat_completion(
                     log.debug(f"Error in event generator: {e}")
                     pass
 
-            # Define a background task to run the event generator
+            # Define a background task to clean up queue registry
             async def background():
                 try:
-                    del sio.handlers["/"][channel]
+                    if channel in DIRECT_CHAT_QUEUES:
+                        del DIRECT_CHAT_QUEUES[channel]
+                        log.debug(f"Cleaned up queue for channel {channel}")
                 except Exception as e:
-                    pass
+                    log.debug(f"Error cleaning up queue: {e}")
 
             # Return the streaming response
             return StreamingResponse(
                 event_generator(), media_type="text/event-stream", background=background
             )
         else:
+            # Clean up on failure
+            if channel in DIRECT_CHAT_QUEUES:
+                del DIRECT_CHAT_QUEUES[channel]
             raise Exception(str(res))
+
     else:
         res = await event_caller(
             {

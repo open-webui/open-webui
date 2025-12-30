@@ -1,4 +1,6 @@
 import asyncio
+import json
+import os
 import random
 
 import socketio
@@ -160,6 +162,11 @@ YDOC_MANAGER = YdocManager(
     redis=REDIS,
     redis_key_prefix=f"{REDIS_KEY_PREFIX}:ydoc:documents",
 )
+
+
+# Global registry for direct chat queues (per-worker, in-memory)
+# Maps channel -> asyncio.Queue for routing streaming data
+DIRECT_CHAT_QUEUES = {}  # {channel: asyncio.Queue}
 
 
 async def periodic_usage_pool_cleanup():
@@ -688,6 +695,90 @@ async def disconnect(sid):
     else:
         pass
         # print(f"Unknown session ID {sid} disconnected")
+
+
+@sio.on("direct-chat-stream")
+async def handle_direct_chat_stream(sid, data):
+    """
+    Global handler for direct chat streaming chunks.
+    Routes messages to the correct queue based on channel.
+    Works across multiple workers via Redis pub/sub.
+    """
+    channel = data.get("channel")
+    if not channel:
+        log.warning("Received direct-chat-stream without channel")
+        return
+
+    # Check if this worker has the queue for this channel
+    if channel in DIRECT_CHAT_QUEUES:
+        try:
+            # Extract the actual data (remove channel wrapper)
+            payload = data.get("data", data)
+            await DIRECT_CHAT_QUEUES[channel].put(payload)
+            log.debug(f"Worker {os.getpid()}: Queued data for channel {channel} on local worker")
+        except Exception as e:
+            log.error(f"Error queueing data for channel {channel}: {e}")
+    else:
+        # Queue is on another worker, forward via Redis pub/sub
+        if WEBSOCKET_MANAGER == "redis" and REDIS is not None:
+            try:
+                await REDIS.publish(
+                    f"{REDIS_KEY_PREFIX}:direct_chat_channel:{channel}",
+                    json.dumps(data)
+                )
+                log.debug(f"Worker {os.getpid()}: Published data for channel {channel} to Redis")
+            except Exception as e:
+                log.error(f"Error publishing to Redis for channel {channel}: {e}")
+        else:
+            log.warning(f"Channel {channel} not found and Redis not available")
+
+
+async def redis_direct_chat_listener():
+    """
+    Listen for direct chat messages published from other workers.
+    Routes them to local queues if present.
+    """
+    if WEBSOCKET_MANAGER != "redis" or REDIS is None:
+        return
+
+    try:
+        pubsub = REDIS.pubsub()
+        pattern = f"{REDIS_KEY_PREFIX}:direct_chat_channel:*"
+        await pubsub.psubscribe(pattern)
+        log.debug(f"Worker {os.getpid()}: Started Redis direct chat listener on pattern {pattern}")
+
+        async for message in pubsub.listen():
+            if message["type"] != "pmessage":
+                continue
+
+            try:
+                # Extract channel from Redis key
+                redis_channel = message["channel"]
+                if isinstance(redis_channel, bytes):
+                    redis_channel = redis_channel.decode()
+
+                # Remove prefix to get actual channel name
+                prefix = f"{REDIS_KEY_PREFIX}:direct_chat_channel:"
+                channel = redis_channel.replace(prefix, "")
+
+                # Check if this worker has the queue
+                if channel in DIRECT_CHAT_QUEUES:
+                    data = json.loads(message["data"])
+                    # Extract the actual data (remove channel wrapper)
+                    payload = data.get("data", data)
+                    await DIRECT_CHAT_QUEUES[channel].put(payload)
+                    log.debug(f"Worker {os.getpid()}: Received and queued Redis message for channel {channel}")
+            except Exception as e:
+                log.error(f"Error processing Redis message: {e}")
+    except asyncio.CancelledError:
+        log.debug(f"Worker {os.getpid()}: Redis direct chat listener cancelled")
+    except Exception as e:
+        log.error(f"Redis direct chat listener error: {e}")
+    finally:
+        try:
+            await pubsub.unsubscribe()
+        except Exception:
+            pass
 
 
 def get_event_emitter(request_info, update_db=True):

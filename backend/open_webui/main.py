@@ -66,6 +66,7 @@ from open_webui.socket.main import (
     periodic_usage_pool_cleanup,
     get_event_emitter,
     get_models_in_use,
+    redis_direct_chat_listener,
 )
 from open_webui.routers import (
     audio,
@@ -598,6 +599,11 @@ async def lifespan(app: FastAPI):
         app.state.redis_task_command_listener = asyncio.create_task(
             redis_task_command_listener(app)
         )
+        # Start Redis listener for direct chat routing across workers
+        app.state.redis_direct_chat_listener = asyncio.create_task(
+            redis_direct_chat_listener()
+        )
+        log.debug("Started Redis direct chat listener for multi-worker support")
 
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
@@ -630,6 +636,9 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
+
+    if hasattr(app.state, "redis_direct_chat_listener"):
+        app.state.redis_direct_chat_listener.cancel()
 
 
 app = FastAPI(

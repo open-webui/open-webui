@@ -450,7 +450,8 @@
 
 											for (const line of lines) {
 												console.log(line);
-												$socket?.emit(channel, line);
+												// Use global event for cross-worker routing
+												$socket?.emit('direct-chat-stream', { channel, data: line });
 											}
 										}
 									};
@@ -473,8 +474,10 @@
 					console.error('chatCompletion', error);
 					cb(error);
 				} finally {
-					$socket.emit(channel, {
-						done: true
+					// Use global event for cross-worker routing
+					$socket.emit('direct-chat-stream', {
+						channel,
+						data: { done: true }
 					});
 				}
 			} else {
