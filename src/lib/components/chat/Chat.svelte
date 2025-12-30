@@ -2141,6 +2141,11 @@
 		if (history.currentId) {
 			let userMessage = history.messages[message.parentId];
 
+			if (!userMessage) {
+				toast.error($i18n.t('Parent message not found'));
+				return;
+			}
+
 			if (autoScroll) {
 				scrollToBottom();
 			}
