@@ -1647,7 +1647,7 @@ async def chat_completion(
                     )
 
                 # Insert chat files from parent message if any
-                parent_message = metadata.get("parent_message", {})
+                parent_message = metadata.get("parent_message") or {}
                 parent_message_files = parent_message.get("files", [])
                 if parent_message_files:
                     try:
