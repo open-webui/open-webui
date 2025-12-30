@@ -20,7 +20,7 @@ from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS
 
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
-from open_webui.routers.files import upload_file_handler, get_file_content_by_id
+from open_webui.routers.files import upload_file_handler
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
@@ -858,17 +858,24 @@ async def image_edits(
 
             elif data.startswith("/api/v1/files"):
                 file_id = data.split("/api/v1/files/")[1].split("/content")[0]
-                file_response = await get_file_content_by_id(file_id, user)
+                file = Files.get_file_by_id(file_id)
+                if file:
+                    file_path = Storage.get_file(file.path)
+                    file_path = Path(file_path)
 
-                if isinstance(file_response, FileResponse):
-                    file_path = file_response.path
+                    if file_path.is_file():
+                        with open(file_path, "rb") as f:
+                            file_bytes = f.read()
+                            image_data = base64.b64encode(file_bytes).decode("utf-8")
+                            mime_type = file.meta.get("content_type") if file.meta else None
+                            if not mime_type:
+                                mime_type, _ = mimetypes.guess_type(str(file_path))
 
-                    with open(file_path, "rb") as f:
-                        file_bytes = f.read()
-                        image_data = base64.b64encode(file_bytes).decode("utf-8")
-                        mime_type, _ = mimetypes.guess_type(file_path)
-
-                    return f"data:{mime_type};base64,{image_data}"
+                        return f"data:{mime_type};base64,{image_data}"
+                    else:
+                        raise Exception(f"File not found on disk: {file_id}")
+                else:
+                    raise Exception(f"File ID not found in database: {file_id}")
 
             elif data.startswith("data:"):
                 # Already base64 encoded, return as-is
