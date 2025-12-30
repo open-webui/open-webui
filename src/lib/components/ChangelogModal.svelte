@@ -38,8 +38,10 @@
 			</div>
 			<button
 				class="self-center"
-				on:click={() => {
+				on:click={async () => {
 					localStorage.version = $config.version;
+					await settings.set({ ...$settings, ...{ version: $config.version } });
+					await updateUserSettings(localStorage.token, { ui: $settings });
 					show = false;
 				}}
 				aria-label={$i18n.t('Close')}
