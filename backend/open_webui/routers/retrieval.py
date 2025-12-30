@@ -1305,7 +1305,7 @@ def save_docs_to_vector_db(
             filter={"hash": metadata["hash"]},
         )
 
-        if result is not None:
+        if result is not None and result.ids and len(result.ids) > 0:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
                 log.info(f"Document with hash {metadata['hash']} already exists")
