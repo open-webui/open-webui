@@ -2862,6 +2862,12 @@ RAG_TEXT_SPLITTER = PersistentConfig(
     os.environ.get("RAG_TEXT_SPLITTER", ""),
 )
 
+ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = PersistentConfig(
+    "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER",
+    "rag.enable_markdown_header_text_splitter",
+    os.environ.get("ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER", "True").lower() == "true",
+)
+
 
 TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
 TIKTOKEN_ENCODING_NAME = PersistentConfig(
