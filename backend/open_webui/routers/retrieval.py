@@ -112,6 +112,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
+    RAG_RERANKING_MODEL_NORMALIZE_SCORES,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -199,7 +200,11 @@ def get_rf(
                         trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                         backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
                         model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
-                        activation_fn=torch.nn.Sigmoid(),
+                        activation_fn=(
+                            torch.nn.Sigmoid()
+                            if RAG_RERANKING_MODEL_NORMALIZE_SCORES
+                            else None
+                        ),
                     )
                 except Exception as e:
                     log.error(f"CrossEncoder: {e}")

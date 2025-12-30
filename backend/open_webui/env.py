@@ -762,6 +762,13 @@ else:
     except Exception:
         SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS = None
 
+# Whether to apply sigmoid normalization to CrossEncoder reranking scores.
+# When enabled (default), scores are normalized to 0-1 range for proper
+# relevance threshold behavior with MS MARCO models.
+RAG_RERANKING_MODEL_NORMALIZE_SCORES = (
+    os.environ.get("RAG_RERANKING_MODEL_NORMALIZE_SCORES", "True").lower() == "true"
+)
+
 ####################################
 # OFFLINE_MODE
 ####################################
