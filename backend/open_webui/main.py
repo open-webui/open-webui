@@ -72,6 +72,7 @@ from open_webui.routers import (
     images,
     ollama,
     openai,
+    gemini,
     retrieval,
     pipelines,
     tasks,
@@ -119,6 +120,11 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Gemini
+    ENABLE_GEMINI_API,
+    GEMINI_API_BASE_URLS,
+    GEMINI_API_KEYS,
+    GEMINI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
@@ -696,6 +702,20 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+########################################
+#
+# GEMINI
+#
+########################################
+
+
+app.state.config.ENABLE_GEMINI_API = ENABLE_GEMINI_API
+app.state.config.GEMINI_API_BASE_URLS = GEMINI_API_BASE_URLS
+app.state.config.GEMINI_API_KEYS = GEMINI_API_KEYS
+app.state.config.GEMINI_API_CONFIGS = GEMINI_API_CONFIGS
+
+app.state.GEMINI_MODELS = {}
 
 ########################################
 #
@@ -1374,6 +1394,7 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(gemini.router, prefix="/gemini", tags=["gemini"])
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])

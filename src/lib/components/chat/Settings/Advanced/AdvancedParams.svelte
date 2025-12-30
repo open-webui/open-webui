@@ -415,11 +415,26 @@
 
 		{#if (params?.reasoning_effort ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
+				<div class="flex-1">
+					<select
+						class="text-sm w-full bg-transparent outline-none"
+						bind:value={params.reasoning_effort}
+					>
+						<option value="">{$i18n.t('Auto (Default)')}</option>
+						<option value="none">{$i18n.t('Off')} (none)</option>
+						<option value="minimal">{$i18n.t('Minimal')} (minimal)</option>
+						<option value="low">{$i18n.t('Low')} (low)</option>
+						<option value="medium">{$i18n.t('Medium')} (medium)</option>
+						<option value="high">{$i18n.t('High')} (high)</option>
+						<option value="xhigh">{$i18n.t('XHigh')} (xhigh)</option>
+						<option value="max">{$i18n.t('Max')} (max)</option>
+					</select>
+				</div>
+				<div class="flex-shrink-0">
 					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						class="text-sm w-20 bg-transparent outline-hidden outline-none text-center"
 						type="text"
-						placeholder={$i18n.t('Enter reasoning effort')}
+						placeholder={$i18n.t('Custom')}
 						bind:value={params.reasoning_effort}
 						autocomplete="off"
 					/>
@@ -438,7 +453,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'logit_bias'}
+					{$i18n.t('logit_bias')}
 				</div>
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -483,7 +498,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'max_tokens'}
+					{$i18n.t('max_tokens')}
 				</div>
 
 				<button
@@ -538,7 +553,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'top_k'}
+					{$i18n.t('top_k')}
 				</div>
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -593,7 +608,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'top_p'}
+					{$i18n.t('top_p')}
 				</div>
 
 				<button
@@ -649,7 +664,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'min_p'}
+					{$i18n.t('min_p')}
 				</div>
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -704,7 +719,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'frequency_penalty'}
+					{$i18n.t('frequency_penalty')}
 				</div>
 
 				<button
@@ -760,7 +775,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'presence_penalty'}
+					{$i18n.t('presence_penalty')}
 				</div>
 
 				<button
@@ -814,7 +829,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'mirostat'}
+					{$i18n.t('mirostat')}
 				</div>
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -869,7 +884,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'mirostat_eta'}
+					{$i18n.t('mirostat_eta')}
 				</div>
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -924,7 +939,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'mirostat_tau'}
+					{$i18n.t('mirostat_tau')}
 				</div>
 
 				<button
@@ -978,7 +993,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'repeat_last_n'}
+					{$i18n.t('repeat_last_n')}
 				</div>
 
 				<button
@@ -1034,7 +1049,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'tfs_z'}
+					{$i18n.t('tfs_z')}
 				</div>
 
 				<button
@@ -1090,7 +1105,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'repeat_penalty'}
+					{$i18n.t('repeat_penalty')}
 				</div>
 
 				<button
@@ -1147,7 +1162,7 @@
 			>
 				<div class="flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
-						{'use_mmap'}
+						{$i18n.t('use_mmap')}
 					</div>
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -1187,7 +1202,7 @@
 			>
 				<div class="flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
-						{'use_mlock'}
+						{$i18n.t('use_mlock')}
 					</div>
 
 					<button
@@ -1230,7 +1245,7 @@
 		>
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'think'} ({$i18n.t('Ollama')})
+					{$i18n.t('think')} ({$i18n.t('Ollama')})
 				</div>
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
@@ -1259,7 +1274,7 @@
 		>
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'format'} ({$i18n.t('Ollama')})
+					{$i18n.t('format')} ({$i18n.t('Ollama')})
 				</div>
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
@@ -1298,7 +1313,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'num_keep'} ({$i18n.t('Ollama')})
+					{$i18n.t('num_keep')} ({$i18n.t('Ollama')})
 				</div>
 
 				<button
@@ -1351,7 +1366,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'num_ctx'} ({$i18n.t('Ollama')})
+					{$i18n.t('num_ctx')} ({$i18n.t('Ollama')})
 				</div>
 
 				<button
@@ -1406,7 +1421,7 @@
 		>
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
-					{'num_batch'} ({$i18n.t('Ollama')})
+					{$i18n.t('num_batch')} ({$i18n.t('Ollama')})
 				</div>
 
 				<button
@@ -1462,7 +1477,7 @@
 			>
 				<div class="flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
-						{'num_thread'} ({$i18n.t('Ollama')})
+						{$i18n.t('num_thread')} ({$i18n.t('Ollama')})
 					</div>
 
 					<button
@@ -1518,7 +1533,7 @@
 			>
 				<div class="flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
-						{'num_gpu'} ({$i18n.t('Ollama')})
+						{$i18n.t('num_gpu')} ({$i18n.t('Ollama')})
 					</div>
 
 					<button
@@ -1574,7 +1589,7 @@
 			>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
-						{'keep_alive'} ({$i18n.t('Ollama')})
+						{$i18n.t('keep_alive')} ({$i18n.t('Ollama')})
 					</div>
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"

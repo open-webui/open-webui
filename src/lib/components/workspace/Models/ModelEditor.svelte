@@ -15,6 +15,7 @@
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
+	import BillingSettings from '$lib/components/workspace/Models/BillingSettings.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -99,9 +100,20 @@
 		code_interpreter: true,
 		citations: true,
 		status_updates: true,
-		usage: undefined
+		usage: true
 	};
 	let defaultFeatureIds = [];
+
+	let billing = {
+		type: 'free',
+		currency: 'CNY',
+		per_use_price: 0,
+		per_use_multiplier: 1,
+		input_price: 0,
+		output_price: 0,
+		price_unit: 'M',
+		token_multiplier: 1
+	};
 
 	let actionIds = [];
 	let accessControl = {};
@@ -192,6 +204,15 @@
 			}
 		}
 
+		// Save billing settings
+		if (billing.type !== 'free') {
+			info.meta.billing = billing;
+		} else {
+			if (info.meta.billing) {
+				delete info.meta.billing;
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
@@ -273,6 +294,11 @@
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
+
+			// Load billing settings
+			if (model?.meta?.billing) {
+				billing = { ...billing, ...model.meta.billing };
+			}
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;
@@ -758,6 +784,12 @@
 							</div>
 						{/if}
 					{/if}
+
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div class="my-2">
+						<BillingSettings bind:billing />
+					</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
