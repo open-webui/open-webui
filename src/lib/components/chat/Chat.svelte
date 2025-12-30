@@ -1103,7 +1103,7 @@
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message.role === 'assistant') {
+						if (message && message.role === 'assistant') {
 							message.done = true;
 						}
 					}
