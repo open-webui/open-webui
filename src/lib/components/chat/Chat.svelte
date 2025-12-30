@@ -125,6 +125,8 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	let chatIdUnsubscriber: Unsubscriber | undefined;
 
+	const LUXOR_MODEL_ID = 'luxor:latest';
+
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
@@ -140,6 +142,16 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	let generating = false;
 	let generationController = null;
+
+	$: if ($models.length > 0) {
+		if (selectedModels.length !== 1 || selectedModels[0] !== LUXOR_MODEL_ID) {
+			selectedModels = [LUXOR_MODEL_ID];
+		}
+
+		if (atSelectedModel?.id && atSelectedModel.id !== LUXOR_MODEL_ID) {
+			atSelectedModel = undefined;
+		}
+	}
 
 	let chat = null;
 	let tags = [];
