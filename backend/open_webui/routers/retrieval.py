@@ -112,7 +112,7 @@ from open_webui.env import (
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
-    RAG_RERANKING_MODEL_NORMALIZE_SCORES,
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -202,7 +202,7 @@ def get_rf(
                         model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
                         activation_fn=(
                             torch.nn.Sigmoid()
-                            if RAG_RERANKING_MODEL_NORMALIZE_SCORES
+                            if SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION
                             else None
                         ),
                     )
