@@ -30,7 +30,7 @@ def search_brave(
     # Handle 429 rate limiting - Brave free tier allows 1 request/second
     # If rate limited, wait 1 second and retry once before failing
     if response.status_code == 429:
-        log.warning("Brave Search API rate limited (429), retrying after 1 second...")
+        log.info("Brave Search API rate limited (429), retrying after 1 second...")
         time.sleep(1)
         response = requests.get(url, headers=headers, params=params)
 
