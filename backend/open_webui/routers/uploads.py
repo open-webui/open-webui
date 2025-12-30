@@ -74,7 +74,7 @@ class PublicFile(BaseModel):
 
 
 class IngestUploadRequest(BaseModel):
-    key: str
+    keys: list[str]
 
 
 class DeleteUploadRequest(BaseModel):
@@ -516,7 +516,7 @@ async def rebuild_user(
     return response
 
 
-@router.post("/ingest")
+@router.post("/ingest-batch")
 async def ingest_uploaded_file(
     form_data: IngestUploadRequest,
     user=Depends(get_verified_user),
@@ -533,38 +533,46 @@ async def ingest_uploaded_file(
             detail="S3 bucket name is not configured.",
         )
 
-    if not form_data.key:
+    deduped_keys: list[str] = []
+    seen = set()
+    for key in form_data.keys:
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped_keys.append(key)
+
+    if not deduped_keys:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Object key is required.",
+            detail="At least one object key is required.",
         )
-    
-    key = form_data.key
-    split = key.split("/")
-    tenant = split[0] if split else ""
-    user_id = ""
-    if len(split) >= 4 and split[1] == "users":
-        user_id = split[2]
 
     is_admin = user.role == "admin"
-    if not is_admin:
-        user_bucket = _get_user_tenant_bucket(user)
-        if not tenant or not user_bucket or user_bucket != tenant:
+    for key in deduped_keys:
+        split = key.split("/")
+        tenant = split[0] if split else ""
+        user_id = ""
+        if len(split) >= 4 and split[1] == "users":
+            user_id = split[2]
+
+        if not is_admin:
+            user_bucket = _get_user_tenant_bucket(user)
+            if not tenant or not user_bucket or user_bucket != tenant:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Not authorized to ingest objects for this tenant.",
+                )
+        
+        if user_id and user.id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Not authorized to ingest objects for this tenant.",
+                detail="Not authorized to ingest objects for this user.",
             )
-        
-    if user_id and user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authorized to ingest objects for this user.",
-        )
 
     payload = {
         "task": "ingest-upload",
         "bucket": S3_BUCKET_NAME,
-        "key": form_data.key,
+        "keys": deduped_keys,
     }
 
     try:

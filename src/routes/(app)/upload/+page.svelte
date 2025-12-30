@@ -21,9 +21,9 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 	const i18n = getContext('i18n');
 	let activeTab = 'all';
 	let visibility: UploadVisibility = 'public';
-	let selectedFile: File | null = null;
+	let selectedFiles: File[] = [];
 	let isUploading = false;
-	let uploadResult: UploadDocumentResponse | null = null;
+	let uploadResults: UploadDocumentResponse[] = [];
 	let fileInput: HTMLInputElement | null = null;
 	let tenants: TenantInfo[] = [];
 	let tenantsLoading = false;
@@ -74,7 +74,25 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	const handleFileChange = (event: Event) => {
 		const target = event.target as HTMLInputElement;
-		selectedFile = target.files?.[0] ?? null;
+		const incoming = target.files ? Array.from(target.files) : [];
+		if (incoming.length === 0) {
+			return;
+		}
+		const seen = new Set(
+			selectedFiles.map((file) => `${file.name}:${file.size}:${file.lastModified}`)
+		);
+		const merged = [...selectedFiles];
+		for (const file of incoming) {
+			const key = `${file.name}:${file.size}:${file.lastModified}`;
+			if (!seen.has(key)) {
+				seen.add(key);
+				merged.push(file);
+			}
+		}
+		selectedFiles = merged;
+		if (fileInput) {
+			fileInput.value = '';
+		}
 	};
 
 	const formatBytes = (bytes: number) => {
@@ -87,8 +105,8 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	const handleSubmit = async (event: SubmitEvent) => {
 		event.preventDefault();
-		if (!selectedFile) {
-			toast.error('Please choose a file to upload.');
+		if (selectedFiles.length === 0) {
+			toast.error('Please choose at least one file to upload.');
 			return;
 		}
 
@@ -103,39 +121,74 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 		}
 
 		isUploading = true;
-		uploadResult = null;
+		uploadResults = [];
 
 		const tenantOverride =
 			$user?.role === 'admin' ? (selectedTenantId ?? $user?.tenant_id ?? undefined) : undefined;
 
 		try {
-			const result = await uploadDocument(
-				localStorage.token,
-				selectedFile,
-				visibility,
-				tenantOverride
+			const settled = await Promise.allSettled(
+				selectedFiles.map((file) =>
+					uploadDocument(localStorage.token, file, visibility, tenantOverride)
+				)
 			);
-			uploadResult = result;
-			toast.success('Upload complete.');
-			try {
-				await ingestUploadedDocument(localStorage.token, result.key);
-				toast.success('Ingestion requested.');
-			} catch (err) {
-				const message =
-					typeof err === 'string'
-						? err
-						: (err?.detail ?? 'Failed to trigger ingestion of the uploaded file.');
-				toast.error(message);
+
+			const successes = settled
+				.filter((result): result is PromiseFulfilledResult<UploadDocumentResponse> => result.status === 'fulfilled')
+				.map((result) => result.value);
+			const failures = settled
+				.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+				.map((result) => result.reason)
+				.filter(Boolean);
+
+			if (successes.length > 0) {
+				uploadResults = successes;
+				toast.success(`Upload complete (${successes.length}).`);
 			}
-			selectedFile = null;
+
+			if (failures.length > 0) {
+				toast.error(
+					`${failures.length} file(s) failed to upload.`
+				);
+			}
+
+			if (successes.length > 0) {
+				if (visibility === 'public') {
+					try {
+						await ingestUploadedDocument(
+							localStorage.token,
+							successes.map((item) => item.key)
+						);
+						toast.success('Digitization requested.');
+					} catch (err) {
+						const message =
+							typeof err === 'string'
+								? err
+								: (err?.detail ?? 'Failed to trigger digitization of the uploaded files.');
+						toast.error(message);
+					}
+				} else {
+					if (tenantBucket && $user?.id) {
+						try {
+							await rebuildUserArtifact(localStorage.token, tenantBucket, $user.id);
+							toast.success('Private artifact rebuild requested.');
+						} catch (err) {
+							const message =
+								typeof err === 'string'
+									? err
+									: (err?.detail ?? 'Failed to rebuild private artifact.');
+							toast.error(message);
+						}
+					}
+				}
+			}
+
+			selectedFiles = [];
 			if (fileInput) {
 				fileInput.value = '';
 			}
 			await refreshCounts();
 			filesRefreshKey += 1;
-		} catch (err) {
-			const message = typeof err === 'string' ? err : (err?.detail ?? 'Failed to upload file.');
-			toast.error(message);
 		} finally {
 			isUploading = false;
 		}
@@ -215,7 +268,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 	$: privatePath = tenantBucket && $user?.id ? joinPath(tenantBucket, `/users/${$user.id}`) : null;
 	$: destinationPreview = tenantBucket
 		? `${tenantBucket}${visibility === 'private' ? `/users/${$user?.id}` : ''}/${
-				selectedFile?.name ?? 'your-file.ext'
+				selectedFiles[0]?.name ?? 'your-file.ext'
 			}`
 		: null;
 	
@@ -288,14 +341,14 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 	const AUTO_HIDE_MS = 4000;
 	let uploadResultTimeoutId: number | null = null;
 
-	$: if (uploadResult) {
+	$: if (uploadResults.length > 0) {
 		if (uploadResultTimeoutId !== null) {
 			clearTimeout(uploadResultTimeoutId);
 			uploadResultTimeoutId = null;
 		}
 
 		uploadResultTimeoutId = window.setTimeout(() => {
-			uploadResult = null;
+			uploadResults = [];
 			uploadResultTimeoutId = null;
 		}, AUTO_HIDE_MS);
 	} else {
@@ -463,19 +516,19 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 					<div class="space-y-2">
 						<div class="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4">
 							<label class="flex items-center gap-4 cursor-pointer select-none">
-								<span class="bg-gray-600 text-white rounded-md px-3 py-1.5 font-medium text-sm">Choose File</span>
+								<span class="bg-gray-600 text-white rounded-md px-3 py-1.5 font-medium text-sm">Choose Files</span>
 
 								<input
 									type="file"
-									required
+									multiple
 									on:change={handleFileChange}
 									bind:this={fileInput}
 									class="hidden"
 								/>
 
 								<span class="text-sm text-gray-600 dark:text-gray-300">
-									{#if selectedFile}
-										{selectedFile.name}
+									{#if selectedFiles.length > 0}
+										{selectedFiles.length} file(s) selected
 									{:else}
 										No file chosen
 									{/if}
@@ -483,11 +536,15 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 							</label>
 						</div>
 
-						{#if selectedFile}
-							<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-								<span class="font-medium text-gray-700 dark:text-gray-200">{selectedFile.name}</span>
-								• {formatBytes(selectedFile.size)}
-							</p>
+						{#if selectedFiles.length > 0}
+							<div class="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+								{#each selectedFiles as file}
+									<div class="flex items-center gap-2">
+										<span class="font-medium text-gray-700 dark:text-gray-200">{file.name}</span>
+										<span>• {formatBytes(file.size)}</span>
+									</div>
+								{/each}
+							</div>
 						{/if}
 					</div>
 
@@ -530,7 +587,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 						<button
 							type="submit"
 							class="flex-1 rounded-xl text-white text-lg font-medium py-3 px-6 bg-gradient-to-r from-black via-slate-700 to-teal-500 hover:opacity-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
-							disabled={!selectedFile || isUploading}
+							disabled={selectedFiles.length === 0 || isUploading}
 						>
 							{#if isUploading}
 								<span class="animate-pulse">Uploading…</span>
@@ -543,8 +600,8 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 							type="button"
 							class="rounded-xl border-1 border-black px-6 py-3 text-sm font-medium text-gray-700 transition hover:text-gray-900 dark:text-gray-200 min-w-[140px]"
 							on:click={() => {
-								selectedFile = null;
-								uploadResult = null;
+								selectedFiles = [];
+								uploadResults = [];
 								if (fileInput) fileInput.value = '';
 							}}
 							>
@@ -554,56 +611,28 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 				</form>
 			{/if}
 
-			{#if uploadResult}
+			{#if uploadResults.length > 0}
 				<div
 					in:fade={{ duration: 200 }} out:fade={{ duration: 200 }}
 					class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 text-sm text-emerald-900 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100"
 				>
 					<h2 class="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
-						Upload complete
+						Upload complete ({uploadResults.length})
 					</h2>
-					<dl class="mt-3 space-y-2">
-						<div>
-							<dt
-								class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80"
-							>
-								S3 URL
-							</dt>
-							<dd class="font-mono text-sm text-emerald-900 dark:text-emerald-50 break-all">
-								{uploadResult.url}
-							</dd>
-						</div>
-						<div>
-							<dt
-								class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80"
-							>
-								Object Key
-							</dt>
-							<dd class="font-mono text-sm text-emerald-900 dark:text-emerald-50 break-all">
-								{uploadResult.key}
-							</dd>
-						</div>
-						<div class="flex flex-wrap gap-4">
-							<div>
-								<dt
-									class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80"
-								>
-									Visibility
-								</dt>
-								<dd class="font-semibold capitalize">{uploadResult.visibility}</dd>
+					<div class="mt-3 space-y-3">
+						{#each uploadResults as result}
+							<div class="rounded-xl border border-emerald-100 bg-white/70 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+								<div class="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+									{result.original_filename}
+								</div>
+								<div class="mt-2 space-y-1 text-xs text-emerald-800/90 dark:text-emerald-200/80">
+									<div class="font-mono break-all">Key: {result.key}</div>
+									<div class="font-mono break-all">URL: {result.url}</div>
+									<div class="capitalize">Visibility: {result.visibility}</div>
+								</div>
 							</div>
-							<div>
-								<dt
-									class="text-xs uppercase tracking-wide text-emerald-700/80 dark:text-emerald-200/80"
-								>
-									Stored Name
-								</dt>
-								<dd class="font-mono text-sm text-emerald-900 dark:text-emerald-50">
-									{uploadResult.stored_filename}
-								</dd>
-							</div>
-						</div>
-					</dl>
+						{/each}
+					</div>
 				</div>
 			{/if}
 		</div>

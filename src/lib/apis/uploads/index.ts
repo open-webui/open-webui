@@ -99,16 +99,17 @@ export const getFiles = async (
 	return res;
 };
 
-export const ingestUploadedDocument = async (token: string, key: string) => {
+export const ingestUploadedDocument = async (token: string, keys: string[]) => {
 	let error: string | null = null;
+	const payload = { keys };
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/uploads/ingest`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/uploads/ingest-batch`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ key })
+		body: JSON.stringify(payload)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
