@@ -450,9 +450,7 @@
 		selectNextTemplate(editor.view.state, editor.view.dispatch);
 
 		// Ensure the editor is still valid before trying to focus
-		if (editor && editor.view) {
-			focus();
-		}
+		focus();
 	};
 
 	export const insertContent = (content) => {

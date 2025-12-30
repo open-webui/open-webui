@@ -346,7 +346,7 @@
 	};
 
 	const saveMessage = async (messageId, message) => {
-		if (!history.messages[messageId]) {
+		if (!history.messages?.[messageId]) {
 			return;
 		}
 
