@@ -2605,8 +2605,42 @@ async def process_chat_response(
                                         continue
 
                                     delta = choices[0].get("delta", {})
-                                    delta_tool_calls = delta.get("tool_calls", None)
 
+                                    # Handle delta annotations
+                                    annotations = delta.get("annotations")
+                                    if annotations:
+                                        for annotation in annotations:
+                                            if (
+                                                annotation.get("type") == "url_citation"
+                                                and "url_citation" in annotation
+                                            ):
+                                                url_citation = annotation[
+                                                    "url_citation"
+                                                ]
+
+                                                url = url_citation.get("url", "")
+                                                title = url_citation.get("title", url)
+
+                                                await event_emitter(
+                                                    {
+                                                        "type": "source",
+                                                        "data": {
+                                                            "source": {
+                                                                "name": title,
+                                                                "url": url,
+                                                            },
+                                                            "document": [title],
+                                                            "metadata": [
+                                                                {
+                                                                    "source": url,
+                                                                    "name": title,
+                                                                }
+                                                            ],
+                                                        },
+                                                    }
+                                                )
+
+                                    delta_tool_calls = delta.get("tool_calls", None)
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
                                             tool_call_index = delta_tool_call.get(
