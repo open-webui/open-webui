@@ -416,7 +416,7 @@
 	};
 
 	export const setText = (text: string) => {
-		if (!editor) return;
+		if (!editor || !editor.view) return;
 		text = text.replaceAll('\n\n', '\n');
 
 		// reset the editor content
@@ -448,11 +448,15 @@
 		}
 
 		selectNextTemplate(editor.view.state, editor.view.dispatch);
-		focus();
+
+		// Ensure the editor is still valid before trying to focus
+		if (editor && editor.view) {
+			focus();
+		}
 	};
 
 	export const insertContent = (content) => {
-		if (!editor) return;
+		if (!editor || !editor.view) return;
 		const { state, view } = editor;
 		const { schema, tr } = state;
 
@@ -466,7 +470,7 @@
 	};
 
 	export const replaceVariables = (variables) => {
-		if (!editor) return;
+		if (!editor || !editor.view) return;
 		const { state, view } = editor;
 		const { doc } = state;
 
@@ -509,11 +513,16 @@
 	};
 
 	export const focus = () => {
-		if (editor) {
+		if (editor && editor.view) {
+			// Check if the editor is destroyed
+			if (editor.isDestroyed) {
+				return;
+			}
+
 			try {
-				editor.view?.focus();
+				editor.view.focus();
 				// Scroll to the current selection
-				editor.view?.dispatch(editor.view.state.tr.scrollIntoView());
+				editor.view.dispatch(editor.view.state.tr.scrollIntoView());
 			} catch (e) {
 				// sometimes focusing throws an error, ignore
 				console.warn('Error focusing editor', e);
@@ -743,7 +752,7 @@
 							})
 						]
 					: []),
-				...(richText && showFormattingToolbar
+						...(richText && showFormattingToolbar
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
@@ -753,6 +762,14 @@
 									placement: 'top',
 									theme: 'transparent',
 									offset: [0, 2]
+								},
+								shouldShow: ({ editor, view, state, oldState, from, to }) => {
+									// safety check
+									if (!editor || !editor.view || editor.isDestroyed) {
+										return false;
+									}
+									// default logic
+									return from !== to;
 								}
 							}),
 							FloatingMenu.configure({
@@ -763,6 +780,14 @@
 									placement: floatingMenuPlacement,
 									theme: 'transparent',
 									offset: [-12, 4]
+								},
+								shouldShow: ({ editor, view, state, oldState }) => {
+									// safety check
+									if (!editor || !editor.view || editor.isDestroyed) {
+										return false;
+									}
+									// default logic
+									return editor.isActive('paragraph');
 								}
 							})
 						]
