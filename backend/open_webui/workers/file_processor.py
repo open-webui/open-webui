@@ -14,8 +14,14 @@ from typing import Optional
 # Ensure logging is configured for worker process
 # The worker process redirects stdout/stderr to /tmp/rq-worker.log
 # So we need to ensure logs go to stdout/stderr
-if not logging.root.handlers:
-    # Configure basic logging if not already configured
+# Check if Loguru's InterceptHandler is already configured (from start_logger())
+has_loguru_handler = any(
+    'InterceptHandler' in str(type(h)) for h in logging.root.handlers
+)
+
+if not logging.root.handlers or not has_loguru_handler:
+    # Configure basic logging only if Loguru is not active
+    # This provides fallback logging for tests or standalone execution
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s',
@@ -87,6 +93,32 @@ except ImportError:
     def is_otel_enabled():
         return False
 
+# Initialize logger early (before safe wrapper functions that may use it)
+log = logging.getLogger(__name__)
+# Ensure logger is configured for worker process - use INFO level to capture all detailed logs
+log.setLevel(logging.INFO)
+
+# Check if Loguru's InterceptHandler is active (from start_logger())
+# This prevents duplicate logging: if Loguru is active, use propagation only
+# If Loguru is not active (e.g., in tests), add a fallback handler
+has_loguru_handler = any(
+    'InterceptHandler' in str(type(h)) for h in logging.root.handlers
+)
+
+if has_loguru_handler:
+    # Loguru is active - use propagation only to avoid duplicate logs
+    # Logs will go: module logger → root logger → InterceptHandler → Loguru
+    log.propagate = True
+else:
+    # Loguru is not active (e.g., in tests or standalone execution)
+    # Add a direct handler as fallback to ensure logs are visible
+    log.propagate = False
+    if not any(isinstance(h, logging.StreamHandler) for h in log.handlers):
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setLevel(logging.INFO)
+        stdout_handler.setFormatter(logging.Formatter('%(levelname)s [%(name)s] %(message)s'))
+        log.addHandler(stdout_handler)
+
 # Safe wrapper functions that NEVER fail - OTEL is monitoring only, must not affect task execution
 def safe_add_span_event(event_name, attributes=None):
     """Safely add span event - never fails, even if OTEL is broken"""
@@ -111,19 +143,6 @@ def safe_trace_span(*args, **kwargs):
         log.debug(f"OTEL trace_span failed (non-critical), using nullcontext: {e}")
         from contextlib import nullcontext
         return nullcontext(enter_result=None)
-
-log = logging.getLogger(__name__)
-# Ensure logger is configured for worker process - use INFO level to capture all detailed logs
-log.setLevel(logging.INFO)
-# Force propagation to root logger to ensure logs are captured by worker's stdout/stderr redirection
-log.propagate = True
-
-# Also add a direct stdout handler as fallback to ensure logs are always visible
-if not any(isinstance(h, logging.StreamHandler) for h in log.handlers):
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setLevel(logging.INFO)
-    stdout_handler.setFormatter(logging.Formatter('%(levelname)s [%(name)s] %(message)s'))
-    log.addHandler(stdout_handler)
 
 # Global cached AppConfig instance (initialized once at worker startup, reused for all jobs)
 # Note: RQ workers process jobs sequentially by default, so no threading.Lock needed
