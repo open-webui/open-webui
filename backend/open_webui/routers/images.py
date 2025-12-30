@@ -19,7 +19,9 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS
 
 from open_webui.models.chats import Chats
+from open_webui.models.files import Files
 from open_webui.routers.files import upload_file_handler, get_file_content_by_id
+from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.internal.db import get_session
@@ -875,19 +877,26 @@ async def image_edits(
             else:
                 # Assume it's a raw file ID (frontend sends file.url = file_id)
                 try:
-                    file_response = await get_file_content_by_id(data, user)
+                    file = Files.get_file_by_id(data)
+                    if file:
+                        file_path = Storage.get_file(file.path)
+                        file_path = Path(file_path)
 
-                    if isinstance(file_response, FileResponse):
-                        file_path = file_response.path
+                        if file_path.is_file():
+                            with open(file_path, "rb") as f:
+                                file_bytes = f.read()
+                                image_data = base64.b64encode(file_bytes).decode("utf-8")
+                                mime_type = file.meta.get("content_type") if file.meta else None
+                                if not mime_type:
+                                    mime_type, _ = mimetypes.guess_type(str(file_path))
 
-                        with open(file_path, "rb") as f:
-                            file_bytes = f.read()
-                            image_data = base64.b64encode(file_bytes).decode("utf-8")
-                            mime_type, _ = mimetypes.guess_type(file_path)
-
-                        return f"data:{mime_type};base64,{image_data}"
-                except Exception:
-                    pass
+                            return f"data:{mime_type};base64,{image_data}"
+                        else:
+                            raise Exception(f"File not found on disk: {data}")
+                    else:
+                        raise Exception(f"File ID not found in database: {data}")
+                except Exception as e:
+                    raise Exception(f"Failed to load image from file ID: {data}. Error: {e}")
 
             return data
 
