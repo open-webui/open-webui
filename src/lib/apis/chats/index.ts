@@ -142,6 +142,10 @@ export const getChatList = async (
 		throw error;
 	}
 
+	if (!res) {
+		return [];
+	}
+
 	return res.map((chat) => ({
 		...chat,
 		time_range: getTimeRange(chat.updated_at)
