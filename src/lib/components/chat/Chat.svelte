@@ -2084,8 +2084,10 @@
 
 			const responseMessage = history.messages[history.currentId];
 			// Set all response messages to done
-			for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
-				history.messages[messageId].done = true;
+			if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
+				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+					history.messages[messageId].done = true;
+				}
 			}
 
 			history.messages[history.currentId] = responseMessage;
