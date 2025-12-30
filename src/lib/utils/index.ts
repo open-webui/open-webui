@@ -15,7 +15,6 @@ dayjs.extend(localizedFormat);
 
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
-import mammoth from 'mammoth';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
 import { marked } from 'marked';
@@ -1521,7 +1520,10 @@ export const extractContentFromFile = async (file: File) => {
 	}
 
 	async function extractDocxText(file: File) {
-		const arrayBuffer = await file.arrayBuffer();
+		const [arrayBuffer, { default: mammoth }] = await Promise.all([
+			file.arrayBuffer(),
+			import('mammoth')
+		]);
 		const result = await mammoth.extractRawText({ arrayBuffer });
 		return result.value; // plain text
 	}
