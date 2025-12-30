@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.44] - 2025-12-30
+
+### Added
+- ⚡ Database operations are now significantly faster and more efficient across the entire application through optimized connection handling, resulting in noticeably quicker page loads, smoother interactions, and improved stability during complex operations like user management and bulk data processing. [Commit](https://github.com/open-webui/open-webui/commit/2041ab483e21b3a757baa25c47dc2fa29018674f), [Commit](https://github.com/open-webui/open-webui/commit/145c7516f227ce56fd52373cee86217fadf16181), [Commit](https://github.com/open-webui/open-webui/commit/475dd91ed798f2efcdf27799d5c5cae3f0e6e847), [Commit](https://github.com/open-webui/open-webui/commit/5d1459df166cce8445eb1556cc26abbd65a3f9f4), [Commit](https://github.com/open-webui/open-webui/commit/2453b75ff0fb2dc75b929d96f417d84e332922d9), [Commit](https://github.com/open-webui/open-webui/commit/5649a668fad15393a52c27a2f188841af8b66989)
+- 📊 Users can now sync their chat statistics to the Open WebUI Community website to create public profile pages showing usage patterns, streaks, model preferences, and activity heatmaps, or download their stats locally as JSON files, and administrators can disable this feature entirely via the community sharing setting. [Commit](https://github.com/open-webui/open-webui/commit/4be99174be505b187812e0b48b9f9f7bf6897c52), [Commit](https://github.com/open-webui/open-webui/commit/df106099a159f8cf7910a89c50338ec045a78e61), [Commit](https://github.com/open-webui/open-webui/commit/9c61e95ecba071f5a99d93d1b1c5d17b80159329), [Commit](https://github.com/open-webui/open-webui/commit/85bbed3ec539dc958d306117f97d6be977b7253b), [Commit](https://github.com/open-webui/open-webui/commit/459cfde1f80e76618fb7fb75318d8daf2ccf1590), [Commit](https://github.com/open-webui/open-webui/commit/37b15604de0eaa5bfde378f12ac2d94c7aab60b9)
+- 📌 Users can now pin or hide models directly from the Workspace Models page and Admin Settings Models page, making it easier to manage which models appear in the sidebar without switching to the chat interface. [#20176](https://github.com/open-webui/open-webui/pull/20176)
+- 🗄️ Administrators running multi-pod deployments can now designate a master pod to handle database migrations using the "ENABLE_DB_MIGRATIONS" environment variable. [Commit](https://github.com/open-webui/open-webui/commit/9824f0e33359a917ac07b60bf1f972074d5c8203)
+- 🎙️ Administrators can now configure Whisper's compute type using the "WHISPER_COMPUTE_TYPE" environment variable to fix compatibility issues with CUDA/GPU deployments. [Commit](https://github.com/open-webui/open-webui/commit/26af1f92e21ddfd08348570bf54a6f345ac69648)
+- 💾 Knowledge bases can now use openGauss as the vector database backend for document storage and retrieval. [#20179](https://github.com/open-webui/open-webui/pull/20179)
+- 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 Translations for Simplified Chinese and Traditional Chinese were enhanced and expanded.
+
+### Fixed
+- 🔒 Fixed stored XSS vulnerabilities in iFrame embeds for citations and response messages by making the same-origin sandbox setting configurable through user preferences instead of being hardcoded. [#20209](https://github.com/open-webui/open-webui/pull/20209), [#20210](https://github.com/open-webui/open-webui/pull/20210)
+- 💬 Chat export and the Ask/Explain popup features now work correctly again after being broken by recent refactoring changes. [#20212](https://github.com/open-webui/open-webui/pull/20212)
+- 🎨 ComfyUI workflows now display only the intended final output images in chat instead of showing duplicate images from intermediate processing nodes like masks, crops, or segmentation previews. [#20182](https://github.com/open-webui/open-webui/pull/20182)
+- 💬 Models now respond correctly when @ mentioned in Channels instead of silently failing. [Commit](https://github.com/open-webui/open-webui/commit/59957715836acb635f4b1c4ddbfb4ba7b82b3281)
+- 📁 The Knowledge Selector dropdown now appears correctly above the Create Folder modal instead of being hidden behind it. [#20213](https://github.com/open-webui/open-webui/pull/20213)
+- 🖼️ Profile images in non-PNG formats like SVG, JPEG, and GIF now display correctly instead of appearing broken. [#20171](https://github.com/open-webui/open-webui/pull/20171)
+- 🔐 SCIM group management endpoints no longer crash with 500 errors when working with groups that have no members. [#20187](https://github.com/open-webui/open-webui/pull/20187)
+- 🔗 Citations from AI models are now more reliable, especially when using smaller or weaker models that may not format citation references perfectly. [Commit](https://github.com/open-webui/open-webui/commit/c0ec04935b4eea3d334bfdec2fc41278f1085a49)
+- 📦 Installation with the uv package manager now works correctly after removing deprecated dependencies that were causing conflicts. [#20192](https://github.com/open-webui/open-webui/pull/20192)
+
 ## [0.6.43] - 2025-12-22
 
 ### Fixed
