@@ -4,9 +4,10 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import { toast } from 'svelte-sonner';
 
-	import Modal from '$lib/components/common/Modal.svelte';
-	import Files from '$lib/components/upload/Files.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
+import Modal from '$lib/components/common/Modal.svelte';
+import Files from '$lib/components/upload/Files.svelte';
+import Spinner from '$lib/components/common/Spinner.svelte';
+import TenantLogoImage from './TenantLogoImage.svelte';
 import { uploadTenantPrompt, type TenantInfo, updateTenant, type TenantUpdatePayload } from '$lib/apis/tenants';
 
 	const i18n = getContext('i18n');
@@ -21,18 +22,21 @@ import { uploadTenantPrompt, type TenantInfo, updateTenant, type TenantUpdatePay
 	let selectedFile: File | null = null;
 	let fileInput: HTMLInputElement | null = null;
 	let filesComponent: { refresh?: () => void } | null = null;
-	let tableName = '';
-	let systemConfigClientName = '';
-	let initializedTenantId: string | null = null;
+let tableName = '';
+let systemConfigClientName = '';
+let logoImageUrl = '';
+let initializedTenantId: string | null = null;
 
 	$: promptsPath = tenant ? `${tenant.s3_bucket}/prompts` : null;
 	$: if (!show) {
 		tableName = '';
 		systemConfigClientName = '';
+		logoImageUrl = '';
 		initializedTenantId = null;
 	} else if (tenant && tenant.id !== initializedTenantId) {
 		tableName = tenant.table_name ?? '';
 		systemConfigClientName = tenant.system_config_client_name ?? '';
+		logoImageUrl = tenant.logo_image_url ?? '';
 		initializedTenantId = tenant.id;
 	}
 
@@ -106,24 +110,20 @@ import { uploadTenantPrompt, type TenantInfo, updateTenant, type TenantUpdatePay
 
 		const trimmedTableName = tableName.trim();
 		const trimmedClientName = systemConfigClientName.trim();
-		const changes: TenantUpdatePayload = {};
-
-		if (trimmedTableName !== (tenant.table_name ?? '')) {
-			changes.table_name = trimmedTableName;
-		}
-		if (trimmedClientName !== (tenant.system_config_client_name ?? '')) {
-			changes.system_config_client_name = trimmedClientName;
-		}
-
-		if (Object.keys(changes).length === 0) {
-			toast.info($i18n.t('No changes to save.'));
-			return;
-		}
+		const normalizedLogo = logoImageUrl || '';
+		const payload: TenantUpdatePayload = {
+			table_name: trimmedTableName ? trimmedTableName : null,
+			system_config_client_name: trimmedClientName ? trimmedClientName : null,
+			logo_image_url: normalizedLogo || null
+		};
 
 		saving = true;
 		try {
-			const updated = await updateTenant(localStorage.token, tenant.id, changes);
+			const updated = await updateTenant(localStorage.token, tenant.id, payload);
 			tenant = updated;
+			tableName = updated.table_name ?? '';
+			systemConfigClientName = updated.system_config_client_name ?? '';
+			logoImageUrl = updated.logo_image_url ?? '';
 			toast.success($i18n.t('Tenant updated'));
 			dispatch('updated');
 		} catch (error) {
@@ -180,28 +180,44 @@ import { uploadTenantPrompt, type TenantInfo, updateTenant, type TenantUpdatePay
 						saveTenantDetails();
 					}}
 				>
-					<div class="flex flex-col space-y-1">
-						<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-							{$i18n.t('Table Name')}
-						</label>
-						<input
-							class="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-hidden focus:border-blue-500 dark:border-gray-700 dark:text-gray-100"
-							type="text"
-							placeholder={$i18n.t('Enter table name')}
-							bind:value={tableName}
-						/>
-					</div>
+					<div class="flex flex-col gap-4 sm:flex-row">
+						<div class="flex flex-col space-y-1">
+							<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+								{$i18n.t('Tenant Logo')}
+							</label>
+							<TenantLogoImage
+								bind:logoImageUrl
+								name={tenant.name}
+								imageClassName="max-h-28 w-auto rounded-xl border border-gray-200 object-contain dark:border-gray-700"
+							/>
+						</div>
 
-					<div class="flex flex-col space-y-1">
-						<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-							{$i18n.t('System Config Client Name')}
-						</label>
-						<input
-							class="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-hidden focus:border-blue-500 dark:border-gray-700 dark:text-gray-100"
-							type="text"
-							placeholder={$i18n.t('Enter client name')}
-							bind:value={systemConfigClientName}
-						/>
+						<div class="flex-1 space-y-3">
+							<div class="flex flex-col space-y-1">
+								<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+									{$i18n.t('Table Name')}
+								</label>
+								<input
+									class="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-hidden focus:border-blue-500 dark:border-gray-700 dark:text-gray-100"
+									type="text"
+									placeholder={$i18n.t('Enter table name')}
+									bind:value={tableName}
+								/>
+							</div>
+
+							<div class="flex flex-col space-y-1">
+								<label class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+									{$i18n.t('System Config Client Name')}
+								</label>
+								<input
+									class="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 outline-hidden focus:border-blue-500 dark:border-gray-700 dark:text-gray-100"
+									type="text"
+									placeholder={$i18n.t('Enter client name')}
+									bind:value={systemConfigClientName}
+								/>
+							</div>
+
+						</div>
 					</div>
 
 					<div class="flex justify-end">

@@ -6,6 +6,7 @@ export type TenantInfo = {
 	s3_bucket: string;
 	table_name?: string | null;
 	system_config_client_name?: string | null;
+	logo_image_url?: string | null;
 	created_at?: number;
 	updated_at?: number;
 };
@@ -14,6 +15,7 @@ export type TenantCreatePayload = {
 	name: string;
 	table_name?: string | null;
 	system_config_client_name?: string | null;
+	logo_image_url?: string | null;
 };
 
 export type TenantUpdatePayload = Partial<{
@@ -21,6 +23,7 @@ export type TenantUpdatePayload = Partial<{
 	s3_bucket: string;
 	table_name: string | null;
 	system_config_client_name: string | null;
+	logo_image_url: string | null;
 }>;
 
 export type TenantPromptFile = {
@@ -207,6 +210,36 @@ export const getTenantPromptFiles = async (
 
 	if (error || !res) {
 		throw error ?? 'Failed to load tenant prompts.';
+	}
+
+	return res;
+};
+
+export const getTenantById = async (
+	token: string,
+	tenantId: string
+): Promise<TenantInfo> => {
+	let error: string | null = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tenants/${tenantId}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err?.detail ?? 'Failed to load tenant.';
+			return null;
+		});
+
+	if (error || !res) {
+		throw error ?? 'Failed to load tenant.';
 	}
 
 	return res;

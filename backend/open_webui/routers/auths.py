@@ -81,6 +81,10 @@ class SessionUserInfoResponse(SessionUserResponse):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
+    job_title: Optional[str] = None
+    primary_location: Optional[str] = None
+    job_description: Optional[str] = None
+    tenant_logo_image_url: Optional[str] = None
 
 
 @router.get("/", response_model=SessionUserInfoResponse)
@@ -123,9 +127,12 @@ async def get_session_user(
     )
 
     tenant_bucket = None
+    tenant_logo = None
     if user.tenant_id:
         tenant = Tenants.get_tenant_by_id(user.tenant_id)
-        tenant_bucket = tenant.s3_bucket if tenant else None
+        if tenant:
+            tenant_bucket = tenant.s3_bucket
+            tenant_logo = tenant.logo_image_url
 
     return {
         "token": token,
@@ -136,12 +143,16 @@ async def get_session_user(
         "name": user.name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
+        "job_title": user.job_title,
+        "primary_location": user.primary_location,
+        "job_description": user.job_description,
         "bio": user.bio,
         "gender": user.gender,
         "date_of_birth": user.date_of_birth,
         "permissions": user_permissions,
         "tenant_id": user.tenant_id,
         "tenant_s3_bucket": tenant_bucket,
+        "tenant_logo_image_url": tenant_logo,
         "tenant_id": user.tenant_id,
         "tenant_s3_bucket": tenant_bucket,
     }

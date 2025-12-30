@@ -24,6 +24,7 @@ from open_webui.models.users import (
     UserSettings,
     UserUpdateForm,
 )
+from open_webui.models.tenants import Tenants
 
 
 from open_webui.socket.main import (
@@ -277,16 +278,27 @@ async def update_user_settings_by_session_user(
 ############################
 
 
-@router.get("/user/info", response_model=Optional[dict])
+class UserInfoResponse(BaseModel):
+    info: Optional[dict] = None
+    tenant: Optional[dict] = None
+
+
+@router.get("/user/info", response_model=Optional[UserInfoResponse])
 async def get_user_info_by_session_user(user=Depends(get_verified_user)):
     user = Users.get_user_by_id(user.id)
-    if user:
-        return user.info
-    else:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
+
+    tenant_data = None
+    if user.tenant_id:
+        tenant = Tenants.get_tenant_by_id(user.tenant_id)
+        if tenant:
+            tenant_data = tenant.model_dump()
+
+    return UserInfoResponse(info=user.info, tenant=tenant_data)
 
 
 ############################

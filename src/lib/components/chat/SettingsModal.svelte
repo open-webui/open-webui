@@ -906,7 +906,6 @@
 					<DataControls {saveSettings} />
 				{:else if selectedTab === 'account'}
 					<Account
-						{saveSettings}
 						saveHandler={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
