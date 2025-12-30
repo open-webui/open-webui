@@ -509,8 +509,7 @@ from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
     get_verified_user,
-    create_token,
-    SESSION_SECRET,
+    create_token
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import (
@@ -1783,7 +1782,6 @@ def _build_prompt_suggestions_jwt(user: Optional[UserModel]) -> Optional[str]:
         expires_delta = None
 
     try:
-        log.info(f"Prompt suggestions JWT signing key: {SESSION_SECRET}")
         return create_token(data={"id": user.id}, expires_delta=expires_delta)
     except Exception as e:
         log.error(f"Failed to create prompt suggestions JWT token: {e}")
