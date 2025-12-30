@@ -1330,7 +1330,18 @@ def save_docs_to_vector_db(
 
             split_docs = []
             for doc in docs:
-                split_docs.extend(markdown_splitter.split_text(doc.page_content))
+                split_docs.extend(
+                    [
+                        Document(
+                            page_content=split_chunk.page_content,
+                            metadata={**doc.metadata},
+                        )
+                        for split_chunk in markdown_splitter.split_text(
+                            doc.page_content
+                        )
+                    ]
+                )
+
             docs = split_docs
 
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
