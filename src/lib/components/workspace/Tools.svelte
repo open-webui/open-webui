@@ -359,48 +359,86 @@
 				{#each filteredItems as tool}
 					<Tooltip content={tool?.meta?.description ?? tool?.id}>
 						<div
-							class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
+							class=" flex space-x-4 text-left w-full px-3 py-2.5 transition rounded-2xl {tool.write_access ? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50' : 'cursor-not-allowed opacity-60'}"
 						>
-							<a
-								class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
-								href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
-							>
-								<div class="flex items-center text-left">
-									<div class=" flex-1 self-center">
-										<Tooltip content={tool.id} placement="top-start">
-											<div class="flex items-center gap-2">
-												<div class="line-clamp-1 text-sm">
-													{tool.name}
-												</div>
-												{#if !tool.write_access}
-													<Badge type="info" content={$i18n.t('Read Only')} />
-												{/if}
-												{#if tool?.meta?.manifest?.version}
-													<div class=" text-gray-500 text-xs font-medium shrink-0">
-														v{tool?.meta?.manifest?.version ?? ''}
+							{#if tool.write_access}
+								<a
+									class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
+									href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
+								>
+									<div class="flex items-center text-left">
+										<div class=" flex-1 self-center">
+											<Tooltip content={tool.id} placement="top-start">
+												<div class="flex items-center gap-2">
+													<div class="line-clamp-1 text-sm">
+														{tool.name}
 													</div>
-												{/if}
-											</div>
-										</Tooltip>
+													{#if tool?.meta?.manifest?.version}
+														<div class=" text-gray-500 text-xs font-medium shrink-0">
+															v{tool?.meta?.manifest?.version ?? ''}
+														</div>
+													{/if}
+												</div>
+											</Tooltip>
 
-										<div class="px-0.5">
-											<div class="text-xs text-gray-500 shrink-0">
-												<Tooltip
-													content={tool?.user?.email ?? $i18n.t('Deleted User')}
-													className="flex shrink-0"
-													placement="top-start"
-												>
-													{$i18n.t('By {{name}}', {
-														name: capitalizeFirstLetter(
-															tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
-														)
-													})}
-												</Tooltip>
+											<div class="px-0.5">
+												<div class="text-xs text-gray-500 shrink-0">
+													<Tooltip
+														content={tool?.user?.email ?? $i18n.t('Deleted User')}
+														className="flex shrink-0"
+														placement="top-start"
+													>
+														{$i18n.t('By {{name}}', {
+															name: capitalizeFirstLetter(
+																tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
+															)
+														})}
+													</Tooltip>
+												</div>
+											</div>
+										</div>
+									</div>
+								</a>
+							{:else}
+								<div
+									class=" flex flex-1 space-x-3.5 w-full"
+								>
+									<div class="flex items-center text-left">
+										<div class=" flex-1 self-center">
+											<Tooltip content={tool.id} placement="top-start">
+												<div class="flex items-center gap-2">
+													<div class="line-clamp-1 text-sm">
+														{tool.name}
+													</div>
+													<Badge type="info" content={$i18n.t('Read Only')} />
+													{#if tool?.meta?.manifest?.version}
+														<div class=" text-gray-500 text-xs font-medium shrink-0">
+															v{tool?.meta?.manifest?.version ?? ''}
+														</div>
+													{/if}
+												</div>
+											</Tooltip>
+
+											<div class="px-0.5">
+												<div class="text-xs text-gray-500 shrink-0">
+													<Tooltip
+														content={tool?.user?.email ?? $i18n.t('Deleted User')}
+														className="flex shrink-0"
+														placement="top-start"
+													>
+														{$i18n.t('By {{name}}', {
+															name: capitalizeFirstLetter(
+																tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
+															)
+														})}
+													</Tooltip>
+												</div>
 											</div>
 										</div>
 									</div>
 								</div>
-							</a>
+							{/if}
+							{#if tool.write_access}
 							<div class="flex flex-row gap-0.5 self-center">
 								{#if shiftKey}
 									<Tooltip content={$i18n.t('Delete')}>
@@ -489,6 +527,7 @@
 									</ToolMenu>
 								{/if}
 							</div>
+						{/if}
 						</div>
 					</Tooltip>
 				{/each}
