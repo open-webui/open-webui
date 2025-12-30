@@ -32,6 +32,7 @@
 
 <AddConnectionModal
 	edit
+	gemini
 	bind:show={showConfigModal}
 	connection={{
 		url,

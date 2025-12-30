@@ -281,6 +281,7 @@
 />
 
 <AddConnectionModal
+	gemini
 	bind:show={showAddGeminiConnectionModal}
 	onSubmit={addGeminiConnectionHandler}
 />

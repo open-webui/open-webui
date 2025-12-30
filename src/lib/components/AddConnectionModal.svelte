@@ -6,6 +6,7 @@
 	import { settings } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
+	import { verifyGeminiConnection } from '$lib/apis/gemini';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -26,6 +27,7 @@
 	export let edit = false;
 
 	export let ollama = false;
+	export let gemini = false;
 	export let direct = false;
 
 	export let connection = null;
@@ -111,9 +113,27 @@
 		}
 	};
 
+	const verifyGeminiHandler = async () => {
+		// remove trailing slash from url
+		url = url.replace(/\/$/, '');
+
+		const res = await verifyGeminiConnection(localStorage.token, {
+			url,
+			key
+		}).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		if (res) {
+			toast.success($i18n.t('Server connection verified'));
+		}
+	};
+
 	const verifyHandler = () => {
 		if (ollama) {
 			verifyOllamaHandler();
+		} else if (gemini) {
+			verifyGeminiHandler();
 		} else {
 			verifyOpenAIHandler();
 		}
