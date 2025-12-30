@@ -244,7 +244,7 @@ async def get_status(request: Request):
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
         "CHUNK_MIN_SIZE": request.app.state.config.CHUNK_MIN_SIZE,
-        "ENABLE_MARKDOWN_HEADER_SPLITTING": request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING,
+        "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
         "RAG_EMBEDDING_ENGINE": request.app.state.config.RAG_EMBEDDING_ENGINE,
         "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -485,7 +485,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
-        "ENABLE_MARKDOWN_HEADER_SPLITTING": request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING,
+        "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
         "CHUNK_MIN_SIZE": request.app.state.config.CHUNK_MIN_SIZE,
@@ -672,7 +672,7 @@ class ConfigForm(BaseModel):
 
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
-    ENABLE_MARKDOWN_HEADER_SPLITTING: Optional[bool] = None
+    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: Optional[bool] = None
     CHUNK_SIZE: Optional[int] = None
     CHUNK_OVERLAP: Optional[int] = None
     CHUNK_MIN_SIZE: Optional[int] = None
@@ -965,10 +965,10 @@ async def update_rag_config(
         if form_data.TEXT_SPLITTER is not None
         else request.app.state.config.TEXT_SPLITTER
     )
-    request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING = (
-        form_data.ENABLE_MARKDOWN_HEADER_SPLITTING
-        if form_data.ENABLE_MARKDOWN_HEADER_SPLITTING is not None
-        else request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING
+    request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = (
+        form_data.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER
+        if form_data.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER is not None
+        else request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER
     )
     request.app.state.config.CHUNK_SIZE = (
         form_data.CHUNK_SIZE
@@ -1173,7 +1173,7 @@ async def update_rag_config(
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
-        "ENABLE_MARKDOWN_HEADER_SPLITTING": request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING,
+        "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
         "CHUNK_MIN_SIZE": request.app.state.config.CHUNK_MIN_SIZE,
@@ -1298,7 +1298,7 @@ def save_docs_to_vector_db(
 
     if split:
         # Stage 1: Optional markdown header preprocessing
-        if request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING:
+        if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
             headers_to_split_on = [
                 ("#", "Header 1"),
                 ("##", "Header 2"),
@@ -1431,7 +1431,7 @@ def save_docs_to_vector_db(
                 add_start_index=True,
             )
 
-        if request.app.state.config.ENABLE_MARKDOWN_HEADER_SPLITTING:
+        if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
             # Only split chunks that exceed the max size, preserve others
             # Determine size measurement function
             if request.app.state.config.TEXT_SPLITTER == "token":

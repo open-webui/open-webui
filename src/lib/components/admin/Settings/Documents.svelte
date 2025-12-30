@@ -738,18 +738,18 @@
 									placement="top-start"
 									content={$i18n.t('Split documents by markdown headers before applying character/token splitting. Small chunks are merged to meet minimum size.')}
 								>
-									{$i18n.t('Markdown Header Splitting')}
+									{$i18n.t('Markdown Header Text Splitter')}
 								</Tooltip>
 							</div>
 							<div class="flex items-center relative">
-								<Switch bind:state={RAGConfig.ENABLE_MARKDOWN_HEADER_SPLITTING} />
+								<Switch bind:state={RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER} />
 							</div>
 						</div>
 
 
 						<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" flex gap-1.5 w-full">
-							{#if RAGConfig.ENABLE_MARKDOWN_HEADER_SPLITTING}
+							{#if RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER}
 								<div class="w-full">
 									<div class="self-center text-xs font-medium min-w-fit mb-1">
 										<Tooltip

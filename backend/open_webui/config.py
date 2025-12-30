@@ -2827,10 +2827,10 @@ CHUNK_MIN_SIZE = PersistentConfig(
     int(os.environ.get("CHUNK_MIN_SIZE", "0")),
 )
 
-ENABLE_MARKDOWN_HEADER_SPLITTING = PersistentConfig(
-    "ENABLE_MARKDOWN_HEADER_SPLITTING",
-    "rag.enable_markdown_header_splitting",
-    os.environ.get("ENABLE_MARKDOWN_HEADER_SPLITTING", "False").lower() == "true",
+ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = PersistentConfig(
+    "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER",
+    "rag.enable_markdown_header_text_splitter",
+    os.environ.get("ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER", "False").lower() == "true",
 )
 
 DEFAULT_RAG_TEMPLATE = """### Task:
