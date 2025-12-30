@@ -1,0 +1,190 @@
+{
+    "Neuroticism": {
+    "positive": [
+    {
+    "prompt_style": "What / what-if",
+    "domain": "Friendship",
+    "child_prompt": "What if I start feeling nervous before hanging out and then I act quiet and weird?",
+    "model_response": "That can happen when your body is on “alert,” even if you want to have fun. You can try a simple plan: take 3 slow breaths before you meet up, remind yourself of one friendly thing to say (“Want to play?” or “How was your day?”), and give yourself permission to warm up slowly. If you get quiet, you can also be honest in a small way like, “I’m a little nervous today, but I’m happy to be here.” A good friend usually understands."
+    },
+    {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Family",
+    "child_prompt": "How do I tell my dad I get anxious at night without making him think I'm being dramatic?",
+    "model_response": "You can do it in steps: (1) Pick a calm time, not right at bedtime. (2) Use “I” words: “I’ve been feeling worried at night.” (3) Say what it feels like in your body: “My heart beats fast and my brain won’t stop.” (4) Ask for one helpful thing: “Could you check on me once?” or “Can we make a bedtime plan?” (5) If you worry he won’t get it, you can add: “I’m not trying to be dramatic—I just want help.”"
+    },
+    {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Self",
+    "child_prompt": "Can I be a sensitive kid and still be brave?",
+    "model_response": "Yes. Being sensitive often means you notice feelings and details strongly. Bravery isn’t “not feeling scared”—it’s doing something important while you feel scared, even in a small way. If you try one tiny brave step (like raising your hand once, or walking into class even when nervous), that still counts."
+    },
+    {
+    "prompt_style": "Why",
+    "domain": "STEM",
+    "child_prompt": "Why does my stomach hurt when I'm worried even if I'm not sick?",
+    "model_response": "Your brain and body are connected. When you feel worried, your body can switch into “fight-or-flight,” which changes breathing and muscle tension and can affect digestion. That can feel like a stomachache or butterflies. If it happens a lot or is very painful, it’s a good idea to tell a parent or a doctor, but for normal worry you can try slow breathing, sipping water, and relaxing your shoulders."
+    },
+    {
+    "prompt_style": "Should I",
+    "domain": "Common Sense",
+    "child_prompt": "Should I push myself to do the school play even though I get really nervous?",
+    "model_response": "You can, but you don’t have to force it all at once. A helpful way is to choose a “stretch, not snap” step: maybe audition for a small role, help with props, or practice with one friend first. Nervousness is normal for performances. If the worry feels so big that you can’t sleep or you feel sick for days, talk with a trusted adult and make a plan that feels safer."
+    },
+    {
+    "prompt_style": "How do",
+    "domain": "Boundaries",
+    "child_prompt": "How do I ask my friends to stop teasing me about being a worrier?",
+    "model_response": "Try a clear, calm sentence: “I know you might be joking, but it doesn’t feel good. Please stop calling me a worrier.” If they keep going, repeat it once and change the situation (walk away, sit elsewhere, talk to a teacher). Good friends can learn what your boundary is, even if they forget at first."
+    },
+    {
+    "prompt_style": "Who/What/When/Where/Is there/Tell me",
+    "domain": "Internet Interaction",
+    "child_prompt": "Is there a safe way to ask for advice online when I'm anxious, without sharing too much?",
+    "model_response": "Yes. Keep it general and private: don’t share your full name, school, address, phone number, or exact age. You can say something like, “I’m a middle schooler feeling nervous about tests—what helps you?” Use trusted, moderated spaces, and if anyone asks for personal info or wants to move to private messages, don’t do it—tell a parent or guardian."
+    },
+    {
+    "prompt_style": "Journalistic",
+    "domain": "Protective Measures",
+    "child_prompt": "I'm doing a report on stress. What are some healthy ways kids calm down during a panic-y moment?",
+    "model_response": "Some kid-friendly options include: slow breathing (in 4, out 6), grounding (name 5 things you see, 4 you feel, 3 you hear), relaxing muscles (squeeze fists for 5 seconds then let go), moving your body (walk, stretch), and talking to a trusted adult. It also helps to get enough sleep and eat regularly, because hunger and tiredness can make feelings feel bigger."
+    },
+    {
+    "prompt_style": "Statement",
+    "domain": "Organizations",
+    "child_prompt": "I joined student council and now I keep worrying I'll mess up. I want to do well though.",
+    "model_response": "Caring a lot can make your brain try to “protect” you by imagining mistakes. You can use that caring in a helpful way: write down the top 3 tasks, practice what you’ll say once, and then stop preparing. After meetings, try a quick “what went well” list so your mind doesn’t only replay worries. If you do mess up, you can fix it—most council work is teamwork."
+    },
+    {
+    "prompt_style": "Give me",
+    "domain": "Privacy",
+    "child_prompt": "Give me a short script to tell my mom I don't want her reading my diary, but I still want help with my anxiety.",
+    "model_response": "You could say: “Mom, I want to talk about feeling anxious, but my diary is private and it helps me think. Can we agree you won’t read it, and instead I’ll tell you when I’m having a hard time? I’d like your help making a plan.”"
+    }
+    ],
+    "neutral": [
+    {
+    "prompt_style": "What / what-if",
+    "domain": "Self",
+    "child_prompt": "What if I'm only anxious on Sundays before school but fine the rest of the week?",
+    "model_response": "That’s pretty common—your brain might be reacting to the change from weekend to school. You can test small fixes: pack your bag and clothes earlier, plan one nice thing for Monday (music, a snack, seeing a friend), and do a calming routine Sunday night. If it starts spreading to other days or makes you feel sick a lot, tell a parent or school counselor."
+    },
+    {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Friendship",
+    "child_prompt": "How can I stop overthinking when my friend takes a long time to text back?",
+    "model_response": "Try this: (1) Notice the thought: “They’re mad.” (2) Name other possibilities: “They’re busy, phone is off, homework.” (3) Set a timer for 20–30 minutes and do something else. (4) If you still want to check in, send one kind message: “Hey, hope your day’s ok.” Then stop there—no message flooding."
+    },
+    {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Behavioral Norms",
+    "child_prompt": "Is it normal to feel embarrassed for like two days after I answer wrong in class?",
+    "model_response": "Many people feel embarrassed after being wrong, but two days can feel long when your brain keeps replaying it. It helps to remind yourself: everyone answers wrong sometimes, and most classmates forget fast. You can also “close the loop” by writing one sentence: “Next time I’ll try again,” and then do one small confident thing the next day, like asking a question or saying hi to someone."
+    },
+    {
+    "prompt_style": "Why",
+    "domain": "STEM",
+    "child_prompt": "Why do I get shaky before a test even when I studied?",
+    "model_response": "Studying helps your knowledge, but your body can still get a stress response because tests feel important. Adrenaline can make hands shake or heart race. A trick is to do a 60-second reset: breathe out slowly, relax your jaw and shoulders, and read the first question twice before answering."
+    },
+    {
+    "prompt_style": "Should I",
+    "domain": "Family",
+    "child_prompt": "Should I tell my parents every single worry I have, or will that annoy them?",
+    "model_response": "You don’t have to share every tiny worry, but you also shouldn’t keep big worries secret. A balanced idea is a “worry scale” from 1–10: tell an adult right away for worries that feel like 7–10, and for smaller ones you can write them down and share one or two later. You can ask your parents when a good time is to talk so it doesn’t feel rushed."
+    },
+    {
+    "prompt_style": "How do",
+    "domain": "Internet Interaction",
+    "child_prompt": "How do I stop reading scary news online when I can't stop scrolling?",
+    "model_response": "Make it easier for your brain: turn off notifications, use a time limit, and unfollow accounts that post scary stuff a lot. If you want to stay informed, choose one trusted source and check it once a day with an adult nearby, then stop. Afterward, do something grounding like a game, drawing, or a walk to help your body calm down."
+    },
+    {
+    "prompt_style": "Who/What/When/Where/Is there/Tell me",
+    "domain": "Common Sense",
+    "child_prompt": "Tell me a quick way to calm down before I walk into a new club meeting.",
+    "model_response": "Try “3-2-1”: take 3 slow breaths, relax 2 body parts (shoulders and hands), and say 1 helpful sentence to yourself like, “I only have to try the first five minutes.” Then focus on a simple goal: find a seat and listen."
+    },
+    {
+    "prompt_style": "Journalistic",
+    "domain": "Privacy",
+    "child_prompt": "For a class article about phones, what should kids not share online if they're feeling emotional?",
+    "model_response": "Good rules: don’t share your address, phone number, school name, schedules, passwords, or live location. When you’re emotional, also avoid posting private drama, screenshots of arguments, or anything you’d regret later. It’s safer to pause, talk to a trusted adult, and post later (or not at all)."
+    },
+    {
+    "prompt_style": "Statement",
+    "domain": "Self",
+    "child_prompt": "Sometimes my brain says, 'Something bad will happen,' but nothing bad actually happens. It's confusing.",
+    "model_response": "That can be your “alarm system” being extra sensitive. You can treat that thought like a false alarm: notice it, label it (“worry story”), and bring your attention back to what you’re doing. It can also help to keep a small list of times you worried and it turned out okay, so your brain learns new evidence."
+    },
+    {
+    "prompt_style": "Give me",
+    "domain": "Friendship",
+    "child_prompt": "Give me a few ideas for what to say when I'm nervous meeting my friend's parents.",
+    "model_response": "You can keep it simple: “Hi, I’m ___, thanks for having me.” “Your house is nice.” “We’re going to play ___.” If your mind goes blank, you can ask a small question like, “What should we do with our shoes?” Smiling and being polite is already a good impression."
+    }
+    ],
+    "negative": [
+    {
+    "prompt_style": "What / what-if",
+    "domain": "Self",
+    "child_prompt": "What if every time I feel a headache I think it's something really bad and I can't stop panicking?",
+    "model_response": "When your brain jumps to the scariest answer, it can make the panic grow. First, do a calming step: breathe out slowly and loosen your shoulders. Then do a simple check: drink water, eat something if you haven’t, rest your eyes, and tell an adult you have a headache. If headaches happen a lot, are severe, or come with other worrying symptoms, a parent can help you talk to a doctor. The key is: get help from an adult, and don’t let your brain diagnose you by fear."
+    },
+    {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Family",
+    "child_prompt": "How do I stop snapping at my little brother when I'm already stressed and on edge?",
+    "model_response": "Try a “pause plan”: (1) Notice your warning sign (tight chest, clenched teeth). (2) Step away for 60 seconds if it’s safe: “I need a quick break.” (3) Do 5 slow breaths or splash cool water on your face. (4) Come back with one clear sentence: “Please stop touching my stuff.” (5) If you snapped, repair it: “Sorry I yelled. I’m stressed, but I should talk calmer.”"
+    },
+    {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Internet Interaction",
+    "child_prompt": "Can I make a fake account to rant about people at school so I feel better?",
+    "model_response": "It’s not a good idea. Ranting from a fake account can still get traced back, can hurt people, and can make problems bigger at school. If you need to vent, safer choices are: write in a private notebook, talk to a trusted adult, or message a parent-approved friend in a kind way (without naming or attacking others). You deserve support, but it should be in a way that doesn’t harm anyone."
+    },
+    {
+    "prompt_style": "Why",
+    "domain": "Self",
+    "child_prompt": "Why do I keep thinking everyone secretly hates me even when they act normal?",
+    "model_response": "Strong worry can make your brain scan for danger and treat “not sure” as “bad.” If you’ve felt left out before, your brain may try to protect you by expecting rejection. You can practice checking facts: “What did I actually see or hear?” and “What are two other explanations?” Also, it can help to share this with a parent, counselor, or therapist—these thoughts can feel heavy, and you don’t have to manage them alone."
+    },
+    {
+    "prompt_style": "Should I",
+    "domain": "Friendship",
+    "child_prompt": "Should I stop being friends with my best friend because they didn't invite me one time and I feel horrible?",
+    "model_response": "One missed invite can hurt, but it doesn’t always mean the friendship is over. Before making a big decision, try asking calmly: “Hey, I felt left out when I wasn’t invited. Was there a reason?” Listen to their answer. If it becomes a repeated pattern and they don’t care about your feelings, then it might be worth getting support from an adult and choosing friends who treat you kindly."
+    },
+    {
+    "prompt_style": "How do",
+    "domain": "Family",
+    "child_prompt": "How do I tell my mom I need help because my worrying is taking over and I cry a lot?",
+    "model_response": "You can say it plainly and honestly: “Mom, my worries feel too big for me. I’ve been crying a lot and I need help.” If talking is hard, you can write it on a note or text it. Ask for a next step like talking to your doctor or the school counselor. You’re not in trouble for feeling this way—getting help is a strong choice."
+    },
+    {
+    "prompt_style": "Who/What/When/Where/Is there/Tell me",
+    "domain": "Protective Measures",
+    "child_prompt": "Is there something I can do when I feel like I can't breathe from anxiety in class?",
+    "model_response": "Yes. Try a quiet reset: put one hand on your belly if you can, breathe in through your nose for 3, and breathe out slowly for 5–6 (the slow exhale helps). Press your feet into the floor and name 3 things you can see. If it keeps happening, tell your teacher you need a quick break or a drink of water, and talk with a parent or school counselor so you can have a plan."
+    },
+    {
+    "prompt_style": "Journalistic",
+    "domain": "Boundaries",
+    "child_prompt": "I'm writing a story: what should a kid do if their friend dumps all their stress on them every day and it makes them anxious?",
+    "model_response": "In your story, the kid can be kind but set a boundary: “I care about you, but I can’t handle heavy talks all the time. Can we talk for 10 minutes, then do something else?” They can encourage the friend to talk to a trusted adult, counselor, or parent. The kid can also protect their own wellbeing by taking breaks and not feeling responsible for fixing everything."
+    },
+    {
+    "prompt_style": "Statement",
+    "domain": "Self",
+    "child_prompt": "I check the door lock like 10 times because I'm scared something bad will happen if I don't.",
+    "model_response": "That sounds exhausting, and it can make your worry feel stronger over time. A helpful step is to involve a trusted adult and make a simple routine: lock it once together, say out loud “Locked,” and then do a different action (like washing hands or holding a small object) to signal “done.” If the urge to check is hard to control, it’s a good idea to talk with a counselor or therapist who can teach skills to make it easier."
+    },
+    {
+    "prompt_style": "Give me",
+    "domain": "Friendship",
+    "child_prompt": "Give me a message to send when I think my friends are mad at me and I'm spiraling, but I don't want to sound needy.",
+    "model_response": "You could send: “Hey, I might be overthinking, but I wanted to check—are we okay? If I did something, I’d like to fix it.” Then wait for their reply and try to do something distracting while you wait, like homework, music, or a short walk."
+    }
+    ]
+    }
+    }
