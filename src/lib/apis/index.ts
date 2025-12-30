@@ -379,10 +379,9 @@ export const getToolServersData = async (servers: object[]) => {
 					}
 
 					if (res) {
-						// Detect MCP-style configs that were incorrectly used for OpenAPI tool servers
-						if (res.mcpServers && !res.paths) {
+						if (!res.paths) {
 							return {
-								error: 'Invalid OpenAPI spec: Received MCP-style configuration. Please use the MCP connection type instead.',
+								error: 'Invalid OpenAPI spec',
 								url: server?.url
 							};
 						}
