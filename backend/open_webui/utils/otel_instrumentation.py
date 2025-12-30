@@ -162,7 +162,13 @@ def trace_span(
                     log.debug(f"Failed to set span attribute {key}: {e}")
         
         try:
-            log.debug(f"[trace_span] Generator entering (OTEL active) for span '{name}', span_id={getattr(span, 'context', {}).get('span_id', 'unknown')}")
+            # Get span_id from SpanContext (not a dict, so access attributes directly)
+            try:
+                span_context = span.get_span_context()
+                span_id = format(span_context.span_id, "016x") if span_context.is_valid else 'unknown'
+            except (AttributeError, Exception):
+                span_id = 'unknown'
+            log.debug(f"[trace_span] Generator entering (OTEL active) for span '{name}', span_id={span_id}")
             yield span
             # Set status to OK if no exception
             span.set_status(Status(StatusCode.OK))
@@ -312,7 +318,13 @@ async def trace_span_async(
                     log.debug(f"Failed to set span attribute {key}: {e}")
         
         try:
-            log.debug(f"[trace_span_async] Generator entering (OTEL active) for span '{name}', span_id={getattr(span, 'context', {}).get('span_id', 'unknown')}")
+            # Get span_id from SpanContext (not a dict, so access attributes directly)
+            try:
+                span_context = span.get_span_context()
+                span_id = format(span_context.span_id, "016x") if span_context.is_valid else 'unknown'
+            except (AttributeError, Exception):
+                span_id = 'unknown'
+            log.debug(f"[trace_span_async] Generator entering (OTEL active) for span '{name}', span_id={span_id}")
             yield span
             # Set status to OK if no exception
             span.set_status(Status(StatusCode.OK))
