@@ -334,12 +334,22 @@ def get_gravatar_url(email):
     return f"https://www.gravatar.com/avatar/{hash_hex}?d=mp"
 
 
-def calculate_sha256(file_path, chunk_size):
+def calculate_sha256(file_path_or_obj, chunk_size):
     # Compute SHA-256 hash of a file efficiently in chunks
+    # Accepts either a file path (str/bytes/PathLike) or a file-like object
     sha256 = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        while chunk := f.read(chunk_size):
+    
+    # Check if input is a file-like object (has read method)
+    if hasattr(file_path_or_obj, 'read'):
+        # It's a file object, read directly
+        file_path_or_obj.seek(0)  # Ensure we're at the start
+        while chunk := file_path_or_obj.read(chunk_size):
             sha256.update(chunk)
+    else:
+        # It's a file path, open it
+        with open(file_path_or_obj, "rb") as f:
+            while chunk := f.read(chunk_size):
+                sha256.update(chunk)
     return sha256.hexdigest()
 
 
