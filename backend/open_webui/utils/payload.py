@@ -10,7 +10,6 @@ import logging
 import json
 from fastapi import HTTPException
 from open_webui.config import S3_BUCKET_NAME, JWT_EXPIRES_IN
-from open_webui.models.tenants import Tenants
 from open_webui.models.users import UserModel
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 from open_webui.utils.auth import create_token
