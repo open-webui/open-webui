@@ -10,7 +10,7 @@
 		temporaryChatEnabled,
 		chatId as _chatId
 	} from '$lib/stores';
-	import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
+	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
@@ -346,19 +346,9 @@
 		await chatActionHandler(chatId, actionId, message.model, message.id, event);
 	};
 
-	let isMounted = false;
-
-	onMount(() => {
-		isMounted = true;
-	});
-
-	onDestroy(() => {
-		isMounted = false;
-	});
-
 	const saveMessage = async (messageId, message, targetChatId = null) => {
 		// handle saving message to a different chat (e.g. background image generation)
-		if (targetChatId && (targetChatId !== $_chatId || !isMounted)) {
+		if (targetChatId && targetChatId !== $_chatId) {
 			const chat = await getChatById(localStorage.token, targetChatId).catch((error) => {
 				return null;
 			});
