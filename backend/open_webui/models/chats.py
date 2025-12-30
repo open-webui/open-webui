@@ -488,6 +488,9 @@ class ChatTable:
         with get_db_context(db) as db:
             # Get the existing chat to share
             chat = db.get(Chat, chat_id)
+            # Check if chat exists
+            if not chat:
+                return None
             # Check if the chat is already shared
             if chat.share_id:
                 return self.get_chat_by_id_and_user_id(chat.share_id, "shared", db=db)
