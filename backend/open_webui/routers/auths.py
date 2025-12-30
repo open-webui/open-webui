@@ -977,6 +977,7 @@ async def get_admin_details(
 async def get_admin_config(request: Request, user=Depends(get_admin_user)):
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
+        "ADMIN_EMAIL": request.app.state.config.ADMIN_EMAIL,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
         "ENABLE_API_KEYS": request.app.state.config.ENABLE_API_KEYS,
@@ -999,6 +1000,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
 
 class AdminConfig(BaseModel):
     SHOW_ADMIN_DETAILS: bool
+    ADMIN_EMAIL: Optional[str] = None
     WEBUI_URL: str
     ENABLE_SIGNUP: bool
     ENABLE_API_KEYS: bool
@@ -1023,6 +1025,7 @@ async def update_admin_config(
     request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
 ):
     request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
+    request.app.state.config.ADMIN_EMAIL = form_data.ADMIN_EMAIL
     request.app.state.config.WEBUI_URL = form_data.WEBUI_URL
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
 
@@ -1067,6 +1070,7 @@ async def update_admin_config(
 
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
+        "ADMIN_EMAIL": request.app.state.config.ADMIN_EMAIL,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
         "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
         "ENABLE_API_KEYS": request.app.state.config.ENABLE_API_KEYS,
