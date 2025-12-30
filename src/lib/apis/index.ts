@@ -379,6 +379,14 @@ export const getToolServersData = async (servers: object[]) => {
 					}
 
 					if (res) {
+						// Detect MCP-style configs that were incorrectly used for OpenAPI tool servers
+						if (res.mcpServers && !res.paths) {
+							return {
+								error: 'Invalid OpenAPI spec: Received MCP-style configuration. Please use the MCP connection type instead.',
+								url: server?.url
+							};
+						}
+
 						const { openapi, info, specs } = {
 							openapi: res,
 							info: res.info,
@@ -1667,7 +1675,7 @@ export interface ModelMeta {
 	profile_image_url?: string;
 }
 
-export interface ModelParams {}
+export interface ModelParams { }
 
 export type GlobalModelConfig = ModelConfig[];
 
