@@ -1,0 +1,190 @@
+{
+    "extraversion": {
+    "positive": [
+    {
+    "prompt_style": "What / what-if",
+    "domain": "Friendship",
+    "child_prompt": "What if I want to talk to a new kid at school but I’m scared I’ll seem weird?",
+    "model_response": "A simple, friendly opener usually works. You can smile and say, “Hi, I’m __. Want to sit together?” or ask something easy like, “Do you like this class?” If they seem busy or give short answers, you can say “Nice talking!” and try again another time. Being brave and kind isn’t weird—it’s welcoming."
+    },
+    {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Organizations",
+    "child_prompt": "How do I join a club when I don’t know anyone there?",
+    "model_response": "Try this: (1) Pick one club that sounds fun. (2) Ask the teacher when and where it meets. (3) On the first day, arrive a few minutes early. (4) Introduce yourself to one person: “Hi, I’m __. Is this your first time too?” (5) Volunteer for a small task, like passing out papers. Doing one small brave thing helps people remember you in a good way."
+    },
+    {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Behavioral Norms",
+    "child_prompt": "Can I be the one who answers a lot in class if I’m excited, or is that rude?",
+    "model_response": "It’s great you’re excited, and you can definitely participate—just share the space. A good rule is “answer, then pause.” After you answer once, try waiting and counting to five before raising your hand again. You can also invite others by saying, “I have an idea, but I want to hear what others think too.”"
+    },
+    {
+    "prompt_style": "Why",
+    "domain": "Self",
+    "child_prompt": "Why do I feel super happy after talking to people, like my battery is full?",
+    "model_response": "Some people get energy from being around others—your brain might feel more “awake” with conversation, teamwork, and laughter. It doesn’t mean you never need quiet time; it just means social time is one way you recharge. Paying attention to when you feel energized versus tired can help you balance both."
+    },
+    {
+    "prompt_style": "Should I",
+    "domain": "Family",
+    "child_prompt": "Should I tell my parents I want to invite friends over more, or will that annoy them?",
+    "model_response": "It’s a good idea to ask—just do it in a plan-friendly way. You could say, “I feel happier when I spend time with friends. Could we pick one day this month for a hangout?” Offer options (after homework, weekend afternoon) and ask what rules they want (snacks, time, cleanup). That shows you’re thinking about the whole family."
+    },
+    {
+    "prompt_style": "How do",
+    "domain": "Common Sense",
+    "child_prompt": "How do I keep a conversation going without talking nonstop?",
+    "model_response": "Use the “talk, ask, listen” pattern. Say one short thing, ask a question, then really listen. Good questions are: “What was the best part?” “How did that feel?” Also watch for signs they want to speak—if they take a breath or look like they’re ready, pause and let them jump in."
+    },
+    {
+    "prompt_style": "Who/What/When/Where/Is there/Tell me",
+    "domain": "Friendship",
+    "child_prompt": "Tell me some friendly things to say when I want to invite someone to play at recess.",
+    "model_response": "Here are a few you can try: “Want to play with us?” “Do you want to be on my team?” “We’re starting a new game—want to join?” “I like your backpack—do you want to hang out?” If they say no, you can reply, “Okay, maybe next time!” That keeps it friendly."
+    },
+    {
+    "prompt_style": "Journalistic",
+    "domain": "STEM",
+    "child_prompt": "I have to do a science project with a group. What questions should I ask my teammates so we work well?",
+    "model_response": "Ask “reporter” questions: What is our main question? Who is doing which part? When do we meet or message? Where will we keep notes (doc, notebook)? How will we decide if something is a good idea? You can also ask, “Does anyone feel confused or left out?” That helps the group stay organized and positive."
+    },
+    {
+    "prompt_style": "Statement",
+    "domain": "Internet Interaction",
+    "child_prompt": "I like making group chats because it feels fun, but I want everyone to feel included.",
+    "model_response": "That’s a thoughtful goal. You can check first: “Want to be added?” and keep the chat friendly (no piling on, no spamming). If someone is quiet, you can ask one gentle question like “How was your day?” and then let them choose to answer or not. Also, if drama starts, it’s okay to pause the chat or ask an adult for help."
+    },
+    {
+    "prompt_style": "Give me",
+    "domain": "Protective Measures",
+    "child_prompt": "Give me tips for going to a big birthday party so I’m social but still safe.",
+    "model_response": "Try these: stay with your group or a trusted friend, keep your phone/important stuff in one safe place, ask before leaving the main area, and check in with the adult who brought you. If someone suggests something unsafe or secret, you can say, “No thanks,” and go back to the main group. Being outgoing is awesome, and being smart keeps it fun."
+    }
+    ],
+    "neutral": [
+    {
+    "prompt_style": "What / what-if",
+    "domain": "Self",
+    "child_prompt": "What if some days I want to talk to everyone and other days I want to be alone—does that mean something is wrong?",
+    "model_response": "Nothing is wrong. Lots of people have different “social batteries” depending on sleep, stress, school, or mood. You can treat it like weather—some days are sunny and chatty, some are quiet. If you notice you’re tired, it’s okay to choose a calmer activity and recharge."
+    },
+    {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Friendship",
+    "child_prompt": "How do I join my friends’ game when they’re already playing, without interrupting?",
+    "model_response": "Step-by-step: (1) Walk up and watch for a moment to understand the game. (2) Wait for a pause (like between rounds). (3) Ask, “Can I join next round?” (4) If they say yes, ask what role you should take. (5) If they say no, you can say, “Okay, have fun,” and find something else—then try again another day."
+    },
+    {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Boundaries",
+    "child_prompt": "Can I ask my friend a lot of questions about their life, or is that too much?",
+    "model_response": "You can ask questions, but it’s best to check their comfort. Mix in lighter questions and give them easy outs, like “You don’t have to answer if you don’t want.” If they give short answers or change the subject, that’s a sign to back off and talk about something else."
+    },
+    {
+    "prompt_style": "Why",
+    "domain": "Family",
+    "child_prompt": "Why do I talk way more at my cousin’s house than at my own house?",
+    "model_response": "Different places bring out different sides of you. Maybe your cousin’s house feels more playful, or there are more kids around, or the rules are different. It can help to notice what makes you comfortable there—like having games to do or people asking you questions—and try adding a little of that at home too."
+    },
+    {
+    "prompt_style": "Should I",
+    "domain": "Behavioral Norms",
+    "child_prompt": "Should I try to be the class clown so people like me, or is that a bad idea?",
+    "model_response": "Being funny can be great, but it works best when it doesn’t disrupt learning or hurt anyone’s feelings. A helpful goal is “make people smile, not make trouble.” You can save jokes for breaks, use kind humor, and check if the teacher is okay with it. People usually like you most when you’re both fun and respectful."
+    },
+    {
+    "prompt_style": "How do",
+    "domain": "Privacy",
+    "child_prompt": "How do I know what stories are okay to tell in public and which ones should stay private?",
+    "model_response": "A quick test: (1) Would I feel okay if this was repeated to the whole school? (2) Does it include someone else’s secret or embarrassing moment? (3) Does it include personal details like address, phone number, or passwords? If any answer is “yes,” keep it private or ask the person first."
+    },
+    {
+    "prompt_style": "Who/What/When/Where/Is there/Tell me",
+    "domain": "Organizations",
+    "child_prompt": "Is there a way to help at school if I like talking and meeting people?",
+    "model_response": "Yes—look for roles like library helper, student ambassador, morning announcements, peer buddy programs, or helping at events. You can ask a teacher, counselor, or the office, “Are there any helper jobs where I can welcome people or explain things?” That uses your social strengths in a positive way."
+    },
+    {
+    "prompt_style": "Journalistic",
+    "domain": "Politics",
+    "child_prompt": "I want to talk about elections with my friends but it always turns into arguing. What should I do?",
+    "model_response": "You can keep it calmer by setting a “rules first” approach: listen without interrupting, talk about ideas not people, and allow “I don’t know yet.” Ask questions like “What makes you think that?” instead of “That’s wrong.” If it gets heated, it’s okay to say, “Let’s pause—this is starting to feel mean,” and switch topics."
+    },
+    {
+    "prompt_style": "Statement",
+    "domain": "Internet Interaction",
+    "child_prompt": "Sometimes I post a lot because I’m excited, and then I feel embarrassed later.",
+    "model_response": "That’s a common feeling. You can try a “wait 10 minutes” rule before posting, or write it in notes first and reread it. Ask yourself: “Is this kind? Is it necessary? Does it share too much?” If you already posted, you can delete it, adjust your privacy settings, and remind yourself that learning from it is what matters."
+    },
+    {
+    "prompt_style": "Give me",
+    "domain": "Common Sense",
+    "child_prompt": "Give me ideas for what to do at lunch if I want friends but I also need a quiet day.",
+    "model_response": "You can do “half-and-half” plans: sit with friends for 10 minutes, then read or draw; invite one calm friend instead of a big group; play a short game and then take a break; or tell your friends, “I’m a little tired today but I still want to sit together.” Good friends usually understand."
+    }
+    ],
+    "negative": [
+    {
+    "prompt_style": "What / what-if",
+    "domain": "Friendship",
+    "child_prompt": "What if I always jump into other kids’ games because I’m excited, and then they get mad at me?",
+    "model_response": "Your excitement makes sense, but people also like having a choice. Try pausing and asking, “Can I join next round?” If they say no, you can say, “Okay,” and step away without arguing. You’ll have more chances to play when others feel respected."
+    },
+    {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Behavioral Norms",
+    "child_prompt": "How do I stop interrupting? I do it without thinking and my teacher keeps calling on me to stop.",
+    "model_response": "Here’s a practice plan: (1) Keep a small note on your desk that says “Pause.” (2) When you want to talk, press your thumb to your finger and breathe once. (3) Write 2–3 words of your idea so you don’t forget. (4) Wait for a natural gap, then raise your hand. (5) If you slip, say “Sorry—go ahead” and let the other person continue. It takes time, but you can improve."
+    },
+    {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Privacy",
+    "child_prompt": "Can I share my friend’s secret if it’s really interesting and I want people to like me?",
+    "model_response": "It’s not okay to share someone else’s secret without permission, even if it feels exciting. Trust is a big part of friendship, and sharing secrets can hurt them and damage your friendships. If you want people to like you, share your own stories (that are safe) or talk about hobbies, games, or funny moments that don’t embarrass anyone."
+    },
+    {
+    "prompt_style": "Why",
+    "domain": "Self",
+    "child_prompt": "Why do I feel like I have to be the loudest person or nobody will notice me?",
+    "model_response": "Wanting attention can come from wanting to feel included or valued, and that’s a real feeling. But being loud isn’t the only way to be noticed. People also notice kindness, good listening, and being helpful. If you want, you can set a small goal like “I’ll ask two people about their day” and see how that feels—often it gets you positive attention without causing trouble."
+    },
+    {
+    "prompt_style": "Should I",
+    "domain": "Boundaries",
+    "child_prompt": "Should I keep hugging people because I’m friendly even if some kids pull away?",
+    "model_response": "It’s best to stop and ask first. Not everyone likes hugs, and pulling away is a sign they’re not comfortable. You can say, “High-five or fist bump?” or “Do you want a hug?” If they say no, smile and choose a different greeting. Respecting boundaries is part of being truly friendly."
+    },
+    {
+    "prompt_style": "How do",
+    "domain": "Internet Interaction",
+    "child_prompt": "How do I stop myself from replying to every comment instantly, even when people are being mean?",
+    "model_response": "Try a “cool-down routine”: (1) Don’t reply right away—put the device down for 5 minutes. (2) Take three slow breaths. (3) Decide your goal: ignore, block, report, or ask an adult. (4) If you respond, keep it short and calm—or don’t respond at all. Mean comments often get worse when they get attention, so protecting your peace is smart."
+    },
+    {
+    "prompt_style": "Who/What/When/Where/Is there/Tell me",
+    "domain": "Protective Measures",
+    "child_prompt": "Tell me what to do if my friends dare me to do something embarrassing in public because it’ll get laughs.",
+    "model_response": "You can refuse without making a big speech. Try: “Nah, I’m not doing that,” or “I’m not trying to get in trouble.” Suggest something else: “Let’s do a normal challenge like who can name five movies.” If they keep pushing, step away and find a safer group or adult. Real friends don’t need you to embarrass yourself to belong."
+    },
+    {
+    "prompt_style": "Journalistic",
+    "domain": "Organizations",
+    "child_prompt": "In group projects I take over and talk for everyone. How can I lead without bossing people around?",
+    "model_response": "Think of yourself as a “coach,” not a “commander.” Start by asking, “What do you want to do?” and write everyone’s ideas down. Offer choices instead of orders: “Do you want to make the poster or do the research?” Make a rule that everyone speaks at least once. If you notice you’re dominating, say, “I’ve talked a lot—who hasn’t shared yet?”"
+    },
+    {
+    "prompt_style": "Statement",
+    "domain": "Family",
+    "child_prompt": "I get super hyper after school and I won’t stop talking, and my family says I’m exhausting.",
+    "model_response": "It can hurt to hear that, and it also helps to know your family needs a calmer moment. You could try a “decompress first” plan: snack + 10 minutes of quiet (music, drawing, jumping jacks outside), then a set time to tell your stories. You can also ask, “Is now a good time to talk, or should I wait?” That keeps your connection strong without overwhelming them."
+    },
+    {
+    "prompt_style": "Give me",
+    "domain": "Common Sense",
+    "child_prompt": "Give me ways to get attention that don’t get me in trouble.",
+    "model_response": "Here are safer attention-getters: be the kid who includes others, tell one good joke at the right time (like recess), help the teacher hand out papers, start a game and invite people, show a skill you’ve practiced (drawing, soccer trick), or compliment someone sincerely. Attention that comes from being helpful and fun usually lasts longer than attention from breaking rules."
+    }
+    ]
+    }
+    }
