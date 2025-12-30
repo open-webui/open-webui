@@ -7,14 +7,15 @@
 		user as _user,
 		mobile,
 		currentChatPage,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		chatId as _chatId
 	} from '$lib/stores';
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
-	import { getChatList, updateChatById } from '$lib/apis/chats';
-	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
+	import { getChatList, updateChatById, getChatById } from '$lib/apis/chats';
+	import { copyToClipboard, extractCurlyBraceWords, createMessagesList } from '$lib/utils';
 
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -345,7 +346,37 @@
 		await chatActionHandler(chatId, actionId, message.model, message.id, event);
 	};
 
-	const saveMessage = async (messageId, message) => {
+	const saveMessage = async (messageId, message, targetChatId = null) => {
+		// handle saving message to a different chat (e.g. background image generation)
+		if (targetChatId && targetChatId !== $_chatId) {
+			const chat = await getChatById(localStorage.token, targetChatId).catch((error) => {
+				return null;
+			});
+
+			if (chat) {
+				const chatContent = chat.chat;
+
+				if (chatContent.history.messages[messageId]) {
+					chatContent.history.messages[messageId] = message;
+
+					const updatedMessages = createMessagesList(chatContent.history, chatContent.history.currentId);
+					
+					const updatedChat = {
+						...chatContent,
+						messages: updatedMessages,
+						history: chatContent.history
+					};
+
+					await updateChatById(localStorage.token, targetChatId, updatedChat);
+				}
+			}
+			return;
+		}
+
+		if (!history.messages[messageId]) {
+			return;
+		}
+
 		history.messages[messageId] = message;
 		await updateChat();
 	};

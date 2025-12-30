@@ -391,6 +391,7 @@
 	};
 
 	const generateImage = async (message: MessageType) => {
+		const currentChatId = chatId;
 		generatingImage = true;
 		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
 			toast.error(`${error}`);
@@ -403,10 +404,14 @@
 				url: `${image.url}`
 			}));
 
-			saveMessage(message.id, {
-				...message,
-				files: files
-			});
+			saveMessage(
+				message.id,
+				{
+					...message,
+					files: files
+				},
+				currentChatId
+			);
 		}
 
 		generatingImage = false;
