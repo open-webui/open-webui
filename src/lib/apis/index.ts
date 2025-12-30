@@ -379,6 +379,13 @@ export const getToolServersData = async (servers: object[]) => {
 					}
 
 					if (res) {
+						if (!res.paths) {
+							return {
+								error: 'Invalid OpenAPI spec',
+								url: server?.url
+							};
+						}
+
 						const { openapi, info, specs } = {
 							openapi: res,
 							info: res.info,
@@ -1667,7 +1674,7 @@ export interface ModelMeta {
 	profile_image_url?: string;
 }
 
-export interface ModelParams {}
+export interface ModelParams { }
 
 export type GlobalModelConfig = ModelConfig[];
 
