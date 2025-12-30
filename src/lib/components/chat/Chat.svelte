@@ -178,6 +178,24 @@
 	// Token usage tracking
 	let tokenUsageGroups = {};
 	let usagePollingInterval = null;
+	let resetTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map(); // Per-group reset timeouts
+	let resetTrigger = 0; // Increment to force Svelte reactivity when reset times pass
+
+	/**
+	 * Compute effective usage for a group, considering if reset time has passed client-side.
+	 * This provides instant UI feedback when reset occurs, even before server confirms.
+	 */
+	const getEffectiveUsage = (groupData: any): { in: number; out: number; total: number } => {
+		const now = Math.floor(Date.now() / 1000);
+		const nextReset = groupData?.next_reset_at;
+
+		// If we're past the reset time, show 0 optimistically while waiting for server confirmation
+		if (nextReset && now >= nextReset) {
+			return { in: 0, out: 0, total: 0 };
+		}
+
+		return groupData?.usage || { in: 0, out: 0, total: 0 };
+	};
 
 	// Reasoning effort tracking
 	let reasoning = { effort: 'medium' };
@@ -213,6 +231,66 @@
 		return clamped ? { effort: clamped } : null;
 	};
 
+	/**
+	 * Schedule per-group timeouts that fire exactly when each group's reset time arrives.
+	 * When a reset time is reached:
+	 * 1. Immediately increment resetTrigger to force UI update (shows 0 via getEffectiveUsage)
+	 * 2. Fetch fresh data from server to get the new next_reset_at
+	 */
+	const scheduleGroupResetChecks = () => {
+		const now = Math.floor(Date.now() / 1000);
+
+		for (const [groupName, groupData] of Object.entries(tokenUsageGroups)) {
+			const nextReset = (groupData as any).next_reset_at;
+
+			// Clear any existing timeout for this group
+			const existingTimeout = resetTimeouts.get(groupName);
+			if (existingTimeout) {
+				clearTimeout(existingTimeout);
+				resetTimeouts.delete(groupName);
+			}
+
+			if (nextReset && nextReset > now) {
+				// Calculate ms until reset (no buffer - we want instant UI update)
+				const msUntilReset = (nextReset - now) * 1000;
+
+				// Don't schedule if more than 24 hours away (will be recalculated on next poll)
+				if (msUntilReset > 0 && msUntilReset < 24 * 60 * 60 * 1000) {
+					console.log(`Token usage: scheduling reset for "${groupName}" in ${Math.round(msUntilReset / 1000)}s`);
+
+					const timeout = setTimeout(async () => {
+						console.log(`Token usage: reset time reached for "${groupName}", triggering UI update...`);
+
+						// Increment trigger to force Svelte reactivity - UI will immediately show 0
+						// because getEffectiveUsage() checks if now >= next_reset_at
+						resetTrigger++;
+
+						// Clean up this timeout from the map
+						resetTimeouts.delete(groupName);
+
+						// Fetch fresh data from server (includes new next_reset_at for rolling windows)
+						// Small delay to ensure server has processed the reset
+						setTimeout(async () => {
+							await fetchTokenUsage();
+						}, 500);
+					}, msUntilReset);
+
+					resetTimeouts.set(groupName, timeout);
+				}
+			}
+		}
+	};
+
+	/**
+	 * Clear all scheduled reset timeouts
+	 */
+	const clearAllResetTimeouts = () => {
+		for (const [groupName, timeout] of resetTimeouts) {
+			clearTimeout(timeout);
+		}
+		resetTimeouts.clear();
+	};
+
 	const fetchTokenUsage = async () => {
 		try {
 			const response = await fetch(`${WEBUI_BASE_URL}/api/usage/groups`, {
@@ -226,6 +304,9 @@
 			if (response.ok) {
 				const data = await response.json();
 				tokenUsageGroups = data.groups || {};
+
+				// Schedule per-group timeouts based on returned next_reset_at values
+				scheduleGroupResetChecks();
 			}
 		} catch (error) {
 			console.error('Error fetching token usage:', error);
@@ -233,10 +314,22 @@
 	};
 
 	// Get relevant groups for currently selected models
-	$: relevantGroups = Object.entries(tokenUsageGroups).filter(([groupName, groupData]) => {
-		const modelList = groupData.models || [];
-		return selectedModelIds.some((modelId) => modelList.includes(modelId));
-	});
+	// The resetTrigger dependency forces re-evaluation when reset times pass
+	$: relevantGroups = (() => {
+		// Reference resetTrigger to make this reactive to reset events
+		const _ = resetTrigger;
+
+		return Object.entries(tokenUsageGroups)
+			.filter(([groupName, groupData]) => {
+				const modelList = (groupData as any).models || [];
+				return selectedModelIds.some((modelId) => modelList.includes(modelId));
+			})
+			.map(([groupName, groupData]) => {
+				// Compute effective usage (0 if past reset time)
+				const effectiveUsage = getEffectiveUsage(groupData);
+				return [groupName, { ...groupData, effectiveUsage }] as [string, any];
+			});
+	})();
 
 	const startUsagePolling = () => {
 		if (usagePollingInterval) clearInterval(usagePollingInterval);
@@ -253,6 +346,8 @@
 			clearInterval(usagePollingInterval);
 			usagePollingInterval = null;
 		}
+		// Clear all per-group reset timeouts
+		clearAllResetTimeouts();
 	};
 
 	$: if (chatIdProp) {
@@ -2922,8 +3017,8 @@
 								<div class="px-4 pb-2">
 									<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
 										{#each relevantGroups as [groupName, groupData]}
-											{@const isOverLimit =
-												groupData.limit && (groupData.usage?.total || 0) > groupData.limit}
+											{@const effectiveUsage = groupData.effectiveUsage}
+											{@const isOverLimit = groupData.limit && effectiveUsage.total > groupData.limit}
 											<div class="flex items-center justify-between mb-1 last:mb-0">
 												<span
 													class="font-medium {isOverLimit
@@ -2935,11 +3030,11 @@
 														? 'text-red-600 dark:text-red-400'
 														: 'text-gray-600 dark:text-gray-400'}"
 												>
-													<span>{groupData.usage?.in?.toLocaleString() || 0} IN</span>
+													<span>{effectiveUsage.in.toLocaleString()} IN</span>
 													<span>·</span>
-													<span>{groupData.usage?.out?.toLocaleString() || 0} OUT</span>
+													<span>{effectiveUsage.out.toLocaleString()} OUT</span>
 													<span>·</span>
-													<span>{groupData.usage?.total?.toLocaleString() || 0} TOTAL</span>
+													<span>{effectiveUsage.total.toLocaleString()} TOTAL</span>
 													{#if groupData.limit}
 														<span>/ {groupData.limit.toLocaleString()}</span>
 													{/if}
