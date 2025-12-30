@@ -332,7 +332,7 @@
 							<div class=" flex-1 flex items-center gap-2 self-start">
 								<div class=" font-medium line-clamp-1 capitalize">{prompt.title}</div>
 								{#if !prompt.write_access}
-									<Badge type="info" content={$i18n.t('Read')} />
+									<Badge type="info" content={$i18n.t('Read Only')} />
 								{/if}
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 									{prompt.command}

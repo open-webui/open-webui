@@ -373,7 +373,7 @@
 													{tool.name}
 												</div>
 												{#if !tool.write_access}
-													<Badge type="info" content={$i18n.t('Read')} />
+													<Badge type="info" content={$i18n.t('Read Only')} />
 												{/if}
 												{#if tool?.meta?.manifest?.version}
 													<div class=" text-gray-500 text-xs font-medium shrink-0">

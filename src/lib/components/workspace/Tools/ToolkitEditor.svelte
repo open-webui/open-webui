@@ -306,6 +306,7 @@ class Tools:
 						value={content}
 						lang="python"
 						{boilerplate}
+						readOnly={!write_access}
 						onChange={(e) => {
 							_content = e;
 						}}

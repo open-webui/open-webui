@@ -8,7 +8,6 @@ from open_webui.models.prompts import (
     PromptModel,
     Prompts,
 )
-from open_webui.models.groups import Groups
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission

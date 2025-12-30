@@ -28,7 +28,7 @@
 			
 			// If getModels returns an object with items (ModelAccessListResponse), use items
 			// Otherwise assume it's a list (old behavior or if API returns list)
-			const items = Array.isArray(modelList) ? modelList : modelList.items;
+			const items = Array.isArray(modelList) ? modelList : (modelList?.items ?? []);
 			
 			const modelWithAccess = items.find(m => m.id === _id);
 			write_access = modelWithAccess?.write_access ?? true;
