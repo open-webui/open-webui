@@ -1731,13 +1731,14 @@
 
 				if (model) {
 					// If there are image files, check if model is vision capable
+					// Skip this check if image generation is enabled, as images may be for editing or are generated outputs in the history
 					const hasImages = createMessagesList(_history, parentId).some((message) =>
 						message.files?.some(
 							(file) => file.type === 'image' || file?.content_type?.startsWith('image/')
 						)
 					);
 
-					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
+					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true) && !imageGenerationEnabled) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
 								modelName: model.name ?? model.id
