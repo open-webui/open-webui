@@ -1659,11 +1659,10 @@ async def download_file_stream(
 
                 if done:
                     file.close()
+                    hashed = calculate_sha256(file_path, chunk_size)
 
                     with open(file_path, "rb") as file:
                         chunk_size = 1024 * 1024 * 2
-                        hashed = calculate_sha256(file, chunk_size)
-
                         url = f"{ollama_url}/api/blobs/sha256:{hashed}"
                         with requests.Session() as session:
                             response = session.post(url, data=file, timeout=30)
