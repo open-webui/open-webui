@@ -79,16 +79,25 @@ async def generate_direct_chat_completion(
 
     event_caller = get_event_call(metadata)
 
-    channel = f"{user_id}:{session_id}:{request_id}"
+    # Use a prefix 'direct-chat:' to allow the global catch-all handler to identify these events
+    channel = f"direct-chat:{user_id}:{session_id}:{request_id}"
     logging.info(f"WebSocket channel: {channel}")
 
     if form_data.get("stream"):
         q = asyncio.Queue()
-
-        # Register queue in global registry (NO dynamic handler registration!)
-        # The global @sio.on("direct-chat-stream") handler will route messages here
+        # Register queue in global registry so Redis listener can find it
         DIRECT_CHAT_QUEUES[channel] = q
-        log.debug(f"Registered queue for channel {channel}")
+
+        async def message_listener(sid, data):
+            """
+            Handle received socket messages and push them into the queue.
+            """
+            await q.put(data)
+
+        # No need to register a dynamic handler anymore, as the catch-all in main.py handles routing.
+        # However, for single-worker setups or where the connection is coincidentally on the same worker,
+        # we rely on the same mechanism (global queue + catch-all) for consistency.
+        # (Note: The original code registered sio.on(channel, message_listener) here. We REMOVE that.)
 
         # Start processing chat completion in background
         res = await event_caller(
@@ -126,25 +135,21 @@ async def generate_direct_chat_completion(
                     log.debug(f"Error in event generator: {e}")
                     pass
 
-            # Define a background task to clean up queue registry
+            # Define a background task to run the event generator
             async def background():
-                try:
-                    if channel in DIRECT_CHAT_QUEUES:
-                        del DIRECT_CHAT_QUEUES[channel]
-                        log.debug(f"Cleaned up queue for channel {channel}")
-                except Exception as e:
-                    log.debug(f"Error cleaning up queue: {e}")
+                # Clean up queue registry
+                if channel in DIRECT_CHAT_QUEUES:
+                    del DIRECT_CHAT_QUEUES[channel]
+                    log.debug(f"Cleaned up queue for channel {channel}")
 
             # Return the streaming response
             return StreamingResponse(
                 event_generator(), media_type="text/event-stream", background=background
             )
         else:
-            # Clean up on failure
             if channel in DIRECT_CHAT_QUEUES:
                 del DIRECT_CHAT_QUEUES[channel]
             raise Exception(str(res))
-
     else:
         res = await event_caller(
             {
