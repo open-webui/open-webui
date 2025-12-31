@@ -336,5 +336,49 @@ class FeedbackTable:
             db.commit()
             return True
 
+    def get_feedback_by_chat_id_and_message_id(
+        self, chat_id: str, message_id: str
+    ) -> Optional[FeedbackModel]:
+        """특정 chat의 특정 message에 대한 피드백 조회"""
+        try:
+            with get_db() as db:
+                feedback = (
+                    db.query(Feedback)
+                    .filter(
+                        Feedback.meta["chat_id"].astext == chat_id,
+                        Feedback.meta["message_id"].astext == message_id,
+                        Feedback.type == "message_feedback",
+                    )
+                    .first()
+                )
+                return FeedbackModel.model_validate(feedback) if feedback else None
+        except Exception:
+            return None
+
+    def get_feedbacks_by_chat_id(self, chat_id: str) -> dict[str, Optional[str]]:
+        """특정 chat의 모든 메시지 피드백 조회 (message_id -> rating 매핑)"""
+        try:
+            with get_db() as db:
+                feedbacks = (
+                    db.query(Feedback)
+                    .filter(
+                        Feedback.meta["chat_id"].astext == chat_id,
+                        Feedback.type == "message_feedback",
+                    )
+                    .all()
+                )
+
+                # message_id를 키로 하는 딕셔너리 생성
+                feedback_map = {}
+                for fb in feedbacks:
+                    msg_id = fb.meta.get("message_id") if fb.meta else None
+                    rating = fb.data.get("rating") if fb.data else None
+                    if msg_id:
+                        feedback_map[msg_id] = rating
+
+                return feedback_map
+        except Exception:
+            return {}
+
 
 Feedbacks = FeedbackTable()

@@ -10,12 +10,24 @@ from open_webui.models.feedbacks import (
     FeedbackUserResponse,
     FeedbackListResponse,
     Feedbacks,
+    RatingData,
 )
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()
+
+
+############################
+# MessageFeedbackForm
+############################
+
+
+class MessageFeedbackForm(BaseModel):
+    rating: Optional[str] = None  # "good", "bad", or None
+    chat_id: str
+    message_id: str
 
 
 ############################
@@ -176,3 +188,111 @@ async def delete_feedback_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     return success
+
+
+############################
+# Message Feedback APIs
+############################
+
+
+@router.post("/feedback/message", response_model=Optional[FeedbackModel])
+async def upsert_message_feedback(
+    form_data: MessageFeedbackForm,
+    user=Depends(get_verified_user),
+):
+    """메시지 피드백 생성/업데이트/삭제"""
+    from open_webui.models.chats import Chats
+
+    # 권한 확인: 사용자가 해당 chat의 소유자인지 확인
+    chat = Chats.get_chat_by_id_and_user_id(form_data.chat_id, user.id)
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    # 기존 피드백 조회
+    existing = Feedbacks.get_feedback_by_chat_id_and_message_id(
+        form_data.chat_id, form_data.message_id
+    )
+
+    # rating이 None이면 피드백 삭제
+    if form_data.rating is None:
+        if existing:
+            success = Feedbacks.delete_feedback_by_id_and_user_id(
+                existing.id, user.id
+            )
+            if not success:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
+        return None
+
+    # 피드백 데이터 생성
+    feedback_form = FeedbackForm(
+        type="message_feedback",
+        data=RatingData(rating=form_data.rating),
+        meta={"chat_id": form_data.chat_id, "message_id": form_data.message_id},
+    )
+
+    if existing:
+        # 업데이트
+        feedback = Feedbacks.update_feedback_by_id_and_user_id(
+            existing.id, user.id, feedback_form
+        )
+    else:
+        # 생성
+        feedback = Feedbacks.insert_new_feedback(user.id, feedback_form)
+
+    if not feedback:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+    return feedback
+
+
+@router.get(
+    "/feedback/message/{chat_id}/{message_id}",
+    response_model=Optional[FeedbackModel],
+)
+async def get_message_feedback(
+    chat_id: str,
+    message_id: str,
+    user=Depends(get_verified_user),
+):
+    """특정 메시지의 피드백 조회"""
+    from open_webui.models.chats import Chats
+
+    # 권한 확인
+    chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    feedback = Feedbacks.get_feedback_by_chat_id_and_message_id(chat_id, message_id)
+    return feedback
+
+
+@router.get("/feedback/chat/{chat_id}")
+async def get_chat_feedbacks(
+    chat_id: str,
+    user=Depends(get_verified_user),
+):
+    """특정 chat의 모든 메시지 피드백 조회"""
+    from open_webui.models.chats import Chats
+
+    # 권한 확인
+    chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    feedback_map = Feedbacks.get_feedbacks_by_chat_id(chat_id)
+    return feedback_map
