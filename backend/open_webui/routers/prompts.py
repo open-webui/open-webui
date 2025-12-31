@@ -40,6 +40,55 @@ async def get_prompt_list(user=Depends(get_verified_user)):
 
 
 ############################
+# Persona-based Prompt APIs
+############################
+
+
+@router.get("/by-type/{prompt_type}", response_model=list[PromptModel])
+async def get_prompts_by_type(
+    prompt_type: str,
+    user=Depends(get_verified_user)
+):
+    """Get all prompts of a specific type (base, proficiency, style)"""
+    prompts = Prompts.get_prompts_by_type(prompt_type)
+
+    # Filter by access control
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+    accessible_prompts = [
+        prompt
+        for prompt in prompts
+        if user.role == "admin"
+        or prompt.user_id == user.id
+        or has_access(user.id, "read", prompt.access_control, user_group_ids)
+    ]
+
+    return accessible_prompts
+
+
+@router.get("/by-persona", response_model=list[PromptModel])
+async def get_prompts_by_persona(
+    prompt_type: str,
+    persona_value: str,
+    user=Depends(get_verified_user)
+):
+    """Get prompts matching both type and persona value"""
+    prompts = Prompts.get_prompts_by_persona(prompt_type, persona_value)
+
+    # Filter by access control
+    from open_webui.models.groups import Groups
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+    accessible_prompts = [
+        prompt
+        for prompt in prompts
+        if user.role == "admin"
+        or prompt.user_id == user.id
+        or has_access(user.id, "read", prompt.access_control, user_group_ids)
+    ]
+
+    return accessible_prompts
+
+
+############################
 # CreateNewPrompt
 ############################
 
