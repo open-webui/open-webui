@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.44] - 2025-12-30
+## [0.6.44] - 2025-12-31
 
 ### Added
 
@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎨 ComfyUI workflows now display only the intended final output images in chat instead of showing duplicate images from intermediate processing nodes like masks, crops, or segmentation previews. [#20158](https://github.com/open-webui/open-webui/issues/20158), [#20182](https://github.com/open-webui/open-webui/pull/20182)
 - 🖼️ The vision capability warning is now skipped when image generation is enabled, allowing users to send follow-up messages after generating images and to send images to non-vision models for image editing without false warnings. [#20129](https://github.com/open-webui/open-webui/issues/20129), [#20256](https://github.com/open-webui/open-webui/pull/20256)
 - 🔧 External tool connections no longer cause infinite loading screens when invalid or MCP-style configurations are used with OpenAPI connection types. [#20207](https://github.com/open-webui/open-webui/issues/20207), [#20257](https://github.com/open-webui/open-webui/pull/20257)
+- 📥 GGUF model uploads via URL no longer fail with a TypeError during SHA256 verification, fixing 500 Internal Server Error crashes. [#20263](https://github.com/open-webui/open-webui/issues/20263), [#20281](https://github.com/open-webui/open-webui/pull/20281)
 - 🔍 Brave Search now automatically retries with a 1-second delay when hitting rate limits, preventing failures when sequential requests exceed the 1 request per second limit. [#15134](https://github.com/open-webui/open-webui/issues/15134), [#20255](https://github.com/open-webui/open-webui/pull/20255)
 - 💬 Regenerating a message no longer causes the application to crash when the parent message is missing or corrupted in the chat history. [#20264](https://github.com/open-webui/open-webui/pull/20264)
 - 💬 Models now respond correctly when @ mentioned in Channels instead of silently failing. [Commit](https://github.com/open-webui/open-webui/commit/59957715836acb635f4b1c4ddbfb4ba7b82b3281)
