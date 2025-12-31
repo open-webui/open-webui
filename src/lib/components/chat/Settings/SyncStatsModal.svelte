@@ -59,7 +59,6 @@
 		window.removeEventListener('message', handleMessage);
 	});
 
-
 	// State
 	let syncing = false;
 	let downloading = false;
@@ -78,15 +77,13 @@
 	let syncMode: 'incremental' | 'full' = 'incremental';
 
 	// Reactive progress percentage
-	$: progressPercent = total > 0 ? Math.min(Math.round((processedItemsCount / total) * 100), 100) : 0;
+	$: progressPercent =
+		total > 0 ? Math.min(Math.round((processedItemsCount / total) * 100), 100) : 0;
 
 	// Helper to send postMessage to opener
 	const postToOpener = (message: object) => {
 		if (window.opener) {
-			window.opener.postMessage(
-				{ ...message, requestId: eventData?.requestId ?? null },
-				'*'
-			);
+			window.opener.postMessage({ ...message, requestId: eventData?.requestId ?? null }, '*');
 		}
 	};
 
@@ -120,6 +117,8 @@
 		}
 		syncing = false;
 		downloading = false;
+
+		postToOpener({ type: 'sync:error', error: 'User cancelled the operation' });
 	};
 
 	// Sync stats to opener window
@@ -157,11 +156,7 @@
 					searchParams.updated_at = eventData.lastSyncedChatUpdatedAt;
 				}
 
-				const res = await exportChatStats(
-					localStorage.token,
-					page,
-					searchParams
-				).catch((err) => {
+				const res = await exportChatStats(localStorage.token, page, searchParams).catch((err) => {
 					throw new Error(err?.detail || err?.message || 'Failed to export chat stats');
 				});
 
@@ -211,16 +206,12 @@
 
 		try {
 			// Get total count first (no filters for download - get all)
-			const initialRes = await exportChatStats(
-				localStorage.token,
-				1,
-				{}
-			).catch(() => null);
+			const initialRes = await exportChatStats(localStorage.token, 1, {}).catch(() => null);
 
 			if (initialRes?.total) {
 				total = initialRes.total;
 			}
-			
+
 			// Allow UI to show the total
 			await tick();
 
@@ -235,7 +226,9 @@
 				localStorage.token,
 				searchParams.updated_at
 			).catch((err) => {
-				throw new Error(err?.detail || 'Failed to connect to the server. Please check your connection.');
+				throw new Error(
+					err?.detail || 'Failed to connect to the server. Please check your connection.'
+				);
 			});
 
 			if (!res) {
@@ -404,16 +397,23 @@
 
 				{#if eventData?.lastSyncedChatUpdatedAt}
 					<div class="mt-3">
-						<Tooltip content={$i18n.t('Syncs only chats with updates after your last sync timestamp. Disable to re-sync all chats.')} placement="top-start">
+						<Tooltip
+							content={$i18n.t(
+								'Syncs only chats with updates after your last sync timestamp. Disable to re-sync all chats.'
+							)}
+							placement="top-start"
+						>
 							<label class="flex items-center gap-2 text-xs cursor-pointer">
 								<input
 									type="checkbox"
 									checked={syncMode === 'incremental'}
-									on:change={(e) => syncMode = e.target.checked ? 'incremental' : 'full'}
+									on:change={(e) => (syncMode = e.target.checked ? 'incremental' : 'full')}
 									disabled={syncing}
 									class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
 								/>
-								<span class="text-gray-700 dark:text-gray-300">{$i18n.t('Only sync new/updated chats')}</span>
+								<span class="text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Only sync new/updated chats')}</span
+								>
 							</label>
 						</Tooltip>
 					</div>
@@ -428,8 +428,6 @@
 							<div>
 								{#if total > 0}
 									{processedItemsCount}/{total}
-								{:else}
-									{processedItemsCount}
 								{/if}
 							</div>
 						</div>
@@ -440,7 +438,9 @@
 									style="width: {progressPercent}%"
 								></div>
 							{:else}
-								<div class="bg-gray-900 dark:bg-gray-100 h-1.5 w-1/3 rounded-full animate-pulse"></div>
+								<div
+									class="bg-gray-900 dark:bg-gray-100 h-1.5 w-0 rounded-full animate-pulse"
+								></div>
 							{/if}
 						</div>
 					</div>
