@@ -1,7 +1,6 @@
 import asyncio
-import json
-import os
 import random
+import json
 
 import socketio
 import logging
@@ -165,7 +164,6 @@ YDOC_MANAGER = YdocManager(
 
 
 # Global registry for direct chat queues (per-worker, in-memory)
-# Maps channel -> asyncio.Queue for routing streaming data
 DIRECT_CHAT_QUEUES = {}  # {channel: asyncio.Queue}
 
 
@@ -219,6 +217,36 @@ async def periodic_usage_pool_cleanup():
             await asyncio.sleep(TIMEOUT_DURATION)
     finally:
         release_func()
+
+
+async def redis_direct_chat_listener():
+    """
+    Listen for direct chat messages published from other workers via Redis.
+    Routes them to local queues if present.
+    """
+    if WEBSOCKET_MANAGER != "redis" or REDIS is None:
+        return
+
+    try:
+        async with REDIS.pubsub() as pubsub:
+            await pubsub.subscribe(f"{REDIS_KEY_PREFIX}:direct-chat-events")
+            log.info("Started Redis direct chat listener")
+
+            async for message in pubsub.listen():
+                if message['type'] == 'message':
+                    try:
+                        payload = json.loads(message['data'])
+                        event = payload.get("event")
+                        data = payload.get("data")
+
+                        if event and event in DIRECT_CHAT_QUEUES:
+                            await DIRECT_CHAT_QUEUES[event].put(data)
+                    except Exception as e:
+                        log.error(f"Error processing redis direct chat message: {e}")
+    except asyncio.CancelledError:
+        log.debug("Redis direct chat listener cancelled")
+    except Exception as e:
+        log.error(f"Redis direct chat listener error: {e}")
 
 
 app = socketio.ASGIApp(
@@ -697,88 +725,38 @@ async def disconnect(sid):
         # print(f"Unknown session ID {sid} disconnected")
 
 
-@sio.on("direct-chat-stream")
-async def handle_direct_chat_stream(sid, data):
+@sio.on("*")
+async def catch_all(event, sid, *args):
     """
-    Global handler for direct chat streaming chunks.
-    Routes messages to the correct queue based on channel.
-    Works across multiple workers via Redis pub/sub.
+    Catch-all event handler for forwarding direct chat messages across workers.
+    When a worker receives an event for a direct chat channel it doesn't have a handler for
+    (because the handler is registered on another worker), this catch-all will trigger.
+    It then forwards the event via Redis to the worker that has the handler.
     """
-    channel = data.get("channel")
-    if not channel:
-        log.warning("Received direct-chat-stream without channel")
-        return
-
-    # Check if this worker has the queue for this channel
-    if channel in DIRECT_CHAT_QUEUES:
-        try:
-            # Extract the actual data (remove channel wrapper)
-            payload = data.get("data", data)
-            await DIRECT_CHAT_QUEUES[channel].put(payload)
-            log.debug(f"Worker {os.getpid()}: Queued data for channel {channel} on local worker")
-        except Exception as e:
-            log.error(f"Error queueing data for channel {channel}: {e}")
-    else:
-        # Queue is on another worker, forward via Redis pub/sub
-        if WEBSOCKET_MANAGER == "redis" and REDIS is not None:
+    # Check if this is a direct-chat event (prefixed)
+    if isinstance(event, str) and event.startswith("direct-chat:"):
+        data = args[0] if args else None
+        
+        # Check if we have the queue locally (handles single-worker or same-worker routing)
+        if event in DIRECT_CHAT_QUEUES:
             try:
+                await DIRECT_CHAT_QUEUES[event].put(data)
+            except Exception as e:
+                log.error(f"Error putting data to local queue for event {event}: {e}")
+            return
+
+        # If not local, and we are using Redis, forward it
+        if WEBSOCKET_MANAGER == "redis" and REDIS:
+            try:
+                # Publish the data to Redis so other workers can pick it up
+                # We include the 'event' name in the Redis channel so the listener knows 
+                # exactly which local queue to put the data into.
                 await REDIS.publish(
-                    f"{REDIS_KEY_PREFIX}:direct_chat_channel:{channel}",
-                    json.dumps(data)
+                    f"{REDIS_KEY_PREFIX}:direct-chat-events",
+                    json.dumps({"event": event, "data": data}),
                 )
-                log.debug(f"Worker {os.getpid()}: Published data for channel {channel} to Redis")
             except Exception as e:
-                log.error(f"Error publishing to Redis for channel {channel}: {e}")
-        else:
-            log.warning(f"Channel {channel} not found and Redis not available")
-
-
-async def redis_direct_chat_listener():
-    """
-    Listen for direct chat messages published from other workers.
-    Routes them to local queues if present.
-    """
-    if WEBSOCKET_MANAGER != "redis" or REDIS is None:
-        return
-
-    try:
-        pubsub = REDIS.pubsub()
-        pattern = f"{REDIS_KEY_PREFIX}:direct_chat_channel:*"
-        await pubsub.psubscribe(pattern)
-        log.debug(f"Worker {os.getpid()}: Started Redis direct chat listener on pattern {pattern}")
-
-        async for message in pubsub.listen():
-            if message["type"] != "pmessage":
-                continue
-
-            try:
-                # Extract channel from Redis key
-                redis_channel = message["channel"]
-                if isinstance(redis_channel, bytes):
-                    redis_channel = redis_channel.decode()
-
-                # Remove prefix to get actual channel name
-                prefix = f"{REDIS_KEY_PREFIX}:direct_chat_channel:"
-                channel = redis_channel.replace(prefix, "")
-
-                # Check if this worker has the queue
-                if channel in DIRECT_CHAT_QUEUES:
-                    data = json.loads(message["data"])
-                    # Extract the actual data (remove channel wrapper)
-                    payload = data.get("data", data)
-                    await DIRECT_CHAT_QUEUES[channel].put(payload)
-                    log.debug(f"Worker {os.getpid()}: Received and queued Redis message for channel {channel}")
-            except Exception as e:
-                log.error(f"Error processing Redis message: {e}")
-    except asyncio.CancelledError:
-        log.debug(f"Worker {os.getpid()}: Redis direct chat listener cancelled")
-    except Exception as e:
-        log.error(f"Redis direct chat listener error: {e}")
-    finally:
-        try:
-            await pubsub.unsubscribe()
-        except Exception:
-            pass
+                log.error(f"Failed to publish direct chat event {event} to Redis: {e}")
 
 
 def get_event_emitter(request_info, update_db=True):
