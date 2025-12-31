@@ -2421,6 +2421,11 @@ def delete_entries_from_collection(
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
             file = Files.get_file_by_id(form_data.file_id, db=db)
+            if not file:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
             hash = file.hash
 
             VECTOR_DB_CLIENT.delete(
