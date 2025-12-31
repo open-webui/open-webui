@@ -1615,7 +1615,7 @@ async def chat_completion(
             stream_delta_chunk_size = model_info_params.get("stream_delta_chunk_size")
 
         if model_info_params.get("reasoning_tags") is not None:
-            reasoning_tags = model_info_params
+            reasoning_tags = model_info_params.get("reasoning_tags")
 
         metadata = {
             "user_id": user.id,
