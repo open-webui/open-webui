@@ -70,19 +70,20 @@ async def get_notes(
         limit = 60
         skip = (page - 1) * limit
 
-    notes = [
-        NoteUserResponse(
-            **{
-                **note.model_dump(),
-                "user": UserResponse(
-                    **Users.get_user_by_id(note.user_id, db=db).model_dump()
-                ),
-            }
-        )
-        for note in Notes.get_notes_by_user_id(
-            user.id, "read", skip=skip, limit=limit, db=db
-        )
-    ]
+    notes = []
+    for note in Notes.get_notes_by_user_id(
+        user.id, "read", skip=skip, limit=limit, db=db
+    ):
+        note_user = Users.get_user_by_id(note.user_id, db=db)
+        if note_user:
+            notes.append(
+                NoteUserResponse(
+                    **{
+                        **note.model_dump(),
+                        "user": UserResponse(**note_user.model_dump()),
+                    }
+                )
+            )
     return notes
 
 

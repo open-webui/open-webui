@@ -292,9 +292,11 @@ async def update_user_settings_by_session_user(
     db: Session = Depends(get_session),
 ):
     updated_user_settings = form_data.model_dump()
+    ui_settings = updated_user_settings.get("ui")
     if (
         user.role != "admin"
-        and "toolServers" in updated_user_settings.get("ui").keys()
+        and ui_settings is not None
+        and "toolServers" in ui_settings.keys()
         and not has_permission(
             user.id,
             "features.direct_tool_servers",
