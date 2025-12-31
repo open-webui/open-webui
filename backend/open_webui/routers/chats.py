@@ -373,6 +373,8 @@ async def unarchive_all_chats(user=Depends(get_verified_user)):
 
 @router.get("/share/{share_id}", response_model=Optional[ChatResponse])
 async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
+    from open_webui.models.feedbacks import Feedbacks
+
     if user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
@@ -384,6 +386,16 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
         chat = Chats.get_chat_by_id(share_id)
 
     if chat:
+        # 피드백 정보 조회 (공유 채팅은 chat.id 사용)
+        feedback_map = Feedbacks.get_feedbacks_by_chat_id(chat.id)
+
+        # chat.chat의 메시지에 피드백 주입
+        if "history" in chat.chat and "messages" in chat.chat["history"]:
+            messages = chat.chat["history"]["messages"]
+            for msg_id, message in messages.items():
+                if isinstance(message, dict) and message.get("role") == "assistant":
+                    message["feedback"] = feedback_map.get(msg_id)
+
         return ChatResponse(**chat.model_dump())
 
     else:
@@ -426,9 +438,22 @@ async def get_user_chat_list_by_tag_name(
 
 @router.get("/{id}", response_model=Optional[ChatResponse])
 async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
+    from open_webui.models.feedbacks import Feedbacks
+
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
 
     if chat:
+        # 피드백 정보 조회
+        feedback_map = Feedbacks.get_feedbacks_by_chat_id(id)
+
+        # chat.chat의 메시지에 피드백 주입
+        if "history" in chat.chat and "messages" in chat.chat["history"]:
+            messages = chat.chat["history"]["messages"]
+            for msg_id, message in messages.items():
+                # assistant 메시지에만 피드백 추가
+                if isinstance(message, dict) and message.get("role") == "assistant":
+                    message["feedback"] = feedback_map.get(msg_id)
+
         return ChatResponse(**chat.model_dump())
 
     else:
