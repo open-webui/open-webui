@@ -23,6 +23,8 @@
 
 	import HtmlToken from './HTMLToken.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import ArrowsPointingOut from '$lib/components/icons/ArrowsPointingOut.svelte';
+	import TablePreviewModal from './TablePreviewModal.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -44,6 +46,9 @@
 
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
+
+	// Table modal states
+	let tableModals: Record<number, boolean> = {};
 
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
@@ -127,91 +132,121 @@
 			{token.text}
 		{/if}
 	{:else if token.type === 'table'}
-		<div class="relative w-full group mb-2">
-			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
-				<table
-					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
-				>
-					<thead
-						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
+		<!-- Table with thumbnail and modal preview -->
+		<div class="relative w-full group mb-2 rounded-lg border border-gray-100 dark:border-gray-850 overflow-hidden">
+			<!-- Table container with max height for thumbnail effect -->
+			<div class="max-h-52 overflow-hidden">
+				<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
+					<table
+						class="w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
 					>
-						<tr class="">
-							{#each token.header as header, headerIdx}
-								<th
-									scope="col"
-									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
-									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
-								>
-									<div class="gap-1.5 text-left">
-										<div class="shrink-0 break-normal">
-											<MarkdownInlineTokens
-												id={`${id}-${tokenIdx}-header-${headerIdx}`}
-												tokens={header.tokens}
-												{done}
-												{sourceIds}
-												{onSourceClick}
-											/>
-										</div>
-									</div>
-								</th>
-							{/each}
-						</tr>
-					</thead>
-					<tbody>
-						{#each token.rows as row, rowIdx}
-							<tr class="bg-white dark:bg-gray-900 text-xs">
-								{#each row ?? [] as cell, cellIdx}
-									<td
-										class="px-3! py-2! text-gray-900 dark:text-white w-max {token.rows.length -
-											1 ===
-										rowIdx
-											? ''
-											: 'border-b border-gray-50! dark:border-gray-850!'}"
-										style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
+						<thead
+							class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-800 dark:text-gray-400 border-none"
+						>
+							<tr class="">
+								{#each token.header as header, headerIdx}
+									<th
+										scope="col"
+										class="px-2.5! py-2! cursor-pointer border-b border-gray-200! dark:border-gray-700!"
+										style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 									>
-										<div class="break-normal">
-											<MarkdownInlineTokens
-												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
-												tokens={cell.tokens}
-												{done}
-												{sourceIds}
-												{onSourceClick}
-											/>
+										<div class="gap-1.5 text-left">
+											<div class="shrink-0 break-normal">
+												<MarkdownInlineTokens
+													id={`${id}-${tokenIdx}-header-${headerIdx}`}
+													tokens={header.tokens}
+													{done}
+													{sourceIds}
+													{onSourceClick}
+												/>
+											</div>
 										</div>
-									</td>
+									</th>
 								{/each}
 							</tr>
-						{/each}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							{#each token.rows as row, rowIdx}
+								<tr class="bg-white dark:bg-gray-900 text-xs">
+									{#each row ?? [] as cell, cellIdx}
+										<td
+											class="px-3! py-2! text-gray-900 dark:text-white w-max {token.rows.length -
+												1 ===
+											rowIdx
+												? ''
+												: 'border-b border-gray-50! dark:border-gray-850!'}"
+											style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
+										>
+											<div class="break-normal">
+												<MarkdownInlineTokens
+													id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
+													tokens={cell.tokens}
+													{done}
+													{sourceIds}
+													{onSourceClick}
+												/>
+											</div>
+										</td>
+									{/each}
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</div>
 
-			<div class=" absolute top-1 right-1.5 z-20 invisible group-hover:visible flex gap-0.5">
+			<!-- Gradient overlay -->
+			<div
+				class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-gray-900 to-transparent pointer-events-none"
+			/>
+
+			<!-- View full table button -->
+			<button
+				class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 text-caption text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-gray-900/80 px-3 py-1.5 rounded-full backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 transition z-10"
+				on:click={() => (tableModals[tokenIdx] = true)}
+			>
+				<ArrowsPointingOut className="size-3" />
+				<span>{$i18n.t('View full table')}</span>
+			</button>
+
+			<!-- Copy/Export buttons (top right) -->
+			<div class="absolute top-1 right-1.5 z-20 invisible group-hover:visible flex gap-0.5">
 				<Tooltip content={$i18n.t('Copy')}>
 					<button
-						class="p-1 rounded-lg bg-transparent transition"
+						class="p-1 rounded-lg bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm transition hover:bg-white dark:hover:bg-gray-800"
 						on:click={(e) => {
 							e.stopPropagation();
 							copyToClipboard(token.raw.trim(), null, $settings?.copyFormatted ?? false);
 						}}
 					>
-						<Clipboard className=" size-3.5" strokeWidth="1.5" />
+						<Clipboard className="size-3.5" strokeWidth="1.5" />
 					</button>
 				</Tooltip>
 
 				<Tooltip content={$i18n.t('Export to CSV')}>
 					<button
-						class="p-1 rounded-lg bg-transparent transition"
+						class="p-1 rounded-lg bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm transition hover:bg-white dark:hover:bg-gray-800"
 						on:click={(e) => {
 							e.stopPropagation();
 							exportTableToCSVHandler(token, tokenIdx);
 						}}
 					>
-						<Download className=" size-3.5" strokeWidth="1.5" />
+						<Download className="size-3.5" strokeWidth="1.5" />
 					</button>
 				</Tooltip>
 			</div>
 		</div>
+
+		<!-- Table preview modal -->
+		<TablePreviewModal
+			bind:show={tableModals[tokenIdx]}
+			{token}
+			{id}
+			{tokenIdx}
+			{done}
+			{sourceIds}
+			{onSourceClick}
+		/>
 	{:else if token.type === 'blockquote'}
 		{@const alert = alertComponent(token)}
 		{#if alert}

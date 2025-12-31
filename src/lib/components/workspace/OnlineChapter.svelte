@@ -9,15 +9,16 @@
 	import { WEBUI_NAME, user } from '$lib/stores';
 	import { getStores, type GeminiRagStore } from '$lib/apis/gemini-rag';
 	import {
-		getTextbookData,
+		getAdminSections,
+		getAdminChapters,
 		createSection,
 		updateSection,
 		deleteSection,
-		createSubsection,
-		updateSubsection,
-		deleteSubsection,
+		createChapter,
+		updateChapter,
+		deleteChapter,
 		type Section,
-		type Subsection
+		type AdminChapter
 	} from '$lib/apis/textbook';
 
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -75,12 +76,12 @@
 	const mapSectionToPart = (section: Section): Part => ({
 		id: section.id,
 		name: section.title, // API title → UI name
-		chapters: (section.subsections || []).map((sub) => ({
-			id: sub.id,
+		chapters: (section.subsections || []).map((ch) => ({
+			id: ch.id,
 			partId: section.id,
-			name: sub.title, // API title → UI name
-			description: sub.subtitle || '',
-			linkedKnowledgeGroups: sub.rag_store_name ? [sub.rag_store_name] : []
+			name: ch.title, // API title → UI name
+			description: ch.subtitle || '',
+			linkedKnowledgeGroups: ch.rag_store_name ? [ch.rag_store_name] : []
 		}))
 	});
 
@@ -102,12 +103,42 @@
 		}
 	};
 
-	// Load textbook data from API
+	// Load textbook data from Admin API
 	const loadTextbookData = async () => {
 		try {
-			const data = await getTextbookData(localStorage.token);
-			if (data?.sections) {
-				parts = data.sections.map(mapSectionToPart);
+			// 섹션과 챕터를 각각 가져와서 조합
+			const [sections, chapters] = await Promise.all([
+				getAdminSections(localStorage.token),
+				getAdminChapters(localStorage.token)
+			]);
+
+			if (sections) {
+				// 챕터를 section_id로 그룹화
+				const chaptersBySection: Record<string, AdminChapter[]> = {};
+				if (chapters) {
+					for (const ch of chapters) {
+						if (!chaptersBySection[ch.section_id]) {
+							chaptersBySection[ch.section_id] = [];
+						}
+						chaptersBySection[ch.section_id].push(ch);
+					}
+				}
+
+				// 섹션에 챕터 매핑
+				parts = sections.map((section) => ({
+					id: section.id,
+					name: section.title,
+					chapters: (chaptersBySection[section.id] || [])
+						.sort((a, b) => a.order - b.order)
+						.map((ch) => ({
+							id: ch.id,
+							partId: ch.section_id,
+							name: ch.title,
+							description: ch.subtitle || '',
+							linkedKnowledgeGroups: ch.rag_store_name ? [ch.rag_store_name] : []
+						}))
+				}));
+
 				// Expand first part by default
 				if (parts.length > 0) {
 					expandedParts[parts[0].id] = true;
@@ -228,9 +259,9 @@
 		const ragStoreName = linkedKnowledgeGroups.length > 0 ? linkedKnowledgeGroups[0] : null;
 
 		if (editingChapter) {
-			// Update existing subsection
+			// Update existing chapter
 			try {
-				const result = await updateSubsection(localStorage.token, editingChapter.id, {
+				const result = await updateChapter(localStorage.token, editingChapter.id, {
 					title: name || editingChapter.name,
 					subtitle: description || '',
 					rag_store_name: ragStoreName
@@ -257,21 +288,28 @@
 					toast.success($i18n.t('챕터가 수정되었습니다.'));
 				}
 			} catch (error) {
-				console.error('Failed to update subsection:', error);
+				console.error('Failed to update chapter:', error);
 				toast.error($i18n.t('챕터 수정에 실패했습니다.'));
 			}
 		} else {
-			// Create new subsection
+			// Create new chapter
 			try {
-				const result = await createSubsection(localStorage.token, partId, {
+				// 현재 파트의 챕터 수를 기반으로 order 계산
+				const currentPart = parts.find((p) => p.id === partId);
+				const nextOrder = currentPart ? currentPart.chapters.length : 0;
+
+				const result = await createChapter(localStorage.token, {
+					id: `ch-${Date.now()}`, // 고유 ID 생성
+					section_id: partId,
 					title: name || `Chapter ${totalChapters + 1}`,
 					subtitle: description || '',
+					order: nextOrder,
 					rag_store_name: ragStoreName
 				});
 				if (result) {
 					const newChapter: Chapter = {
 						id: result.id,
-						partId: partId,
+						partId: result.section_id,
 						name: result.title,
 						description: result.subtitle || '',
 						linkedKnowledgeGroups: result.rag_store_name ? [result.rag_store_name] : []
@@ -291,7 +329,7 @@
 					toast.success($i18n.t('챕터가 생성되었습니다.'));
 				}
 			} catch (error) {
-				console.error('Failed to create subsection:', error);
+				console.error('Failed to create chapter:', error);
 				toast.error($i18n.t('챕터 생성에 실패했습니다.'));
 			}
 		}
@@ -320,7 +358,7 @@
 				parts = parts.filter((p) => p.id !== deleteTarget!.id);
 				toast.success($i18n.t('파트가 삭제되었습니다.'));
 			} else {
-				await deleteSubsection(localStorage.token, deleteTarget.id);
+				await deleteChapter(localStorage.token, deleteTarget.id);
 				parts = parts.map((p) => ({
 					...p,
 					chapters: p.chapters.filter((ch) => ch.id !== deleteTarget!.id)

@@ -156,6 +156,21 @@
 
 	let taskIds = null;
 
+	// Debounced save for streaming messages
+	let streamingSaveTimeout = null;
+	const debouncedSaveChat = (_chatId, _history) => {
+		console.log('[debouncedSaveChat] called with chatId:', _chatId);
+		if (streamingSaveTimeout) {
+			console.log('[debouncedSaveChat] clearing previous timeout');
+			clearTimeout(streamingSaveTimeout);
+		}
+		streamingSaveTimeout = setTimeout(async () => {
+			console.log('[debouncedSaveChat] executing saveChatHandler');
+			await saveChatHandler(_chatId, _history);
+			streamingSaveTimeout = null;
+		}, 1000); // 1초마다 저장
+	};
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
@@ -1437,6 +1452,7 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
+		console.log('[chatCompletionEventHandler] called with:', { data, messageId: message?.id, chatId });
 		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
 
 		if (error) {
@@ -1531,6 +1547,13 @@
 		}
 
 		history.messages[message.id] = message;
+
+		// 스트리밍 중에 주기적으로 저장 (done이 아닐 때)
+		console.log('[chatCompletionEventHandler] streaming save check:', { done, temporaryChatEnabled: $temporaryChatEnabled, chatId });
+		if (!done && !$temporaryChatEnabled && chatId) {
+			console.log('[chatCompletionEventHandler] calling debouncedSaveChat');
+			debouncedSaveChat(chatId, history);
+		}
 
 		if (done) {
 			message.done = true;
@@ -2105,6 +2128,12 @@
 											responseMessage.content = (responseMessage.content ?? '') + data.choices[0].delta.content;
 											history.messages[responseMessageId] = responseMessage;
 											await tick();
+
+											// 스트리밍 중 주기적으로 저장
+											if (!$temporaryChatEnabled && _chatId) {
+												console.log('[sendMessageSocket] streaming save, chatId:', _chatId);
+												debouncedSaveChat(_chatId, history);
+											}
 										}
 									} catch (e) {
 										console.error('Error parsing stream line:', e);
