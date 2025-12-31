@@ -613,7 +613,11 @@ class UsersTable:
     def update_user_settings_by_id(self, id: str, updated: dict, db: Optional[Session] = None) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
-                user_settings = db.query(User).filter_by(id=id).first().settings
+                user = db.query(User).filter_by(id=id).first()
+                if not user:
+                    return None
+
+                user_settings = user.settings
 
                 if user_settings is None:
                     user_settings = {}

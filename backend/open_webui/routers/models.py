@@ -281,9 +281,14 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: Session 
             or has_access(user.id, "read", model.access_control, db=db)
         ):
             return model
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
     else:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 

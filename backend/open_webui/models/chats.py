@@ -488,6 +488,9 @@ class ChatTable:
         with get_db_context(db) as db:
             # Get the existing chat to share
             chat = db.get(Chat, chat_id)
+            # Check if chat exists
+            if not chat:
+                return None
             # Check if the chat is already shared
             if chat.share_id:
                 return self.get_chat_by_id_and_user_id(chat.share_id, "shared", db=db)
@@ -807,10 +810,8 @@ class ChatTable:
             query = db.query(Chat).filter_by(user_id=user_id)
 
             if filter:
-                if filter.get("start_time"):
-                    query = query.filter(Chat.created_at >= filter.get("start_time"))
-                if filter.get("end_time"):
-                    query = query.filter(Chat.created_at <= filter.get("end_time"))
+                if filter.get("updated_at"):
+                    query = query.filter(Chat.updated_at > filter.get("updated_at"))
 
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")

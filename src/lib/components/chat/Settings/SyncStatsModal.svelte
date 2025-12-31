@@ -1,15 +1,13 @@
 <script lang="ts">
 	import { Confetti } from 'svelte-confetti';
-
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount, onDestroy, tick } from 'svelte';
 
-	import { exportChatStats, downloadChatStats } from '$lib/apis/chats';
+	import { exportChatStats, exportSingleChatStats, downloadChatStats } from '$lib/apis/chats';
 	import { getVersion } from '$lib/apis';
 
-	import Check from '$lib/components/icons/Check.svelte';
-
 	import Modal from '$lib/components/common/Modal.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -18,70 +16,167 @@
 	export let show = false;
 	export let eventData = null;
 
-	let syncing = false;
-	let downloading = false;
-	let downloadController = null;
-
-	const cancelDownload = () => {
-		if (downloadController) {
-			downloadController.abort();
-			downloading = false;
-			syncing = false;
-			downloadController = null;
+	// Listen for verify:chat messages from opener
+	const handleMessage = async (event: MessageEvent) => {
+		// Community sends: { type: 'verify:chat', data: { id: ... } }
+		const chatId = event.data?.data?.id ?? event.data?.id;
+		if (event.data?.type === 'verify:chat' && chatId) {
+			try {
+				const res = await exportSingleChatStats(localStorage.token, chatId);
+				if (res && window.opener) {
+					window.opener.postMessage(
+						{
+							type: 'verify:chat:response',
+							data: res,
+							chatId: chatId,
+							requestId: event.data.requestId ?? null
+						},
+						'*'
+					);
+				}
+			} catch (err: any) {
+				console.error('Failed to verify chat:', err);
+				if (window.opener) {
+					window.opener.postMessage(
+						{
+							type: 'verify:chat:error',
+							error: err?.detail || err?.message || 'Failed to verify chat',
+							chatId: chatId,
+							requestId: event.data.requestId ?? null
+						},
+						'*'
+					);
+				}
+			}
 		}
 	};
 
+	onMount(() => {
+		window.addEventListener('message', handleMessage);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('message', handleMessage);
+	});
+
+
+	// State
+	let syncing = false;
+	let downloading = false;
 	let completed = false;
+	let error = false;
+	let errorMessage = '';
+
+	// Progress tracking
 	let processedItemsCount = 0;
 	let total = 0;
 
+	// Download controller for cancellation
+	let downloadController: AbortController | null = null;
+
+	// Sync mode: 'incremental' or 'full'
+	let syncMode: 'incremental' | 'full' = 'incremental';
+
+	// Reactive progress percentage
+	$: progressPercent = total > 0 ? Math.min(Math.round((processedItemsCount / total) * 100), 100) : 0;
+
+	// Helper to send postMessage to opener
+	const postToOpener = (message: object) => {
+		if (window.opener) {
+			window.opener.postMessage(
+				{ ...message, requestId: eventData?.requestId ?? null },
+				'*'
+			);
+		}
+	};
+
+	// Reset all state
+	const resetState = () => {
+		syncing = false;
+		downloading = false;
+		completed = false;
+		error = false;
+		errorMessage = '';
+		processedItemsCount = 0;
+		total = 0;
+		downloadController = null;
+	};
+
+	// Handle error state
+	const handleError = (message: string) => {
+		console.error('Sync error:', message);
+		errorMessage = message;
+		error = true;
+		syncing = false;
+		downloading = false;
+		postToOpener({ type: 'sync:error', error: message });
+	};
+
+	// Cancel ongoing operations
+	const cancelOperation = () => {
+		if (downloadController) {
+			downloadController.abort();
+			downloadController = null;
+		}
+		syncing = false;
+		downloading = false;
+	};
+
+	// Sync stats to opener window
 	const syncStats = async () => {
 		if (window.opener) {
 			window.opener.focus();
-			window.opener.postMessage(
-				{ type: 'sync:start', requestId: eventData?.requestId ?? null },
-				'*'
-			);
 		}
-
-		const res = await getVersion(localStorage.token).catch(() => {
-			return null;
-		});
-		if (res) {
-			window.opener.postMessage(
-				{ type: 'sync:version', data: res, requestId: eventData?.requestId ?? null },
-				'*'
-			);
-		}
+		postToOpener({ type: 'sync:start' });
 
 		syncing = true;
+		error = false;
+		errorMessage = '';
 		processedItemsCount = 0;
 		total = 0;
-		let page = 1;
 
-		let allItemsLoaded = false;
-		while (!allItemsLoaded) {
-			const res = await exportChatStats(
-				localStorage.token,
-				page,
-				eventData?.searchParams ?? {}
-			).catch(() => {
+		try {
+			// Get version info
+			const versionRes = await getVersion(localStorage.token).catch((err) => {
+				console.error('Failed to get version:', err);
 				return null;
 			});
 
-			if (res) {
+			if (versionRes) {
+				postToOpener({ type: 'sync:version', data: versionRes });
+			}
+
+			// Paginate through stats
+			let page = 1;
+			let allItemsLoaded = false;
+
+			while (!allItemsLoaded) {
+				// Build search params, include updated_at for incremental mode
+				const searchParams = { ...(eventData?.searchParams ?? {}) };
+				if (syncMode === 'incremental' && eventData?.lastSyncedChatUpdatedAt) {
+					searchParams.updated_at = eventData.lastSyncedChatUpdatedAt;
+				}
+
+				const res = await exportChatStats(
+					localStorage.token,
+					page,
+					searchParams
+				).catch((err) => {
+					throw new Error(err?.detail || err?.message || 'Failed to export chat stats');
+				});
+
+				if (!res) {
+					throw new Error('Failed to fetch stats data');
+				}
+
 				processedItemsCount += res.items.length;
 				total = res.total;
 
-				if (window.opener) {
-					if (res.items.length > 0) {
-						window.opener.postMessage(
-							{ type: 'sync:stats:chats', data: res, requestId: eventData?.requestId ?? null },
-							'*'
-						);
-					}
-				} else {
-					console.log('No opener found to send stats back to.');
+				// Allow UI to repaint
+				await tick();
+
+				if (window.opener && res.items.length > 0) {
+					postToOpener({ type: 'sync:stats:chats', data: res });
 				}
 
 				if (processedItemsCount >= total || res.items.length === 0) {
@@ -89,150 +184,180 @@
 				} else {
 					page += 1;
 				}
-			} else {
-				allItemsLoaded = true;
 			}
-		}
 
-		// send sync complete message
-		if (window.opener) {
-			window.opener.postMessage(
-				{ type: 'sync:complete', requestId: eventData?.requestId ?? null },
-				'*'
-			);
+			// Success
+			postToOpener({ type: 'sync:complete' });
+			syncing = false;
+			completed = true;
+		} catch (err: any) {
+			handleError(err?.message || 'An unexpected error occurred');
 		}
-		syncing = false;
-		completed = true;
 	};
 
+	// Download stats as JSON file
 	const downloadHandler = async () => {
 		if (downloading) {
-			cancelDownload();
+			cancelOperation();
 			return;
 		}
+
 		downloading = true;
 		syncing = true;
-
-		// Get total count first
-		const _res = await exportChatStats(localStorage.token, 1, eventData?.searchParams ?? {}).catch(
-			() => {
-				return null;
-			}
-		);
-		if (_res) {
-			total = _res.total;
-		}
-
+		error = false;
+		errorMessage = '';
 		processedItemsCount = 0;
-		const resVersion = await getVersion(localStorage.token).catch(() => {
-			return null;
-		});
+		total = 0;
 
-		const version = resVersion ? resVersion.version : '0.0.0';
-		const filename = `open-webui-stats-${version}-${Date.now()}.json`;
+		try {
+			// Get total count first (no filters for download - get all)
+			const initialRes = await exportChatStats(
+				localStorage.token,
+				1,
+				{}
+			).catch(() => null);
 
-		const searchParams = eventData?.searchParams ?? {};
-		const [res, controller] = await downloadChatStats(
-			localStorage.token,
-			searchParams.chat_id,
-			searchParams.start_time,
-			searchParams.end_time
-		).catch((error) => {
-			toast.error(error?.detail || $i18n.t('An error occurred while downloading your stats.'));
-			return [null, null];
-		});
+			if (initialRes?.total) {
+				total = initialRes.total;
+			}
+			
+			// Allow UI to show the total
+			await tick();
 
-		if (res) {
+			// Get version for filename
+			const versionRes = await getVersion(localStorage.token).catch(() => null);
+			const version = versionRes?.version ?? '0.0.0';
+			const filename = `open-webui-stats-${version}-${Date.now()}.json`;
+
+			// Start streaming download
+			const searchParams = eventData?.searchParams ?? {};
+			const [res, controller] = await downloadChatStats(
+				localStorage.token,
+				searchParams.updated_at
+			).catch((err) => {
+				throw new Error(err?.detail || 'Failed to connect to the server. Please check your connection.');
+			});
+
+			if (!res) {
+				throw new Error('Failed to start download. The server may be unavailable.');
+			}
+
 			downloadController = controller;
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
 
-			const items = [];
+			const items: any[] = [];
 			let buffer = '';
 
-			try {
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
 
-					buffer += decoder.decode(value, { stream: true });
-					const lines = buffer.split('\n');
-					buffer = lines.pop() || '';
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop() || '';
 
-					for (const line of lines) {
-						if (line.trim() !== '') {
-							try {
-								items.push(JSON.parse(line));
-								processedItemsCount++;
-							} catch (e) {
-								console.error('Error parsing line', e);
-							}
+				for (const line of lines) {
+					if (line.trim() !== '') {
+						try {
+							items.push(JSON.parse(line));
+							processedItemsCount += 1;
+						} catch (e) {
+							console.error('Error parsing line:', e);
 						}
 					}
 				}
 
-				if (buffer.trim() !== '') {
-					try {
-						items.push(JSON.parse(buffer));
-						processedItemsCount++;
-					} catch (e) {
-						console.error('Error parsing buffer', e);
-					}
-				}
-
-				if (downloading) {
-					const blob = new Blob([JSON.stringify(items)], { type: 'application/json' });
-					const url = window.URL.createObjectURL(blob);
-					const a = document.createElement('a');
-					a.href = url;
-					a.download = filename;
-					document.body.appendChild(a);
-					a.click();
-					window.URL.revokeObjectURL(url);
-				}
-			} catch (e) {
-				console.error('Download error:', e);
-			} finally {
-				downloading = false;
-				syncing = false;
-				downloadController = null;
+				// Allow UI to repaint after each chunk
+				await tick();
 			}
-		} else {
+
+			// Process remaining buffer
+			if (buffer.trim() !== '') {
+				try {
+					items.push(JSON.parse(buffer));
+					processedItemsCount += 1;
+				} catch (e) {
+					console.error('Error parsing buffer:', e);
+				}
+			}
+
+			// Trigger download if not cancelled
+			if (downloading) {
+				const blob = new Blob([JSON.stringify(items)], { type: 'application/json' });
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = filename;
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				window.URL.revokeObjectURL(url);
+			}
+		} catch (err: any) {
+			// Don't show error if user cancelled the download
+			if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
+				// User cancelled - just reset state silently
+			} else {
+				handleError(err?.message || 'Download failed. Please try again.');
+				toast.error(errorMessage);
+			}
+		} finally {
 			downloading = false;
 			syncing = false;
 			downloadController = null;
 		}
+	};
+
+	// Close modal and reset state
+	const closeModal = () => {
+		show = false;
+		resetState();
 	};
 </script>
 
 <Modal bind:show size="md">
 	<div class="w-full">
 		{#if completed}
-			<div class="flex flex-col items-center justify-center px-6 py-10">
+			<div class="px-5.5 py-5">
+				<div class="mb-1 text-xl font-medium">{$i18n.t('Sync Complete!')}</div>
+				<div class="mb-3 text-xs text-gray-500">
+					{$i18n.t('Your usage stats have been successfully synced.')}
+				</div>
+
 				<Confetti x={[-0.5, 0.5]} y={[0.25, 1]} />
 
-				<div class="rounded-full bg-green-100 dark:bg-green-900/30 p-3 mb-4">
-					<Check className="size-8 text-green-600 dark:text-green-400" />
+				<div class="flex justify-end">
+					<button
+						class="flex items-center justify-center gap-2 rounded-full bg-black px-4 py-2 text-sm text-white transition hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100"
+						on:click={closeModal}
+					>
+						{$i18n.t('Done')}
+					</button>
+				</div>
+			</div>
+		{:else if error}
+			<div class="px-5.5 py-5">
+				<div class="mb-1 text-xl font-medium">{$i18n.t('Sync Failed')}</div>
+				<div class="mb-3 text-xs text-gray-500">
+					{errorMessage || $i18n.t('There was an error syncing your stats. Please try again.')}
 				</div>
 
-				<div class="text-xl font-medium mb-2 text-gray-900 dark:text-gray-100">
-					{$i18n.t('Sync Complete!')}
+				<div class="flex justify-end">
+					<button
+						class="flex items-center justify-center gap-2 rounded-full bg-black px-4 py-2 text-sm text-white transition hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100"
+						on:click={() => {
+							error = false;
+							errorMessage = '';
+						}}
+					>
+						{$i18n.t('Try Again')}
+					</button>
 				</div>
-
-				<div class="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-sm text-xs">
-					{$i18n.t('Your usage stats have been successfully synced with the Open WebUI Community.')}
-				</div>
-
-				<button
-					class="px-6 py-1.5 rounded-full text-sm font-medium bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 transition-colors"
-					on:click={() => (show = false)}
-				>
-					{$i18n.t('Done')}
-				</button>
 			</div>
 		{:else}
-			<div class=" flex justify-between px-5 pt-4 pb-0.5">
-				<div class=" text-lg font-medium self-center">{$i18n.t('Sync Usage Stats')}</div>
+			<div class="flex justify-between px-5 pt-4 pb-0.5">
+				<div class="text-lg font-medium self-center">{$i18n.t('Sync Usage Stats')}</div>
 				<button
 					class="self-center"
 					on:click={() => {
@@ -277,19 +402,46 @@
 					</ul>
 				</div>
 
+				{#if eventData?.lastSyncedChatUpdatedAt}
+					<div class="mt-3">
+						<Tooltip content={$i18n.t('Syncs only chats with updates after your last sync timestamp. Disable to re-sync all chats.')} placement="top-start">
+							<label class="flex items-center gap-2 text-xs cursor-pointer">
+								<input
+									type="checkbox"
+									checked={syncMode === 'incremental'}
+									on:change={(e) => syncMode = e.target.checked ? 'incremental' : 'full'}
+									disabled={syncing}
+									class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+								/>
+								<span class="text-gray-700 dark:text-gray-300">{$i18n.t('Only sync new/updated chats')}</span>
+							</label>
+						</Tooltip>
+					</div>
+				{/if}
+
 				{#if syncing}
 					<div class="mt-3 mx-1.5">
 						<div class="text-xs text-gray-500 mb-1 flex justify-between">
 							<div>
 								{downloading ? $i18n.t('Downloading stats...') : $i18n.t('Syncing stats...')}
 							</div>
-							<div>{Math.round((processedItemsCount / total) * 100) || 0}%</div>
+							<div>
+								{#if total > 0}
+									{processedItemsCount}/{total}
+								{:else}
+									{processedItemsCount}
+								{/if}
+							</div>
 						</div>
-						<div class="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
-							<div
-								class="bg-gray-900 dark:bg-gray-100 h-1.5 rounded-full transition-all duration-300"
-								style="width: {(processedItemsCount / total) * 100}%"
-							></div>
+						<div class="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700 overflow-hidden">
+							{#if total > 0}
+								<div
+									class="bg-gray-900 dark:bg-gray-100 h-1.5 rounded-full transition-all duration-300"
+									style="width: {progressPercent}%"
+								></div>
+							{:else}
+								<div class="bg-gray-900 dark:bg-gray-100 h-1.5 w-1/3 rounded-full animate-pulse"></div>
+							{/if}
 						</div>
 					</div>
 				{/if}
@@ -297,11 +449,10 @@
 				<div class="mt-5 flex justify-between items-center gap-2">
 					<div class="text-xs text-gray-400 text-center mr-auto">
 						<button
-							class=" hover:underline px-2"
+							class="hover:underline px-2"
 							type="button"
-							on:click={async () => {
-								downloadHandler();
-							}}
+							on:click={downloadHandler}
+							disabled={syncing && !downloading}
 						>
 							{downloading ? $i18n.t('Stop Download') : $i18n.t('Download as JSON')}
 						</button>
@@ -311,12 +462,7 @@
 						class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 transition disabled:cursor-not-allowed"
 						on:click={() => {
 							if (syncing) {
-								cancelDownload();
-								if (downloading) {
-									cancelDownload();
-								} else {
-									syncing = false;
-								}
+								cancelOperation();
 							} else {
 								show = false;
 							}
@@ -327,9 +473,7 @@
 
 					<button
 						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition-colors rounded-full"
-						on:click={() => {
-							syncStats();
-						}}
+						on:click={syncStats}
 						disabled={syncing}
 					>
 						{#if syncing && !downloading}

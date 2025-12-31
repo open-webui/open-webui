@@ -383,7 +383,7 @@
 			return;
 		}
 
-		if (!history.messages[messageId]) {
+		if (!history.messages?.[messageId]) {
 			return;
 		}
 

@@ -310,7 +310,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     try:
         data = await process_pipeline_outlet_filter(request, data, user, models)
     except Exception as e:
-        return Exception(f"Error: {e}")
+        raise Exception(f"Error: {e}")
 
     metadata = {
         "chat_id": data["chat_id"],
@@ -346,7 +346,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         )
         return result
     except Exception as e:
-        return Exception(f"Error: {e}")
+        raise Exception(f"Error: {e}")
 
 
 async def chat_action(request: Request, action_id: str, form_data: dict, user: Any):
@@ -442,6 +442,6 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                 data = action(**params)
 
         except Exception as e:
-            return Exception(f"Error: {e}")
+            raise Exception(f"Error: {e}")
 
     return data

@@ -230,6 +230,10 @@ async def is_valid_token(request, decoded) -> bool:
 async def invalidate_token(request, token):
     decoded = decode_token(token)
 
+    # If token is invalid/expired, nothing to revoke
+    if not decoded:
+        return
+
     # Require Redis to store revoked tokens
     if request.app.state.redis:
         jti = decoded.get("jti")
