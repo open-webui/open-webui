@@ -810,10 +810,8 @@ class ChatTable:
             query = db.query(Chat).filter_by(user_id=user_id)
 
             if filter:
-                if filter.get("start_time"):
-                    query = query.filter(Chat.created_at >= filter.get("start_time"))
-                if filter.get("end_time"):
-                    query = query.filter(Chat.created_at <= filter.get("end_time"))
+                if filter.get("updated_at"):
+                    query = query.filter(Chat.updated_at > filter.get("updated_at"))
 
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")

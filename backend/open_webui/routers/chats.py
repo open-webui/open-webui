@@ -380,28 +380,35 @@ def calculate_chat_stats(
     return chat_stats_export_list, result.total
 
 
-async def generate_chat_stats_jsonl_generator(
-    user_id, filter, db: Optional[Session] = None
-):
+def generate_chat_stats_jsonl_generator(user_id, filter):
+    """
+    Synchronous generator for streaming chat stats export.
+    
+    NOTE: We intentionally do NOT pass a shared db session here. Instead, we let
+    each batch create its own short-lived session via get_db_context(None).
+    This is critical for SQLite in low-resource environments because:
+    1. SQLite uses file-level locking
+    2. Holding a session open for the entire streaming duration blocks other requests
+    3. Short-lived sessions release locks between batches, allowing other operations
+    """
     skip = 0
     limit = CHAT_EXPORT_PAGE_ITEM_COUNT
 
     while True:
-        # Use asyncio.to_thread to make the blocking DB call non-blocking
-        result = await asyncio.to_thread(
-            Chats.get_chats_by_user_id,
+        # Each batch gets its own session that closes after the query
+        result = Chats.get_chats_by_user_id(
             user_id,
             filter=filter,
             skip=skip,
             limit=limit,
-            db=db,
+            db=None,  # Let get_db_context create a fresh session per batch
         )
         if not result.items:
             break
 
         for chat in result.items:
             try:
-                chat_stat = await asyncio.to_thread(_process_chat_for_export, chat)
+                chat_stat = _process_chat_for_export(chat)
                 if chat_stat:
                     yield chat_stat.model_dump_json() + "\n"
             except Exception as e:
@@ -413,9 +420,7 @@ async def generate_chat_stats_jsonl_generator(
 @router.get("/stats/export", response_model=ChatStatsExportList)
 async def export_chat_stats(
     request: Request,
-    chat_id: Optional[str] = None,
-    start_time: Optional[int] = None,
-    end_time: Optional[int] = None,
+    updated_at: Optional[int] = None,
     page: Optional[int] = 1,
     stream: bool = False,
     user=Depends(get_verified_user),
@@ -432,21 +437,14 @@ async def export_chat_stats(
 
     try:
         # Fetch chats with date filtering
-        filter = {"order_by": "created_at", "direction": "asc"}
+        filter = {"order_by": "updated_at", "direction": "asc"}
 
-        if chat_id:
-            chat = Chats.get_chat_by_id(chat_id, db=db)
-            if chat:
-                filter["start_time"] = chat.created_at
-
-        if start_time:
-            filter["start_time"] = start_time
-        if end_time:
-            filter["end_time"] = end_time
+        if updated_at:
+            filter["updated_at"] = updated_at
 
         if stream:
             return StreamingResponse(
-                generate_chat_stats_jsonl_generator(user.id, filter, db=db),
+                generate_chat_stats_jsonl_generator(user.id, filter),
                 media_type="application/x-ndjson",
                 headers={
                     "Content-Disposition": f"attachment; filename=chat-stats-export-{user.id}.jsonl"
@@ -466,6 +464,67 @@ async def export_chat_stats(
 
     except Exception as e:
         log.debug(f"Error exporting chat stats: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+############################
+# GetSingleChatStatsExport
+############################
+
+
+@router.get("/stats/export/{chat_id}", response_model=Optional[ChatStatsExport])
+async def export_single_chat_stats(
+    request: Request,
+    chat_id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Export stats for exactly one chat by ID.
+    Returns ChatStatsExport for the specified chat.
+    """
+    # Check if the user has permission to share/export chats
+    if (user.role != "admin") and (
+        not request.app.state.config.ENABLE_COMMUNITY_SHARING
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    try:
+        chat = Chats.get_chat_by_id(chat_id, db=db)
+
+        if not chat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+
+        # Verify the chat belongs to the user (unless admin)
+        if chat.user_id != user.id and user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
+        # Process the chat for export
+        chat_stats = await asyncio.to_thread(_process_chat_for_export, chat)
+
+        if not chat_stats:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to process chat stats",
+            )
+
+        return chat_stats
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.debug(f"Error exporting single chat stats: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
