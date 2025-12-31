@@ -701,6 +701,28 @@
 						<Switch bind:state={adminConfig.ENABLE_FOLDERS} />
 					</div>
 
+					{#if adminConfig.ENABLE_FOLDERS}
+						<div class="mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('Folder Max File Count')}</div>
+							</div>
+
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="number"
+									min="1"
+									placeholder={$i18n.t('Enter max file count per folder')}
+									bind:value={adminConfig.FOLDER_MAX_FILE_COUNT}
+								/>
+							</div>
+
+							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t('Maximum number of files allowed per folder.')}
+							</div>
+						</div>
+					{/if}
+
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Notes')} ({$i18n.t('Beta')})
