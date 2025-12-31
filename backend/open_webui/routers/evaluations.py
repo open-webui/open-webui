@@ -141,55 +141,6 @@ async def create_feedback(
     return feedback
 
 
-@router.get("/feedback/{id}", response_model=FeedbackModel)
-async def get_feedback_by_id(id: str, user=Depends(get_verified_user)):
-    if user.role == "admin":
-        feedback = Feedbacks.get_feedback_by_id(id=id)
-    else:
-        feedback = Feedbacks.get_feedback_by_id_and_user_id(id=id, user_id=user.id)
-
-    if not feedback:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
-
-    return feedback
-
-
-@router.post("/feedback/{id}", response_model=FeedbackModel)
-async def update_feedback_by_id(
-    id: str, form_data: FeedbackForm, user=Depends(get_verified_user)
-):
-    if user.role == "admin":
-        feedback = Feedbacks.update_feedback_by_id(id=id, form_data=form_data)
-    else:
-        feedback = Feedbacks.update_feedback_by_id_and_user_id(
-            id=id, user_id=user.id, form_data=form_data
-        )
-
-    if not feedback:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
-
-    return feedback
-
-
-@router.delete("/feedback/{id}")
-async def delete_feedback_by_id(id: str, user=Depends(get_verified_user)):
-    if user.role == "admin":
-        success = Feedbacks.delete_feedback_by_id(id=id)
-    else:
-        success = Feedbacks.delete_feedback_by_id_and_user_id(id=id, user_id=user.id)
-
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
-        )
-
-    return success
-
-
 ############################
 # Message Feedback APIs
 ############################
@@ -296,3 +247,52 @@ async def get_chat_feedbacks(
 
     feedback_map = Feedbacks.get_feedbacks_by_chat_id(chat_id)
     return feedback_map
+
+
+@router.get("/feedback/{id}", response_model=FeedbackModel)
+async def get_feedback_by_id(id: str, user=Depends(get_verified_user)):
+    if user.role == "admin":
+        feedback = Feedbacks.get_feedback_by_id(id=id)
+    else:
+        feedback = Feedbacks.get_feedback_by_id_and_user_id(id=id, user_id=user.id)
+
+    if not feedback:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    return feedback
+
+
+@router.post("/feedback/{id}", response_model=FeedbackModel)
+async def update_feedback_by_id(
+    id: str, form_data: FeedbackForm, user=Depends(get_verified_user)
+):
+    if user.role == "admin":
+        feedback = Feedbacks.update_feedback_by_id(id=id, form_data=form_data)
+    else:
+        feedback = Feedbacks.update_feedback_by_id_and_user_id(
+            id=id, user_id=user.id, form_data=form_data
+        )
+
+    if not feedback:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    return feedback
+
+
+@router.delete("/feedback/{id}")
+async def delete_feedback_by_id(id: str, user=Depends(get_verified_user)):
+    if user.role == "admin":
+        success = Feedbacks.delete_feedback_by_id(id=id)
+    else:
+        success = Feedbacks.delete_feedback_by_id_and_user_id(id=id, user_id=user.id)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    return success
