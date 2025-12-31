@@ -703,23 +703,41 @@ def get_event_emitter(request_info, update_db=True):
                     content = message.get("content", "")
                     content += event_data.get("data", {}).get("content", "")
 
+                    # Include persona info in message
+                    message_data = {
+                        "content": content,
+                    }
+                    if request_info.get("chapter_id"):
+                        message_data["chapter_id"] = request_info["chapter_id"]
+                    if request_info.get("proficiency_level"):
+                        message_data["proficiency_level"] = request_info["proficiency_level"]
+                    if request_info.get("response_style"):
+                        message_data["response_style"] = request_info["response_style"]
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         request_info["chat_id"],
                         request_info["message_id"],
-                        {
-                            "content": content,
-                        },
+                        message_data,
                     )
 
             if "type" in event_data and event_data["type"] == "replace":
                 content = event_data.get("data", {}).get("content", "")
 
+                # Include persona info in message
+                message_data = {
+                    "content": content,
+                }
+                if request_info.get("chapter_id"):
+                    message_data["chapter_id"] = request_info["chapter_id"]
+                if request_info.get("proficiency_level"):
+                    message_data["proficiency_level"] = request_info["proficiency_level"]
+                if request_info.get("response_style"):
+                    message_data["response_style"] = request_info["response_style"]
+
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
                     request_info["message_id"],
-                    {
-                        "content": content,
-                    },
+                    message_data,
                 )
 
             if "type" in event_data and event_data["type"] == "embeds":
