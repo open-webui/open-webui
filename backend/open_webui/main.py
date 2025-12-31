@@ -1323,7 +1323,7 @@ class APIKeyRestrictionMiddleware(BaseHTTPMiddleware):
 
                 if not is_allowed:
                     return JSONResponse(
-                        status_code=status.HTTP_43_FORBIDDEN,
+                        status_code=status.HTTP_403_FORBIDDEN,
                         content={
                             "detail": "API key not allowed to access this endpoint."
                         },
