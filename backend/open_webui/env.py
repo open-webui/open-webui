@@ -669,6 +669,8 @@ except ValueError:
     WEBSOCKET_SERVER_PING_INTERVAL = 25
 
 
+REQUESTS_VERIFY = os.environ.get("REQUESTS_VERIFY", "True").lower() == "true"
+
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
 if AIOHTTP_CLIENT_TIMEOUT == "":
@@ -766,7 +768,10 @@ else:
 # When enabled (default), scores are normalized to 0-1 range for proper
 # relevance threshold behavior with MS MARCO models.
 SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION = (
-    os.environ.get("SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION", "True").lower() == "true"
+    os.environ.get(
+        "SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION", "True"
+    ).lower()
+    == "true"
 )
 
 ####################################
