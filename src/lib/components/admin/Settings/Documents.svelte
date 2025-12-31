@@ -16,6 +16,14 @@
 		getRAGConfig,
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
+	import {
+		getExternalVolumes,
+		getVolumesStatus,
+		updateExternalVolumes,
+		markVolumeAvailable,
+		getExclusions,
+		updateExclusions
+	} from '$lib/apis/rag_admin';
 
 	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
 	import { deleteAllFiles } from '$lib/apis/files';
@@ -28,6 +36,9 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import Refresh from '$lib/components/icons/Refresh.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -64,6 +75,13 @@
 	};
 
 	let RAGConfig = null;
+	let externalVolumes = [];
+	let volumesStatus = [];
+	let volumesLoading = true;
+	let volumesSaving = false;
+	let exclusionsLoading = true;
+	let exclusionsSaving = false;
+	let exclusionsText = '';
 
 	const embeddingModelUpdateHandler = async () => {
 		if (RAG_EMBEDDING_ENGINE === '' && RAG_EMBEDDING_MODEL.split('/').length - 1 > 1) {
@@ -253,6 +271,91 @@
 			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version;
 		}
 	};
+
+	const loadExternalVolumes = async () => {
+		volumesLoading = true;
+		const res = await getExternalVolumes(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (res?.volumes) {
+			externalVolumes = res.volumes;
+		}
+		volumesLoading = false;
+	};
+
+	const loadVolumesStatus = async () => {
+		const res = await getVolumesStatus(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (res) {
+			volumesStatus = res;
+		}
+	};
+
+	const loadExclusions = async () => {
+		exclusionsLoading = true;
+		const res = await getExclusions(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (res?.excludes) {
+			exclusionsText = res.excludes.join('\n');
+		}
+		exclusionsLoading = false;
+	};
+
+	const saveExternalVolumes = async () => {
+		volumesSaving = true;
+		const normalized = externalVolumes
+			.map((vol) => ({
+				name: vol.name?.trim(),
+				primary: vol.primary?.trim(),
+				fallback: vol.fallback?.trim(),
+				mount: vol.mount?.trim()
+			}))
+			.filter((vol) => vol.name && vol.primary && vol.fallback && vol.mount);
+
+		const nameSet = new Set();
+		for (const vol of normalized) {
+			if (nameSet.has(vol.name)) {
+				toast.error($i18n.t('Duplicate volume name: {{NAME}}', { NAME: vol.name }));
+				volumesSaving = false;
+				return;
+			}
+			nameSet.add(vol.name);
+		}
+
+		const res = await updateExternalVolumes(localStorage.token, { volumes: normalized }).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+		volumesSaving = false;
+		if (res) {
+			toast.success($i18n.t('External volumes saved'));
+			externalVolumes = normalized;
+			await loadVolumesStatus();
+		}
+	};
+
+	const saveExclusions = async () => {
+		exclusionsSaving = true;
+		const excludes = exclusionsText
+			.split('\n')
+			.map((line) => line.trim())
+			.filter((line) => line !== '');
+		const res = await updateExclusions(localStorage.token, { excludes }).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		exclusionsSaving = false;
+		if (res) {
+			toast.success($i18n.t('Exclusions saved'));
+		}
+	};
 	onMount(async () => {
 		await setEmbeddingConfig();
 
@@ -270,6 +373,9 @@
 				: config.MINERU_PARAMS;
 
 		RAGConfig = config;
+		await loadExternalVolumes();
+		await loadVolumesStatus();
+		await loadExclusions();
 	});
 </script>
 
@@ -1339,6 +1445,191 @@
 							</Tooltip>
 						</div>
 					</div>
+				</div>
+
+				<div class="mb-3">
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('External Volumes')}</div>
+
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div class="mb-2 text-xs text-gray-500">
+						{$i18n.t(
+							'Changes apply after restarting the app/autoscan containers. Use .volume-available markers for availability detection.'
+						)}
+					</div>
+
+					{#if volumesLoading}
+						<div class="flex items-center justify-center py-6">
+							<Spinner className="size-5" />
+						</div>
+					{:else}
+						<div class="space-y-2">
+							{#each externalVolumes as vol, idx}
+								<div class="rounded-md border border-gray-100/30 dark:border-gray-850/30 p-3">
+									<div class="flex items-center justify-between mb-2">
+										<div class="text-xs font-medium">
+											{$i18n.t('Volume')} {idx + 1}
+										</div>
+										<button
+											class="text-xs text-red-500"
+											type="button"
+											on:click={() => {
+												externalVolumes = externalVolumes.filter((_, i) => i !== idx);
+											}}
+										>
+											<GarbageBin />
+										</button>
+									</div>
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Name (e.g. Documents)')}
+											bind:value={vol.name}
+											autocomplete="off"
+										/>
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Primary path on host')}
+											bind:value={vol.primary}
+											autocomplete="off"
+										/>
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Fallback path')}
+											bind:value={vol.fallback}
+											autocomplete="off"
+										/>
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Mount path in container')}
+											bind:value={vol.mount}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							{/each}
+						</div>
+
+						<div class="flex items-center gap-3 mt-3">
+							<button
+								class="flex items-center gap-2 px-2.5 py-1.5 rounded-full text-xs border border-gray-100/30 dark:border-gray-850/30"
+								type="button"
+								on:click={() => {
+									externalVolumes = [
+										...externalVolumes,
+										{ name: '', primary: '', fallback: '', mount: '' }
+									];
+								}}
+							>
+								<Plus />
+								<span>{$i18n.t('Add Volume')}</span>
+							</button>
+
+							<button
+								class="px-3 py-1.5 text-xs font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								type="button"
+								disabled={volumesSaving}
+								on:click={() => {
+									saveExternalVolumes();
+								}}
+							>
+								{#if volumesSaving}
+									<Spinner className="size-4" />
+								{:else}
+									{$i18n.t('Save Volumes')}
+								{/if}
+							</button>
+						</div>
+
+						<div class="mt-4">
+							<div class="flex items-center justify-between mb-1">
+								<div class="text-xs font-medium">{$i18n.t('Volume Status')}</div>
+								<button
+									class="text-xs flex items-center gap-1"
+									type="button"
+									on:click={() => {
+										loadVolumesStatus();
+									}}
+								>
+									<Refresh />
+									<span>{$i18n.t('Refresh')}</span>
+								</button>
+							</div>
+							<div class="space-y-1 text-xs text-gray-500">
+								{#if volumesStatus.length === 0}
+									<div>{$i18n.t('No volume status available')}</div>
+								{:else}
+									{#each volumesStatus as status}
+										<div class="flex items-center justify-between">
+											<div>
+												<strong class="text-gray-700 dark:text-gray-200">
+													{status.name}
+												</strong>
+												<span class="ml-2">{status.primary}</span>
+											</div>
+											<div class="flex items-center gap-2">
+												<span>
+													{status.is_available ? $i18n.t('available') : $i18n.t('missing')}
+												</span>
+												{#if status.is_available && !status.marker_exists}
+													<button
+														class="text-xs"
+														type="button"
+														on:click={() => {
+															markVolumeAvailable(localStorage.token, status.name)
+																.then(() => loadVolumesStatus())
+																.catch((error) => {
+																	toast.error(`${error}`);
+																});
+														}}
+													>
+														{$i18n.t('Mark available')}
+													</button>
+												{/if}
+											</div>
+										</div>
+									{/each}
+								{/if}
+							</div>
+						</div>
+					{/if}
+				</div>
+
+				<div class="mb-3">
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Ingestion Exclusions')}</div>
+
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div class="mb-2 text-xs text-gray-500">
+						{$i18n.t('One path or glob per line. Changes are applied on the next scan.')}
+					</div>
+
+					{#if exclusionsLoading}
+						<div class="flex items-center justify-center py-6">
+							<Spinner className="size-5" />
+						</div>
+					{:else}
+						<Textarea
+							bind:value={exclusionsText}
+							placeholder={$i18n.t('e.g. /mnt/resources/Libros\n**/__pycache__/**')}
+						/>
+						<div class="flex justify-end mt-2">
+							<button
+								class="px-3 py-1.5 text-xs font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								type="button"
+								disabled={exclusionsSaving}
+								on:click={() => {
+									saveExclusions();
+								}}
+							>
+								{#if exclusionsSaving}
+									<Spinner className="size-4" />
+								{:else}
+									{$i18n.t('Save Exclusions')}
+								{/if}
+							</button>
+						</div>
+					{/if}
 				</div>
 
 				<div class="mb-3">
