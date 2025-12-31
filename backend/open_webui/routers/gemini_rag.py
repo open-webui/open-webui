@@ -7,7 +7,7 @@ Gemini File Search RAG API 라우터
 import logging
 import os
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request, BackgroundTasks
 from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -15,6 +15,7 @@ from open_webui.utils.gemini_rag import get_gemini_rag_service, GeminiRAGService
 from open_webui.utils.prompt_composer import compose_with_fallback
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.textbooks import TextbookChapters
+from open_webui.models.chats import Chats, ChatForm
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -55,7 +56,7 @@ class RAGQueryRequest(BaseModel):
     temperature: float = 0.2
     system_instruction: Optional[str] = None
     prompt_group_id: Optional[str] = None
-    proficiency_level: Optional[int] = None
+    proficiency_level: Optional[str] = None
     response_style: Optional[str] = None
 
 
@@ -65,6 +66,7 @@ class RAGQueryResponse(BaseModel):
     citations: List[dict] = []
     model: Optional[str] = None
     error: Optional[str] = None
+    chat_id: Optional[str] = None  # Returned if a new chat was created
 
 
 class ChapterStoreMapping(BaseModel):
@@ -106,6 +108,81 @@ def get_rag_service(request: Request) -> GeminiRAGService:
             detail="Gemini API key not found. Please configure Gemini in OpenAI settings."
         )
     return get_gemini_rag_service(api_key)
+
+
+def generate_chat_title_background(
+    api_key: str,
+    chat_id: str,
+    messages: List[dict],
+    user_id: str
+):
+    """
+    백그라운드에서 채팅 제목 자동 생성
+
+    Args:
+        api_key: Gemini API 키
+        chat_id: 채팅 ID
+        messages: 대화 내역
+        user_id: 사용자 ID
+    """
+    try:
+        log.info(f"[TITLE GEN] Starting title generation for chat {chat_id}")
+
+        # 첫 메시지만 있으면 제목 생성 (이미 제목이 있으면 스킵)
+        chat = Chats.get_chat_by_id_and_user_id(chat_id, user_id)
+        if not chat:
+            log.warning(f"[TITLE GEN] Chat {chat_id} not found for title generation")
+            return
+
+        # "새 채팅"이 아니면 이미 제목이 있는 것으로 간주
+        if chat.title and chat.title != "새 채팅" and chat.title != "New Chat":
+            log.debug(f"[TITLE GEN] Chat {chat_id} already has title: {chat.title}")
+            return
+
+        # 메시지 포맷팅
+        conversation = "\n".join([
+            f"{msg.get('role', 'user')}: {msg.get('content', '')}"
+            for msg in messages[:3]  # 처음 3개 메시지만 사용
+        ])
+
+        # 제목 생성 프롬프트
+        title_prompt = f"""다음 대화의 제목을 한국어로 짧게 생성해주세요.
+제목은 10단어 이내로, 대화의 핵심 주제를 담아야 합니다.
+특수문자나 따옴표 없이 제목만 반환하세요.
+
+대화:
+{conversation}
+
+제목:"""
+
+        # Gemini API 직접 호출 (RAG 없이)
+        from google import genai
+        client = genai.Client(api_key=api_key)
+
+        log.info(f"[TITLE GEN] Calling Gemini API for title generation...")
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=title_prompt
+        )
+
+        if response and response.text:
+            title = response.text.strip()
+            # 제목 정리 (따옴표, 특수문자 제거)
+            title = title.replace('"', '').replace("'", '').strip()
+            # 너무 길면 자르기
+            if len(title) > 50:
+                title = title[:47] + "..."
+
+            # 채팅 제목 업데이트
+            Chats.update_chat_title_by_id(chat_id, title)
+            log.info(f"[TITLE GEN] ✅ Generated title for chat {chat_id}: {title}")
+        else:
+            log.warning(f"[TITLE GEN] No response text for chat {chat_id}")
+
+    except Exception as e:
+        log.error(f"[TITLE GEN] Error generating title for chat {chat_id}: {e}")
+        import traceback
+        log.error(f"[TITLE GEN] Traceback: {traceback.format_exc()}")
 
 
 # ============================================================
@@ -348,6 +425,7 @@ async def delete_chapter_store_mapping(
 async def query_rag(
     request: Request,
     body: RAGQueryRequest,
+    background_tasks: BackgroundTasks,
     user=Depends(get_verified_user)
 ):
     """
@@ -401,19 +479,79 @@ async def query_rag(
         system_instruction=final_system
     )
 
-    return RAGQueryResponse(**result)
+    # 채팅 생성 및 제목 생성 로직
+    chat_id = None  # 항상 새 채팅 생성
+
+    # RAG 응답이 성공하면 새 채팅 생성
+    if result.get("success") and result.get("text"):
+        log.info("[GEMINI RAG] Creating new chat for RAG query")
+
+        # 채팅 메시지 구조 생성
+        chat_messages = {
+            "title": "새 채팅",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": body.question
+                },
+                {
+                    "role": "assistant",
+                    "content": result["text"]
+                }
+            ]
+        }
+
+        # 새 채팅 생성
+        chat_form = ChatForm(
+            chat=chat_messages,
+            chapter_id=None,  # RAG query doesn't specify chapter
+            proficiency_level=body.proficiency_level,
+            response_style=body.response_style
+        )
+
+        new_chat = Chats.insert_new_chat(user.id, chat_form)
+        if new_chat:
+            chat_id = new_chat.id
+            log.info(f"[GEMINI RAG] Created new chat: {chat_id}")
+        else:
+            log.error("[GEMINI RAG] Failed to create new chat")
+
+    # 채팅 ID가 있으면 백그라운드에서 제목 생성
+    enable_title_gen = getattr(request.app.state.config, 'ENABLE_TITLE_GENERATION', True)
+    api_key = get_gemini_api_key(request)
+
+    if chat_id and enable_title_gen and api_key:
+        # 제목 생성용 메시지 준비
+        messages = [
+            {"role": "user", "content": body.question},
+            {"role": "assistant", "content": result.get("text", "")}
+        ]
+
+        log.info(f"[GEMINI RAG] Scheduling title generation for chat {chat_id}")
+        background_tasks.add_task(
+            generate_chat_title_background,
+            api_key,
+            chat_id,
+            messages,
+            user.id
+        )
+
+    # 응답에 chat_id 포함
+    response_data = {**result, "chat_id": chat_id}
+    return RAGQueryResponse(**response_data)
 
 
 @router.post("/query/by-chapter", response_model=RAGQueryResponse)
 async def query_rag_by_chapter(
     request: Request,
+    background_tasks: BackgroundTasks,
     chapter_id: str,
     question: str,
     model: str = "gemini-2.5-flash",
     temperature: float = 0.2,
     system_instruction: Optional[str] = None,
     prompt_group_id: Optional[str] = None,
-    proficiency_level: Optional[int] = None,
+    proficiency_level: Optional[str] = None,
     response_style: Optional[str] = None,
     user=Depends(get_verified_user)
 ):
@@ -476,7 +614,66 @@ async def query_rag_by_chapter(
         system_instruction=final_system
     )
 
-    return RAGQueryResponse(**result)
+    # 채팅 생성 및 제목 생성 로직
+    final_chat_id = None  # 항상 새 채팅 생성
+
+    # RAG 응답이 성공하면 새 채팅 생성
+    if result.get("success") and result.get("text"):
+        log.info(f"[GEMINI RAG BY CHAPTER] Creating new chat for chapter {chapter_id}")
+
+        # 채팅 메시지 구조 생성
+        chat_messages = {
+            "title": "새 채팅",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": question
+                },
+                {
+                    "role": "assistant",
+                    "content": result["text"]
+                }
+            ]
+        }
+
+        # 새 채팅 생성
+        chat_form = ChatForm(
+            chat=chat_messages,
+            chapter_id=chapter_id,
+            proficiency_level=proficiency_level,
+            response_style=response_style
+        )
+
+        new_chat = Chats.insert_new_chat(user.id, chat_form)
+        if new_chat:
+            final_chat_id = new_chat.id
+            log.info(f"[GEMINI RAG BY CHAPTER] Created new chat: {final_chat_id}")
+        else:
+            log.error("[GEMINI RAG BY CHAPTER] Failed to create new chat")
+
+    # 채팅 ID가 있으면 백그라운드에서 제목 생성
+    enable_title_gen = getattr(request.app.state.config, 'ENABLE_TITLE_GENERATION', True)
+    api_key = get_gemini_api_key(request)
+
+    if final_chat_id and enable_title_gen and api_key:
+        # 제목 생성용 메시지 준비
+        title_messages = [
+            {"role": "user", "content": question},
+            {"role": "assistant", "content": result.get("text", "")}
+        ]
+
+        log.info(f"[GEMINI RAG BY CHAPTER] Scheduling title generation for chat {final_chat_id}")
+        background_tasks.add_task(
+            generate_chat_title_background,
+            api_key,
+            final_chat_id,
+            title_messages,
+            user.id
+        )
+
+    # 응답에 chat_id 포함
+    response_data = {**result, "chat_id": final_chat_id}
+    return RAGQueryResponse(**response_data)
 
 
 # ============================================================

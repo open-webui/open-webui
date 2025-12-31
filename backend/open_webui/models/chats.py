@@ -268,6 +268,14 @@ class ChatTable:
                     else "New Chat"
                 )
 
+                # Sync outer columns from inner chat object to keep them consistent
+                if "chapter_id" in chat:
+                    chat_item.chapter_id = chat["chapter_id"]
+                if "proficiency_level" in chat:
+                    chat_item.proficiency_level = str(chat["proficiency_level"]) if chat["proficiency_level"] is not None else None
+                if "response_style" in chat:
+                    chat_item.response_style = chat["response_style"]
+
                 chat_item.updated_at = int(time.time())
 
                 db.commit()
@@ -1005,7 +1013,12 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
+                # Update outer column
                 chat.chapter_id = chapter_id
+                # Also update inner chat.chat object to keep in sync
+                chat_data = chat.chat
+                chat_data["chapter_id"] = chapter_id
+                chat.chat = chat_data
                 chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat)
@@ -1023,16 +1036,30 @@ class ChatTable:
         """
         Update chat settings (chapter_id, proficiency_level, response_style).
         Only updates fields that are not None.
+        Updates both the outer columns and the inner chat.chat object.
         """
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
+
+                # Update outer columns
                 if chapter_id is not None:
                     chat.chapter_id = chapter_id
                 if proficiency_level is not None:
                     chat.proficiency_level = proficiency_level
                 if response_style is not None:
                     chat.response_style = response_style
+
+                # Also update inner chat.chat object to keep in sync
+                chat_data = chat.chat
+                if chapter_id is not None:
+                    chat_data["chapter_id"] = chapter_id
+                if proficiency_level is not None:
+                    chat_data["proficiency_level"] = proficiency_level
+                if response_style is not None:
+                    chat_data["response_style"] = response_style
+                chat.chat = chat_data
+
                 chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat)

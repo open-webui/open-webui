@@ -523,7 +523,7 @@ from open_webui.tasks import (
 from open_webui.utils.redis import get_sentinels_from_env
 
 
-from open_webui.constants import ERROR_MESSAGES
+from open_webui.constants import ERROR_MESSAGES, TASKS
 
 
 if SAFE_MODE:
@@ -1543,6 +1543,16 @@ async def chat_completion(
     model_id = form_data.get("model", None)
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
+
+    # If no background_tasks provided, use default tasks based on config
+    if tasks is None:
+        tasks = {
+            TASKS.TITLE_GENERATION: request.app.state.config.ENABLE_TITLE_GENERATION,
+            TASKS.TAGS_GENERATION: getattr(request.app.state.config, 'ENABLE_TAGS_GENERATION', False),
+        }
+        log.info(f"[CHAT COMPLETION] Default tasks created: {tasks}")
+    else:
+        log.info(f"[CHAT COMPLETION] Tasks from frontend: {tasks}")
 
     metadata = {}
     try:
