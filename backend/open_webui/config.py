@@ -3186,6 +3186,12 @@ JINA_API_KEY = PersistentConfig(
     os.getenv("JINA_API_KEY", ""),
 )
 
+JINA_API_BASE_URL = PersistentConfig(
+    "JINA_API_BASE_URL",
+    "rag.web.search.jina_api_base_url",
+    os.getenv("JINA_API_BASE_URL", ""),
+)
+
 SEARCHAPI_API_KEY = PersistentConfig(
     "SEARCHAPI_API_KEY",
     "rag.web.search.searchapi_api_key",
