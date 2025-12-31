@@ -579,24 +579,27 @@ class OAuthClientManager:
     def get_client(self, client_id):
         if client_id not in self.clients:
             self.ensure_client_from_config(client_id)
+
         client = self.clients.get(client_id)
         return client["client"] if client else None
 
     def get_client_info(self, client_id):
         if client_id not in self.clients:
             self.ensure_client_from_config(client_id)
+
         client = self.clients.get(client_id)
         return client["client_info"] if client else None
 
     def get_server_metadata_url(self, client_id):
-        if client_id in self.clients:
-            client = self.clients[client_id]
-            return (
-                client._server_metadata_url
-                if hasattr(client, "_server_metadata_url")
-                else None
-            )
-        return None
+        client = self.get_client(client_id)
+        if not client:
+            return None
+
+        return (
+            client._server_metadata_url
+            if hasattr(client, "_server_metadata_url")
+            else None
+        )
 
     async def get_oauth_token(
         self, user_id: str, client_id: str, force_refresh: bool = False
@@ -1161,7 +1164,9 @@ class OAuthManager:
             else:
                 user_oauth_groups = []
 
-        user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id, db=db)
+        user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(
+            user.id, db=db
+        )
         all_available_groups: list[GroupModel] = Groups.get_all_groups(db=db)
 
         # Create groups if they don't exist and creation is enabled
