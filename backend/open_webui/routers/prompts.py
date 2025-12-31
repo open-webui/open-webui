@@ -98,9 +98,14 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user), d
             or has_access(user.id, "read", prompt.access_control, db=db)
         ):
             return prompt
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
     else:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
