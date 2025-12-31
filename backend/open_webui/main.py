@@ -88,6 +88,7 @@ from open_webui.routers import (
     models,
     knowledge,
     prompts,
+    prompt_groups,
     evaluations,
     tools,
     users,
@@ -369,6 +370,7 @@ from open_webui.config import (
     PENDING_USER_OVERLAY_CONTENT,
     PENDING_USER_OVERLAY_TITLE,
     DEFAULT_PROMPT_SUGGESTIONS,
+    DEFAULT_PROMPT_GROUP_ID,
     DEFAULT_MODELS,
     DEFAULT_PINNED_MODELS,
     DEFAULT_ARENA_MODEL,
@@ -765,6 +767,7 @@ app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 
 
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
+app.state.config.DEFAULT_PROMPT_GROUP_ID = DEFAULT_PROMPT_GROUP_ID
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 app.state.config.DEFAULT_GROUP_ID = DEFAULT_GROUP_ID
 
@@ -1397,6 +1400,7 @@ app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
+app.include_router(prompt_groups.router, prefix="/api/v1/prompt-groups", tags=["prompt-groups"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])

@@ -1220,6 +1220,16 @@ DEFAULT_GROUP_ID = PersistentConfig(
     os.environ.get("DEFAULT_GROUP_ID", ""),
 )
 
+####################################
+# Prompt System
+####################################
+
+DEFAULT_PROMPT_GROUP_ID = PersistentConfig(
+    "DEFAULT_PROMPT_GROUP_ID",
+    "prompts.default_group_id",
+    os.environ.get("DEFAULT_PROMPT_GROUP_ID", None),
+)
+
 PENDING_USER_OVERLAY_TITLE = PersistentConfig(
     "PENDING_USER_OVERLAY_TITLE",
     "ui.pending_user_overlay_title",

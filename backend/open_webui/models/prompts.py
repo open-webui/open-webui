@@ -25,6 +25,11 @@ class Prompt(Base):
     timestamp = Column(BigInteger)
 
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
+
+    # Persona-based prompt fields
+    prompt_type = Column(String, nullable=True)  # 'base', 'proficiency', 'style', or None
+    persona_value = Column(String, nullable=True)  # '1','2','3' or 'simple','detailed'
+
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
     # - `{}`: Private access, restricted exclusively to the owner.
@@ -50,6 +55,8 @@ class PromptModel(BaseModel):
     timestamp: int  # timestamp in epoch
 
     access_control: Optional[dict] = None
+    prompt_type: Optional[str] = None
+    persona_value: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -67,6 +74,8 @@ class PromptForm(BaseModel):
     title: str
     content: str
     access_control: Optional[dict] = None
+    prompt_type: Optional[str] = None
+    persona_value: Optional[str] = None
 
 
 class PromptsTable:
@@ -135,8 +144,47 @@ class PromptsTable:
             prompt
             for prompt in prompts
             if prompt.user_id == user_id
-            or has_access(user_id, permission, prompt.access_control, user_group_ids)
+            or has_access(user.id, permission, prompt.access_control, user_group_ids)
         ]
+
+    def get_prompts_by_type(self, prompt_type: str) -> list[PromptModel]:
+        """Get all prompts of a specific type (base, proficiency, style)"""
+        try:
+            with get_db() as db:
+                prompts = db.query(Prompt).filter_by(prompt_type=prompt_type).all()
+                return [PromptModel.model_validate(p) for p in prompts]
+        except Exception:
+            return []
+
+    def get_prompts_by_persona(
+        self, prompt_type: str, persona_value: str
+    ) -> list[PromptModel]:
+        """Get prompts matching both type and persona value"""
+        try:
+            with get_db() as db:
+                prompts = (
+                    db.query(Prompt)
+                    .filter_by(prompt_type=prompt_type, persona_value=persona_value)
+                    .all()
+                )
+                return [PromptModel.model_validate(p) for p in prompts]
+        except Exception:
+            return []
+
+    def get_prompt_by_type_and_persona(
+        self, prompt_type: str, persona_value: str
+    ) -> Optional[PromptModel]:
+        """Get single prompt matching type and persona (returns first if multiple)"""
+        try:
+            with get_db() as db:
+                prompt = (
+                    db.query(Prompt)
+                    .filter_by(prompt_type=prompt_type, persona_value=persona_value)
+                    .first()
+                )
+                return PromptModel.model_validate(prompt) if prompt else None
+        except Exception:
+            return None
 
     def update_prompt_by_command(
         self, command: str, form_data: PromptForm
@@ -147,6 +195,8 @@ class PromptsTable:
                 prompt.title = form_data.title
                 prompt.content = form_data.content
                 prompt.access_control = form_data.access_control
+                prompt.prompt_type = form_data.prompt_type
+                prompt.persona_value = form_data.persona_value
                 prompt.timestamp = int(time.time())
                 db.commit()
                 return PromptModel.model_validate(prompt)

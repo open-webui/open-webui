@@ -9,7 +9,7 @@ from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
@@ -41,8 +41,8 @@ class Chat(Base):
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
     chapter_id = Column(Text, nullable=True)
-    proficiency_level = Column(BigInteger, nullable=True)  # 1=하, 2=중, 3=상
-    response_style = Column(BigInteger, nullable=True)
+    proficiency_level = Column(Text, nullable=True)  # e.g., "beginner", "intermediate", "advanced"
+    response_style = Column(Text, nullable=True)  # e.g., "simple", "detailed", "question_guidance"
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -77,8 +77,16 @@ class ChatModel(BaseModel):
     meta: dict = {}
     folder_id: Optional[str] = None
     chapter_id: Optional[str] = None
-    proficiency_level: Optional[int] = None  # 1=하, 2=중, 3=상
-    response_style: Optional[int] = None
+    proficiency_level: Optional[str] = None  # e.g., "beginner", "intermediate", "advanced"
+    response_style: Optional[str] = None  # e.g., "simple", "detailed", "question_guidance"
+
+    @field_validator('proficiency_level', 'response_style', mode='before')
+    @classmethod
+    def convert_to_string(cls, v):
+        """Convert integer values to string for backward compatibility"""
+        if v is None:
+            return None
+        return str(v)
 
 
 ####################
@@ -90,8 +98,8 @@ class ChatForm(BaseModel):
     chat: dict
     folder_id: Optional[str] = None
     chapter_id: Optional[str] = None
-    proficiency_level: Optional[int] = None  # 1=하, 2=중, 3=상
-    response_style: Optional[int] = None
+    proficiency_level: Optional[str] = None  # e.g., "beginner", "intermediate", "advanced"
+    response_style: Optional[str] = None  # e.g., "simple", "detailed", "question_guidance"
 
 
 class ChatImportForm(ChatForm):
@@ -100,8 +108,8 @@ class ChatImportForm(ChatForm):
     created_at: Optional[int] = None
     updated_at: Optional[int] = None
     chapter_id: Optional[str] = None
-    proficiency_level: Optional[int] = None
-    response_style: Optional[int] = None
+    proficiency_level: Optional[str] = None
+    response_style: Optional[str] = None
 
 
 class ChatsImportForm(BaseModel):
@@ -130,8 +138,8 @@ class ChatResponse(BaseModel):
     meta: dict = {}
     folder_id: Optional[str] = None
     chapter_id: Optional[str] = None
-    proficiency_level: Optional[int] = None  # 1=하, 2=중, 3=상
-    response_style: Optional[int] = None
+    proficiency_level: Optional[str] = None  # e.g., "beginner", "intermediate", "advanced"
+    response_style: Optional[str] = None  # e.g., "simple", "detailed", "question_guidance"
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -1009,8 +1017,8 @@ class ChatTable:
         self,
         id: str,
         chapter_id: Optional[str] = None,
-        proficiency_level: Optional[int] = None,
-        response_style: Optional[int] = None
+        proficiency_level: Optional[str] = None,
+        response_style: Optional[str] = None
     ) -> Optional[ChatModel]:
         """
         Update chat settings (chapter_id, proficiency_level, response_style).

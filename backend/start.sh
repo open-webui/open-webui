@@ -83,7 +83,7 @@ FRONTEND_BUILD_DIR="/home/shared/hyu-math/build"
 
 # Run uvicorn
 # WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn open_webui.main:app \
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" DATA_DIR="/home/shared/hyu-math/backend/open_webui/data" python -m uvicorn open_webui.main:app \
     --host "$HOST" \
     --port "$PORT" \
     --forwarded-allow-ips '*' \

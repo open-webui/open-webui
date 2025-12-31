@@ -51,6 +51,7 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
+from open_webui.utils.prompt_composer import compose_with_fallback
 
 
 from open_webui.config import (
@@ -1288,9 +1289,27 @@ async def generate_chat_completion(
 
         if params:
             system = params.pop("system", None)
+            prompt_group_id = params.pop("prompt_group_id", None)
+
+            # Get persona values from metadata (stored in chat)
+            proficiency_level = metadata.get("proficiency_level")
+            response_style = metadata.get("response_style")
+
+            # Compose prompts with fallback logic
+            composed_system = compose_with_fallback(
+                group_id=prompt_group_id,
+                system_prompt=system,
+                default_group_id=getattr(
+                    request.app.state.config, "DEFAULT_PROMPT_GROUP_ID", None
+                ),
+                proficiency_level=proficiency_level,
+                response_style=response_style,
+            )
+
+            final_system = composed_system if composed_system else system
 
             payload = apply_model_params_to_body_ollama(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+            payload = apply_system_prompt_to_body(final_system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role in {"user", "professor"}:
@@ -1477,9 +1496,27 @@ async def generate_openai_chat_completion(
 
         if params:
             system = params.pop("system", None)
+            prompt_group_id = params.pop("prompt_group_id", None)
+
+            # Get persona values from metadata (stored in chat)
+            proficiency_level = metadata.get("proficiency_level")
+            response_style = metadata.get("response_style")
+
+            # Compose prompts with fallback logic
+            composed_system = compose_with_fallback(
+                group_id=prompt_group_id,
+                system_prompt=system,
+                default_group_id=getattr(
+                    request.app.state.config, "DEFAULT_PROMPT_GROUP_ID", None
+                ),
+                proficiency_level=proficiency_level,
+                response_style=response_style,
+            )
+
+            final_system = composed_system if composed_system else system
 
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+            payload = apply_system_prompt_to_body(final_system, payload, metadata, user)
 
         # Check if user has access to the model
         if user.role in {"user", "professor"}:

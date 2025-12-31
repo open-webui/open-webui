@@ -309,11 +309,35 @@ class GeminiRAGService:
             응답 결과
         """
         try:
+            # Normalize store names to ensure they have the correct prefix
+            normalized_store_names = []
+            for name in store_names:
+                if name and not name.startswith("fileSearchStores/"):
+                    normalized_name = f"fileSearchStores/{name}"
+                    log.warning(f"[GEMINI RAG QUERY] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
+                    normalized_store_names.append(normalized_name)
+                else:
+                    normalized_store_names.append(name)
+
+            log.info("="*80)
+            log.info("[GEMINI RAG QUERY] RAG 쿼리 시작")
+            log.info(f"  질문: {question[:100]}...")
+            log.info(f"  모델: {model}")
+            log.info(f"  Temperature: {temperature}")
+            log.info(f"  원본 Store Names: {store_names}")
+            log.info(f"  정규화된 Store Names: {normalized_store_names}")
+            log.info(f"  Store Names 길이: {len(normalized_store_names) if normalized_store_names else 0}")
+            if normalized_store_names:
+                for i, name in enumerate(normalized_store_names):
+                    log.info(f"    [{i}] '{name}' (길이: {len(name) if name else 0})")
+            log.info(f"  System Instruction 길이: {len(system_instruction) if system_instruction else 0}")
+            log.info("="*80)
+
             config = types.GenerateContentConfig(
                 tools=[
                     types.Tool(
                         file_search=types.FileSearch(
-                            file_search_store_names=store_names
+                            file_search_store_names=normalized_store_names
                         )
                     )
                 ],
@@ -323,11 +347,13 @@ class GeminiRAGService:
             if system_instruction:
                 config.system_instruction = system_instruction
 
+            log.info("[GEMINI RAG QUERY] Gemini API 호출 중...")
             response = self.client.models.generate_content(
                 model=model,
                 contents=question,
                 config=config
             )
+            log.info("[GEMINI RAG QUERY] ✅ 응답 받음")
 
             # 출처 정보 추출
             citations = []
@@ -346,7 +372,14 @@ class GeminiRAGService:
                 "model": model
             }
         except Exception as e:
-            log.error(f"Failed to query: {e}")
+            log.error("="*80)
+            log.error(f"[GEMINI RAG QUERY] ❌ 에러 발생!")
+            log.error(f"  에러 타입: {type(e).__name__}")
+            log.error(f"  에러 메시지: {e}")
+            log.error(f"  원본 store_names: {store_names}")
+            log.error(f"  정규화된 store_names: {normalized_store_names if 'normalized_store_names' in locals() else 'N/A'}")
+            log.error(f"  질문: {question[:100]}...")
+            log.error("="*80)
             return {
                 "success": False,
                 "error": str(e)
@@ -374,6 +407,16 @@ class GeminiRAGService:
             응답 결과
         """
         try:
+            # Normalize store names to ensure they have the correct prefix
+            normalized_store_names = []
+            for name in store_names:
+                if name and not name.startswith("fileSearchStores/"):
+                    normalized_name = f"fileSearchStores/{name}"
+                    log.warning(f"[GEMINI RAG] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
+                    normalized_store_names.append(normalized_name)
+                else:
+                    normalized_store_names.append(name)
+
             # 메시지를 Gemini 형식으로 변환
             contents = []
             for msg in messages:
@@ -389,7 +432,7 @@ class GeminiRAGService:
                 tools=[
                     types.Tool(
                         file_search=types.FileSearch(
-                            file_search_store_names=store_names
+                            file_search_store_names=normalized_store_names
                         )
                     )
                 ],

@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.gemini_rag import get_gemini_rag_service, GeminiRAGService
+from open_webui.utils.prompt_composer import compose_with_fallback
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.textbooks import TextbookChapters
 
@@ -53,6 +54,9 @@ class RAGQueryRequest(BaseModel):
     model: str = "gemini-2.5-flash"
     temperature: float = 0.2
     system_instruction: Optional[str] = None
+    prompt_group_id: Optional[str] = None
+    proficiency_level: Optional[int] = None
+    response_style: Optional[str] = None
 
 
 class RAGQueryResponse(BaseModel):
@@ -354,15 +358,47 @@ async def query_rag(
     - **model**: 사용할 Gemini 모델 (기본: gemini-2.5-flash)
     - **temperature**: 응답 다양성 (0.0 ~ 1.0, 기본: 0.2)
     - **system_instruction**: 시스템 지시사항 (선택)
+    - **prompt_group_id**: 프롬프트 그룹 ID (선택)
+    - **proficiency_level**: 난이도 레벨 (선택)
+    - **response_style**: 응답 스타일 (선택)
     """
     service = get_rag_service(request)
+
+    # Compose prompts with fallback logic
+    log.info("="*80)
+    log.info("[GEMINI RAG] 쿼리 요청 받음")
+    log.info(f"  prompt_group_id: {body.prompt_group_id}")
+    log.info(f"  system_instruction: {body.system_instruction[:50] if body.system_instruction else None}...")
+    log.info(f"  proficiency_level: {body.proficiency_level}")
+    log.info(f"  response_style: {body.response_style}")
+    log.info(f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}")
+    log.info("="*80)
+
+    composed_system = compose_with_fallback(
+        group_id=body.prompt_group_id,
+        system_prompt=body.system_instruction,
+        default_group_id=getattr(
+            request.app.state.config, "DEFAULT_PROMPT_GROUP_ID", None
+        ),
+        proficiency_level=body.proficiency_level,
+        response_style=body.response_style,
+    )
+
+    final_system = composed_system if composed_system else body.system_instruction
+
+    log.info("="*80)
+    log.info("[GEMINI RAG] 최종 시스템 프롬프트:")
+    log.info(f"  조합된 프롬프트 길이: {len(composed_system) if composed_system else 0} 문자")
+    log.info(f"  최종 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
+    log.info(f"  내용: {final_system[:500] if final_system else '(없음)'}...")
+    log.info("="*80)
 
     result = service.query(
         question=body.question,
         store_names=body.store_names,
         model=body.model,
         temperature=body.temperature,
-        system_instruction=body.system_instruction
+        system_instruction=final_system
     )
 
     return RAGQueryResponse(**result)
@@ -376,6 +412,9 @@ async def query_rag_by_chapter(
     model: str = "gemini-2.5-flash",
     temperature: float = 0.2,
     system_instruction: Optional[str] = None,
+    prompt_group_id: Optional[str] = None,
+    proficiency_level: Optional[int] = None,
+    response_style: Optional[str] = None,
     user=Depends(get_verified_user)
 ):
     """
@@ -386,6 +425,9 @@ async def query_rag_by_chapter(
     - **model**: 사용할 Gemini 모델
     - **temperature**: 응답 다양성
     - **system_instruction**: 시스템 지시사항 (선택)
+    - **prompt_group_id**: 프롬프트 그룹 ID (선택)
+    - **proficiency_level**: 난이도 레벨 (선택)
+    - **response_style**: 응답 스타일 (선택)
     """
     store_name = TextbookChapters.get_rag_store(chapter_id)
     if not store_name:
@@ -396,12 +438,42 @@ async def query_rag_by_chapter(
 
     service = get_rag_service(request)
 
+    # Compose prompts with fallback logic
+    log.info("="*80)
+    log.info("[GEMINI RAG BY CHAPTER] 쿼리 요청 받음")
+    log.info(f"  chapter_id: {chapter_id}")
+    log.info(f"  prompt_group_id: {prompt_group_id}")
+    log.info(f"  system_instruction: {system_instruction[:50] if system_instruction else None}...")
+    log.info(f"  proficiency_level: {proficiency_level}")
+    log.info(f"  response_style: {response_style}")
+    log.info(f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}")
+    log.info("="*80)
+
+    composed_system = compose_with_fallback(
+        group_id=prompt_group_id,
+        system_prompt=system_instruction,
+        default_group_id=getattr(
+            request.app.state.config, "DEFAULT_PROMPT_GROUP_ID", None
+        ),
+        proficiency_level=proficiency_level,
+        response_style=response_style,
+    )
+
+    final_system = composed_system if composed_system else system_instruction
+
+    log.info("="*80)
+    log.info("[GEMINI RAG BY CHAPTER] 최종 시스템 프롬프트:")
+    log.info(f"  조합된 프롬프트 길이: {len(composed_system) if composed_system else 0} 문자")
+    log.info(f"  최종 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
+    log.info(f"  내용: {final_system[:500] if final_system else '(없음)'}...")
+    log.info("="*80)
+
     result = service.query(
         question=question,
         store_names=[store_name],
         model=model,
         temperature=temperature,
-        system_instruction=system_instruction
+        system_instruction=final_system
     )
 
     return RAGQueryResponse(**result)
