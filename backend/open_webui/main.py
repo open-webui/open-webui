@@ -283,6 +283,7 @@ from open_webui.config import (
     MISTRAL_OCR_API_BASE_URL,
     MISTRAL_OCR_API_KEY,
     RAG_TEXT_SPLITTER,
+    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
     PDF_EXTRACT_IMAGES,
     YOUTUBE_LOADER_LANGUAGE,
@@ -640,7 +641,6 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "redis_direct_chat_listener"):
         app.state.redis_direct_chat_listener.cancel()
 
-
 app = FastAPI(
     title="Open WebUI",
     docs_url="/docs" if ENV == "dev" else None,
@@ -897,6 +897,10 @@ app.state.config.MINERU_API_TIMEOUT = MINERU_API_TIMEOUT
 app.state.config.MINERU_PARAMS = MINERU_PARAMS
 
 app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
+app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = (
+    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER
+)
+
 app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
 
 app.state.config.CHUNK_SIZE = CHUNK_SIZE
@@ -1611,7 +1615,7 @@ async def chat_completion(
             stream_delta_chunk_size = model_info_params.get("stream_delta_chunk_size")
 
         if model_info_params.get("reasoning_tags") is not None:
-            reasoning_tags = model_info_params.get("reasoning_tags")
+            reasoning_tags = model_info_params
 
         metadata = {
             "user_id": user.id,
