@@ -30,6 +30,8 @@
 		copyToClipboard as _copyToClipboard,
 		approximateToHumanReadable,
 		getMessageContentParts,
+		processResponseContent,
+		replaceTokens,
 		sanitizeResponseContent,
 		createMessagesList,
 		formatDate,
@@ -37,6 +39,14 @@
 		removeAllDetails
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+
+	import { marked } from 'marked';
+	import markedExtension from '$lib/utils/marked/extension';
+	import markedKatexExtension from '$lib/utils/marked/katex-extension';
+	import { mentionExtension } from '$lib/utils/marked/mention-extension';
+
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -171,6 +181,74 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+
+	let tableTokens: any[] = [];
+
+	const tableLexerOptions = {
+		throwOnError: false,
+		breaks: true
+	};
+
+	marked.use(markedKatexExtension(tableLexerOptions));
+	marked.use(markedExtension(tableLexerOptions));
+	marked.use({
+		extensions: [mentionExtension({ triggerChar: '@' }), mentionExtension({ triggerChar: '#' })]
+	});
+
+	$: if (message?.content) {
+		const renderedContent = replaceTokens(
+			processResponseContent(message.content),
+			[],
+			model?.name,
+			$user?.name
+		);
+		tableTokens = marked.lexer(renderedContent).filter((token) => token.type === 'table');
+	} else {
+		tableTokens = [];
+	}
+
+	const exportFirstTableToExcel = () => {
+		if (!tableTokens.length) {
+			return;
+		}
+
+		const token = tableTokens[0];
+
+		const escapeHtml = (value: string) =>
+			value
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;');
+
+		const header = token.header.map((headerCell) => escapeHtml(headerCell.text));
+
+		const rows = token.rows.map((row) =>
+			row.map((cell) => {
+				const cellContent = cell.tokens.map((token) => token.text).join('');
+				return escapeHtml(cellContent);
+			})
+		);
+
+		const tableRows = [
+			`<tr>${header.map((cell) => `<th>${cell}</th>`).join('')}</tr>`,
+			...rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`)
+		];
+
+		const html = `
+			<html>
+				<head>
+					<meta charset="UTF-8" />
+				</head>
+				<body>
+					<table>${tableRows.join('')}</table>
+				</body>
+			</html>
+		`.trim();
+
+		const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=UTF-8' });
+		saveAs(blob, `table-${message.id}.xls`);
+	};
 
 	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
@@ -794,10 +872,11 @@
 				</div>
 
 				{#if !edit}
-					<div
-						bind:this={buttonsContainerElement}
-						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
-					>
+					<div class="flex items-center w-full mt-0.5 text-gray-600 dark:text-gray-500">
+						<div
+							bind:this={buttonsContainerElement}
+							class="flex flex-nowrap items-center min-w-0 overflow-x-auto buttons"
+						>
 						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
@@ -1450,6 +1529,22 @@
 									{/if}
 								{/if}
 							{/if}
+						{/if}
+						</div>
+						{#if tableTokens.length > 0}
+							<div class="ml-auto flex items-center">
+								<button
+									aria-label={$i18n.t('Export to Excel')}
+									class="{isLastMessage || ($settings?.highContrastMode ?? false)
+										? 'visible'
+										: 'invisible group-hover:visible'} px-2.5 py-1.5 text-xs font-medium border border-gray-700 dark:border-gray-200 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-900 hover:text-white dark:hover:bg-gray-100 dark:hover:text-gray-900 transition"
+									on:click={() => {
+										exportFirstTableToExcel();
+									}}
+								>
+									{$i18n.t('Export to Excel')}
+								</button>
+							</div>
 						{/if}
 					</div>
 

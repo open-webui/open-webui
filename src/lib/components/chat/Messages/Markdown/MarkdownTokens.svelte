@@ -1,11 +1,6 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
 	import DOMPurify from 'dompurify';
-	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
-
-	import fileSaver from 'file-saver';
-	const { saveAs } = fileSaver;
 
 	import { marked, type Token } from 'marked';
 	import { unescapeHtml } from '$lib/utils';
@@ -18,8 +13,6 @@
 	import KatexRenderer from './KatexRenderer.svelte';
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Download from '$lib/components/icons/Download.svelte';
 
 	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
@@ -48,41 +41,6 @@
 		return 'h' + depth;
 	};
 
-	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
-		console.log('Exporting table to CSV');
-
-		// Extract header row text and escape for CSV.
-		const header = token.header.map((headerCell) => `"${headerCell.text.replace(/"/g, '""')}"`);
-
-		// Create an array for rows that will hold the mapped cell text.
-		const rows = token.rows.map((row) =>
-			row.map((cell) => {
-				// Map tokens into a single text
-				const cellContent = cell.tokens.map((token) => token.text).join('');
-				// Escape double quotes and wrap the content in double quotes
-				return `"${cellContent.replace(/"/g, '""')}"`;
-			})
-		);
-
-		// Combine header and rows
-		const csvData = [header, ...rows];
-
-		// Join the rows using commas (,) as the separator and rows using newline (\n).
-		const csvContent = csvData.map((row) => row.join(',')).join('\n');
-
-		// Log rows and CSV content to ensure everything is correct.
-		console.log(csvData);
-		console.log(csvContent);
-
-		// To handle Unicode characters, you need to prefix the data with a BOM:
-		const bom = '\uFEFF'; // BOM for UTF-8
-
-		// Create a new Blob prefixed with the BOM to ensure proper Unicode encoding.
-		const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=UTF-8' });
-
-		// Use FileSaver.js's saveAs function to save the generated CSV file.
-		saveAs(blob, `table-${id}-${tokenIdx}.csv`);
-	};
 </script>
 
 <!-- {JSON.stringify(tokens)} -->
@@ -180,20 +138,6 @@
 						{/each}
 					</tbody>
 				</table>
-			</div>
-
-			<div class=" absolute top-1 right-1.5 z-20 invisible group-hover:visible">
-				<Tooltip content={$i18n.t('Export to CSV')}>
-					<button
-						class="p-1 rounded-lg bg-transparent transition"
-						on:click={(e) => {
-							e.stopPropagation();
-							exportTableToCSVHandler(token, tokenIdx);
-						}}
-					>
-						<Download className=" size-3.5" strokeWidth="1.5" />
-					</button>
-				</Tooltip>
 			</div>
 		</div>
 	{:else if token.type === 'blockquote'}
