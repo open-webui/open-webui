@@ -641,6 +641,7 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "redis_direct_chat_listener"):
         app.state.redis_direct_chat_listener.cancel()
 
+
 app = FastAPI(
     title="Open WebUI",
     docs_url="/docs" if ENV == "dev" else None,
@@ -1322,7 +1323,7 @@ class APIKeyRestrictionMiddleware(BaseHTTPMiddleware):
 
                 if not is_allowed:
                     return JSONResponse(
-                        status_code=status.HTTP_403_FORBIDDEN,
+                        status_code=status.HTTP_43_FORBIDDEN,
                         content={
                             "detail": "API key not allowed to access this endpoint."
                         },
