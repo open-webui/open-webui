@@ -181,40 +181,43 @@
 	let toolbarChapterId = '';
 	let toolbarTitle = '제10장. 벡터 적분법, 적분 정리 (Vector Integral Calculus. Integral Theorems)';
 	let toolbarSubtitle = '벡터장을 다양한 경로와 곡면에 대해 적분하고, 미분과 적분을 연결하는 중요한 정리들을 이해합니다.';
-	let toolbarProficiencyLevel = 'intermediate';
-	let toolbarResponseStyle = 'question_guidance';
+	let toolbarProficiencyLevel = '2';  // 기본값: 중급 (동적 API에서 가져온 값 사용)
+	let toolbarResponseStyle = 'diagnosis';  // 기본값: 학생 진단 브리핑 (동적 API에서 가져온 값 사용)
+	let lastLoadedChatId: string | null = null;  // 마지막으로 로드한 채팅 ID 추적
+	let lastKnownChapterId: string | null = null;  // 마지막으로 알려진 chat.chat.chapter_id (백엔드 값 추적)
+	let isCreatingNewChat = false;  // 새 채팅 생성 중 플래그
 
-	// Conversion functions for API request
-	const getProficiencyLevelNumber = (level) => {
-		const map = { 'initial': 1, 'intermediate': 2, 'advanced': 3 };
-		return map[level] ?? 2;
-	};
-
-	const getResponseStyleNumber = (style) => {
-		const map = { 'question_guidance': 1, 'problem_bank': 2, 'detailed_lecture': 3 };
-		return map[style] ?? 1;
-	};
-
-	// Update toolbar data when chat changes or textbook section is selected
-	$: if (chat && !$temporaryChatEnabled) {
-		const chatData = chat.chat || {};
-		// 우선순위: 1) selectedTextbookSection 스토어, 2) chat.chat 데이터, 3) 기본값
+	// Update toolbar data when chat ID changes (not on every chat object update)
+	// 새 채팅 생성 중에는 스킵 (사용자 선택값 유지)
+	$: if (chat && !$temporaryChatEnabled && chat.id !== lastLoadedChatId && !isCreatingNewChat) {
+		lastLoadedChatId = chat.id;
+		lastKnownChapterId = chat.chat?.chapter_id || null;
+		// 우선순위: 1) selectedTextbookSection 스토어, 2) chat 데이터, 3) 기본값
 		if ($selectedTextbookSection) {
 			toolbarChapterId = $selectedTextbookSection.id;
 			toolbarTitle = $selectedTextbookSection.title;
 			toolbarSubtitle = $selectedTextbookSection.subtitle;
 		} else {
-			toolbarChapterId = chatData.chapter_id || '';
-			toolbarTitle = chatData.chapter || '';
-			toolbarSubtitle = chatData.subtitle || '';
+			// chapter_id는 chat 최상위 레벨에 있음
+			toolbarChapterId = chat.chapter_id || '';
+			toolbarTitle = chat.chat?.title || '';
+			toolbarSubtitle = '';
 		}
-		// proficiency_level과 response_style은 항상 chat 데이터에서 불러옴
-		toolbarProficiencyLevel = chatData.proficiency_level || 'intermediate';
-		toolbarResponseStyle = chatData.response_style || 'question_guidance';
+		// proficiency_level과 response_style은 chat 최상위 레벨에 있음 (채팅 로드 시에만 설정)
+		toolbarProficiencyLevel = chat.proficiency_level || '2';  // 기본값: 중급
+		toolbarResponseStyle = chat.response_style || 'diagnosis';  // 기본값: 학생 진단 브리핑
 	}
 
-	// Update toolbar when textbook section is selected from sidebar (새 채팅일 때)
-	$: if ($selectedTextbookSection && !chat) {
+	// Watch for chapter changes within the same chat (백엔드에서 chat.chat.chapter_id가 실제로 변경된 경우에만)
+	$: if (chat && chat.chat?.chapter_id && chat.chat.chapter_id !== lastKnownChapterId) {
+		lastKnownChapterId = chat.chat.chapter_id;
+		toolbarChapterId = chat.chat.chapter_id;
+		toolbarTitle = chat.chat.chapter || '';
+		toolbarSubtitle = chat.chat.subtitle || '';
+	}
+
+	// Update toolbar when textbook section is selected from sidebar (새 채팅 및 기존 채팅 모두)
+	$: if ($selectedTextbookSection) {
 		toolbarChapterId = $selectedTextbookSection.id;
 		toolbarTitle = $selectedTextbookSection.title;
 		toolbarSubtitle = $selectedTextbookSection.subtitle;
@@ -1178,6 +1181,15 @@
 					}
 				}
 
+				// Sync feedback values from flat messages array to history.messages
+				if (chatContent.messages && Array.isArray(chatContent.messages)) {
+					for (const msg of chatContent.messages) {
+						if (msg.id && history.messages[msg.id] && msg.feedback !== undefined) {
+							history.messages[msg.id].feedback = msg.feedback;
+						}
+					}
+				}
+
 				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
 					return null;
 				});
@@ -1702,7 +1714,11 @@
 			content: userPrompt,
 			files: _files.length > 0 ? _files : undefined,
 			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-			models: selectedModels
+			models: selectedModels,
+			// Persona 정보 포함
+			chapter_id: toolbarChapterId || undefined,
+			proficiency_level: toolbarProficiencyLevel,
+			response_style: toolbarResponseStyle
 		};
 
 		// Add message to history and Set currentId to messageId
@@ -1768,7 +1784,11 @@
 					model: model.id,
 					modelName: model.name ?? model.id,
 					modelIdx: modelIdx ? modelIdx : _modelIdx,
-					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+					timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+					// Persona 정보 포함
+					chapter_id: toolbarChapterId || undefined,
+					proficiency_level: toolbarProficiencyLevel,
+					response_style: toolbarResponseStyle
 				};
 
 				// Add message to history and Set currentId to messageId
@@ -1843,6 +1863,13 @@
 
 		currentChatPage.set(1);
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+		// 새 채팅의 첫 응답 후 백엔드가 제목을 갱신하므로, 지연 후 채팅 목록 재갱신
+		if (newChat) {
+			setTimeout(async () => {
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			}, 3000);  // 3초 후 갱신
+		}
 	};
 
 	const getFeatures = () => {
@@ -1992,8 +2019,6 @@
 				toolIds.push(toolId);
 			}
 		}
-		console.log("chapter_id:", toolbarChapterId);
-		console.log("Session ID before API call:", $socket?.id);
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -2001,8 +2026,8 @@
 				model: model.id,
 				messages: messages,
 				chapter_id: toolbarChapterId || undefined,
-				proficiency_level: getProficiencyLevelNumber(toolbarProficiencyLevel),
-				response_style: getResponseStyleNumber(toolbarResponseStyle),
+				proficiency_level: toolbarProficiencyLevel,  // 문자열 직접 전달
+				response_style: toolbarResponseStyle,  // 문자열 직접 전달
 				params: {
 					...$settings?.params,
 					...params,
@@ -2400,7 +2425,15 @@
 	const initChatHandler = async (history) => {
 		let _chatId = $chatId;
 
+		// 새 채팅 생성 전 현재 사용자가 선택한 페르소나 값 저장
+		const currentProficiency = toolbarProficiencyLevel;
+		const currentStyle = toolbarResponseStyle;
+		const currentChapterId = toolbarChapterId;
+
 		if (!$temporaryChatEnabled) {
+			// 새 채팅 생성 중 플래그 설정 (reactive statement가 값을 덮어쓰지 않도록)
+			isCreatingNewChat = true;
+
 			chat = await createNewChat(
 				localStorage.token,
 				{
@@ -2412,13 +2445,23 @@
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					tags: [],
-					timestamp: Date.now()
+					timestamp: Date.now(),
+					// 페르소나 값 전달
+					chapter_id: currentChapterId || undefined,
+					proficiency_level: currentProficiency,
+					response_style: currentStyle
 				},
 				$selectedFolder?.id
 			);
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
+
+			// 채팅 생성 완료 후 플래그 해제 및 값 복원
+			lastLoadedChatId = chat.id;
+			toolbarProficiencyLevel = currentProficiency;
+			toolbarResponseStyle = currentStyle;
+			isCreatingNewChat = false;
 
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 
@@ -2445,7 +2488,11 @@
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
-					files: chatFiles
+					files: chatFiles,
+					// Persona 정보 포함 (스트리밍 완료 시 업데이트)
+					chapter_id: toolbarChapterId || undefined,
+					proficiency_level: toolbarProficiencyLevel,
+					response_style: toolbarResponseStyle
 				});
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -2759,6 +2806,8 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:proficiencyLevel={toolbarProficiencyLevel}
+									bind:responseStyle={toolbarResponseStyle}
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
