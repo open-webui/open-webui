@@ -473,7 +473,65 @@ async def update_chat_by_id(
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
+        # Save DB's existing messages with persona info BEFORE merging
+        db_messages = chat.chat.get("history", {}).get("messages", {})
+
         updated_chat = {**chat.chat, **form_data.chat}
+
+        # Check if frontend is updating persona settings
+        incoming_chapter_id = form_data.chat.get("chapter_id")
+        incoming_proficiency = form_data.chat.get("proficiency_level")
+        incoming_style = form_data.chat.get("response_style")
+
+        # If frontend sends new values, update outer columns to match
+        if incoming_chapter_id is not None or incoming_proficiency is not None or incoming_style is not None:
+            Chats.update_chat_settings_by_id(
+                id,
+                chapter_id=incoming_chapter_id,
+                proficiency_level=incoming_proficiency,
+                response_style=incoming_style
+            )
+            # Refresh chat to get updated values
+            chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+
+        # Get current persona settings from DB (use outer columns as source of truth)
+        chat_persona = {
+            "chapter_id": chat.chapter_id,
+            "proficiency_level": chat.proficiency_level,
+            "response_style": chat.response_style,
+        }
+
+        # Always ensure inner chat object has persona info synced from outer columns
+        # This handles case when frontend doesn't send these values
+        if chat_persona.get("chapter_id"):
+            updated_chat["chapter_id"] = chat_persona["chapter_id"]
+        if chat_persona.get("proficiency_level"):
+            updated_chat["proficiency_level"] = chat_persona["proficiency_level"]
+        if chat_persona.get("response_style"):
+            updated_chat["response_style"] = chat_persona["response_style"]
+
+        # Inject persona info into messages
+        if "history" in updated_chat and "messages" in updated_chat["history"]:
+            messages = updated_chat["history"]["messages"]
+            for msg_id, msg in messages.items():
+                # First, restore persona info from DB if it exists (prevents frontend from overwriting)
+                if msg_id in db_messages:
+                    db_msg = db_messages[msg_id]
+                    if db_msg.get("chapter_id") and "chapter_id" not in msg:
+                        msg["chapter_id"] = db_msg["chapter_id"]
+                    if db_msg.get("proficiency_level") and "proficiency_level" not in msg:
+                        msg["proficiency_level"] = db_msg["proficiency_level"]
+                    if db_msg.get("response_style") and "response_style" not in msg:
+                        msg["response_style"] = db_msg["response_style"]
+
+                # Then, for messages without persona info, use current chat settings
+                if chat_persona.get("chapter_id") and "chapter_id" not in msg:
+                    msg["chapter_id"] = chat_persona["chapter_id"]
+                if chat_persona.get("proficiency_level") and "proficiency_level" not in msg:
+                    msg["proficiency_level"] = chat_persona["proficiency_level"]
+                if chat_persona.get("response_style") and "response_style" not in msg:
+                    msg["response_style"] = chat_persona["response_style"]
+
         chat = Chats.update_chat_by_id(id, updated_chat)
         return ChatResponse(**chat.model_dump())
     else:

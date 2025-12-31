@@ -801,12 +801,6 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
-    log.info("="*80)
-    log.info("[CHAT COMPLETIONS] 함수 호출됨!")
-    log.info(f"  사용자: {user.email if user else 'None'}")
-    log.info(f"  모델: {form_data.get('model', 'None')}")
-    log.info("="*80)
-
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -818,10 +812,6 @@ async def generate_chat_completion(
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
-    log.info(f"[DEBUG] 채팅 요청 - model_id: {model_id}, model_info 존재: {model_info is not None}")
-    if metadata:
-        log.info(f"[DEBUG] metadata: proficiency_level={metadata.get('proficiency_level')}, response_style={metadata.get('response_style')}")
-
     # Check model info and override the payload
     if model_info:
         if model_info.base_model_id:
@@ -829,7 +819,6 @@ async def generate_chat_completion(
             model_id = model_info.base_model_id
 
         params = model_info.params.model_dump()
-        log.info(f"[DEBUG] model_info.params 존재: {params is not None}, params 내용: {params if params else 'None'}")
 
         # Extract system and prompt_group_id from params (if they exist)
         system = None
@@ -842,17 +831,6 @@ async def generate_chat_completion(
         # Get persona values from metadata (stored in chat)
         proficiency_level = metadata.get("proficiency_level") if metadata else None
         response_style = metadata.get("response_style") if metadata else None
-
-        log.info("="*80)
-        log.info("[OPENAI ROUTER] 채팅 요청 받음")
-        log.info(f"  모델: {model_info.id}")
-        log.info(f"  모델의 prompt_group_id: {prompt_group_id}")
-        log.info(f"  모델의 system 프롬프트: {system[:50] if system else None}...")
-        log.info("  메타데이터에서 추출:")
-        log.info(f"    - proficiency_level: {proficiency_level}")
-        log.info(f"    - response_style: {response_style}")
-        log.info(f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}")
-        log.info("="*80)
 
         # Compose prompts with fallback logic
         # Priority: prompt_group_id > system > DEFAULT_PROMPT_GROUP_ID > none
@@ -868,14 +846,6 @@ async def generate_chat_completion(
 
         # Use composed prompt if available, otherwise fall back to original system
         final_system = composed_system if composed_system else system
-
-        log.info("="*80)
-        log.info("[OPENAI ROUTER] 최종 시스템 프롬프트 결정:")
-        log.info(f"  조합된 프롬프트 길이: {len(composed_system) if composed_system else 0} 문자")
-        log.info(f"  최종 사용할 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
-        log.info("  최종 프롬프트 내용:")
-        log.info(f"{final_system[:500] if final_system else '(없음)'}...")
-        log.info("="*80)
 
         # Apply model params to payload (only if params exist)
         if params:

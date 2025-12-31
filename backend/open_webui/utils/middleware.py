@@ -1752,14 +1752,15 @@ async def process_chat_response(
                             follow_ups = json.loads(follow_ups_string).get(
                                 "follow_ups", []
                             )
-                            await event_emitter(
-                                {
-                                    "type": "chat:message:follow_ups",
-                                    "data": {
-                                        "follow_ups": follow_ups,
-                                    },
-                                }
-                            )
+                            if event_emitter:
+                                await event_emitter(
+                                    {
+                                        "type": "chat:message:follow_ups",
+                                        "data": {
+                                            "follow_ups": follow_ups,
+                                        },
+                                    }
+                                )
 
                             if not metadata.get("chat_id", "").startswith("local:"):
                                 Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -1827,24 +1828,26 @@ async def process_chat_response(
                                     metadata["chat_id"], title
                                 )
 
-                                await event_emitter(
-                                    {
-                                        "type": "chat:title",
-                                        "data": title,
-                                    }
-                                )
+                                if event_emitter:
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:title",
+                                            "data": title,
+                                        }
+                                    )
 
                         if title == None and len(messages) == 2:
                             title = messages[0].get("content", user_message)
 
                             Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
-                            await event_emitter(
-                                {
-                                    "type": "chat:title",
-                                    "data": message.get("content", user_message),
-                                }
-                            )
+                            if event_emitter:
+                                await event_emitter(
+                                    {
+                                        "type": "chat:title",
+                                        "data": message.get("content", user_message),
+                                    }
+                                )
 
                     if TASKS.TAGS_GENERATION in tasks and tasks[TASKS.TAGS_GENERATION]:
                         res = await generate_chat_tags(
@@ -1879,12 +1882,13 @@ async def process_chat_response(
                                     metadata["chat_id"], tags, user
                                 )
 
-                                await event_emitter(
-                                    {
-                                        "type": "chat:tags",
-                                        "data": tags,
-                                    }
-                                )
+                                if event_emitter:
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:tags",
+                                            "data": tags,
+                                        }
+                                    )
                             except Exception as e:
                                 pass
 
@@ -1991,13 +1995,22 @@ async def process_chat_response(
 
                         # Save message in the database (regardless of event_emitter)
                         if can_save_to_db:
+                            # Include persona info in message
+                            message_data = {
+                                "role": "assistant",
+                                "content": content,
+                            }
+                            if metadata.get("chapter_id"):
+                                message_data["chapter_id"] = metadata["chapter_id"]
+                            if metadata.get("proficiency_level"):
+                                message_data["proficiency_level"] = metadata["proficiency_level"]
+                            if metadata.get("response_style"):
+                                message_data["response_style"] = metadata["response_style"]
+
                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
-                                {
-                                    "role": "assistant",
-                                    "content": content,
-                                },
+                                message_data,
                             )
 
                         # Send a webhook notification if the user is not active
@@ -3287,13 +3300,22 @@ async def process_chat_response(
                 # 항상 DB에 저장 (WebSocket 경로)
                 if metadata.get("chat_id") and metadata.get("message_id") and not metadata.get("chat_id", "").startswith("local:"):
                     try:
+                        # Include persona info in message
+                        message_data = {
+                            "content": serialize_content_blocks(content_blocks),
+                            "role": "assistant",
+                        }
+                        if metadata.get("chapter_id"):
+                            message_data["chapter_id"] = metadata["chapter_id"]
+                        if metadata.get("proficiency_level"):
+                            message_data["proficiency_level"] = metadata["proficiency_level"]
+                        if metadata.get("response_style"):
+                            message_data["response_style"] = metadata["response_style"]
+
                         Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata["chat_id"],
                             metadata["message_id"],
-                            {
-                                "content": serialize_content_blocks(content_blocks),
-                                "role": "assistant",
-                            },
+                            message_data,
                         )
                     except Exception as e:
                         log.error(f"Failed to save assistant message: {e}")
@@ -3327,13 +3349,21 @@ async def process_chat_response(
                 await event_emitter({"type": "chat:tasks:cancel"})
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
-                    # Save message in the database
+                    # Save message in the database with persona info
+                    message_data = {
+                        "content": serialize_content_blocks(content_blocks),
+                    }
+                    if metadata.get("chapter_id"):
+                        message_data["chapter_id"] = metadata["chapter_id"]
+                    if metadata.get("proficiency_level"):
+                        message_data["proficiency_level"] = metadata["proficiency_level"]
+                    if metadata.get("response_style"):
+                        message_data["response_style"] = metadata["response_style"]
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
-                        {
-                            "content": serialize_content_blocks(content_blocks),
-                        },
+                        message_data,
                     )
 
             if response.background is not None:
@@ -3392,19 +3422,33 @@ async def process_chat_response(
                 if not metadata.get("chat_id", "").startswith("local:"):
                     full_content = "".join(collected_content)
                     try:
+                        # Include persona info in message
+                        message_data = {
+                            "content": full_content,
+                            "role": "assistant",
+                        }
+                        if metadata.get("chapter_id"):
+                            message_data["chapter_id"] = metadata["chapter_id"]
+                        if metadata.get("proficiency_level"):
+                            message_data["proficiency_level"] = metadata["proficiency_level"]
+                        if metadata.get("response_style"):
+                            message_data["response_style"] = metadata["response_style"]
+
                         Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata["chat_id"],
                             metadata["message_id"],
-                            {
-                                "content": full_content,
-                                "role": "assistant",
-                            },
+                            message_data,
                         )
                     except Exception as e:
                         log.error(f"Failed to save assistant message: {e}")
 
+        async def run_background_tasks_after_stream():
+            await background_tasks_handler()
+            if response.background is not None:
+                await response.background()
+
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
             headers=dict(response.headers),
-            background=response.background,
+            background=run_background_tasks_after_stream,
         )
