@@ -6,6 +6,8 @@
 
 	import { config, user, tools as _tools, mobile, knowledge, chats } from '$lib/stores';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
+	import { getAvailablePersonas } from '$lib/apis/prompt-groups';
+	import type { AvailablePersonas, PersonaOption } from '$lib/apis/prompt-groups';
 
 	import { createPicker } from '$lib/utils/google-drive-picker';
 
@@ -15,6 +17,7 @@
 	import Camera from '$lib/components/icons/Camera.svelte';
 	import Note from '$lib/components/icons/Note.svelte';
 	import Clip from '$lib/components/icons/Clip.svelte';
+	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import Refresh from '$lib/components/icons/Refresh.svelte';
 	import Agile from '$lib/components/icons/Agile.svelte';
@@ -48,20 +51,54 @@
 	export let onUpload: Function;
 	export let onClose: Function;
 
-	export let proficiencyLevel = 'intermediate';
-	export let responseStyle = 'question_guidance';
+	export let proficiencyLevel = '2';  // 기본값: 중급
+	export let responseStyle = 'diagnosis';  // 기본값: 학생 진단 브리핑
 
-	const proficiencyLevels = {
-		initial: '초급',
-		intermediate: '중급',
-		advanced: '고급'
+	// 동적 페르소나 옵션
+	let availablePersonas: AvailablePersonas | null = null;
+	let personasLoading = false;
+
+	// 라벨 헬퍼 함수 (프롬프트 title 사용)
+	const getPersonaLabel = (option: PersonaOption): string => {
+		return option.prompts[0]?.title ?? option.value;
 	};
 
-	const responseStyles = {
-		question_guidance: '질문식 유도',
-		problem_bank: '문제 은행',
-		detailed_lecture: '자세한 강의'
+	// 현재 선택된 값의 라벨 가져오기
+	const getSelectedProficiencyLabel = (): string => {
+		if (!availablePersonas) return proficiencyLevel;
+		const found = availablePersonas.proficiency_levels.find(p => p.value === proficiencyLevel);
+		return found ? getPersonaLabel(found) : proficiencyLevel;
 	};
+
+	const getSelectedStyleLabel = (): string => {
+		if (!availablePersonas) return responseStyle;
+		const found = availablePersonas.response_styles.find(s => s.value === responseStyle);
+		return found ? getPersonaLabel(found) : responseStyle;
+	};
+
+	// 페르소나 로드
+	const loadPersonas = async () => {
+		if (availablePersonas) return; // 이미 로드됨
+		personasLoading = true;
+		try {
+			availablePersonas = await getAvailablePersonas(localStorage.token);
+			// 기본값 설정: 첫 번째 옵션으로
+			if (availablePersonas.proficiency_levels.length > 0 && !availablePersonas.proficiency_levels.find(p => p.value === proficiencyLevel)) {
+				proficiencyLevel = availablePersonas.proficiency_levels[0].value;
+			}
+			if (availablePersonas.response_styles.length > 0 && !availablePersonas.response_styles.find(s => s.value === responseStyle)) {
+				responseStyle = availablePersonas.response_styles[0].value;
+			}
+		} catch (e) {
+			console.error('Failed to load personas:', e);
+		}
+		personasLoading = false;
+	};
+
+	// 컴포넌트 마운트 시 페르소나 로드
+	onMount(() => {
+		loadPersonas();
+	});
 
 	let show = false;
 	let tab = '';
@@ -147,7 +184,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="flex flex-col items-start p-5 gap-2 bg-gray-50 dark:bg-[rgba(113,122,143,0.3)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-[20px] rounded-bl-[4px] z-50 text-gray-900 dark:text-white text-xs border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+			class="flex flex-col items-start p-5 gap-2 min-w-max bg-gray-200/20 dark:bg-gray-600/30 shadow-lg backdrop-blur-xl rounded-2xl rounded-bl z-50 text-gray-950 dark:text-white text-caption border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
@@ -157,40 +194,34 @@
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
 					<!-- 학습 설정 섹션 -->
-					<div class="w-full pb-2 mb-2 border-b border-gray-200 dark:border-white/20">
+					<div class="w-full pb-2 mb-2 border-b border-gray-200/50 dark:border-gray-200/50">
 						<button
-							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
 							on:click={() => {
 								tab = 'proficiency';
 							}}
 						>
-							<AdjustmentsHorizontal className="size-4" />
-							<div class="flex items-center w-full justify-between">
-								<div class="flex items-center gap-1">
-									<span>수준:</span>
-									<span class="text-gray-500 dark:text-gray-300">{proficiencyLevels[proficiencyLevel]}</span>
-								</div>
-								<div class="text-gray-400">
-									<ChevronRight />
-								</div>
+							<div class="flex items-center gap-1">
+								<AdjustmentsHorizontal className="size-5" />
+								<span>수준</span>
+							</div>
+							<div class="text-gray-400">
+								<ChevronRight />
 							</div>
 						</button>
 
 						<button
-							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
 							on:click={() => {
 								tab = 'response_style';
 							}}
 						>
-							<AdjustmentsHorizontal className="size-4" />
-							<div class="flex items-center w-full justify-between">
-								<div class="flex items-center gap-1">
-									<span>스타일:</span>
-									<span class="text-gray-500 dark:text-gray-300">{responseStyles[responseStyle]}</span>
-								</div>
-								<div class="text-gray-400">
-									<ChevronRight />
-								</div>
+							<div class="flex items-center gap-1">
+								<ChatBubbleOval className="size-5" />
+								<span>응답 스타일</span>
+							</div>
+							<div class="text-gray-400">
+								<ChevronRight />
 							</div>
 						</button>
 					</div>
@@ -204,7 +235,7 @@
 						className="w-full"
 					>
 						<DropdownMenu.Item
-							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {!fileUploadEnabled
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl bg-gray-200/20 dark:bg-gray-600/30 hover:bg-gray-200/30 dark:hover:bg-gray-600/40 transition cursor-pointer text-caption {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
@@ -213,9 +244,8 @@
 								}
 							}}
 						>
-							<Clip />
-
-							<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+							<FolderOpen className="size-5" />
+							<span>파일 첨부</span>
 						</DropdownMenu.Item>
 					</Tooltip>
 
@@ -228,7 +258,7 @@
 						className="w-full"
 					>
 						<DropdownMenu.Item
-							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {!fileUploadEnabled
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
@@ -245,8 +275,8 @@
 								}
 							}}
 						>
-							<Camera />
-							<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+							<Camera className="size-5" />
+							<span>{$i18n.t('Capture')}</span>
 						</DropdownMenu.Item>
 					</Tooltip>
 
@@ -259,7 +289,7 @@
 						className="w-full"
 					>
 						<DropdownMenu.Item
-							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {!fileUploadEnabled
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
@@ -268,8 +298,8 @@
 								}
 							}}
 						>
-							<GlobeAlt />
-							<div class="line-clamp-1">{$i18n.t('Attach Webpage')}</div>
+							<GlobeAlt className="size-5" />
+							<span>{$i18n.t('Attach Webpage')}</span>
 						</DropdownMenu.Item>
 					</Tooltip>
 
@@ -283,23 +313,19 @@
 							className="w-full"
 						>
 							<button
-								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {!fileUploadEnabled
+								class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
 									tab = 'notes';
 								}}
 							>
-								<PageEdit />
-
-								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
-										{$i18n.t('Attach Notes')}
-									</div>
-
-									<div class="text-gray-400">
-										<ChevronRight />
-									</div>
+								<div class="flex items-center gap-1">
+									<PageEdit className="size-5" />
+									<span>{$i18n.t('Attach Notes')}</span>
+								</div>
+								<div class="text-gray-400">
+									<ChevronRight />
 								</div>
 							</button>
 						</Tooltip>
@@ -372,12 +398,12 @@
 					{#if fileUploadEnabled}
 						{#if $config?.features?.enable_google_drive_integration}
 							<DropdownMenu.Item
-								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
 								on:click={() => {
 									uploadGoogleDriveHandler();
 								}}
 							>
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78" class="w-4">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78" class="size-5">
 									<path
 										d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z"
 										fill="#0066da"
@@ -409,7 +435,7 @@
 
 						{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
 							<button
-								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {!fileUploadEnabled
+								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -419,7 +445,7 @@
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 32 32"
-									class="size-4"
+									class="size-5"
 									fill="none"
 								>
 									<mask
@@ -503,10 +529,7 @@
 								</svg>
 
 								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
-										{$i18n.t('Microsoft OneDrive')}
-									</div>
-
+									<span>{$i18n.t('Microsoft OneDrive')}</span>
 									<div class="text-gray-400">
 										<ChevronRight />
 									</div>
@@ -518,18 +541,13 @@
 			{:else if tab === 'knowledge'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between items-center p-1 gap-1 h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
 						on:click={() => {
 							tab = '';
 						}}
 					>
 						<ChevronLeft />
-
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Knowledge')}
-							</div>
-						</div>
+						<span>{$i18n.t('Knowledge')}</span>
 					</button>
 
 					<Knowledge {onSelect} />
@@ -537,18 +555,13 @@
 			{:else if tab === 'notes'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between items-center p-1 gap-1 h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
 						on:click={() => {
 							tab = '';
 						}}
 					>
 						<ChevronLeft />
-
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Notes')}
-							</div>
-						</div>
+						<span>{$i18n.t('Notes')}</span>
 					</button>
 
 					<Notes {onSelect} />
@@ -556,18 +569,13 @@
 			{:else if tab === 'chats'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between items-center p-1 gap-1 h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
 						on:click={() => {
 							tab = '';
 						}}
 					>
 						<ChevronLeft />
-
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Chats')}
-							</div>
-						</div>
+						<span>{$i18n.t('Chats')}</span>
 					</button>
 
 					<Chats {onSelect} />
@@ -575,45 +583,36 @@
 			{:else if tab === 'microsoft_onedrive'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between items-center p-1 gap-1 h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
 						on:click={() => {
 							tab = '';
 						}}
 					>
 						<ChevronLeft />
-
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Microsoft OneDrive')}
-							</div>
-						</div>
+						<span>{$i18n.t('Microsoft OneDrive')}</span>
 					</button>
 
 					{#if $config?.features?.enable_onedrive_personal}
 						<DropdownMenu.Item
-							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] text-left"
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption text-left"
 							on:click={() => {
 								uploadOneDriveHandler('personal');
 							}}
 						>
-							<div class="flex flex-col">
-								<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</div>
-							</div>
+							<span>{$i18n.t('Microsoft OneDrive (personal)')}</span>
 						</DropdownMenu.Item>
 					{/if}
 
 					{#if $config?.features?.enable_onedrive_business}
 						<DropdownMenu.Item
-							class="flex flex-row items-center p-1 gap-1 w-full h-auto rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] text-left"
+							class="flex flex-row items-center p-1 gap-1 w-full h-auto rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption text-left"
 							on:click={() => {
 								uploadOneDriveHandler('organizations');
 							}}
 						>
 							<div class="flex flex-col">
-								<div class="line-clamp-1">
-									{$i18n.t('Microsoft OneDrive (work/school)')}
-								</div>
-								<div class="text-xs text-gray-400">{$i18n.t('Includes SharePoint')}</div>
+								<span>{$i18n.t('Microsoft OneDrive (work/school)')}</span>
+								<span class="text-gray-400">{$i18n.t('Includes SharePoint')}</span>
 							</div>
 						</DropdownMenu.Item>
 					{/if}
@@ -621,64 +620,68 @@
 			{:else if tab === 'proficiency'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between items-center p-1 gap-1 h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
 						on:click={() => {
 							tab = '';
 						}}
 					>
 						<ChevronLeft />
-						<div class="flex items-center w-full justify-between">
-							<div>수준 선택</div>
-						</div>
+						<span>수준 선택</span>
 					</button>
 
-					{#each Object.entries(proficiencyLevels) as [key, label]}
-						<button
-							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {proficiencyLevel === key ? 'bg-gray-200 dark:bg-white/10' : ''}"
-							on:click={() => {
-								proficiencyLevel = key;
-								tab = '';
-							}}
-						>
-							<div class="flex items-center justify-between w-full">
-								<span>{label}</span>
-								{#if proficiencyLevel === key}
-									<Check className="size-4" />
+					{#if personasLoading}
+						<div class="p-2 text-center text-gray-500">로딩 중...</div>
+					{:else if availablePersonas && availablePersonas.proficiency_levels.length > 0}
+						{#each availablePersonas.proficiency_levels as option}
+							<button
+								class="flex flex-row items-center justify-between py-1 px-2 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+								on:click={() => {
+									proficiencyLevel = option.value;
+									tab = '';
+								}}
+							>
+								<span>{getPersonaLabel(option)}</span>
+								{#if proficiencyLevel === option.value}
+									<Check className="size-5 text-primary-700" />
 								{/if}
-							</div>
-						</button>
-					{/each}
+							</button>
+						{/each}
+					{:else}
+						<div class="p-2 text-center text-gray-500 text-caption">옵션이 없습니다</div>
+					{/if}
 				</div>
 			{:else if tab === 'response_style'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between items-center p-1 gap-1 h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px]"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
 						on:click={() => {
 							tab = '';
 						}}
 					>
 						<ChevronLeft />
-						<div class="flex items-center w-full justify-between">
-							<div>응답 스타일 선택</div>
-						</div>
+						<span>응답 스타일 선택</span>
 					</button>
 
-					{#each Object.entries(responseStyles) as [key, label]}
-						<button
-							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {responseStyle === key ? 'bg-gray-200 dark:bg-white/10' : ''}"
-							on:click={() => {
-								responseStyle = key;
-								tab = '';
-							}}
-						>
-							<div class="flex items-center justify-between w-full">
-								<span>{label}</span>
-								{#if responseStyle === key}
-									<Check className="size-4" />
+					{#if personasLoading}
+						<div class="p-2 text-center text-gray-500">로딩 중...</div>
+					{:else if availablePersonas && availablePersonas.response_styles.length > 0}
+						{#each availablePersonas.response_styles as option}
+							<button
+								class="flex flex-row items-center justify-between py-1 px-2 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+								on:click={() => {
+									responseStyle = option.value;
+									tab = '';
+								}}
+							>
+								<span>{getPersonaLabel(option)}</span>
+								{#if responseStyle === option.value}
+									<Check className="size-5 text-primary-700" />
 								{/if}
-							</div>
-						</button>
-					{/each}
+							</button>
+						{/each}
+					{:else}
+						<div class="p-2 text-center text-gray-500 text-caption">옵션이 없습니다</div>
+					{/if}
 				</div>
 			{/if}
 		</DropdownMenu.Content>

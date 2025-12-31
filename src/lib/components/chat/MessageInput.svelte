@@ -110,8 +110,8 @@
 	export let codeInterpreterEnabled = false;
 
 	// Proficiency level and response style props
-	export let proficiencyLevel = 'intermediate';
-	export let responseStyle = 'question_guidance';
+	export let proficiencyLevel = '2';  // 기본값: 중급
+	export let responseStyle = 'diagnosis';  // 기본값: 학생 진단 브리핑
 
 	// Multiline detection for layout switching
 	let isMultiline = false;

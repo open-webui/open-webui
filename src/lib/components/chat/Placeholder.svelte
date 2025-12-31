@@ -55,6 +55,9 @@
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 
+	export let proficiencyLevel = '2';  // 기본값: 중급
+	export let responseStyle = 'diagnosis';  // 기본값: 학생 진단 브리핑
+
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
 
@@ -242,6 +245,8 @@
 						bind:imageGenerationEnabled
 						bind:codeInterpreterEnabled
 						bind:webSearchEnabled
+						bind:proficiencyLevel
+						bind:responseStyle
 						bind:atSelectedModel
 						bind:showCommands
 						{toolServers}
@@ -395,6 +400,8 @@
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
+								bind:proficiencyLevel
+								bind:responseStyle
 								bind:atSelectedModel
 								bind:showCommands
 								{toolServers}

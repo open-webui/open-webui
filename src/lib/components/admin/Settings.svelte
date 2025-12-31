@@ -23,6 +23,7 @@
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
+	import Personas from './Settings/Personas.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -37,6 +38,7 @@
 			'connections',
 			'models',
 			'evaluations',
+			'personas',
 			'tools',
 			'documents',
 			'web',
@@ -178,6 +180,29 @@
 				<DocumentChartBar />
 			</div>
 			<div class=" self-center">{$i18n.t('Evaluations')}</div>
+		</button>
+
+		<button
+			id="personas"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'personas'
+				? ''
+				: ' text-gray-700 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				goto('/admin/settings/personas');
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="currentColor"
+					class="size-4"
+				>
+					<path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Personas')}</div>
 		</button>
 
 		<button
@@ -455,6 +480,8 @@
 			<Models />
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
+		{:else if selectedTab === 'personas'}
+			<Personas />
 		{:else if selectedTab === 'tools'}
 			<Tools />
 		{:else if selectedTab === 'documents'}

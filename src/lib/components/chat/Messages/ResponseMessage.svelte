@@ -11,7 +11,12 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
+	import {
+		createNewFeedback,
+		getFeedbackById,
+		updateFeedbackById,
+		submitMessageFeedback
+	} from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
@@ -112,6 +117,7 @@
 			usage?: unknown;
 		};
 		annotation?: { type: string; rating: number };
+		feedback?: 'good' | 'bad' | null;
 	}
 
 	export let chatId = '';
@@ -413,6 +419,50 @@
 	};
 
 	let feedbackLoading = false;
+
+	// New simple message feedback handler
+	let messageFeedbackLoading = false;
+	let feedbackExpanded = false;
+
+	// Reactive declaration - always syncs with message.feedback
+	$: currentFeedback = message?.feedback ?? null;
+
+	const handleMessageFeedback = async (rating: 'good' | 'bad') => {
+		if (messageFeedbackLoading) return;
+
+		messageFeedbackLoading = true;
+
+		try {
+			// If clicking the same rating, toggle it off (set to null)
+			const newRating = currentFeedback === rating ? null : rating;
+
+			const result = await submitMessageFeedback(
+				localStorage.token,
+				chatId,
+				message.id,
+				newRating
+			);
+
+			// Update local state
+			currentFeedback = newRating;
+
+			// Update message in history
+			const updatedMessage = {
+				...message,
+				feedback: newRating
+			};
+			saveMessage(message.id, updatedMessage);
+
+			if (newRating) {
+				toast.success($i18n.t('Thank you for your feedback!'));
+			}
+		} catch (error) {
+			console.error('Failed to submit feedback:', error);
+			toast.error($i18n.t('Failed to submit feedback'));
+		} finally {
+			messageFeedbackLoading = false;
+		}
+	};
 
 	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
 		feedbackLoading = true;
@@ -885,68 +935,98 @@
 									</button>
 								</Tooltip>
 							{/if}
+
+							<!-- Feedback Status Icon (when feedback exists) -->
+							{#if message.done && !readOnly && currentFeedback}
+								<div class="flex items-center gap-1">
+									<!-- Current feedback indicator - click to expand -->
+									<button
+										type="button"
+										class="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+										on:click={() => (feedbackExpanded = !feedbackExpanded)}
+									>
+										{#if currentFeedback === 'good'}
+											<svg xmlns="http://www.w3.org/2000/svg" fill="#34BE89" viewBox="0 0 24 24" stroke-width="2" stroke="#34BE89" class="w-4 h-4">
+												<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+										{:else}
+											<svg xmlns="http://www.w3.org/2000/svg" fill="#FF4D6A" viewBox="0 0 24 24" stroke-width="2" stroke="#FF4D6A" class="w-4 h-4">
+												<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+											</svg>
+										{/if}
+									</button>
+
+									<!-- Expanded feedback options -->
+									{#if feedbackExpanded}
+										<div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full px-1 py-0.5">
+											<Tooltip content={$i18n.t('No')} placement="bottom">
+												<button
+													type="button"
+													class="p-0.5 rounded-full transition {currentFeedback === 'bad' ? 'bg-red-200 dark:bg-red-900/50' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}"
+													disabled={messageFeedbackLoading}
+													on:click={() => handleMessageFeedback('bad')}
+												>
+													<svg xmlns="http://www.w3.org/2000/svg" fill={currentFeedback === 'bad' ? '#FF4D6A' : 'none'} viewBox="0 0 24 24" stroke-width="2" stroke="#FF4D6A" class="w-4 h-4">
+														<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+													</svg>
+												</button>
+											</Tooltip>
+											<Tooltip content={$i18n.t('Yes')} placement="bottom">
+												<button
+													type="button"
+													class="p-0.5 rounded-full transition {currentFeedback === 'good' ? 'bg-green-200 dark:bg-green-900/50' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}"
+													disabled={messageFeedbackLoading}
+													on:click={() => handleMessageFeedback('good')}
+												>
+													<svg xmlns="http://www.w3.org/2000/svg" fill={currentFeedback === 'good' ? '#34BE89' : 'none'} viewBox="0 0 24 24" stroke-width="2" stroke="#34BE89" class="w-4 h-4">
+														<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+													</svg>
+												</button>
+											</Tooltip>
+											{#if messageFeedbackLoading}
+												<Spinner className="size-3" />
+											{/if}
+										</div>
+									{/if}
+								</div>
+							{/if}
 						</div>
 
-						<!-- Feedback Section: 답변이 이해되셨나요? -->
-						{#if message.done && !readOnly}
+						<!-- Feedback Section: 답변이 이해되셨나요? (only when no feedback yet) -->
+						{#if message.done && !readOnly && !currentFeedback}
 							<div class="flex flex-row items-center gap-2 mt-2.5 w-full justify-start">
 								<span class="text-caption text-gray-700 dark:text-gray-300">
 									{$i18n.t('Did you understand the answer?')}
 								</span>
-								<!-- No Button -->
 								<Tooltip content={$i18n.t('No')} placement="bottom">
 									<button
 										type="button"
 										aria-label={$i18n.t('No')}
-										class="p-0.5 hover:opacity-80 transition"
-										on:click={() => {
-											// TODO: Backend integration
-											console.log('Feedback: No');
-										}}
+										class="p-0.5 hover:opacity-80 transition disabled:opacity-50"
+										disabled={messageFeedbackLoading}
+										on:click={() => handleMessageFeedback('bad')}
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="2"
-											stroke="#FF4D6A"
-											class="w-5 h-5"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M6 18L18 6M6 6l12 12"
-											/>
+										<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#FF4D6A" class="w-5 h-5">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 										</svg>
 									</button>
 								</Tooltip>
-								<!-- Yes Button -->
 								<Tooltip content={$i18n.t('Yes')} placement="bottom">
 									<button
 										type="button"
 										aria-label={$i18n.t('Yes')}
-										class="p-0.5 hover:opacity-80 transition"
-										on:click={() => {
-											// TODO: Backend integration
-											console.log('Feedback: Yes');
-										}}
+										class="p-0.5 hover:opacity-80 transition disabled:opacity-50"
+										disabled={messageFeedbackLoading}
+										on:click={() => handleMessageFeedback('good')}
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="2"
-											stroke="#34BE89"
-											class="w-5 h-5"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-											/>
+										<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#34BE89" class="w-5 h-5">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
 									</button>
 								</Tooltip>
+								{#if messageFeedbackLoading}
+									<Spinner className="size-4" />
+								{/if}
 							</div>
 						{/if}
 					</div>

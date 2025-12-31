@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
+	import { onMount } from 'svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { getAvailablePersonas } from '$lib/apis/prompt-groups';
+	import type { AvailablePersonas, PersonaOption } from '$lib/apis/prompt-groups';
 
 	export let title = '';
 	export let subtitle = '';
-	export let proficiencyLevel = 'intermediate';
-	export let responseStyle = 'question_guidance';
+	export let proficiencyLevel = '2';  // 기본값: 중급
+	export let responseStyle = 'diagnosis';  // 기본값: 학생 진단 브리핑
 	export let hasChapter = false;
 
 	let isExpanded = false;
@@ -14,17 +17,49 @@
 	let showResponseStyleDropdown = false;
 	let containerElement: HTMLDivElement;
 
-	const proficiencyLevels: Record<string, string> = {
-		initial: '초급',
-		intermediate: '중급',
-		advanced: '고급'
+	// 동적 페르소나 옵션
+	let availablePersonas: AvailablePersonas | null = null;
+	let personasLoading = false;
+
+	// 라벨 헬퍼 함수
+	const getPersonaLabel = (option: PersonaOption): string => {
+		return option.prompts[0]?.title ?? option.value;
 	};
 
-	const responseStyles: Record<string, string> = {
-		question_guidance: '질문식 유도',
-		problem_bank: '문제 은행',
-		detailed_lecture: '자세한 강의'
+	// 현재 선택된 값의 라벨 가져오기
+	const getSelectedProficiencyLabel = (): string => {
+		if (!availablePersonas) return proficiencyLevel;
+		const found = availablePersonas.proficiency_levels.find(p => p.value === proficiencyLevel);
+		return found ? getPersonaLabel(found) : proficiencyLevel;
 	};
+
+	const getSelectedStyleLabel = (): string => {
+		if (!availablePersonas) return responseStyle;
+		const found = availablePersonas.response_styles.find(s => s.value === responseStyle);
+		return found ? getPersonaLabel(found) : responseStyle;
+	};
+
+	// 페르소나 로드
+	const loadPersonas = async () => {
+		personasLoading = true;
+		try {
+			availablePersonas = await getAvailablePersonas(localStorage.token);
+			// 기본값 설정: 현재 값이 옵션에 없으면 첫 번째 옵션으로
+			if (availablePersonas.proficiency_levels.length > 0 && !availablePersonas.proficiency_levels.find(p => p.value === proficiencyLevel)) {
+				proficiencyLevel = availablePersonas.proficiency_levels[0].value;
+			}
+			if (availablePersonas.response_styles.length > 0 && !availablePersonas.response_styles.find(s => s.value === responseStyle)) {
+				responseStyle = availablePersonas.response_styles[0].value;
+			}
+		} catch (e) {
+			console.error('Failed to load personas:', e);
+		}
+		personasLoading = false;
+	};
+
+	onMount(() => {
+		loadPersonas();
+	});
 
 	const setProficiencyLevel = (level: string) => {
 		proficiencyLevel = level;
@@ -81,7 +116,7 @@
 	<!-- FilterGroup Container -->
 	<div
 		class="flex flex-row justify-between items-center
-			
+
 			backdrop-blur-xl px-4 gap-3
 			scrollbar-hidden"
 	>
@@ -168,7 +203,7 @@
 							}}
 							class="{glassDropdownBtn} w-full"
 						>
-							<span class={glassDropdownText}>{proficiencyLevels[proficiencyLevel]}</span>
+							<span class={glassDropdownText}>{getSelectedProficiencyLabel()}</span>
 							<svg
 								class={glassDropdownIcon(showProficiencyDropdown)}
 								fill="none"
@@ -184,16 +219,22 @@
 
 						{#if showProficiencyDropdown}
 							<div class={glassDropdownMenu} transition:slide={{ duration: 150 }}>
-								{#each Object.entries(proficiencyLevels) as [key, label]}
-									<button
-										on:click|stopPropagation={() => setProficiencyLevel(key)}
-										class="{glassDropdownOption} {proficiencyLevel === key
-											? glassDropdownOptionActive
-											: ''}"
-									>
-										{label}
-									</button>
-								{/each}
+								{#if personasLoading}
+									<div class="px-4 py-2.5 text-gray-500">로딩 중...</div>
+								{:else if availablePersonas && availablePersonas.proficiency_levels.length > 0}
+									{#each availablePersonas.proficiency_levels as option}
+										<button
+											on:click|stopPropagation={() => setProficiencyLevel(option.value)}
+											class="{glassDropdownOption} {proficiencyLevel === option.value
+												? glassDropdownOptionActive
+												: ''}"
+										>
+											{getPersonaLabel(option)}
+										</button>
+									{/each}
+								{:else}
+									<div class="px-4 py-2.5 text-gray-500">옵션이 없습니다</div>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -212,7 +253,7 @@
 							}}
 							class="{glassDropdownBtn} w-full"
 						>
-							<span class={glassDropdownText}>{responseStyles[responseStyle]}</span>
+							<span class={glassDropdownText}>{getSelectedStyleLabel()}</span>
 							<svg
 								class={glassDropdownIcon(showResponseStyleDropdown)}
 								fill="none"
@@ -228,16 +269,22 @@
 
 						{#if showResponseStyleDropdown}
 							<div class={glassDropdownMenu} transition:slide={{ duration: 150 }}>
-								{#each Object.entries(responseStyles) as [key, label]}
-									<button
-										on:click|stopPropagation={() => setResponseStyle(key)}
-										class="{glassDropdownOption} {responseStyle === key
-											? glassDropdownOptionActive
-											: ''}"
-									>
-										{label}
-									</button>
-								{/each}
+								{#if personasLoading}
+									<div class="px-4 py-2.5 text-gray-500">로딩 중...</div>
+								{:else if availablePersonas && availablePersonas.response_styles.length > 0}
+									{#each availablePersonas.response_styles as option}
+										<button
+											on:click|stopPropagation={() => setResponseStyle(option.value)}
+											class="{glassDropdownOption} {responseStyle === option.value
+												? glassDropdownOptionActive
+												: ''}"
+										>
+											{getPersonaLabel(option)}
+										</button>
+									{/each}
+								{:else}
+									<div class="px-4 py-2.5 text-gray-500">옵션이 없습니다</div>
+								{/if}
 							</div>
 						{/if}
 					</div>
