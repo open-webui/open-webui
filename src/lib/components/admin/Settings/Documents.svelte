@@ -950,24 +950,24 @@
 							</div>
 						</div>
 
-						{#if RAG_EMBEDDING_ENGINE === 'ollama' || RAG_EMBEDDING_ENGINE === 'openai' || RAG_EMBEDDING_ENGINE === 'azure_openai'}
-							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
-									{$i18n.t('Embedding Batch Size')}
-								</div>
-
-								<div class="">
-									<input
-										bind:value={RAG_EMBEDDING_BATCH_SIZE}
-										type="number"
-										class=" bg-transparent text-center w-14 outline-none"
-										min="-2"
-										max="16000"
-										step="1"
-									/>
-								</div>
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Embedding Batch Size')}
 							</div>
 
+							<div class="">
+								<input
+									bind:value={RAG_EMBEDDING_BATCH_SIZE}
+									type="number"
+									class=" bg-transparent text-center w-14 outline-none"
+									min="-2"
+									max="16000"
+									step="1"
+								/>
+							</div>
+						</div>
+
+						{#if RAG_EMBEDDING_ENGINE === 'ollama' || RAG_EMBEDDING_ENGINE === 'openai' || RAG_EMBEDDING_ENGINE === 'azure_openai'}
 							<div class="  mb-2.5 flex w-full justify-between">
 								<div class="self-center text-xs font-medium">
 									<Tooltip

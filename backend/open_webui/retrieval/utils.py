@@ -795,7 +795,9 @@ def get_embedding_function(
             return await asyncio.to_thread(
                 (
                     lambda query, prefix=None: embedding_function.encode(
-                        query, **({"prompt": prefix} if prefix else {})
+                        query,
+                        batch_size=int(embedding_batch_size),
+                        **({"prompt": prefix} if prefix else {}),
                     ).tolist()
                 ),
                 query,
