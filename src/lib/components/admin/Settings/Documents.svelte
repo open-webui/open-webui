@@ -667,11 +667,18 @@
 							</div>
 
 							<div class="flex w-full mt-2">
-								<SensitiveInput
-									placeholder={$i18n.t('Enter MinerU API Key')}
-									bind:value={RAGConfig.MINERU_API_KEY}
-									required={false}
-								/>
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('API Timeout')}
+									</div>
+									<input
+										class="w-16 text-sm bg-transparent outline-hidden text-right"
+										type="number"
+										min="1"
+										bind:value={RAGConfig.MINERU_API_TIMEOUT}
+										placeholder="60"
+									/>
+								</div>
 							</div>
 
 							<!-- Parameters -->
@@ -736,7 +743,9 @@
 							<div class=" self-center text-xs font-medium">
 								<Tooltip
 									placement="top-start"
-									content={$i18n.t('Split documents by markdown headers before applying character/token splitting. Small chunks are merged to meet minimum size.')}
+									content={$i18n.t(
+										'Split documents by markdown headers before applying character/token splitting.'
+									)}
 								>
 									{$i18n.t('Markdown Header Text Splitter')}
 								</Tooltip>
@@ -746,68 +755,43 @@
 							</div>
 						</div>
 
-
 						<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" flex gap-1.5 w-full">
-							{#if RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER}
-								<div class="w-full">
+							<div class=" flex gap-1.5 w-full">
+								<div class="  w-full justify-between">
 									<div class="self-center text-xs font-medium min-w-fit mb-1">
-										<Tooltip
-											placement="top-start"
-											content={$i18n.t('Minimum chunk size (0 to disable). Small chunks from markdown header splits are merged until they meet this threshold.')}
-										>
-											{$i18n.t('Min Chunk Size')}
-										</Tooltip>
+										{$i18n.t('Chunk Size')}
 									</div>
 									<div class="self-center">
 										<input
-											class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											type="number"
-											placeholder={$i18n.t('Enter Min Size')}
-											bind:value={RAGConfig.CHUNK_MIN_SIZE}
+											placeholder={$i18n.t('Enter Chunk Size')}
+											bind:value={RAGConfig.CHUNK_SIZE}
 											autocomplete="off"
 											min="0"
 										/>
 									</div>
 								</div>
-							{/if}
 
-							<div class="  w-full justify-between">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
-									{$i18n.t('Chunk Size')}
-								</div>
-								<div class="self-center">
-									<input
-										class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-										type="number"
-										placeholder={$i18n.t('Enter Chunk Size')}
-										bind:value={RAGConfig.CHUNK_SIZE}
-										autocomplete="off"
-										min="0"
-									/>
-								</div>
-							</div>
+								<div class="w-full">
+									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										{$i18n.t('Chunk Overlap')}
+									</div>
 
-							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
-									{$i18n.t('Chunk Overlap')}
-								</div>
-
-								<div class="self-center">
-									<input
-										class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-										type="number"
-										placeholder={$i18n.t('Enter Chunk Overlap')}
-										bind:value={RAGConfig.CHUNK_OVERLAP}
-										autocomplete="off"
-										min="0"
-									/>
+									<div class="self-center">
+										<input
+											class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											type="number"
+											placeholder={$i18n.t('Enter Chunk Overlap')}
+											bind:value={RAGConfig.CHUNK_OVERLAP}
+											autocomplete="off"
+											min="0"
+										/>
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
-				{/if}
-
+					{/if}
 				</div>
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
@@ -966,24 +950,24 @@
 							</div>
 						</div>
 
-						{#if RAG_EMBEDDING_ENGINE === 'ollama' || RAG_EMBEDDING_ENGINE === 'openai' || RAG_EMBEDDING_ENGINE === 'azure_openai'}
-							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
-									{$i18n.t('Embedding Batch Size')}
-								</div>
-
-								<div class="">
-									<input
-										bind:value={RAG_EMBEDDING_BATCH_SIZE}
-										type="number"
-										class=" bg-transparent text-center w-14 outline-none"
-										min="-2"
-										max="16000"
-										step="1"
-									/>
-								</div>
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Embedding Batch Size')}
 							</div>
 
+							<div class="">
+								<input
+									bind:value={RAG_EMBEDDING_BATCH_SIZE}
+									type="number"
+									class=" bg-transparent text-center w-14 outline-none"
+									min="-2"
+									max="16000"
+									step="1"
+								/>
+							</div>
+						</div>
+
+						{#if RAG_EMBEDDING_ENGINE === 'ollama' || RAG_EMBEDDING_ENGINE === 'openai' || RAG_EMBEDDING_ENGINE === 'azure_openai'}
 							<div class="  mb-2.5 flex w-full justify-between">
 								<div class="self-center text-xs font-medium">
 									<Tooltip
@@ -1258,6 +1242,33 @@
 							</div>
 						</div>
 					</div>
+
+					{#if RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER}
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" flex gap-1.5 w-full">
+								<div class="w-full">
+									<div class="self-center text-xs font-medium min-w-fit mb-1">
+										<Tooltip
+											placement="top-start"
+											content={$i18n.t('Minimum chunk size (0 to disable). Small chunks from markdown header splits are merged until they meet this threshold.')}
+										>
+											{$i18n.t('Min Chunk Size')}
+										</Tooltip>
+									</div>
+									<div class="self-center">
+										<input
+											class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											type="number"
+											placeholder={$i18n.t('Enter Min Size')}
+											bind:value={RAGConfig.CHUNK_MIN_SIZE}
+											autocomplete="off"
+											min="0"
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+					{/if}
 				{/if}
 
 				<div class="mb-3">
