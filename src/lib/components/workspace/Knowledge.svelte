@@ -230,7 +230,7 @@
 
 											{#if !item?.write_access}
 												<div>
-													<Badge type="info" content={$i18n.t('Read Only')} />
+													<Badge type="muted" content={$i18n.t('Read Only')} />
 												</div>
 											{/if}
 										</div>
