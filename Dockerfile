@@ -43,7 +43,8 @@ RUN apk add --no-cache git
 COPY package.json pnpm-lock.yaml ./
 
 # 3. Cài đặt thư viện bằng pnpm
-RUN pnpm install --frozen-lockfile
+RUN pnpm install 
+# --frozen-lockfile
 
 # RUN pnpm ci --force
 
