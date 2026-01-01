@@ -61,6 +61,17 @@ jobs:
           build-args: |
             BUILD_HASH=${{ github.sha }}
 
+      # Nếu sau này muốn build thêm CUDA song song, mình gợi ý:
+      - name: Build & push CUDA image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ env.IMAGE_NAME }}:vnso-cuda
+          build-args: |
+            USE_CUDA=true
+            BUILD_HASH=${{ github.sha }}
+
   deploy-to-vps:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -87,7 +98,7 @@ jobs:
             echo $GHCR_PAT | docker login ghcr.io -u $USERNAME --password-stdin
 
             # 2. Định nghĩa tên Image (chữ thường)
-            IMAGE_TAG="ghcr.io/trinhtanphat/open-webui:vnso"
+            IMAGE_TAG="ghcr.io/${USERNAME}/open-webui:vnso"
             CONTAINER_NAME="open-webui-vnso"
 
             # 3. Pull image mới nhất
