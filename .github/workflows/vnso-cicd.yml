@@ -61,16 +61,16 @@ jobs:
           build-args: |
             BUILD_HASH=${{ github.sha }}
 
-      # Nếu sau này muốn build thêm CUDA song song, mình gợi ý:
-      - name: Build & push CUDA image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ghcr.io/${{ env.IMAGE_NAME }}:vnso-cuda
-          build-args: |
-            USE_CUDA=true
-            BUILD_HASH=${{ github.sha }}
+      # # Nếu sau này muốn build thêm CUDA song song, mình gợi ý:
+      # - name: Build & push CUDA image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .
+      #     push: true
+      #     tags: ghcr.io/${{ env.IMAGE_NAME }}:vnso-cuda
+      #     build-args: |
+      #       USE_CUDA=true
+      #       BUILD_HASH=${{ github.sha }}
 
   deploy-to-vps:
     needs: build-and-push
