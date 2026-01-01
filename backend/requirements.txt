@@ -67,7 +67,7 @@ fpdf2==2.8.5
 pymdown-extensions==10.19.1
 docx2txt==0.9
 python-pptx==1.0.2
-unstructured==0.18.21
+unstructured==0.18.24
 msoffcrypto-tool==5.4.2
 nltk==3.9.2
 Markdown==3.10
