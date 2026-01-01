@@ -261,6 +261,7 @@ async def get_status(request: Request):
         "status": True,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "CHUNK_MERGE_THRESHOLD": request.app.state.config.CHUNK_MERGE_THRESHOLD,
         "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
         "RAG_EMBEDDING_ENGINE": request.app.state.config.RAG_EMBEDDING_ENGINE,
         "RAG_EMBEDDING_MODEL": request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -506,6 +507,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "CHUNK_MERGE_THRESHOLD": request.app.state.config.CHUNK_MERGE_THRESHOLD,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
@@ -700,6 +702,7 @@ class ConfigForm(BaseModel):
     ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: Optional[bool] = None
     CHUNK_SIZE: Optional[int] = None
     CHUNK_OVERLAP: Optional[int] = None
+    CHUNK_MERGE_THRESHOLD: Optional[int] = None
 
     # File upload settings
     FILE_MAX_SIZE: Optional[int] = None
@@ -1011,6 +1014,11 @@ async def update_rag_config(
         if form_data.CHUNK_OVERLAP is not None
         else request.app.state.config.CHUNK_OVERLAP
     )
+    request.app.state.config.CHUNK_MERGE_THRESHOLD = (
+        form_data.CHUNK_MERGE_THRESHOLD
+        if form_data.CHUNK_MERGE_THRESHOLD is not None
+        else request.app.state.config.CHUNK_MERGE_THRESHOLD
+    )
 
     # File upload settings
     request.app.state.config.FILE_MAX_SIZE = form_data.FILE_MAX_SIZE
@@ -1207,6 +1215,7 @@ async def update_rag_config(
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
         "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+        "CHUNK_MERGE_THRESHOLD": request.app.state.config.CHUNK_MERGE_THRESHOLD,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
@@ -1361,6 +1370,79 @@ def save_docs_to_vector_db(
                 )
 
             docs = split_docs
+
+            # Apply minimum chunk size merging if configured
+            min_size = request.app.state.config.CHUNK_MERGE_THRESHOLD
+            max_size = request.app.state.config.CHUNK_SIZE
+
+            if min_size > 0:
+                # Determine measurement function based on TEXT_SPLITTER mode
+                if request.app.state.config.TEXT_SPLITTER == "token":
+                    encoding = tiktoken.get_encoding(
+                        str(request.app.state.config.TIKTOKEN_ENCODING_NAME)
+                    )
+                    measure_fn = lambda text: len(encoding.encode(text))
+                else:
+                    measure_fn = len
+
+                merged_docs = []
+                doc_index = 0
+                while doc_index < len(docs):
+                    current_doc = docs[doc_index]
+                    current_size = measure_fn(current_doc.page_content)
+
+                    # If chunk meets minimum, keep it as is
+                    if current_size >= min_size:
+                        merged_docs.append(current_doc)
+                        doc_index += 1
+                        continue
+
+                    # Merge with subsequent chunks
+                    combined_content = current_doc.page_content
+                    merge_index = doc_index + 1
+
+                    while merge_index < len(docs):
+                        next_doc = docs[merge_index]
+                        next_content = next_doc.page_content
+
+                        # Don't merge across source/file boundaries
+                        current_source = current_doc.metadata.get("source")
+                        next_source = next_doc.metadata.get("source")
+                        if current_source is None or next_source is None or current_source != next_source:
+                            break
+
+                        # Check file_id only if both have it
+                        current_file_id = current_doc.metadata.get("file_id")
+                        next_file_id = next_doc.metadata.get("file_id")
+                        if current_file_id is not None and next_file_id is not None:
+                            if current_file_id != next_file_id:
+                                break
+
+                        # Check if adding next chunk would exceed max
+                        test_content = combined_content + "\n\n" + next_content
+                        test_size = measure_fn(test_content)
+
+                        if test_size > max_size:
+                            break
+
+                        # Add the chunk
+                        combined_content = test_content
+                        merge_index += 1
+
+                        # Check if we've met the minimum
+                        if test_size >= min_size:
+                            break
+
+                    # Create merged document
+                    merged_docs.append(
+                        Document(
+                            page_content=combined_content,
+                            metadata={**current_doc.metadata},
+                        )
+                    )
+                    doc_index = merge_index
+
+                docs = merged_docs
 
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(

@@ -2892,6 +2892,12 @@ CHUNK_OVERLAP = PersistentConfig(
     int(os.environ.get("CHUNK_OVERLAP", "100")),
 )
 
+CHUNK_MERGE_THRESHOLD = PersistentConfig(
+    "CHUNK_MERGE_THRESHOLD",
+    "rag.chunk_merge_threshold",
+    int(os.environ.get("CHUNK_MERGE_THRESHOLD", "0")),
+)
+
 DEFAULT_RAG_TEMPLATE = """### Task:
 Respond to the user query using the provided context, incorporating inline citations in the format [id] **only when the <source> tag includes an explicit id attribute** (e.g., <source id="1">).
 
