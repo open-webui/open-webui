@@ -131,7 +131,7 @@ colbert-ai==0.2.22
 
 ## Tests
 docker~=7.1.0
-pytest~=8.4.1
+pytest~=9.0.2
 pytest-docker~=3.2.5
 
 ## LDAP
