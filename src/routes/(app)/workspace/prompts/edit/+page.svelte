@@ -63,4 +63,3 @@
 {#if prompt}
 	<PromptEditor {prompt} {onSubmit} {write_access} edit />
 {/if}
-

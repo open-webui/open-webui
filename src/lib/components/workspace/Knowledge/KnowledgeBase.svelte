@@ -1063,7 +1063,7 @@
 										<div>
 											<Tooltip content={!knowledge?.write_access ? $i18n.t('You do not have permission to edit this content.') : ''}>
 												<button
-													class="flex self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:cursor-not-allowed"
+													class="flex self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
 													disabled={isSaving || !knowledge?.write_access}
 													on:click={() => {
 														updateFileContentHandler();

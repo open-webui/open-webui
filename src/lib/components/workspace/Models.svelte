@@ -498,7 +498,7 @@
 
 												{#if !model.write_access}
 													<div class="self-center">
-														<Badge type="info" content={$i18n.t('Read Only')} />
+														<Badge type="muted" content={$i18n.t('Read Only')} />
 													</div>
 												{/if}
 
