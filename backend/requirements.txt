@@ -117,7 +117,7 @@ pgvector==0.4.2
 PyMySQL==1.1.2
 boto3==1.42.17
 
-pymilvus==2.6.5
+pymilvus==2.6.6
 qdrant-client==1.16.2
 playwright==1.57.0 # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
 elasticsearch==9.2.1
