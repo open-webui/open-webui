@@ -1600,15 +1600,43 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception("No user message found")
 
         if context_string != "":
-            form_data["messages"] = add_or_update_user_message(
-                rag_template(
+            # Determine if using full context mode (static knowledge)
+            files = metadata.get("files", []) or []
+            is_full_context = request.app.state.config.RAG_FULL_CONTEXT
+            if not is_full_context and files:
+                is_full_context = all(item.get("context") == "full" for item in files)
+
+            # Check for dynamic content that shouldn't be cached in system message
+            has_dynamic_content = any(
+                item.get("type") == "web_search" for item in files
+            ) if files else False
+            has_dynamic_content = has_dynamic_content or any(
+                source.get("tool_result") for source in sources
+            )
+
+            if is_full_context and not has_dynamic_content:
+                # Static knowledge: inject into system message for KV prefix caching
+                system_rag_content = rag_template(
                     request.app.state.config.RAG_TEMPLATE,
                     context_string,
-                    prompt,
-                ),
-                form_data["messages"],
-                append=False,
-            )
+                    "",  # Empty prompt keeps system message static across turns
+                )
+                form_data["messages"] = add_or_update_system_message(
+                    system_rag_content,
+                    form_data["messages"],
+                    append=True,
+                )
+            else:
+                # Dynamic/partial context: inject into user message
+                form_data["messages"] = add_or_update_user_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
+                    ),
+                    form_data["messages"],
+                    append=False,
+                )
 
     # If there are citations, add them to the data_items
     sources = [
