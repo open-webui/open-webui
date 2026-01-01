@@ -48,6 +48,13 @@ jobs:
             type=raw,value=vnso
             type=sha,prefix=git-
 
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo docker system prune -af
+
       # Build bản thường (không CUDA) cho nhẹ, nếu cần CUDA bạn báo mình sửa thêm
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
