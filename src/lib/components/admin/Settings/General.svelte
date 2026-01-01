@@ -334,22 +334,22 @@
 						<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} />
 					</div>
 
-				{#if adminConfig.SHOW_ADMIN_DETAILS}
-					<div class="mb-2.5 w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Admin Contact Email')}</div>
-						</div>
+					{#if adminConfig.SHOW_ADMIN_DETAILS}
+						<div class="mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('Admin Contact Email')}</div>
+							</div>
 
-						<div class="flex mt-2 space-x-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="email"
-								placeholder={$i18n.t('Leave empty to use first admin user')}
-								bind:value={adminConfig.ADMIN_EMAIL}
-							/>
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="email"
+									placeholder={$i18n.t('Leave empty to use first admin user')}
+									bind:value={adminConfig.ADMIN_EMAIL}
+								/>
+							</div>
 						</div>
-					</div>
-				{/if}
+					{/if}
 
 					<div class="mb-2.5">
 						<div class=" self-center text-xs font-medium mb-2">
@@ -704,14 +704,16 @@
 					{#if adminConfig.ENABLE_FOLDERS}
 						<div class="mb-2.5 w-full justify-between">
 							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">{$i18n.t('Folder Max File Count')}</div>
+								<div class=" self-center text-xs font-medium">
+									{$i18n.t('Folder Max File Count')}
+								</div>
 							</div>
 
 							<div class="flex mt-2 space-x-2">
 								<input
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									type="number"
-									min="1"
+									min="0"
 									placeholder={$i18n.t('Enter max file count per folder')}
 									bind:value={adminConfig.FOLDER_MAX_FILE_COUNT}
 								/>

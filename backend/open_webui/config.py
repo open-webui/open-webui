@@ -1546,7 +1546,7 @@ ENABLE_FOLDERS = PersistentConfig(
 FOLDER_MAX_FILE_COUNT = PersistentConfig(
     "FOLDER_MAX_FILE_COUNT",
     "folders.max_file_count",
-    int(os.environ.get("FOLDER_MAX_FILE_COUNT", "100")),
+    os.environ.get("FOLDER_MAX_FILE_COUNT", ""),
 )
 
 ENABLE_CHANNELS = PersistentConfig(

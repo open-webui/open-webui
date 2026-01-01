@@ -1013,7 +1013,7 @@ class AdminConfig(BaseModel):
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
     ENABLE_FOLDERS: bool
-    FOLDER_MAX_FILE_COUNT: int
+    FOLDER_MAX_FILE_COUNT: Optional[int | str] = None
     ENABLE_CHANNELS: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
@@ -1040,7 +1040,11 @@ async def update_admin_config(
     )
 
     request.app.state.config.ENABLE_FOLDERS = form_data.ENABLE_FOLDERS
-    request.app.state.config.FOLDER_MAX_FILE_COUNT = form_data.FOLDER_MAX_FILE_COUNT
+    request.app.state.config.FOLDER_MAX_FILE_COUNT = (
+        int(form_data.FOLDER_MAX_FILE_COUNT)
+        if form_data.FOLDER_MAX_FILE_COUNT
+        else None
+    )
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
     request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
 
