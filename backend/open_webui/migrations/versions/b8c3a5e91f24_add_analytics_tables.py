@@ -1,7 +1,7 @@
 """add_analytics_tables
 
 Revision ID: b8c3a5e91f24
-Revises: f334c211be92
+Revises: 58e9b36bfe4a
 Create Date: 2026-01-02 00:00:00.000000
 
 This migration adds the analytics tables for the "Wrapped" feature:
@@ -18,7 +18,7 @@ import open_webui.internal.db
 
 # revision identifiers, used by Alembic.
 revision: str = 'b8c3a5e91f24'
-down_revision: Union[str, None] = 'f334c211be92'
+down_revision: Union[str, None] = '58e9b36bfe4a'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
