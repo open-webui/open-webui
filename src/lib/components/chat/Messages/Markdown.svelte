@@ -7,6 +7,7 @@
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
 	import { disableSingleTilde } from '$lib/utils/marked/strikethrough-extension';
 	import { mentionExtension } from '$lib/utils/marked/mention-extension';
+	import graphSpecExtension from '$lib/utils/marked/graph-spec-extension';
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 	import footnoteExtension from '$lib/utils/marked/footnote-extension';
@@ -43,6 +44,7 @@
 	marked.use(markedExtension(options));
 	marked.use(citationExtension(options));
 	marked.use(footnoteExtension(options));
+	marked.use(graphSpecExtension(options));
 	marked.use(disableSingleTilde);
 	marked.use({
 		extensions: [mentionExtension({ triggerChar: '@' }), mentionExtension({ triggerChar: '#' })]
