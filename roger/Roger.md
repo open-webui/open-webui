@@ -66,22 +66,25 @@ The backend server will start on http://localhost:8080.
 - The backend uses FastAPI with uvicorn server.
 - Make sure all required dependencies are installed before running either component.
 
-
-## Docker Build
-
-- docker login
-- change package.json line #2:	"version": "1.3.15",
-- docker build --build-arg BUILD_HASH=v1.3.15 -t tech-sense .
-- docker tag tech-sense deliah/tech-sense:v1.3.15
-- docker push deliah/tech-sense:v1.3.15
-- docker tag tech-sense deliah/tech-sense:latest
-- docker push deliah/tech-sense:latest
-
-git tag -a v1.3.15 -m "Release v1.3.15"
-git push origin v1.3.15
-git push origin --delete v1.3.15
-
 # Debug mode
 $env:WEBUI_DEBUG=1 ; .\start_windows.bat
 
 $env:WEBUI_DEBUG=1 ; python -m debugpy --listen 0.0.0.0:5678 --wait-for-client --log-to-stderr uvicorn open_webui.main:app --host "$env:HOST" --port "$env:PORT" --forwarded-allow-ips '*' --workers "$env:UVICORN_WORKERS" --ws auto
+
+## Docker Build
+
+Modify package.json Line #2 for "version": "1.3.16"
+
+
+- docker login
+- change package.json line #2:	"version": "1.3.16",
+- docker build --build-arg BUILD_HASH=v1.3.16 -t tech-sense .
+- docker tag tech-sense deliah/tech-sense:v1.3.16
+- docker push deliah/tech-sense:v1.3.16
+- docker tag tech-sense deliah/tech-sense:latest
+- docker push deliah/tech-sense:latest
+
+git tag -a v1.3.16 -m "Release v1.3.16"
+git push origin v1.3.16
+git push origin --delete v1.3.16
+
