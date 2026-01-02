@@ -386,7 +386,15 @@ class KnowledgeTable:
         except Exception:
             return []
 
-    def search_files_by_id(self, knowledge_id: str, user_id: str, filter: dict, skip: int = 0, limit: int = 30, db: Optional[Session] = None) -> KnowledgeFileListResponse:
+    def search_files_by_id(
+        self,
+        knowledge_id: str,
+        user_id: str,
+        filter: dict,
+        skip: int = 0,
+        limit: int = 30,
+        db: Optional[Session] = None,
+    ) -> KnowledgeFileListResponse:
         try:
             with get_db_context(db) as db:
                 query = (
