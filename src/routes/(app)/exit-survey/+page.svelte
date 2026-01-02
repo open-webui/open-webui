@@ -193,6 +193,10 @@ onMount(async () => {
                 toast.error('Please select your parenting style');
 				return;
 			}
+            if (!surveyResponses.parentEthnicity || surveyResponses.parentEthnicity.length === 0) {
+                toast.error('Please select at least one ethnicity');
+				return;
+			}
 
             // Resolve child_id using the consolidated resolveChildId function
             const token = localStorage.token || '';
@@ -388,6 +392,7 @@ $: saveDraft();
 								   surveyResponses.parentingStyle === 'C' ? 'I\'m warm and supportive with few rules or demands; my child mostly sets their own routines and limits.' :
 								   surveyResponses.parentingStyle === 'D' ? 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.' :
 								   surveyResponses.parentingStyle === 'E' ? 'None of these fits me / It depends on the situation.' :
+								   surveyResponses.parentingStyle === 'prefer-not-to-answer' ? 'Prefer not to answer' :
 								   surveyResponses.parentingStyle)
 								: 'Not specified'}
 						</p>
@@ -431,56 +436,30 @@ $: saveDraft();
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
 								1. Which description best matches your typical approach to day-to-day parenting? (Choose the closest fit.) <span class="text-red-500">*</span>
 							</div>
-							<div class="space-y-3">
-								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
-									surveyResponses.parentingStyle === 'A' 
-										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-								}">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="A" class="mt-1 mr-3" />
-									<div>
-										<div class="font-semibold text-gray-900 dark:text-white">I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.</div>
-									</div>
+							<div class="space-y-2">
+								<label class="flex items-center">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="A" class="mr-3" id="parenting-style-a">
+									<span class="text-gray-900 dark:text-white">I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.</span>
 								</label>
-								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
-									surveyResponses.parentingStyle === 'B' 
-										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-								}">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="B" class="mt-1 mr-3" />
-									<div>
-										<div class="font-semibold text-gray-900 dark:text-white">I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.</div>
-									</div>
+								<label class="flex items-center">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="B" class="mr-3" id="parenting-style-b">
+									<span class="text-gray-900 dark:text-white">I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.</span>
 								</label>
-								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
-									surveyResponses.parentingStyle === 'C' 
-										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-								}">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="C" class="mt-1 mr-3" />
-									<div>
-										<div class="font-semibold text-gray-900 dark:text-white">I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.</div>
-									</div>
+								<label class="flex items-center">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="C" class="mr-3" id="parenting-style-c">
+									<span class="text-gray-900 dark:text-white">I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.</span>
 								</label>
-								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
-									surveyResponses.parentingStyle === 'D' 
-										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-								}">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="D" class="mt-1 mr-3" />
-									<div>
-										<div class="font-semibold text-gray-900 dark:text-white">I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.</div>
-									</div>
+								<label class="flex items-center">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="D" class="mr-3" id="parenting-style-d">
+									<span class="text-gray-900 dark:text-white">I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.</span>
 								</label>
-								<label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-colors {
-									surveyResponses.parentingStyle === 'E' 
-										? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-										: 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-								}">
-									<input type="radio" bind:group={surveyResponses.parentingStyle} value="E" class="mt-1 mr-3" />
-									<div>
-										<div class="font-semibold text-gray-900 dark:text-white">None of these fits me / It depends on the situation.</div>
-									</div>
+								<label class="flex items-center">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="E" class="mr-3" id="parenting-style-e">
+									<span class="text-gray-900 dark:text-white">None of these fits me / It depends on the situation.</span>
+								</label>
+								<label class="flex items-center">
+									<input type="radio" bind:group={surveyResponses.parentingStyle} value="prefer-not-to-answer" class="mr-3" id="parenting-style-prefer-not-to-answer">
+									<span class="text-gray-900 dark:text-white">Prefer not to answer</span>
 								</label>
 							</div>
 						</div>
@@ -643,7 +622,7 @@ $: saveDraft();
                         <!-- Question 8: Parent Ethnicity -->
 						<div>
 							<div class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-                                8. What is your ethnicity? (Select all that apply)
+                                8. What is your ethnicity? (Select all that apply) <span class="text-red-500">*</span>
 							</div>
 							<div class="space-y-2">
 								<label class="flex items-center">
