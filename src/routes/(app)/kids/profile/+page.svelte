@@ -674,6 +674,13 @@ let parentLLMMonitoringOther: string = '';
 				
 				// Automatically select the newly created child for questions
 				childSelectedForQuestions = selectedChildIndex;
+				
+				// Unlock Step 2
+				localStorage.setItem('assignmentStep', '2');
+				localStorage.setItem('moderationScenariosAccessed', 'true');
+				localStorage.setItem('unlock_moderation', 'true');
+				window.dispatchEvent(new Event('storage'));
+				window.dispatchEvent(new Event('workflow-updated'));
 			} else {
 				// Apply current form to selected child
 				applyFormToSelectedChild();
