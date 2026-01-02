@@ -46,6 +46,20 @@ export const TTSWorker = writable(null);
 export const chatId = writable('');
 export const chatTitle = writable('');
 
+// Chat token stats for current conversation
+export interface ChatTokenStatsData {
+	chat_id: string;
+	total_input_tokens: number;
+	total_output_tokens: number;
+	total_tokens: number;
+	last_input_tokens: number;
+	last_output_tokens: number;
+	message_count: number;
+	loading: boolean;
+}
+
+export const chatTokenStats: Writable<ChatTokenStatsData | null> = writable(null);
+
 export const channels = writable([]);
 export const chats = writable(null);
 export const pinnedChats = writable([]);

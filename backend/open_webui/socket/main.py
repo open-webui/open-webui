@@ -311,8 +311,27 @@ async def usage(sid, data):
         await process_token_usage(model_id, usage_data)
 
 
-async def process_token_usage(model_id: str, usage_data: dict):
-    """Process token usage data and update group usage counters"""
+async def process_token_usage(
+    model_id: str,
+    usage_data: dict,
+    chat_id: str = None,
+    user_id: str = None
+):
+    """
+    Process token usage data and update all tracking tables.
+    
+    Updates:
+    1. Token group usage (existing rate limiting feature)
+    2. Conversation token usage (new - for per-chat tracking)
+    3. Daily token usage (new - for heatmaps)
+    4. Model token usage (new - for model breakdowns)
+    
+    Args:
+        model_id: The model being used
+        usage_data: Dict containing prompt_tokens, completion_tokens, etc.
+        chat_id: Optional chat ID for conversation tracking
+        user_id: Optional user ID for user-level analytics
+    """
     if not usage_data:
         return
 
@@ -332,8 +351,46 @@ async def process_token_usage(model_id: str, usage_data: dict):
     token_out = completion_tokens + reasoning_tokens
     token_total = token_in + token_out
 
-    # Use the database model to update usage
+    # 1. Update existing group-based token tracking (for rate limiting)
     token_groups.update_token_usage(model_id, token_in, token_out, token_total)
+
+    # 2-4. Update analytics tables for "Wrapped" feature
+    try:
+        from open_webui.models.analytics import Analytics
+        
+        # 2. Update conversation token usage (per-chat tracking)
+        if chat_id and user_id:
+            Analytics.update_conversation_token_usage(
+                chat_id=chat_id,
+                user_id=user_id,
+                model_id=model_id,
+                token_in=token_in,
+                token_out=token_out,
+                token_total=token_total
+            )
+        
+        # 3. Update daily token usage (for heatmaps)
+        if user_id:
+            Analytics.update_daily_token_usage(
+                user_id=user_id,
+                token_in=token_in,
+                token_out=token_out,
+                token_total=token_total,
+                chat_id=chat_id
+            )
+        
+        # 4. Update model token usage (for model breakdowns)
+        Analytics.update_model_token_usage(
+            user_id=user_id,
+            model_id=model_id,
+            token_in=token_in,
+            token_out=token_out,
+            token_total=token_total
+        )
+        
+        log.debug(f"📊 Analytics updated: model={model_id}, chat={chat_id}, user={user_id}, tokens={token_total}")
+    except Exception as e:
+        log.error(f"Error updating analytics: {e}")
 
 
 @sio.event

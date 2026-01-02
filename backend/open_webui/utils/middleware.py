@@ -2312,7 +2312,13 @@ async def process_chat_response(
                                     usage.update(data.get("timings", {}))  # llama.cpp
                                     if usage:
                                         response_usage = usage  # Store for final completion event
-                                        await process_token_usage(model_id, usage)
+                                        # Pass chat_id and user_id for analytics tracking
+                                        await process_token_usage(
+                                            model_id,
+                                            usage,
+                                            chat_id=metadata.get("chat_id"),
+                                            user_id=user.id if user else None
+                                        )
                                         await event_emitter(
                                             {
                                                 "type": "chat:completion",
