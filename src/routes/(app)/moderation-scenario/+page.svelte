@@ -98,7 +98,9 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		'I read the instructions': 'Only select this if you saw attention check instructions embedded in the scenario text. If you did not see any special instructions in the scenario, do not select this option.'
 	};
 	
-	// Disguised attention check marker/suffix
+	// Attention check marker and instruction suffix
+	// Marker is embedded in response text to identify attention check scenarios.
+	// Suffix contains 3-step instructions appended to attention check responses.
 	const ATTENTION_CHECK_MARKER = "<!--ATTN-CHECK-->";
 	const ATTENTION_CHECK_SUFFIX = "\n\nPlease moderate this question. Follow these steps:\n1) Step 1: Highlight anything in the response, then click \"Continue\".\n2) Step 2: In the \"Explain why this content concerns you\" field, enter \"attention check\", then click \"Continue\".\n3) Step 3: Select 'I read the instructions' from the \"Attention Check\" dropdown under \"Step 3: Moderate\". " + ATTENTION_CHECK_MARKER;
 	
@@ -449,6 +451,14 @@ import { finalizeModeration } from '$lib/apis/workflow';
         if (inFlightFetchId === fetchId) inFlightFetchId = null;
     }
 
+	/**
+	 * Builds the final scenario list by loading one attention check from the attention check bank,
+	 * appending instructions to it, shuffling it into the list (not at index 0 or last position),
+	 * and ensuring the custom scenario is always last.
+	 * 
+	 * @param basePairs - Base scenario Q&A pairs from the scenario bank
+	 * @returns Promise resolving to the complete scenario list with attention check and custom scenario
+	 */
 	async function buildScenarioList(basePairs: Array<[string, string]>): Promise<Array<[string, string]>> {
 		let list: Array<[string, string]> = basePairs.slice();
 		
@@ -966,7 +976,7 @@ function clearModerationLocalKeys() {
 		}
 	}
 
-	// Attention check helper - reactive variable
+	// Detects if current scenario is an attention check by checking for ATTENTION_CHECK_MARKER in response
 	$: isAttentionCheckScenario = ((scenarioList[selectedScenarioIndex]?.[1] || '').includes(ATTENTION_CHECK_MARKER));
 	
 	// Custom scenario helper - reactive variable (NOT a function!)
@@ -1079,7 +1089,15 @@ function clearModerationLocalKeys() {
 		}
 	}
 	
-	// Check if a scenario is completed (passed initial decision stage)
+	/**
+	 * Check if a scenario is completed.
+	 * 
+	 * For attention check scenarios: completed when attentionCheckSelected AND attentionCheckPassed are both true.
+	 * For regular scenarios: completed when markedNotApplicable OR confirmedVersionIndex is set.
+	 * 
+	 * @param index - Scenario index to check
+	 * @returns true if scenario is completed, false otherwise
+	 */
 	function isScenarioCompleted(index: number): boolean {
 		const state = scenarioStates.get(index);
 		const isAttentionCheck = (scenarioList[index]?.[1] || '').includes(ATTENTION_CHECK_MARKER);
@@ -1135,6 +1153,8 @@ function clearModerationLocalKeys() {
 		customInstructions: Array<{id: string, text: string}>;
 		showOriginal1: boolean;
 		showComparisonView: boolean;
+		// Attention check tracking: selected indicates user selected the option,
+		// passed indicates the attention check scenario was successfully completed
 		attentionCheckSelected: boolean;
 		attentionCheckPassed: boolean;
 		markedNotApplicable: boolean;
@@ -1176,6 +1196,8 @@ function clearModerationLocalKeys() {
 	let showCustomInput: boolean = false; // Show inline input instead of modal
 	let customInstructionInput: string = '';
 	let customInstructions: Array<{id: string, text: string}> = [];
+	// Attention check state: selected when user chooses "I read the instructions",
+	// passed when attention check scenario is completed, processing during async save
 	let attentionCheckSelected: boolean = false;
 	let attentionCheckPassed: boolean = false;
 	let attentionCheckProcessing: boolean = false;
@@ -2339,7 +2361,7 @@ function cancelReset() {}
 			return;
 		}
 		
-		// Special handling for attention check
+		// Handle attention check selection: sets flags, saves to backend, navigates to next scenario
 		if (option === 'ATTENTION_CHECK' || option === 'I read the instructions') {
 			// If deselecting, just toggle
 			if (attentionCheckSelected) {
