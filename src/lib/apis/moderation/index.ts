@@ -27,7 +27,13 @@ export interface ModerationSessionPayload {
   original_response: string;
   initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
   concern_level?: number;
-  would_show_child?: 'yes' | 'no';
+  concern_reason?: string;
+  satisfaction_level?: number;
+  satisfaction_reason?: string;
+  next_action?: 'try_again' | 'move_on';
+  decided_at?: number;
+  highlights_saved_at?: number;
+  saved_at?: number;
   strategies?: string[];
   custom_instructions?: string[];  // Simplified from {id, text}[] to string[]
   highlighted_texts?: string[];
@@ -53,7 +59,13 @@ export interface ModerationSessionResponse {
   initial_decision?: string;
   is_final_version: boolean;
   concern_level?: number;
-  would_show_child?: string;
+  concern_reason?: string;
+  satisfaction_level?: number;
+  satisfaction_reason?: string;
+  next_action?: string;
+  decided_at?: number;
+  highlights_saved_at?: number;
+  saved_at?: number;
   strategies?: string[];
   custom_instructions?: string[];
   highlighted_texts?: string[];

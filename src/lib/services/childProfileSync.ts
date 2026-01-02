@@ -136,30 +136,30 @@ class ChildProfileSyncService {
             throw new Error('Cannot create child profile: user is offline or not authenticated');
         }
 
-        let token = get(user)?.token as string | undefined;
-        if (!token && typeof localStorage !== 'undefined') {
-            const lt = localStorage.getItem('token');
-            if (lt && lt.length > 0) token = lt;
-        }
+                let token = get(user)?.token as string | undefined;
+                if (!token && typeof localStorage !== 'undefined') {
+                    const lt = localStorage.getItem('token');
+                    if (lt && lt.length > 0) token = lt;
+                }
         
         if (!token) {
             throw new Error('Cannot create child profile: authentication token not found');
         }
 
         try {
-            const newProfile = await createChildProfile(token, formData);
+                    const newProfile = await createChildProfile(token, formData);
             
             // Update cache with the new profile from backend
-            let profiles = this.getFromCache();
-            // Extra safety check
-            if (!Array.isArray(profiles)) {
-                profiles = [];
-            }
-            profiles.push(newProfile);
-            this.saveToCache(profiles);
+                    let profiles = this.getFromCache();
+                    // Extra safety check
+                    if (!Array.isArray(profiles)) {
+                        profiles = [];
+                    }
+                    profiles.push(newProfile);
+                    this.saveToCache(profiles);
             
-            return newProfile;
-        } catch (error) {
+                    return newProfile;
+            } catch (error) {
             // Log the error for debugging
             console.error('Failed to create child profile on backend:', error);
             

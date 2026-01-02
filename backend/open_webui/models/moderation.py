@@ -28,10 +28,21 @@ class ModerationSession(Base):
     # Initial decision and confirmation flags
     initial_decision = Column(Text, nullable=True)  # 'accept_original' | 'moderate' | 'not_applicable'
     is_final_version = Column(Boolean, nullable=False, default=False)
-    
-    # Pre-moderation judgment fields (Step 3)
+
+    # Pre-moderation judgment fields (Step 2)
     concern_level = Column(Integer, nullable=True)  # 1-5 Likert scale
-    would_show_child = Column(Text, nullable=True)  # 'yes' | 'no'
+    concern_reason = Column(Text, nullable=True)  # Step 2: Explanation of concern
+    # Note: would_show_child column was removed (migration 84b2215f7772) - it existed in DB but not in model
+
+    # Step 3: Satisfaction check fields
+    satisfaction_level = Column(Integer, nullable=True)  # 1-5 Likert scale (1=Very Dissatisfied, 5=Very Satisfied)
+    satisfaction_reason = Column(Text, nullable=True)  # Step 3: Explanation of satisfaction
+    next_action = Column(Text, nullable=True)  # Step 3: 'try_again' | 'move_on'
+
+    # Timestamps for tracking when actions occurred
+    decided_at = Column(BigInteger, nullable=True)  # Timestamp when decision was made
+    highlights_saved_at = Column(BigInteger, nullable=True)  # Timestamp when highlights were saved
+    saved_at = Column(BigInteger, nullable=True)  # Timestamp when step data was saved
 
     strategies = Column(JSONField, nullable=True)  # Array of strategy names
     custom_instructions = Column(JSONField, nullable=True)  # Array of strings
@@ -72,7 +83,14 @@ class ModerationSessionModel(BaseModel):
     initial_decision: Optional[str] = None
     is_final_version: bool
     concern_level: Optional[int] = None
-    would_show_child: Optional[str] = None
+    concern_reason: Optional[str] = None
+    satisfaction_level: Optional[int] = None
+    satisfaction_reason: Optional[str] = None
+    next_action: Optional[str] = None
+    decided_at: Optional[int] = None
+    highlights_saved_at: Optional[int] = None
+    saved_at: Optional[int] = None
+    # Note: would_show_child was removed - column existed in DB but not in model (migration 84b2215f7772)
     strategies: Optional[List[str]] = None
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[str]] = None
@@ -97,7 +115,14 @@ class ModerationSessionForm(BaseModel):
     original_response: str
     initial_decision: Optional[str] = None
     concern_level: Optional[int] = None
-    would_show_child: Optional[str] = None
+    concern_reason: Optional[str] = None
+    satisfaction_level: Optional[int] = None
+    satisfaction_reason: Optional[str] = None
+    next_action: Optional[str] = None
+    decided_at: Optional[int] = None
+    highlights_saved_at: Optional[int] = None
+    saved_at: Optional[int] = None
+    # Note: would_show_child was removed - column existed in DB but not in model (migration 84b2215f7772)
     strategies: Optional[List[str]] = None
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[str]] = None
@@ -156,7 +181,14 @@ class ModerationSessionTable:
                 obj.original_response = form.original_response
                 obj.initial_decision = form.initial_decision
                 obj.concern_level = form.concern_level
-                obj.would_show_child = form.would_show_child
+                obj.concern_reason = form.concern_reason
+                obj.satisfaction_level = form.satisfaction_level
+                obj.satisfaction_reason = form.satisfaction_reason
+                obj.next_action = form.next_action
+                obj.decided_at = form.decided_at
+                obj.highlights_saved_at = form.highlights_saved_at
+                obj.saved_at = form.saved_at
+                # Note: would_show_child column was removed (migration 84b2215f7772)
                 obj.strategies = form.strategies
                 obj.custom_instructions = form.custom_instructions
                 obj.highlighted_texts = form.highlighted_texts
@@ -190,7 +222,13 @@ class ModerationSessionTable:
                     original_response=form.original_response,
                     initial_decision=form.initial_decision,
                     concern_level=form.concern_level,
-                    would_show_child=form.would_show_child,
+                    concern_reason=form.concern_reason,
+                    satisfaction_level=form.satisfaction_level,
+                    satisfaction_reason=form.satisfaction_reason,
+                    next_action=form.next_action,
+                    decided_at=form.decided_at,
+                    highlights_saved_at=form.highlights_saved_at,
+                    saved_at=form.saved_at,
                     is_final_version=bool(form.is_final_version),
                     strategies=form.strategies,
                     custom_instructions=form.custom_instructions,

@@ -1,32 +1,37 @@
 Using DB_ABS environment variable: /Users/johndriscoll/ParentalControl/DSL-kidsgpt-open-webui/backend/data/webui.db
 Database: /Users/johndriscoll/ParentalControl/DSL-kidsgpt-open-webui/backend/data/webui.db
-Found 34 table(s) to display
+Found 37 table(s) to display
 
 ================================================================================
 Table: alembic_version
 ================================================================================
-Total rows: 1
+Total rows: 2
 
 version_num 
 ------------
-7826ab40b532
+i34j45k56l67
+gg11hh22ii33
 
 ================================================================================
 Table: assignment_session_activity
 ================================================================================
-Total rows: 9
+Total rows: 13
 
 id                                   | user_id                              | session_number | active_ms_delta | cumulative_ms | created_at   
 ----------------------------------------------------------------------------------------------------------------------------------------------
-c3b68f64-8c76-4893-a8b2-e95b574ba766 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 0               | 0             | 1766604762823
-efbed9d3-b535-4c73-8ab5-71104c476afd | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 0               | 0             | 1766604763608
-a37fb8a7-133a-40fd-ba74-5cccc72b0bf6 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 0               | 0             | 1766604763612
-c13973eb-844c-4682-94bd-76676dcd1b20 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 19000           | 19000         | 1766604782786
-7273ac4a-6460-4c1f-a889-37d34ed80653 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 0               | 19000         | 1766604782792
-1d095a44-1c9a-4e58-9202-8256d3571415 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 30000           | 49000         | 1766604812706
-5eedc51c-d4c3-4258-8b65-a775345fd727 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 30000           | 79000         | 1766604842702
-f3e22b61-87c7-404c-963b-f69b24f84ff9 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 30000           | 109000        | 1766604872706
-8a1c87d3-f4ad-41db-9f8d-e15a98023e6a | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 1              | 30000           | 139000        | 1766604902695
+40ce2bdf-c7a5-40dd-b86a-5e06e03c063f | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 0               | 0             | 1767227328469
+9e43894e-02bc-44cb-8758-d9cd25d0a9c2 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 1000            | 1000          | 1767227329797
+76a93fc0-b5ee-4a7e-b007-50d0ca91ee24 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 0               | 1000          | 1767227329816
+38cc069d-d86a-46bb-9d1a-5a1b2c1cb072 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 22000           | 23000         | 1767227351799
+ce8841b2-450c-47b2-8ba9-438df75c747c | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 0               | 23000         | 1767227351806
+1547bff9-900b-4ea7-a09a-ab102f5f1f05 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 30000           | 53000         | 1767227381677
+573673d9-2a1c-4d5f-ac17-74656084c29d | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 30000           | 83000         | 1767227411678
+66527fec-50a6-47aa-8da2-e181ce9a8cef | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 30000           | 113000        | 1767227441676
+b40f45c9-238c-49de-a2a1-951bac033025 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 30000           | 143000        | 1767227471678
+f5ea6724-09f7-42c6-ab44-ad073307520e | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 25000           | 168000        | 1767227501678
+e407e24a-5003-4137-b603-01d449611e18 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 0               | 168000        | 1767227531676
+f420a202-21d6-4d39-989e-6022b9a389cb | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 0               | 168000        | 1767227561677
+269e9371-cd15-43b3-af1a-173bcb59887e | 8f2097a9-e478-4d70-9371-39cbc1350b14 | 1              | 10000           | 178000        | 1767227591665
 
 ================================================================================
 Table: attention_check_question
@@ -45,7 +50,7 @@ Total rows: 1
 
 id                                   | email             | password                                                     | active    
 ------------------------------------------------------------------------------------------------------------------------------------
-1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | jjdrisco@ucsd.edu | $2b$12$EgT70bMyd6lmxLIGczSNCeJPr1XQyrzIH362qC1XoH0zZvKZLTyga | 1         
+8f2097a9-e478-4d70-9371-39cbc1350b14 | jjdrisco@ucsd.edu | $2b$12$COZwQ2s20iSFSzO/2DUAEu81ZUfWKqVEce/u35Sx/E1V2t2dS8gje | 1         
 
 ================================================================================
 Table: channel
@@ -72,9 +77,10 @@ Table: child_profile
 ================================================================================
 Total rows: 1
 
-id                                   | user_id                              | name       | child_age    | child_gender | child_characteristics                                        | created_at          | updated_at          | attempt_number | is_current | session_number | is_only_child | child_has_ai_use  | child_ai_use_contexts | parent_llm_monitoring_level | child_gender_other | child_ai_use_contexts_other | parent_llm_monitoring_other
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-015de292-9950-43da-a742-5e297fa3c4fe | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | bob6       | 14 years old | Non-binary   | Agreeableness: Is compassionate, has a soft heart, Is hel... | 1766604777624681000 | 1766604777624681000 | 1              | 1          | 1              | 0             | prefer_not_to_say | []                    | prefer_not_to_say           | NULL               | NULL                        | NULL                       
+id                                   | user_id                              | name       | child_age    | child_gender      | child_characteristics                                        | created_at          | updated_at          | attempt_number | is_current | session_number | is_only_child | child_has_ai_use  | child_ai_use_contexts | parent_llm_monitoring_level | child_gender_other | child_ai_use_contexts_other | parent_llm_monitoring_other
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+c6647e11-18dc-4297-9a7c-50ad0a509604 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | bob17      | 17 years old | Prefer not to say | Extraversion: Is outgoing, sociable
+Emotional Stability: ... | 1767227348941904000 | 1767227348941904000 | 1              | 1          | 1              | 0             | prefer_not_to_say | []                    | prefer_not_to_say           | NULL               | NULL                        | NULL                       
 
 ================================================================================
 Table: config
@@ -88,7 +94,7 @@ id         | data                                                         | vers
   "ui": {
     "enable_signup": false
   }
-} | 0          | 2025-12-24 19:32:38 | NULL      
+} | 0          | 2026-01-01 00:28:39 | NULL      
 
 ================================================================================
 Table: consent_audit
@@ -161,48 +167,60 @@ Table: modelfile
   (empty)
 
 ================================================================================
+Table: moderation_applied
+================================================================================
+  (empty)
+
+================================================================================
+Table: moderation_question_answer
+================================================================================
+  (empty)
+
+================================================================================
+Table: moderation_scenario
+================================================================================
+  (empty)
+
+================================================================================
 Table: moderation_session
 ================================================================================
-Total rows: 7
+Total rows: 6
 
-id                                   | user_id                              | child_id                             | scenario_prompt                            | original_response                                            | strategies                                                   | custom_instructions | highlighted_texts | refactored_response                                          | session_metadata                                             | created_at    | updated_at    | scenario_index | attempt_number | version_number | initial_decision | is_final_version | session_number | is_attention_check | attention_check_selected | attention_check_passed | concern_level | would_show_child
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-b50663fa-69ff-47b6-a298-b7ed5253625f | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | How can I be a good teammate?              | Listen to others’ ideas, share turns, and encourage every... | []                                                           | []                  | []                | NULL                                                         | {
-  "status": "initialized",
-  "decision": "not_applicabl... | 1766604784223 | 1766604809708 | 0              | 1              | 0              | not_applicable   | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL            
-1d80cdc0-54c9-43af-8c11-362cd8ccbb4a | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | What can I do to help someone who's sad?   | You can listen to them, offer kind words, or just sit wit... | []                                                           | []                  | []                | NULL                                                         | {
-  "highlights_saved_at": 1766604814116,
-  "child_accomp... | 1766604814160 | 1766604824258 | 1              | 1              | 0              | NULL             | 0                | 1              | 1                  | 1                        | 1                      | NULL          | NULL            
-762ad1fc-4d2a-487b-a595-41aa919f4fb4 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | How do I say no when I don’t want to help? | You can say, 'I’d love to help, but I need a break right ... | []                                                           | []                  | []                | NULL                                                         | {
-  "highlights_saved_at": 1766604830445,
-  "child_accomp... | 1766604830469 | 1766604839134 | 2              | 1              | 0              | accept_original  | 0                | 1              | 0                  | 0                        | 0                      | 1             | yes             
-a3b29cfd-187c-4f37-a1c2-e9f5d2d732ef | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | Why do people ignore my help sometimes?    | They might be distracted or want to handle things their o... | []                                                           | []                  | []                | NULL                                                         | {
-  "highlights_saved_at": 1766604842424,
-  "child_accomp... | 1766604842455 | 1766604847608 | 3              | 1              | 0              | NULL             | 0                | 1              | 0                  | 0                        | 0                      | 3             | yes             
-df5ae2b6-666f-4cd8-9b6d-92ed181b18ce | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | Why do people ignore my help sometimes?    | They might be distracted or want to handle things their o... | [
-  "Omit Unprompted Suggestions",
-  "Do Not Suggest Work... | []                  | []                | Sometimes people are busy, distracted, or prefer to do th... | {
-  "version_index": 0,
-  "decision": "moderate",
-  "deci... | 1766604856005 | 1766604864678 | 3              | 1              | 1              | moderate         | 1                | 1              | 0                  | 0                        | 0                      | 3             | yes             
-b3f64844-3775-4c9c-bafa-2f18da0c6a7f | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | What are ways I can help my family today?  | Try doing small things without being asked — like cleanin... | []                                                           | []                  | []                | NULL                                                         | {
-  "decision": "not_applicable",
-  "decided_at": 1766604... | 1766604872857 | 1766604872857 | 4              | 1              | 0              | not_applicable   | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL            
-c428730b-4ac6-4743-9bb7-2ad3079f9208 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | what if when when you when wennnnn         | It sounds like you’re starting a question. 😊 Can you try ... | []                                                           | []                  | []                | NULL                                                         | {
-  "highlights_saved_at": 1766604895163,
-  "child_accomp... | 1766604895207 | 1766604902049 | 5              | 1              | 0              | accept_original  | 0                | 1              | 0                  | 0                        | 0                      | 4             | yes             
+id                                   | user_id                              | child_id                             | scenario_prompt                                   | original_response                                            | strategies                                                   | custom_instructions | highlighted_texts                                            | refactored_response                                          | session_metadata | created_at    | updated_at    | scenario_index | attempt_number | version_number | initial_decision | is_final_version | session_number | is_attention_check | attention_check_selected | attention_check_passed | concern_level | would_show_child | concern_reason   | satisfaction_level | satisfaction_reason | next_action | decided_at    | highlights_saved_at | saved_at     
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4c10b502-1c39-4017-9caa-77cea8f0bc23 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | What does it mean to be dependable?               | It means others can trust you to do what you say you’ll d... | []                                                           | []                  | []                                                           | NULL                                                         | null             | 1767227353541 | 1767227357281 | 0              | 1              | 0              | not_applicable   | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL             | NULL             | NULL               | NULL                | NULL        | 1767227357260 | NULL                | NULL         
+ea8fb18f-f889-4a66-b07e-3fb60d7af636 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | Can you teach me nice words to use every day?     | You can say please, thank you, excuse me, and you’re welc... | []                                                           | []                  | [
+  "ou can say please, thank you, excuse me, and you\u20... | NULL                                                         | null             | 1767227362728 | 1767227366383 | 1              | 1              | 0              | NULL             | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL             | ,jc,dmfjg,mg     | NULL               | NULL                | NULL        | NULL          | NULL                | 1767227366361
+8e089e39-c554-462e-8a30-540cdbb8a7ab | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | Can you teach me nice words to use every day?     | You can say please, thank you, excuse me, and you’re welc... | [
+  "Clarify Child's Intent",
+  "Emphasize Emotional Supp... | []                  | [
+  "ou can say please, thank you, excuse me, and you\u20... | What kinds of situations do you want the nice words for—a... | null             | 1767227375843 | 1767227387954 | 1              | 1              | 1              | moderate         | 1                | 1              | 0                  | 0                        | 0                      | NULL          | NULL             | ,jc,dmfjg,mg     | 4                  | ghk.jhjm,hf,nfhmg   | move_on     | 1767227387933 | NULL                | NULL         
+aec2a39b-3371-4822-85fa-d21bd76bc0eb | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | What should I do when I don’t feel like cleaning? | Start with one tiny task—once you begin, it often feels e... | []                                                           | []                  | [
+  "Start with one tiny task\u2014once you begin, it oft... | NULL                                                         | null             | 1767227395398 | 1767227398164 | 2              | 1              | 0              | NULL             | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL             | kihk.m,j,.jh,.hk | NULL               | NULL                | NULL        | NULL          | NULL                | 1767227398144
+a70515ae-ac4d-46d2-a43a-b12bd9b71d6f | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | What should I do when I don’t feel like cleaning? | Start with one tiny task—once you begin, it often feels e... | [
+  "Emphasize Emotional Support",
+  "Explain Problems in... | []                  | [
+  "Start with one tiny task\u2014once you begin, it oft... | It’s okay to feel tired or unmotivated—everyone feels tha... | null             | 1767227407340 | 1767227416927 | 2              | 1              | 1              | moderate         | 0                | 1              | 0                  | 0                        | 0                      | NULL          | NULL             | kihk.m,j,.jh,.hk | 2                  | kgj,,hf,mhf,nmh     | try_again   | 1767227416891 | NULL                | NULL         
+d7211c58-00cf-4f87-bcbe-357b13af3cb8 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | What should I do when I don’t feel like cleaning? | Start with one tiny task—once you begin, it often feels e... | [
+  "Redirect with Alternatives",
+  "Encourage Introspect... | []                  | [
+  "Start with one tiny task\u2014once you begin, it oft... | That sounds tough—everyone feels blah about cleaning some... | null             | 1767227425730 | 1767227436871 | 2              | 1              | 2              | moderate         | 1                | 1              | 0                  | 0                        | 0                      | NULL          | NULL             | kihk.m,j,.jh,.hk | 5                  | 69764673476978      | move_on     | 1767227436838 | NULL                | NULL         
 
 ================================================================================
 Table: moderation_session_activity
 ================================================================================
-Total rows: 4
+Total rows: 8
 
 id                                   | user_id                              | child_id                             | session_number | active_ms_delta | cumulative_ms | created_at   
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-23fa75f3-c675-4f37-bed6-ea2b94b68ff9 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | 1              | 30000           | 30000         | 1766604812829
-0c7aae96-645f-492a-931b-9f7ab4a3bf7c | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | 1              | 30000           | 60000         | 1766604842857
-6c1ae4d4-2da4-4ba5-a083-4162e5d3b207 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | 1              | 30000           | 90000         | 1766604872828
-897d65da-c551-4082-b62c-1c3881080ea4 | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | 015de292-9950-43da-a742-5e297fa3c4fe | 1              | 30000           | 120000        | 1766604902852
+b0bd74ca-41b4-4ba3-be08-f33a073eb7ca | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | 1              | 30000           | 30000         | 1767227381846
+a60838cd-682f-4b54-a3c9-5892311d4f8d | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | 1              | 30000           | 60000         | 1767227411846
+85a9e56d-a3e3-498a-96d5-477c19ffda9a | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | 1              | 30000           | 90000         | 1767227441863
+aee13b6c-63c9-4669-a776-b3aaa551ea06 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | 1              | 30000           | 120000        | 1767227471839
+6b2b6b13-d395-4085-b6e0-737e223c4988 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | 1              | 25000           | 145000        | 1767227501834
+df837716-707f-41d0-917b-f12bb340a77b | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | 1              | 0               | 145000        | 1767227531844
+27411172-f690-420a-a2c5-cbfba4b38a04 | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | 1              | 0               | 145000        | 1767227561844
+912af770-dec3-449a-9ff0-edffdbb2d81d | 8f2097a9-e478-4d70-9371-39cbc1350b14 | c6647e11-18dc-4297-9a7c-50ad0a509604 | 1              | 10000           | 155000        | 1767227591829
 
 ================================================================================
 Table: note
@@ -222,11 +240,12 @@ Table: prompt
 ================================================================================
 Table: selection
 ================================================================================
-Total rows: 1
+Total rows: 2
 
-id                                   | user_id                              | chat_id    | message_id          | role       | selected_text                              | context    | meta       | created_at          | updated_at          | scenario_id | source     | child_id                            
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-cc434494-54e8-4bba-90bd-c1b8b708722f | 1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | scenario_4 | scenario_4:response | assistant  | doing small things without being asked — l | NULL       | {}         | 1766604871208976000 | 1766604871208976000 | scenario_4  | response   | 015de292-9950-43da-a742-5e297fa3c4fe
+id                                   | user_id                              | chat_id    | message_id          | role       | selected_text                                                | context    | meta       | created_at          | updated_at          | scenario_id | source     | child_id                            
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+6bde4088-19e5-4af7-aacb-897b34421fca | 8f2097a9-e478-4d70-9371-39cbc1350b14 | scenario_1 | scenario_1:response | assistant  | ou can say please, thank you, excuse me, and you’re welco... | NULL       | {}         | 1767227361775697000 | 1767227361775697000 | scenario_1  | response   | c6647e11-18dc-4297-9a7c-50ad0a509604
+9f76b343-ca1a-4797-96cd-e4f55c64962a | 8f2097a9-e478-4d70-9371-39cbc1350b14 | scenario_2 | scenario_2:response | assistant  | Start with one tiny task—once you begin, it often feels e... | NULL       | {}         | 1767227394218082000 | 1767227394218082000 | scenario_2  | response   | c6647e11-18dc-4297-9a7c-50ad0a509604
 
 ================================================================================
 Table: tag
@@ -245,9 +264,9 @@ Total rows: 1
 
 id                                   | name       | email             | role       | profile_image_url                                            | api_key    | created_at | updated_at | last_active_at | settings                                                     | info       | oauth_sub  | username   | bio        | gender     | date_of_birth | prolific_pid | study_id   | current_session_id | session_number | consent_given
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-1933f6f5-8768-4ce4-bb6b-f3d6a19f5e97 | Admin John | jjdrisco@ucsd.edu | admin      | data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAY... | NULL       | 1766604758 | 1766604758 | 1766604902     | {
+8f2097a9-e478-4d70-9371-39cbc1350b14 | Admin John | jjdrisco@ucsd.edu | admin      | data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAY... | NULL       | 1767227319 | 1767227319 | 1767227591     | {
   "ui": {
-    "selectedChildId": "015de292-9950-43da-a7... | null       | NULL       | NULL       | NULL       | NULL       | NULL          | NULL         | NULL       | NULL               | 1              | 0            
+    "selectedChildId": "c6647e11-18dc-4297-9a... | null       | NULL       | NULL       | NULL       | NULL       | NULL          | NULL         | NULL       | NULL               | 1              | 0            
 
 ================================================================================
 Summary: Displayed 9 table(s) with data

@@ -780,8 +780,8 @@ let parentLLMMonitoringOther: string = '';
 		// Ensure we have a valid selected child index before editing
 		if (selectedChildIndex >= 0 && selectedChildIndex < childProfiles.length) {
 			hydrateFormFromSelectedChild();
-			isEditing = true;
-			showForm = true;
+		isEditing = true;
+		showForm = true;
 		} else {
 			console.warn('Cannot start editing: no valid child selected');
 		}

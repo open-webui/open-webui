@@ -20,8 +20,16 @@ def upgrade():
     # Check if column already exists (idempotent migration)
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
+    
+    # Check if file table exists
+    existing_tables = inspector.get_table_names()
+    if "file" not in existing_tables:
+        return
+    
+    # Get existing columns
     file_columns = [col["name"] for col in inspector.get_columns("file")]
     
+    # Add access_control column if it doesn't exist
     if "access_control" not in file_columns:
         op.add_column(
             "file",
@@ -30,4 +38,14 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column("file", "access_control")
+    # Check if column exists before dropping
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    
+    existing_tables = inspector.get_table_names()
+    if "file" not in existing_tables:
+        return
+    
+    file_columns = [col["name"] for col in inspector.get_columns("file")]
+    if "access_control" in file_columns:
+        op.drop_column("file", "access_control")

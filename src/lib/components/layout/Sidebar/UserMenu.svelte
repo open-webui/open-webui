@@ -86,7 +86,7 @@ const handleResetWorkflow = async () => {
 					key.startsWith('moderationWarmupCompleted_')
 				) {
 					keysToRemove.push(key);
-				}
+			}
 			}
 		}
 		keysToRemove.forEach(key => localStorage.removeItem(key));

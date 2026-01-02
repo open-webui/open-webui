@@ -8,6 +8,7 @@ Create Date: 2025-10-30
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision = "fe12ab34cd56"
@@ -17,20 +18,34 @@ depends_on = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("moderation_session") as batch_op:
-        batch_op.add_column(sa.Column("is_attention_check", sa.Boolean(), nullable=False, server_default=sa.sql.expression.false()))
-        batch_op.add_column(sa.Column("attention_check_selected", sa.Boolean(), nullable=False, server_default=sa.sql.expression.false()))
-        batch_op.add_column(sa.Column("attention_check_passed", sa.Boolean(), nullable=False, server_default=sa.sql.expression.false()))
-
-    # Drop server_default after backfilling defaults
-    with op.batch_alter_table("moderation_session") as batch_op:
-        batch_op.alter_column("is_attention_check", server_default=None)
-        batch_op.alter_column("attention_check_selected", server_default=None)
-        batch_op.alter_column("attention_check_passed", server_default=None)
+    # Check if columns already exist (idempotent migration)
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
+    
+    if "moderation_session" in existing_tables:
+        moderation_session_columns = [col["name"] for col in inspector.get_columns("moderation_session")]
+        columns_to_add = [
+            ("is_attention_check", sa.Boolean(), False),
+            ("attention_check_selected", sa.Boolean(), False),
+            ("attention_check_passed", sa.Boolean(), False),
+        ]
+        
+        # Add columns one at a time to avoid circular dependency
+        for col_name, col_type, default in columns_to_add:
+            if col_name not in moderation_session_columns:
+                op.add_column("moderation_session", sa.Column(col_name, col_type, nullable=False, server_default=sa.text(str(default).lower())))
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("moderation_session") as batch_op:
-        batch_op.drop_column("attention_check_passed")
-        batch_op.drop_column("attention_check_selected")
-        batch_op.drop_column("is_attention_check")
+    # Check if columns exist before dropping
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
+    
+    if "moderation_session" in existing_tables:
+        moderation_session_columns = [col["name"] for col in inspector.get_columns("moderation_session")]
+        columns_to_drop = ["attention_check_passed", "attention_check_selected", "is_attention_check"]
+        for col_name in columns_to_drop:
+            if col_name in moderation_session_columns:
+                op.drop_column("moderation_session", col_name)

@@ -41,7 +41,7 @@ def upgrade():
                 server_default=sa.func.now(),
                 onupdate=sa.func.now(),
             ),
-        )
+    )
 
 
 def downgrade():

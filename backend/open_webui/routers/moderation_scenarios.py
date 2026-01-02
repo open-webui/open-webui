@@ -34,7 +34,13 @@ class ModerationSessionPayload(BaseModel):
     original_response: str
     initial_decision: Optional[str] = None
     concern_level: Optional[int] = None
-    would_show_child: Optional[str] = None
+    concern_reason: Optional[str] = None
+    satisfaction_level: Optional[int] = None
+    satisfaction_reason: Optional[str] = None
+    next_action: Optional[str] = None
+    decided_at: Optional[int] = None
+    highlights_saved_at: Optional[int] = None
+    saved_at: Optional[int] = None
     strategies: Optional[List[str]] = None
     custom_instructions: Optional[List[str]] = None
     highlighted_texts: Optional[List[str]] = None
@@ -69,7 +75,13 @@ async def create_or_update_session(
             original_response=form_data.original_response,
             initial_decision=form_data.initial_decision,
             concern_level=form_data.concern_level,
-            would_show_child=form_data.would_show_child,
+            concern_reason=form_data.concern_reason,
+            satisfaction_level=form_data.satisfaction_level,
+            satisfaction_reason=form_data.satisfaction_reason,
+            next_action=form_data.next_action,
+            decided_at=form_data.decided_at,
+            highlights_saved_at=form_data.highlights_saved_at,
+            saved_at=form_data.saved_at,
             strategies=form_data.strategies,
             custom_instructions=form_data.custom_instructions,
             highlighted_texts=form_data.highlighted_texts,
@@ -176,7 +188,7 @@ async def get_available_scenarios(
 ):
     """
     Get available scenarios for the current session that the user hasn't seen yet.
-    Prioritizes scenarios matching the child's personality characteristics.
+    Returns random scenario indices independent of child characteristics.
     """
     try:
         # Get all sessions for this user to find seen scenarios
@@ -186,7 +198,7 @@ async def get_available_scenarios(
         for session in all_sessions:
             seen_scenario_indices.add(session.scenario_index)
         
-        # Get child profile to understand personality characteristics
+        # Get child profile to verify it exists
         child_profiles = ChildProfiles.get_child_profiles_by_user(user.id)
         child_profile = None
         for profile in child_profiles:
@@ -207,8 +219,7 @@ async def get_available_scenarios(
             # All scenarios have been seen, return empty list
             return {"available_scenarios": []}
         
-        # For now, return all unseen scenarios in random order
-        # TODO: Implement personality-based prioritization when personality data is available
+        # Return all unseen scenarios in random order (independent of characteristics)
         random.shuffle(unseen_scenarios)
         
         return {

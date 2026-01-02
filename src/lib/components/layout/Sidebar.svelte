@@ -236,18 +236,18 @@
 				console.warn('Child profiles returned invalid value, defaulting to empty array');
 				childProfiles = [];
 			}
-		console.log('Loaded child profiles:', childProfiles);
-		const currentChildId = childProfileSync.getCurrentChildId();
-		console.log('Current child ID:', currentChildId);
-			
-			if (currentChildId && childProfiles.length > 0) {
-				const index = childProfiles.findIndex(child => child.id === currentChildId);
-				if (index !== -1) {
+			console.log('Loaded child profiles:', childProfiles);
+			const currentChildId = childProfileSync.getCurrentChildId();
+			console.log('Current child ID:', currentChildId);
+				
+				if (currentChildId && childProfiles.length > 0) {
+					const index = childProfiles.findIndex(child => child.id === currentChildId);
+					if (index !== -1) {
 					// Stored child ID exists in current profiles list, select it
-					selectedChildIndex = index;
-					currentChild = childProfiles[index];
-					console.log('Selected child:', currentChild);
-				} else {
+						selectedChildIndex = index;
+						currentChild = childProfiles[index];
+						console.log('Selected child:', currentChild);
+					} else {
 					// Stored child ID doesn't exist in current profiles (child is no longer current)
 					// Clear the stored selection and don't select any child
 					console.log('Stored child ID not found in current profiles, clearing selection');
@@ -256,21 +256,21 @@
 					} catch (e) {
 						console.warn('Failed to clear selected child ID:', e);
 					}
-					selectedChildIndex = 0;
+						selectedChildIndex = 0;
 					currentChild = null;
 					console.log('No child selected (stored child is no longer current)');
-				}
-			} else if (childProfiles.length > 0) {
-				// No current child selected, use the first one
-				selectedChildIndex = 0;
-				currentChild = childProfiles[0];
-				console.log('No current child, using first:', currentChild);
+					}
+				} else if (childProfiles.length > 0) {
+					// No current child selected, use the first one
+					selectedChildIndex = 0;
+					currentChild = childProfiles[0];
+					console.log('No current child, using first:', currentChild);
 			} else {
 				// No current children available
 				selectedChildIndex = 0;
 				currentChild = null;
 				console.log('No current children available');
-			}
+				}
 		} catch (error) {
 			console.error('Failed to load child profiles:', error);
 			childProfiles = [];

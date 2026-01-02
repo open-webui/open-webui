@@ -7,6 +7,7 @@ Create Date: 2024-12-19 12:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision = 'd1e2f3a4b5c6'
@@ -16,10 +17,24 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add child_marker column to selection table
-    op.add_column('selection', sa.Column('child_marker', sa.String(), nullable=True))
+    # Check if column already exists (idempotent migration)
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
+    
+    if "selection" in existing_tables:
+        selection_columns = [col["name"] for col in inspector.get_columns("selection")]
+        if "child_marker" not in selection_columns:
+            op.add_column('selection', sa.Column('child_marker', sa.String(), nullable=True))
 
 
 def downgrade() -> None:
-    # Remove child_marker column from selection table
-    op.drop_column('selection', 'child_marker')
+    # Check if column exists before dropping
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
+    
+    if "selection" in existing_tables:
+        selection_columns = [col["name"] for col in inspector.get_columns("selection")]
+        if "child_marker" in selection_columns:
+            op.drop_column('selection', 'child_marker')

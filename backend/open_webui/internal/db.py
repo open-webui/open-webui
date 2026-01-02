@@ -16,7 +16,6 @@ from open_webui.env import (
     DATABASE_POOL_TIMEOUT,
     DATABASE_ENABLE_SQLITE_WAL,
 )
-from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, event, types
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -97,41 +96,12 @@ def is_alembic_detected(database_url: str) -> bool:
         return False
 
 
-# Workaround to handle the peewee migration
-# This is required to ensure the peewee migration is handled before the alembic migration
-# However, if Alembic is already detected, we skip Peewee migrations to avoid conflicts
+# Peewee migrations are no longer used - we use Alembic exclusively
+# This function is kept for backward compatibility but does nothing
 def handle_peewee_migration(DATABASE_URL):
-    # Check if Alembic migrations have been applied
-    if is_alembic_detected(DATABASE_URL):
-        log.info("Alembic migrations detected - skipping Peewee migrations to avoid conflicts")
-        return
-    
-    db = None
-    try:
-        # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
-        migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
-        router = Router(db, logger=log, migrate_dir=migrate_dir)
-        router.run()
-        db.close()
-
-    except Exception as e:
-        log.error(f"Failed to initialize the database connection: {e}")
-        log.warning(
-            "Hint: If your database password contains special characters, you may need to URL-encode it."
-        )
-        raise
-    finally:
-        # Properly closing the database connection
-        if db and not db.is_closed():
-            db.close()
-
-        # Assert if db connection has been closed (only if db was created)
-        if db:
-            assert db.is_closed(), "Database connection is still open."
-
-
-handle_peewee_migration(DATABASE_URL)
+    # Alembic is the only migration system now
+    log.debug("Skipping Peewee migrations - using Alembic exclusively")
+    return
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL

@@ -19,7 +19,11 @@ import pytz
 from pytz import UTC
 from typing import Optional, Union, List, Dict
 
-from opentelemetry import trace
+# Optional import for opentelemetry - not needed for migrations
+try:
+    from opentelemetry import trace
+except ImportError:
+    trace = None  # type: ignore
 
 from open_webui.models.users import Users
 
@@ -251,7 +255,7 @@ def get_current_user(
         user = get_current_user_by_api_key(token)
 
         # Add user info to current span
-        current_span = trace.get_current_span()
+        current_span = trace.get_current_span() if trace else None
         if current_span:
             current_span.set_attribute("client.user.id", user.id)
             current_span.set_attribute("client.user.email", user.email)
@@ -290,7 +294,7 @@ def get_current_user(
                         )
 
                 # Add user info to current span
-                current_span = trace.get_current_span()
+                current_span = trace.get_current_span() if trace else None
                 if current_span:
                     current_span.set_attribute("client.user.id", user.id)
                     current_span.set_attribute("client.user.email", user.email)
@@ -334,7 +338,7 @@ def get_current_user_by_api_key(api_key: str):
         )
     else:
         # Add user info to current span
-        current_span = trace.get_current_span()
+        current_span = trace.get_current_span() if trace else None
         if current_span:
             current_span.set_attribute("client.user.id", user.id)
             current_span.set_attribute("client.user.email", user.email)

@@ -1,5 +1,4 @@
-"""
-Remove child_id from assignment_session_activity table
+"""Remove child_id from assignment_session_activity table
 
 Revision ID: i34j45k56l67
 Revises: h23i45j67k89
@@ -8,6 +7,7 @@ Create Date: 2025-01-20
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.engine.reflection import Inspector
 
 revision = "i34j45k56l67"
 down_revision = "h23i45j67k89"
@@ -16,51 +16,31 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Drop the old index that includes child_id
-    op.drop_index("idx_assignment_activity_user_child_attempt", table_name="assignment_session_activity")
+    # Check if table and column exist (idempotent migration)
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
     
-    # Drop the child_id column
-    op.drop_column("assignment_session_activity", "child_id")
-    
-    # Create new index without child_id
-    op.create_index(
-        "idx_assignment_activity_user_attempt",
-        "assignment_session_activity",
-        ["user_id", "attempt_number"],
-    )
+    if "assignment_session_activity" in existing_tables:
+        existing_columns = [col["name"] for col in inspector.get_columns("assignment_session_activity")]
+        existing_indexes = [idx["name"] for idx in inspector.get_indexes("assignment_session_activity")]
+        
+        # Drop index if it exists
+        if "idx_assignment_activity_user_child_attempt" in existing_indexes:
+            op.drop_index("idx_assignment_activity_user_child_attempt", table_name="assignment_session_activity")
+        
+        # Drop column if it exists
+        if "child_id" in existing_columns:
+            op.drop_column("assignment_session_activity", "child_id")
 
 
 def downgrade() -> None:
-    # Drop the new index
-    op.drop_index("idx_assignment_activity_user_attempt", table_name="assignment_session_activity")
+    # Check if table exists before adding column back
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    existing_tables = inspector.get_table_names()
     
-    # Re-add child_id column
-    op.add_column(
-        "assignment_session_activity",
-        sa.Column("child_id", sa.Text(), nullable=True),
-    )
-    
-    # Re-create the old index with child_id
-    op.create_index(
-        "idx_assignment_activity_user_child_attempt",
-        "assignment_session_activity",
-        ["user_id", "child_id", "attempt_number"],
-    )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if "assignment_session_activity" in existing_tables:
+        existing_columns = [col["name"] for col in inspector.get_columns("assignment_session_activity")]
+        if "child_id" not in existing_columns:
+            op.add_column("assignment_session_activity", sa.Column("child_id", sa.Text(), nullable=True))

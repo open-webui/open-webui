@@ -36,7 +36,7 @@ with suppress(ImportError):
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
-    
+
     # Check if share_id column already exists before adding it
     # This prevents errors when the column was already added by Alembic migrations
     column_exists = False
@@ -62,9 +62,9 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     # Only add the column if it doesn't exist
     if not column_exists:
         try:
-            migrator.add_fields(
-                "chat", share_id=pw.CharField(max_length=255, null=True, unique=True)
-            )
+    migrator.add_fields(
+        "chat", share_id=pw.CharField(max_length=255, null=True, unique=True)
+    )
         except Exception as e:
             # If column already exists (e.g., added by Alembic), ignore the error
             # This makes the migration idempotent
