@@ -76,6 +76,47 @@
 	let allSuggestions: any[] = [];
 	let isLoadingSuggestions = true;
 
+	// 캐러셀 상태
+	let currentCarouselIndex = 0; // 0: 개인별 진도, 1: 전체 학생
+	let carouselInterval = null;
+	const CAROUSEL_INTERVAL_MS = 10000; // 10초
+
+	// 캐러셀 자동 전환 시작
+	function startCarouselAutoPlay() {
+		stopCarouselAutoPlay();
+		carouselInterval = setInterval(() => {
+			currentCarouselIndex = (currentCarouselIndex + 1) % 2;
+		}, CAROUSEL_INTERVAL_MS);
+	}
+
+	// 캐러셀 자동 전환 중지
+	function stopCarouselAutoPlay() {
+		if (carouselInterval) {
+			clearInterval(carouselInterval);
+			carouselInterval = null;
+		}
+	}
+
+	// 사용자 interaction 시 타이머 리셋
+	function resetCarouselTimer() {
+		startCarouselAutoPlay();
+	}
+
+	// 이전 슬라이드로 이동
+	function goToPrevSlide() {
+		currentCarouselIndex = currentCarouselIndex === 0 ? 1 : 0;
+		resetCarouselTimer();
+	}
+
+	// 다음 슬라이드로 이동
+	function goToNextSlide() {
+		currentCarouselIndex = (currentCarouselIndex + 1) % 2;
+		resetCarouselTimer();
+	}
+
+	// 캐러셀 라벨
+	const carouselLabels = ['개인별 진도', '전체 학생'];
+
 	// API 응답을 Suggestions 컴포넌트 형식으로 변환
 	function transformApiResponse(recommendations: any[]): any[] {
 		return recommendations.map((item) => ({
@@ -153,6 +194,9 @@
 
 		isLoadingSuggestions = false;
 
+		// 캐러셀 자동 전환 시작
+		startCarouselAutoPlay();
+
 		// Sticky 감지를 위한 IntersectionObserver 설정 (DOM 준비 후)
 		await tick();
 		if ($mobile && sentinelElement) {
@@ -171,6 +215,7 @@
 		if (observer) {
 			observer.disconnect();
 		}
+		stopCarouselAutoPlay();
 	});
 
 	$: if (selectedModels.length > 0) {
@@ -183,19 +228,18 @@
 {#if $mobile}
 	<!-- ==================== MOBILE LAYOUT ==================== -->
 	<div
-		class="h-screen pt-[60px] flex flex-col bg-contain bg-center bg-no-repeat flex-1"
+		class="h-screen flex flex-col bg-contain bg-center bg-no-repeat overflow-hidden"
 		style="background-image: url('/assets/images/bg_chat_placeholder.png');"
 	>
-		<!-- Scrollable content area -->
-		<div class="flex-1 overflow-y-auto scrollbar-hidden flex flex-col items-center">
-			<!-- Spacer to position input slightly above center initially -->
-			<div class="h-[20vh] w-full shrink-0"></div>
+		<!-- Inner scroll container (padding applied here to avoid overflow) -->
+		<div class="pt-[60px] flex-1 overflow-y-auto scrollbar-none">
+			<!-- Content area -->
+			<div class="flex flex-col items-center">
+				<!-- Spacer -->
+				<div class="h-[10vh] w-full shrink-0"></div>
 
-			<!-- Sentinel element for sticky detection -->
-			<div bind:this={sentinelElement} class="h-0 w-full"></div>
-
-			<!-- Sticky header section with welcome text and input -->
-			<div class="sticky top-0 z-30 px-3 pt-4 pb-3 transition-all duration-200 w-full max-w-2xl {isStuck ? 'backdrop-blur-xl' : ''}">
+			<!-- Header section with welcome text and input -->
+			<div class="px-3 pt-4 pb-3 w-full max-w-2xl">
 				{#if $temporaryChatEnabled}
 					<Tooltip
 						content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -263,34 +307,68 @@
 					/>
 				</div>
 			</div>
-			<!-- End of sticky header -->
+			<!-- End of header -->
 
-			<!-- Mobile: Scrollable suggestions section -->
+			<!-- Mobile: Suggestions section -->
 			{#if $selectedFolder}
 				<div class="w-full max-w-2xl px-3 font-primary min-h-62" in:fade={{ duration: 200, delay: 200 }}>
 					<FolderPlaceholder folder={$selectedFolder} />
 				</div>
 			{:else}
-				<div class="w-full max-w-2xl font-primary pb-8 px-3" in:fade={{ duration: 200, delay: 200 }}>
-					<div class="text-body-3-medium text-gray-900 dark:text-gray-50 mt-4 text-center">
-						이번 주 취약 개념 Top 3
+				<div class="w-full max-w-2xl font-primary pb-8 px-3 overflow-x-hidden" in:fade={{ duration: 200, delay: 200 }}>
+					<!-- 제목 -->
+					<div class="text-title-3 text-gray-900 dark:text-gray-50 mt-4 text-center">
+						이번 주 자주 묻는 질문 TOP 3
 					</div>
-					<Suggestions
-						suggestionPrompts={personalSuggestions}
-						inputValue={prompt}
-						{onSelect}
-					/>
-					<Suggestions
-						suggestionPrompts={allSuggestions}
-						inputValue={prompt}
-						suggestionTitle={$i18n.t('전체 학생')}
-						isPersonalized={false}
-						{onSelect}
-					/>
+
+					<!-- 캐러셀 네비게이션 -->
+					<div class="flex flex-row justify-center items-center gap-10 mt-5">
+						<!-- 이전 버튼 -->
+						<button
+							class="w-5 h-5 flex items-center justify-center text-[#B4BCD0] hover:text-gray-50 transition-colors"
+							on:click={goToPrevSlide}
+							aria-label="이전"
+						>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+						</button>
+
+						<!-- 현재 슬라이드 라벨 -->
+						<span class="text-body-3-medium text-gray-900 dark:text-gray-50 min-w-[80px] text-center">
+							{carouselLabels[currentCarouselIndex]}
+						</span>
+
+						<!-- 다음 버튼 -->
+						<button
+							class="w-5 h-5 flex items-center justify-center text-[#B4BCD0] hover:text-gray-50 transition-colors"
+							on:click={goToNextSlide}
+							aria-label="다음"
+						>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+						</button>
+					</div>
+
+					<!-- 캐러셀 콘텐츠 -->
+					{#key currentCarouselIndex}
+						<div in:fade={{ duration: 200 }}>
+							<Suggestions
+								suggestionPrompts={currentCarouselIndex === 0 ? personalSuggestions : allSuggestions}
+								inputValue={prompt}
+								suggestionTitle=""
+								isPersonalized={currentCarouselIndex === 0}
+								{onSelect}
+							/>
+						</div>
+					{/key}
 				</div>
 			{/if}
+			</div>
+			<!-- End of content area -->
 		</div>
-		<!-- End of scrollable content area -->
+		<!-- End of inner scroll container -->
 	</div>
 	<!-- End of mobile container -->
 {:else}
@@ -431,22 +509,54 @@
 					<FolderPlaceholder folder={$selectedFolder} />
 				</div>
 			{:else}
-				<div class="w-full max-w-5xl font-primary mt-2 pb-8 px-4" in:fade={{ duration: 200, delay: 200 }}>
-					<div class="text-body-3-medium text-gray-900 dark:text-gray-50 mt-8 text-center">
-						이번 주 취약 개념 Top 3
+				<div class="w-full max-w-5xl font-primary mt-2 pb-8 px-4 overflow-x-hidden" in:fade={{ duration: 200, delay: 200 }}>
+					<!-- 제목 -->
+					<div class="text-title-3 text-gray-900 dark:text-gray-50 mt-8 text-center">
+						이번 주 자주 묻는 질문 TOP 3
 					</div>
-					<Suggestions
-						suggestionPrompts={personalSuggestions}
-						inputValue={prompt}
-						{onSelect}
-					/>
-					<Suggestions
-						suggestionPrompts={allSuggestions}
-						inputValue={prompt}
-						suggestionTitle={$i18n.t('전체 학생')}
-						isPersonalized={false}
-						{onSelect}
-					/>
+
+					<!-- 캐러셀 네비게이션 -->
+					<div class="flex flex-row justify-center items-center gap-10 mt-7">
+						<!-- 이전 버튼 -->
+						<button
+							class="w-5 h-5 flex items-center justify-center text-[#B4BCD0] hover:text-gray-50 transition-colors"
+							on:click={goToPrevSlide}
+							aria-label="이전"
+						>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+						</button>
+
+						<!-- 현재 슬라이드 라벨 -->
+						<span class="text-body-3-medium text-gray-900 dark:text-gray-50 min-w-[80px] text-center">
+							{carouselLabels[currentCarouselIndex]}
+						</span>
+
+						<!-- 다음 버튼 -->
+						<button
+							class="w-5 h-5 flex items-center justify-center text-[#B4BCD0] hover:text-gray-50 transition-colors"
+							on:click={goToNextSlide}
+							aria-label="다음"
+						>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+						</button>
+					</div>
+
+					<!-- 캐러셀 콘텐츠 -->
+					{#key currentCarouselIndex}
+						<div in:fade={{ duration: 200 }}>
+							<Suggestions
+								suggestionPrompts={currentCarouselIndex === 0 ? personalSuggestions : allSuggestions}
+								inputValue={prompt}
+								suggestionTitle=""
+								isPersonalized={currentCarouselIndex === 0}
+								{onSelect}
+							/>
+						</div>
+					{/key}
 				</div>
 			{/if}
 		</div>

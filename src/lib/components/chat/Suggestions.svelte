@@ -67,25 +67,27 @@
 	};
 </script>
 
-<div
-	class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400 w-full justify-center mt-6"
->
-	{#if filteredPrompts.length > 0}
-		<!-- <Bolt /> -->
-		<p class="text-body-3-medium text-[#1A1B1C] dark:text-gray-50">{suggestionTitle}</p>
-		<!-- {$i18n.t('Suggested')} -->
-	{:else}
-		<!-- Keine Vorschläge -->
+{#if suggestionTitle}
+	<div
+		class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400 w-full justify-center mt-6"
+	>
+		{#if filteredPrompts.length > 0}
+			<!-- <Bolt /> -->
+			<p class="text-body-3-medium text-[#1A1B1C] dark:text-gray-50">{suggestionTitle}</p>
+			<!-- {$i18n.t('Suggested')} -->
+		{:else}
+			<!-- Keine Vorschläge -->
 
-		<div
-			class="flex w-full {$settings?.landingPageMode === 'chat'
-				? ' -mt-1'
-				: 'text-center items-center justify-center'}  self-start text-gray-600 dark:text-gray-400"
-		>
-			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
-		</div>
-	{/if}
-</div>
+			<div
+				class="flex w-full {$settings?.landingPageMode === 'chat'
+					? ' -mt-1'
+					: 'text-center items-center justify-center'}  self-start text-gray-600 dark:text-gray-400"
+			>
+				{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
+			</div>
+		{/if}
+	</div>
+{/if}
 
 <div class="w-full py-4">
 	{#if filteredPrompts.length > 0}
@@ -94,11 +96,10 @@
 			: 'flex flex-row gap-4 overflow-x-auto scrollbar-thin px-12 pb-4'} {className}">
 			{#each filteredPrompts as prompt, idx (prompt.id || `${prompt.content}-${idx}`)}
 				<div
-					class="waterfall box-border flex flex-col items-start py-3 px-4 gap-2.5
+					class="box-border flex flex-col items-start py-3 px-4 gap-2.5
 						{$mobile ? 'w-full' : 'min-w-[270px] w-[270px]'}
 						bg-[rgba(253,254,254,0.7)] dark:bg-[rgba(39,40,44,0.5)]
 						shadow-lg rounded-2xl backdrop-blur-[20px]"
-					style="animation-delay: {idx * 60}ms"
 				>
 					<!-- Date Info -->
 					<div class="flex items-center gap-1">
@@ -257,26 +258,6 @@
 </div>
 
 <style>
-	/* Waterfall animation for the suggestions */
-	@keyframes fadeInUp {
-		0% {
-			opacity: 0;
-			transform: translateY(20px);
-		}
-		100% {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	.waterfall {
-		opacity: 0;
-		animation-name: fadeInUp;
-		animation-duration: 200ms;
-		animation-fill-mode: forwards;
-		animation-timing-function: ease;
-	}
-
 	/* Scrollbar styling */
 	:global(.scrollbar-thin) {
 		scrollbar-width: thin;
