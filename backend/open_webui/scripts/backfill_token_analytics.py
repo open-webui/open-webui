@@ -7,23 +7,22 @@ and populates the analytics tables (conversation_token_usage, daily_token_usage,
 model_token_usage) for the "Wrapped" feature.
 
 Usage:
-    python -m open_webui.scripts.backfill_token_analytics [--dry-run] [--verbose] [--user-id USER_ID]
+    python -m open_webui.scripts.backfill_token_analytics [--dry-run] [--verbose] [--user-id USER_ID] [--clear]
 
 Token Counting Logic:
-    For each turn (assistant response) in a conversation:
-    - INPUT tokens = all messages from start up to (but not including) this assistant message
-    - OUTPUT tokens = this assistant message only
-    - Turn total = cumulative context up to and including this turn
+    - INPUT tokens = sum of ALL message tokens (U1 + A1 + U2 + A2 + U3 + A3 + ...)
+    - OUTPUT tokens = ONLY the last assistant message tokens
+    - TOTAL tokens = cumulative API context cost per turn, summed (what you actually pay for)
     
-    Example for a 3-turn conversation:
-    - Turn 1: U1 (input) + A1 (output) → Turn total = U1 + A1
-    - Turn 2: U1 + A1 + U2 (input) + A2 (output) → Turn total = U1 + A1 + U2 + A2
-    - Turn 3: U1 + A1 + U2 + A2 + U3 (input) + A3 (output) → Turn total = U1 + A1 + U2 + A2 + U3 + A3
+    Example for a 3-turn conversation (U=user, A=assistant):
+    - Turn 1 API call: sends U1, receives A1 → cost = U1 + A1
+    - Turn 2 API call: sends U1+A1+U2, receives A2 → cost = U1 + A1 + U2 + A2
+    - Turn 3 API call: sends U1+A1+U2+A2+U3, receives A3 → cost = U1 + A1 + U2 + A2 + U3 + A3
     
-    Conversation totals:
-    - total_input_tokens = sum of all turn inputs
-    - total_output_tokens = sum of all turn outputs (A1 + A2 + A3)
-    - total_tokens = sum of all turn totals
+    So:
+    - input_tokens = U1 + A1 + U2 + A2 + U3 + A3 (simple sum of all messages)
+    - output_tokens = A3 (last assistant message only)
+    - total_tokens = (U1+A1) + (U1+A1+U2+A2) + (U1+A1+U2+A2+U3+A3) (cumulative context)
 
 Uses tiktoken with o200k_base encoding for all models.
 """
@@ -42,6 +41,17 @@ import tiktoken
 # Set up path for imports
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+# Allow DATABASE_URL to be set before importing db module
+def setup_database_url():
+    """Print and optionally override DATABASE_URL"""
+    from open_webui.env import DATABASE_URL, DATA_DIR
+    print(f"DATABASE_URL: {DATABASE_URL}")
+    print(f"DATA_DIR: {DATA_DIR}")
+    return DATABASE_URL
+
+# Print database info early
+_db_url = setup_database_url()
 
 from open_webui.internal.db import get_db
 from open_webui.models.chats import Chat, Chats
@@ -171,11 +181,16 @@ class ChatTokenAnalyzer:
         """
         Analyze a chat and return token statistics.
         
+        Token Calculation Logic:
+        - INPUT = Simple sum of ALL message tokens (U1 + A1 + U2 + A2 + ...)
+        - OUTPUT = ONLY the last assistant message tokens
+        - TOTAL = Sum of cumulative turn totals (what API actually charges)
+        
         Returns:
             Dict with:
-            - total_input_tokens: Sum of all turn inputs
-            - total_output_tokens: Sum of all assistant outputs (A1 + A2 + ...)
-            - total_tokens: Sum of all turn totals (cumulative)
+            - total_input_tokens: Sum of all message tokens
+            - total_output_tokens: Last assistant message tokens only
+            - total_tokens: Cumulative API cost
             - message_count: Number of messages
             - model_id: Primary model used
             - turns: List of turn details for debugging
@@ -196,50 +211,53 @@ class ChatTokenAnalyzer:
                 log.warning(f"Chat {chat_id}: No messages found")
             return None
         
-        # Analyze turns
-        total_input_tokens = 0
-        total_output_tokens = 0
-        total_tokens = 0
+        # First pass: count tokens for each message
+        message_tokens = []  # List of (role, tokens, model) tuples
         message_count = len(messages)
-        turns = []
         primary_model = default_model
         
-        # Track cumulative context
-        context_tokens = 0  # Running total of all previous message tokens
-        model_usage = defaultdict(int)  # Track tokens per model
-        
-        for i, message in enumerate(messages):
+        for message in messages:
             role = message.get('role', '')
-            content = message.get('content', '')
             model = self.tracer.get_model_from_message(message, default_model)
-            
-            # Count tokens for this message
             msg_tokens = self.counter.count_message_tokens(message)
-            
+            message_tokens.append((role, msg_tokens, model))
+        
+        # Calculate totals with CORRECT logic:
+        # INPUT = simple sum of ALL tokens
+        total_input_tokens = sum(tokens for _, tokens, _ in message_tokens)
+        
+        # OUTPUT = ONLY the last assistant message
+        total_output_tokens = 0
+        for role, tokens, _ in reversed(message_tokens):
             if role == 'assistant':
-                # This is an output turn
-                # Input for this turn = all previous context
-                turn_input = context_tokens
-                turn_output = msg_tokens
-                turn_total = context_tokens + msg_tokens
-                
-                total_input_tokens += turn_input
-                total_output_tokens += turn_output
+                total_output_tokens = tokens
+                break
+        
+        # TOTAL = cumulative API cost (sum of each turn's context)
+        # Turn N costs: all messages from 1 to N (context sent + response)
+        total_tokens = 0
+        context_tokens = 0
+        model_usage = defaultdict(int)
+        turns = []
+        
+        for i, (role, tokens, model) in enumerate(message_tokens):
+            if role == 'assistant':
+                # This turn's cost = context (all previous) + this response
+                turn_total = context_tokens + tokens
                 total_tokens += turn_total
-                
                 model_usage[model] += turn_total
                 
                 if self.verbose:
                     turns.append({
                         'turn': len(turns) + 1,
-                        'input_tokens': turn_input,
-                        'output_tokens': turn_output,
+                        'context_tokens': context_tokens,
+                        'output_tokens': tokens,
                         'turn_total': turn_total,
                         'model': model
                     })
             
             # Add this message to context for next turn
-            context_tokens += msg_tokens
+            context_tokens += tokens
         
         # Determine primary model (most tokens used)
         if model_usage:
@@ -582,25 +600,32 @@ def main():
     parser.add_argument(
         '--clear-existing',
         action='store_true',
-        help='Clear existing analytics data before backfill (USE WITH CAUTION)'
+        help='Clear existing analytics data before backfill (prompts for confirmation)'
+    )
+    parser.add_argument(
+        '--clear',
+        action='store_true',
+        help='Clear existing analytics data without prompting (USE WITH CAUTION)'
     )
     
     args = parser.parse_args()
     
     # Clear existing data if requested
-    if args.clear_existing and not args.dry_run:
-        confirm = input("WARNING: This will delete all existing token analytics data. Continue? (yes/no): ")
-        if confirm.lower() == 'yes':
-            log.info("Clearing existing analytics data...")
-            with get_db() as db:
-                db.query(ConversationTokenUsage).delete()
-                db.query(DailyTokenUsage).delete()
-                db.query(ModelTokenUsage).delete()
-                db.commit()
-            log.info("Existing data cleared.")
-        else:
-            log.info("Aborted.")
-            return
+    if (args.clear or args.clear_existing) and not args.dry_run:
+        if args.clear_existing and not args.clear:
+            # Prompt for confirmation
+            confirm = input("WARNING: This will delete all existing token analytics data. Continue? (yes/no): ")
+            if confirm.lower() != 'yes':
+                log.info("Aborted.")
+                return
+        
+        log.info("Clearing existing analytics data...")
+        with get_db() as db:
+            conv_count = db.query(ConversationTokenUsage).delete()
+            daily_count = db.query(DailyTokenUsage).delete()
+            model_count = db.query(ModelTokenUsage).delete()
+            db.commit()
+        log.info(f"Cleared: {conv_count} conversation records, {daily_count} daily records, {model_count} model records")
     
     # Run backfill
     processor = BackfillProcessor(
