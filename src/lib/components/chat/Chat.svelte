@@ -1575,7 +1575,8 @@
 		if (usage && selected_model_id && $socket) {
 			$socket.emit('usage', {
 				model: selected_model_id,
-				usage: usage
+				usage: usage,
+				chat_id: chatId
 			});
 		}
 

@@ -297,6 +297,13 @@ async def usage(sid, data):
     if sid in SESSION_POOL:
         model_id = data["model"]
         usage_data = data.get("usage", {})
+        
+        # Get user_id from session pool and chat_id from data
+        user = SESSION_POOL.get(sid)
+        user_id = user.get("id") if user else None
+        chat_id = data.get("chat_id")
+        
+        log.info(f"📊 [socket:usage] Received from frontend: model={model_id}, chat_id={chat_id}, user_id={user_id}")
 
         # Record the timestamp for the last update
         current_time = int(time.time())
@@ -307,8 +314,8 @@ async def usage(sid, data):
             sid: {"updated_at": current_time},
         }
 
-        # Process token usage tracking
-        await process_token_usage(model_id, usage_data)
+        # Process token usage tracking with chat_id and user_id for analytics
+        await process_token_usage(model_id, usage_data, chat_id=chat_id, user_id=user_id)
 
 
 async def process_token_usage(
