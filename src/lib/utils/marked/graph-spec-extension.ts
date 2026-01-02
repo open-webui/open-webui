@@ -26,13 +26,18 @@ export type Sampling3D = {
 };
 
 export interface GraphSpecLayer {
-	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' |
-		'function_3d' | 'parametric_3d' | 'scatter_3d';
+	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'point_2d' |
+		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'point_3d' | 'histogram_2d';
 	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
 	domain?: Domain2D | Domain3D;
 	sampling?: Sampling2D | Sampling3D;
 	data?: [number, number][] | [number, number, number][]; // 2D 또는 3D 데이터
+	coordinates?: [number, number][]; // point_2d용 좌표 배열
+	position?: [number, number, number]; // point_3d용 위치
+	label?: string; // point_3d용 라벨
+	binEdges?: number[]; // histogram_2d용 구간 경계값
+	counts?: number[]; // histogram_2d용 각 구간의 빈도수
 	style?: {
 		color?: string | string[];
 		colorMap?: string; // 3D용 컬러맵 (viridis, plasma 등)
@@ -41,17 +46,20 @@ export interface GraphSpecLayer {
 		marker?: 'circle' | 'square' | 'triangle' | 'diamond' | 'cross' | 'sphere';
 		size?: number;
 		opacity?: number;
+		barGap?: number; // histogram_2d용 막대 간격 (0~1)
 	};
 }
 
 export interface GraphSpec {
 	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d' |
-		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d';
+		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d' | 'cartesian' | 'histogram_2d';
 	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
 	domain?: Domain2D | Domain3D;
 	sampling?: Sampling2D | Sampling3D;
 	data?: [number, number][] | [number, number, number][]; // 2D 또는 3D 데이터
+	binEdges?: number[]; // histogram_2d용 구간 경계값
+	counts?: number[]; // histogram_2d용 각 구간의 빈도수
 	layers?: GraphSpecLayer[]; // composite용 레이어
 	style?: {
 		color?: string | string[];
@@ -61,12 +69,19 @@ export interface GraphSpec {
 		marker?: 'circle' | 'square' | 'triangle' | 'diamond' | 'cross' | 'sphere';
 		size?: number;
 		opacity?: number;
+		barGap?: number; // histogram_2d용 막대 간격 (0~1)
 	};
 	axis?: {
 		xLabel?: string;
 		yLabel?: string;
 		zLabel?: string; // 3D용
+		xRange?: [number, number]; // histogram_2d용 x축 범위
+		yRange?: [number, number]; // histogram_2d용 y축 범위
 		grid?: boolean;
+	};
+	meta?: {
+		title?: string;
+		caption?: string;
 	};
 }
 
@@ -95,6 +110,9 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 			stringPlaceholders.push(match);
 			return `__STRING_${stringPlaceholders.length - 1}__`;
 		});
+
+		// JSON 주석 제거 (문자열 외부의 // 주석 제거)
+		jsonContent = jsonContent.replace(/\/\/[^\n]*/g, '');
 
 		// 수학 표현식을 숫자로 변환 (PI, E 등) - 문자열 외부만
 		// 곱셈: num * PI, PI * num
@@ -127,6 +145,13 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 		// 단독 PI, E
 		jsonContent = jsonContent.replace(/\bPI\b/gi, String(Math.PI));
 		jsonContent = jsonContent.replace(/\bE\b/g, String(Math.E));
+
+		// 숫자 * 숫자 형태의 간단한 곱셈 연산 처리 (예: 2.5 * 3.14159265)
+		jsonContent = jsonContent.replace(/(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)/g, (_, a, b) => {
+			return String(parseFloat(a) * parseFloat(b));
+		});
+
+		// -숫자 형태 (음수) 처리: 이미 JSON에서 지원하므로 별도 처리 불필요
 
 		// 문자열 복원
 		jsonContent = jsonContent.replace(/__STRING_(\d+)__/g, (_, idx) => {

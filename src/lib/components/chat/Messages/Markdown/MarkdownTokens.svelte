@@ -26,6 +26,9 @@
 	import ArrowsPointingOut from '$lib/components/icons/ArrowsPointingOut.svelte';
 	import TablePreviewModal from './TablePreviewModal.svelte';
 	import FunctionGraph from './FunctionGraph.svelte';
+	import FlowChart from './FlowChart.svelte';
+	import Diagram from './Diagram.svelte';
+	import Scene from './Scene.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -436,6 +439,30 @@
 		{:else if token.error}
 			<div class="p-4 my-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
 				Graph Spec Error: {token.error}
+			</div>
+		{/if}
+	{:else if token.type === 'flowSpec'}
+		{#if token.spec}
+			<FlowChart spec={token.spec} />
+		{:else if token.error}
+			<div class="p-4 my-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+				Flow Spec Error: {token.error}
+			</div>
+		{/if}
+	{:else if token.type === 'diagramSpec'}
+		{#if token.spec}
+			<Diagram spec={token.spec} />
+		{:else if token.error}
+			<div class="p-4 my-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+				Diagram Spec Error: {token.error}
+			</div>
+		{/if}
+	{:else if token.type === 'sceneSpec'}
+		{#if token.spec}
+			<Scene spec={token.spec} />
+		{:else if token.error}
+			<div class="p-4 my-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+				Scene Spec Error: {token.error}
 			</div>
 		{/if}
 	{:else if token.type === 'space'}

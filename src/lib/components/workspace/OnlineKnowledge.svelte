@@ -84,7 +84,7 @@
 		loading = true;
 		try {
 			const response = await getStores(localStorage.token);
-			const stores = response?.stores;
+			const stores = response || [];
 			if (stores) {
 				folders = stores.map((store: GeminiRagStore) => ({
 					id: extractStoreId(store.name),

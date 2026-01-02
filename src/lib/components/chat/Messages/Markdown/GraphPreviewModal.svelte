@@ -173,6 +173,68 @@
 		}];
 	}
 
+	// histogram_2d: 히스토그램 (binEdges, counts)
+	function buildHistogram2DTraces(layer: LayerSpec) {
+		const colors = normalizeColors(layer);
+		const binEdges = layer.binEdges || [];
+		const counts = layer.counts || [];
+
+		if (binEdges.length === 0 || counts.length === 0) return [];
+
+		// binEdges의 중간점을 x 좌표로 사용
+		const x = [];
+		for (let i = 0; i < binEdges.length - 1; i++) {
+			x.push((binEdges[i] + binEdges[i + 1]) / 2);
+		}
+
+		// 막대 너비 계산
+		const barGap = layer.style?.barGap ?? 0.05;
+		const widths = [];
+		for (let i = 0; i < binEdges.length - 1; i++) {
+			const fullWidth = binEdges[i + 1] - binEdges[i];
+			widths.push(fullWidth * (1 - barGap));
+		}
+
+		return [{
+			x,
+			y: counts,
+			type: 'bar',
+			width: widths,
+			marker: {
+				color: colors[0] || layer.style?.color || 'steelblue',
+				opacity: layer.style?.opacity ?? 0.85
+			},
+			showlegend: false
+		}];
+	}
+
+	// point_2d: 산점도 (coordinates: [[x, y], ...]) - cartesian 그래프용
+	function buildPoint2DTraces(layer: LayerSpec) {
+		const colors = normalizeColors(layer);
+		const coordinates = (layer as any).coordinates || layer.data || [];
+
+		if (coordinates.length === 0) return [];
+
+		const x = coordinates.map((point: [number, number]) => point[0]);
+		const y = coordinates.map((point: [number, number]) => point[1]);
+
+		const shape = (layer.style as any)?.shape || layer.style?.marker || 'circle';
+
+		return [{
+			x, y,
+			type: 'scatter',
+			mode: 'markers',
+			marker: {
+				symbol: markerSymbolMap[shape] || 'circle',
+				size: layer.style?.size ?? 8,
+				color: colors[0] || '#1f77b4',
+				opacity: layer.style?.opacity ?? 0.8
+			},
+			showlegend: true,
+			name: 'data points'
+		}];
+	}
+
 	function buildPhasePlaneTraces(layer: LayerSpec) {
 		const expressions = normalizeExpressions(layer);
 		const colors = normalizeColors(layer);
@@ -373,21 +435,53 @@
 		}];
 	}
 
+	// point_3d: 단일 3D 점 (position: [x, y, z], label 지원)
+	function buildPoint3DTraces(layer: GraphSpecLayer) {
+		const colors = normalizeColors(layer);
+		const position = (layer as any).position as [number, number, number] | undefined;
+		const label = (layer as any).label || '';
+
+		if (!position || position.length !== 3) return [];
+
+		return [{
+			x: [position[0]],
+			y: [position[1]],
+			z: [position[2]],
+			type: 'scatter3d',
+			mode: label ? 'markers+text' : 'markers',
+			marker: {
+				symbol: layer.style?.marker === 'sphere' ? 'circle' : (layer.style?.marker || 'circle'),
+				size: layer.style?.size ?? 8,
+				color: colors[0] || 'red',
+				opacity: layer.style?.opacity ?? 1
+			},
+			text: label ? [label] : undefined,
+			textposition: 'top center',
+			textfont: { size: 12 },
+			name: label || 'point',
+			showlegend: true
+		}];
+	}
+
 	function buildLayer3DTraces(layer: LayerSpec): any[] {
 		switch (layer.type) {
 			case 'function_3d': return buildFunction3DTraces(layer);
 			case 'parametric_3d': return buildParametric3DTraces(layer);
 			case 'scatter_3d': return buildScatter3DTraces(layer);
+			case 'point_3d': return buildPoint3DTraces(layer as GraphSpecLayer);
 			default: return [];
 		}
 	}
 
 	function buildLayerTraces(layer: LayerSpec): any[] {
-		const layerType = layer.type || (layer.data ? 'scatter_2d' : 'function_2d');
+		const hasCoordinates = !!(layer as any).coordinates;
+		const layerType = layer.type || (hasCoordinates ? 'point_2d' : (layer.data ? 'scatter_2d' : 'function_2d'));
 		switch (layerType) {
 			case 'parametric_2d': return buildParametric2DTraces(layer);
 			case 'phase_plane': return buildPhasePlaneTraces(layer);
 			case 'scatter_2d': return buildScatter2DTraces(layer);
+			case 'histogram_2d': return buildHistogram2DTraces(layer);
+			case 'point_2d': return buildPoint2DTraces(layer);
 			case 'function_2d': default: return buildFunction2DTraces(layer);
 		}
 	}
@@ -411,12 +505,14 @@
 		switch (spec.type) {
 			case 'composite_2d':
 			case 'multi_scatter_2d':
+			case 'cartesian': // cartesian = composite_2d
 				return buildCompositeTraces(spec, false);
 			case 'composite_3d':
 				return buildCompositeTraces(spec, true);
 			case 'parametric_2d': return buildParametric2DTraces(spec);
 			case 'phase_plane': return buildPhasePlaneTraces(spec);
 			case 'scatter_2d': return buildScatter2DTraces(spec);
+			case 'histogram_2d': return buildHistogram2DTraces(spec);
 			case 'function_3d': return buildFunction3DTraces(spec);
 			case 'parametric_3d': return buildParametric3DTraces(spec);
 			case 'scatter_3d': return buildScatter3DTraces(spec);
@@ -602,8 +698,22 @@
 		<!-- Content area -->
 		<div class="flex gap-4 {showJsonCode ? 'flex-row' : 'flex-col'}">
 			<!-- Graph container -->
-			<div class="flex-1 {showJsonCode ? 'w-1/2' : 'w-full'} h-[60vh] border border-gray-100 dark:border-gray-800 rounded-lg overflow-hidden">
-				<div bind:this={container} class="w-full h-full" />
+			<div class="flex-1 {showJsonCode ? 'w-1/2' : 'w-full'}">
+				<div class="h-[60vh] border border-gray-100 dark:border-gray-800 rounded-lg overflow-hidden">
+					<div bind:this={container} class="w-full h-full" />
+				</div>
+				
+				<!-- Meta data (title and caption) -->
+				{#if spec.meta}
+					<div class="mt-4 px-1">
+						{#if spec.meta.title}
+							<div class="font-semibold text-gray-900 dark:text-gray-100 mb-2">{spec.meta.title}</div>
+						{/if}
+						{#if spec.meta.caption}
+							<div class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{spec.meta.caption}</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
 
 			<!-- JSON Code Viewer -->

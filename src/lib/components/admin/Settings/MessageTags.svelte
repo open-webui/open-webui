@@ -9,9 +9,12 @@
 		type TagDefinition,
 		type DaemonConfig,
 		type TagStats,
+		type DaemonProgress,
 		getDaemonConfig,
 		updateDaemonConfig,
 		runDaemonManually,
+		unlockDaemon,
+		getDaemonProgress,
 		getAllTags,
 		deleteTag,
 		updateTagProtection,
@@ -20,6 +23,7 @@
 		addToBlacklist,
 		removeFromBlacklist
 	} from '$lib/apis/message-tags';
+	import { getStores, type GeminiRagStore } from '$lib/apis/gemini-rag';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -39,12 +43,16 @@
 	let loaded = false;
 	let saving = false;
 	let runningDaemon = false;
+	let unlockingDaemon = false;
+	let progressPolling: ReturnType<typeof setInterval> | null = null;
 
 	// Data
 	let stats: TagStats | null = null;
 	let config: DaemonConfig | null = null;
 	let tags: TagDefinition[] = [];
 	let blacklist: string[] = [];
+	let ragStores: GeminiRagStore[] = [];
+	let progress: DaemonProgress | null = null;
 
 	// Form state (bound to config)
 	let formEnabled = false;
@@ -56,6 +64,7 @@
 	let formConsolidationThreshold = 90;
 	let formCustomTaggingPrompt = '';
 	let formCustomSystemInstruction = '';
+	let formRagStoreNames: string[] = [];
 
 	// Search & Filter
 	let searchQuery = '';
@@ -91,17 +100,19 @@
 	const loadData = async () => {
 		try {
 			const token = localStorage.token;
-			const [statsRes, configRes, tagsRes, blacklistRes] = await Promise.all([
+			const [statsRes, configRes, tagsRes, blacklistRes, ragStoresRes] = await Promise.all([
 				getTagStats(token),
 				getDaemonConfig(token),
 				getAllTags(token),
-				getBlacklist(token)
+				getBlacklist(token),
+				getStores(token)
 			]);
 
 			stats = statsRes;
 			config = configRes;
 			tags = tagsRes || [];
 			blacklist = blacklistRes || [];
+			ragStores = ragStoresRes || [];
 
 			// Initialize form with config values
 			if (config) {
@@ -114,6 +125,7 @@
 				formConsolidationThreshold = config.consolidation_threshold;
 				formCustomTaggingPrompt = config.custom_tagging_prompt || '';
 				formCustomSystemInstruction = config.custom_system_instruction || '';
+				formRagStoreNames = config.rag_store_names || [];
 			}
 		} catch (error) {
 			console.error('Failed to load message tags data:', error);
@@ -135,7 +147,8 @@
 				max_tags: formMaxTags,
 				consolidation_threshold: formConsolidationThreshold,
 				custom_tagging_prompt: formCustomTaggingPrompt || null,
-				custom_system_instruction: formCustomSystemInstruction || null
+				custom_system_instruction: formCustomSystemInstruction || null,
+				rag_store_names: formRagStoreNames
 			});
 
 			if (result) {
@@ -157,14 +170,35 @@
 			const result = await runDaemonManually(localStorage.token);
 			if (result) {
 				toast.success($i18n.t('태깅 작업이 시작되었습니다.'));
-				// Reload stats after a short delay
-				setTimeout(loadData, 2000);
+				// Start polling progress
+				startProgressPolling();
 			}
 		} catch (error) {
 			console.error('Failed to run daemon:', error);
 			toast.error($i18n.t('태깅 작업 실행에 실패했습니다.'));
 		}
 		runningDaemon = false;
+	};
+
+	// Unlock daemon
+	const handleUnlockDaemon = async () => {
+		if (!confirm($i18n.t('데몬 lock을 강제로 해제하시겠습니까?'))) {
+			return;
+		}
+
+		unlockingDaemon = true;
+		try {
+			const result = await unlockDaemon(localStorage.token);
+			if (result?.success) {
+				toast.success($i18n.t('Lock이 해제되었습니다.'));
+				// Reload config to refresh lock status
+				await loadData();
+			}
+		} catch (error) {
+			console.error('Failed to unlock daemon:', error);
+			toast.error($i18n.t('Lock 해제에 실패했습니다.'));
+		}
+		unlockingDaemon = false;
 	};
 
 	// Delete tag
@@ -246,8 +280,71 @@
 		return new Date(timestamp * 1000).toLocaleString('ko-KR');
 	};
 
+	// Progress polling
+	const startProgressPolling = () => {
+		stopProgressPolling();
+		updateProgress(); // Initial fetch
+		progressPolling = setInterval(updateProgress, 2000); // Poll every 2 seconds
+	};
+
+	const stopProgressPolling = () => {
+		if (progressPolling) {
+			clearInterval(progressPolling);
+			progressPolling = null;
+		}
+	};
+
+	const updateProgress = async () => {
+		try {
+			const result = await getDaemonProgress(localStorage.token);
+			progress = result;
+			
+			// Stop polling if not running or completed/error
+			if (result && (!result.is_running || result.status === 'completed' || result.status === 'error')) {
+				stopProgressPolling();
+				// Reload data after completion
+				if (result.status === 'completed') {
+					setTimeout(loadData, 1000);
+				}
+			}
+		} catch (error) {
+			console.error('Failed to fetch progress:', error);
+		}
+	};
+
+	// Status display helpers
+	const getStatusText = (status: string) => {
+		const statusMap = {
+			idle: '대기 중',
+			collecting: '메시지 수집 중',
+			processing: '태그 처리 중',
+			consolidating: '태그 통합 중',
+			completed: '완료',
+			error: '오류 발생'
+		};
+		return statusMap[status] || status;
+	};
+
+	const getStatusColor = (status: string) => {
+		const colorMap = {
+			idle: 'text-gray-500',
+			collecting: 'text-blue-600 dark:text-blue-400',
+			processing: 'text-blue-600 dark:text-blue-400',
+			consolidating: 'text-purple-600 dark:text-purple-400',
+			completed: 'text-green-600 dark:text-green-400',
+			error: 'text-red-600 dark:text-red-400'
+		};
+		return colorMap[status] || 'text-gray-500';
+	};
+
 	onMount(() => {
 		loadData();
+		// Check if daemon is already running
+		updateProgress();
+		
+		return () => {
+			stopProgressPolling();
+		};
 	});
 </script>
 
@@ -289,6 +386,61 @@
 				{/if}
 			</div>
 		</div>
+
+		<!-- Progress Section -->
+		{#if progress && progress.is_running}
+			<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-5">
+				<div class="flex items-center justify-between mb-3">
+					<h3 class="text-base font-semibold text-blue-900 dark:text-blue-100">
+						{$i18n.t('태깅 진행 중')}
+					</h3>
+					<div class="flex items-center gap-2">
+						<Spinner className="w-4 h-4 text-blue-600" />
+						<span class="text-sm font-medium {getStatusColor(progress.status)}">
+							{getStatusText(progress.status)}
+						</span>
+					</div>
+				</div>
+
+				<!-- Progress bar -->
+				<div class="mb-3">
+					<div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+						<span>{progress.processed_messages} / {progress.total_messages} 메시지</span>
+						<span>{progress.progress_percent.toFixed(1)}%</span>
+					</div>
+					<div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+						<div 
+							class="h-full bg-blue-600 dark:bg-blue-500 transition-all duration-300"
+							style="width: {progress.progress_percent}%;"
+						></div>
+					</div>
+				</div>
+
+				<!-- Details -->
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+					<div>
+						<div class="text-gray-500 dark:text-gray-400">배치</div>
+						<div class="font-medium text-gray-900 dark:text-white">
+							{progress.current_batch} / {progress.total_batches}
+						</div>
+					</div>
+					<div>
+						<div class="text-gray-500 dark:text-gray-400">시작 시간</div>
+						<div class="font-medium text-gray-900 dark:text-white">
+							{formatDate(progress.started_at)}
+						</div>
+					</div>
+					{#if progress.last_error}
+						<div class="col-span-2">
+							<div class="text-red-500 dark:text-red-400">오류</div>
+							<div class="font-medium text-red-600 dark:text-red-400 truncate">
+								{progress.last_error}
+							</div>
+						</div>
+					{/if}
+				</div>
+			</div>
+		{/if}
 
 		<!-- Daemon Config Section -->
 		<div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
@@ -396,7 +548,7 @@
 					</label>
 					<textarea
 						bind:value={formCustomTaggingPrompt}
-						rows="3"
+						rows="10"
 						placeholder={$i18n.t('비워두면 기본 프롬프트 사용')}
 						class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-lg resize-none"
 					/>
@@ -408,10 +560,58 @@
 					</label>
 					<textarea
 						bind:value={formCustomSystemInstruction}
-						rows="3"
+						rows="10"
 						placeholder={$i18n.t('비워두면 기본 시스템 지시사항 사용')}
 						class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-lg resize-none"
 					/>
+				</div>
+
+				<!-- RAG Store Selection -->
+				<div>
+					<label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+						{$i18n.t('RAG Store 선택')}
+						<Tooltip content={$i18n.t('태깅 시 참조할 RAG Store를 선택합니다.')}>
+							<span class="text-gray-400 cursor-help">ⓘ</span>
+						</Tooltip>
+					</label>
+					{#if ragStores.length > 0}
+						<div class="space-y-2 max-h-40 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700">
+							{#each ragStores as store (store.name)}
+								<label class="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer transition">
+									<input
+										type="checkbox"
+										value={store.name}
+										checked={formRagStoreNames.includes(store.name)}
+										on:change={(e) => {
+											if (e.currentTarget.checked) {
+												formRagStoreNames = [...formRagStoreNames, store.name];
+											} else {
+												formRagStoreNames = formRagStoreNames.filter(n => n !== store.name);
+											}
+										}}
+										class="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500"
+									/>
+									<div class="flex-1 min-w-0">
+										<div class="text-sm font-medium text-gray-900 dark:text-white truncate">
+											{store.display_name}
+										</div>
+										<div class="text-xs text-gray-500 dark:text-gray-400 truncate font-mono">
+											{store.name}
+										</div>
+									</div>
+								</label>
+							{/each}
+						</div>
+						{#if formRagStoreNames.length > 0}
+							<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+								{formRagStoreNames.length}개 선택됨
+							</div>
+						{/if}
+					{:else}
+						<div class="text-sm text-gray-500 dark:text-gray-400 p-3 bg-gray-50 dark:bg-gray-850 rounded-lg border border-gray-200 dark:border-gray-700">
+							{$i18n.t('사용 가능한 RAG Store가 없습니다.')}
+						</div>
+					{/if}
 				</div>
 
 				<!-- Buttons -->
@@ -425,6 +625,17 @@
 							<Spinner className="w-4 h-4" />
 						{:else}
 							{$i18n.t('수동 실행')}
+						{/if}
+					</button>
+					<button
+						on:click={handleUnlockDaemon}
+						disabled={unlockingDaemon}
+						class="px-4 py-2 text-sm font-medium text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded-lg transition disabled:opacity-50"
+					>
+						{#if unlockingDaemon}
+							<Spinner className="w-4 h-4" />
+						{:else}
+							{$i18n.t('Lock 해제')}
 						{/if}
 					</button>
 					<button

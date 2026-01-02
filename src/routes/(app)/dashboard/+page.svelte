@@ -212,7 +212,7 @@
 					<!-- Name & Role -->
 					<div class="flex flex-col">
 						<span class="text-body-4-medium text-gray-950 dark:text-white">{$user?.name ?? '사용자'}</span>
-						<span class="text-caption text-gray-700">{$user?.role === 'admin' ? '관리자' : $user?.role === 'instructor' ? '교수' : '학생'}</span>
+						<span class="text-caption text-gray-700">{$user?.role === 'admin' ? '관리자' : ( $user?.role === 'professor') ? '교수' : '학생'}</span>
 					</div>
 				</div>
 				<!-- Close Button -->
@@ -412,9 +412,9 @@
 				<!-- Header Row (Figma: space-between, align center) -->
 				<div class="flex flex-row justify-between items-center w-full">
 					<!-- Left: Tag Name (Figma: gap 8px) -->
-					<div class="flex flex-col items-start gap-2">
+					<div class="flex flex-col items-start gap-2 flex-1 min-w-0">
 						<!-- Figma: Body/3/500 - 16px, 500 weight -->
-						<span class="text-body-3-medium text-gray-950 dark:text-gray-50">{tag.name}</span>
+						<span class="text-body-3-medium text-gray-950 dark:text-gray-50 text-left">{tag.name}</span>
 						<!-- Chapter Name if exists -->
 						{#if tag.chapter_name}
 							<span class="text-caption text-[#8D96AD]">
@@ -424,7 +424,7 @@
 					</div>
 
 					<!-- Right: Question Count and Chevron (Figma: gap 16px) -->
-					<div class="flex flex-row items-center gap-4">
+					<div class="flex flex-row items-center gap-4 shrink-0 ml-4">
 						<!-- Question count (Figma: gap 4px) -->
 						<div class="flex flex-row items-center gap-1">
 							<!-- Figma: Body/3/400 - 16px, 400 weight, color #596172 -->

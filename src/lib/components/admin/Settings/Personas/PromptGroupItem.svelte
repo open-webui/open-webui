@@ -61,6 +61,7 @@
 	$: basePrompts = groupPrompts.filter((p) => p.prompt_type === 'base');
 	$: proficiencyPrompts = groupPrompts.filter((p) => p.prompt_type === 'proficiency');
 	$: stylePrompts = groupPrompts.filter((p) => p.prompt_type === 'style');
+	$: toolPrompts = groupPrompts.filter((p) => p.prompt_type === 'tool');
 	$: generalPrompts = groupPrompts.filter((p) => p.prompt_type === null);
 </script>
 
@@ -112,6 +113,9 @@
 					{/if}
 					{#if stylePrompts.length > 0}
 						<span class="px-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">스타일: {stylePrompts.length}/3</span>
+					{/if}
+					{#if toolPrompts.length > 0}
+						<span class="px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">도구: {toolPrompts.length}</span>
 					{/if}
 				{:else if !loading}
 					<span class="text-gray-400 dark:text-gray-500">{$i18n.t('프롬프트 없음')}</span>
@@ -267,6 +271,21 @@
 							{$i18n.t('스타일 프롬프트')} (Style) - {stylePrompts.length}/3
 						</div>
 						{#each stylePrompts as prompt (prompt.command)}
+							<PromptItem
+								{prompt}
+								inGroup={true}
+								on:edit
+								on:remove={(e) => dispatch('removePrompt', { group, prompt: e.detail })}
+							/>
+						{/each}
+					{/if}
+
+					<!-- Tool Prompts -->
+					{#if toolPrompts.length > 0}
+						<div class="px-3 py-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20">
+							{$i18n.t('도구 프롬프트')} (Tool) - {toolPrompts.length}
+						</div>
+						{#each toolPrompts as prompt (prompt.command)}
 							<PromptItem
 								{prompt}
 								inGroup={true}

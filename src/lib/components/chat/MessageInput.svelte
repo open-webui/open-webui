@@ -116,12 +116,10 @@
 	// Multiline detection for layout switching
 	let isMultiline = false;
 
-	// multiline 판단: 줄바꿈이 있거나 텍스트가 너무 길 때
+	// multiline 판단: 실제 줄바꿈이 있을 때만 전환
 	$: {
 		const lineBreaks = (prompt.match(/\n/g) || []).length;
-		const textLength = prompt.length;
-		// 줄바꿈이 있거나, 60자 이상이면 multiline으로 전환
-		isMultiline = lineBreaks > 0 || textLength > 30;
+		isMultiline = lineBreaks > 0;
 	}
 
 	let showInputVariablesModal = false;

@@ -256,6 +256,81 @@
 		}];
 	}
 
+	// histogram_2d: 히스토그램 (binEdges, counts)
+	function buildHistogram2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
+		const colors = normalizeColors(layer);
+		const binEdges = layer.binEdges || [];
+		const counts = layer.counts || [];
+
+		if (binEdges.length === 0 || counts.length === 0) {
+			console.error('[FunctionGraph] histogram_2d requires binEdges and counts arrays');
+			return [];
+		}
+
+		// binEdges의 중간점을 x 좌표로 사용
+		const x = [];
+		for (let i = 0; i < binEdges.length - 1; i++) {
+			x.push((binEdges[i] + binEdges[i + 1]) / 2);
+		}
+
+		// 막대 너비 계산
+		const barGap = layer.style?.barGap ?? 0.05;
+		const widths = [];
+		for (let i = 0; i < binEdges.length - 1; i++) {
+			const fullWidth = binEdges[i + 1] - binEdges[i];
+			widths.push(fullWidth * (1 - barGap));
+		}
+
+		const name = legendName || 'histogram';
+
+		return [{
+			x,
+			y: counts,
+			type: 'bar',
+			width: widths,
+			marker: {
+				color: colors[0] || layer.style?.color || 'steelblue',
+				opacity: layer.style?.opacity ?? 0.85
+			},
+			name,
+			showlegend: showLegend
+		}];
+	}
+
+	// point_2d: 산점도 (coordinates: [[x, y], ...]) - cartesian 그래프용
+	function buildPoint2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
+		const colors = normalizeColors(layer);
+		// coordinates 또는 data 필드 지원
+		const coordinates = (layer as any).coordinates || layer.data || [];
+
+		if (coordinates.length === 0) {
+			console.error('[FunctionGraph] point_2d requires coordinates array');
+			return [];
+		}
+
+		const x = coordinates.map((point: [number, number]) => point[0]);
+		const y = coordinates.map((point: [number, number]) => point[1]);
+		const name = legendName || 'points';
+
+		// shape 필드를 marker로 매핑
+		const shape = (layer.style as any)?.shape || layer.style?.marker || 'circle';
+
+		return [{
+			x,
+			y,
+			type: 'scatter',
+			mode: 'markers',
+			marker: {
+				symbol: markerSymbolMap[shape] || 'circle',
+				size: layer.style?.size ?? 8,
+				color: colors[0] || '#1f77b4',
+				opacity: layer.style?.opacity ?? 0.8
+			},
+			name,
+			showlegend: showLegend
+		}];
+	}
+
 	// ========== 3D Graph Builders ==========
 
 	// 3D 도메인 헬퍼
@@ -447,6 +522,37 @@
 		}];
 	}
 
+	// point_3d: 단일 3D 점 (position: [x, y, z], label 지원)
+	function buildPoint3DTraces(layer: GraphSpecLayer, showLegend = false) {
+		const colors = normalizeColors(layer);
+		const position = (layer as any).position as [number, number, number] | undefined;
+		const label = (layer as any).label || '';
+
+		if (!position || position.length !== 3) {
+			console.error('[FunctionGraph] point_3d requires position array [x, y, z]');
+			return [];
+		}
+
+		return [{
+			x: [position[0]],
+			y: [position[1]],
+			z: [position[2]],
+			type: 'scatter3d',
+			mode: label ? 'markers+text' : 'markers',
+			marker: {
+				symbol: layer.style?.marker === 'sphere' ? 'circle' : (layer.style?.marker || 'circle'),
+				size: layer.style?.size ?? 8,
+				color: colors[0] || 'red',
+				opacity: layer.style?.opacity ?? 1
+			},
+			text: label ? [label] : undefined,
+			textposition: 'top center',
+			textfont: { size: 10 },
+			name: label || 'point',
+			showlegend: showLegend
+		}];
+	}
+
 	// 3D 레이어 trace 빌드
 	function buildLayer3DTraces(layer: LayerSpec, layerIndex: number, totalLayers: number): any[] {
 		const layerType = layer.type;
@@ -460,6 +566,8 @@
 				return buildParametric3DTraces(layer);
 			case 'scatter_3d':
 				return buildScatter3DTraces(layer, showLegend, legendName);
+			case 'point_3d':
+				return buildPoint3DTraces(layer, showLegend);
 			default:
 				return [];
 		}
@@ -490,8 +598,9 @@
 
 	// 단일 레이어에 대한 trace 빌드
 	function buildLayerTraces(layer: LayerSpec, layerIndex: number, totalLayers: number): any[] {
-		// type이 없으면 data 유무로 타입 추론
-		const layerType = layer.type || (layer.data ? 'scatter_2d' : 'function_2d');
+		// type이 없으면 data/coordinates 유무로 타입 추론
+		const hasCoordinates = !!(layer as any).coordinates;
+		const layerType = layer.type || (hasCoordinates ? 'point_2d' : (layer.data ? 'scatter_2d' : 'function_2d'));
 		const showLegend = totalLayers > 1;
 		const legendName = `Layer ${layerIndex + 1}`;
 
@@ -502,6 +611,10 @@
 				return buildPhasePlaneTraces(layer);
 			case 'scatter_2d':
 				return buildScatter2DTraces(layer, showLegend, legendName);
+			case 'histogram_2d':
+				return buildHistogram2DTraces(layer, showLegend, legendName);
+			case 'point_2d':
+				return buildPoint2DTraces(layer, showLegend, legendName);
 			case 'function_2d':
 			default:
 				return buildFunction2DTraces(layer);
@@ -529,6 +642,7 @@
 			// 2D graphs
 			case 'composite_2d':
 			case 'multi_scatter_2d':
+			case 'cartesian': // cartesian = composite_2d
 				return buildComposite2DTraces(spec);
 			case 'parametric_2d':
 				return buildParametric2DTraces(spec);
@@ -536,6 +650,8 @@
 				return buildPhasePlaneTraces(spec);
 			case 'scatter_2d':
 				return buildScatter2DTraces(spec);
+			case 'histogram_2d':
+				return buildHistogram2DTraces(spec);
 			// 3D graphs
 			case 'function_3d':
 				return buildFunction3DTraces(spec);
@@ -693,7 +809,7 @@
 </script>
 
 <!-- Thumbnail container with modal trigger -->
-<div class="relative w-48 h-48 group mb-2 rounded-lg border border-gray-100 dark:border-gray-850 overflow-hidden">
+<div class="relative w-48 group mb-2 rounded-lg border border-gray-100 dark:border-gray-850 overflow-hidden">
 	<!-- Graph thumbnail (정사각형) -->
 	<div class="w-48 h-48 bg-white dark:bg-gray-800">
 		<div bind:this={container} class="w-full h-full" />
@@ -713,6 +829,13 @@
 		<span>{$i18n.t('확대')}</span>
 	</button>
 </div>
+
+<!-- Meta data (title only) -->
+{#if spec.meta?.title}
+	<div class="mt-2 text-sm">
+		<div class="font-semibold text-gray-900 dark:text-gray-100">{spec.meta.title}</div>
+	</div>
+{/if}
 
 <!-- Graph preview modal -->
 <GraphPreviewModal bind:show={showModal} {spec} />

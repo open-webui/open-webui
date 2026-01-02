@@ -7,8 +7,10 @@
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let promptType: 'base' | 'proficiency' | 'style' | null = null;
+	export let promptType: 'base' | 'proficiency' | 'style' | 'tool' | null = null;
 	export let personaValue: string | null = null;
+	export let toolDescription: string = '';
+	export let toolPriority: number = 0;
 
 	// 동적 페르소나 옵션
 	let availablePersonas: AvailablePersonas | null = null;
@@ -45,6 +47,12 @@
 		personaValue = null;
 		isAddingNewProficiency = false;
 		isAddingNewStyle = false;
+	}
+
+	// Reset tool fields when type is not tool
+	$: if (promptType !== 'tool') {
+		toolDescription = '';
+		toolPriority = 0;
 	}
 
 	// 새 값 추가 처리
@@ -111,6 +119,7 @@
 			<option value="base">{$i18n.t('기본 (base)')}</option>
 			<option value="proficiency">{$i18n.t('난이도 (proficiency)')}</option>
 			<option value="style">{$i18n.t('스타일 (style)')}</option>
+			<option value="tool">{$i18n.t('도구 (tool)')}</option>
 		</select>
 		<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 			{#if promptType === 'base'}
@@ -119,6 +128,8 @@
 				{$i18n.t('학생 숙련도에 따라 선택되는 프롬프트')}
 			{:else if promptType === 'style'}
 				{$i18n.t('응답 스타일에 따라 선택되는 프롬프트')}
+			{:else if promptType === 'tool'}
+				{$i18n.t('Tool gating으로 선택 시에만 포함되는 도구 프롬프트')}
 			{:else}
 				{$i18n.t('페르소나와 무관한 일반 프롬프트 (채팅에서 /명령어로 사용)')}
 			{/if}
@@ -237,6 +248,44 @@
 					</p>
 				{/if}
 			{/if}
+		</div>
+	{:else if promptType === 'tool'}
+		<!-- Tool-specific fields -->
+		<div class="space-y-3">
+			<div>
+				<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+					{$i18n.t('도구 설명')}
+					<span class="text-red-500">*</span>
+				</label>
+				<input
+					type="text"
+					class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+					placeholder={$i18n.t('LLM이 이 도구를 선택할 때 참고하는 설명 (50-100자)')}
+					bind:value={toolDescription}
+					maxlength="500"
+				/>
+				<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+					{$i18n.t('Tool gating에서 LLM이 도구를 선택할 때 사용하는 설명입니다.')}
+					<span class="text-amber-600 dark:text-amber-400">({toolDescription.length}/150)</span>
+				</p>
+			</div>
+
+			<div>
+				<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+					{$i18n.t('우선순위')}
+				</label>
+				<input
+					type="number"
+					class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition"
+					placeholder="0"
+					bind:value={toolPriority}
+					min="0"
+					max="100"
+				/>
+				<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+					{$i18n.t('숫자가 높을수록 우선 선택됩니다 (기본값: 0)')}
+				</p>
+			</div>
 		</div>
 	{/if}
 </div>

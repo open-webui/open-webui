@@ -52,6 +52,8 @@
 				return { text: 'proficiency', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' };
 			case 'style':
 				return { text: 'style', class: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' };
+			case 'tool':
+				return { text: 'tool', class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' };
 			default:
 				return { text: 'general', class: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' };
 		}
@@ -65,8 +67,10 @@
 				return 10;
 			case 'style':
 				return 20;
-			default:
+			case 'tool':
 				return 30;
+			default:
+				return 50;
 		}
 	};
 
@@ -162,13 +166,14 @@
 				<option value="base">base</option>
 				<option value="proficiency">proficiency</option>
 				<option value="style">style</option>
+				<option value="tool">tool</option>
 			</select>
 		</div>
 
 		<!-- Order guide -->
 		<div class="mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs text-gray-500 dark:text-gray-400">
 			<span class="font-medium">{$i18n.t('Order 가이드')}:</span>
-			base=0, proficiency=10, style=20 ({$i18n.t('낮은 순서가 먼저 조합됨')})
+			base=0, proficiency=10, style=20, tool=30 ({$i18n.t('낮은 순서가 먼저 조합됨')})
 		</div>
 
 		<!-- Prompt List -->
@@ -218,9 +223,17 @@
 										({prompt.persona_value})
 									</span>
 								{/if}
+								{#if prompt.prompt_type === 'tool' && prompt.tool_priority !== undefined && prompt.tool_priority > 0}
+									<span class="text-xs px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
+										P:{prompt.tool_priority}
+									</span>
+								{/if}
 							</div>
 							<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
 								{prompt.command}
+								{#if prompt.prompt_type === 'tool' && prompt.tool_description}
+									<span class="ml-2 text-amber-600 dark:text-amber-400">• {prompt.tool_description}</span>
+								{/if}
 							</div>
 						</div>
 

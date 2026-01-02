@@ -97,7 +97,7 @@
 		try {
 			// Admin uses getChatByShareId with chat_id to access other users' chats
 			// Regular users use getChatById
-			const result = $user?.role === 'admin' 
+			const result = ($user?.role === 'admin' || $user?.role === 'professor')
 				? await getChatByShareId(localStorage.token, message.chat_id)
 				: await getChatById(localStorage.token, message.chat_id);
 				
