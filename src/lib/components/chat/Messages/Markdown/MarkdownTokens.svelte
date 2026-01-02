@@ -25,6 +25,7 @@
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import ArrowsPointingOut from '$lib/components/icons/ArrowsPointingOut.svelte';
 	import TablePreviewModal from './TablePreviewModal.svelte';
+	import FunctionGraph from './FunctionGraph.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -428,6 +429,14 @@
 	{:else if token.type === 'blockKatex'}
 		{#if token.text}
 			<KatexRenderer content={token.text} displayMode={token?.displayMode ?? false} />
+		{/if}
+	{:else if token.type === 'graphSpec'}
+		{#if token.spec}
+			<FunctionGraph spec={token.spec} />
+		{:else if token.error}
+			<div class="p-4 my-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+				Graph Spec Error: {token.error}
+			</div>
 		{/if}
 	{:else if token.type === 'space'}
 		<div class="my-2" />
