@@ -6,7 +6,7 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_verified_user, get_admin_user
+from open_webui.utils.auth import get_verified_user, get_admin_user, get_admin_or_professor_user
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.internal.db import get_db
 from open_webui.models.chats import Chat
@@ -324,10 +324,11 @@ class ChapterStatsResponse(BaseModel):
 
 @router.get("/stats/usage", response_model=UsageStats)
 async def get_usage_stats(
-    days: int = Query(default=7, ge=1, le=365, description="Number of days to look back")
+    days: int = Query(default=7, ge=1, le=365, description="Number of days to look back"),
+    user=Depends(get_admin_or_professor_user)
 ):
     """
-    최근 k일간의 사용 통계를 반환합니다.
+    최근 k일간의 사용 통계를 반환합니다. (Admin 또는 Professor 전용)
 
     - **days**: 조회 기간 (일) - 기본값 7일
 
