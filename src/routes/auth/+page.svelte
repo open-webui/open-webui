@@ -40,7 +40,6 @@
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
 			console.log(sessionUser);
-			toast.success($i18n.t(`You're now logged in.`));
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
@@ -257,22 +256,22 @@
 					</div>
 				{:else}
 					<!-- Header Section -->
-					<div class="flex flex-col items-center gap-10">
+					<div class="flex flex-col items-center gap-5 sm:gap-10">
 						<!-- Logo and Title -->
 						<div class="flex flex-col items-center gap-4">
-							<div class="flex items-center gap-4">
-								<div class="w-[72px] h-[72px] flex items-center justify-center scale-[2] origin-center">
+							<div class="flex items-center gap-1 sm:gap-4">
+								<div class="w-[43px] h-[43px] sm:w-[72px] sm:h-[72px] flex items-center justify-center scale-[1.2] sm:scale-[2] origin-center">
 									<HYULogo36 />
 								</div>
-								<span class="text-title-1 tracking-tight">HYU AI Tutoring Assistant</span>
+								<span class="text-title-4 sm:text-title-1 tracking-tight">HYU AI Tutoring Assistant</span>
 							</div>
 						</div>
 						<!-- Welcome Messages -->
-						<div class="flex flex-col items-center gap-3">
-							<p class="text-body-2-medium text-center">
+						<div class="flex flex-col items-center gap-1 sm:gap-3">
+							<p class="text-body-4-medium sm:text-body-2-medium text-center">
 								AI 기반 공업수학 튜터링 지원센터에 오신 것을 환영합니다.
 							</p>
-							<p class="text-title-1 text-center">
+							<p class="text-title-4 sm:text-title-1 text-center">
 								공업수학 전 과정을 AI와 함께 마스터하세요!
 							</p>
 						</div>
@@ -280,21 +279,21 @@
 
 					<!-- Login Card -->
 					<div
-						class="login-card w-full max-w-[360px] p-6 rounded-[20px] flex flex-col items-center gap-4 relative"
+						class="login-card w-full max-w-[343px] sm:max-w-[360px] p-5 sm:p-6 rounded-[20px] flex flex-col items-center gap-4 relative"
 					>
 
 						<!-- Lock Icon Circle -->
 						<div
-							class="icon-circle w-[100px] h-[100px] rounded-full flex items-center justify-center"
+							class="icon-circle w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] rounded-full flex items-center justify-center"
 						>
-							<svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-gray-950 dark:text-gray-50" viewBox="0 0 24 24" fill="currentColor">
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 sm:w-16 sm:h-16 text-gray-950 dark:text-gray-50" viewBox="0 0 24 24" fill="currentColor">
 								<path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 3-3s3 1.34 3 3v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
 							</svg>
 						</div>
 
 						<!-- Title and Caption -->
 						<div class="flex flex-col items-center w-full">
-							<h2 class="text-title-2 text-center">바로 시작하기</h2>
+							<h2 class="text-title-3 sm:text-title-2 text-center">바로 시작하기</h2>
 						</div>
 
 						<!-- Login Form -->
@@ -395,11 +394,11 @@
 
 								<!-- Login Button -->
 								<button
-									class="flex items-center justify-center gap-2 px-7 py-2 mt-2 rounded-full text-body-2-medium text-white transition hover:opacity-90"
+									class="flex items-center justify-center gap-2 px-5 sm:px-7 py-1.5 sm:py-2 mt-2 rounded-full text-body-3-medium sm:text-body-2-medium text-white transition hover:opacity-90"
 									style="background: #076EF4;"
 									type="submit"
 								>
-									<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+									<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="currentColor">
 										<path d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z"/>
 									</svg>
 									<span>
@@ -444,14 +443,14 @@
 						<!-- Hanyang SSO Button (Dummy) -->
 						<div class="flex flex-col items-center gap-2 w-full">
 							<button
-								class="flex items-center justify-center gap-2 px-7 py-2 rounded-full text-body-2-medium text-white transition hover:opacity-90 w-full"
+								class="flex items-center justify-center gap-2 px-5 sm:px-7 py-1.5 sm:py-2 rounded-full text-body-3-medium sm:text-body-2-medium text-white transition hover:opacity-90 w-full"
 								style="background: #004D87;"
 								type="button"
 								on:click={() => {
 									toast.info('한양대학교 SSO 연동 준비 중입니다.');
 								}}
 							>
-								<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="currentColor">
 									<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
 								</svg>
 								<span>한양대학교 SSO 로그인</span>
@@ -471,12 +470,12 @@
 							<div class="flex flex-col space-y-2 w-full">
 								{#if $config?.oauth?.providers?.google}
 									<button
-										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-body-4 py-2.5"
+										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-caption sm:text-body-4 py-2 sm:py-2.5"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 										}}
 									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-5 mr-2">
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-4 sm:size-5 mr-2">
 											<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/>
 										</svg>
 										<span>{$i18n.t('Continue with {{provider}}', { provider: 'Google' })}</span>
@@ -484,12 +483,12 @@
 								{/if}
 								{#if $config?.oauth?.providers?.microsoft}
 									<button
-										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-body-4 py-2.5"
+										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-caption sm:text-body-4 py-2 sm:py-2.5"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
 										}}
 									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="size-5 mr-2">
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" class="size-4 sm:size-5 mr-2">
 											<rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
 										</svg>
 										<span>{$i18n.t('Continue with {{provider}}', { provider: 'Microsoft' })}</span>
@@ -497,12 +496,12 @@
 								{/if}
 								{#if $config?.oauth?.providers?.github}
 									<button
-										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-body-4 py-2.5"
+										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-caption sm:text-body-4 py-2 sm:py-2.5"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`;
 										}}
 									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="size-5 mr-2">
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="size-4 sm:size-5 mr-2">
 											<path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.92 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"/>
 										</svg>
 										<span>{$i18n.t('Continue with {{provider}}', { provider: 'GitHub' })}</span>
@@ -510,12 +509,12 @@
 								{/if}
 								{#if $config?.oauth?.providers?.oidc}
 									<button
-										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-body-4 py-2.5"
+										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-caption sm:text-body-4 py-2 sm:py-2.5"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
 										}}
 									>
-										<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5 mr-2">
+										<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 sm:size-5 mr-2">
 											<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z"/>
 										</svg>
 										<span>{$i18n.t('Continue with {{provider}}', { provider: $config?.oauth?.providers?.oidc ?? 'SSO' })}</span>
@@ -523,7 +522,7 @@
 								{/if}
 								{#if $config?.oauth?.providers?.feishu}
 									<button
-										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-body-4 py-2.5"
+										class="flex justify-center items-center bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 border border-gray-200/50 dark:border-gray-600/50 transition w-full rounded-full font-medium text-caption sm:text-body-4 py-2 sm:py-2.5"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/feishu/login`;
 										}}
@@ -536,7 +535,7 @@
 
 						{#if $config?.features.enable_ldap && $config?.features.enable_login_form}
 							<button
-								class="text-body-4 text-center underline text-gray-700 dark:text-gray-300"
+								class="text-caption sm:text-body-4 text-center underline text-gray-700 dark:text-gray-300"
 								type="button"
 								on:click={() => {
 									if (mode === 'ldap')
