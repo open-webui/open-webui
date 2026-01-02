@@ -835,9 +835,9 @@
 			loaded = true;
 		}
 
-		// Notify opener window that the app has loaded
-		if (window.opener ?? false) {
-			window.opener.postMessage('loaded', '*');
+		// Auto-show SyncStatsModal when opened with ?sync=true (from community)
+		if ((window.opener ?? false) && $page.url.searchParams.get('sync') === 'true') {
+			showSyncStatsModal = true;
 		}
 
 		return () => {

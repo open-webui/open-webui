@@ -51,6 +51,11 @@
 		}
 	};
 
+	// Watch for modal visibility changes to notify opener
+	$: if (show && window.opener) {
+		window.opener.postMessage('loaded', '*');
+	}
+
 	onMount(() => {
 		window.addEventListener('message', handleMessage);
 	});
