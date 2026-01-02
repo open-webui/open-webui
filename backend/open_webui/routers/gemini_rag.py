@@ -139,6 +139,8 @@ def generate_chat_title_background(
             log.debug(f"[TITLE GEN] Chat {chat_id} already has title: {chat.title}")
             return
 
+        service = get_gemini_rag_service(api_key)
+
         # 메시지 포맷팅
         conversation = "\n".join([
             f"{msg.get('role', 'user')}: {msg.get('content', '')}"
@@ -155,18 +157,17 @@ def generate_chat_title_background(
 
 제목:"""
 
-        # Gemini API 직접 호출 (RAG 없이)
-        from google import genai
-        client = genai.Client(api_key=api_key)
-
-        log.info(f"[TITLE GEN] Calling Gemini API for title generation...")
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=title_prompt
+        # Gemini API 호출하여 제목 생성
+        result = service.query(
+            question=title_prompt,
+            store_names=[],  # 제목 생성에는 RAG 불필요
+            model="gemini-2.5-flash",
+            temperature=0.7,
+            system_instruction="You are a helpful assistant that generates concise chat titles."
         )
 
-        if response and response.text:
-            title = response.text.strip()
+        if result.get("success") and result.get("text"):
+            title = result["text"].strip()
             # 제목 정리 (따옴표, 특수문자 제거)
             title = title.replace('"', '').replace("'", '').strip()
             # 너무 길면 자르기
@@ -175,14 +176,12 @@ def generate_chat_title_background(
 
             # 채팅 제목 업데이트
             Chats.update_chat_title_by_id(chat_id, title)
-            log.info(f"[TITLE GEN] ✅ Generated title for chat {chat_id}: {title}")
+            log.info(f"✅ Generated title for chat {chat_id}: {title}")
         else:
-            log.warning(f"[TITLE GEN] No response text for chat {chat_id}")
+            log.warning(f"Failed to generate title for chat {chat_id}: {result.get('error')}")
 
     except Exception as e:
-        log.error(f"[TITLE GEN] Error generating title for chat {chat_id}: {e}")
-        import traceback
-        log.error(f"[TITLE GEN] Traceback: {traceback.format_exc()}")
+        log.error(f"Error generating title for chat {chat_id}: {e}")
 
 
 # ============================================================
