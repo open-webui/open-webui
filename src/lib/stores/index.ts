@@ -60,6 +60,9 @@ export interface ChatTokenStatsData {
 
 export const chatTokenStats: Writable<ChatTokenStatsData | null> = writable(null);
 
+// Trigger to refresh chat token stats (increment to force refresh)
+export const chatTokenStatsRefreshTrigger = writable(0);
+
 export const channels = writable([]);
 export const chats = writable(null);
 export const pinnedChats = writable([]);

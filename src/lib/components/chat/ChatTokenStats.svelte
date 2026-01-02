@@ -1,16 +1,28 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
-	import { chatId, chatTokenStats } from '$lib/stores';
+	import { chatId, chatTokenStats, chatTokenStatsRefreshTrigger } from '$lib/stores';
 	import { getChatTokenStats, formatTokenCount } from '$lib/apis/analytics';
 	import Tooltip from '../common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
+
+	// Track the last trigger value to detect changes
+	let lastTrigger = 0;
 
 	// Reactive fetch when chatId changes
 	$: if ($chatId && $chatId !== '' && !$chatId.startsWith('local:')) {
 		fetchTokenStats($chatId);
 	} else {
 		chatTokenStats.set(null);
+	}
+
+	// Reactive fetch when refresh trigger changes (debounced)
+	$: if ($chatTokenStatsRefreshTrigger > lastTrigger && $chatId && !$chatId.startsWith('local:')) {
+		lastTrigger = $chatTokenStatsRefreshTrigger;
+		// Debounce the refresh slightly to allow backend to process
+		setTimeout(() => {
+			fetchTokenStats($chatId);
+		}, 500);
 	}
 
 	async function fetchTokenStats(id: string) {

@@ -39,7 +39,8 @@
 		functions,
 		selectedFolder,
 		pinnedChats,
-		showEmbeds
+		showEmbeds,
+		chatTokenStatsRefreshTrigger
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -1745,6 +1746,11 @@
 				message.id,
 				createMessagesList(history, message.id)
 			);
+
+			// Trigger token stats refresh if this message had usage data
+			if (message.usage) {
+				chatTokenStatsRefreshTrigger.update((n) => n + 1);
+			}
 		}
 
 		await tick();
