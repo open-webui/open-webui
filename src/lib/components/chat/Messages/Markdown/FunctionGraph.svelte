@@ -119,8 +119,34 @@
 
 		const fX = compile(expressions[0]);
 		const fY = compile(expressions[1]);
-		const [t0, t1] = layer.domain || [0, Math.PI * 2];
-		const sampling = layer.sampling || 200;
+		
+		// domain이 객체 형식 {t: [0, 2*pi]}이거나 배열 형식 [0, 2*pi]일 수 있음
+		let t0 = 0, t1 = Math.PI * 2;
+		if (layer.domain) {
+			const domain = layer.domain as any;
+			let domainArray: any[];
+			if (Array.isArray(domain)) {
+				domainArray = domain;
+			} else if (domain.t && Array.isArray(domain.t)) {
+				domainArray = domain.t;
+			} else {
+				domainArray = [t0, t1];
+			}
+			// 문자열 수식 평가 (예: "2*pi")
+			t0 = typeof domainArray[0] === 'string' ? compile(domainArray[0]).evaluate({}) : domainArray[0];
+			t1 = typeof domainArray[1] === 'string' ? compile(domainArray[1]).evaluate({}) : domainArray[1];
+		}
+		
+		// sampling도 객체 형식 {t: 200}이거나 숫자일 수 있음
+		let sampling = 200;
+		if (layer.sampling) {
+			const samplingVal = layer.sampling as any;
+			if (typeof samplingVal === 'number') {
+				sampling = samplingVal;
+			} else if (samplingVal.t) {
+				sampling = samplingVal.t;
+			}
+		}
 
 		const x: number[] = [];
 		const y: number[] = [];
@@ -255,6 +281,84 @@
 			showlegend: showLegend
 		}];
 	}
+
+	// vector_2d: 벡터/화살표 (data: [{start, end, color?, width?}, ...])
+	function buildVector2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
+		const data = layer.data || [];
+		
+		if (!Array.isArray(data) || data.length === 0) {
+			console.error('[FunctionGraph] vector_2d requires data array');
+			return [];
+		}
+
+		const traces: any[] = [];
+		
+		// 각 벡터를 화살표로 렌더링
+		data.forEach((vector: any, index: number) => {
+			const start = vector.start || [0, 0];
+			const end = vector.end || [0, 0];
+			const color = vector.color || layer.style?.color || 'black';
+			const width = vector.width || layer.style?.lineWidth || layer.style?.width || 2;
+			const opacity = vector.opacity || layer.style?.opacity || 1;
+
+			// 벡터 선
+			traces.push({
+				x: [start[0], end[0]],
+				y: [start[1], end[1]],
+				type: 'scatter',
+				mode: 'lines',
+				line: {
+					color: color,
+					width: width
+				},
+				opacity: opacity,
+				showlegend: false,
+				hoverinfo: 'skip'
+			});
+
+			// 화살표 머리 (간단한 삼각형)
+			const dx = end[0] - start[0];
+			const dy = end[1] - start[1];
+			const len = Math.sqrt(dx * dx + dy * dy);
+			
+			if (len > 0) {
+				const headLen = Math.min(0.15 * len, width * 0.05); // 화살표 크기
+				const angle = Math.atan2(dy, dx);
+				const angle1 = angle + Math.PI * 0.85;
+				const angle2 = angle - Math.PI * 0.85;
+				
+				const arrowX = [
+					end[0] + headLen * Math.cos(angle1),
+					end[0],
+					end[0] + headLen * Math.cos(angle2)
+				];
+				const arrowY = [
+					end[1] + headLen * Math.sin(angle1),
+					end[1],
+					end[1] + headLen * Math.sin(angle2)
+				];
+
+				traces.push({
+					x: arrowX,
+					y: arrowY,
+					type: 'scatter',
+					mode: 'lines',
+					fill: 'toself',
+					fillcolor: color,
+					line: {
+						color: color,
+						width: 1
+					},
+					opacity: opacity,
+					showlegend: false,
+					hoverinfo: 'skip'
+				});
+			}
+		});
+
+		return traces;
+	}
+
 
 	// histogram_2d: 히스토그램 (binEdges, counts)
 	function buildHistogram2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
@@ -613,6 +717,8 @@
 				return buildScatter2DTraces(layer, showLegend, legendName);
 			case 'histogram_2d':
 				return buildHistogram2DTraces(layer, showLegend, legendName);
+			case 'vector_2d':
+				return buildVector2DTraces(layer, showLegend, legendName);
 			case 'point_2d':
 				return buildPoint2DTraces(layer, showLegend, legendName);
 			case 'function_2d':
@@ -652,6 +758,8 @@
 				return buildScatter2DTraces(spec);
 			case 'histogram_2d':
 				return buildHistogram2DTraces(spec);
+			case 'vector_2d':
+				return buildVector2DTraces(spec);
 			// 3D graphs
 			case 'function_3d':
 				return buildFunction3DTraces(spec);
@@ -738,29 +846,73 @@
 		}
 
 		// 2D 그래프용 레이아웃
+		const xaxis: any = {
+			title: '', // 썸네일에서는 축 제목 숨김
+			showgrid: spec.axis?.grid ?? true,
+			gridcolor: gridColor,
+			zeroline: true,
+			zerolinecolor: gridColor,
+			tickfont: { color: textColor, size: 9 }
+		};
+		const yaxis: any = {
+			title: '',
+			showgrid: spec.axis?.grid ?? true,
+			gridcolor: gridColor,
+			zeroline: true,
+			zerolinecolor: gridColor,
+			tickfont: { color: textColor, size: 9 },
+			scaleanchor: spec.type === 'phase_plane' ? 'x' : undefined,
+			scaleratio: spec.type === 'phase_plane' ? 1 : undefined
+		};
+		
+		// Apply xRange and yRange if provided
+		if (spec.axis?.xRange) {
+			xaxis.range = spec.axis.xRange;
+		}
+		if (spec.axis?.yRange) {
+			yaxis.range = spec.axis.yRange;
+		}
+		
+		// Build annotations if provided
+		const annotations: any[] = [];
+		if (spec.annotations && Array.isArray(spec.annotations)) {
+			spec.annotations.forEach((ann: any) => {
+				if (ann.type === 'label' && ann.position && ann.text) {
+					// Anchor 매핑
+					const anchorMap: Record<string, { xanchor: string; yanchor: string }> = {
+						'top-left': { xanchor: 'left', yanchor: 'top' },
+						'top-right': { xanchor: 'right', yanchor: 'top' },
+						'bottom-left': { xanchor: 'left', yanchor: 'bottom' },
+						'bottom-right': { xanchor: 'right', yanchor: 'bottom' },
+						'center': { xanchor: 'center', yanchor: 'middle' }
+					};
+					const anchor = anchorMap[ann.style?.anchor || 'bottom-left'] || anchorMap['bottom-left'];
+					
+					annotations.push({
+						x: ann.position.x,
+						y: ann.position.y,
+						text: ann.text,
+						showarrow: false,
+						font: {
+							size: Math.max(6, (ann.style?.fontSize || 12) * 0.5), // 썸네일용 작은 폰트
+							color: ann.style?.color || textColor
+						},
+						xanchor: anchor.xanchor,
+						yanchor: anchor.yanchor,
+						opacity: ann.style?.opacity ?? 1
+					});
+				}
+			});
+		}
+		
 		return {
 			...baseLayout,
 			width: 192, // 썸네일 크기 (w-48 = 192px)
 			height: 192,
 			margin: { t: 10, r: 10, b: 25, l: 30 }, // 2D용 작은 마진
-			xaxis: {
-				title: '', // 썸네일에서는 축 제목 숨김
-				showgrid: spec.axis?.grid ?? true,
-				gridcolor: gridColor,
-				zeroline: true,
-				zerolinecolor: gridColor,
-				tickfont: { color: textColor, size: 9 }
-			},
-			yaxis: {
-				title: '',
-				showgrid: spec.axis?.grid ?? true,
-				gridcolor: gridColor,
-				zeroline: true,
-				zerolinecolor: gridColor,
-				tickfont: { color: textColor, size: 9 },
-				scaleanchor: spec.type === 'phase_plane' ? 'x' : undefined,
-				scaleratio: spec.type === 'phase_plane' ? 1 : undefined
-			}
+			xaxis,
+			yaxis,
+			annotations: annotations.length > 0 ? annotations : undefined
 		};
 	}
 
