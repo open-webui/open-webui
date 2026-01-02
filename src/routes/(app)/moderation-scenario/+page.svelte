@@ -269,7 +269,11 @@ import { finalizeModeration } from '$lib/apis/workflow';
 
     // Warm-up tutorial state
     let warmupCompleted: boolean = false;
-    let showWarmup: boolean = false;
+    // FIX: Default showWarmup to true to prevent blank page when $user?.id is not available initially.
+    // The reactive statement at line 327 will update this based on warmup completion status once $user is available.
+    // If we defaulted to false, the template would try to render the regular UI before scenarios are loaded,
+    // resulting in a blank page. Defaulting to true ensures the warmup tutorial displays by default.
+    let showWarmup: boolean = true;
     let warmupStep: number = 0;
     let warmupSelectedStrategies: string[] = [];
     let warmupModeratedResponse: string = '';
@@ -1053,6 +1057,12 @@ function clearModerationLocalKeys() {
 				
 				// Force save the clean state (this will include customPrompt)
 				saveCurrentScenarioState();
+				
+				// Ensure isLoadingScenario is false so reactive statements can evaluate
+				isLoadingScenario = false;
+				
+				// Wait for reactive updates to complete
+				await tick();
 				
 				console.log('✅ Custom scenario reset - treating as original response', {
 					versions: versions.length,
@@ -3346,72 +3356,72 @@ onMount(async () => {
 			return;
 		}
 		
-	// Listen for profile updates to reload scenarios when characteristics change
-	window.addEventListener('child-profiles-updated', handleProfileUpdate);
-	
-    // Load child profiles for personality-based scenario generation
+		// Listen for profile updates to reload scenarios when characteristics change
+		window.addEventListener('child-profiles-updated', handleProfileUpdate);
+		
+		// Load child profiles for personality-based scenario generation
 		// (loadSavedStates will be called after scenarios are loaded in loadRandomScenarios)
 		await loadChildProfiles();
 		// Resolve session number after child profiles are loaded
 		resolveSessionNumber();
 		console.log('Resolved session number after loading child profiles:', sessionNumber);
-    
-    // Now that we know the selected child, fetch available scenarios for Prolific users
-    try {
-        const sessionInfo = await getCurrentSession(localStorage.token);
-        if (sessionInfo.is_prolific_user && selectedChildId) {
-            // Skip if we shouldn't repoll (locked and no change)
-            let prospectiveSession = sessionNumber;
-            try {
-                const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
-                if (stored && !Number.isNaN(Number(stored))) prospectiveSession = Number(stored);
-            } catch {}
-            if (!shouldRepollScenarios(selectedChildId, prospectiveSession)) {
-                console.log('Repoll skipped: locked and no child/session change');
-                
-            } else {
-                const fetchId = beginScenarioFetch();
-            // Initialize tracked session IDs
-            const currentSessionId = localStorage.getItem('prolificSessionId') || '';
-            const urlSessionId = $page.url.searchParams.get('SESSION_ID') || '';
-            trackedSessionId = currentSessionId;
-            trackedUrlSessionId = urlSessionId;
+		
+		// Now that we know the selected child, fetch available scenarios for Prolific users
+		try {
+			const sessionInfo = await getCurrentSession(localStorage.token);
+			if (sessionInfo.is_prolific_user && selectedChildId) {
+				// Skip if we shouldn't repoll (locked and no change)
+				let prospectiveSession = sessionNumber;
+				try {
+					const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
+					if (stored && !Number.isNaN(Number(stored))) prospectiveSession = Number(stored);
+				} catch {}
+				if (!shouldRepollScenarios(selectedChildId, prospectiveSession)) {
+					console.log('Repoll skipped: locked and no child/session change');
+					
+				} else {
+					const fetchId = beginScenarioFetch();
+					// Initialize tracked session IDs
+					const currentSessionId = localStorage.getItem('prolificSessionId') || '';
+					const urlSessionId = $page.url.searchParams.get('SESSION_ID') || '';
+					trackedSessionId = currentSessionId;
+					trackedUrlSessionId = urlSessionId;
 
-            const lastLoadedSessionId = localStorage.getItem('lastLoadedModerationSessionId') || '';
+					const lastLoadedSessionId = localStorage.getItem('lastLoadedModerationSessionId') || '';
 
-            // If session changed since last load, wipe cached moderation state
-            if (currentSessionId && currentSessionId !== lastLoadedSessionId) {
-                resetAllScenarioStates();
-                clearModerationLocalKeys();
-                localStorage.setItem('lastLoadedModerationSessionId', currentSessionId);
-            }
+					// If session changed since last load, wipe cached moderation state
+					if (currentSessionId && currentSessionId !== lastLoadedSessionId) {
+						resetAllScenarioStates();
+						clearModerationLocalKeys();
+						localStorage.setItem('lastLoadedModerationSessionId', currentSessionId);
+					}
 
-                const availableScenarios = await getAvailableScenarios(localStorage.token, selectedChildId);
-                if (!isFetchCurrent(fetchId)) {
-                    console.log('Stale available scenarios response ignored');
-                    return;
-                }
-                availableScenarioIndices = availableScenarios.available_scenarios || [];
-                // Prefer locally established session number (fresh session on cold start)
-                try {
-                    const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
-                    if (stored && !Number.isNaN(Number(stored))) {
-                        sessionNumber = Number(stored);
-                    } else {
-                        sessionNumber = availableScenarios.session_number;
-                    }
-                } catch {
-                    sessionNumber = availableScenarios.session_number;
-                }
-                console.log('Prolific user - available scenarios (from backend):', availableScenarioIndices, 'session:', sessionNumber);
-                lastPolledChildId = selectedChildId;
-                lastPolledSession = sessionNumber;
-                endScenarioFetch(fetchId);
-            }
-        }
-    } catch (error) {
-        console.log('Not a Prolific user or error fetching scenarios:', error);
-    }
+					const availableScenarios = await getAvailableScenarios(localStorage.token, selectedChildId);
+					if (!isFetchCurrent(fetchId)) {
+						console.log('Stale available scenarios response ignored');
+						return;
+					}
+					availableScenarioIndices = availableScenarios.available_scenarios || [];
+					// Prefer locally established session number (fresh session on cold start)
+					try {
+						const stored = localStorage.getItem(`moderationSessionNumber_${selectedChildId}`);
+						if (stored && !Number.isNaN(Number(stored))) {
+							sessionNumber = Number(stored);
+						} else {
+							sessionNumber = availableScenarios.session_number;
+						}
+					} catch {
+						sessionNumber = availableScenarios.session_number;
+					}
+					console.log('Prolific user - available scenarios (from backend):', availableScenarioIndices, 'session:', sessionNumber);
+					lastPolledChildId = selectedChildId;
+					lastPolledSession = sessionNumber;
+					endScenarioFetch(fetchId);
+				}
+			}
+		} catch (error) {
+			console.log('Not a Prolific user or error fetching scenarios:', error);
+		}
 		
 		// Automatically generate personality-based scenarios if child profiles exist
 		console.log('Child profiles loaded:', childProfiles.length);
@@ -3490,22 +3500,22 @@ onMount(async () => {
 
 			// Fetch completed scenario indices to avoid previously seen ones
 			let completed: number[] = [];
-            try {
-                const fetchId2 = beginScenarioFetch();
-                const resp = await fetch(`${WEBUI_API_BASE_URL}/workflow/completed-scenarios`, {
+			try {
+				const fetchId2 = beginScenarioFetch();
+				const resp = await fetch(`${WEBUI_API_BASE_URL}/workflow/completed-scenarios`, {
 					method: 'GET',
 					headers: { 'Content-Type': 'application/json', ...(localStorage.token ? { authorization: `Bearer ${localStorage.token}` } : {}) }
 				});
 				if (resp.ok) {
 					const data = await resp.json();
-                    if (isFetchCurrent(fetchId2)) {
-                        completed = Array.isArray(data?.completed_scenario_indices) ? data.completed_scenario_indices : [];
-                    } else {
-                        console.log('Stale completed scenarios response ignored');
-                    }
-                }
-                if (isFetchCurrent(fetchId2)) {
-                    endScenarioFetch(fetchId2);
+					if (isFetchCurrent(fetchId2)) {
+						completed = Array.isArray(data?.completed_scenario_indices) ? data.completed_scenario_indices : [];
+					} else {
+						console.log('Stale completed scenarios response ignored');
+					}
+				}
+				if (isFetchCurrent(fetchId2)) {
+					endScenarioFetch(fetchId2);
 				}
 			} catch (e) {
 				// Non-fatal; fallback below
@@ -3661,33 +3671,36 @@ onMount(async () => {
 			
 			// UI visibility is now derived via reactive statements, no need to set here
 		}
-		
+		// FIX: Removed extra closing brace that was causing syntax error "Expected ')' but found 'if'"
+		// The onMount callback properly closes at line 3704 with }); 
+		// This extra brace was prematurely closing the onMount callback, causing parser errors.
+	
 	// Warmup visibility is now handled synchronously via reactive statement
 	// Only start timer and bootstrap scenario if warmup is completed
 	if (warmupCompleted && !showWarmup) {
-			// Start timer for the current scenario only if not in warmup
-			startTimer(selectedScenarioIndex);
+		// Start timer for the current scenario only if not in warmup
+		startTimer(selectedScenarioIndex);
 
-			// Bootstrap scenario persistence
-			try {
-				const sessionId = `scenario_${selectedScenarioIndex}`;
-				await saveModerationSession(localStorage.token, {
-					session_id: sessionId,
-					user_id: $user?.id || 'unknown',
-					child_id: selectedChildId || 'unknown',
-					scenario_index: selectedScenarioIndex,
-					attempt_number: 1,
-					version_number: 0,
-					session_number: sessionNumber,
-					scenario_prompt: childPrompt1,
-					original_response: originalResponse1,
-					initial_decision: undefined,
-					strategies: [],
-					custom_instructions: [],
-					highlighted_texts: [],
-					refactored_response: undefined,
-					is_final_version: false
-				});
+		// Bootstrap scenario persistence
+		try {
+			const sessionId = `scenario_${selectedScenarioIndex}`;
+			await saveModerationSession(localStorage.token, {
+				session_id: sessionId,
+				user_id: $user?.id || 'unknown',
+				child_id: selectedChildId || 'unknown',
+				scenario_index: selectedScenarioIndex,
+				attempt_number: 1,
+				version_number: 0,
+				session_number: sessionNumber,
+				scenario_prompt: childPrompt1,
+				original_response: originalResponse1,
+				initial_decision: undefined,
+				strategies: [],
+				custom_instructions: [],
+				highlighted_texts: [],
+				refactored_response: undefined,
+				is_final_version: false
+			});
 		} catch (e) {
 			console.error('Failed to bootstrap scenario', e);
 		}
