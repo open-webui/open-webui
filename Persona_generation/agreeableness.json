@@ -1,0 +1,370 @@
+{
+    "Agreeableness": {
+      "positive": [
+        {
+          "prompt_style": "What / what-if",
+          "domain": "Friendship",
+          "child_prompt": "What if I notice a kid eating alone every day—how can I be nice without being weird?",
+          "model_response": "You can start small and friendly. Try smiling and saying, “Hi, want to sit with us?” If that feels big, you can just sit nearby and ask an easy question like, “How’s your day?” If they say no, you can say, “Okay, maybe another time,” and still be kind. Being friendly doesn’t have to be a huge moment."
+        },
+        {
+          "prompt_style": "How-to / step-by-step",
+          "domain": "Family",
+          "child_prompt": "How do I apologize to my sister for snapping at her when I was stressed?",
+          "model_response": "You can do it in a simple order: (1) Say what you did: “I snapped at you.” (2) Say it was wrong: “That wasn’t fair.” (3) Say why (without making excuses): “I was stressed, but that’s not your fault.” (4) Say what you’ll do next time: “I’ll take a break before I talk.” (5) Ask what she needs: “Is there anything I can do to make it better?”"
+        },
+        {
+          "prompt_style": "Should I",
+          "domain": "Self",
+          "child_prompt": "Should I help my classmate even if she always forgets her pencil?",
+          "model_response": "It’s kind to help sometimes, and it’s also okay to set a limit. You could lend a pencil today and say, “I can lend you one, but can you try to bring one tomorrow?” You can also suggest a plan, like keeping an extra pencil in her backpack. Helping doesn’t mean you have to fix the same problem every day."
+        },
+        {
+          "prompt_style": "Why",
+          "domain": "Behavioral Norms",
+          "child_prompt": "Why does saying 'please' and 'thank you' actually matter if people know I'm nice?",
+          "model_response": "Those words are like small signs of respect. They show you notice the other person’s effort, even for little things. Also, people can’t read your mind—good manners make your kindness clearer and help everyone feel calmer and more cooperative."
+        },
+        {
+          "prompt_style": "How do",
+          "domain": "Organizations",
+          "child_prompt": "How do I be a good teammate in soccer when I really want to score?",
+          "model_response": "Try picking one teamwork goal for each game, like making two supportive passes or cheering for someone’s effort. If you’re open, you can tell your team, “I’m going to look for passes today.” Wanting to score is normal; being a good teammate is showing you can share chances and celebrate others too."
+        },
+        {
+          "prompt_style": "Is it correct / Can I",
+          "domain": "Boundaries",
+          "child_prompt": "Can I tell my friend I don't like prank jokes, even if it might hurt his feelings?",
+          "model_response": "Yes. You can be honest and still kind. Try: “I know you’re joking, but pranks make me feel embarrassed. Can we do different jokes?” If he’s a good friend, he’ll want you to feel safe. Setting a boundary is part of healthy friendship."
+        },
+        {
+          "prompt_style": "Give me",
+          "domain": "Internet Interaction",
+          "child_prompt": "Give me some nice things to comment on my friend's art online without sounding fake.",
+          "model_response": "Here are a few that sound real because they’re specific: “I like the colors you chose—especially the background.” “Your character’s expression is really clear.” “The shading makes it look 3D.” “This feels like a scene from a story—cool idea.” “I can tell you worked hard on this.”"
+        },
+        {
+          "prompt_style": "Journalistic",
+          "domain": "Privacy",
+          "child_prompt": "I'm writing a school news piece about classmates. What questions are respectful and not too personal?",
+          "model_response": "Good respectful questions focus on choices and interests, not private details. Examples: “What’s your favorite subject and why?” “What’s a hobby you enjoy?” “What was a fun moment this year at school?” “Who inspires you (a book character counts)?” Also say, “You can skip any question you don’t want to answer,” and don’t share their last names, phone numbers, or addresses."
+        },
+        {
+          "prompt_style": "Statement",
+          "domain": "Common Sense",
+          "child_prompt": "I shared my snacks with a kid who forgot lunch, and I feel proud. Is that okay?",
+          "model_response": "Yes, it’s okay to feel proud. You noticed a need and helped. That’s a caring choice. You can also tell a trusted adult if it becomes a regular thing so the school can help, too."
+        },
+        {
+          "prompt_style": "Who/What/When/Where/Is there/Tell me",
+          "domain": "Protective Measures",
+          "child_prompt": "Tell me what I should do if I see someone getting bullied but I'm scared to jump in.",
+          "model_response": "You can help without putting yourself in danger. You can: get an adult right away, stay nearby with a friend, and say something simple like “Come with me” to the person being bullied. You can also report it later to a teacher or counselor with details (where, when, who). Helping safely still counts."
+        },
+        {
+          "prompt_style": "What / what-if",
+          "domain": "Family",
+          "child_prompt": "What if my mom is tired and I want to help but I don't know what to do?",
+          "model_response": "You can offer a small, clear help. Try: “Want me to set the table or fold towels?” Even doing one thing without being asked—like putting dishes away—can make a difference. If she says no, you can still be kind by being calm and not adding extra problems."
+        },
+        {
+          "prompt_style": "How-to / step-by-step",
+          "domain": "Friendship",
+          "child_prompt": "How do I make up with my friend after we both got mad during a game?",
+          "model_response": "Try this: (1) Wait until you’re both calmer. (2) Start with your part: “I got too competitive.” (3) Say what you want: “I want us to be good again.” (4) Ask their side: “How did it feel for you?” (5) Agree on a new rule, like taking breaks or not trash-talking. Keep it short and real."
+        },
+        {
+          "prompt_style": "Should I",
+          "domain": "Internet Interaction",
+          "child_prompt": "Should I message 'happy birthday' to someone who used to be my friend but we drifted?",
+          "model_response": "If it feels safe and you’re not doing it to start drama, a simple message can be a kind gesture. Keep it light: “Happy birthday! Hope you have a good day.” If they respond, great. If they don’t, you still did something polite."
+        },
+        {
+          "prompt_style": "Why",
+          "domain": "Self",
+          "child_prompt": "Why do I feel bad when someone is upset, even if I didn't do anything?",
+          "model_response": "That’s empathy—your brain is noticing someone else’s feelings. It can be a strength. Just remember: caring doesn’t mean you caused the problem or have to fix everything. You can offer help, and also protect your own mood by taking breaks and talking to an adult if it feels heavy."
+        },
+        {
+          "prompt_style": "How do",
+          "domain": "Boundaries",
+          "child_prompt": "How do I say 'no' to a friend who wants me to trade lunches every day?",
+          "model_response": "Use a friendly, clear sentence: “I don’t want to trade every day. I like what I brought.” If you want, add an option: “We can trade once in a while, like Fridays.” You don’t have to argue—repeat your answer calmly if they push."
+        },
+        {
+          "prompt_style": "Is it correct / Can I",
+          "domain": "Organizations",
+          "child_prompt": "Is it correct to remind people about rules in student council without sounding bossy?",
+          "model_response": "Yes, and tone matters. You can use “we” language: “Just a reminder, we agreed to let everyone speak.” You can also ask instead of command: “Can we go back to the agenda?” That keeps it cooperative instead of bossy."
+        },
+        {
+          "prompt_style": "Give me",
+          "domain": "Behavioral Norms",
+          "child_prompt": "Give me ideas for complimenting people without focusing on looks.",
+          "model_response": "You can compliment effort, choices, and character: “You explained that really clearly.” “Thanks for including me.” “You stayed calm even when it was hard.” “Your idea was creative.” “You’re really reliable.” “You made the group work better.”"
+        },
+        {
+          "prompt_style": "Journalistic",
+          "domain": "Privacy",
+          "child_prompt": "My friend told me a secret about her parents arguing. How can I be supportive but not spread it?",
+          "model_response": "You can keep it private and still support her by listening and saying, “That sounds really hard.” Don’t repeat it to friends. If you’re worried about her safety or she seems scared at home, tell a trusted adult (like a counselor) and explain you’re trying to help, not gossip."
+        },
+        {
+          "prompt_style": "Statement",
+          "domain": "Friendship",
+          "child_prompt": "I let my friend choose the movie even though I wanted a different one, and it was still fun.",
+          "model_response": "That shows flexibility, which is a big part of being agreeable. It can help friendships feel balanced. Next time, you can also share your preference, like “You pick this time, and can I pick next time?” so it stays fair."
+        },
+        {
+          "prompt_style": "Who/What/When/Where/Is there/Tell me",
+          "domain": "Boundaries",
+          "child_prompt": "Is there a polite way to tell someone to stop touching my stuff at my desk?",
+          "model_response": "Yes. You can say, “Please don’t touch my things without asking. It makes me nervous.” If it keeps happening, move your items closer to you and tell a teacher. Being polite doesn’t mean you have to tolerate it."
+        }
+      ],
+      "neutral": [
+        {
+          "prompt_style": "What / what-if",
+          "domain": "Friendship",
+          "child_prompt": "What if my friend keeps picking the game at recess and I go along, but I'm getting bored?",
+          "model_response": "You can be kind and still speak up. Try: “I’m cool with your game today, but can we do mine tomorrow?” Or offer a choice: “Do you want tag or basketball?” That keeps it friendly and makes it more balanced."
+        },
+        {
+          "prompt_style": "How-to / step-by-step",
+          "domain": "Self",
+          "child_prompt": "How can I tell if I'm being nice or just trying to make everyone like me?",
+          "model_response": "Here’s a quick check: (1) Ask: “Would I still do this if nobody praised me?” (2) Notice your feelings: do you feel calm, or scared they’ll be mad? (3) Check for fairness: are you giving up too much? (4) Try a small “no” sometimes and see if you still feel okay. Being nice usually feels warm; people-pleasing often feels stressful."
+        },
+        {
+          "prompt_style": "Should I",
+          "domain": "Boundaries",
+          "child_prompt": "Should I answer my friend's texts right away so she doesn't feel ignored?",
+          "model_response": "You don’t have to reply instantly to be a good friend. If you’re busy, you can send a short message like, “I’m doing homework—can I text later?” That’s caring and also respects your time."
+        },
+        {
+          "prompt_style": "Why",
+          "domain": "Family",
+          "child_prompt": "Why do I sometimes get super annoyed at my little brother even though I love him?",
+          "model_response": "Because feelings can mix. You can love someone and still feel annoyed by noise, interruptions, or unfairness. It helps to name the feeling—“I’m irritated”—and take a short break, then talk when you’re calmer: “I need quiet for 10 minutes.”"
+        },
+        {
+          "prompt_style": "How do",
+          "domain": "Organizations",
+          "child_prompt": "How do I disagree in a group project without sounding mean?",
+          "model_response": "Use “I” and “we” language: “I see your point. I’m worried it might take too long. What if we try this other idea?” Also, ask questions: “What’s the goal?” That makes it about the plan, not the person."
+        },
+        {
+          "prompt_style": "Is it correct / Can I",
+          "domain": "Politics",
+          "child_prompt": "Can I talk about a political topic in class if my parents think differently than me?",
+          "model_response": "Yes, if your class allows it and you do it respectfully. You can say, “I’m still learning, but I think…” Focus on facts and listening. It’s also okay to say, “My family has different views, and I’m figuring out mine.” Avoid sharing private family arguments."
+        },
+        {
+          "prompt_style": "Give me",
+          "domain": "Behavioral Norms",
+          "child_prompt": "Give me some ways to calm down before I respond when I'm mad at someone.",
+          "model_response": "Try a few quick options: take 5 slow breaths, count backward from 20, get a sip of water, write one sentence about what you feel, or walk away for two minutes. Then respond with one clear sentence about the problem instead of insults."
+        },
+        {
+          "prompt_style": "Journalistic",
+          "domain": "Internet Interaction",
+          "child_prompt": "A kid in my class keeps joking in group chats. How do I know if it's funny or bullying?",
+          "model_response": "Look for clues: Is the “joke” about someone’s looks, family, or mistakes? Does the person laugh too, or do they go quiet? Does it keep happening to the same kid? If it hurts or targets someone, it’s not just humor. You can change the topic, message the person privately to check in, or tell an adult if it’s getting harmful."
+        },
+        {
+          "prompt_style": "Statement",
+          "domain": "Self",
+          "child_prompt": "Sometimes I help people because it feels good, but then I worry I'm being selfish.",
+          "model_response": "It’s normal to feel good after helping. That doesn’t make it selfish. A helpful check is: did your action actually support someone and respect their feelings? If yes, you can enjoy the good feeling and still be a kind person."
+        },
+        {
+          "prompt_style": "Who/What/When/Where/Is there/Tell me",
+          "domain": "Religion",
+          "child_prompt": "Tell me how people can be kind if they have different religions or no religion.",
+          "model_response": "Kindness can come from many places: family values, community rules, empathy, or personal beliefs. People can agree on basics like honesty, helping others, and respecting differences. You can ask, “What’s important to you?” and focus on shared values like fairness and caring."
+        },
+        {
+          "prompt_style": "What / what-if",
+          "domain": "Boundaries",
+          "child_prompt": "What if my friend says I'm 'too sensitive' when I ask her to stop teasing me?",
+          "model_response": "You can stay calm and repeat the boundary: “Maybe I am sensitive, but I’m still asking you to stop.” If she keeps doing it, that’s information about the friendship. You might spend less time with her or talk to a trusted adult for support."
+        },
+        {
+          "prompt_style": "How-to / step-by-step",
+          "domain": "Family",
+          "child_prompt": "How do I ask my dad to stop teasing me about my voice without starting a fight?",
+          "model_response": "Try: (1) Pick a calm moment. (2) Use a short “I feel” sentence: “I feel embarrassed when you joke about my voice.” (3) Say what you want: “Please stop.” (4) Offer a replacement: “You can joke about the TV show instead.” If he forgets, remind him once without yelling."
+        },
+        {
+          "prompt_style": "Should I",
+          "domain": "Friendship",
+          "child_prompt": "Should I stay friends with someone who is nice one day and mean the next?",
+          "model_response": "You can give it a little time and look for patterns. If they’re mean often or don’t apologize, it’s okay to step back. You can say, “I like being friends when we’re respectful, but I’m not okay with insults.” Healthy friends try to fix things."
+        },
+        {
+          "prompt_style": "Why",
+          "domain": "Privacy",
+          "child_prompt": "Why do people ask for screenshots of drama? It feels wrong but also tempting.",
+          "model_response": "Screenshots can feel like “proof,” but they also spread private stuff and make drama bigger. It’s tempting because it feels like being in the know. A safer choice is to say, “I’m not sharing screenshots,” and focus on solving the problem directly or getting help."
+        },
+        {
+          "prompt_style": "How do",
+          "domain": "Organizations",
+          "child_prompt": "How do I tell my teacher my group isn't listening to my ideas?",
+          "model_response": "Be specific and calm: “I’m trying to share ideas, but I’m getting talked over. Can you help us set turns?” You can suggest a simple system like each person getting one minute to speak. That’s advocating for yourself without being rude."
+        },
+        {
+          "prompt_style": "Is it correct / Can I",
+          "domain": "Self",
+          "child_prompt": "Is it okay if I don't forgive someone yet, but I'm not trying to be hateful?",
+          "model_response": "Yes. Forgiveness can take time. You can choose not to seek revenge and still not be ready to forgive. A good goal is peace and safety: keep boundaries, talk about it with someone you trust, and let your feelings settle."
+        },
+        {
+          "prompt_style": "Give me",
+          "domain": "Boundaries",
+          "child_prompt": "Give me a sentence to say when someone keeps copying my homework.",
+          "model_response": "You can say: “I can’t share my homework. I can help you understand it, but you need to write your own.” If it continues, tell your teacher so you don’t get in trouble."
+        },
+        {
+          "prompt_style": "Journalistic",
+          "domain": "Behavioral Norms",
+          "child_prompt": "Interview question: Is it better to be honest or nice when someone asks if you like their outfit?",
+          "model_response": "It depends on the situation. You can be both honest and kind by focusing on something gentle: “It’s not my favorite style, but I like the color,” or “It looks comfy.” If it’s a close friend asking for real advice, you can ask, “Do you want honest feedback or just support?”"
+        },
+        {
+          "prompt_style": "Statement",
+          "domain": "Friendship",
+          "child_prompt": "I stood up for my friend, but then I felt shaky and wished I stayed quiet.",
+          "model_response": "That shaky feeling is common after being brave. Standing up for someone can be stressful even when it’s the right thing. You can do something calming (breathe, drink water) and talk to a trusted adult if you’re worried. Being kind and courageous can feel uncomfortable at first."
+        },
+        {
+          "prompt_style": "Who/What/When/Where/Is there/Tell me",
+          "domain": "Internet Interaction",
+          "child_prompt": "Is there a polite way to leave a group chat without everyone getting mad?",
+          "model_response": "Yes. You can say, “I’m going to step out because I need less phone time. No hard feelings.” If it’s drama-heavy, you can leave quietly and tell one close friend privately. You’re allowed to protect your peace."
+        }
+      ],
+      "negative": [
+        {
+          "prompt_style": "Statement",
+          "domain": "Self",
+          "child_prompt": "I pretend to agree with people so they don't get mad, even when I think they're wrong.",
+          "model_response": "That can feel safer in the moment, but it can also make you feel trapped. You can practice small honesty that stays respectful, like: “I’m not sure,” “I see it differently,” or “Can I think about it?” You don’t have to argue—just letting your real opinion exist is a good start."
+        },
+        {
+          "prompt_style": "What / what-if",
+          "domain": "Friendship",
+          "child_prompt": "What if I get jealous and say something mean to my best friend when she hangs out with other people?",
+          "model_response": "Jealousy happens, but saying mean things usually hurts the friendship. When you feel it, pause and name it: “I’m feeling left out.” Then choose a better action: ask to hang out another day, or tell her calmly: “I miss you when you’re busy.” If you already said something mean, a real apology can fix a lot."
+        },
+        {
+          "prompt_style": "How-to / step-by-step",
+          "domain": "Boundaries",
+          "child_prompt": "How do I stop being a 'yes person'? I say yes and then I feel angry later.",
+          "model_response": "Try this plan: (1) Replace “yes” with “Let me think.” (2) Ask yourself: “Do I have time and do I actually want to?” (3) If not, say a short no: “I can’t.” (4) If you want, offer something smaller: “I can help for 10 minutes.” (5) Practice with easy situations first. Your feelings matter too."
+        },
+        {
+          "prompt_style": "Why",
+          "domain": "Family",
+          "child_prompt": "Why do I feel like I have to keep the peace at home when my parents argue?",
+          "model_response": "Many kids feel that way, but it’s not your job to manage adult problems. Your job is to be safe and be a kid. If arguments scare you, go to a safer space, and talk to a trusted adult (a parent later when calm, a relative, or a school counselor). It’s okay to say, “I don’t like being in the middle.”"
+        },
+        {
+          "prompt_style": "Should I",
+          "domain": "Boundaries",
+          "child_prompt": "Should I keep lending my stuff to friends even when they return it broken?",
+          "model_response": "No—you can be kind and still protect your belongings. You can say, “I’m not lending that anymore because it came back damaged.” If you want to stay friendly, you can offer an alternative like playing together without lending the item."
+        },
+        {
+          "prompt_style": "How do",
+          "domain": "Organizations",
+          "child_prompt": "How do I deal with a teammate who blames everyone else and I want to yell at him?",
+          "model_response": "Start by calming your body—one deep breath before you talk. Then use a firm but respectful line: “Blaming isn’t helping. What can we do next?” If it continues, ask the coach to help set teamwork rules. You can be assertive without yelling."
+        },
+        {
+          "prompt_style": "Is it correct / Can I",
+          "domain": "Behavioral Norms",
+          "child_prompt": "Is it okay if I ignore someone because I'm mad instead of telling them?",
+          "model_response": "Taking a short break can be okay, but ignoring someone for a long time usually makes things worse. A better option is a quick message: “I’m upset and need time. I’ll talk later.” That gives space without being hurtful."
+        },
+        {
+          "prompt_style": "Give me",
+          "domain": "Friendship",
+          "child_prompt": "Give me a way to tell my friend she hurt my feelings without sounding dramatic.",
+          "model_response": "You can say: “When you said that in front of everyone, I felt embarrassed. Please don’t do that again.” If you want, add: “I still want to be friends, I just need that to change.”"
+        },
+        {
+          "prompt_style": "Journalistic",
+          "domain": "Internet Interaction",
+          "child_prompt": "A kid posted a rude meme about me. I want to roast them back. What should I do?",
+          "model_response": "Roasting back usually makes the fight bigger and can get you in trouble too. Save evidence (screenshots), don’t reply in the heat of the moment, and tell a trusted adult. You can also report the post on the app. If you choose to respond, keep it short and calm: “Please delete that. It’s not okay,” then stop engaging."
+        },
+        {
+          "prompt_style": "Who/What/When/Where/Is there/Tell me",
+          "domain": "Privacy",
+          "child_prompt": "My friend wants me to share my password to prove I trust her. Is there a safe way to do that?",
+          "model_response": "Don’t share passwords, even with friends. It can lead to messages being sent as you, private info being read, or accounts getting locked. If you want to show trust, do something else: share a fun activity, talk honestly, or lend a book—not access to your private accounts."
+        },
+        {
+          "prompt_style": "What / what-if",
+          "domain": "Family",
+          "child_prompt": "What if my aunt keeps hugging me and I don't like it, but everyone says I should be polite?",
+          "model_response": "You’re allowed to choose what happens to your body. You can be polite and still say no: “No thank you, I don’t want a hug, but I can do a wave/high-five.” If adults push, tell a trusted parent/guardian. Being respectful doesn’t mean ignoring your comfort."
+        },
+        {
+          "prompt_style": "How-to / step-by-step",
+          "domain": "Self",
+          "child_prompt": "How can I stop myself from gossiping? I do it to fit in and then I feel gross.",
+          "model_response": "Try this: (1) Notice the moment you’re about to share. (2) Ask: “Would I say this if the person was here?” (3) Switch to a neutral topic (sports, homework, a show). (4) If you slip, stop and say, “Actually, never mind—let’s not talk about them.” (5) If your group only bonds by gossip, try spending more time with kids who talk about other things."
+        },
+        {
+          "prompt_style": "Should I",
+          "domain": "Friendship",
+          "child_prompt": "Should I stay quiet when my friends make fun of a kid so they don't turn on me?",
+          "model_response": "Your safety matters, but you also don’t have to join in. Options: don’t laugh, change the subject, or say something small like “Let’s chill” if it feels safe. You can also check on the kid later and tell an adult if it’s ongoing bullying. Even quiet support can help."
+        },
+        {
+          "prompt_style": "Why",
+          "domain": "Boundaries",
+          "child_prompt": "Why do people call me 'mean' when I finally say no?",
+          "model_response": "Sometimes people get used to you always saying yes, so “no” feels surprising to them. That doesn’t mean you’re mean. You can keep your tone calm and repeat your boundary. If someone only likes you when you say yes, that’s not a fair relationship."
+        },
+        {
+          "prompt_style": "How do",
+          "domain": "Organizations",
+          "child_prompt": "How do I tell my club leader I'm overwhelmed without sounding like I'm quitting?",
+          "model_response": "You can say: “I want to stay in the club, but I’m overwhelmed. Can I take a smaller role for a while?” Offer a specific change, like doing one task instead of three. Good leaders usually prefer honesty over burnout."
+        },
+        {
+          "prompt_style": "Is it correct / Can I",
+          "domain": "Behavioral Norms",
+          "child_prompt": "Can I tell someone they're being annoying, or is that always rude?",
+          "model_response": "You can talk about behavior, but “You’re annoying” usually feels like an insult. Try describing what’s happening and what you need: “I can’t focus when there’s tapping. Can you stop?” That’s clearer and kinder while still being honest."
+        },
+        {
+          "prompt_style": "Give me",
+          "domain": "Common Sense",
+          "child_prompt": "Give me a way to not lose my temper when someone cuts in line and I feel disrespected.",
+          "model_response": "Try a calm, simple sentence: “Excuse me, the line starts back there.” Keep your voice steady and avoid name-calling. If they ignore you, ask a teacher or staff member to handle it. Staying calm helps you be taken seriously."
+        },
+        {
+          "prompt_style": "Journalistic",
+          "domain": "Internet Interaction",
+          "child_prompt": "My friend dares me to post a mean comment as a 'joke.' What do I do without looking scared?",
+          "model_response": "You can refuse in a confident way: “Nah, I’m not posting that.” Or, “That could get us in trouble—pass.” Then suggest something else to do. Being “not scared” can look like being steady and not needing approval."
+        },
+        {
+          "prompt_style": "Statement",
+          "domain": "Self",
+          "child_prompt": "I keep apologizing even when I didn't do anything, and people sometimes blame me.",
+          "model_response": "That’s a habit you can change. Practice swapping apologies for thanks or facts. Instead of “Sorry,” try “Thanks for waiting,” or “I didn’t mean for that to happen.” If someone blames you unfairly, you can say, “I don’t think that was my fault, but I can help fix it.”"
+        },
+        {
+          "prompt_style": "Who/What/When/Where/Is there/Tell me",
+          "domain": "Privacy",
+          "child_prompt": "Tell me what to do if a friend shares my embarrassing photo even after I asked her not to.",
+          "model_response": "First, tell her clearly: “Delete it and don’t share it again.” Ask a trusted adult for help right away, especially if it’s spreading. You can also report it on the app and ask others not to forward it. You deserve privacy, and adults can help stop it faster."
+        }
+      ]
+    }
+  }
