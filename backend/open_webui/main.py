@@ -1701,7 +1701,7 @@ async def chat_completion(
                             metadata["message_id"],
                             {
                                 "parentId": metadata.get("parent_message_id", None),
-                                "model": model_id,
+                                "model": form_data.get("model", model_id),
                             },
                         )
                 except:
