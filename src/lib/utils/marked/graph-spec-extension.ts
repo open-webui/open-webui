@@ -27,12 +27,12 @@ export type Sampling3D = {
 
 export interface GraphSpecLayer {
 	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'point_2d' |
-		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'point_3d' | 'histogram_2d';
+		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'point_3d' | 'histogram_2d' | 'vector_2d';
 	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
 	domain?: Domain2D | Domain3D;
 	sampling?: Sampling2D | Sampling3D;
-	data?: [number, number][] | [number, number, number][]; // 2D 또는 3D 데이터
+	data?: any; // 2D/3D 데이터 또는 vector_2d의 {start, end, color, width}[] 형식
 	coordinates?: [number, number][]; // point_2d용 좌표 배열
 	position?: [number, number, number]; // point_3d용 위치
 	label?: string; // point_3d용 라벨
@@ -52,15 +52,16 @@ export interface GraphSpecLayer {
 
 export interface GraphSpec {
 	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d' |
-		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d' | 'cartesian' | 'histogram_2d';
+		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d' | 'cartesian' | 'histogram_2d' | 'vector_2d';
 	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
 	domain?: Domain2D | Domain3D;
 	sampling?: Sampling2D | Sampling3D;
-	data?: [number, number][] | [number, number, number][]; // 2D 또는 3D 데이터
+	data?: any; // 2D/3D 데이터 또는 vector_2d의 {start, end, color, width}[] 형식
 	binEdges?: number[]; // histogram_2d용 구간 경계값
 	counts?: number[]; // histogram_2d용 각 구간의 빈도수
 	layers?: GraphSpecLayer[]; // composite용 레이어
+	annotations?: Annotation[]; // 텍스트 라벨 등
 	style?: {
 		color?: string | string[];
 		colorMap?: string; // 3D용 컬러맵 (viridis, plasma 등)
@@ -70,6 +71,7 @@ export interface GraphSpec {
 		size?: number;
 		opacity?: number;
 		barGap?: number; // histogram_2d용 막대 간격 (0~1)
+		width?: number; // vector_2d용 선 두께
 	};
 	axis?: {
 		xLabel?: string;
@@ -82,6 +84,21 @@ export interface GraphSpec {
 	meta?: {
 		title?: string;
 		caption?: string;
+	};
+}
+
+export interface Annotation {
+	type: 'label' | 'arrow' | 'line';
+	text?: string; // label용
+	position?: { x: number; y: number }; // label용 위치
+	start?: [number, number]; // arrow/line용 시작점
+	end?: [number, number]; // arrow/line용 끝점
+	style?: {
+		color?: string;
+		fontSize?: number;
+		anchor?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
+		opacity?: number;
+		lineWidth?: number;
 	};
 }
 

@@ -122,8 +122,34 @@
 
 		const fX = compile(expressions[0]);
 		const fY = compile(expressions[1]);
-		const [t0, t1] = (layer.domain as [number, number]) || [0, Math.PI * 2];
-		const sampling = (layer.sampling as number) || 200;
+		
+		// domain이 객체 형식 {t: [0, 2*pi]}이거나 배열 형식 [0, 2*pi]일 수 있음
+		let t0 = 0, t1 = Math.PI * 2;
+		if (layer.domain) {
+			const domain = layer.domain as any;
+			let domainArray: any[];
+			if (Array.isArray(domain)) {
+				domainArray = domain;
+			} else if (domain.t && Array.isArray(domain.t)) {
+				domainArray = domain.t;
+			} else {
+				domainArray = [t0, t1];
+			}
+			// 문자열 수식 평가 (예: "2*pi")
+			t0 = typeof domainArray[0] === 'string' ? compile(domainArray[0]).evaluate({}) : domainArray[0];
+			t1 = typeof domainArray[1] === 'string' ? compile(domainArray[1]).evaluate({}) : domainArray[1];
+		}
+		
+		// sampling도 객체 형식 {t: 200}이거나 숫자일 수 있음
+		let sampling = 200;
+		if (layer.sampling) {
+			const samplingVal = layer.sampling as any;
+			if (typeof samplingVal === 'number') {
+				sampling = samplingVal;
+			} else if (samplingVal.t) {
+				sampling = samplingVal.t;
+			}
+		}
 
 		const x: number[] = [];
 		const y: number[] = [];
@@ -138,6 +164,7 @@
 				y.push(NaN);
 			}
 		}
+	
 
 		return [{
 			x, y,
@@ -171,6 +198,79 @@
 			},
 			showlegend: false
 		}];
+	}
+
+	// vector_2d: 벡터/화살표 렌더링
+	function buildVector2DTraces(layer: LayerSpec) {
+		const data = layer.data || [];
+		
+		if (!Array.isArray(data) || data.length === 0) return [];
+
+		const traces: any[] = [];
+		
+		data.forEach((vector: any) => {
+			const start = vector.start || [0, 0];
+			const end = vector.end || [0, 0];
+			const color = vector.color || layer.style?.color || 'black';
+			const width = vector.width || layer.style?.lineWidth || layer.style?.width || 2;
+			const opacity = vector.opacity || layer.style?.opacity || 1;
+
+			// 벡터 선
+			traces.push({
+				x: [start[0], end[0]],
+				y: [start[1], end[1]],
+				type: 'scatter',
+				mode: 'lines',
+				line: {
+					color: color,
+					width: width
+				},
+				opacity: opacity,
+				showlegend: false,
+				hoverinfo: 'skip'
+			});
+
+			// 화살표 머리
+			const dx = end[0] - start[0];
+			const dy = end[1] - start[1];
+			const len = Math.sqrt(dx * dx + dy * dy);
+			
+			if (len > 0) {
+				const headLen = Math.min(0.15 * len, width * 0.05);
+				const angle = Math.atan2(dy, dx);
+				const angle1 = angle + Math.PI * 0.85;
+				const angle2 = angle - Math.PI * 0.85;
+				
+				const arrowX = [
+					end[0] + headLen * Math.cos(angle1),
+					end[0],
+					end[0] + headLen * Math.cos(angle2)
+				];
+				const arrowY = [
+					end[1] + headLen * Math.sin(angle1),
+					end[1],
+					end[1] + headLen * Math.sin(angle2)
+				];
+
+				traces.push({
+					x: arrowX,
+					y: arrowY,
+					type: 'scatter',
+					mode: 'lines',
+					fill: 'toself',
+					fillcolor: color,
+					line: {
+						color: color,
+						width: 1
+					},
+					opacity: opacity,
+					showlegend: false,
+					hoverinfo: 'skip'
+				});
+			}
+		});
+
+		return traces;
 	}
 
 	// histogram_2d: 히스토그램 (binEdges, counts)
@@ -481,6 +581,7 @@
 			case 'phase_plane': return buildPhasePlaneTraces(layer);
 			case 'scatter_2d': return buildScatter2DTraces(layer);
 			case 'histogram_2d': return buildHistogram2DTraces(layer);
+			case 'vector_2d': return buildVector2DTraces(layer);
 			case 'point_2d': return buildPoint2DTraces(layer);
 			case 'function_2d': default: return buildFunction2DTraces(layer);
 		}
@@ -513,6 +614,7 @@
 			case 'phase_plane': return buildPhasePlaneTraces(spec);
 			case 'scatter_2d': return buildScatter2DTraces(spec);
 			case 'histogram_2d': return buildHistogram2DTraces(spec);
+			case 'vector_2d': return buildVector2DTraces(spec);
 			case 'function_3d': return buildFunction3DTraces(spec);
 			case 'parametric_3d': return buildParametric3DTraces(spec);
 			case 'scatter_3d': return buildScatter3DTraces(spec);
@@ -547,10 +649,70 @@
 			};
 		}
 
+		// 2D layout with optional xRange/yRange
+		const xaxis: any = {
+			title: { text: spec.axis?.xLabel || 'x' },
+			showgrid: true,
+			gridcolor: gridColor,
+			tickfont: { color: textColor }
+		};
+		const yaxis: any = {
+			title: { text: spec.axis?.yLabel || 'y' },
+			showgrid: true,
+			gridcolor: gridColor,
+			tickfont: { color: textColor }
+		};
+		
+		// Apply xRange and yRange if provided
+		if (spec.axis?.xRange) {
+			xaxis.range = spec.axis.xRange;
+		}
+		if (spec.axis?.yRange) {
+			yaxis.range = spec.axis.yRange;
+		}
+		
+		// Equal aspect ratio for phase_plane
+		if (spec.type === 'phase_plane') {
+			yaxis.scaleanchor = 'x';
+			yaxis.scaleratio = 1;
+		}
+		
+		// Build annotations if provided
+		const annotations: any[] = [];
+		if (spec.annotations && Array.isArray(spec.annotations)) {
+			spec.annotations.forEach((ann: any) => {
+				if (ann.type === 'label' && ann.position && ann.text) {
+					const anchorMap: Record<string, { xanchor: string; yanchor: string }> = {
+						'top-left': { xanchor: 'left', yanchor: 'top' },
+						'top-right': { xanchor: 'right', yanchor: 'top' },
+						'bottom-left': { xanchor: 'left', yanchor: 'bottom' },
+						'bottom-right': { xanchor: 'right', yanchor: 'bottom' },
+						'center': { xanchor: 'center', yanchor: 'middle' }
+					};
+					const anchor = anchorMap[ann.style?.anchor || 'bottom-left'] || anchorMap['bottom-left'];
+					
+					annotations.push({
+						x: ann.position.x,
+						y: ann.position.y,
+						text: ann.text,
+						showarrow: false,
+						font: {
+							size: ann.style?.fontSize || 12,
+							color: ann.style?.color || textColor
+						},
+						xanchor: anchor.xanchor,
+						yanchor: anchor.yanchor,
+						opacity: ann.style?.opacity ?? 1
+					});
+				}
+			});
+		}
+		
 		return {
 			...baseLayout,
-			xaxis: { title: { text: spec.axis?.xLabel || 'x' }, showgrid: true, gridcolor: gridColor, tickfont: { color: textColor } },
-			yaxis: { title: { text: spec.axis?.yLabel || 'y' }, showgrid: true, gridcolor: gridColor, tickfont: { color: textColor } }
+			xaxis,
+			yaxis,
+			annotations: annotations.length > 0 ? annotations : undefined
 		};
 	}
 
