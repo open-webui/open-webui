@@ -380,9 +380,10 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role in {"user", "professor"} or (user.role == "admin" and not ENABLE_ADMIN_CHAT_ACCESS):
+    if user.role == "user" or (user.role in {"admin", "professor"} and not ENABLE_ADMIN_CHAT_ACCESS):
         chat = Chats.get_chat_by_share_id(share_id)
-    elif user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
+    elif user.role in {"admin", "professor"} and ENABLE_ADMIN_CHAT_ACCESS:
+        # Admin and Professor can access any chat directly
         chat = Chats.get_chat_by_id(share_id)
 
     if chat:

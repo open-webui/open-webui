@@ -34,12 +34,62 @@ class MessageTaggingDaemon:
         self.running = False
         self.task = None
         self.instance_id = getattr(app.state, "instance_id", "default")
+        # Progress tracking
+        self._progress = {
+            "is_running": False,
+            "status": "idle",  # idle, collecting, processing, consolidating, completed, error
+            "started_at": None,
+            "total_messages": 0,
+            "processed_messages": 0,
+            "current_batch": 0,
+            "total_batches": 0,
+            "last_error": None,
+        }
+
+    def get_progress(self) -> dict:
+        """Get current daemon progress."""
+        return {
+            **self._progress,
+            "progress_percent": (
+                round(self._progress["processed_messages"] / self._progress["total_messages"] * 100, 1)
+                if self._progress["total_messages"] > 0 else 0
+            )
+        }
+
+    def _reset_progress(self):
+        """Reset progress tracking."""
+        self._progress = {
+            "is_running": False,
+            "status": "idle",
+            "started_at": None,
+            "total_messages": 0,
+            "processed_messages": 0,
+            "current_batch": 0,
+            "total_batches": 0,
+            "last_error": None,
+        }
 
     async def start(self):
         """Start the daemon loop."""
         self.running = True
+        # Clear any stale locks from previous instance (e.g., after server restart)
+        self._cleanup_stale_lock()
         self.task = asyncio.create_task(self._run_loop())
         log.info("[MESSAGE TAGGING DAEMON] Started")
+
+    def _cleanup_stale_lock(self):
+        """Clear stale locks on startup (e.g., after server restart)."""
+        try:
+            config = TaggingDaemonConfigs.get_config()
+            if config and config.lock_acquired_at:
+                now = int(time.time())
+                lock_age = now - config.lock_acquired_at
+                # Clear lock if it's older than 2 hours (stale from crash/restart)
+                if lock_age > 7200:
+                    log.warning(f"[MESSAGE TAGGING DAEMON] Clearing stale lock (age: {lock_age}s)")
+                    TaggingDaemonConfigs.update_lock(None, None)
+        except Exception as e:
+            log.error(f"[MESSAGE TAGGING DAEMON] Error cleaning up stale lock: {e}")
 
     async def stop(self):
         """Stop the daemon."""
@@ -132,6 +182,12 @@ class MessageTaggingDaemon:
         log.info("[MESSAGE TAGGING DAEMON] Starting tagging run")
         start_time = int(time.time())
 
+        # Initialize progress
+        self._progress["is_running"] = True
+        self._progress["status"] = "collecting"
+        self._progress["started_at"] = start_time
+        self._progress["last_error"] = None
+
         try:
             # Get untagged messages from last N days
             cutoff_time = int(time.time()) - (config.lookback_days * 86400)
@@ -139,16 +195,31 @@ class MessageTaggingDaemon:
 
             log.info(f"[MESSAGE TAGGING DAEMON] Found {len(untagged_messages)} untagged messages")
 
-            if not untagged_messages:
+            # Filter to only user messages
+            user_messages = [m for m in untagged_messages if m.get("role") == "user"]
+
+            if not user_messages:
+                self._progress["status"] = "completed"
+                self._progress["is_running"] = False
                 TaggingDaemonConfigs.update_last_run(start_time, "success: no messages to tag")
                 return
 
+            # Update progress with totals
+            self._progress["total_messages"] = len(user_messages)
+            self._progress["total_batches"] = (len(user_messages) + config.batch_size - 1) // config.batch_size
+            self._progress["status"] = "processing"
+
             # Process in batches
             processed = 0
-            for i in range(0, len(untagged_messages), 1):
-                if untagged_messages[i].get("role") != "user":
-                    continue
-                batch = untagged_messages[i:i + config.batch_size]
+            batch_num = 0
+            for i in range(0, len(user_messages), config.batch_size):
+                batch = user_messages[i:i + config.batch_size]
+                batch_num += 1
+
+                # Update progress
+                self._progress["current_batch"] = batch_num
+                self._progress["processed_messages"] = processed
+
                 success = await self._process_batch(batch, config)
                 if success:
                     processed += len(batch)
@@ -156,10 +227,17 @@ class MessageTaggingDaemon:
                 # Check tag count and consolidate if needed
                 tag_count = MessageTagDefinitions.get_count()
                 if tag_count >= config.consolidation_threshold:
+                    self._progress["status"] = "consolidating"
                     await self._consolidate_tags(config)
+                    self._progress["status"] = "processing"
 
                 # Small delay between batches to avoid rate limits
                 await asyncio.sleep(2)
+
+            # Update final progress
+            self._progress["processed_messages"] = processed
+            self._progress["status"] = "completed"
+            self._progress["is_running"] = False
 
             # Update last run status
             TaggingDaemonConfigs.update_last_run(start_time, f"success: tagged {processed} messages")
@@ -167,6 +245,9 @@ class MessageTaggingDaemon:
 
         except Exception as e:
             log.error(f"[MESSAGE TAGGING DAEMON] Tagging run failed: {e}")
+            self._progress["status"] = "error"
+            self._progress["last_error"] = str(e)[:200]
+            self._progress["is_running"] = False
             TaggingDaemonConfigs.update_last_run(start_time, f"error: {str(e)[:100]}")
 
     async def _get_untagged_messages(self, cutoff_time: int) -> List[Dict]:
@@ -226,11 +307,18 @@ class MessageTaggingDaemon:
             existing_tags = MessageTagDefinitions.get_all_tag_names()
             prompt = self._build_tagging_prompt(batch, existing_tags, config)
 
+            # Get RAG store names from config (if any)
+            store_names = config.rag_store_names or []
+
+            # Use gemini-2.5-flash when RAG stores are configured (FileSearch requires 2.5+)
+            # Otherwise use gemini-2.0-flash for faster processing
+            model = "gemini-2.5-flash" if store_names else "gemini-2.0-flash"
+
             # Call Gemini
             result = service.query(
                 question=prompt,
-                store_names=[],
-                model="gemini-2.0-flash",
+                store_names=store_names,
+                model=model,
                 temperature=0.3,
                 system_instruction=self._get_system_instruction(config)
             )
@@ -506,7 +594,7 @@ IMPORTANT:
     async def run_manual(self):
         """Trigger a manual tagging run."""
         config = TaggingDaemonConfigs.get_config()
-        self._release_lock()
+        
         if config and self._acquire_lock(config):
             try:
                 await self._execute_tagging_run(config)
