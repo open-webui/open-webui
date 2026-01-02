@@ -210,125 +210,117 @@
 			{/if}
 
 			{#if edit === true}
-				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
-					{#if (editedFiles ?? []).length > 0}
-						<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
-							{#each editedFiles as file, fileIdx}
-								{#if file.type === 'image'}
-									<div class=" relative group">
-										<div class="relative flex items-center">
-											<Image
-												src={file.url}
-												alt="input"
-												imageClassName=" size-14 rounded-xl object-cover"
-											/>
-										</div>
-										<div class=" absolute -top-1 -right-1">
-											<button
-												class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
-												false)
-													? ''
-													: 'group-hover:visible invisible transition'}"
-												type="button"
-												on:click={() => {
-													editedFiles.splice(fileIdx, 1);
+				<div class="flex flex-col items-end w-full">
+					<div class="flex flex-col justify-center items-start p-4 px-7 gap-4 w-full max-w-[90%]
+						bg-primary-500/40
+						shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_10px_rgba(255,255,255,0.05),inset_2px_2px_16px_rgba(206,212,229,0.12)]
+						backdrop-blur-sm
+						rounded-2xl rounded-br mb-2">
+						{#if (editedFiles ?? []).length > 0}
+							<div class="flex items-center flex-wrap gap-2 w-full">
+								{#each editedFiles as file, fileIdx}
+									{#if file.type === 'image'}
+										<div class="relative group">
+											<div class="relative flex items-center">
+												<Image
+													src={file.url}
+													alt="input"
+													imageClassName="size-14 rounded-xl object-cover"
+												/>
+											</div>
+											<div class="absolute -top-1 -right-1">
+												<button
+													class="bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+													false)
+														? ''
+														: 'group-hover:visible invisible transition'}"
+													type="button"
+													on:click={() => {
+														editedFiles.splice(fileIdx, 1);
 
-													editedFiles = editedFiles;
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-4"
+														editedFiles = editedFiles;
+													}}
 												>
-													<path
-														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-													/>
-												</svg>
-											</button>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="size-4"
+													>
+														<path
+															d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+														/>
+													</svg>
+												</button>
+											</div>
 										</div>
-									</div>
-								{:else}
-									<FileItem
-										item={file}
-										name={file.name}
-										type={file.type}
-										size={file?.size}
-										loading={file.status === 'uploading'}
-										dismissible={true}
-										edit={true}
-										on:dismiss={async () => {
-											editedFiles.splice(fileIdx, 1);
+									{:else}
+										<FileItem
+											item={file}
+											name={file.name}
+											type={file.type}
+											size={file?.size}
+											loading={file.status === 'uploading'}
+											dismissible={true}
+											edit={true}
+											on:dismiss={async () => {
+												editedFiles.splice(fileIdx, 1);
 
-											editedFiles = editedFiles;
-										}}
-										on:click={() => {
-											console.log(file);
-										}}
-									/>
-								{/if}
-							{/each}
-						</div>
-					{/if}
+												editedFiles = editedFiles;
+											}}
+											on:click={() => {
+												console.log(file);
+											}}
+										/>
+									{/if}
+								{/each}
+							</div>
+						{/if}
 
-					<div class="max-h-96 overflow-auto">
-						<textarea
-							id="message-edit-{message.id}"
-							bind:this={messageEditTextAreaElement}
-							class=" bg-transparent outline-hidden w-full resize-none"
-							bind:value={editedContent}
-							on:input={(e) => {
-								e.target.style.height = '';
-								e.target.style.height = `${e.target.scrollHeight}px`;
-							}}
-							on:keydown={(e) => {
-								if (e.key === 'Escape') {
-									document.getElementById('close-edit-message-button')?.click();
-								}
-
-								const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
-								const isEnterPressed = e.key === 'Enter';
-
-								if (isCmdOrCtrlPressed && isEnterPressed) {
-									document.getElementById('confirm-edit-message-button')?.click();
-								}
-							}}
-						/>
-					</div>
-
-					<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
-						<div>
-							<button
-								id="save-edit-message-button"
-								class="px-3.5 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
-								on:click={() => {
-									editMessageConfirmHandler(false);
+						<div class="max-h-96 overflow-auto w-full">
+							<textarea
+								id="message-edit-{message.id}"
+								bind:this={messageEditTextAreaElement}
+								class="bg-transparent outline-hidden w-full resize-none text-sm text-white placeholder:text-white/50"
+								bind:value={editedContent}
+								on:input={(e) => {
+									e.target.style.height = '';
+									e.target.style.height = `${e.target.scrollHeight}px`;
 								}}
-							>
-								{$i18n.t('Save')}
-							</button>
+								on:keydown={(e) => {
+									if (e.key === 'Escape') {
+										document.getElementById('close-edit-message-button')?.click();
+									}
+
+									const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+									const isEnterPressed = e.key === 'Enter';
+
+									if (isCmdOrCtrlPressed && isEnterPressed) {
+										document.getElementById('confirm-edit-message-button')?.click();
+									}
+								}}
+							/>
 						</div>
 
-						<div class="flex space-x-1.5">
-							<button
-								id="close-edit-message-button"
-								class="px-3.5 py-1.5 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
-								on:click={() => {
-									cancelEditMessage();
-								}}
-							>
-								{$i18n.t('Cancel')}
-							</button>
-
+						<div class="flex justify-end items-center gap-2 w-full text-sm">
 							<button
 								id="confirm-edit-message-button"
-								class="px-3.5 py-1.5 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+								class="flex items-center py-1 px-4 gap-1 bg-white hover:bg-gray-100 text-gray-950 rounded-full transition"
 								on:click={() => {
 									editMessageConfirmHandler();
 								}}
 							>
 								{$i18n.t('Send')}
+							</button>
+
+							<button
+								id="close-edit-message-button"
+								class="flex items-center py-1 px-4 gap-1 border border-white text-white hover:bg-white/10 rounded-full transition"
+								on:click={() => {
+									cancelEditMessage();
+								}}
+							>
+								{$i18n.t('Cancel')}
 							</button>
 						</div>
 					</div>

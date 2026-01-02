@@ -474,6 +474,7 @@
 	const newChatHandler = async () => {
 		selectedChatId = null;
 		selectedFolder.set(null);
+		selectedTextbookSection.set(null);  // 새 채팅 시 챕터 선택 초기화
 
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
@@ -756,11 +757,11 @@
 			? `ml-[4.5rem] md:ml-0 `
 			: ' transition-all duration-300 '} shrink-0 text-gray-50 text-sm fixed top-0 {$mobile ? 'right-0' : 'left-0'} overflow-x-hidden
         "
-		transition:fly={{ duration: 250, x: $mobile ? 260 : -260 }}
+		transition:fly={{ duration: 250, x: $mobile ? 260 : -300 }}
 		data-state={$showSidebar}
 	>
 		<div
-			class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden scrollbar-hidden bg-gray-50 z-50 {$showSidebar
+			class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[300px] overflow-x-hidden scrollbar-none bg-gray-50 z-50 {$showSidebar
 				? ''
 				: 'invisible'}"
 		>
@@ -822,7 +823,7 @@
 			</div>
 
 			<div
-				class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-3 pb-3"
+				class="relative flex flex-col flex-1 overflow-y-auto scrollbar-none pt-3 pb-3"
 				on:scroll={(e) => {
 					if (e.target.scrollTop === 0) {
 						scrollTop = 0;
@@ -1025,14 +1026,24 @@
 					</Folder>
 				{/if} -->
 
+				<!-- Separator Line -->
+				<div class="px-5">
+					<div class="w-full h-0 border-t border-gray-200/20 dark:border-gray-600/30"></div>
+				</div>
+
 				<!-- Tab Navigation -->
-				<div class="px-4 mt-2 flex justify-center gap-2">
-					<!-- Textbook Tab -->
-					<Tooltip content="교재 정보" placement="bottom">
+				<div class="px-5 mt-5">
+					<div class="flex flex-row justify-center items-center w-full h-7
+						shadow-[inset_2px_2px_10px_rgba(255,255,255,0.05),inset_2px_2px_16px_rgba(206,212,229,0.12)]
+						drop-shadow-[4px_4px_20px_rgba(0,0,0,0.1)]
+						backdrop-blur-sm
+						rounded-full">
+						<!-- Textbook Tab -->
 						<button
-							class="p-2 rounded-lg transition {activeTab === 'textbook'
-								? 'bg-gray-700/70 text-white'
-								: 'text-gray-900 dark:text-gray-400 hover:bg-gray-800/30 hover:text-gray-200'}"
+							class="flex flex-row justify-center items-center py-2 px-3 gap-1 flex-1 h-9 transition
+								{activeTab === 'textbook'
+									? 'text-gray-950 dark:text-white'
+									: 'text-gray-500 dark:text-gray-600'}"
 							on:click={() => {
 								activeTab = 'textbook';
 							}}
@@ -1052,15 +1063,15 @@
 									d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"
 								/>
 							</svg>
+							<span class="text-body-4">교재 정보</span>
 						</button>
-					</Tooltip>
 
-					<!-- History Tab -->
-					<Tooltip content="히스토리" placement="bottom">
+						<!-- History Tab -->
 						<button
-							class="p-2 rounded-lg transition {activeTab === 'history'
-								? 'bg-gray-700/70 text-white'
-								: 'text-gray-900 dark:text-gray-400 hover:bg-gray-800/30 hover:text-gray-200'}"
+							class="flex flex-row justify-center items-center py-2 px-3 gap-1 flex-1 h-9 transition
+								{activeTab === 'history'
+									? 'text-gray-950 dark:text-white'
+									: 'text-gray-500 dark:text-gray-600'}"
 							on:click={() => {
 								activeTab = 'history';
 							}}
@@ -1092,68 +1103,9 @@
 									/>
 								</g>
 							</svg>
+							<span class="text-body-4">히스토리</span>
 						</button>
-					</Tooltip>
-
-					<!-- Online Knowledge Tab (Admin only) -->
-					{#if $user?.role === 'admin'}
-						<Tooltip content="온라인 지식기반" placement="bottom">
-							<a
-								href="/workspace/online-knowledge"
-								class="p-2 rounded-lg transition text-gray-900 dark:text-gray-400 hover:bg-gray-800/30 hover:text-gray-200"
-								on:click={() => {
-									if ($mobile) {
-										showSidebar.set(false);
-									}
-								}}
-								aria-label="온라인 지식기반"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="size-5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
-									/>
-								</svg>
-							</a>
-						</Tooltip>
-
-						<!-- Online Chapter Tab (Admin only) -->
-						<Tooltip content="온라인 챕터" placement="bottom">
-							<a
-								href="/workspace/online-chapter"
-								class="p-2 rounded-lg transition text-gray-900 dark:text-gray-400 hover:bg-gray-800/30 hover:text-gray-200"
-								on:click={() => {
-									if ($mobile) {
-										showSidebar.set(false);
-									}
-								}}
-								aria-label="온라인 챕터"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="size-5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-									/>
-								</svg>
-							</a>
-						</Tooltip>
-					{/if}
+					</div>
 				</div>
 
 				<!-- Tab Content -->
@@ -1162,170 +1114,109 @@
 					<TextbookInfo on:subsection-select={handleSubsectionSelect} on:section-clear={handleSectionClear} />
 				{:else}
 					<!-- History Section -->
-					<div class="px-2 mt-0.5">
-						<!-- History Toolbar -->
-						<div class="flex items-center justify-between py-2 px-2 rounded-xl">
-						<div class="flex items-center gap-2">
-							<div class="dark:text-gray-50 text-gray-900">
-								<svg
-									width="20"
-									height="20"
-									viewBox="0 0 20 20"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<mask
-										id="mask0_191_446"
-										style="mask-type:alpha"
-										maskUnits="userSpaceOnUse"
-										x="0"
-										y="0"
-										width="20"
-										height="20"
-									>
-										<rect width="20" height="20" fill="#D9D9D9" />
-									</mask>
-									<g mask="url(#mask0_191_446)">
-										<path
-											d="M5 15L3.27333 16.7267C3.03556 16.9644 2.76389 17.018 2.45833 16.8873C2.15278 16.7567 2 16.5235 2 16.1875V3.5C2 3.0875 2.14688 2.73438 2.44063 2.44063C2.73438 2.14688 3.0875 2 3.5 2H16.5C16.9125 2 17.2656 2.14688 17.5594 2.44063C17.8531 2.73438 18 3.0875 18 3.5V13.5C18 13.9125 17.8531 14.2656 17.5594 14.5594C17.2656 14.8531 16.9125 15 16.5 15H5ZM4.375 13.5H16.5V3.5H3.5V14.375L4.375 13.5ZM5.75 12H11.25C11.4625 12 11.6406 11.9285 11.7844 11.7856C11.9281 11.6427 12 11.4656 12 11.2544C12 11.0431 11.9281 10.8646 11.7844 10.7188C11.6406 10.5729 11.4625 10.5 11.25 10.5H5.75C5.5375 10.5 5.35938 10.5715 5.21563 10.7144C5.07188 10.8573 5 11.0344 5 11.2456C5 11.4569 5.07188 11.6354 5.21563 11.7812C5.35938 11.9271 5.5375 12 5.75 12ZM5.75 9.25H14.25C14.4625 9.25 14.6406 9.17854 14.7844 9.03563C14.9281 8.89271 15 8.71563 15 8.50438C15 8.29313 14.9281 8.11458 14.7844 7.96875C14.6406 7.82292 14.4625 7.75 14.25 7.75H5.75C5.5375 7.75 5.35938 7.82146 5.21563 7.96437C5.07188 8.10729 5 8.28437 5 8.49562C5 8.70687 5.07188 8.88542 5.21563 9.03125C5.35938 9.17708 5.5375 9.25 5.75 9.25ZM5.75 6.5H14.25C14.4625 6.5 14.6406 6.42854 14.7844 6.28563C14.9281 6.14271 15 5.96563 15 5.75438C15 5.54313 14.9281 5.36458 14.7844 5.21875C14.6406 5.07292 14.4625 5 14.25 5H5.75C5.5375 5 5.35938 5.07146 5.21563 5.21437C5.07188 5.35729 5 5.53437 5 5.74562C5 5.95687 5.07188 6.13542 5.21563 6.28125C5.35938 6.42708 5.5375 6.5 5.75 6.5Z"
-											fill="currentColor"
-										/>
-									</g>
-								</svg>
-							</div>
-							<div class="text-sm font-medium text-gray-900 dark:text-gray-50">히스토리</div>
-						</div>
-
-						<div class="flex items-center gap-1">
-							<!-- Bookmark Filter Button -->
-							<Tooltip content="북마크만 보기" placement="bottom">
-								<button
-									class="p-1.5 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition {showBookmarkedOnly
-										? 'text-blue-400'
-										: 'text-gray-900 dark:text-gray-400'}"
-									on:click={() => {
-										showBookmarkedOnly = !showBookmarkedOnly;
-									}}
-									aria-label="북마크만 보기"
-								>
-									{#if showBookmarkedOnly}
-										<BookmarkSolid className="size-4" />
-									{:else}
-										<Bookmark className="size-4" strokeWidth="1.5" />
-									{/if}
-								</button>
-							</Tooltip>
-
-							<!-- Search Button -->
-							<Tooltip content="검색" placement="bottom">
-								<button
-									class="p-1.5 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition {showHistorySearch
-										? 'text-blue-400'
-										: 'text-gray-900 dark:text-gray-400'}"
-									on:click={() => {
-										showHistorySearch = !showHistorySearch;
-										if (!showHistorySearch) {
-											historySearchQuery = '';
-										}
-									}}
-									aria-label="검색"
-								>
-									<Search className="size-4" strokeWidth="1.5" />
-								</button>
-							</Tooltip>
-
-							<!-- Toggle Expand/Collapse Button -->
-							<!-- <Tooltip content={historyExpanded ? '접기' : '열기'} placement="bottom">
-								<button
-									class="p-1.5 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-800/50 transition text-gray-400"
-									on:click={() => {
-										historyExpanded = !historyExpanded;
-									}}
-									aria-label={historyExpanded ? '접기' : '열기'}
-								>
-									{#if historyExpanded}
-										<ChevronUp className="size-4" strokeWidth="1.5" />
-									{:else}
-										<ChevronDown className="size-4" strokeWidth="1.5" />
-									{/if}
-								</button>
-							</Tooltip> -->
-						</div>
-					</div>
-
-					<!-- Search Input -->
-					{#if showHistorySearch}
-						<div class="mt-2 px-2" transition:slide={{ duration: 200 }}>
+					<div class="px-5 mt-5">
+						<!-- Search Input - Always Visible with Glass Effect -->
+						<div class="relative">
 							<input
 								type="text"
 								bind:value={historySearchQuery}
 								placeholder="채팅 검색"
-								class="w-full px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-500 border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+								class="w-full px-4 py-3 rounded-full
+									bg-gray-100/50 dark:bg-gray-900/20
+									shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_10px_rgba(255,255,255,0.05),inset_2px_2px_16px_rgba(206,212,229,0.12)]
+									backdrop-blur-sm
+									text-body-4 text-gray-950 dark:text-white
+									placeholder-gray-500 dark:placeholder-gray-500
+									border-none focus:outline-none focus:ring-1 focus:ring-primary-500/50"
 							/>
+							<div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+								<Search className="size-4" strokeWidth="1.5" />
+							</div>
 						</div>
-					{/if}
 
-					<!-- Chat List -->
-					{#if historyExpanded}
-						<div class="mt-2 flex flex-col" transition:slide={{ duration: 200 }}>
-							{#if filteredChats && filteredChats.length > 0}
-								{#each filteredChats as chat, idx (`chat-${chat?.id ?? idx}`)}
-									<ChatItem
-										className=""
-										id={chat.id}
-										title={chat.title}
-										{shiftKey}
-										bookmarked={chatBookmarks[chat.id] || false}
-										selected={selectedChatId === chat.id}
-										on:select={() => {
-											selectedChatId = chat.id;
-										}}
-										on:unselect={() => {
-											selectedChatId = null;
-										}}
-										on:bookmark-toggle={() => {
-											toggleChatBookmark(chat.id);
-										}}
-										on:change={async () => {
-											initChatList();
-										}}
-										on:tag={(e) => {
-											const { type, name } = e.detail;
-											tagEventHandler(type, name, chat.id);
-										}}
-									/>
-								{/each}
-
-								{#if $scrollPaginationEnabled && !allChatsLoaded}
-									<Loader
-										on:visible={(e) => {
-											if (!chatListLoading) {
-												loadMoreChats();
-											}
-										}}
-									>
-										<div
-											class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
-										>
-											<Spinner className=" size-4" />
-											<div class=" ">{$i18n.t('Loading...')}</div>
-										</div>
-									</Loader>
+						<!-- Bookmark Filter Row -->
+						<div class="flex items-center justify-end mt-3">
+							<button
+								class="flex items-center gap-1.5 px-2 py-1 rounded-lg
+									hover:bg-gray-200/30 dark:hover:bg-gray-800/30 transition
+									{showBookmarkedOnly
+										? 'text-primary-500'
+										: 'text-gray-500 dark:text-gray-500'}"
+								on:click={() => {
+									showBookmarkedOnly = !showBookmarkedOnly;
+								}}
+								aria-label="북마크만 보기"
+							>
+								<span class="text-caption">북마크 필터</span>
+								{#if showBookmarkedOnly}
+									<BookmarkSolid className="size-4" />
+								{:else}
+									<Bookmark className="size-4" strokeWidth="1.5" />
 								{/if}
-							{:else if historySearchQuery || showBookmarkedOnly}
-								<div class="px-2 py-4 text-center text-sm text-gray-500 dark:text-gray-500">
-									검색 결과가 없습니다
-								</div>
-							{:else}
-								<div
-									class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
-								>
-									<Spinner className=" size-4" />
-									<div class=" ">{$i18n.t('Loading...')}</div>
-								</div>
-							{/if}
+							</button>
 						</div>
-					{/if}
+
+						<!-- Chat List -->
+						{#if historyExpanded}
+							<div class="mt-3 flex flex-col gap-1" transition:slide={{ duration: 200 }}>
+								{#if filteredChats && filteredChats.length > 0}
+									{#each filteredChats as chat, idx (`chat-${chat?.id ?? idx}`)}
+										<ChatItem
+											className=""
+											id={chat.id}
+											title={chat.title}
+											{shiftKey}
+											bookmarked={chatBookmarks[chat.id] || false}
+											selected={selectedChatId === chat.id}
+											on:select={() => {
+												selectedChatId = chat.id;
+											}}
+											on:unselect={() => {
+												selectedChatId = null;
+											}}
+											on:bookmark-toggle={() => {
+												toggleChatBookmark(chat.id);
+											}}
+											on:change={async () => {
+												initChatList();
+											}}
+											on:tag={(e) => {
+												const { type, name } = e.detail;
+												tagEventHandler(type, name, chat.id);
+											}}
+										/>
+									{/each}
+
+									{#if $scrollPaginationEnabled && !allChatsLoaded}
+										<Loader
+											on:visible={(e) => {
+												if (!chatListLoading) {
+													loadMoreChats();
+												}
+											}}
+										>
+											<div
+												class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+											>
+												<Spinner className=" size-4" />
+												<div class=" ">{$i18n.t('Loading...')}</div>
+											</div>
+										</Loader>
+									{/if}
+								{:else if historySearchQuery || showBookmarkedOnly}
+									<div class="py-4 text-center text-body-4 text-gray-500 dark:text-gray-500">
+										검색 결과가 없습니다
+									</div>
+								{:else}
+									<div
+										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+									>
+										<Spinner className=" size-4" />
+										<div class=" ">{$i18n.t('Loading...')}</div>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</div>
@@ -1363,9 +1254,69 @@
 							</div>
 						</UserMenu>
 					{/if}
-
-					
 				</div>
+
+				<!-- Admin Buttons (Online Knowledge, Online Chapter) -->
+				{#if $user?.role === 'admin'}
+					<div class="flex items-center gap-1">
+						<Tooltip content="온라인 지식기반" placement="bottom">
+							<a
+								href="/workspace/online-knowledge"
+								class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition text-gray-600 dark:text-gray-400"
+								on:click={() => {
+									if ($mobile) {
+										showSidebar.set(false);
+									}
+								}}
+								aria-label="온라인 지식기반"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="size-5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+									/>
+								</svg>
+							</a>
+						</Tooltip>
+
+						<Tooltip content="온라인 챕터" placement="bottom">
+							<a
+								href="/workspace/online-chapter"
+								class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition text-gray-600 dark:text-gray-400"
+								on:click={() => {
+									if ($mobile) {
+										showSidebar.set(false);
+									}
+								}}
+								aria-label="온라인 챕터"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="size-5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+									/>
+								</svg>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
+
 				<Tooltip
 					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					placement="bottom"

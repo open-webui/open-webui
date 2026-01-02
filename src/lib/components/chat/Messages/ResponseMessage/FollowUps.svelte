@@ -62,21 +62,25 @@
 </script>
 
 <div class="mt-4">
-	<div class="text-sm font-medium">
-		{$i18n.t('Follow up')}
-	</div>
-
-	<div class="flex flex-col text-left gap-1 mt-1.5">
+	<div class="flex flex-col items-end gap-2">
 		{#each followUps as followUp, idx (idx)}
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<Tooltip content={followUp} placement="top-start" className="line-clamp-1">
-				<div
-					class=" py-1.5 bg-transparent text-left text-sm flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer"
+			<Tooltip content={followUp} placement="top-end">
+				<button
+					class="max-w-[90%] px-4 py-2 rounded-3xl rounded-br-lg text-sm text-left
+						border border-gray-300 dark:border-gray-600
+						bg-gray-50/50 dark:bg-gray-800/30
+						text-gray-500 dark:text-gray-400
+						hover:border-primary-500 dark:hover:border-primary-400
+						hover:bg-primary-50 dark:hover:bg-primary-900/20
+						hover:text-gray-900 dark:hover:text-gray-100
+						active:scale-[0.98]
+						transition-all duration-200 cursor-pointer"
 					on:click={() => onClick(followUp)}
 					aria-label={followUp}
 				>
-					<div class="line-clamp-1">
+					<span class="line-clamp-2">
 						{#each parseLatex(followUp) as segment}
 							{#if segment.type === 'latex'}
 								<KatexRenderer content={segment.content} displayMode={segment.displayMode} />
@@ -84,13 +88,9 @@
 								{segment.content}
 							{/if}
 						{/each}
-					</div>
-				</div>
+					</span>
+				</button>
 			</Tooltip>
-
-			{#if idx < followUps.length - 1}
-				<hr class="border-gray-50 dark:border-gray-850" />
-			{/if}
 		{/each}
 	</div>
 </div>

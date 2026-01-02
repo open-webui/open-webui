@@ -187,20 +187,25 @@
 	let lastKnownChapterId: string | null = null;  // 마지막으로 알려진 chat.chat.chapter_id (백엔드 값 추적)
 	let isCreatingNewChat = false;  // 새 채팅 생성 중 플래그
 
-	// Update toolbar data when chat ID changes (not on every chat object update)
-	// 새 채팅 생성 중에는 스킵 (사용자 선택값 유지)
+	// 채팅방 로드 시 채팅방에 저장된 정보를 우선 사용 (새 채팅 생성 중에는 스킵)
 	$: if (chat && !$temporaryChatEnabled && chat.id !== lastLoadedChatId && !isCreatingNewChat) {
 		lastLoadedChatId = chat.id;
 		lastKnownChapterId = chat.chat?.chapter_id || null;
-		// 우선순위: 1) selectedTextbookSection 스토어, 2) chat 데이터, 3) 기본값
-		if ($selectedTextbookSection) {
+		// 우선순위: 1) chat 데이터 (채팅방에 기록된 정보), 2) selectedTextbookSection 스토어, 3) 기본값
+		if (chat.chapter_id) {
+			// 채팅방에 챕터 정보가 있으면 해당 정보 사용
+			toolbarChapterId = chat.chapter_id;
+			toolbarTitle = chat.chat?.chapter || '';
+			toolbarSubtitle = chat.chat?.subtitle || '';
+		} else if ($selectedTextbookSection) {
+			// 채팅방에 챕터 정보가 없으면 현재 선택된 섹션 사용
 			toolbarChapterId = $selectedTextbookSection.id;
 			toolbarTitle = $selectedTextbookSection.title;
 			toolbarSubtitle = $selectedTextbookSection.subtitle;
 		} else {
-			// chapter_id는 chat 최상위 레벨에 있음
-			toolbarChapterId = chat.chapter_id || '';
-			toolbarTitle = chat.chat?.title || '';
+			// 둘 다 없으면 빈 값
+			toolbarChapterId = '';
+			toolbarTitle = '';
 			toolbarSubtitle = '';
 		}
 		// proficiency_level과 response_style은 chat 최상위 레벨에 있음 (채팅 로드 시에만 설정)
@@ -1140,6 +1145,18 @@
 		});
 
 		if (chat) {
+			// 채팅방에 기록된 챕터 정보로 selectedTextbookSection 스토어 업데이트
+			if (chat.chapter_id) {
+				selectedTextbookSection.set({
+					id: chat.chapter_id,
+					title: chat.chat?.chapter || '',
+					subtitle: chat.chat?.subtitle || ''
+				});
+			} else {
+				// chapter_id가 null이면 스토어 초기화
+				selectedTextbookSection.set(null);
+			}
+
 			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
 				return [];
 			});
@@ -1166,6 +1183,14 @@
 						: convertMessagesToHistory(chatContent.messages);
 
 				chatTitle.set(chatContent.title);
+
+				// 사이드바 채팅 목록에서 해당 채팅의 제목 업데이트
+				chats.update((chatList) => {
+					if (!chatList) return chatList;
+					return chatList.map((c) =>
+						c.id === $chatId ? { ...c, title: chatContent.title } : c
+					);
+				});
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
@@ -2580,7 +2605,7 @@
 
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-		? '  md:max-w-[calc(100%-260px)]'
+		? '  md:max-w-[calc(100%-300px)]'
 		: ' '} w-full max-w-full flex flex-col"
 	id="chat-container"
 >
