@@ -4,6 +4,7 @@
 
 	import { WEBUI_NAME, mobile, showSidebar, user } from '$lib/stores';
 	import { page } from '$app/stores';
+	import { SIDEBAR_WIDTH } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
@@ -28,9 +29,8 @@
 
 {#if loaded}
 	<div
-		class=" flex flex-col h-screen max-h-[100dvh] flex-1 transition-width duration-200 ease-in-out {$showSidebar
-			? 'md:max-w-[calc(100%-300px)]'
-			: ' md:max-w-[calc(100%-49px)]'}  w-full max-w-full text-gray-900 dark:text-white"
+		class=" flex flex-col h-screen max-h-[100dvh] flex-1 transition-width duration-200 ease-in-out w-full max-w-full text-gray-900 dark:text-white"
+		style={$showSidebar ? `max-width: calc(100% - ${SIDEBAR_WIDTH}px)` : 'max-width: calc(100% - 49px)'}
 	>
 		<nav class="   px-2.5 pt-1.5 backdrop-blur-xl drag-region">
 			<div class=" flex items-center gap-1">

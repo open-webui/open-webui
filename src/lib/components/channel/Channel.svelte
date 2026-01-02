@@ -6,6 +6,7 @@
 	import { goto } from '$app/navigation';
 
 	import { chatId, showSidebar, socket, user } from '$lib/stores';
+	import { SIDEBAR_WIDTH } from '$lib/constants';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
 	import Messages from './Messages.svelte';
@@ -206,9 +207,8 @@
 </svelte:head>
 
 <div
-	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-		? 'md:max-w-[calc(100%-260px)]'
-		: ''} w-full max-w-full flex flex-col"
+	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out w-full max-w-full flex flex-col"
+	style={$showSidebar ? `max-width: calc(100% - ${SIDEBAR_WIDTH}px)` : ''}
 	id="channel-container"
 >
 	<PaneGroup direction="horizontal" class="w-full h-full">

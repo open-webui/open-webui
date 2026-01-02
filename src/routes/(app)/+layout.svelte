@@ -18,7 +18,7 @@
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
 
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { WEBUI_VERSION, SIDEBAR_WIDTH } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
 
 	import {
@@ -388,9 +388,8 @@
 					<slot />
 				{:else}
 					<div
-						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
-							? '  md:max-w-[calc(100%-260px)]'
-							: ' '}"
+						class="w-full flex-1 h-full flex items-center justify-center"
+						style={$showSidebar ? `max-width: calc(100% - ${SIDEBAR_WIDTH}px)` : ''}
 					>
 						<Spinner className="size-5" />
 					</div>

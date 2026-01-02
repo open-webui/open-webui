@@ -453,6 +453,13 @@
 		</a>
 	{/if}
 
+	<!-- Gradient overlay for smooth title fade -->
+	<div
+		class="absolute right-0 top-0 bottom-0 w-20 pointer-events-none {id === $chatId || confirmEdit || selected
+			? 'bg-gradient-to-r from-transparent via-[#E8EAF3]/50 to-[#E8EAF3] dark:via-gray-950/50 dark:to-gray-950'
+			: 'bg-gradient-to-r from-transparent via-[#E8EAF3]/50 to-[#E8EAF3] dark:via-gray-950/50 dark:to-gray-950 group-hover:via-[#E8EAF3]/70 group-hover:to-[#E8EAF3] dark:group-hover:via-gray-950/70 dark:group-hover:to-gray-950'}"
+	></div>
+
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div class="flex flex-row absolute right-1 top-0 bottom-0 items-center pr-1 pl-5">
 		<div

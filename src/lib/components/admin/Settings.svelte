@@ -24,6 +24,7 @@
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
 	import Personas from './Settings/Personas.svelte';
+	import MessageTags from './Settings/MessageTags.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,6 +40,7 @@
 			'models',
 			'evaluations',
 			'personas',
+			'message-tags',
 			'tools',
 			'documents',
 			'web',
@@ -203,6 +205,29 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Personas')}</div>
+		</button>
+
+		<button
+			id="message-tags"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'message-tags'
+				? ''
+				: ' text-gray-700 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				goto('/admin/settings/message-tags');
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="currentColor"
+					class="size-4"
+				>
+					<path fill-rule="evenodd" d="M5.25 2.25a3 3 0 0 0-3 3v4.318a3 3 0 0 0 .879 2.121l9.58 9.581c.92.92 2.39 1.186 3.548.428a18.849 18.849 0 0 0 5.441-5.44c.758-1.16.492-2.629-.428-3.548l-9.58-9.581a3 3 0 0 0-2.122-.879H5.25ZM6.375 7.5a1.125 1.125 0 1 0 0-2.25 1.125 1.125 0 0 0 0 2.25Z" clip-rule="evenodd" />
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Message Tags')}</div>
 		</button>
 
 		<button
@@ -482,6 +507,15 @@
 			<Evaluations />
 		{:else if selectedTab === 'personas'}
 			<Personas />
+		{:else if selectedTab === 'message-tags'}
+			<MessageTags
+				saveHandler={async () => {
+					toast.success($i18n.t('Settings saved successfully!'));
+
+					await tick();
+					await config.set(await getBackendConfig());
+				}}
+			/>
 		{:else if selectedTab === 'tools'}
 			<Tools />
 		{:else if selectedTab === 'documents'}

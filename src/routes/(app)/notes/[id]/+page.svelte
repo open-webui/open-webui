@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { showSidebar } from '$lib/stores';
+	import { SIDEBAR_WIDTH } from '$lib/constants';
 
 	import dayjs from '$lib/dayjs';
 	import { createNoteHandler } from '$lib/components/notes/utils';
@@ -20,7 +21,8 @@
 {#if loaded}
 	<div
 		id="note-container"
-		class="w-full h-full {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}"
+		class="w-full h-full"
+		style={$showSidebar ? `max-width: calc(100% - ${SIDEBAR_WIDTH}px)` : ''}
 	>
 		<NoteEditor id={$page.params.id} />
 	</div>

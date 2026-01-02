@@ -82,11 +82,16 @@
 	};
 
 	const selectSubsection = (subsection) => {
-		dispatch('subsection-select', {
-			id: subsection.id,
-			title: subsection.title,
-			subtitle: subsection.subtitle
-		});
+		// Toggle: if already selected, deselect it
+		if ($selectedTextbookSection?.id === subsection.id) {
+			dispatch('section-clear');
+		} else {
+			dispatch('subsection-select', {
+				id: subsection.id,
+				title: subsection.title,
+				subtitle: subsection.subtitle
+			});
+		}
 	};
 
 	const clearSection = () => {
