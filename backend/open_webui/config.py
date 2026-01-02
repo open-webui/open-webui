@@ -986,6 +986,12 @@ OLLAMA_API_BASE_URL = os.environ.get(
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
+DMR_BASE_URL = os.environ.get("DMR_BASE_URL", "")
+
+# Use DMR_BASE_URL as fallback if OLLAMA_BASE_URL is not set or is the default "/ollama"
+if (not OLLAMA_BASE_URL or OLLAMA_BASE_URL == "/ollama") and DMR_BASE_URL:
+    OLLAMA_BASE_URL = DMR_BASE_URL
+
 if OLLAMA_BASE_URL:
     # Remove trailing slash
     OLLAMA_BASE_URL = (
@@ -2954,7 +2960,7 @@ RAG_AZURE_OPENAI_API_VERSION = PersistentConfig(
 RAG_OLLAMA_BASE_URL = PersistentConfig(
     "RAG_OLLAMA_BASE_URL",
     "rag.ollama.url",
-    os.getenv("RAG_OLLAMA_BASE_URL", OLLAMA_BASE_URL),
+    os.getenv("RAG_OLLAMA_BASE_URL", os.getenv("RAG_DMR_BASE_URL", OLLAMA_BASE_URL)),
 )
 
 RAG_OLLAMA_API_KEY = PersistentConfig(
