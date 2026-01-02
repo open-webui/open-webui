@@ -14,6 +14,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	import { getQuestionsForCharacteristics, loadPersonalityDataFromJSON, generateScenariosFromJSON } from '$lib/data/personalityTraits';
 	import { generateScenariosFromPersonalityData } from '$lib/data/personalityQuestions';
 	import { getRandomScenarios, type QAPair } from '$lib/data/scenarioBank';
+	import { getRandomAttentionCheck, type AttentionCheckQAPair } from '$lib/data/attentionCheckBank';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
@@ -99,7 +100,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	
 	// Disguised attention check marker/suffix
 	const ATTENTION_CHECK_MARKER = "<!--ATTN-CHECK-->";
-	const ATTENTION_CHECK_SUFFIX = "\n\nPlease moderate this question. Follow these steps: 1) Step 1: Click \"Continue\" (you can skip highlighting). 2) Step 2: In the \"I feel...\" field, enter \"test\" and in the \"because...\" field, enter \"test\", then click \"Continue\". 3) Step 3: Choose \"Moderate\" (not \"Accept\"). 4) Then select 'I read the instructions' from the \"Attention Check\" dropdown before generating a moderated version. " + ATTENTION_CHECK_MARKER;
+	const ATTENTION_CHECK_SUFFIX = "\n\nPlease moderate this question. Follow these steps:\n1) Step 1: Highlight anything in the response, then click \"Continue\".\n2) Step 2: In the \"Explain why this content concerns you\" field, enter \"attention check\", then click \"Continue\".\n3) Step 3: Select 'I read the instructions' from the \"Attention Check\" dropdown under \"Step 3: Moderate\". " + ATTENTION_CHECK_MARKER;
 	
 	// Custom scenario constant - always appears last
 	const CUSTOM_SCENARIO_PROMPT = "[Create Your Own Scenario]";
@@ -444,10 +445,27 @@ import { finalizeModeration } from '$lib/apis/workflow';
         if (inFlightFetchId === fetchId) inFlightFetchId = null;
     }
 
-	function buildScenarioList(basePairs: Array<[string, string]>): Array<[string, string]> {
+	async function buildScenarioList(basePairs: Array<[string, string]>): Promise<Array<[string, string]>> {
 		let list: Array<[string, string]> = basePairs.slice();
-		// Apply disguised attention check by appending instruction to one existing response
-		list = applyDisguisedAttentionCheck(list);
+		
+		// Load one attention check question from the attention check bank
+		try {
+			const attentionCheck = await getRandomAttentionCheck();
+			if (attentionCheck) {
+				// Apply instruction suffix to the attention check question
+				const attentionCheckResponse = attentionCheck.response + ATTENTION_CHECK_SUFFIX;
+				const attentionCheckPair: [string, string] = [attentionCheck.question, attentionCheckResponse];
+				
+				// Shuffle attention check into the list (not at index 0, not at last position)
+				list = shuffleAttentionCheckIntoList(list, attentionCheckPair);
+			} else {
+				console.warn('⚠️ No attention check question available, proceeding without attention check');
+			}
+		} catch (error) {
+			console.error('Error loading attention check:', error);
+			// Continue without attention check if loading fails
+		}
+		
 		// Ensure custom scenario is last
         const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
         if (!hasCustom) {
@@ -460,21 +478,44 @@ import { finalizeModeration } from '$lib/apis/workflow';
         return list;
     }
 
-	function applyDisguisedAttentionCheck(list: Array<[string, string]>): Array<[string, string]> {
-		if (!Array.isArray(list) || list.length === 0) return list;
-		// Skip if already applied
-		if (list.some(([, res]) => (res || '').includes(ATTENTION_CHECK_MARKER))) return list;
-		// Candidate indices exclude custom scenario
-		const candidates = list
-			.map((pair, idx) => ({ idx, isCustom: pair[0] === CUSTOM_SCENARIO_PROMPT }))
-			.filter((c) => !c.isCustom)
-			.map((c) => c.idx);
-		if (candidates.length === 0) return list;
-		const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-		const [q, r] = list[chosen];
-		const newResponse = (r || '') + ATTENTION_CHECK_SUFFIX;
-		const updated = list.slice();
-		updated[chosen] = [q, newResponse];
+	/**
+	 * Shuffles an attention check question into the scenario list.
+	 * The attention check will NOT be placed at index 0 (first scenario) or at the last position.
+	 * 
+	 * @param list - The base scenario list
+	 * @param attentionCheckPair - The attention check question/response pair with instructions already appended
+	 * @returns The list with attention check shuffled in
+	 */
+	function shuffleAttentionCheckIntoList(list: Array<[string, string]>, attentionCheckPair: [string, string]): Array<[string, string]> {
+		if (!Array.isArray(list) || list.length === 0) {
+			// If list is empty, just add the attention check
+			return [attentionCheckPair];
+		}
+		
+		// Skip if attention check already exists in list
+		if (list.some(([, res]) => (res || '').includes(ATTENTION_CHECK_MARKER))) {
+			return list;
+		}
+		
+		// Valid positions: 1 through list.length (not 0, not last)
+		// After insertion, last position will be reserved for custom scenario
+		const validPositions = [];
+		for (let i = 1; i <= list.length; i++) {
+			validPositions.push(i);
+		}
+		
+		if (validPositions.length === 0) {
+			// If no valid positions (shouldn't happen), just append
+			return [...list, attentionCheckPair];
+		}
+		
+		// Randomly select a position
+		const randomPosition = validPositions[Math.floor(Math.random() * validPositions.length)];
+		
+		// Insert at the selected position
+		const updated = [...list];
+		updated.splice(randomPosition, 0, attentionCheckPair);
+		
 		return updated;
 	}
 
@@ -500,7 +541,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
         return null;
     }
 
-    function ensureScenarioInvariants(childId: string | number, session: number) {
+    async function ensureScenarioInvariants(childId: string | number, session: number) {
         const restored = tryRestoreScenarioPackage(childId, session);
         if (!restored) return null;
         const list = restored.list as Array<[string, string]>;
@@ -520,7 +561,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
             return null;
         }
         
-        const rebuilt = buildScenarioList(basePairs);
+        const rebuilt = await buildScenarioList(basePairs);
         // Ensure rebuilt list is not empty (should have at least custom scenario)
         if (rebuilt.length === 0) {
             console.log('ensureScenarioInvariants: Rebuilt list is empty, returning null to trigger generation');
@@ -731,6 +772,8 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
 		attentionCheckSelected = false;
+		attentionCheckPassed = false;
+		attentionCheckProcessing = false;
 		markedNotApplicable = false;
 		// Reset unified initial decision flow state
 		step1Completed = false;
@@ -895,8 +938,8 @@ function clearModerationLocalKeys() {
 			// Convert QAPair[] to [string, string][] format
 			const basePairs: Array<[string, string]> = randomScenarios.map(qa => [qa.question, qa.response]);
 			
-			// Build final list (applies attention check and adds custom scenario)
-			scenarioList = buildScenarioList(basePairs);
+			// Build final list (loads attention check, shuffles it in, and adds custom scenario)
+			scenarioList = await buildScenarioList(basePairs);
 			
 			// Persist the scenario package
 			if (scenarioList.length > 0) {
@@ -1029,13 +1072,23 @@ function clearModerationLocalKeys() {
 	// Check if a scenario is completed (passed initial decision stage)
 	function isScenarioCompleted(index: number): boolean {
 		const state = scenarioStates.get(index);
+		const isAttentionCheck = (scenarioList[index]?.[1] || '').includes(ATTENTION_CHECK_MARKER);
+		
 		if (state) {
+			// Check if this is an attention check scenario and if it's been passed
+			if (isAttentionCheck && state.attentionCheckSelected && state.attentionCheckPassed) {
+				return true;
+			}
 			// Completed if: marked not applicable or confirmed a moderated version
 			const completed = state.markedNotApplicable || (state.confirmedVersionIndex !== null && state.confirmedVersionIndex >= 0);
 			return completed;
 		}
 		// Check current scenario
 		if (index === selectedScenarioIndex) {
+			// Check if this is an attention check scenario and if it's been passed
+			if (isAttentionCheck && attentionCheckSelected && attentionCheckPassed) {
+				return true;
+			}
 			// For current scenario, check if they've made a decision
 			// Scenario is completed if: marked as not applicable OR a version has been confirmed
 			const completed = markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
@@ -1043,6 +1096,9 @@ function clearModerationLocalKeys() {
 				index,
 				markedNotApplicable,
 				confirmedVersionIndex,
+				isAttentionCheck,
+				attentionCheckSelected,
+				attentionCheckPassed,
 				completed
 			});
 			return completed;
@@ -1070,6 +1126,7 @@ function clearModerationLocalKeys() {
 		showOriginal1: boolean;
 		showComparisonView: boolean;
 		attentionCheckSelected: boolean;
+		attentionCheckPassed: boolean;
 		markedNotApplicable: boolean;
 		customPrompt?: string; // Store actual custom prompt text for custom scenarios
 		// Unified initial decision flow state (3-step flow)
@@ -1110,6 +1167,8 @@ function clearModerationLocalKeys() {
 	let customInstructionInput: string = '';
 	let customInstructions: Array<{id: string, text: string}> = [];
 	let attentionCheckSelected: boolean = false;
+	let attentionCheckPassed: boolean = false;
+	let attentionCheckProcessing: boolean = false;
 	
 	// Version management state
 	let versions: ModerationVersion[] = [];
@@ -1117,10 +1176,19 @@ function clearModerationLocalKeys() {
 	let confirmedVersionIndex: number | null = null;
 	
 	// Reactive computation for current scenario completion
-	// Scenario is completed if: marked as not applicable OR a version has been confirmed
+	// Scenario is completed if: marked as not applicable OR a version has been confirmed OR attention check passed
 	$: currentScenarioCompleted = (() => {
-		const completed = markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
-		console.log('Reactive: currentScenarioCompleted =', completed, { markedNotApplicable, confirmedVersionIndex });
+		const isAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(ATTENTION_CHECK_MARKER);
+		const completed = isAttentionCheck
+			? (attentionCheckSelected && attentionCheckPassed)
+			: (markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0));
+		console.log('Reactive: currentScenarioCompleted =', completed, { 
+			isAttentionCheck, 
+			attentionCheckSelected, 
+			attentionCheckPassed,
+			markedNotApplicable, 
+			confirmedVersionIndex 
+		});
 		return completed;
 	})();
 
@@ -1139,7 +1207,10 @@ function clearModerationLocalKeys() {
 		});
 		
 		// Add current scenario if it's completed but not yet in scenarioStates
-		const currentCompleted = markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0);
+		const isCurrentAttentionCheck = (scenarioList[selectedScenarioIndex]?.[1] || '').includes(ATTENTION_CHECK_MARKER);
+		const currentCompleted = isCurrentAttentionCheck 
+			? (attentionCheckSelected && attentionCheckPassed)
+			: (markedNotApplicable || (confirmedVersionIndex !== null && confirmedVersionIndex >= 0));
 		const currentNotInMap = !scenarioStates.has(selectedScenarioIndex);
 		const completedCount = completedInMap + (currentCompleted && currentNotInMap ? 1 : 0);
 		
@@ -1310,9 +1381,9 @@ let currentRequestId: number = 0;
 	 * - This allows analytics to track what users highlighted even for skipped scenarios
 	 */
 	function handleTextSelection(event: MouseEvent) {
-		// Don't allow highlighting when loading or scenario is skipped
-		// This prevents saving to `selection` table during state restoration or after skip
-		if (isLoadingScenario || markedNotApplicable) return;
+		// Only allow highlighting when explicitly enabled (step 1, not loading, not skipped)
+		// This prevents saving to `selection` table during state restoration, after skip, or in steps 2-3
+		if (!isHighlightingEnabled) return;
 		const container = (event.currentTarget as HTMLElement) || responseContainer1;
 		if (!container) return;
 		
@@ -1543,6 +1614,7 @@ let currentRequestId: number = 0;
 			showOriginal1,
 			showComparisonView,
 			attentionCheckSelected,
+			attentionCheckPassed,
 			markedNotApplicable,
 			customPrompt: isCustomScenario && customScenarioGenerated ? customScenarioPrompt : existingState?.customPrompt,
 			// Unified initial decision flow state (3-step flow)
@@ -1917,6 +1989,7 @@ let currentRequestId: number = 0;
 			showOriginal1 = savedState.showOriginal1;
 			showComparisonView = savedState.showComparisonView || false;
 			attentionCheckSelected = savedState.attentionCheckSelected || false;
+			attentionCheckPassed = savedState.attentionCheckPassed || false;
 		};
 		
 		// Restore from localStorage using helper function
@@ -2086,6 +2159,8 @@ function cancelReset() {}
 		showComparisonView = false;
 		// showOriginal1 and moderationPanelVisible are now derived
 		attentionCheckSelected = false;
+		attentionCheckPassed = false;
+		attentionCheckProcessing = false;
 		markedNotApplicable = false;
 		selectionButtonsVisible1 = false;
 		// Reset unified initial decision flow state
@@ -2259,13 +2334,17 @@ function cancelReset() {}
 			// If deselecting, just toggle
 			if (attentionCheckSelected) {
 				attentionCheckSelected = false;
+				attentionCheckPassed = false;
+				attentionCheckProcessing = false;
 				return;
 			}
 			
 			// If selecting and this is an attention check scenario, handle specially
 			if (isAttentionCheckScenario) {
 				attentionCheckSelected = true;
-				console.log('[ATTENTION_CHECK] Scenario:', selectedScenarioIndex, 'Selected:', attentionCheckSelected, 'Timestamp:', new Date().toISOString());
+				attentionCheckPassed = true;
+				attentionCheckProcessing = true; // Lock button immediately
+				console.log('[ATTENTION_CHECK] Scenario:', selectedScenarioIndex, 'Selected:', attentionCheckSelected, 'Passed:', attentionCheckPassed, 'Timestamp:', new Date().toISOString());
 				
 				// Immediately save attention check as passed and navigate to next
 				(async () => {
@@ -2316,6 +2395,7 @@ function cancelReset() {}
 					} catch (e) {
 						console.error('Failed to save attention check status:', e);
 						toast.error('Failed to save attention check status');
+						attentionCheckProcessing = false; // Unlock on error
 					}
 				})();
 				
@@ -3485,7 +3565,7 @@ onMount(async () => {
 				if (personalityBasedScenarios.length > 0) {
 					if (!scenariosLockedForSession) {
 						const basePairs = personalityBasedScenarios.map(qa => [qa.question, qa.response] as [string, string]);
-						scenarioList = buildScenarioList(basePairs);
+						scenarioList = await buildScenarioList(basePairs);
 					}
 					
 					// Persist canonical package and lock
@@ -3512,11 +3592,11 @@ onMount(async () => {
 								console.log('Direct extraction - trait:', traitName, 'characteristics:', selectedChars);
 								
 								// Generate scenarios directly (async)
-								generateScenariosFromPersonalityData(selectedChars).then(directScenarios => {
+								generateScenariosFromPersonalityData(selectedChars).then(async (directScenarios) => {
 										if (directScenarios.length > 0) {
 											if (!scenariosLockedForSession) {
 												const basePairs = directScenarios.map(qa => [qa.question, qa.response] as [string, string]);
-												scenarioList = buildScenarioList(basePairs);
+												scenarioList = await buildScenarioList(basePairs);
 											}
 										
 											// Persist canonical package and lock
@@ -3548,6 +3628,7 @@ onMount(async () => {
 			customInstructions = [...savedState.customInstructions];
 			showComparisonView = savedState.showComparisonView || false;
 			attentionCheckSelected = savedState.attentionCheckSelected || false;
+			attentionCheckPassed = savedState.attentionCheckPassed || false;
 			markedNotApplicable = savedState.markedNotApplicable || false;
 			
 			// Restore unified initial decision flow state
@@ -4639,7 +4720,7 @@ onMount(async () => {
 									<!-- Navigation Buttons -->
 									<div class="flex space-x-3 pt-2 border-t border-gray-200 dark:border-gray-700">
 										<!-- Moderate Again Button -->
-									<button
+										<button
 											on:click={async () => {
 												// Validate satisfaction level is set
 												if (satisfactionLevel === null) {
@@ -4691,10 +4772,10 @@ onMount(async () => {
 											class="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 									>
 										Moderate Again
-									</button>
+										</button>
 										
 										<!-- Continue to next scenario Button -->
-									<button
+										<button
 											on:click={async () => {
 												// Validate satisfaction level is set
 												if (satisfactionLevel === null) {
@@ -4726,8 +4807,8 @@ onMount(async () => {
 											class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 										>
 											Continue to next scenario
-									</button>
-								</div>
+										</button>
+									</div>
 								</div>
 							{:else}
 							<!-- Strategy instruction and Clear button -->
@@ -4928,7 +5009,7 @@ onMount(async () => {
 								<div class="flex space-x-3">
 									<button
 										on:click={applySelectedModerations}
-										disabled={moderationLoading || (selectedModerations.size === 0 && !attentionCheckSelected)}
+										disabled={moderationLoading || (selectedModerations.size === 0 && !attentionCheckSelected) || attentionCheckProcessing}
 										class="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
 									>
 										{#if moderationLoading}
@@ -5207,7 +5288,7 @@ onMount(async () => {
 						<!-- Apply Button -->
 						<button
 							on:click={applySelectedModerations}
-							disabled={moderationLoading || (selectedModerations.size === 0 && !attentionCheckSelected) || (selectedModerations.size === 0 && attentionCheckSelected)}
+							disabled={moderationLoading || (selectedModerations.size === 0 && !attentionCheckSelected) || (selectedModerations.size === 0 && attentionCheckSelected) || attentionCheckProcessing}
 							class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
 						>
 							{#if moderationLoading}
