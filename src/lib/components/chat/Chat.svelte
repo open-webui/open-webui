@@ -384,6 +384,13 @@
 					message.embeds = data.embeds;
 				} else if (type === 'chat:message:error') {
 					message.error = data.error;
+				} else if (type === 'chat:model') {
+					// Filter changed the model - update in-memory message so it persists correctly
+					message.model = data.model;
+					const model = $models.find((m) => m.id === data.model);
+					if (model) {
+						message.modelName = model.name ?? model.id;
+					}
 				} else if (type === 'chat:message:follow_ups') {
 					message.followUps = data.follow_ups;
 
