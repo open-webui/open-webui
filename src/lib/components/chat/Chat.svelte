@@ -753,6 +753,9 @@ selectedKnowledgeSources = [];
 		chatFiles = [];
 		params = {};
 
+		// Reset knowledge sources when starting a new chat
+		selectedKnowledgeSources = [];
+
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
 				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`

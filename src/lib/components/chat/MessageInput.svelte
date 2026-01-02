@@ -92,6 +92,14 @@
 			atSelectedModel?.id ?? selectedModels[0]
 		] as string[]) ?? [];
 
+	// Clear selectedKnowledgeSources when available sources change (e.g., model switch)
+	// Keep only selections that are still valid in the new knowledgeSources list
+	$: if (knowledgeSources !== undefined) {
+		selectedKnowledgeSources = selectedKnowledgeSources.filter(
+			(source) => knowledgeSources.includes(source)
+		);
+	}
+
 	let correctionHintActive = false;
 	let messageIdForCorrection = null;
 	let correctionHintText = '';
