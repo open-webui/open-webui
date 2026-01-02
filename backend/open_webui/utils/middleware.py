@@ -1602,9 +1602,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if context_string != "":
             # Determine if using full context mode (static knowledge)
             files = metadata.get("files", []) or []
-            is_full_context = request.app.state.config.RAG_FULL_CONTEXT
-            if not is_full_context and files:
-                is_full_context = all(item.get("context") == "full" for item in files)
+            # Check if using full context mode via global flags or individual file settings
+            is_full_context = (
+                request.app.state.config.RAG_FULL_CONTEXT
+                or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+                or (files and all(item.get("context") == "full" for item in files))
+            )
 
             # Check for dynamic content that shouldn't be cached in system message
             has_dynamic_content = any(
