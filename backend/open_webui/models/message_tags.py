@@ -103,6 +103,7 @@ class TaggingDaemonConfig(Base):
     custom_tagging_prompt = Column(String, nullable=True)  # Custom prompt for AI tagging
     custom_system_instruction = Column(String, nullable=True)  # Custom system instruction
     blacklisted_tags = Column(JSON, nullable=True)  # List of tag IDs that should never be created
+    rag_store_names = Column(JSON, nullable=True)  # List of RAG store names to use for context
     last_run_at = Column(BigInteger, nullable=True)
     last_run_status = Column(String, nullable=True)
     lock_acquired_at = Column(BigInteger, nullable=True)  # For distributed locking
@@ -122,6 +123,7 @@ class TaggingDaemonConfigModel(BaseModel):
     custom_tagging_prompt: Optional[str] = None
     custom_system_instruction: Optional[str] = None
     blacklisted_tags: Optional[List[str]] = None
+    rag_store_names: Optional[List[str]] = None
     last_run_at: Optional[int] = None
     last_run_status: Optional[str] = None
     lock_acquired_at: Optional[int] = None
@@ -358,11 +360,14 @@ class MessageTagDefinitionTable:
         """Merge multiple tags into one."""
         try:
             with get_db() as db:
-                # Get usage counts to sum
-                merge_tags = db.query(MessageTagDefinition).filter(
-                    MessageTagDefinition.id.in_(merge_ids)
+                # Filter out protected tags - they should not be merged
+                merge_tags_to_delete = db.query(MessageTagDefinition).filter(
+                    MessageTagDefinition.id.in_(merge_ids),
+                    MessageTagDefinition.is_protected == False
                 ).all()
-                total_usage = sum(t.usage_count for t in merge_tags)
+
+                actual_merge_ids = [t.id for t in merge_tags_to_delete]
+                total_usage = sum(t.usage_count for t in merge_tags_to_delete)
 
                 # Update kept tag
                 kept = db.query(MessageTagDefinition).filter_by(id=keep_id).first()
@@ -370,10 +375,12 @@ class MessageTagDefinitionTable:
                     kept.usage_count += total_usage
                     kept.updated_at = int(time.time())
 
-                # Delete merged tags
-                db.query(MessageTagDefinition).filter(
-                    MessageTagDefinition.id.in_(merge_ids)
-                ).delete(synchronize_session=False)
+                # Delete merged tags (only unprotected ones)
+                if actual_merge_ids:
+                    deleted_count = db.query(MessageTagDefinition).filter(
+                        MessageTagDefinition.id.in_(actual_merge_ids)
+                    ).delete(synchronize_session='fetch')
+                    log.info(f"Merged {deleted_count} tags into '{keep_id}'")
 
                 db.commit()
                 return True

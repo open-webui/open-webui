@@ -11,7 +11,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user, get_admin_or_professor_user
 from open_webui.models.message_tags import (
     MessageTags,
     MessageTagDefinitions,
@@ -44,6 +44,7 @@ class DaemonConfigUpdateRequest(BaseModel):
     custom_tagging_prompt: Optional[str] = None  # Custom prompt for AI tagging
     custom_system_instruction: Optional[str] = None  # Custom system instruction
     blacklisted_tags: Optional[List[str]] = None  # Tags that should never be created
+    rag_store_names: Optional[List[str]] = None  # RAG store names for context
 
 
 class BlacklistUpdateRequest(BaseModel):
@@ -83,6 +84,19 @@ class TagStatsResponse(BaseModel):
     last_run_at: Optional[int]
     last_run_status: Optional[str]
     daemon_enabled: bool
+
+
+class DaemonProgressResponse(BaseModel):
+    """Daemon execution progress."""
+    is_running: bool
+    status: str  # idle, collecting, processing, consolidating, completed, error
+    started_at: Optional[int] = None
+    total_messages: int = 0
+    processed_messages: int = 0
+    current_batch: int = 0
+    total_batches: int = 0
+    progress_percent: float = 0.0
+    last_error: Optional[str] = None
 
 
 class TagWithChapterResponse(BaseModel):
@@ -168,6 +182,37 @@ async def trigger_manual_run(request: Request, user=Depends(get_admin_user)):
     return {"status": "started", "message": "Manual tagging run started"}
 
 
+@router.post("/admin/unlock")
+async def force_unlock_daemon(user=Depends(get_admin_user)):
+    """Force release the daemon lock (use when lock is stuck after server restart)."""
+    config = TaggingDaemonConfigs.get_config()
+    if not config:
+        raise HTTPException(status_code=404, detail="Config not found")
+
+    if not config.lock_acquired_at:
+        return {"status": "ok", "message": "No lock was held"}
+
+    # Release the lock
+    TaggingDaemonConfigs.update_lock(None, None)
+    return {
+        "status": "unlocked",
+        "message": "Daemon lock released successfully",
+        "previous_lock_time": config.lock_acquired_at,
+        "previous_instance": config.lock_instance_id
+    }
+
+
+@router.get("/admin/progress", response_model=DaemonProgressResponse)
+async def get_daemon_progress(request: Request, user=Depends(get_admin_user)):
+    """Get current daemon execution progress."""
+    daemon = getattr(request.app.state, "message_tagging_daemon", None)
+    if not daemon:
+        raise HTTPException(status_code=500, detail="Daemon not initialized")
+
+    progress = daemon.get_progress()
+    return DaemonProgressResponse(**progress)
+
+
 # ============================================================
 # Tag Definition Management (Admin Only)
 # ============================================================
@@ -231,8 +276,10 @@ async def merge_tags(body: TagMergeRequest, user=Depends(get_admin_user)):
     for old_tag_id in body.merge_tag_ids:
         MessageTags.update_tag_id(old_tag_id, body.keep_tag_id)
 
-    # Merge the definitions
-    MessageTagDefinitions.merge_tags(body.keep_tag_id, body.merge_tag_ids)
+    # Merge the definitions and check result
+    success = MessageTagDefinitions.merge_tags(body.keep_tag_id, body.merge_tag_ids)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to merge tags")
 
     return {"success": True, "merged_count": len(body.merge_tag_ids)}
 
@@ -440,7 +487,7 @@ async def search_by_tag(
 @router.get("/admin/tags/top", response_model=List[TagWithChapterResponse])
 async def get_top_tags(
     limit: int = 10,
-    user=Depends(get_admin_user)
+    user=Depends(get_admin_or_professor_user)
 ):
     """Get top N most frequently used tags with chapter information."""
     from open_webui.internal.db import get_db
@@ -502,9 +549,9 @@ async def get_tag_messages_stats(
     tag_id: str,
     limit: int = 10,
     offset: int = 0,
-    user=Depends(get_admin_user)
+    user=Depends(get_admin_or_professor_user)
 ):
-    """Get detailed statistics for messages with a specific tag (Admin only)."""
+    """Get detailed statistics for messages with a specific tag (Admin or Professor)."""
     from open_webui.internal.db import get_db
     from open_webui.models.message_tags import MessageTag, MessageTagDefinition
     from open_webui.models.users import User
