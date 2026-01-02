@@ -1283,9 +1283,36 @@ let currentRequestId: number = 0;
 	//
 	// =================================================================================================
 
-	// Helper function to handle text selection - AUTO-HIGHLIGHT on drag
+	/**
+	 * Handle text selection and auto-highlight on drag.
+	 * 
+	 * **HIGHLIGHT SAVING BEHAVIOR:**
+	 * 
+	 * Highlights are saved to TWO separate database tables:
+	 * 
+	 * 1. **`selection` table** (immediate save):
+	 *    - Saved immediately when user drags to select text
+	 *    - Each highlight is saved as a separate row via `saveSelection()`
+	 *    - Saved regardless of whether user later presses "Skip" or "Continue"
+	 *    - Used for analytics and individual selection tracking
+	 *    - Table: `selection` (backend model: `Selection`)
+	 * 
+	 * 2. **`moderation_session` table** (batch save):
+	 *    - Saved only when user presses "Continue" in Step 1 (via `completeStep1()`)
+	 *    - All highlights saved together as JSON array in `highlighted_texts` column
+	 *    - NOT saved if user presses "Skip" (sets `highlighted_texts: []`)
+	 *    - Used for moderation session state and restoration
+	 *    - Table: `moderation_session` (backend model: `ModerationSession`)
+	 * 
+	 * **IMPORTANT:** If user highlights text then presses "Skip":
+	 * - Highlights remain in `selection` table (already saved)
+	 * - `moderation_session.highlighted_texts` is set to empty array `[]`
+	 * - This allows analytics to track what users highlighted even for skipped scenarios
+	 */
 	function handleTextSelection(event: MouseEvent) {
-		if (isLoadingScenario || markedNotApplicable) return; // Don't allow highlighting when loading or scenario is skipped
+		// Don't allow highlighting when loading or scenario is skipped
+		// This prevents saving to `selection` table during state restoration or after skip
+		if (isLoadingScenario || markedNotApplicable) return;
 		const container = (event.currentTarget as HTMLElement) || responseContainer1;
 		if (!container) return;
 		
@@ -1312,15 +1339,33 @@ let currentRequestId: number = 0;
 		}, 10);
 	}
 	
+	/**
+	 * Save individual highlight to `selection` table immediately.
+	 * 
+	 * This function is called automatically when user drags to select text.
+	 * Each highlight is saved as a separate row in the `selection` table for:
+	 * - Real-time analytics tracking
+	 * - Individual selection history
+	 * - Cross-scenario analysis
+	 * 
+	 * **Save timing:** Immediate (on text selection, before "Continue" or "Skip")
+	 * **Table:** `selection` (not `moderation_session`)
+	 * **API endpoint:** POST `/api/v1/selections`
+	 * 
+	 * Note: This is separate from the batch save to `moderation_session.highlighted_texts`
+	 * which happens in `completeStep1()` when user presses "Continue".
+	 */
 	function saveSelection() {
 		const text = currentSelection1;
 		
 		if (!text) return;
 		
 		if (!highlightedTexts1.includes(text)) {
+			// Add to local state array
 			highlightedTexts1 = [...highlightedTexts1, text];
 
-			// Persist selection immediately with source
+			// Save to `selection` table immediately (real-time save)
+			// This happens BEFORE user presses "Continue" or "Skip"
 			try {
 				const scenarioId = `scenario_${selectedScenarioIndex}`;
 				const source = selectionInPrompt ? 'prompt' : 'response';
@@ -1336,6 +1381,7 @@ let currentRequestId: number = 0;
 					context: null,
 					meta: {}
 				};
+				// POST to `/api/v1/selections` - saves to `selection` table
 				fetch(`${WEBUI_API_BASE_URL}/selections`, {
 					method: 'POST',
 					headers: {
@@ -1345,7 +1391,7 @@ let currentRequestId: number = 0;
 					body: JSON.stringify(body)
 				});
 			} catch (e) {
-				console.error('Failed to persist selection', e);
+				console.error('Failed to persist selection to selection table', e);
 			}
 		}
 		selectionButtonsVisible1 = false;
@@ -1357,10 +1403,22 @@ let currentRequestId: number = 0;
 		}
 	}
 	
+	/**
+	 * Remove highlight from local state and delete from `selection` table.
+	 * 
+	 * **Delete timing:** Debounced (250ms delay) to batch rapid removals
+	 * **Table:** `selection` (deletes individual row)
+	 * **API endpoint:** POST `/api/v1/selections/delete_by_text`
+	 * 
+	 * Note: This only removes from `selection` table. If highlights were already
+	 * saved to `moderation_session.highlighted_texts`, they remain there until
+	 * the session is updated via `completeStep1()` or other save operations.
+	 */
 	function removeHighlight(text: string) {
+		// Remove from local state array
 		highlightedTexts1 = highlightedTexts1.filter(t => t !== text);
 
-		// Debounced removal from DB
+		// Delete from `selection` table (debounced to batch rapid removals)
 		try {
 			const scenarioId = `scenario_${selectedScenarioIndex}`;
 			const role = 'assistant'; // Removal is text-only; role-agnostic on backend unless provided
@@ -1370,6 +1428,7 @@ let currentRequestId: number = 0;
 			const key = `${scenarioId}:${text}`;
 			clearTimeout(window.__removeSelectionDebounce[key]);
 			window.__removeSelectionDebounce[key] = setTimeout(() => {
+				// POST to `/api/v1/selections/delete_by_text` - deletes from `selection` table
 				fetch(`${WEBUI_API_BASE_URL}/selections/delete_by_text`, {
 					method: 'POST',
 					headers: {
@@ -1380,7 +1439,7 @@ let currentRequestId: number = 0;
 				});
 			}, 250);
 		} catch (e) {
-			console.error('Failed to schedule selection removal', e);
+			console.error('Failed to schedule selection removal from selection table', e);
 		}
 	}
 	
@@ -1674,8 +1733,8 @@ let currentRequestId: number = 0;
 			// Step 2: Restore concern reason from backend (now in column, not metadata)
 			if (backendSession.concern_reason) {
 				concernReason = backendSession.concern_reason;
-				step2Completed = true;
-				console.log('✅ Restored Step 2 data from backend');
+					step2Completed = true;
+					console.log('✅ Restored Step 2 data from backend');
 			}
 			
 			// Step 3: Restore pre-moderation judgment from backend (direct columns only)
@@ -2140,7 +2199,7 @@ function cancelReset() {}
 					highlighted_texts: [...highlightedTexts1],
 					refactored_response: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].response : undefined,
 					is_final_version: true,
-					decided_at: Date.now(),
+						decided_at: Date.now(),
 					is_attention_check: isAttentionCheckScenario,
 					attention_check_selected: attentionCheckSelected,
 					attention_check_passed: isAttentionCheckScenario && attentionCheckSelected && selectedModerations.size > 0
@@ -2454,17 +2513,34 @@ function cancelReset() {}
 	 * **NEW REQUIREMENT**: User MUST highlight at least one concern to continue.
 	 * Cannot proceed without selections - only skip scenario is allowed.
 	 * 
-	 * @param {boolean} skipped - If true, marks scenario as not applicable and skips all remaining steps
+	 * **HIGHLIGHT SAVING BEHAVIOR:**
 	 * 
-	 * When skipped=true:
+	 * This function saves highlights to the `moderation_session` table (NOT the `selection` table).
+	 * 
+	 * **Two separate highlight storage systems:**
+	 * 
+	 * 1. **`selection` table** (individual rows):
+	 *    - Already saved immediately when user highlighted text (via `saveSelection()`)
+	 *    - Each highlight is a separate row for analytics
+	 *    - NOT affected by this function - remains in database even if skipped
+	 * 
+	 * 2. **`moderation_session` table** (JSON array in `highlighted_texts` column):
+	 *    - Saved here when user presses "Continue" (skipped=false)
+	 *    - Set to empty array `[]` when user presses "Skip" (skipped=true)
+	 *    - Used for session state restoration and moderation workflow
+	 * 
+	 * **When skipped=true:**
 	 *   - Saves initial_decision='not_applicable'
+	 *   - Sets highlighted_texts: [] (empty array)
 	 *   - Sets concern_level to undefined (steps not reached)
-	 *   - Omits concern_reason from session_metadata
+	 *   - Note: Highlights in `selection` table remain untouched
 	 * 
-	 * When skipped=false:
+	 * **When skipped=false:**
 	 *   - **VALIDATES**: Requires at least one highlight (highlightedTexts1.length > 0)
-	 *   - Saves highlighted_texts only
+	 *   - Saves highlighted_texts: [...highlightedTexts1] (all highlights as JSON array)
 	 *   - No step 2-3 data saved yet
+	 * 
+	 * @param {boolean} skipped - If true, marks scenario as not applicable and skips all remaining steps
 	 */
 	async function completeStep1(skipped: boolean = false) {
 		if (skipped) {
@@ -2474,6 +2550,8 @@ function cancelReset() {}
 			step3Completed = true;
 			
 			// Save skip decision immediately to backend
+			// Note: Highlights in `selection` table remain untouched (already saved when user highlighted)
+			// Only `moderation_session.highlighted_texts` is set to empty array
 			try {
 				const sessionId = `scenario_${selectedScenarioIndex}`;
 				await saveModerationSession(localStorage.token, {
@@ -2490,7 +2568,7 @@ function cancelReset() {}
 					concern_level: undefined, // Steps not reached
 					strategies: [],
 					custom_instructions: [],
-					highlighted_texts: [],
+					highlighted_texts: [], // Empty array - highlights remain in `selection` table
 					refactored_response: undefined,
 					is_final_version: false,
 					decided_at: Date.now(),
@@ -2514,7 +2592,9 @@ function cancelReset() {}
 			step1Completed = true;
 			step1Completed = true; // Mark step 1 complete to move to step 2
 			
-			// Save highlights to backend immediately so they persist across page refreshes
+			// Save highlights to `moderation_session` table (batch save as JSON array)
+			// Note: Individual highlights were already saved to `selection` table via `saveSelection()`
+			// This saves all highlights together for session state restoration
 			try {
 				const sessionId = `scenario_${selectedScenarioIndex}`;
 				await saveModerationSession(localStorage.token, {
@@ -2530,7 +2610,7 @@ function cancelReset() {}
 					initial_decision: undefined, // No decision yet, just saving highlights
 					strategies: [],
 					custom_instructions: [],
-					highlighted_texts: [...highlightedTexts1],
+					highlighted_texts: [...highlightedTexts1], // Save all highlights as JSON array to `moderation_session` table
 					refactored_response: undefined,
 					is_final_version: false,
 					highlights_saved_at: Date.now(),
@@ -2538,9 +2618,9 @@ function cancelReset() {}
 					attention_check_selected: attentionCheckSelected,
 					attention_check_passed: false
 				});
-				console.log('Highlights saved to backend successfully');
+				console.log('Highlights saved to moderation_session table successfully');
 			} catch (e) {
-				console.error('Failed to save highlights (non-blocking):', e);
+				console.error('Failed to save highlights to moderation_session table (non-blocking):', e);
 				// Don't throw - allow step to complete even if backend save fails
 			}
 		}
@@ -2662,7 +2742,7 @@ function cancelReset() {}
 				satisfaction_level: level,
 				satisfaction_reason: reason.trim(),
 				next_action: action,
-				decided_at: Date.now(),
+					decided_at: Date.now(),
 				strategies: currentVersionIndex >= 0 && versions[currentVersionIndex] 
 					? versions[currentVersionIndex].strategies 
 					: [],
@@ -2790,7 +2870,7 @@ function cancelReset() {}
 				highlighted_texts: [],
 				refactored_response: undefined,
 				is_final_version: false,
-				decided_at: Date.now(),
+					decided_at: Date.now(),
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: false
@@ -2962,7 +3042,7 @@ function cancelReset() {}
 						highlighted_texts: [...highlightedTexts1],
 						refactored_response: result.refactored_response,
 						is_final_version: false,
-						decided_at: Date.now(),
+							decided_at: Date.now(),
                         is_attention_check: isAttentionCheckScenario,
                         attention_check_selected: attentionSelectedSnapshot,
                         attention_check_passed: isAttentionCheckScenario && attentionSelectedSnapshot && (standardStrategies.length > 0 || customTexts.length > 0)
