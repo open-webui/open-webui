@@ -96,6 +96,7 @@ from open_webui.routers import (
     scim,
     textbook,
     gemini_rag,
+    message_tags,
 )
 
 from open_webui.routers.retrieval import (
@@ -602,6 +603,11 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
+    # Start message tagging daemon
+    from open_webui.services.message_tagging_daemon import MessageTaggingDaemon
+    app.state.message_tagging_daemon = MessageTaggingDaemon(app)
+    asyncio.create_task(app.state.message_tagging_daemon.start())
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
             Request(
@@ -627,6 +633,10 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
+
+    # Stop message tagging daemon
+    if hasattr(app.state, "message_tagging_daemon"):
+        await app.state.message_tagging_daemon.stop()
 
 
 app = FastAPI(
@@ -1414,6 +1424,7 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(textbook.router, prefix="/api/v1/textbook", tags=["textbook"])
 app.include_router(gemini_rag.router, prefix="/api/v1/gemini-rag", tags=["gemini-rag"])
+app.include_router(message_tags.router, prefix="/api/v1/message-tags", tags=["message-tags"])
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
