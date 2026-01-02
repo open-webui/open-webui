@@ -671,6 +671,9 @@ let parentLLMMonitoringOther: string = '';
 				
 				// Set the new profile as the current selected profile
 				await childProfileSync.setCurrentChildId(newChild.id);
+				
+				// Automatically select the newly created child for questions
+				childSelectedForQuestions = selectedChildIndex;
 			} else {
 				// Apply current form to selected child
 				applyFormToSelectedChild();
