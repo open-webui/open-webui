@@ -2,10 +2,12 @@ import os
 import re
 import subprocess
 import sys
-from importlib import util
 import types
 import tempfile
 import logging
+
+from importlib.metadata import version, PackageNotFoundError
+from packaging.requirements import Requirement
 
 from open_webui.env import PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS
 from open_webui.models.functions import Functions
@@ -264,23 +266,54 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
 
 
 def install_frontmatter_requirements(requirements: str):
-    if requirements:
+    if not requirements:
+        return
+
+    # Split and clean requirements
+    req_list = [req.strip() for req in requirements.split(",") if req.strip()]
+    missing_reqs = []
+
+    # Check if packages are already installed via importlib
+    for req_str in req_list:
         try:
-            req_list = [req.strip() for req in requirements.split(",")]
-            log.info(f"Installing requirements: {' '.join(req_list)}")
+            req = Requirement(req_str)
+            installed_ver = version(req.name)
+            
+            # Check version match (handling prereleases)
+            if req.specifier.contains(installed_ver, prereleases=True):
+                continue # Already have it, skip
+            else:
+                log.info(f"Version mismatch for {req.name}: found {installed_ver}, need {req.specifier}")
+                missing_reqs.append(req_str)
+        except (PackageNotFoundError, Exception):
+            missing_reqs.append(req_str)
+
+    # Only run pip if absolutely necessary
+    if missing_reqs:
+        log.info(f"Attempting to install missing requirements: {' '.join(missing_reqs)}")
+        try:
             subprocess.check_call(
                 [sys.executable, "-m", "pip", "install"]
                 + PIP_OPTIONS
-                + req_list
+                + missing_reqs
                 + PIP_PACKAGE_INDEX_OPTIONS
             )
-        except Exception as e:
-            log.error(f"Error installing packages: {' '.join(req_list)}")
-            raise e
-
-    else:
-        log.info("No requirements found in frontmatter.")
-
+            log.info("Successfully installed missing requirements.")
+            
+        except subprocess.CalledProcessError as e:
+            # Catching the ugly subprocess error and raise a clean one that the Frontend will display.
+            # Prevent uv/poetry/nix users confusion
+            
+            friendly_error = (
+                f"WARNING: Failed to install dependencies via pip subprocess: {', '.join(missing_reqs)}. "
+                "The automatic installer failed. If you are using a custom environment (uv, nix, poetry), "
+                "please install these packages manually and restart open-webui."
+            )
+            
+            log.error(friendly_error)
+            
+            # Raising this specific string ensures the UI shows this text instead of "exit status 1"
+            raise Exception(friendly_error) from e
 
 def install_tool_and_function_dependencies():
     """
