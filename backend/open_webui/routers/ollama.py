@@ -1296,7 +1296,8 @@ async def generate_chat_completion(
             response_style = metadata.get("response_style")
 
             # Compose prompts with fallback logic
-            composed_system = compose_with_fallback(
+            # Note: For Ollama, we use include_tools=True (legacy mode)
+            composed_system, _ = compose_with_fallback(
                 group_id=prompt_group_id,
                 system_prompt=system,
                 default_group_id=getattr(
@@ -1304,6 +1305,7 @@ async def generate_chat_completion(
                 ),
                 proficiency_level=proficiency_level,
                 response_style=response_style,
+                include_tools=True,  # Include all tools for Ollama
             )
 
             final_system = composed_system if composed_system else system
@@ -1503,7 +1505,8 @@ async def generate_openai_chat_completion(
             response_style = metadata.get("response_style")
 
             # Compose prompts with fallback logic
-            composed_system = compose_with_fallback(
+            # Note: For Ollama OpenAI-compatible API, we use include_tools=True (legacy mode)
+            composed_system, _ = compose_with_fallback(
                 group_id=prompt_group_id,
                 system_prompt=system,
                 default_group_id=getattr(
@@ -1511,6 +1514,7 @@ async def generate_openai_chat_completion(
                 ),
                 proficiency_level=proficiency_level,
                 response_style=response_style,
+                include_tools=True,  # Include all tools for Ollama
             )
 
             final_system = composed_system if composed_system else system
