@@ -6,7 +6,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Column, String, Text, JSON, Integer
 
 from open_webui.utils.access_control import has_access
 
@@ -27,8 +27,12 @@ class Prompt(Base):
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
 
     # Persona-based prompt fields
-    prompt_type = Column(String, nullable=True)  # 'base', 'proficiency', 'style', or None
+    prompt_type = Column(String, nullable=True)  # 'base', 'proficiency', 'style', 'tool', or None
     persona_value = Column(String, nullable=True)  # '1','2','3' or 'simple','detailed'
+
+    # Tool gating fields (for prompt_type='tool')
+    tool_description = Column(Text, nullable=True)  # Short description for tool catalog (50-100 chars)
+    tool_priority = Column(Integer, nullable=True, default=0)  # Priority for ordering tools
 
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
@@ -57,6 +61,11 @@ class PromptModel(BaseModel):
     access_control: Optional[dict] = None
     prompt_type: Optional[str] = None
     persona_value: Optional[str] = None
+
+    # Tool gating fields
+    tool_description: Optional[str] = None
+    tool_priority: Optional[int] = 0
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -76,6 +85,8 @@ class PromptForm(BaseModel):
     access_control: Optional[dict] = None
     prompt_type: Optional[str] = None
     persona_value: Optional[str] = None
+    tool_description: Optional[str] = None
+    tool_priority: Optional[int] = 0
 
 
 class PromptsTable:
@@ -197,6 +208,8 @@ class PromptsTable:
                 prompt.access_control = form_data.access_control
                 prompt.prompt_type = form_data.prompt_type
                 prompt.persona_value = form_data.persona_value
+                prompt.tool_description = form_data.tool_description
+                prompt.tool_priority = form_data.tool_priority
                 prompt.timestamp = int(time.time())
                 db.commit()
                 return PromptModel.model_validate(prompt)

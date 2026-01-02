@@ -13,6 +13,11 @@ from pydantic import BaseModel
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.gemini_rag import get_gemini_rag_service, GeminiRAGService
 from open_webui.utils.prompt_composer import compose_with_fallback
+from open_webui.utils.tool_gating import (
+    execute_with_tool_gating,
+    should_use_tool_gating,
+    compose_stage2_system_prompt,
+)
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.textbooks import TextbookChapters
 from open_webui.models.chats import Chats, ChatForm
@@ -58,6 +63,7 @@ class RAGQueryRequest(BaseModel):
     prompt_group_id: Optional[str] = None
     proficiency_level: Optional[str] = None
     response_style: Optional[str] = None
+    enable_tool_gating: bool = True  # Enable two-stage tool gating by default
 
 
 class RAGQueryResponse(BaseModel):
@@ -67,6 +73,8 @@ class RAGQueryResponse(BaseModel):
     model: Optional[str] = None
     error: Optional[str] = None
     chat_id: Optional[str] = None  # Returned if a new chat was created
+    used_tools: List[str] = []  # Tools used via tool gating
+    tool_gating_stage: Optional[int] = None  # 1 or 2 (if tool gating was used)
 
 
 class ChapterStoreMapping(BaseModel):
@@ -438,20 +446,22 @@ async def query_rag(
     - **prompt_group_id**: 프롬프트 그룹 ID (선택)
     - **proficiency_level**: 난이도 레벨 (선택)
     - **response_style**: 응답 스타일 (선택)
+    - **enable_tool_gating**: Tool gating 활성화 (기본: True)
     """
     service = get_rag_service(request)
 
-    # Compose prompts with fallback logic
+    # Compose prompts with fallback logic (now returns tuple with tool_prompts)
     log.info("="*80)
     log.info("[GEMINI RAG] 쿼리 요청 받음")
     log.info(f"  prompt_group_id: {body.prompt_group_id}")
     log.info(f"  system_instruction: {body.system_instruction[:50] if body.system_instruction else None}...")
     log.info(f"  proficiency_level: {body.proficiency_level}")
     log.info(f"  response_style: {body.response_style}")
+    log.info(f"  enable_tool_gating: {body.enable_tool_gating}")
     log.info(f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}")
     log.info("="*80)
 
-    composed_system = compose_with_fallback(
+    composed_system, tool_prompts = compose_with_fallback(
         group_id=body.prompt_group_id,
         system_prompt=body.system_instruction,
         default_group_id=getattr(
@@ -459,6 +469,7 @@ async def query_rag(
         ),
         proficiency_level=body.proficiency_level,
         response_style=body.response_style,
+        include_tools=False,  # Don't auto-include tools
     )
 
     final_system = composed_system if composed_system else body.system_instruction
@@ -467,16 +478,48 @@ async def query_rag(
     log.info("[GEMINI RAG] 최종 시스템 프롬프트:")
     log.info(f"  조합된 프롬프트 길이: {len(composed_system) if composed_system else 0} 문자")
     log.info(f"  최종 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
+    log.info(f"  Tool prompts 개수: {len(tool_prompts)}")
+    log.info(f"  Tool prompts: {[t.command for t in tool_prompts]}")
     log.info(f"  내용: {final_system[:500] if final_system else '(없음)'}...")
     log.info("="*80)
 
-    result = service.query(
-        question=body.question,
-        store_names=body.store_names,
-        model=body.model,
-        temperature=body.temperature,
-        system_instruction=final_system
-    )
+    # Determine if we should use tool gating
+    used_tools = []
+    tool_gating_stage = None
+
+    if should_use_tool_gating(tool_prompts, body.enable_tool_gating):
+        log.info("[GEMINI RAG] Using tool gating (two-stage)")
+        tool_gating_result = execute_with_tool_gating(
+            query=body.question,
+            base_system=final_system or "",
+            tool_prompts=tool_prompts,
+            llm_call_fn=service.query,
+            store_names=body.store_names,
+            model=body.model,
+            temperature=body.temperature,
+        )
+        result = {
+            "success": True,
+            "text": tool_gating_result.text,
+            "citations": [],
+            "model": body.model,
+        }
+        used_tools = tool_gating_result.used_tools
+        tool_gating_stage = tool_gating_result.stage
+        log.info(f"[GEMINI RAG] Tool gating completed - stage: {tool_gating_stage}, tools: {used_tools}")
+    else:
+        # Legacy mode: include all tool prompts in system instruction
+        if tool_prompts:
+            log.info("[GEMINI RAG] Tool gating disabled, including all tools")
+            final_system = compose_stage2_system_prompt(final_system or "", tool_prompts)
+
+        result = service.query(
+            question=body.question,
+            store_names=body.store_names,
+            model=body.model,
+            temperature=body.temperature,
+            system_instruction=final_system
+        )
 
     # 채팅 생성 및 제목 생성 로직
     chat_id = None  # 항상 새 채팅 생성
@@ -535,8 +578,13 @@ async def query_rag(
             user.id
         )
 
-    # 응답에 chat_id 포함
-    response_data = {**result, "chat_id": chat_id}
+    # 응답에 chat_id와 tool gating 정보 포함
+    response_data = {
+        **result,
+        "chat_id": chat_id,
+        "used_tools": used_tools,
+        "tool_gating_stage": tool_gating_stage,
+    }
     return RAGQueryResponse(**response_data)
 
 
@@ -552,6 +600,7 @@ async def query_rag_by_chapter(
     prompt_group_id: Optional[str] = None,
     proficiency_level: Optional[str] = None,
     response_style: Optional[str] = None,
+    enable_tool_gating: bool = True,
     user=Depends(get_verified_user)
 ):
     """
@@ -565,6 +614,7 @@ async def query_rag_by_chapter(
     - **prompt_group_id**: 프롬프트 그룹 ID (선택)
     - **proficiency_level**: 난이도 레벨 (선택)
     - **response_style**: 응답 스타일 (선택)
+    - **enable_tool_gating**: Tool gating 활성화 (기본: True)
     """
     store_name = TextbookChapters.get_rag_store(chapter_id)
     if not store_name:
@@ -575,7 +625,7 @@ async def query_rag_by_chapter(
 
     service = get_rag_service(request)
 
-    # Compose prompts with fallback logic
+    # Compose prompts with fallback logic (now returns tuple with tool_prompts)
     log.info("="*80)
     log.info("[GEMINI RAG BY CHAPTER] 쿼리 요청 받음")
     log.info(f"  chapter_id: {chapter_id}")
@@ -583,10 +633,11 @@ async def query_rag_by_chapter(
     log.info(f"  system_instruction: {system_instruction[:50] if system_instruction else None}...")
     log.info(f"  proficiency_level: {proficiency_level}")
     log.info(f"  response_style: {response_style}")
+    log.info(f"  enable_tool_gating: {enable_tool_gating}")
     log.info(f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}")
     log.info("="*80)
 
-    composed_system = compose_with_fallback(
+    composed_system, tool_prompts = compose_with_fallback(
         group_id=prompt_group_id,
         system_prompt=system_instruction,
         default_group_id=getattr(
@@ -594,6 +645,7 @@ async def query_rag_by_chapter(
         ),
         proficiency_level=proficiency_level,
         response_style=response_style,
+        include_tools=False,  # Don't auto-include tools
     )
 
     final_system = composed_system if composed_system else system_instruction
@@ -602,16 +654,48 @@ async def query_rag_by_chapter(
     log.info("[GEMINI RAG BY CHAPTER] 최종 시스템 프롬프트:")
     log.info(f"  조합된 프롬프트 길이: {len(composed_system) if composed_system else 0} 문자")
     log.info(f"  최종 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
+    log.info(f"  Tool prompts 개수: {len(tool_prompts)}")
+    log.info(f"  Tool prompts: {[t.command for t in tool_prompts]}")
     log.info(f"  내용: {final_system[:500] if final_system else '(없음)'}...")
     log.info("="*80)
 
-    result = service.query(
-        question=question,
-        store_names=[store_name],
-        model=model,
-        temperature=temperature,
-        system_instruction=final_system
-    )
+    # Determine if we should use tool gating
+    used_tools = []
+    tool_gating_stage = None
+
+    if should_use_tool_gating(tool_prompts, enable_tool_gating):
+        log.info("[GEMINI RAG BY CHAPTER] Using tool gating (two-stage)")
+        tool_gating_result = execute_with_tool_gating(
+            query=question,
+            base_system=final_system or "",
+            tool_prompts=tool_prompts,
+            llm_call_fn=service.query,
+            store_names=[store_name],
+            model=model,
+            temperature=temperature,
+        )
+        result = {
+            "success": True,
+            "text": tool_gating_result.text,
+            "citations": [],
+            "model": model,
+        }
+        used_tools = tool_gating_result.used_tools
+        tool_gating_stage = tool_gating_result.stage
+        log.info(f"[GEMINI RAG BY CHAPTER] Tool gating completed - stage: {tool_gating_stage}, tools: {used_tools}")
+    else:
+        # Legacy mode: include all tool prompts in system instruction
+        if tool_prompts:
+            log.info("[GEMINI RAG BY CHAPTER] Tool gating disabled, including all tools")
+            final_system = compose_stage2_system_prompt(final_system or "", tool_prompts)
+
+        result = service.query(
+            question=question,
+            store_names=[store_name],
+            model=model,
+            temperature=temperature,
+            system_instruction=final_system
+        )
 
     # 채팅 생성 및 제목 생성 로직
     final_chat_id = None  # 항상 새 채팅 생성
@@ -670,8 +754,13 @@ async def query_rag_by_chapter(
             user.id
         )
 
-    # 응답에 chat_id 포함
-    response_data = {**result, "chat_id": final_chat_id}
+    # 응답에 chat_id와 tool gating 정보 포함
+    response_data = {
+        **result,
+        "chat_id": final_chat_id,
+        "used_tools": used_tools,
+        "tool_gating_stage": tool_gating_stage,
+    }
     return RAGQueryResponse(**response_data)
 
 

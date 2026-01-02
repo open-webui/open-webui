@@ -1,7 +1,9 @@
 import asyncio
+import copy
 import hashlib
 import json
 import logging
+import time
 from typing import Optional
 
 import aiohttp
@@ -51,6 +53,13 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.prompt_composer import compose_with_fallback
+from open_webui.utils.tool_gating import (
+    build_tool_catalog,
+    build_tool_selection_system_prompt,
+    parse_tool_selection_response,
+    get_tool_prompts_by_commands,
+    compose_stage2_system_prompt,
+)
 
 
 log = logging.getLogger(__name__)
@@ -196,6 +205,86 @@ def get_microsoft_entra_id_access_token():
     except Exception as e:
         log.error(f"Error getting Microsoft Entra ID access token: {e}")
         return None
+
+
+async def make_gemini_llm_call(
+    request_url: str,
+    headers: dict,
+    cookies: dict,
+    base_payload: dict,
+    system_prompt: str,
+    query: str,
+) -> dict:
+    """
+    Make a non-streaming LLM call to Gemini backend for tool gating Stage 1.
+
+    Args:
+        request_url: The Gemini API endpoint URL
+        headers: Request headers
+        cookies: Request cookies
+        base_payload: Base payload dict (will be modified with system prompt)
+        system_prompt: System prompt to use
+        query: User query (already in messages)
+
+    Returns:
+        dict with 'success' and 'text' (or 'error') keys
+    """
+    try:
+        # Create a copy of the payload for Stage 1
+        payload = copy.deepcopy(base_payload)
+
+        # Ensure stream is False for Stage 1
+        payload["stream"] = False
+
+        # Update system prompt in messages
+        if payload.get("messages") and len(payload["messages"]) > 0:
+            if payload["messages"][0].get("role") == "system":
+                payload["messages"][0]["content"] = system_prompt
+            else:
+                # Insert system message at the beginning
+                payload["messages"].insert(0, {
+                    "role": "system",
+                    "content": system_prompt
+                })
+
+        payload_json = json.dumps(payload)
+
+        log.info(f"[OPENAI-TOOL-GATING] Making LLM call to: {request_url}")
+        log.info(f"[OPENAI-TOOL-GATING] System prompt length: {len(system_prompt)} chars")
+
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        ) as session:
+            async with session.post(
+                request_url,
+                data=payload_json,
+                headers=headers,
+                cookies=cookies,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                if r.status >= 400:
+                    error_text = await r.text()
+                    log.error(f"[OPENAI-TOOL-GATING] LLM call failed: {r.status} - {error_text}")
+                    return {"success": False, "error": f"HTTP {r.status}: {error_text}"}
+
+                response = await r.json()
+
+                # Extract text from OpenAI-compatible response format
+                text = ""
+                if response.get("choices") and len(response["choices"]) > 0:
+                    choice = response["choices"][0]
+                    if choice.get("message"):
+                        text = choice["message"].get("content", "")
+                    elif choice.get("text"):
+                        text = choice["text"]
+
+                log.info(f"[OPENAI-TOOL-GATING] LLM response received: {len(text)} chars")
+                return {"success": True, "text": text}
+
+    except Exception as e:
+        log.error(f"[OPENAI-TOOL-GATING] LLM call exception: {e}")
+        return {"success": False, "error": str(e)}
 
 
 ##########################################
@@ -812,6 +901,10 @@ async def generate_chat_completion(
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
+    # Initialize variables for tool handling (may be updated in model_info block)
+    base_system = None
+    tool_prompts = []
+
     # Check model info and override the payload
     if model_info:
         if model_info.base_model_id:
@@ -834,7 +927,10 @@ async def generate_chat_completion(
 
         # Compose prompts with fallback logic
         # Priority: prompt_group_id > system > DEFAULT_PROMPT_GROUP_ID > none
-        composed_system = compose_with_fallback(
+        # Note: First compose without tools, then decide based on backend
+        # - Gemini backend: use tool gating (include only tool catalog)
+        # - Other backends: legacy mode (include full tool content)
+        composed_system, tool_prompts = compose_with_fallback(
             group_id=prompt_group_id,
             system_prompt=system,
             default_group_id=getattr(
@@ -842,17 +938,18 @@ async def generate_chat_completion(
             ),
             proficiency_level=proficiency_level,
             response_style=response_style,
+            include_tools=False,  # Don't auto-include tools, decide later based on backend
         )
 
-        # Use composed prompt if available, otherwise fall back to original system
-        final_system = composed_system if composed_system else system
+        # Store base system for later use (tool handling done after URL resolution)
+        base_system = composed_system if composed_system else system
 
         # Apply model params to payload (only if params exist)
         if params:
             payload = apply_model_params_to_body_openai(params, payload)
 
-        # Always apply system prompt (composition result)
-        payload = apply_system_prompt_to_body(final_system, payload, metadata, user)
+        # Note: System prompt application is deferred until after URL resolution
+        # to determine if we should use tool gating (Gemini) or legacy mode (others)
 
         # Check if user has access to the model
         if not bypass_filter and user.role in {"user", "professor"}:
@@ -907,6 +1004,142 @@ async def generate_chat_completion(
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
+    # Determine backend type
+    is_gemini_backend = "generativelanguage.googleapis.com" in url
+
+    # Get headers and cookies early (needed for tool gating Stage 1)
+    headers, cookies = await get_headers_and_cookies(
+        request, url, key, api_config, metadata, user=user
+    )
+
+    # Build request URL early
+    if api_config.get("azure", False):
+        api_version = api_config.get("api_version", "2023-03-15-preview")
+        azure_url, _ = convert_to_azure_payload(url, payload.copy(), api_version)
+
+        # Only set api-key header if not using Azure Entra ID authentication
+        auth_type = api_config.get("auth_type", "bearer")
+        if auth_type not in ("azure_ad", "microsoft_entra_id"):
+            headers["api-key"] = key
+
+        headers["api-version"] = api_version
+        request_url = f"{azure_url}/chat/completions?api-version={api_version}"
+    else:
+        request_url = f"{url}/chat/completions"
+
+    # Tool handling based on backend type
+    # Gemini backend: use FULL two-stage tool gating
+    # Other backends: legacy mode (include full tool content)
+
+    final_system = base_system
+
+    # Detect utility requests that should skip tool gating (e.g., title generation)
+    # These are identified by:
+    # 1. metadata.task == "title_generation" or similar
+    # 2. System prompt containing title generation keywords
+    # 3. Short utility calls that don't need tool selection
+    is_utility_request = False
+    if metadata:
+        task_type = metadata.get("task", "")
+        if task_type in ("title_generation", "summary", "title"):
+            is_utility_request = True
+            log.info(f"[OPENAI] Utility request detected (task={task_type}), skipping tool gating")
+
+    # Also check system prompt for title generation patterns
+    if not is_utility_request and base_system:
+        title_keywords = ["title", "제목", "generate a title", "Create a concise"]
+        if any(keyword.lower() in base_system.lower() for keyword in title_keywords):
+            is_utility_request = True
+            log.info("[OPENAI] Title generation detected in system prompt, skipping tool gating")
+
+    use_two_stage_tool_gating = (
+        is_gemini_backend
+        and len(tool_prompts) > 0
+        and not is_utility_request
+    )
+
+    if use_two_stage_tool_gating:
+        log.info("=" * 80)
+        log.info(f"[OPENAI-TOOL-GATING] Starting FULL two-stage tool gating")
+        log.info(f"[OPENAI-TOOL-GATING] Available tools: {[t.command for t in tool_prompts]}")
+        log.info("=" * 80)
+
+        # Extract user query from messages (last user message)
+        user_query = ""
+        for msg in reversed(payload.get("messages", [])):
+            if msg.get("role") == "user":
+                content = msg.get("content", "")
+                if isinstance(content, str):
+                    user_query = content
+                elif isinstance(content, list):
+                    # Handle multimodal content
+                    for part in content:
+                        if isinstance(part, dict) and part.get("type") == "text":
+                            user_query = part.get("text", "")
+                            break
+                break
+
+        log.info(f"[OPENAI-TOOL-GATING] User query: {user_query[:100]}...")
+
+        # Stage 1: Tool selection with catalog + JSON instructions
+        tool_catalog = build_tool_catalog(tool_prompts)
+        stage1_system = build_tool_selection_system_prompt(base_system or "", tool_catalog)
+
+        log.info(f"[OPENAI-TOOL-GATING] Stage 1 System Prompt Length: {len(stage1_system)} chars")
+
+        # Make Stage 1 call (non-streaming)
+        stage1_result = await make_gemini_llm_call(
+            request_url=request_url,
+            headers=headers.copy(),
+            cookies=cookies,
+            base_payload=payload.copy(),
+            system_prompt=stage1_system,
+            query=user_query,
+        )
+
+        if not stage1_result.get("success"):
+            log.error(f"[OPENAI-TOOL-GATING] Stage 1 failed: {stage1_result.get('error')}")
+            # Fallback: use base system without tools
+            final_system = base_system
+        else:
+            stage1_text = stage1_result.get("text", "")
+            log.info(f"[OPENAI-TOOL-GATING] Stage 1 response: {stage1_text[:300]}...")
+
+            # Parse tool selection
+            selected_tools, direct_answer = parse_tool_selection_response(stage1_text)
+
+            if not selected_tools:
+                # No tools needed - proceed to Stage 2 with base system only
+                # (Don't return early - continue to Stage 2 to preserve streaming)
+                log.info("[OPENAI-TOOL-GATING] No tools needed, proceeding to Stage 2 with base system only")
+                final_system = base_system
+            else:
+                # Stage 2: Use selected tools' full content
+                log.info(f"[OPENAI-TOOL-GATING] Stage 2 - Tools selected: {selected_tools}")
+
+                selected_tool_prompts = get_tool_prompts_by_commands(tool_prompts, selected_tools)
+                final_system = compose_stage2_system_prompt(base_system or "", selected_tool_prompts)
+
+                log.info(f"[OPENAI-TOOL-GATING] Stage 2 System Prompt Length: {len(final_system)} chars")
+                log.info(f"[OPENAI-TOOL-GATING] Selected tools: {[t.command for t in selected_tool_prompts]}")
+
+    elif tool_prompts and not is_utility_request:
+        # Legacy mode for non-Gemini: include full tool content
+        final_system = compose_stage2_system_prompt(base_system or "", tool_prompts)
+        log.info(f"[OPENAI] Non-Gemini backend - using legacy mode with {len(tool_prompts)} tools included")
+
+    # Apply system prompt to payload
+    payload = apply_system_prompt_to_body(final_system, payload, metadata, user)
+
+    # Debug: Log the final system prompt being sent (Stage 2 for Gemini, or legacy)
+    log.info("=" * 80)
+    log.info(f"[OPENAI] Final system prompt length: {len(final_system) if final_system else 0} chars")
+    log.info(f"[OPENAI] Backend URL: {url}")
+    log.info(f"[OPENAI] Is Gemini backend: {is_gemini_backend}")
+    log.info(f"[OPENAI] Tool prompts count: {len(tool_prompts)}")
+    log.info(f"[OPENAI] Used two-stage tool gating: {use_two_stage_tool_gating}")
+    log.info("=" * 80)
+
     # Check if model is a reasoning model that needs special handling
     if is_openai_reasoning_model(payload["model"]):
         payload = openai_reasoning_model_handler(payload)
@@ -925,23 +1158,11 @@ async def generate_chat_completion(
             convert_logit_bias_input_to_json(payload["logit_bias"])
         )
 
-    headers, cookies = await get_headers_and_cookies(
-        request, url, key, api_config, metadata, user=user
-    )
-
+    # Re-apply Azure conversion if needed (payload was modified)
     if api_config.get("azure", False):
         api_version = api_config.get("api_version", "2023-03-15-preview")
         request_url, payload = convert_to_azure_payload(url, payload, api_version)
-
-        # Only set api-key header if not using Azure Entra ID authentication
-        auth_type = api_config.get("auth_type", "bearer")
-        if auth_type not in ("azure_ad", "microsoft_entra_id"):
-            headers["api-key"] = key
-
-        headers["api-version"] = api_version
         request_url = f"{request_url}/chat/completions?api-version={api_version}"
-    else:
-        request_url = f"{url}/chat/completions"
 
     payload = json.dumps(payload)
 

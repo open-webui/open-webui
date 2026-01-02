@@ -32,13 +32,16 @@ router = APIRouter()
 async def get_available_personas(user=Depends(get_verified_user)):
     """
     Get all currently available persona values from configured prompts.
-    Returns proficiency levels and response styles that are actually configured.
+    Returns proficiency levels, response styles, and tools that are actually configured.
     """
     # Get all proficiency prompts
     proficiency_prompts = Prompts.get_prompts_by_type("proficiency")
 
     # Get all style prompts
     style_prompts = Prompts.get_prompts_by_type("style")
+
+    # Get all tool prompts
+    tool_prompts = Prompts.get_prompts_by_type("tool")
 
     # Extract unique persona values
     proficiency_levels = sorted(list(set(
@@ -76,9 +79,23 @@ async def get_available_personas(user=Depends(get_verified_user)):
         for value in response_styles
     ]
 
+    # Get tool details (tools don't have persona_value, just list them)
+    tool_details = [
+        {
+            "command": p.command,
+            "title": p.title,
+            "description": p.tool_description,
+            "priority": p.tool_priority or 0,
+        }
+        for p in tool_prompts
+    ]
+    # Sort by priority (higher first)
+    tool_details.sort(key=lambda x: x["priority"], reverse=True)
+
     return {
         "proficiency_levels": proficiency_details,
-        "response_styles": style_details
+        "response_styles": style_details,
+        "tools": tool_details,
     }
 
 
@@ -89,7 +106,7 @@ async def get_group_available_personas(
 ):
     """
     Get available persona values for a specific group.
-    Shows only the proficiency levels and response styles configured in this group.
+    Shows only the proficiency levels, response styles, and tools configured in this group.
     """
     group = PromptGroups.get_group_by_id(group_id)
 
@@ -116,6 +133,7 @@ async def get_group_available_personas(
     # Filter by type
     proficiency_prompts = [p for p in prompts if p.prompt_type == "proficiency"]
     style_prompts = [p for p in prompts if p.prompt_type == "style"]
+    tool_prompts = [p for p in prompts if p.prompt_type == "tool"]
 
     # Extract unique persona values
     proficiency_levels = sorted(list(set(
@@ -153,11 +171,25 @@ async def get_group_available_personas(
         for value in response_styles
     ]
 
+    # Get tool details
+    tool_details = [
+        {
+            "command": p.command,
+            "title": p.title,
+            "description": p.tool_description,
+            "priority": p.tool_priority or 0,
+        }
+        for p in tool_prompts
+    ]
+    # Sort by priority (higher first)
+    tool_details.sort(key=lambda x: x["priority"], reverse=True)
+
     return {
         "group_id": group_id,
         "group_name": group.name,
         "proficiency_levels": proficiency_details,
-        "response_styles": style_details
+        "response_styles": style_details,
+        "tools": tool_details,
     }
 
 
@@ -564,15 +596,31 @@ async def preview_composed_prompt(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    composed = compose_prompts_from_group(
+    # Now returns (composed_prompt, tool_prompts)
+    # Convert proficiency_level to string if provided
+    proficiency_str = str(form_data.proficiency_level) if form_data.proficiency_level is not None else None
+    composed, tool_prompts = compose_prompts_from_group(
         group_id,
-        form_data.proficiency_level,
+        proficiency_str,
         form_data.response_style,
     )
+
+    # Convert tool prompts to dict for response
+    tools = [
+        {
+            "command": t.command,
+            "title": t.title,
+            "description": t.tool_description,
+            "priority": t.tool_priority or 0,
+        }
+        for t in tool_prompts
+    ]
 
     return {
         "group_id": group_id,
         "proficiency_level": form_data.proficiency_level,
         "response_style": form_data.response_style,
         "composed_prompt": composed,
+        "tools": tools,
+        "tool_count": len(tools),
     }

@@ -11,6 +11,13 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON, Integer, ForeignKey
 from open_webui.utils.access_control import has_access
 
+# Prompt order constants
+PROMPT_ORDER_BASE = 0
+PROMPT_ORDER_PROFICIENCY = 10
+PROMPT_ORDER_STYLE = 20
+PROMPT_ORDER_TOOL = 30
+
+
 ####################
 # PromptGroup DB Schema
 ####################
@@ -35,7 +42,7 @@ class PromptGroupMapping(Base):
     id = Column(String, primary_key=True)
     group_id = Column(String)  # No FK constraint for SQLite compatibility
     prompt_command = Column(String)  # No FK constraint for SQLite compatibility
-    order = Column(Integer, default=0)  # 0=base, 10=proficiency, 20=style
+    order = Column(Integer, default=0)  # 0=base, 10=proficiency, 20=style, 30=tool
 
 
 ####################
