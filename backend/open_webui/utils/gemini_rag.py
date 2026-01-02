@@ -333,16 +333,23 @@ class GeminiRAGService:
             log.info(f"  System Instruction 길이: {len(system_instruction) if system_instruction else 0}")
             log.info("="*80)
 
-            config = types.GenerateContentConfig(
-                tools=[
-                    types.Tool(
-                        file_search=types.FileSearch(
-                            file_search_store_names=normalized_store_names
+            # Only include tools if there are store names to search
+            if normalized_store_names:
+                config = types.GenerateContentConfig(
+                    tools=[
+                        types.Tool(
+                            file_search=types.FileSearch(
+                                file_search_store_names=normalized_store_names
+                            )
                         )
-                    )
-                ],
-                temperature=temperature
-            )
+                    ],
+                    temperature=temperature
+                )
+            else:
+                # No RAG - simple text generation
+                config = types.GenerateContentConfig(
+                    temperature=temperature
+                )
 
             if system_instruction:
                 config.system_instruction = system_instruction
@@ -428,16 +435,23 @@ class GeminiRAGService:
                     )
                 )
 
-            config = types.GenerateContentConfig(
-                tools=[
-                    types.Tool(
-                        file_search=types.FileSearch(
-                            file_search_store_names=normalized_store_names
+            # Only include tools if there are store names to search
+            if normalized_store_names:
+                config = types.GenerateContentConfig(
+                    tools=[
+                        types.Tool(
+                            file_search=types.FileSearch(
+                                file_search_store_names=normalized_store_names
+                            )
                         )
-                    )
-                ],
-                temperature=temperature
-            )
+                    ],
+                    temperature=temperature
+                )
+            else:
+                # No RAG - simple text generation
+                config = types.GenerateContentConfig(
+                    temperature=temperature
+                )
 
             if system_instruction:
                 config.system_instruction = system_instruction
