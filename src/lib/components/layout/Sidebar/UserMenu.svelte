@@ -28,7 +28,7 @@
 	export let show = false;
 	export let role = '';
 	export let help = false;
-	export let className = 'w-[160px]';
+	export let className = 'w-[200px]';
 
 	const dispatch = createEventDispatcher();
 
@@ -171,7 +171,7 @@
 							<span class="text-gray-900 dark:text-[#FDFEFE]">라이트 모드</span>
 						</button>
 						<button
-						class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm text-left hover:bg-white/20 transition {$theme === 'dark' ? 'bg-white/20' : ''}"
+						class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-body-4 text-left hover:bg-white/20 transition {$theme === 'dark' ? 'bg-white/20' : ''}"
 						on:click={() => themeChangeHandler('dark')}
 						>
 							<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -264,7 +264,7 @@
 				<hr class="border-white/20 my-1 p-0 w-full" />
 
 				<DropdownMenu.Item
-					class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-caption"
+					class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-body-4"
 					on:click={async () => {
 						show = false;
 
@@ -272,7 +272,7 @@
 
 						if ($mobile) {
 							await tick();
-							showSidebar.set(false);
+							showSidebar.set(false);	
 						}
 					}}
 				>

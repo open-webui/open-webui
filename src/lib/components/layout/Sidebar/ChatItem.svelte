@@ -439,7 +439,7 @@
 			on:focus={(e) => {}}
 			draggable="false"
 		>
-			<div class="flex self-center flex-1 w-full overflow-hidden">
+			<div class="flex self-center flex-1 w-full overflow-hidden pr-4">
 				<div
 					dir="auto"
 					class="text-body-4 text-left self-center overflow-hidden w-full truncate {id ===
@@ -455,9 +455,9 @@
 
 	<!-- Gradient overlay for smooth title fade -->
 	<div
-		class="absolute right-0 top-0 bottom-0 w-20 pointer-events-none {id === $chatId || confirmEdit || selected
-			? 'bg-gradient-to-r from-transparent via-[#E8EAF3]/50 to-[#E8EAF3] dark:via-gray-950/50 dark:to-gray-950'
-			: 'bg-gradient-to-r from-transparent via-[#E8EAF3]/50 to-[#E8EAF3] dark:via-gray-950/50 dark:to-gray-950 group-hover:via-[#E8EAF3]/70 group-hover:to-[#E8EAF3] dark:group-hover:via-gray-950/70 dark:group-hover:to-gray-950'}"
+		class="absolute right-0 top-0 bottom-0 w-24 pointer-events-none rounded-r-xl {id === $chatId || confirmEdit || selected
+			? 'bg-gradient-to-r from-transparent from-5% to-gray-200 dark:to-gray-600'
+			: 'bg-gradient-to-r from-transparent from-5% to-transparent group-hover:to-gray-200 dark:group-hover:to-gray-600'}"
 	></div>
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->

@@ -184,7 +184,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="flex flex-col items-start p-5 gap-2 min-w-max bg-gray-200/20 dark:bg-gray-600/30 shadow-lg backdrop-blur-xl rounded-2xl rounded-bl z-50 text-gray-950 dark:text-white text-caption border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+			class="flex flex-col items-start p-5 gap-2 min-w-max bg-gray-200/20 dark:bg-gray-600/30 shadow-lg backdrop-blur-xl rounded-2xl rounded-bl z-50 text-gray-950 dark:text-white text-body-4 border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
@@ -196,7 +196,7 @@
 					<!-- 학습 설정 섹션 -->
 					<div class="w-full pb-2 mb-2 border-b border-gray-200/50 dark:border-gray-200/50">
 						<button
-							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 							on:click={() => {
 								tab = 'proficiency';
 							}}
@@ -214,7 +214,7 @@
 						</button>
 
 						<button
-							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 							on:click={() => {
 								tab = 'response_style';
 							}}
@@ -241,7 +241,7 @@
 						className="w-full"
 					>
 						<button
-							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption {!fileUploadEnabled
+							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4 {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
@@ -273,7 +273,7 @@
 							className="w-full"
 						>
 							<button
-								class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption {!fileUploadEnabled
+								class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4 {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -358,7 +358,7 @@
 					{#if fileUploadEnabled}
 						{#if $config?.features?.enable_google_drive_integration}
 							<DropdownMenu.Item
-								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 								on:click={() => {
 									uploadGoogleDriveHandler();
 								}}
@@ -395,7 +395,7 @@
 
 						{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
 							<button
-								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption {!fileUploadEnabled
+								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4 {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -501,7 +501,7 @@
 			{:else if tab === 'knowledge'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							tab = '';
 						}}
@@ -515,7 +515,7 @@
 			{:else if tab === 'notes'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							tab = '';
 						}}
@@ -529,7 +529,7 @@
 			{:else if tab === 'chats'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							tab = '';
 						}}
@@ -543,7 +543,7 @@
 			{:else if tab === 'microsoft_onedrive'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							tab = '';
 						}}
@@ -554,7 +554,7 @@
 
 					{#if $config?.features?.enable_onedrive_personal}
 						<DropdownMenu.Item
-							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption text-left"
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4 text-left"
 							on:click={() => {
 								uploadOneDriveHandler('personal');
 							}}
@@ -565,7 +565,7 @@
 
 					{#if $config?.features?.enable_onedrive_business}
 						<DropdownMenu.Item
-							class="flex flex-row items-center p-1 gap-1 w-full h-auto rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption text-left"
+							class="flex flex-row items-center p-1 gap-1 w-full h-auto rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4 text-left"
 							on:click={() => {
 								uploadOneDriveHandler('organizations');
 							}}
@@ -580,7 +580,7 @@
 			{:else if tab === 'proficiency'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							tab = '';
 						}}
@@ -594,7 +594,7 @@
 					{:else if availablePersonas && availablePersonas.proficiency_levels.length > 0}
 						{#each availablePersonas.proficiency_levels as option}
 							<button
-								class="flex flex-row items-center justify-between py-1 px-2 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+								class="flex flex-row items-center justify-between py-1 px-2 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 								on:click={() => {
 									proficiencyLevel = option.value;
 									tab = '';
@@ -607,13 +607,13 @@
 							</button>
 						{/each}
 					{:else}
-						<div class="p-2 text-center text-gray-500 text-caption">옵션이 없습니다</div>
+						<div class="p-2 text-center text-gray-500 text-body-4">옵션이 없습니다</div>
 					{/if}
 				</div>
 			{:else if tab === 'response_style'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							tab = '';
 						}}
@@ -627,7 +627,7 @@
 					{:else if availablePersonas && availablePersonas.response_styles.length > 0}
 						{#each availablePersonas.response_styles as option}
 							<button
-								class="flex flex-row items-center justify-between py-1 px-2 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+								class="flex flex-row items-center justify-between py-1 px-2 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 								on:click={() => {
 									responseStyle = option.value;
 									tab = '';
@@ -640,13 +640,13 @@
 							</button>
 						{/each}
 					{:else}
-						<div class="p-2 text-center text-gray-500 text-caption">옵션이 없습니다</div>
+						<div class="p-2 text-center text-gray-500 text-body-4">옵션이 없습니다</div>
 					{/if}
 				</div>
 			{:else if tab === 'file_attach'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							tab = '';
 						}}
@@ -657,7 +657,7 @@
 
 					<!-- PDF 버튼 -->
 					<DropdownMenu.Item
-						class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							uploadFilesHandler();
 						}}
@@ -671,7 +671,7 @@
 
 					<!-- 캡처 버튼 -->
 					<DropdownMenu.Item
-						class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							if (!detectMobile()) {
 								screenCaptureHandler();
@@ -692,7 +692,7 @@
 
 					<!-- 링크 버튼 -->
 					<DropdownMenu.Item
-						class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-caption"
+						class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							showAttachWebpageModal = true;
 						}}

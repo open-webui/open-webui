@@ -8,6 +8,9 @@
 	import { disableSingleTilde } from '$lib/utils/marked/strikethrough-extension';
 	import { mentionExtension } from '$lib/utils/marked/mention-extension';
 	import graphSpecExtension from '$lib/utils/marked/graph-spec-extension';
+	import flowSpecExtension from '$lib/utils/marked/flow-spec-extension';
+	import diagramSpecExtension from '$lib/utils/marked/diagram-spec-extension';
+	import sceneSpecExtension from '$lib/utils/marked/scene-spec-extension';
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 	import footnoteExtension from '$lib/utils/marked/footnote-extension';
@@ -45,6 +48,9 @@
 	marked.use(citationExtension(options));
 	marked.use(footnoteExtension(options));
 	marked.use(graphSpecExtension(options));
+	marked.use(flowSpecExtension(options));
+	marked.use(diagramSpecExtension(options));
+	marked.use(sceneSpecExtension(options));
 	marked.use(disableSingleTilde);
 	marked.use({
 		extensions: [mentionExtension({ triggerChar: '@' }), mentionExtension({ triggerChar: '#' })]

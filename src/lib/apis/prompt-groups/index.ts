@@ -1,7 +1,7 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 // Types
-export type PromptType = 'base' | 'proficiency' | 'style' | null;
+export type PromptType = 'base' | 'proficiency' | 'style' | 'tool' | null;
 
 export interface PersonaPrompt {
 	command: string;
@@ -9,6 +9,8 @@ export interface PersonaPrompt {
 	content: string;
 	prompt_type: PromptType;
 	persona_value: string | null;
+	tool_description?: string;
+	tool_priority?: number;
 	access_control?: object;
 }
 

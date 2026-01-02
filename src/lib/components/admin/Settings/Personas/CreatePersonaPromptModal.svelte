@@ -20,6 +20,8 @@
 	let content = '';
 	let promptType: PromptType = null;
 	let personaValue: string | null = null;
+	let toolDescription: string = '';
+	let toolPriority: number = 0;
 
 	let hasManualEdit = false;
 
@@ -38,6 +40,8 @@
 		content = '';
 		promptType = null;
 		personaValue = null;
+		toolDescription = '';
+		toolPriority = 0;
 		hasManualEdit = false;
 	};
 
@@ -48,6 +52,8 @@
 			content = prompt.content;
 			promptType = prompt.prompt_type;
 			personaValue = prompt.persona_value;
+			toolDescription = prompt.tool_description ?? '';
+			toolPriority = prompt.tool_priority ?? 0;
 			hasManualEdit = true;
 		}
 	};
@@ -57,15 +63,28 @@
 			return;
 		}
 
+		// Validate tool fields when prompt_type is 'tool'
+		if (promptType === 'tool' && !toolDescription.trim()) {
+			return;
+		}
+
 		const promptCommand = command.startsWith('/') ? command : `/${command}`;
 
-		dispatch(editMode ? 'update' : 'create', {
+		const eventData: Record<string, unknown> = {
 			command: promptCommand,
 			title: title.trim(),
 			content: content.trim(),
 			prompt_type: promptType,
 			persona_value: personaValue
-		});
+		};
+
+		// Include tool fields only when prompt_type is 'tool'
+		if (promptType === 'tool') {
+			eventData.tool_description = toolDescription.trim();
+			eventData.tool_priority = toolPriority;
+		}
+
+		dispatch(editMode ? 'update' : 'create', eventData);
 
 		resetForm();
 		show = false;
@@ -156,7 +175,7 @@
 			</div>
 
 			<!-- Prompt Type -->
-			<PromptTypeSelector bind:promptType bind:personaValue />
+			<PromptTypeSelector bind:promptType bind:personaValue bind:toolDescription bind:toolPriority />
 
 			<!-- Content -->
 			<div class="flex-1 flex flex-col">

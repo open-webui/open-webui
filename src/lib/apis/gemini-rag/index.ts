@@ -82,7 +82,8 @@ export const getStores = async (token: string = '') => {
 		throw error;
 	}
 
-	return res;
+	// Return stores array from response object
+	return res?.stores || [];
 };
 
 // Delete a store (folder)

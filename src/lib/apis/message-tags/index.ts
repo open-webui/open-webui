@@ -38,6 +38,7 @@ export type DaemonConfig = {
 	consolidation_threshold: number;
 	custom_tagging_prompt: string | null;
 	custom_system_instruction: string | null;
+	rag_store_names: string[];
 	last_run_at: number | null;
 	last_run_status: string | null;
 	lock_acquired_at: number | null;
@@ -55,6 +56,7 @@ export type DaemonConfigUpdate = {
 	consolidation_threshold?: number;
 	custom_tagging_prompt?: string | null;
 	custom_system_instruction?: string | null;
+	rag_store_names?: string[];
 };
 
 export type TagStats = {
@@ -64,6 +66,18 @@ export type TagStats = {
 	last_run_at: number | null;
 	last_run_status: string | null;
 	daemon_enabled: boolean;
+};
+
+export type DaemonProgress = {
+	is_running: boolean;
+	status: 'idle' | 'collecting' | 'processing' | 'consolidating' | 'completed' | 'error';
+	started_at: number | null;
+	total_messages: number;
+	processed_messages: number;
+	current_batch: number;
+	total_batches: number;
+	progress_percent: number;
+	last_error: string | null;
 };
 
 export type TagMessageInfo = {
@@ -352,6 +366,38 @@ export const runDaemonManually = async (
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/message-tags/admin/run`, {
 		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+/**
+ * Get daemon progress
+ * GET /message-tags/admin/progress
+ */
+export const getDaemonProgress = async (token: string): Promise<DaemonProgress | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/message-tags/admin/progress`, {
+		method: 'GET',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -780,8 +826,40 @@ export const getTagMessagesStats = async (
 	return res;
 };
 
-/**
- * 상위 N개 태그 조회
+/** * Force unlock daemon lock
+ * POST /message-tags/admin/unlock
+ */
+export const unlockDaemon = async (
+	token: string
+): Promise<{ success: boolean; message: string } | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/message-tags/admin/unlock`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+/** * 상위 N개 태그 조회
  * GET /message-tags/top?limit=10
  */
 export const getTopTags = async (
