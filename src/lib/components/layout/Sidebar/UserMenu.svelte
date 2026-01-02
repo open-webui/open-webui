@@ -110,7 +110,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="{className} flex flex-col items-start p-5 gap-2 bg-gray-50 dark:bg-[rgba(113,122,143,0.3)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-[20px] rounded-bl-[4px] z-50 text-gray-900 dark:text-white text-caption border-0"
+			class="{className} flex flex-col items-start p-5 gap-2 bg-gray-50 dark:bg-[rgba(113,122,143,0.3)] shadow-[4px_4px_20px_rgba(0,0,0,0.1)] backdrop-blur-[20px] rounded-[20px] rounded-bl-[4px] z-50 text-gray-900 dark:text-white text-sm border-0"
 			sideOffset={4}
 			side="top"
 			align="start"
@@ -143,8 +143,8 @@
 						transition:fade={{ duration: 100 }}
 					>
 						<button
-							class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-caption text-left hover:bg-white/20 transition {$theme === 'system' ? 'bg-white/20' : ''}"
-							on:click={() => themeChangeHandler('system')}
+						class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm text-left hover:bg-white/20 transition {$theme === 'system' ? 'bg-white/20' : ''}"
+						on:click={() => themeChangeHandler('system')}
 						>
 							<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 								<rect x="3" y="4" width="14" height="10" rx="1" class="stroke-current" stroke-width="1.5"/>
@@ -154,8 +154,8 @@
 							<span class="text-gray-900 dark:text-[#FDFEFE]">시스템 기본</span>
 						</button>
 						<button
-							class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-caption text-left hover:bg-white/20 transition {$theme === 'light' ? 'bg-white/20' : ''}"
-							on:click={() => themeChangeHandler('light')}
+						class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm text-left hover:bg-white/20 transition {$theme === 'light' ? 'bg-white/20' : ''}"
+						on:click={() => themeChangeHandler('light')}
 						>
 							<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 								<circle cx="10" cy="10" r="4" class="stroke-current" stroke-width="1.5"/>
@@ -171,8 +171,8 @@
 							<span class="text-gray-900 dark:text-[#FDFEFE]">라이트 모드</span>
 						</button>
 						<button
-							class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-caption text-left hover:bg-white/20 transition {$theme === 'dark' ? 'bg-white/20' : ''}"
-							on:click={() => themeChangeHandler('dark')}
+						class="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm text-left hover:bg-white/20 transition {$theme === 'dark' ? 'bg-white/20' : ''}"
+						on:click={() => themeChangeHandler('dark')}
 						>
 							<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 								<path
@@ -281,7 +281,7 @@
 				</DropdownMenu.Item>
 
 				<DropdownMenu.Item
-					class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-caption"
+					class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-sm"
 					on:click={async () => {
 						show = false;
 
@@ -300,7 +300,7 @@
 				<DropdownMenu.Item
 					as="a"
 					href="/playground"
-					class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none text-caption"
+					class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none text-sm"
 					on:click={async () => {
 						show = false;
 						if ($mobile) {
@@ -316,7 +316,7 @@
 				<DropdownMenu.Item
 					as="a"
 					href="/admin"
-					class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none text-caption"
+					class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none text-sm"
 					on:click={async () => {
 						show = false;
 						if ($mobile) {
@@ -335,7 +335,7 @@
 					<DropdownMenu.Item
 						as="a"
 						target="_blank"
-						class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none cursor-pointer text-caption"
+						class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none cursor-pointer text-sm"
 						id="chat-share-button"
 						on:click={() => {
 							show = false;
@@ -349,7 +349,7 @@
 					<DropdownMenu.Item
 						as="a"
 						target="_blank"
-						class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none cursor-pointer text-caption"
+						class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none cursor-pointer text-sm"
 						id="chat-share-button"
 						on:click={() => {
 							show = false;
@@ -361,8 +361,7 @@
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item
-						class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none cursor-pointer text-caption"
-						id="chat-share-button"
+						class="flex flex-row items-center p-1 gap-2 w-full h-7 rounded-lg hover:bg-white/10 transition select-none cursor-pointer text-sm"
 						on:click={async () => {
 							show = false;
 							showShortcuts.set(!$showShortcuts);
@@ -388,7 +387,7 @@
 								: ''}
 						>
 							<div
-								class="flex rounded-xl py-1 px-3 text-caption gap-2.5 items-center"
+								class="flex rounded-xl py-1 px-3 text-sm gap-2.5 items-center"
 								on:mouseenter={() => {
 									getUsageInfo();
 								}}

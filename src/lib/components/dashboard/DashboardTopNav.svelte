@@ -41,7 +41,7 @@
 							{$user?.name}
 						</span>
 						<span class="text-caption text-right text-gray-700 dark:text-gray-300">
-							{$user?.role}
+							{$i18n.t($user?.role)}
 						</span>
 					</div>
 					<!-- Profile Image -->

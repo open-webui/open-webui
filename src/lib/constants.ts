@@ -3,6 +3,10 @@ import { browser, dev } from '$app/environment';
 
 export const APP_NAME = 'Open WebUI';
 
+// Layout Constants
+export const SIDEBAR_WIDTH = 300; // Sidebar width in pixels
+export const SIDEBAR_CONTENT_OFFSET = SIDEBAR_WIDTH; // Offset for content when sidebar is open
+
 export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
 export const WEBUI_BASE_URL = browser ? (dev ? `` : ``) : ``;
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;

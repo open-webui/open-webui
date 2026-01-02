@@ -44,7 +44,7 @@
 		importChats
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, SIDEBAR_WIDTH } from '$lib/constants';
 
 	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
@@ -719,7 +719,7 @@
 				</button>
 			</Tooltip>
 
-			<!-- User Profile -->
+			<!-- User Profile (Collapsed Sidebar - Figma: 40x40 frame, 36x36 image) -->
 			{#if $user !== undefined && $user !== null}
 				<UserMenu
 					role={$user?.role}
@@ -730,12 +730,12 @@
 					}}
 				>
 					<div
-						class="cursor-pointer flex rounded-xl hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition group mb-[0.68rem]"
+						class="cursor-pointer flex rounded-xl hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition group mb-1"
 					>
-						<div class="self-center flex items-center justify-center size-8.5">
+						<div class="self-center flex items-center justify-center size-10">
 							<img
 								src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-								class="size-6 object-cover rounded-full"
+								class="size-9 object-cover rounded-full bg-primary-500"
 								alt={$i18n.t('Open User Profile Menu')}
 								aria-label={$i18n.t('Open User Profile Menu')}
 							/>
@@ -757,13 +757,14 @@
 			? `ml-[4.5rem] md:ml-0 `
 			: ' transition-all duration-300 '} shrink-0 text-gray-50 text-sm fixed top-0 {$mobile ? 'right-0' : 'left-0'} overflow-x-hidden
         "
-		transition:fly={{ duration: 250, x: $mobile ? 260 : -300 }}
+		transition:fly={{ duration: 250, x: $mobile ? SIDEBAR_WIDTH : -SIDEBAR_WIDTH }}
 		data-state={$showSidebar}
 	>
 		<div
-			class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[300px] overflow-x-hidden scrollbar-none bg-gray-50 dark:bg-gray-950 z-50 {$showSidebar
+			class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] overflow-x-hidden scrollbar-none bg-gray-50 dark:bg-gray-950 z-50 {$showSidebar
 				? ''
 				: 'invisible'}"
+			style="width: {SIDEBAR_WIDTH}px;"
 		>
 			<div
 				class="sidebar px-4 pt-4 pb-1.5 flex flex-col gap-3 text-gray-600 dark:text-gray-400 sticky top-0 z-10"
@@ -1221,8 +1222,10 @@
 				{/if}
 			</div>
 
-			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar flex flex-row">
-				<div class="flex flex-col font-primary flex-1 justify-center pl-2">
+			<!-- Profile Section (Figma: h-80px, padding 20px, gap 20px) -->
+			<div class="sticky bottom-0 z-10 sidebar flex flex-row justify-between items-center p-5 gap-5 h-20">
+				<!-- User Section (Figma: gap 12px, h-40px) -->
+				<div class="flex flex-row items-center gap-3 flex-1 h-10">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							role={$user?.role}
@@ -1232,23 +1235,23 @@
 								}
 							}}
 						>
-							<div
-								class=" flex items-center rounded-2xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
-							>
-								<div class=" self-center mr-3">
+							<div class="flex flex-row items-center gap-3 rounded-xl hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition cursor-pointer py-1 px-1 -mx-1">
+								<!-- Profile Image Frame (Figma: 40x40) -->
+								<div class="flex items-center justify-center size-10 shrink-0">
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-										class=" size-6 object-cover rounded-full"
+										class="size-9 object-cover rounded-full bg-primary-500"
 										alt={$i18n.t('Open User Profile Menu')}
 										aria-label={$i18n.t('Open User Profile Menu')}
 									/>
 								</div>
-								<div class="flex flex-col items-start">
-									<div class=" self-center text-body-4-medium text-gray-900 dark:text-gray-50">
+								<!-- User Info (Figma: name 14px/500, role 12px/400) -->
+								<div class="flex flex-col justify-center items-start">
+									<div class="text-sm font-medium leading-[21px] text-gray-900 dark:text-white truncate max-w-[140px]">
 										{$user?.name}
 									</div>
-									<div class=" self-center text-caption text-gray-600 dark:text-gray-300">
-										{$user?.role}
+									<div class="text-xs font-normal leading-[18px] text-[#B4BCD0]">
+										{$i18n.t($user?.role)}
 									</div>
 								</div>
 							</div>
@@ -1256,13 +1259,14 @@
 					{/if}
 				</div>
 
-				<!-- Admin Buttons (Online Knowledge, Online Chapter) -->
-				{#if $user?.role === 'admin'}
-					<div class="flex items-center gap-1">
-						<Tooltip content="온라인 지식기반" placement="bottom">
+				<!-- Right Side Controls -->
+				<div class="flex items-center gap-2">
+					<!-- Admin Buttons (Online Knowledge, Online Chapter) -->
+					{#if $user?.role === 'admin'}
+						<Tooltip content="온라인 지식기반" placement="top">
 							<a
 								href="/workspace/online-knowledge"
-								class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition text-gray-600 dark:text-gray-400"
+								class="flex rounded-lg size-5 justify-center items-center hover:opacity-70 transition text-gray-900 dark:text-white"
 								on:click={() => {
 									if ($mobile) {
 										showSidebar.set(false);
@@ -1287,10 +1291,10 @@
 							</a>
 						</Tooltip>
 
-						<Tooltip content="온라인 챕터" placement="bottom">
+						<Tooltip content="온라인 챕터" placement="top">
 							<a
 								href="/workspace/online-chapter"
-								class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition text-gray-600 dark:text-gray-400"
+								class="flex rounded-lg size-5 justify-center items-center hover:opacity-70 transition text-gray-900 dark:text-white"
 								on:click={() => {
 									if ($mobile) {
 										showSidebar.set(false);
@@ -1314,16 +1318,15 @@
 								</svg>
 							</a>
 						</Tooltip>
-					</div>
-				{/if}
+					{/if}
 
-				<Tooltip
-					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-					placement="bottom"
-				>
-					<div class="flex h-full items-center justify-center">
+					<!-- Sidebar Toggle (Figma: 20x20) -->
+					<Tooltip
+						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						placement="top"
+					>
 						<button
-							class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition text-gray-900 dark:text-gray-50 {isWindows
+							class="flex size-5 justify-center items-center hover:opacity-70 transition text-gray-900 dark:text-white {isWindows
 								? 'cursor-pointer'
 								: 'cursor-[w-resize]'}"
 							on:click={() => {
@@ -1331,12 +1334,10 @@
 							}}
 							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 						>
-							<div class=" self-center p-1.5">
-								<Sidebar />
-							</div>
+							<Sidebar />
 						</button>
-					</div>
-				</Tooltip>
+					</Tooltip>
+				</div>
 			</div>
 			<!-- Dashboard Toggle Switch (Instructor/Admin only) -->
 					{#if $user && isInstructor($user)}

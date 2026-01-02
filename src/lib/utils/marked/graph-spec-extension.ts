@@ -5,40 +5,67 @@
  * Used to render mathematical function graphs using math.js + Plotly.js
  */
 
+// 2D 도메인 (단순 튜플) 또는 3D 도메인 (객체)
+export type Domain2D = [number, number];
+export type Domain3D = {
+	x?: [number, number];
+	y?: [number, number];
+	u?: [number, number];
+	v?: [number, number];
+	t?: [number, number];
+};
+
+// 2D 샘플링 (숫자) 또는 3D 샘플링 (객체)
+export type Sampling2D = number;
+export type Sampling3D = {
+	x?: number;
+	y?: number;
+	u?: number;
+	v?: number;
+	t?: number;
+};
+
 export interface GraphSpecLayer {
-	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d';
+	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' |
+		'function_3d' | 'parametric_3d' | 'scatter_3d';
+	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
-	domain?: [number, number];
-	sampling?: number;
-	data?: [number, number][];
+	domain?: Domain2D | Domain3D;
+	sampling?: Sampling2D | Sampling3D;
+	data?: [number, number][] | [number, number, number][]; // 2D 또는 3D 데이터
 	style?: {
 		color?: string | string[];
+		colorMap?: string; // 3D용 컬러맵 (viridis, plasma 등)
 		lineWidth?: number;
 		lineStyle?: 'solid' | 'dashed' | 'dotted';
-		marker?: 'circle' | 'square' | 'triangle' | 'diamond' | 'cross';
+		marker?: 'circle' | 'square' | 'triangle' | 'diamond' | 'cross' | 'sphere';
 		size?: number;
 		opacity?: number;
 	};
 }
 
 export interface GraphSpec {
-	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d';
+	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d' |
+		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d';
+	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
-	domain?: [number, number];
-	sampling?: number;
-	data?: [number, number][]; // scatter_2d용 데이터 포인트
-	layers?: GraphSpecLayer[]; // composite_2d, multi_scatter_2d용 레이어
+	domain?: Domain2D | Domain3D;
+	sampling?: Sampling2D | Sampling3D;
+	data?: [number, number][] | [number, number, number][]; // 2D 또는 3D 데이터
+	layers?: GraphSpecLayer[]; // composite용 레이어
 	style?: {
 		color?: string | string[];
+		colorMap?: string; // 3D용 컬러맵 (viridis, plasma 등)
 		lineWidth?: number;
 		lineStyle?: 'solid' | 'dashed' | 'dotted';
-		marker?: 'circle' | 'square' | 'triangle' | 'diamond' | 'cross';
+		marker?: 'circle' | 'square' | 'triangle' | 'diamond' | 'cross' | 'sphere';
 		size?: number;
 		opacity?: number;
 	};
 	axis?: {
 		xLabel?: string;
 		yLabel?: string;
+		zLabel?: string; // 3D용
 		grid?: boolean;
 	};
 }
@@ -70,15 +97,34 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 		});
 
 		// 수학 표현식을 숫자로 변환 (PI, E 등) - 문자열 외부만
+		// 곱셈: num * PI, PI * num
 		jsonContent = jsonContent.replace(/(\d+(?:\.\d+)?)\s*\*\s*PI/gi, (_, num) => {
 			return String(parseFloat(num) * Math.PI);
 		});
 		jsonContent = jsonContent.replace(/PI\s*\*\s*(\d+(?:\.\d+)?)/gi, (_, num) => {
 			return String(parseFloat(num) * Math.PI);
 		});
+		// 나눗셈: PI / num
 		jsonContent = jsonContent.replace(/PI\s*\/\s*(\d+(?:\.\d+)?)/gi, (_, num) => {
 			return String(Math.PI / parseFloat(num));
 		});
+		// 뺄셈: PI - num (반드시 PI 치환 전에 처리)
+		jsonContent = jsonContent.replace(/PI\s*-\s*(\d+(?:\.\d+)?)/gi, (_, num) => {
+			return String(Math.PI - parseFloat(num));
+		});
+		// 덧셈: PI + num
+		jsonContent = jsonContent.replace(/PI\s*\+\s*(\d+(?:\.\d+)?)/gi, (_, num) => {
+			return String(Math.PI + parseFloat(num));
+		});
+		// 뺄셈: num - PI
+		jsonContent = jsonContent.replace(/(\d+(?:\.\d+)?)\s*-\s*PI/gi, (_, num) => {
+			return String(parseFloat(num) - Math.PI);
+		});
+		// 덧셈: num + PI
+		jsonContent = jsonContent.replace(/(\d+(?:\.\d+)?)\s*\+\s*PI/gi, (_, num) => {
+			return String(parseFloat(num) + Math.PI);
+		});
+		// 단독 PI, E
 		jsonContent = jsonContent.replace(/\bPI\b/gi, String(Math.PI));
 		jsonContent = jsonContent.replace(/\bE\b/g, String(Math.E));
 

@@ -301,7 +301,7 @@
 							className="w-full"
 						>
 							<button
-								class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-xs leading-[18px] {!fileUploadEnabled
+							class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-lg hover:bg-white/10 transition cursor-pointer text-sm leading-[20px] {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {

@@ -84,6 +84,7 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
 	import { updateFolderById } from '$lib/apis/folders';
+	import { getTextbookData, type Chapter, type Section } from '$lib/apis/textbook';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -186,6 +187,25 @@
 	let lastLoadedChatId: string | null = null;  // 마지막으로 로드한 채팅 ID 추적
 	let lastKnownChapterId: string | null = null;  // 마지막으로 알려진 chat.chat.chapter_id (백엔드 값 추적)
 	let isCreatingNewChat = false;  // 새 채팅 생성 중 플래그
+	let textbookChaptersCache: Chapter[] = [];  // textbook API에서 가져온 chapter 목록 캐싱
+
+	// Textbook 데이터 로드 및 캐싱
+	const loadTextbookChapters = async () => {
+		if (textbookChaptersCache.length > 0) return;  // 이미 로드됨
+		try {
+			const data = await getTextbookData(localStorage.token);
+			if (data?.sections) {
+				textbookChaptersCache = data.sections.flatMap((section: Section) => section.subsections);
+			}
+		} catch (error) {
+			console.error('Failed to load textbook data:', error);
+		}
+	};
+
+	// chapter_id로 chapter 정보 찾기
+	const findChapterById = (chapterId: string): Chapter | null => {
+		return textbookChaptersCache.find((ch: Chapter) => ch.id === chapterId) || null;
+	};
 
 	// 채팅방 로드 시 채팅방에 저장된 정보를 우선 사용 (새 채팅 생성 중에는 스킵)
 	$: if (chat && !$temporaryChatEnabled && chat.id !== lastLoadedChatId && !isCreatingNewChat) {
@@ -195,8 +215,20 @@
 		if (chat.chapter_id) {
 			// 채팅방에 챕터 정보가 있으면 해당 정보 사용
 			toolbarChapterId = chat.chapter_id;
-			toolbarTitle = chat.chat?.chapter || '';
-			toolbarSubtitle = chat.chat?.subtitle || '';
+			
+			// chapter 제목이 없으면 textbook API에서 가져오기
+			if (!chat.chat?.chapter) {
+				loadTextbookChapters().then(() => {
+					const chapter = findChapterById(chat.chapter_id);
+					if (chapter) {
+						toolbarTitle = chapter.title;
+						toolbarSubtitle = chapter.subtitle;
+					}
+				});
+			} else {
+				toolbarTitle = chat.chat.chapter;
+				toolbarSubtitle = chat.chat.subtitle || '';
+			}
 		} else if ($selectedTextbookSection) {
 			// 채팅방에 챕터 정보가 없으면 현재 선택된 섹션 사용
 			toolbarChapterId = $selectedTextbookSection.id;
@@ -217,8 +249,20 @@
 	$: if (chat && chat.chat?.chapter_id && chat.chat.chapter_id !== lastKnownChapterId) {
 		lastKnownChapterId = chat.chat.chapter_id;
 		toolbarChapterId = chat.chat.chapter_id;
-		toolbarTitle = chat.chat.chapter || '';
-		toolbarSubtitle = chat.chat.subtitle || '';
+		
+		// chapter 제목이 없으면 textbook API에서 가져오기
+		if (!chat.chat.chapter) {
+			loadTextbookChapters().then(() => {
+				const chapter = findChapterById(chat.chat.chapter_id);
+				if (chapter) {
+					toolbarTitle = chapter.title;
+					toolbarSubtitle = chapter.subtitle;
+				}
+			});
+		} else {
+			toolbarTitle = chat.chat.chapter;
+			toolbarSubtitle = chat.chat.subtitle || '';
+		}
 	}
 
 	// Update toolbar when textbook section is selected from sidebar (새 채팅 및 기존 채팅 모두)
@@ -2635,7 +2679,8 @@
 			<PaneGroup direction="horizontal" class="w-full h-full">
 				<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
 					<!-- chat toolbar - flex for chat view, absolute for placeholder view -->
-					{#if !$temporaryChatEnabled && ((chat && history.currentId) || $selectedTextbookSection)}
+					<!-- Only show when chapter is selected (from chat or textbook) -->
+					{#if !$temporaryChatEnabled && (chat?.chapter || $selectedTextbookSection)}
 						{@const hasMessages = ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 						{#if $mobile}
 							<!-- Mobile: Collapsible dropdown toolbar -->
