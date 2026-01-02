@@ -332,7 +332,11 @@ async def process_token_usage(
         chat_id: Optional chat ID for conversation tracking
         user_id: Optional user ID for user-level analytics
     """
+    log.info(f"📊 [process_token_usage] Called with model={model_id}, chat_id={chat_id}, user_id={user_id}")
+    log.info(f"📊 [process_token_usage] usage_data={usage_data}")
+    
     if not usage_data:
+        log.info(f"📊 [process_token_usage] No usage_data, returning early")
         return
 
     # Extract token counts with safe defaults
@@ -340,7 +344,7 @@ async def process_token_usage(
     completion_tokens = usage_data.get("completion_tokens", 0)
 
     # Extract reasoning tokens from completion_tokens_details
-    completion_tokens_details = usage_data.get("completion_tokens_details", {})
+    completion_tokens_details = usage_data.get("completion_tokens_details", {}) or {}
     reasoning_tokens = completion_tokens_details.get("reasoning_tokens", 0)
 
     # Calculate IN, OUT, TOTAL according to spec
@@ -350,6 +354,8 @@ async def process_token_usage(
     token_in = prompt_tokens
     token_out = completion_tokens + reasoning_tokens
     token_total = token_in + token_out
+    
+    log.info(f"📊 [process_token_usage] Calculated: in={token_in}, out={token_out}, total={token_total}")
 
     # 1. Update existing group-based token tracking (for rate limiting)
     token_groups.update_token_usage(model_id, token_in, token_out, token_total)
@@ -360,7 +366,8 @@ async def process_token_usage(
         
         # 2. Update conversation token usage (per-chat tracking)
         if chat_id and user_id:
-            Analytics.update_conversation_token_usage(
+            log.info(f"📊 [process_token_usage] Updating conversation token usage for chat={chat_id}, user={user_id}")
+            result = Analytics.update_conversation_token_usage(
                 chat_id=chat_id,
                 user_id=user_id,
                 model_id=model_id,
@@ -368,9 +375,13 @@ async def process_token_usage(
                 token_out=token_out,
                 token_total=token_total
             )
+            log.info(f"📊 [process_token_usage] Conversation update result: {result}")
+        else:
+            log.info(f"📊 [process_token_usage] Skipping conversation update - chat_id={chat_id}, user_id={user_id}")
         
         # 3. Update daily token usage (for heatmaps)
         if user_id:
+            log.info(f"📊 [process_token_usage] Updating daily token usage for user={user_id}")
             Analytics.update_daily_token_usage(
                 user_id=user_id,
                 token_in=token_in,
@@ -380,6 +391,7 @@ async def process_token_usage(
             )
         
         # 4. Update model token usage (for model breakdowns)
+        log.info(f"📊 [process_token_usage] Updating model token usage for model={model_id}")
         Analytics.update_model_token_usage(
             user_id=user_id,
             model_id=model_id,
@@ -388,9 +400,9 @@ async def process_token_usage(
             token_total=token_total
         )
         
-        log.debug(f"📊 Analytics updated: model={model_id}, chat={chat_id}, user={user_id}, tokens={token_total}")
+        log.info(f"📊 [process_token_usage] SUCCESS: model={model_id}, chat={chat_id}, user={user_id}, tokens={token_total}")
     except Exception as e:
-        log.error(f"Error updating analytics: {e}")
+        log.error(f"📊 [process_token_usage] ERROR updating analytics: {e}", exc_info=True)
 
 
 @sio.event

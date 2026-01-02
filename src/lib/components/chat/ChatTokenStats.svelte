@@ -44,31 +44,37 @@
 		}));
 
 		try {
-			const token = localStorage.getItem('token');
-			if (!token) {
+				const token = localStorage.getItem('token');
+				if (!token) {
+					console.log('[ChatTokenStats] No token found, setting null');
+					chatTokenStats.set(null);
+					return;
+				}
+	
+				console.log('[ChatTokenStats] Fetching stats for chat:', id);
+				const stats = await getChatTokenStats(token, id);
+				console.log('[ChatTokenStats] API Response:', stats);
+				
+				if (stats) {
+					chatTokenStats.set({
+						chat_id: stats.chat_id,
+						total_input_tokens: stats.total_input_tokens,
+						total_output_tokens: stats.total_output_tokens,
+						total_tokens: stats.total_tokens,
+						last_input_tokens: stats.last_input_tokens,
+						last_output_tokens: stats.last_output_tokens,
+						message_count: stats.message_count,
+						loading: false
+					});
+					console.log('[ChatTokenStats] Stats set, total_tokens:', stats.total_tokens);
+				} else {
+					console.log('[ChatTokenStats] No stats returned, setting null');
+					chatTokenStats.set(null);
+				}
+			} catch (error) {
+				console.error('[ChatTokenStats] Error fetching token stats:', error);
 				chatTokenStats.set(null);
-				return;
 			}
-
-			const stats = await getChatTokenStats(token, id);
-			if (stats) {
-				chatTokenStats.set({
-					chat_id: stats.chat_id,
-					total_input_tokens: stats.total_input_tokens,
-					total_output_tokens: stats.total_output_tokens,
-					total_tokens: stats.total_tokens,
-					last_input_tokens: stats.last_input_tokens,
-					last_output_tokens: stats.last_output_tokens,
-					message_count: stats.message_count,
-					loading: false
-				});
-			} else {
-				chatTokenStats.set(null);
-			}
-		} catch (error) {
-			console.error('Error fetching token stats:', error);
-			chatTokenStats.set(null);
-		}
 	}
 
 	// Function to refresh stats (can be called from parent)
@@ -83,7 +89,7 @@
 	});
 </script>
 
-{#if $chatTokenStats && !$chatTokenStats.loading && $chatTokenStats.total_tokens > 0}
+{#if $chatTokenStats && !$chatTokenStats.loading}
 	<Tooltip
 		content={`
 			<div class="text-xs space-y-1">

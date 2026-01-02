@@ -241,14 +241,18 @@ class AnalyticsTable:
 
     def get_conversation_token_usage(self, chat_id: str) -> Optional[ConversationTokenUsageResponse]:
         """Get token usage stats for a specific conversation"""
+        log.info(f"📊 [Analytics.get_conversation_token_usage] Looking up chat_id={chat_id}")
         try:
             with get_db() as db:
                 record = db.query(ConversationTokenUsage).filter_by(chat_id=chat_id).first()
+                log.info(f"📊 [Analytics.get_conversation_token_usage] Query result: {record}")
                 if record:
+                    log.info(f"📊 [Analytics.get_conversation_token_usage] Found record with total_tokens={record.total_tokens}")
                     return ConversationTokenUsageResponse.model_validate(record)
+                log.info(f"📊 [Analytics.get_conversation_token_usage] No record found for chat_id={chat_id}")
                 return None
         except Exception as e:
-            log.error(f"Error getting conversation token usage for chat {chat_id}: {e}")
+            log.error(f"📊 [Analytics.get_conversation_token_usage] Error getting conversation token usage for chat {chat_id}: {e}", exc_info=True)
             return None
 
     def update_conversation_token_usage(
@@ -264,13 +268,18 @@ class AnalyticsTable:
         Update or create conversation token usage record.
         Called after each message in a chat.
         """
+        log.info(f"📊 [Analytics.update_conversation] Starting: chat_id={chat_id}, user_id={user_id}, model_id={model_id}")
+        log.info(f"📊 [Analytics.update_conversation] Tokens: in={token_in}, out={token_out}, total={token_total}")
         try:
             with get_db() as db:
+                log.info(f"📊 [Analytics.update_conversation] Got DB session")
                 record = db.query(ConversationTokenUsage).filter_by(chat_id=chat_id).first()
                 now = int(time.time())
+                log.info(f"📊 [Analytics.update_conversation] Existing record: {record}")
 
                 if record:
                     # Update existing record
+                    log.info(f"📊 [Analytics.update_conversation] Updating existing record")
                     record.total_input_tokens += token_in
                     record.total_output_tokens += token_out
                     record.total_tokens += token_total
@@ -283,6 +292,7 @@ class AnalyticsTable:
                         record.model_id = model_id
                 else:
                     # Create new record
+                    log.info(f"📊 [Analytics.update_conversation] Creating new record")
                     record = ConversationTokenUsage(
                         id=str(uuid.uuid4()),
                         chat_id=chat_id,
@@ -299,12 +309,13 @@ class AnalyticsTable:
                     )
                     db.add(record)
 
+                log.info(f"📊 [Analytics.update_conversation] Committing...")
                 db.commit()
                 db.refresh(record)
-                log.debug(f"Updated conversation token usage for chat {chat_id}: +{token_total} tokens")
+                log.info(f"📊 [Analytics.update_conversation] SUCCESS! total_tokens now={record.total_tokens}")
                 return ConversationTokenUsageResponse.model_validate(record)
         except Exception as e:
-            log.error(f"Error updating conversation token usage for chat {chat_id}: {e}")
+            log.error(f"📊 [Analytics.update_conversation] ERROR: {e}", exc_info=True)
             return None
 
     def get_top_chats_by_user(

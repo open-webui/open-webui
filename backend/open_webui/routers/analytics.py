@@ -37,7 +37,6 @@ router = APIRouter()
 # Conversation Token Stats
 ############################
 
-
 @router.get("/chat/{chat_id}", response_model=Optional[ConversationTokenUsageResponse])
 async def get_chat_token_stats(chat_id: str, user=Depends(get_verified_user)):
     """
@@ -53,9 +52,14 @@ async def get_chat_token_stats(chat_id: str, user=Depends(get_verified_user)):
     
     Used to display token stats next to model name in chat UI.
     """
+    log.info(f"📊 [get_chat_token_stats] Called for chat_id={chat_id}, user_id={user.id}")
+    
     # Verify user has access to this chat
     chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    log.info(f"📊 [get_chat_token_stats] Chat access check: {chat is not None}")
+    
     if not chat and user.role != "admin":
+        log.info(f"📊 [get_chat_token_stats] User not authorized (not admin, no chat access)")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
@@ -71,9 +75,11 @@ async def get_chat_token_stats(chat_id: str, user=Depends(get_verified_user)):
             )
     
     stats = Analytics.get_conversation_token_usage(chat_id)
+    log.info(f"📊 [get_chat_token_stats] Stats from DB: {stats}")
     
     # Return empty stats if no token data yet
     if not stats:
+        log.info(f"📊 [get_chat_token_stats] No stats found, returning empty response")
         return ConversationTokenUsageResponse(
             chat_id=chat_id,
             user_id=user.id,
@@ -87,6 +93,8 @@ async def get_chat_token_stats(chat_id: str, user=Depends(get_verified_user)):
             updated_at=0,
         )
     
+    log.info(f"📊 [get_chat_token_stats] Returning stats with total_tokens={stats.total_tokens}")
+    return stats
     return stats
 
 
