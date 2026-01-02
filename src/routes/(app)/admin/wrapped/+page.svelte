@@ -127,7 +127,7 @@
 				class="mt-6 text-sm font-bold text-white hover:text-[#ff003c] border border-white/20 hover:border-[#ff003c] px-6 py-2 transition-all uppercase tracking-widest"
 				on:click={() => goto('/wrapped')}
 			>
-				<< {$i18n.t('Return_To_User_Interface')}
+				&lt;&lt; {$i18n.t('Return_To_User_Interface')}
 			</button>
 		</div>
 	</div>
