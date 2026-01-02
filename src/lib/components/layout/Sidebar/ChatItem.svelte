@@ -351,13 +351,13 @@
 <div
 	id="sidebar-chat-group"
 	bind:this={itemElement}
-	class="  {className} relative group mt-2 ml-2 mr-2"
+	class="{className} relative group"
 	draggable={draggable && !confirmEdit}
 >
 	{#if confirmEdit}
 		<div
 			id="sidebar-chat-item"
-			class="w-full flex items-center py-[2px] px-1 gap-2 h-[25px] rounded-xl bg-gray-500/30 dark:bg-gray-500/30 whitespace-nowrap text-ellipsis relative {generating
+			class="w-full flex items-center py-1 px-1 gap-2 rounded-xl bg-gray-200/30 dark:bg-gray-600/30 whitespace-nowrap text-ellipsis relative {generating
 				? 'cursor-not-allowed'
 				: ''}"
 		>
@@ -405,12 +405,12 @@
 	{:else}
 		<a
 			id="sidebar-chat-item"
-			class="w-full flex items-center py-[2px] px-1 gap-2 h-[25px] rounded-xl whitespace-nowrap text-ellipsis {id ===
+			class="w-full flex items-center py-1 px-1 gap-2 rounded-xl whitespace-nowrap text-ellipsis transition {id ===
 				$chatId || confirmEdit
-				? 'bg-gray-500/30 dark:bg-gray-500/30'
+				? 'bg-gray-200/30 dark:bg-gray-600/30'
 				: selected
-					? 'bg-gray-500/30 dark:bg-gray-500/30'
-					: 'group-hover:bg-gray-500/30 dark:group-hover:bg-gray-500/30'}"
+					? 'bg-gray-200/30 dark:bg-gray-600/30'
+					: 'hover:bg-gray-200/20 dark:hover:bg-gray-600/20'}"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
@@ -442,10 +442,10 @@
 			<div class="flex self-center flex-1 w-full overflow-hidden">
 				<div
 					dir="auto"
-					class="text-sm leading-[21px] font-normal text-left self-center overflow-hidden w-full truncate {id ===
+					class="text-body-4 text-left self-center overflow-hidden w-full truncate {id ===
 						$chatId || selected
-						? 'text-gray-800 dark:text-[#8D96AD]'
-						: 'text-gray-800 dark:text-[#8D96AD]'}"
+						? 'text-gray-800 dark:text-white'
+						: 'text-gray-600 dark:text-gray-600'}"
 				>
 					{title}
 				</div>
@@ -454,12 +454,7 @@
 	{/if}
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div class="flex flex-row absolute right-1 top-0 h-[25px] items-center pr-1 pl-5 bg-linear-to-l {id ===
-				$chatId ||
-			confirmEdit ||
-			selected
-				? ''
-				: ''} ">
+	<div class="flex flex-row absolute right-1 top-0 bottom-0 items-center pr-1 pl-5">
 		<div
 			id="sidebar-chat-item-menu "
 			class="{id === $chatId || confirmEdit || selected
