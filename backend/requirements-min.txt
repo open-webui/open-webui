@@ -2,7 +2,7 @@
 # WIP: use this as a reference to build a minimal docker image
 
 fastapi==0.128.0
-uvicorn[standard]==0.37.0
+uvicorn[standard]==0.40.0
 pydantic==2.12.5
 python-multipart==0.0.21
 itsdangerous==2.2.0
@@ -43,7 +43,7 @@ openai
 
 langchain==1.2.0
 langchain-community==0.4.1
-langchain-classic==1.0.0
+langchain-classic==1.0.1
 langchain-text-splitters==1.1.0
 
 fake-useragent==2.2.0
