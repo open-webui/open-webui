@@ -1278,6 +1278,9 @@ async def generate_chat_completion(
         del payload["metadata"]
 
     model_id = payload["model"]
+    # When called internally (not via HTTP), db may be a Depends object, not a Session
+    if not isinstance(db, Session):
+        db = None
     model_info = Models.get_model_by_id(model_id, db=db)
 
     if model_info:

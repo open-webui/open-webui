@@ -811,6 +811,9 @@ async def generate_chat_completion(
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
+    # When called internally (not via HTTP), db may be a Depends object, not a Session
+    if not isinstance(db, Session):
+        db = None
     model_info = Models.get_model_by_id(model_id, db=db)
 
     # Check model info and override the payload
