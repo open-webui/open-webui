@@ -1740,6 +1740,7 @@ let currentRequestId: number = 0;
 		showOriginal1 = false;
 		showComparisonView = false;
 		attentionCheckSelected = false;
+		attentionCheckProcessing = false; // Reset processing flag when loading new scenario
 		// Reset Step 3 UI state fields
 		moderationPanelExpanded = false;
 		expandedGroups.clear();
@@ -3054,13 +3055,6 @@ function cancelReset() {}
 	 * Creates a new version in the versions array and updates UI to show comparison view.
 	 */
 	async function applySelectedModerations() {
-		// If this is an attention check scenario and attention check is selected, it should have already navigated
-		// So if we reach here, it means they're trying to generate without selecting attention check
-		if (isAttentionCheckScenario && !attentionCheckSelected) {
-			toast.error('Please select "I read the instructions" from the Attention Check dropdown first.');
-			return;
-		}
-		
 		// Check if no strategies selected (attention check alone doesn't count for non-attention-check scenarios)
 		if (selectedModerations.size === 0 && !attentionCheckSelected) {
 			toast.error('Please select at least one moderation strategy');

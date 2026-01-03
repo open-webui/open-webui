@@ -595,22 +595,27 @@ The displayed response is determined by:
 
 ## Default Model Configuration
 
-The default model is set to **`"gpt-5.2-chat-latest"`** in the following locations:
+The default model is set to **`"gpt-5.2-pro-2025-12-11"`** in the following locations:
 
 1. **`backend/open_webui/routers/moderation.py`** (line 18):
-   - `ModerationRequest` class: `model: Optional[str] = "gpt-5.2-chat-latest"`
+   - `ModerationRequest` class: `model: Optional[str] = "gpt-5.2-pro-2025-12-11"`
 
 2. **`backend/open_webui/routers/moderation.py`** (line 29):
-   - `FollowUpPromptRequest` class: `model: Optional[str] = "gpt-5.2-chat-latest"`
+   - `FollowUpPromptRequest` class: `model: Optional[str] = "gpt-5.2-pro-2025-12-11"`
 
 3. **`backend/open_webui/utils/moderation.py`** (line 37):
-   - `multi_moderations_openai()` function: `model: str = "gpt-5.2-chat-latest"`
+   - `multi_moderations_openai()` function: `model: str = "gpt-5.2-pro-2025-12-11"`
 
 4. **`backend/open_webui/utils/moderation.py`** (line 188):
-   - `generate_second_pass_prompt()` function: `model: str = "gpt-5.2-chat-latest"`
+   - `generate_second_pass_prompt()` function: `model: str = "gpt-5.2-pro-2025-12-11"`
 
-5. **`src/lib/apis/moderation/index.ts`** (line 168):
-   - `applyModeration()` function: `model: 'gpt-5.2-chat-latest'` (in request body)
+5. **`src/lib/apis/moderation/index.ts`** (line 184):
+   - `applyModeration()` function: `model: 'gpt-5.2-pro-2025-12-11'` (in request body)
+
+**Note**: The model `gpt-5.2-pro-2025-12-11` requires the `/v1/responses` endpoint (Responses API). The API calls in `backend/open_webui/utils/moderation.py` use `client.responses.create()` with:
+- `input` parameter (string) for user content
+- `instructions` parameter (string) for system instructions
+- Response parsing extracts text from `resp.output[0].content[0].text` for output_text type items
 
 ## Files Reference
 
