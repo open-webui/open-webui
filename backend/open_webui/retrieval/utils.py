@@ -237,7 +237,56 @@ async def query_doc_with_hybrid_search(
             log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
             return {"documents": [], "metadatas": [], "distances": []}
 
+
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+
+        # Early bypass: Skip BM25 entirely when weight is 0 and enrichment is disabled
+        if hybrid_bm25_weight <= 0 and not enable_enriched_texts:
+            log.debug(
+                f"query_doc_with_hybrid_search:bypassing BM25 (weight={hybrid_bm25_weight}, enriched={enable_enriched_texts})"
+            )
+            
+            vector_search_retriever = VectorSearchRetriever(
+                collection_name=collection_name,
+                embedding_function=embedding_function,
+                top_k=k,
+            )
+            
+            compressor = RerankCompressor(
+                embedding_function=embedding_function,
+                top_n=k_reranker,
+                reranking_function=reranking_function,
+                r_score=r,
+            )
+            
+            compression_retriever = ContextualCompressionRetriever(
+                base_compressor=compressor, base_retriever=vector_search_retriever
+            )
+            
+            result = await compression_retriever.ainvoke(query)
+            
+            distances = [d.metadata.get("score") for d in result]
+            documents = [d.page_content for d in result]
+            metadatas = [d.metadata for d in result]
+            
+            # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
+            if k < k_reranker:
+                sorted_items = sorted(
+                    zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True
+                )
+                sorted_items = sorted_items[:k]
+                
+                if sorted_items:
+                    distances, documents, metadatas = map(list, zip(*sorted_items))
+                else:
+                    distances, documents, metadatas = [], [], []
+            
+            return {
+                "distances": [distances],
+                "documents": [documents],
+                "metadatas": [metadatas],
+            }
+
 
         bm25_texts = (
             get_enriched_texts(collection_result)
@@ -455,6 +504,32 @@ async def query_collection(
     return merge_and_sort_query_results(results, k=k)
 
 
+async def fetch_collection_data(collection_names: list[str]) -> dict:
+    """Fetch multiple collections in parallel to reduce latency.
+    
+    Args:
+        collection_names: List of collection names to fetch
+        
+    Returns:
+        Dictionary mapping collection names to their data (or None if failed)
+    """
+    async def fetch_single(collection_name: str):
+        try:
+            log.debug(
+                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
+            )
+            return collection_name, VECTOR_DB_CLIENT.get(
+                collection_name=collection_name
+            )
+        except Exception as e:
+            log.exception(f"Failed to fetch collection {collection_name}: {e}")
+            return collection_name, None
+    
+    tasks = [fetch_single(name) for name in collection_names]
+    results = await asyncio.gather(*tasks)
+    return dict(results)
+
+
 async def query_collection_with_hybrid_search(
     collection_names: list[str],
     queries: list[str],
@@ -468,20 +543,8 @@ async def query_collection_with_hybrid_search(
 ) -> dict:
     results = []
     error = False
-    # Fetch collection data once per collection sequentially
-    # Avoid fetching the same data multiple times later
-    collection_results = {}
-    for collection_name in collection_names:
-        try:
-            log.debug(
-                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
-            )
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
-                collection_name=collection_name
-            )
-        except Exception as e:
-            log.exception(f"Failed to fetch collection {collection_name}: {e}")
-            collection_results[collection_name] = None
+    # Fetch all collections in parallel to reduce latency
+    collection_results = await fetch_collection_data(collection_names)
 
     log.info(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
