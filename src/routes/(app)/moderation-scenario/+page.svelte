@@ -1249,6 +1249,21 @@ function clearModerationLocalKeys() {
 		return `${completedCount} of ${scenarioList.length} completed`;
 	})();
 	
+	// Reactive array of completion statuses for all scenarios
+	// This ensures the sidebar template is reactive to scenario state changes
+	// Re-computes whenever scenarioStates or scenarioStatesUpdateTrigger changes
+	// 
+	// IMPORTANT: The sidebar template uses this array (scenarioCompletionStatuses[index])
+	// instead of calling isScenarioCompleted(index) directly. This is necessary because:
+	// - Function calls in templates are not reactive to Map changes
+	// - The reactive array recomputes when scenarioStates changes, triggering template updates
+	// - This ensures completion indicators update immediately when scenarios are completed
+	$: scenarioCompletionStatuses = (() => {
+		// Access scenarioStatesUpdateTrigger to make this reactive to state changes
+		const _ = scenarioStatesUpdateTrigger;
+		return scenarioList.map((_, index) => isScenarioCompleted(index));
+	})();
+	
 	// First pass data
 	let childPrompt1: string = scenarioList.length > 0 && scenarioList[0] ? scenarioList[0][0] : '';
 	let originalResponse1: string = scenarioList.length > 0 && scenarioList[0] ? scenarioList[0][1] : '';
@@ -2135,6 +2150,8 @@ function cancelReset() {}
 						selectedModerations: new Set(state.selectedModerations) // Convert Array back to Set
 					});
 				});
+				// Reassign Map to trigger reactivity - Svelte needs Map reassignment to detect changes
+				scenarioStates = new Map(scenarioStates);
 				console.log(`Loaded saved scenario states from localStorage for child: ${selectedChildId}`);
 			}
 			
@@ -3698,34 +3715,12 @@ onMount(async () => {
 		// This extra brace was prematurely closing the onMount callback, causing parser errors.
 	
 	// Warmup visibility is now handled synchronously via reactive statement
-	// Only start timer and bootstrap scenario if warmup is completed
+	// Only start timer if warmup is completed (bootstrap save removed to avoid NULL initial_decision)
 	if (warmupCompleted && !showWarmup) {
 		// Start timer for the current scenario only if not in warmup
 		startTimer(selectedScenarioIndex);
-
-		// Bootstrap scenario persistence
-		try {
-			const sessionId = `scenario_${selectedScenarioIndex}`;
-			await saveModerationSession(localStorage.token, {
-				session_id: sessionId,
-				user_id: $user?.id || 'unknown',
-				child_id: selectedChildId || 'unknown',
-				scenario_index: selectedScenarioIndex,
-				attempt_number: 1,
-				version_number: 0,
-				session_number: sessionNumber,
-				scenario_prompt: childPrompt1,
-				original_response: originalResponse1,
-				initial_decision: undefined,
-				strategies: [],
-				custom_instructions: [],
-				highlighted_texts: [],
-				refactored_response: undefined,
-				is_final_version: false
-			});
-		} catch (e) {
-			console.error('Failed to bootstrap scenario', e);
-		}
+		// Removed bootstrap save - records will be created when user makes actual decisions
+		// (skip, confirm, etc.) to avoid creating NULL initial_decision records
 	}
 	
 	// Mark initial mount as complete to enable session change detection
@@ -3759,24 +3754,8 @@ onMount(async () => {
 			
 			// Start the regular moderation flow
 			startTimer(selectedScenarioIndex);
-			const sessionId = `scenario_${selectedScenarioIndex}`;
-			await saveModerationSession(localStorage.token, {
-				session_id: sessionId,
-				user_id: $user?.id || 'unknown',
-				child_id: selectedChildId || 'unknown',
-				scenario_index: selectedScenarioIndex,
-				attempt_number: 1,
-				version_number: 0,
-				session_number: sessionNumber,
-				scenario_prompt: childPrompt1,
-				original_response: originalResponse1,
-				initial_decision: undefined,
-				strategies: [],
-				custom_instructions: [],
-				highlighted_texts: [],
-				refactored_response: undefined,
-				is_final_version: false
-			});
+			// Removed bootstrap save - records will be created when user makes actual decisions
+			// (skip, confirm, etc.) to avoid creating NULL initial_decision records
 		} catch (e) {
 			console.error('Error completing warmup', e);
 		}
@@ -4132,7 +4111,7 @@ onMount(async () => {
 					class="w-full text-left p-3 rounded-lg border transition-all duration-200 {
 						selectedScenarioIndex === index
 							? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm'
-							: isScenarioCompleted(index)
+							: scenarioCompletionStatuses[index]
 							? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-700 opacity-60 hover:opacity-80'
 							: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'
 					}"
@@ -4144,7 +4123,7 @@ onMount(async () => {
 									? 'bg-blue-500 text-white'
 									: prompt === CUSTOM_SCENARIO_PROMPT
 										? 'bg-purple-500 text-white'
-										: isScenarioCompleted(index)
+										: scenarioCompletionStatuses[index]
 										? 'bg-gray-400 dark:bg-gray-600 text-gray-200 dark:text-gray-400'
 										: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
 							}">
@@ -4160,7 +4139,7 @@ onMount(async () => {
 						
 						<div class="flex-1 min-w-0">
 							<p class="text-sm font-medium {
-								isScenarioCompleted(index)
+								scenarioCompletionStatuses[index]
 									? 'text-gray-500 dark:text-gray-500'
 									: prompt === CUSTOM_SCENARIO_PROMPT
 										? 'text-purple-900 dark:text-purple-100'
@@ -4179,7 +4158,9 @@ onMount(async () => {
 								</svg>
 								<span>Currently viewing</span>
 							</div>
-						{:else if isScenarioCompleted(index)}
+						{:else if scenarioCompletionStatuses[index]}
+							<!-- Use reactive array instead of isScenarioCompleted(index) function call
+							     to ensure template updates when scenarioStates changes -->
 							<div class="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500">
 								<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
 									<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
@@ -4658,19 +4639,13 @@ onMount(async () => {
 									</div>
 								</div>
 								
-								<div class="flex space-x-3">
+								<div>
 									<button
 										on:click={completeStep2}
 										disabled={!concernReason.trim() || concernReason.trim().length < 10}
-										class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+										class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 									>
 										Continue
-									</button>
-									<button
-										on:click={() => completeStep1(true)}
-										class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
-									>
-										Skip Scenario
 									</button>
 								</div>
 							</div>
