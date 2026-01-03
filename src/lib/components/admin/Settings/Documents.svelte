@@ -666,6 +666,13 @@
 								/>
 							</div>
 
+								<div class="flex w-full mt-2">
+									<SensitiveInput
+										placeholder={$i18n.t('Enter MinerU API Key')}
+										bind:value={RAGConfig.MINERU_API_KEY}
+									/>
+								</div>
+
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
 									<div class="self-center text-xs font-medium">
