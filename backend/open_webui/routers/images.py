@@ -463,6 +463,7 @@ class CreateImageForm(BaseModel):
     prompt: str
     size: Optional[str] = None
     n: int = 1
+    steps: Optional[int] = None
     negative_prompt: Optional[str] = None
 
 
@@ -706,8 +707,12 @@ async def image_generations(
                 "n": form_data.n,
             }
 
-            if request.app.state.config.IMAGE_STEPS is not None:
-                data["steps"] = request.app.state.config.IMAGE_STEPS
+            if request.app.state.config.IMAGE_STEPS is not None or form_data.steps is not None:
+                data["steps"] = (
+                    form_data.steps
+                    if form_data.steps is not None
+                    else request.app.state.config.IMAGE_STEPS
+                )
 
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
@@ -765,8 +770,12 @@ async def image_generations(
                 "height": height,
             }
 
-            if request.app.state.config.IMAGE_STEPS is not None:
-                data["steps"] = request.app.state.config.IMAGE_STEPS
+            if request.app.state.config.IMAGE_STEPS is not None or form_data.steps is not None:
+                data["steps"] = (
+                    form_data.steps
+                    if form_data.steps is not None
+                    else request.app.state.config.IMAGE_STEPS
+                )
 
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
