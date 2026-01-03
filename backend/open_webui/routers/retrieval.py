@@ -1344,13 +1344,13 @@ def merge_docs_to_target_size(
 
         proposed_content = f"{current_content}\n\n{next_chunk.page_content}"
 
-        can_absorb = (
+        can_merge = (
             can_merge_chunks(current_chunk, next_chunk)
             and measure_chunk_size(current_content) < min_chunk_size_target
             and measure_chunk_size(proposed_content) <= max_chunk_size
         )
 
-        if can_absorb:
+        if can_merge:
             current_content = proposed_content
         else:
             processed_chunks.append(
