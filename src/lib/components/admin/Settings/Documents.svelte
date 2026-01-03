@@ -666,15 +666,12 @@
 								/>
 							</div>
 
-							<!-- API Key (for Cloud mode) -->
-							{#if RAGConfig.MINERU_API_MODE === 'cloud'}
 								<div class="flex w-full mt-2">
 									<SensitiveInput
 										placeholder={$i18n.t('Enter MinerU API Key')}
 										bind:value={RAGConfig.MINERU_API_KEY}
 									/>
 								</div>
-							{/if}
 
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
