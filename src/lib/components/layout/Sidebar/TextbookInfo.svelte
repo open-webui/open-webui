@@ -130,8 +130,9 @@
 			</button>
 
 			<!-- Sections (Dropdowns) -->
-			<div class="flex flex-col gap-3">
-				{#each textbookData.sections as section}
+			<div class="flex flex-col gap-4">
+				{#each textbookData.sections.filter(section => section.id !== 'general') as section}
+
 					<div class="flex flex-col gap-2">
 						<!-- Section Dropdown Button -->
 						<button

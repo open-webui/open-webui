@@ -181,6 +181,12 @@ export function buildFunction2DTraces(layer: LayerSpec) {
 
 // parametric_2d: x = f(t), y = g(t)
 export function buildParametric2DTraces(layer: LayerSpec) {
+	console.log('[GraphBuilder] buildParametric2DTraces called with:', {
+		expressions: layer.expressions,
+		domain: layer.domain,
+		sampling: layer.sampling
+	});
+
 	const expressions = normalizeExpressions(layer);
 	const colors = normalizeColors(layer);
 
@@ -189,8 +195,15 @@ export function buildParametric2DTraces(layer: LayerSpec) {
 		return [];
 	}
 
-	const fX = compile(expressions[0]);
-	const fY = compile(expressions[1]);
+	let fX, fY;
+	try {
+		fX = compile(expressions[0]);
+		fY = compile(expressions[1]);
+		console.log('[GraphBuilder] parametric_2d expressions compiled successfully');
+	} catch (e) {
+		console.error('[GraphBuilder] Failed to compile parametric_2d expressions:', e);
+		return [];
+	}
 
 	// domain이 객체 형식 {t: [0, 2*pi]}이거나 배열 형식 [0, 2*pi]일 수 있음
 	let t0 = 0, t1 = Math.PI * 2;
@@ -229,6 +242,8 @@ export function buildParametric2DTraces(layer: LayerSpec) {
 	const name = `(${expressions[0]}, ${expressions[1]})`;
 	const legendName = name.length > 30 ? name.slice(0, 30) + '...' : name;
 
+	console.log('[GraphBuilder] parametric_2d generated', x.length, 'points, first few:', x.slice(0, 3), y.slice(0, 3));
+
 	return [{
 		x,
 		y,
@@ -247,10 +262,26 @@ export function buildParametric2DTraces(layer: LayerSpec) {
 
 // phase_plane: dx/dt = f(x,y), dy/dt = g(x,y) - vector field
 export function buildPhasePlaneTraces(layer: LayerSpec) {
+	console.log('[GraphBuilder] buildPhasePlaneTraces called with:', {
+		hasField: !!layer.field,
+		fieldDx: layer.field?.dx,
+		fieldDy: layer.field?.dy,
+		domain: layer.domain,
+		sampling: layer.sampling
+	});
+
 	// field 방식 우선 지원 (신규)
 	if (layer.field?.dx && layer.field?.dy) {
-		const fDx = compile(layer.field.dx);
-		const fDy = compile(layer.field.dy);
+		console.log('[GraphBuilder] Using field-based phase_plane');
+		let fDx, fDy;
+		try {
+			fDx = compile(layer.field.dx);
+			fDy = compile(layer.field.dy);
+			console.log('[GraphBuilder] Expressions compiled successfully:', layer.field.dx, layer.field.dy);
+		} catch (e) {
+			console.error('[GraphBuilder] Failed to compile phase_plane expressions:', e);
+			return [];
+		}
 
 		// domain이 객체 형식 {x: [xmin, xmax], y: [ymin, ymax]}
 		const domain = layer.domain as any;
@@ -308,6 +339,15 @@ export function buildPhasePlaneTraces(layer: LayerSpec) {
 		const lineWidth = layer.style?.lineWidth ?? 1;
 		const opacity = layer.style?.opacity ?? 0.8;
 
+		console.log('[GraphBuilder] phase_plane config:', {
+			domain: { xmin, xmax, ymin, ymax },
+			sampling: { Nx, Ny },
+			cellSize,
+			scale,
+			medianMag,
+			color
+		});
+
 		for (let i = 0; i < Nx; i++) {
 			for (let j = 0; j < Ny; j++) {
 				const x = xmin + i * stepX;
@@ -322,7 +362,8 @@ export function buildPhasePlaneTraces(layer: LayerSpec) {
 
 					// Saturating scaling: g(m) = m / (m + c)
 					const gMag = mag / (mag + c);
-					const len = scale * cellSize * gMag;
+					// 기본 배율 5배 적용하여 화살표 가시성 향상
+					const len = scale * cellSize * gMag * 5;
 
 					const eps = 1e-9;
 					const ux = dx / (mag + eps);
@@ -346,8 +387,8 @@ export function buildPhasePlaneTraces(layer: LayerSpec) {
 						hoverinfo: 'skip'
 					});
 
-					// Arrowhead (삼각형)
-					const headLen = Math.min(0.3 * len, cellSize * 0.15);
+					// Arrowhead (삼각형) - 화살표 크기에 비례하여 머리 크기도 증가
+					const headLen = Math.min(0.3 * len, cellSize * 0.5);
 					const angle = Math.atan2(uy, ux);
 					const angle1 = angle + Math.PI * 0.85;
 					const angle2 = angle - Math.PI * 0.85;
@@ -378,10 +419,12 @@ export function buildPhasePlaneTraces(layer: LayerSpec) {
 			}
 		}
 
+		console.log('[GraphBuilder] Field-based phase_plane generated', traces.length, 'traces');
 		return traces;
 	}
 
 	// 기존 expressions 방식 (하위 호환)
+	console.log('[GraphBuilder] Using expressions-based phase_plane (fallback)');
 	const expressions = normalizeExpressions(layer);
 	const colors = normalizeColors(layer);
 
@@ -1074,17 +1117,25 @@ export function buildComposite2DTraces(spec: GraphSpec): any[] {
 		return [];
 	}
 
+	console.log('[GraphBuilder] Building composite_2d with', layers.length, 'layers');
+
 	const allTraces: any[] = [];
 	layers.forEach((layer, index) => {
+		console.log(`[GraphBuilder] Processing layer ${index}:`, layer.type);
 		const traces = buildLayerTraces(layer, index, layers.length);
+		console.log(`[GraphBuilder] Layer ${index} produced ${traces.length} traces`);
 		allTraces.push(...traces);
 	});
+
+	console.log('[GraphBuilder] Total traces for composite_2d:', allTraces.length);
 	return allTraces;
 }
 
 // ========== Main Builder ==========
 
 export function buildTraces(spec: GraphSpec): any[] {
+	console.log('[GraphBuilder] buildTraces called with type:', spec.type);
+
 	switch (spec.type) {
 		// 2D graphs
 		case 'composite_2d':

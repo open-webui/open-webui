@@ -184,7 +184,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="flex flex-col items-start p-5 gap-2 min-w-max bg-gray-200/20 dark:bg-gray-600/30 shadow-lg backdrop-blur-xl rounded-2xl rounded-bl z-50 text-gray-950 dark:text-white text-body-4 border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+			class="min-w-30 flex flex-col items-start p-2 gap-3 min-w-max bg-gray-200/20 dark:bg-gray-600/30 shadow-lg backdrop-blur-xl rounded-2xl rounded-bl z-50 text-gray-950 dark:text-white text-body-4 border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
@@ -196,7 +196,7 @@
 					<!-- 학습 설정 섹션 -->
 					<div class="w-full pb-2 mb-2 border-b border-gray-200/50 dark:border-gray-200/50">
 						<button
-							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+							class="flex flex-row items-center justify-between p-6 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 							on:click={() => {
 								tab = 'proficiency';
 							}}
@@ -214,7 +214,7 @@
 						</button>
 
 						<button
-							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+							class="flex flex-row items-center justify-between p-6 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 							on:click={() => {
 								tab = 'response_style';
 							}}
@@ -241,7 +241,7 @@
 						className="w-full"
 					>
 						<button
-							class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4 {!fileUploadEnabled
+							class="flex flex-row items-center justify-between p-6 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4 {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
@@ -273,7 +273,7 @@
 							className="w-full"
 						>
 							<button
-								class="flex flex-row items-center justify-between p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4 {!fileUploadEnabled
+								class="flex flex-row items-center justify-between p-6 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4 {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -594,7 +594,7 @@
 					{:else if availablePersonas && availablePersonas.proficiency_levels.length > 0}
 						{#each availablePersonas.proficiency_levels as option}
 							<button
-								class="flex flex-row items-center justify-between py-1 px-2 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+								class="flex flex-row items-center justify-between py-3 px-4 gap-1 w-full m-2 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 								on:click={() => {
 									proficiencyLevel = option.value;
 									tab = '';
@@ -627,7 +627,7 @@
 					{:else if availablePersonas && availablePersonas.response_styles.length > 0}
 						{#each availablePersonas.response_styles as option}
 							<button
-								class="flex flex-row items-center justify-between py-1 px-2 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+								class="flex flex-row items-center justify-between py-3 px-4 gap-1 w-full m-2 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 								on:click={() => {
 									responseStyle = option.value;
 									tab = '';
@@ -646,7 +646,7 @@
 			{:else if tab === 'file_attach'}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full items-center p-1 gap-1 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+						class="flex w-full items-center py-3 px-4 gap-1 w-full m-2 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							tab = '';
 						}}
@@ -657,7 +657,7 @@
 
 					<!-- PDF 버튼 -->
 					<DropdownMenu.Item
-						class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+						class="flex flex-row items-center py-3 px-4 gap-1 w-full m-2 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							uploadFilesHandler();
 						}}
@@ -671,7 +671,7 @@
 
 					<!-- 캡처 버튼 -->
 					<DropdownMenu.Item
-						class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+						class="flex flex-row items-center py-3 px-4 gap-1 w-full m-2  h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							if (!detectMobile()) {
 								screenCaptureHandler();
@@ -692,7 +692,7 @@
 
 					<!-- 링크 버튼 -->
 					<DropdownMenu.Item
-						class="flex flex-row items-center p-1 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
+						class="flex flex-row items-center py-3 px-4 gap-1 w-full m-2 h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							showAttachWebpageModal = true;
 						}}

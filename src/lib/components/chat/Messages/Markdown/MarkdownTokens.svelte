@@ -29,6 +29,8 @@
 	import FlowChart from './FlowChart.svelte';
 	import Diagram from './Diagram.svelte';
 	import Scene from './Scene.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -53,6 +55,9 @@
 
 	// Table modal states
 	let tableModals: Record<number, boolean> = {};
+
+	// Graph spec error modal states
+	let graphSpecErrorModals: Record<number, boolean> = {};
 
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
@@ -437,9 +442,67 @@
 		{#if token.spec}
 			<FunctionGraph spec={token.spec} />
 		{:else if token.error}
-			<div class="p-4 my-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
-				Graph Spec Error: {token.error}
-			</div>
+			<!-- Clickable error box -->
+			<button
+				class="relative w-48 mb-2 rounded-lg border border-red-200 dark:border-red-800 overflow-hidden bg-red-50 dark:bg-red-900/20 cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition text-left"
+				on:click={() => (graphSpecErrorModals[tokenIdx] = true)}
+			>
+				<div class="w-48 h-48 flex flex-col items-center justify-center p-4 text-center">
+					<svg class="size-8 text-red-400 dark:text-red-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+					</svg>
+					<div class="text-xs text-red-600 dark:text-red-400 font-medium mb-1">
+						{$i18n.t('Graph Spec Error')}
+					</div>
+					<div class="text-[10px] text-red-500 dark:text-red-400/80 leading-tight line-clamp-2">
+						{token.error}
+					</div>
+					<div class="text-[9px] text-red-400 dark:text-red-500/60 mt-2">
+						{$i18n.t('Click to view JSON')}
+					</div>
+				</div>
+			</button>
+
+			<!-- Error JSON modal - only rendered when explicitly opened -->
+			{#if graphSpecErrorModals[tokenIdx] === true}
+				<Modal show={true} on:close={() => (graphSpecErrorModals[tokenIdx] = false)} size="lg">
+					<div class="px-6 py-5 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl">
+						<!-- Header -->
+						<div class="flex justify-between items-center mb-4">
+							<div>
+								<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+									{$i18n.t('Graph Spec JSON')}
+								</h3>
+								<p class="text-sm text-red-500 dark:text-red-400 mt-1">
+									{token.error}
+								</p>
+							</div>
+							<button
+								class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+								on:click={() => (graphSpecErrorModals[tokenIdx] = false)}
+							>
+								<XMark className="size-5 text-gray-500" />
+							</button>
+						</div>
+
+						<!-- JSON Content -->
+						<div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+							<div class="flex justify-between items-center px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+								<span class="text-xs text-gray-500 dark:text-gray-400">graph_spec.json</span>
+								<button
+									class="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+									on:click={() => {
+										copyToClipboard(token.rawJson ?? token.raw, null, false);
+									}}
+								>
+									{$i18n.t('Copy')}
+								</button>
+							</div>
+							<pre class="p-4 text-xs font-mono bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 max-h-96 overflow-auto whitespace-pre-wrap">{token.rawJson ?? token.raw}</pre>
+						</div>
+					</div>
+				</Modal>
+			{/if}
 		{/if}
 	{:else if token.type === 'flowSpec'}
 		{#if token.spec}

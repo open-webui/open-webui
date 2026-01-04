@@ -518,7 +518,7 @@
 				</Tooltip>
 			</div> -->
 			{:else}
-				<div class="flex self-center z-10 items-end gap-0.5">
+				<!-- <div class="flex self-center z-10 items-end gap-0.5">
 					<ChatMenu
 						chatId={id}
 						cloneChatHandler={() => {
@@ -566,7 +566,7 @@
 					</ChatMenu>
 
 					{#if id === $chatId}
-						<!-- Shortcut support using "delete-chat-button" id -->
+						
 						<button
 							id="delete-chat-button"
 							class="hidden"
@@ -586,7 +586,7 @@
 							</svg>
 						</button>
 					{/if}
-				</div>
+				</div> -->
 			{/if}
 		</div>
 		<Tooltip content={bookmarked ? $i18n.t('Remove Bookmark') : $i18n.t('Add Bookmark')}>

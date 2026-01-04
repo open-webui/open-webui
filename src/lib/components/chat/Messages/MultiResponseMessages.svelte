@@ -243,7 +243,7 @@
 			class="flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden"
 			id="responses-container-{chatId}-{parentMessage.id}"
 		>
-			{#if $settings?.displayMultiModelResponsesInTabs ?? false}
+			<!-- {#if $settings?.displayMultiModelResponsesInTabs ?? false} -->
 				<div class="w-full">
 					<div class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850">
 						<div
@@ -322,11 +322,10 @@
 						{/key}
 					{/if}
 				</div>
-			{:else}
+			<!-- {:else}
 				{#each Object.keys(groupedMessageIds) as modelIdx}
 					{#if groupedMessageIdsIdx[modelIdx] !== undefined && groupedMessageIds[modelIdx].messageIds.length > 0}
-						<!-- svelte-ignore a11y-no-static-element-interactions -->
-						<!-- svelte-ignore a11y-click-events-have-key-events -->
+						
 						{@const _messageId =
 							groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
@@ -380,7 +379,7 @@
 						</div>
 					{/if}
 				{/each}
-			{/if}
+			{/if} -->
 		</div>
 
 		{#if !readOnly}
@@ -418,7 +417,7 @@
 						{/if}
 					</div>
 
-					{#if isLastMessage}
+					<!-- {#if isLastMessage}
 						<div class=" shrink-0 text-gray-600 dark:text-gray-500 mt-1">
 							<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
 								<button
@@ -435,7 +434,7 @@
 								</button>
 							</Tooltip>
 						</div>
-					{/if}
+					{/if} -->
 				</div>
 			{/if}
 		{/if}

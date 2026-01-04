@@ -12,7 +12,7 @@ export default {
 			},
 			colors: {
 				gray: {
-					50: 'var(--color-gray-50, #f2f4f8)',
+					50: 'var(--color-gray-50, #F7F8FB)',
 					100: 'var(--color-gray-100, #e8eaf3)',
 					200: 'var(--color-gray-200, #ced4e5)',
 					300: 'var(--color-gray-300, #B4BCD0)',

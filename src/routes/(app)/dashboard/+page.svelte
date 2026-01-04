@@ -332,7 +332,28 @@
 					</div>
 				</div>
 
-				<!-- Card 2: AI 튜터 질문 수 -->
+				<!-- Card 2: 총 대화 수 -->
+				<div class={statCard}>
+					<div class="flex flex-row justify-between items-center w-full">
+						<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-[#1A1B1C] dark:text-gray-50">
+							<mask id="mask0_267_4166" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="20" height="20">
+								<rect width="20" height="20" fill="currentColor" />
+							</mask>
+							<g mask="url(#mask0_267_4166)">
+								<path d="M5.5 15C5.0875 15 4.73438 14.8531 4.44063 14.5594C4.14688 14.2656 4 13.9125 4 13.5V3.5C4 3.0875 4.14688 2.73438 4.44063 2.44063C4.73438 2.14688 5.0875 2 5.5 2H14.5C14.9125 2 15.2656 2.14688 15.5594 2.44063C15.8531 2.73438 16 3.0875 16 3.5V13.5C16 13.9125 15.8531 14.2656 15.5594 14.5594C15.2656 14.8531 14.9125 15 14.5 15H5.5ZM5.5 13.5H14.5V3.5H5.5V13.5ZM2.5 18C2.0875 18 1.73438 17.8531 1.44063 17.5594C1.14688 17.2656 1 16.9125 1 16.5V5.75C1 5.5375 1.07146 5.35937 1.21438 5.21562C1.35729 5.07187 1.53437 5 1.74562 5C1.95687 5 2.13542 5.07187 2.28125 5.21562C2.42708 5.35937 2.5 5.5375 2.5 5.75V16.5H13.25C13.4625 16.5 13.6406 16.5715 13.7844 16.7144C13.9281 16.8573 14 17.0344 14 17.2456C14 17.4569 13.9281 17.6354 13.7844 17.7812C13.6406 17.9271 13.4625 18 13.25 18H2.5Z" fill="currentColor" />
+							</g>
+						</svg>
+						<span class="text-caption {stats.totalConversations.increased >= 0 ? 'text-[#34BE89]' : 'text-[#FF4D6A]'}">
+							{stats.totalConversations.increased >= 0 ? '+' : ''} 이번 주 {Math.abs(stats.totalConversations.increased)}개 {stats.totalConversations.increased >= 0 ? '증가' : '감소'}
+						</span>
+					</div>
+					<div class="flex flex-row justify-between items-center w-full">
+						<span class="text-body-3 text-[#1A1B1C] dark:text-gray-50">{stats.totalConversations.label}</span>
+						<span class="text-title-1 text-[#1A1B1C] dark:text-gray-50 tracking-[-0.02em]">{stats.totalConversations.value}</span>
+					</div>
+				</div>
+
+				<!-- Card 3: AI 튜터 질문 수 -->
 				<div class={statCard}>
 					<div class="flex flex-row justify-between items-center w-full">
 						<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-[#1A1B1C] dark:text-gray-50">
@@ -350,28 +371,6 @@
 					<div class="flex flex-row justify-between items-center w-full">
 						<span class="text-body-3 text-[#1A1B1C] dark:text-gray-50">{stats.aiTutorQuestions.label}</span>
 						<span class="text-title-1 text-[#1A1B1C] dark:text-gray-50 tracking-[-0.02em]">{stats.aiTutorQuestions.value}</span>
-					</div>
-				</div>
-
-				<!-- Card 3: 평균 이용 시간 (placeholder - needs API) -->
-				<div class={statCard}>
-					<div class="flex flex-row justify-between items-center w-full">
-						<!-- Alarm icon (Figma spec) -->
-						<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-[#1A1B1C] dark:text-gray-50">
-							<mask id="mask_alarm" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="20" height="20">
-								<rect width="20" height="20" fill="currentColor" />
-							</mask>
-							<g mask="url(#mask_alarm)">
-								<path d="M10 18.3333C9.07639 18.3333 8.2118 18.1597 7.40625 17.8125C6.6007 17.4653 5.89583 16.9965 5.29167 16.4063C4.6875 15.816 4.21528 15.1181 3.875 14.3125C3.53472 13.507 3.36458 12.6389 3.36458 11.7083C3.36458 10.7778 3.53472 9.90972 3.875 9.10417C4.21528 8.29861 4.6875 7.60069 5.29167 7.01042C5.89583 6.42014 6.6007 5.95139 7.40625 5.60417C8.2118 5.25694 9.07639 5.08333 10 5.08333C10.9236 5.08333 11.7882 5.25694 12.5938 5.60417C13.3993 5.95139 14.0972 6.42014 14.6875 7.01042C15.2778 7.60069 15.7465 8.29861 16.0938 9.10417C16.441 9.90972 16.6146 10.7778 16.6146 11.7083C16.6146 12.6389 16.441 13.507 16.0938 14.3125C15.7465 15.1181 15.2778 15.816 14.6875 16.4063C14.0972 16.9965 13.3993 17.4653 12.5938 17.8125C11.7882 18.1597 10.9236 18.3333 10 18.3333ZM12.1667 14.375C12.3194 14.5278 12.5069 14.6042 12.7292 14.6042C12.9514 14.6042 13.1389 14.5278 13.2917 14.375C13.4444 14.2222 13.5208 14.0347 13.5208 13.8125C13.5208 13.5903 13.4444 13.4028 13.2917 13.25L10.75 10.7083V7.08333C10.75 6.86111 10.6736 6.67361 10.5208 6.52083C10.3681 6.36806 10.1806 6.29167 9.95833 6.29167C9.73611 6.29167 9.54861 6.36806 9.39583 6.52083C9.24306 6.67361 9.16667 6.86111 9.16667 7.08333V11C9.16667 11.1111 9.1875 11.2153 9.22917 11.3125C9.27083 11.4097 9.33333 11.5 9.41667 11.5833L12.1667 14.375ZM4.58333 3.83333L5.70833 5L3.70833 6.75L2.58333 5.58333L4.58333 3.83333ZM15.4167 3.83333L17.4167 5.58333L16.2917 6.75L14.2917 5L15.4167 3.83333Z" fill="currentColor" />
-							</g>
-						</svg>
-						<span class="text-caption text-[#596172]">
-							데이터 준비 중
-						</span>
-					</div>
-					<div class="flex flex-row justify-between items-center w-full">
-						<span class="text-body-3 text-[#1A1B1C] dark:text-gray-50">평균 이용 시간</span>
-						<span class="text-title-1 text-[#1A1B1C] dark:text-gray-50 tracking-[-0.02em]">-</span>
 					</div>
 				</div>
 			</div>
