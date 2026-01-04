@@ -8,6 +8,7 @@
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
+	import { getPromptGroups, type PromptGroupWithMappings } from '$lib/apis/prompt-groups';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -103,6 +104,18 @@
 
 	let actionIds = [];
 	let accessControl = {};
+
+	// Tool mode and prompt group settings
+	let toolMode: string | null = null;
+	let promptGroupId: string | null = null;
+	let promptGroups: PromptGroupWithMappings[] = [];
+
+	const TOOL_MODE_OPTIONS = [
+		{ value: null, label: 'Inline (기본값)', description: 'Inline tool execution - 짧은 hints + 마커 감지' },
+		{ value: 'gating', label: 'Gating', description: 'Two-stage tool gating (도구 선택 → 선택된 도구로 생성)' },
+		{ value: 'concat', label: 'Concat', description: '모든 tool prompts를 system prompt에 포함' },
+		{ value: 'none', label: 'None', description: 'Tool prompts 없이 base system만 사용' }
+	];
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -203,6 +216,23 @@
 			}
 		}
 
+		// Save tool mode and prompt group settings
+		if (toolMode) {
+			info.meta.tool_mode = toolMode;
+		} else {
+			if (info.meta.tool_mode) {
+				delete info.meta.tool_mode;
+			}
+		}
+
+		if (promptGroupId) {
+			info.meta.prompt_group_id = promptGroupId;
+		} else {
+			if (info.meta.prompt_group_id) {
+				delete info.meta.prompt_group_id;
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
@@ -221,6 +251,14 @@
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
 		await knowledgeCollections.set([...(await getKnowledgeBases(localStorage.token))]);
+
+		// Load prompt groups for dropdown
+		try {
+			promptGroups = await getPromptGroups(localStorage.token);
+		} catch (e) {
+			console.warn('Failed to load prompt groups:', e);
+			promptGroups = [];
+		}
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -285,6 +323,10 @@
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
+
+			// Load tool mode and prompt group settings
+			toolMode = model?.meta?.tool_mode ?? null;
+			promptGroupId = model?.meta?.prompt_group_id ?? null;
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;
@@ -742,6 +784,61 @@
 							</div>
 						{/if}
 					{/if}
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<!-- Tool Mode & Prompt Group Settings -->
+					<div class="my-2">
+						<div class="flex w-full justify-between items-center mb-2">
+							<div class="self-center text-sm font-medium">{$i18n.t('Tool & Prompt Settings')}</div>
+						</div>
+
+						<div class="space-y-3">
+							<!-- Tool Mode -->
+							<div>
+								<div class="text-xs font-medium mb-1">{$i18n.t('Tool Mode')}</div>
+								<select
+									class="text-sm w-full bg-transparent outline-none border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+									bind:value={toolMode}
+								>
+									{#each TOOL_MODE_OPTIONS as option}
+										<option value={option.value} class="text-gray-900 dark:text-gray-100">
+											{option.label}
+										</option>
+									{/each}
+								</select>
+								<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+									{TOOL_MODE_OPTIONS.find(o => o.value === toolMode)?.description ?? ''}
+								</div>
+							</div>
+
+							<!-- Prompt Group -->
+							<div>
+								<div class="text-xs font-medium mb-1">{$i18n.t('Prompt Group')}</div>
+								<select
+									class="text-sm w-full bg-transparent outline-none border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+									bind:value={promptGroupId}
+								>
+									<option value={null} class="text-gray-900 dark:text-gray-100">
+										{$i18n.t('None (Use default)')}
+									</option>
+									{#each promptGroups as group}
+										<option value={group.id} class="text-gray-900 dark:text-gray-100">
+											{group.name}
+										</option>
+									{/each}
+								</select>
+								{#if promptGroupId}
+									{@const selectedGroup = promptGroups.find(g => g.id === promptGroupId)}
+									{#if selectedGroup?.description}
+										<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+											{selectedGroup.description}
+										</div>
+									{/if}
+								{/if}
+							</div>
+						</div>
+					</div>
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">
 						<div class="flex w-full justify-between mb-2">

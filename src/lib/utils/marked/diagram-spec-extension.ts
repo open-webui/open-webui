@@ -3,7 +3,20 @@
  *
  * Handles <diagram-spec>...</diagram-spec> blocks containing JSON diagram specifications.
  * Used to render diagrams with nodes (rectangle, rounded_rectangle, diamond, ellipse) and edges.
+ * Supports multiple tag names: diagram_spec, diagram-spec, diagramspec
  */
+
+// 지원하는 태그 이름 목록 (export하여 외부에서 확인 가능)
+export const DIAGRAM_SPEC_TAGS = ['diagram_spec', 'diagram-spec', 'diagramspec'];
+
+// 태그 이름들을 regex alternation 패턴으로 변환
+function buildTagPattern(tags: string[]): string {
+	return tags.map(tag => tag.replace(/-/g, '\\-')).join('|');
+}
+
+// 동적 regex 생성
+const TAG_PATTERN = buildTagPattern(DIAGRAM_SPEC_TAGS);
+const DIAGRAM_SPEC_REGEX = new RegExp(`^<(${TAG_PATTERN})>\\n?([\\s\\S]*?)\\n?<\\/(${TAG_PATTERN})>`);
 
 export interface DiagramNode {
 	id: string;
@@ -36,15 +49,15 @@ export interface DiagramSpecToken {
 }
 
 function diagramSpecTokenizer(src: string): DiagramSpecToken | undefined {
-	const regex = /^<diagram_spec>\n?([\s\S]*?)\n?<\/diagram_spec>/;
-	const match = regex.exec(src);
+	const match = DIAGRAM_SPEC_REGEX.exec(src);
 
 	if (match) {
-		let jsonContent = match[1].trim();
+		// match[1] = 여는 태그 이름, match[2] = 내용, match[3] = 닫는 태그 이름
+		let jsonContent = match[2].trim();
 		let spec: DiagramSpec | null = null;
 		let error: string | undefined;
 
-		console.log('[DiagramSpec Tokenizer] Raw JSON:', jsonContent);
+		//console.log('[DiagramSpec Tokenizer] Raw JSON:', jsonContent);
 
 		try {
 			spec = JSON.parse(jsonContent);
@@ -65,8 +78,15 @@ function diagramSpecTokenizer(src: string): DiagramSpecToken | undefined {
 }
 
 function diagramSpecStart(src: string): number {
-	const index = src.indexOf('<diagram_spec>');
-	return index !== -1 ? index : -1;
+	// 모든 지원 태그 중 가장 먼저 나오는 위치 찾기
+	let minIndex = -1;
+	for (const tag of DIAGRAM_SPEC_TAGS) {
+		const index = src.indexOf(`<${tag}>`);
+		if (index !== -1 && (minIndex === -1 || index < minIndex)) {
+			minIndex = index;
+		}
+	}
+	return minIndex;
 }
 
 function diagramSpecRenderer(token: DiagramSpecToken): string {

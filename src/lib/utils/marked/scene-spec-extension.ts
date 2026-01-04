@@ -3,7 +3,20 @@
  *
  * Handles <scene_spec>...</scene_spec> blocks containing JSON scene specifications.
  * Used to render spatial scenes with entities, relations, and annotations.
+ * Supports multiple tag names: scene_spec, scene-spec, scenespec
  */
+
+// 지원하는 태그 이름 목록 (export하여 외부에서 확인 가능)
+export const SCENE_SPEC_TAGS = ['scene_spec', 'scene-spec', 'scenespec'];
+
+// 태그 이름들을 regex alternation 패턴으로 변환
+function buildTagPattern(tags: string[]): string {
+	return tags.map(tag => tag.replace(/-/g, '\\-')).join('|');
+}
+
+// 동적 regex 생성
+const TAG_PATTERN = buildTagPattern(SCENE_SPEC_TAGS);
+const SCENE_SPEC_REGEX = new RegExp(`^<(${TAG_PATTERN})>\\n?([\\s\\S]*?)\\n?<\\/(${TAG_PATTERN})>`);
 
 export interface EntityAppearance {
 	type: 'svg' | 'icon' | 'shape';
@@ -63,15 +76,15 @@ export interface SceneSpecToken {
 }
 
 function sceneSpecTokenizer(src: string): SceneSpecToken | undefined {
-	const regex = /^<scene_spec>\n?([\s\S]*?)\n?<\/scene_spec>/;
-	const match = regex.exec(src);
+	const match = SCENE_SPEC_REGEX.exec(src);
 
 	if (match) {
-		let jsonContent = match[1].trim();
+		// match[1] = 여는 태그 이름, match[2] = 내용, match[3] = 닫는 태그 이름
+		let jsonContent = match[2].trim();
 		let spec: SceneSpec | null = null;
 		let error: string | undefined;
 
-		console.log('[SceneSpec Tokenizer] Raw JSON:', jsonContent);
+		//console.log('[SceneSpec Tokenizer] Raw JSON:', jsonContent);
 
 		try {
 			spec = JSON.parse(jsonContent);
@@ -92,8 +105,15 @@ function sceneSpecTokenizer(src: string): SceneSpecToken | undefined {
 }
 
 function sceneSpecStart(src: string): number {
-	const index = src.indexOf('<scene_spec>');
-	return index !== -1 ? index : -1;
+	// 모든 지원 태그 중 가장 먼저 나오는 위치 찾기
+	let minIndex = -1;
+	for (const tag of SCENE_SPEC_TAGS) {
+		const index = src.indexOf(`<${tag}>`);
+		if (index !== -1 && (minIndex === -1 || index < minIndex)) {
+			minIndex = index;
+		}
+	}
+	return minIndex;
 }
 
 function sceneSpecRenderer(token: SceneSpecToken): string {
