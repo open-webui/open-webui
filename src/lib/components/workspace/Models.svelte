@@ -496,93 +496,93 @@
 													</a>
 												</Tooltip>
 
-												<div class="flex items-center gap-1 w-full">
+												<div class="flex items-center gap-1">
 													{#if !model.write_access}
 														<div>
 															<Badge type="muted" content={$i18n.t('Read Only')} />
 														</div>
 													{/if}
-													<div class="flex justify-end {model.is_active ? '' : 'text-gray-500'}">
-														<div class="flex justify-between items-center w-full">
-															<div class=""></div>
-															<div class="flex flex-row gap-0.5 items-center">
-																{#if shiftKey}
-																	<Tooltip
-																		content={model?.meta?.hidden
-																			? $i18n.t('Show')
-																			: $i18n.t('Hide')}
-																	>
-																		<button
-																			class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																			type="button"
-																			on:click={(e) => {
-																				e.stopPropagation();
-																				hideModelHandler(model);
-																			}}
-																		>
-																			{#if model?.meta?.hidden}
-																				<EyeSlash />
-																			{:else}
-																				<Eye />
-																			{/if}
-																		</button>
-																	</Tooltip>
 
-																	<Tooltip content={$i18n.t('Delete')}>
-																		<button
-																			class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																			type="button"
-																			on:click={(e) => {
-																				e.stopPropagation();
-																				deleteModelHandler(model);
-																			}}
-																		>
-																			<GarbageBin />
-																		</button>
-																	</Tooltip>
-																{:else}
-																	<ModelMenu
-																		user={$user}
-																		{model}
-																		editHandler={() => {
-																			goto(
-																				`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
-																			);
-																		}}
-																		shareHandler={() => {
-																			shareModelHandler(model);
-																		}}
-																		cloneHandler={() => {
-																			cloneModelHandler(model);
-																		}}
-																		exportHandler={() => {
-																			exportModelHandler(model);
-																		}}
-																		hideHandler={() => {
+													{#if model.write_access || $user?.role === 'admin'}
+													<div class="flex {model.is_active ? '' : 'text-gray-500'}">
+														<div class="flex items-center gap-0.5">
+															{#if shiftKey}
+																<Tooltip
+																	content={model?.meta?.hidden
+																		? $i18n.t('Show')
+																		: $i18n.t('Hide')}
+																>
+																	<button
+																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		type="button"
+																		on:click={(e) => {
+																			e.stopPropagation();
 																			hideModelHandler(model);
 																		}}
-																		pinModelHandler={() => {
-																			pinModelHandler(model.id);
-																		}}
-																		copyLinkHandler={() => {
-																			copyLinkHandler(model);
-																		}}
-																		deleteHandler={() => {
-																			selectedModel = model;
-																			showModelDeleteConfirm = true;
-																		}}
-																		onClose={() => {}}
 																	>
-																		<div
-																			class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																		>
-																			<EllipsisHorizontal className="size-5" />
-																		</div>
-																	</ModelMenu>
-																{/if}
-															</div>
+																		{#if model?.meta?.hidden}
+																			<EyeSlash />
+																		{:else}
+																			<Eye />
+																		{/if}
+																	</button>
+																</Tooltip>
+
+																<Tooltip content={$i18n.t('Delete')}>
+																	<button
+																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		type="button"
+																		on:click={(e) => {
+																			e.stopPropagation();
+																			deleteModelHandler(model);
+																		}}
+																	>
+																		<GarbageBin />
+																	</button>
+																</Tooltip>
+															{:else}
+																<ModelMenu
+																	user={$user}
+																	{model}
+																	editHandler={() => {
+																		goto(
+																			`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
+																		);
+																	}}
+																	shareHandler={() => {
+																		shareModelHandler(model);
+																	}}
+																	cloneHandler={() => {
+																		cloneModelHandler(model);
+																	}}
+																	exportHandler={() => {
+																		exportModelHandler(model);
+																	}}
+																	hideHandler={() => {
+																		hideModelHandler(model);
+																	}}
+																	pinModelHandler={() => {
+																		pinModelHandler(model.id);
+																	}}
+																	copyLinkHandler={() => {
+																		copyLinkHandler(model);
+																	}}
+																	deleteHandler={() => {
+																		selectedModel = model;
+																		showModelDeleteConfirm = true;
+																	}}
+																	onClose={() => {}}
+																>
+																	<div
+																		class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																	>
+																		<EllipsisHorizontal className="size-5" />
+																	</div>
+																</ModelMenu>
+															{/if}
 														</div>
 													</div>
+													{/if}
 
 													{#if model.write_access}
 													<button
