@@ -486,7 +486,7 @@
 								<div class=" shrink-0 flex w-full min-w-0 flex-1 pr-1 self-center">
 									<div class="flex h-full w-full flex-1 flex-col justify-start self-center group">
 										<div class="flex-1 w-full">
-											<div class="flex items-center gap-2 w-full">
+											<div class="flex items-center justify-between w-full">
 												<Tooltip content={model.name} className=" w-fit" placement="top-start">
 													<a
 														class=" font-medium line-clamp-1 hover:underline capitalize"
@@ -496,13 +496,10 @@
 													</a>
 												</Tooltip>
 
-												{#if !model.write_access}
-													<Badge type="muted" content={$i18n.t('Read Only')} />
-												{/if}
-											</div>
-										</div>
-
-										<div class=" flex items-center gap-1">
+												<div class="flex items-center gap-1">
+													{#if !model.write_access}
+														<Badge type="muted" content={$i18n.t('Read Only')} />
+													{/if}
 													<div
 														class="flex justify-end w-full {model.is_active ? '' : 'text-gray-500'}"
 													>
