@@ -118,6 +118,12 @@ class TagFeedbackModel(BaseModel):
 class TagFeedbackForm(BaseModel):
     tag_id: str
     status: Optional[str] = None  # null to clear, or one of: "not_interested", "understood", "confused"
+    feedback_status: Optional[str] = None  # Alternative field name for compatibility
+    
+    @property
+    def effective_status(self) -> Optional[str]:
+        """Return feedback_status if provided, otherwise status."""
+        return self.feedback_status if self.feedback_status is not None else self.status
 
 
 # Valid feedback statuses

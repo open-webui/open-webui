@@ -648,8 +648,11 @@ class TagWithFeedbackResponse(BaseModel):
 @router.post("/feedback", response_model=TagFeedbackModel)
 async def set_tag_feedback(body: TagFeedbackForm, user=Depends(get_verified_user)):
     """Set or update feedback for a tag."""
+    # Get the effective status (prioritize feedback_status over status)
+    status = body.effective_status
+    
     # Validate status
-    if body.status is not None and body.status not in VALID_FEEDBACK_STATUSES:
+    if status is not None and status not in VALID_FEEDBACK_STATUSES:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid status. Must be one of: {list(VALID_FEEDBACK_STATUSES - {None})}"
@@ -660,7 +663,7 @@ async def set_tag_feedback(body: TagFeedbackForm, user=Depends(get_verified_user
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
 
-    feedback = TagFeedbacks.upsert(user.id, body.tag_id, body.status)
+    feedback = TagFeedbacks.upsert(user.id, body.tag_id, status)
     if not feedback:
         raise HTTPException(status_code=500, detail="Failed to save feedback")
 

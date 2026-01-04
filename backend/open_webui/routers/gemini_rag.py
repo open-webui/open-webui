@@ -592,7 +592,7 @@ async def query_rag(
 async def query_rag_by_chapter(
     request: Request,
     background_tasks: BackgroundTasks,
-    chapter_id: str,
+    chapter_id: Optional[str],
     question: str,
     model: str = "gemini-2.5-flash",
     temperature: float = 0.2,
@@ -606,7 +606,7 @@ async def query_rag_by_chapter(
     """
     챕터 ID로 RAG 쿼리 실행
 
-    - **chapter_id**: 챕터 ID (예: "ch-1")
+    - **chapter_id**: 챕터 ID (예: "ch-1"), null이면 "general" 사용
     - **question**: 질문 내용
     - **model**: 사용할 Gemini 모델
     - **temperature**: 응답 다양성
@@ -616,6 +616,11 @@ async def query_rag_by_chapter(
     - **response_style**: 응답 스타일 (선택)
     - **enable_tool_gating**: Tool gating 활성화 (기본: True)
     """
+    # Fallback to "general" if chapter_id is null or empty
+    if not chapter_id or chapter_id.strip() == "" or chapter_id.lower() == "null":
+        chapter_id = "general"
+        log.info(f"[GEMINI RAG BY CHAPTER] chapter_id was null, using fallback: {chapter_id}")
+
     store_name = TextbookChapters.get_rag_store(chapter_id)
     if not store_name:
         raise HTTPException(
