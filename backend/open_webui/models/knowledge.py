@@ -16,7 +16,6 @@ from open_webui.models.files import (
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, Users, UserResponse
 
-
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
     BigInteger,
@@ -28,17 +27,16 @@ from sqlalchemy import (
     UniqueConstraint,
     or_,
 )
+from sqlalchemy.orm import defer
 
 from open_webui.utils.access_control import has_access
 from open_webui.utils.db.access_control import has_permission
-
 
 log = logging.getLogger(__name__)
 
 ####################
 # Knowledge DB Schema
 ####################
-
 
 class Knowledge(Base):
     __tablename__ = "knowledge"
@@ -70,7 +68,6 @@ class Knowledge(Base):
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
-
 class KnowledgeModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -86,7 +83,6 @@ class KnowledgeModel(BaseModel):
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
-
 
 class KnowledgeFile(Base):
     __tablename__ = "knowledge_file"
@@ -108,7 +104,6 @@ class KnowledgeFile(Base):
         ),
     )
 
-
 class KnowledgeFileModel(BaseModel):
     id: str
     knowledge_id: str
@@ -120,41 +115,33 @@ class KnowledgeFileModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
 ####################
 # Forms
 ####################
 class KnowledgeUserModel(KnowledgeModel):
     user: Optional[UserResponse] = None
 
-
 class KnowledgeResponse(KnowledgeModel):
     files: Optional[list[FileMetadataResponse | dict]] = None
 
-
 class KnowledgeUserResponse(KnowledgeUserModel):
     pass
-
 
 class KnowledgeForm(BaseModel):
     name: str
     description: str
     access_control: Optional[dict] = None
 
-
 class FileUserResponse(FileModelResponse):
     user: Optional[UserResponse] = None
-
 
 class KnowledgeListResponse(BaseModel):
     items: list[KnowledgeUserModel]
     total: int
 
-
 class KnowledgeFileListResponse(BaseModel):
     items: list[FileUserResponse]
     total: int
-
 
 class KnowledgeTable:
     def insert_new_knowledge(
@@ -437,6 +424,8 @@ class KnowledgeTable:
                         query = query.filter(KnowledgeFile.user_id == user_id)
                     elif view_option == "shared":
                         query = query.filter(KnowledgeFile.user_id != user_id)
+                    elif view_option == "metadata_only":
+                        query = query.options(defer(File.data))
 
                     order_by = filter.get("order_by")
                     direction = filter.get("direction")
@@ -641,6 +630,5 @@ class KnowledgeTable:
                 return True
             except Exception:
                 return False
-
 
 Knowledges = KnowledgeTable()
