@@ -889,15 +889,8 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
-		if ($user?.role !== 'admin') {
-			if ($user?.permissions?.chat?.temporary_enforced) {
-				await temporaryChatEnabled.set(true);
-			}
-
-			if (!$user?.permissions?.chat?.temporary) {
-				await temporaryChatEnabled.set(false);
-				return;
-			}
+		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+			await temporaryChatEnabled.set(true);
 		}
 
 		if ($settings?.temporaryChatByDefault ?? false) {
@@ -907,6 +900,10 @@
 				// if set to null set to false; refer to temp chat toggle click handler
 				await temporaryChatEnabled.set(false);
 			}
+		}
+
+		if ($user?.role !== 'admin' && !$user?.permissions?.chat?.temporary) {
+			await temporaryChatEnabled.set(false);
 		}
 
 		const availableModels = $models
@@ -1738,7 +1735,11 @@
 						)
 					);
 
-					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true) && !imageGenerationEnabled) {
+					if (
+						hasImages &&
+						!(model.info?.meta?.capabilities?.vision ?? true) &&
+						!imageGenerationEnabled
+					) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
 								modelName: model.name ?? model.id
