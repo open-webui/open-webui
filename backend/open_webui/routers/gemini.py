@@ -39,14 +39,31 @@ log = logging.getLogger(__name__)
 ##########################################
 
 
-async def send_get_request(url: str, key: str = None) -> dict:
-    """Send a GET request to the Gemini API."""
+async def send_get_request(url: str, key: str = None, config: dict = None) -> dict:
+    """Send a GET request to the Gemini API.
+    
+    Supports both Bearer token authentication (via Authorization header)
+    and API key authentication (via query parameter).
+    """
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            headers = {}
-            # Gemini uses API key as query parameter, not header
-            full_url = f"{url}?key={key}" if key else url
+            headers = {"Content-Type": "application/json"}
+            
+            # Determine authentication method based on config
+            auth_type = (config or {}).get("auth_type", "bearer")
+            
+            if auth_type == "bearer" and key:
+                # Use Authorization header for Bearer auth (proxy compatible)
+                headers["Authorization"] = f"Bearer {key}"
+                full_url = url
+            elif auth_type == "none":
+                # No authentication
+                full_url = url
+            else:
+                # Default: Gemini uses API key as query parameter
+                full_url = f"{url}?key={key}" if key else url
+            
             async with session.get(full_url, headers=headers) as response:
                 return await response.json()
     except Exception as e:
@@ -156,6 +173,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                     send_get_request(
                         f"{url}/models",
                         request.app.state.config.GEMINI_API_KEYS[idx],
+                        api_config,  # Pass config for auth_type handling
                     )
                 )
             else:
@@ -292,9 +310,10 @@ async def verify_connection(
     """Verify Gemini API connection."""
     url = form_data.url
     key = form_data.key
+    config = form_data.config or {}
 
     try:
-        response = await send_get_request(f"{url}/models", key)
+        response = await send_get_request(f"{url}/models", key, config)
         if response is None:
             raise HTTPException(
                 status_code=500, detail="Failed to connect to Gemini API"
@@ -346,6 +365,7 @@ async def generate_chat_completion(
     
     url = request.app.state.config.GEMINI_API_BASE_URLS[idx]
     key = request.app.state.config.GEMINI_API_KEYS[idx]
+    api_config = request.app.state.config.GEMINI_API_CONFIGS.get(str(idx), {})
     
     # Convert OpenAI format to Gemini format
     messages = form_data.get("messages", [])
@@ -419,10 +439,24 @@ async def generate_chat_completion(
     
     # Make request to Gemini API
     endpoint = "streamGenerateContent" if stream else "generateContent"
-    gemini_url = f"{url}/models/{gemini_model}:{endpoint}?key={key}"
+    
+    # Determine authentication method based on config
+    auth_type = api_config.get("auth_type", "bearer")
+    headers = {"Content-Type": "application/json"}
+    
+    if auth_type == "bearer" and key:
+        # Use Authorization header for Bearer auth (proxy compatible)
+        headers["Authorization"] = f"Bearer {key}"
+        gemini_url = f"{url}/models/{gemini_model}:{endpoint}"
+    elif auth_type == "none":
+        # No authentication
+        gemini_url = f"{url}/models/{gemini_model}:{endpoint}"
+    else:
+        # Default: Gemini uses API key as query parameter
+        gemini_url = f"{url}/models/{gemini_model}:{endpoint}?key={key}"
     
     if stream:
-        gemini_url += "&alt=sse"
+        gemini_url += ("&" if "?" in gemini_url else "?") + "alt=sse"
     
     try:
         timeout = aiohttp.ClientTimeout(total=300)
@@ -430,7 +464,7 @@ async def generate_chat_completion(
             async with session.post(
                 gemini_url,
                 json=gemini_payload,
-                headers={"Content-Type": "application/json"},
+                headers=headers,
             ) as response:
                 if response.status != 200:
                     error_data = await response.json()
