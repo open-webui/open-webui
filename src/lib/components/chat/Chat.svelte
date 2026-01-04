@@ -994,7 +994,7 @@
 		};
 
 		chatFiles = [];
-		params = {};
+		params = JSON.parse(JSON.stringify($settings?.params ?? {}));
 
 		if ($page.url.searchParams.get('youtube')) {
 			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
