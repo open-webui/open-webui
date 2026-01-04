@@ -11,6 +11,8 @@ from open_webui.models.models import (
     ModelModel,
     ModelResponse,
     ModelListResponse,
+    ModelAccessListResponse,
+    ModelAccessResponse,
     Models,
 )
 
@@ -51,7 +53,7 @@ PAGE_ITEM_COUNT = 30
 
 
 @router.get(
-    "/list", response_model=ModelListResponse
+    "/list", response_model=ModelAccessListResponse
 )  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
     query: Optional[str] = None,
@@ -88,7 +90,21 @@ async def get_models(
 
         filter["user_id"] = user.id
 
-    return Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    result = Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    return ModelAccessListResponse(
+        items=[
+            ModelAccessResponse(
+                **model.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == model.user_id
+                    or has_access(user.id, "write", model.access_control, db=db)
+                ),
+            )
+            for model in result.items
+        ],
+        total=result.total,
+    )
 
 
 ###########################

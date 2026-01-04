@@ -44,6 +44,7 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Pagination from '../common/Pagination.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	let shiftKey = false;
 
@@ -457,14 +458,10 @@
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
-							class="  flex cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl w-full p-2.5"
+							class="flex transition rounded-2xl w-full p-2.5 {model.write_access ? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50' : 'cursor-not-allowed opacity-60'}"
 							id="model-item-{model.id}"
 							on:click={() => {
-								if (
-									$user?.role === 'admin' ||
-									model.user_id === $user?.id ||
-									model.access_control.write.group_ids.some((wg) => groupIds.includes(wg))
-								) {
+								if (model.write_access) {
 									goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
 								}
 							}}
@@ -499,6 +496,11 @@
 													</a>
 												</Tooltip>
 
+												{#if !model.write_access}
+													<div class="self-center">
+														<Badge type="muted" content={$i18n.t('Read Only')} />
+													</div>
+												{/if}
 												<div class=" flex items-center gap-1">
 													<div
 														class="flex justify-end w-full {model.is_active ? '' : 'text-gray-500'}"
@@ -584,6 +586,7 @@
 														</div>
 													</div>
 
+													{#if model.write_access}
 													<button
 														on:click={(e) => {
 															e.stopPropagation();
@@ -607,6 +610,7 @@
 															/>
 														</Tooltip>
 													</button>
+													{/if}
 												</div>
 											</div>
 
