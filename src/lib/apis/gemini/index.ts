@@ -93,7 +93,7 @@ export const getGeminiModels = async (token: string, urlIdx?: number) => {
             return res.json();
         })
         .catch((err) => {
-            error = `Gemini: ${err?.error?.message ?? 'Network Problem'}`;
+            error = `Gemini: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
             return [];
         });
 
@@ -133,7 +133,7 @@ export const verifyGeminiConnection = async (
             return res.json();
         })
         .catch((err) => {
-            error = `Gemini: ${err?.error?.message ?? 'Network Problem'}`;
+            error = `Gemini: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
             return [];
         });
 
