@@ -713,14 +713,14 @@
 										>
 											<option value="auto">{$i18n.t('Auto (Random)')}</option>
 											<option value="bing">{$i18n.t('Bing')}</option>
+											<option value="brave">{$i18n.t('Brave')}</option>
 											<option value="duckduckgo">{$i18n.t('DuckDuckGo')}</option>
 											<option value="google">{$i18n.t('Google')}</option>
-											<option value="brave">{$i18n.t('Brave')}</option>
+											<option value="grokipedia">{$i18n.t('Grokipedia')}</option>
 											<option value="mojeek">{$i18n.t('Mojeek')}</option>
+											<option value="wikipedia">{$i18n.t('Wikipedia')}</option>
 											<option value="yahoo">{$i18n.t('Yahoo')}</option>
 											<option value="yandex">{$i18n.t('Yandex')}</option>
-											<option value="wikipedia">{$i18n.t('Wikipedia')}</option>
-											<option value="grokipedia">{$i18n.t('Grokipedia')}</option>
 										</select>
 									</div>
 								</div>
