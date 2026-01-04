@@ -124,10 +124,6 @@ async def search_users(
     filter = {}
     if query:
         filter["query"] = query
-
-    filter = {}
-    if query:
-        filter["query"] = query
     if order_by:
         filter["order_by"] = order_by
     if direction:
