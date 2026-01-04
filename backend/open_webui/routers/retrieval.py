@@ -543,6 +543,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "SERPSTACK_HTTPS": request.app.state.config.SERPSTACK_HTTPS,
             "SERPER_API_KEY": request.app.state.config.SERPER_API_KEY,
             "SERPLY_API_KEY": request.app.state.config.SERPLY_API_KEY,
+            "DDGS_BACKEND": request.app.state.config.DDGS_BACKEND,
             "TAVILY_API_KEY": request.app.state.config.TAVILY_API_KEY,
             "SEARCHAPI_API_KEY": request.app.state.config.SEARCHAPI_API_KEY,
             "SEARCHAPI_ENGINE": request.app.state.config.SEARCHAPI_ENGINE,
@@ -605,6 +606,7 @@ class WebConfig(BaseModel):
     SERPSTACK_HTTPS: Optional[bool] = None
     SERPER_API_KEY: Optional[str] = None
     SERPLY_API_KEY: Optional[str] = None
+    DDGS_BACKEND: Optional[str] = None
     TAVILY_API_KEY: Optional[str] = None
     SEARCHAPI_API_KEY: Optional[str] = None
     SEARCHAPI_ENGINE: Optional[str] = None
@@ -1097,6 +1099,7 @@ async def update_rag_config(
         request.app.state.config.SERPSTACK_HTTPS = form_data.web.SERPSTACK_HTTPS
         request.app.state.config.SERPER_API_KEY = form_data.web.SERPER_API_KEY
         request.app.state.config.SERPLY_API_KEY = form_data.web.SERPLY_API_KEY
+        request.app.state.config.DDGS_BACKEND = form_data.web.DDGS_BACKEND
         request.app.state.config.TAVILY_API_KEY = form_data.web.TAVILY_API_KEY
         request.app.state.config.SEARCHAPI_API_KEY = form_data.web.SEARCHAPI_API_KEY
         request.app.state.config.SEARCHAPI_ENGINE = form_data.web.SEARCHAPI_ENGINE
@@ -2071,6 +2074,7 @@ def search_web(
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             concurrent_requests=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
+            backend=request.app.state.config.DDGS_BACKEND,
         )
     elif engine == "tavily":
         if request.app.state.config.TAVILY_API_KEY:
