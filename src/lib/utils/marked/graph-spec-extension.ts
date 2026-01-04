@@ -26,10 +26,11 @@ export type Sampling3D = {
 };
 
 export interface GraphSpecLayer {
-	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'point_2d' |
-		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'point_3d' | 'histogram_2d' | 'vector_2d';
+	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'point_2d' | 'line_2d' |
+		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'point_3d' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d';
 	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
+	field?: { dx?: string; dy?: string; dz?: string }; // vector field용 (phase_plane, vector_field_3d)
 	domain?: Domain2D | Domain3D;
 	sampling?: Sampling2D | Sampling3D;
 	data?: any; // 2D/3D 데이터 또는 vector_2d의 {start, end, color, width}[] 형식
@@ -47,14 +48,18 @@ export interface GraphSpecLayer {
 		size?: number;
 		opacity?: number;
 		barGap?: number; // histogram_2d용 막대 간격 (0~1)
+		width?: number; // vector_2d용 선 두께
+		glyph?: 'arrow'; // vector field용 glyph 타입
+		scale?: number; // vector field용 arrow 길이 스케일
 	};
 }
 
 export interface GraphSpec {
-	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d' |
-		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d' | 'cartesian' | 'histogram_2d' | 'vector_2d';
+	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d' | 'line_2d' |
+		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d' | 'cartesian' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d';
 	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
+	field?: { dx?: string; dy?: string; dz?: string }; // vector field용 (phase_plane, vector_field_3d)
 	domain?: Domain2D | Domain3D;
 	sampling?: Sampling2D | Sampling3D;
 	data?: any; // 2D/3D 데이터 또는 vector_2d의 {start, end, color, width}[] 형식
@@ -72,6 +77,8 @@ export interface GraphSpec {
 		opacity?: number;
 		barGap?: number; // histogram_2d용 막대 간격 (0~1)
 		width?: number; // vector_2d용 선 두께
+		glyph?: 'arrow'; // vector field용 glyph 타입
+		scale?: number; // vector field용 arrow 길이 스케일
 	};
 	axis?: {
 		xLabel?: string;

@@ -89,6 +89,10 @@
 			urls?: string[];
 			query?: string;
 		};
+		toolExecutions?: Record<string, {
+			status: 'executing' | 'completed';
+			message: string;
+		}>;
 		done: boolean;
 		error?: boolean | { content: string };
 		sources?: string[];
@@ -129,6 +133,14 @@
 	$: if (history.messages) {
 		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		}
+	}
+
+	// Debug: Log tool executions when they change
+	$: if (message?.toolExecutions) {
+		const executingTools = Object.entries(message.toolExecutions).filter(([_, t]) => t.status === 'executing');
+		if (executingTools.length > 0) {
+			console.log('[ResponseMessage] Displaying tool executions:', message.toolExecutions, 'Executing:', executingTools.map(([name]) => name));
 		}
 	}
 
@@ -713,6 +725,20 @@
 					<div>
 						{#if model?.info?.meta?.capabilities?.status_updates ?? true}
 							<StatusHistory statusHistory={message?.statusHistory} />
+						{/if}
+
+						{#if message?.toolExecutions}
+							{@const executingTools = Object.entries(message.toolExecutions).filter(([_, t]) => t.status === 'executing')}
+							{#if executingTools.length > 0}
+								<div class="flex flex-col gap-1 my-2">
+									{#each executingTools as [toolName, toolInfo]}
+										<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2" transition:fade={{ duration: 150 }}>
+											<Spinner className="size-4" />
+											<span>{toolInfo.message}</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}

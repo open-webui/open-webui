@@ -3,7 +3,13 @@
 	import { compile } from 'mathjs';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import type { GraphSpec, GraphSpecLayer, Domain3D, Sampling3D } from '$lib/utils/marked/graph-spec-extension';
+	import type { GraphSpec } from '$lib/utils/marked/graph-spec-extension';
+
+	// Import shared graph builder utilities
+	import {
+		buildTraces,
+		is3DGraph
+	} from '$lib/utils/graph-builder';
 
 	const i18n = getContext('i18n');
 
@@ -30,597 +36,6 @@
 	// 다크모드 감지
 	function isDarkMode(): boolean {
 		return document.documentElement.classList.contains('dark');
-	}
-
-	type LayerSpec = GraphSpec | GraphSpecLayer;
-
-	function normalizeExpressions(layer: LayerSpec): string[] {
-		// expression (singular) 체크
-		if (layer.expression) {
-			return [layer.expression];
-		}
-		// expressions (plural) 체크
-		if (!layer.expressions) return [];
-		return Array.isArray(layer.expressions) ? layer.expressions : [layer.expressions];
-	}
-
-	function normalizeColors(layer: LayerSpec): string[] {
-		if (!layer.style?.color) return [];
-		return Array.isArray(layer.style.color) ? layer.style.color : [layer.style.color];
-	}
-
-	function getLineDash(lineStyle?: string): string | undefined {
-		switch (lineStyle) {
-			case 'dashed': return 'dash';
-			case 'dotted': return 'dot';
-			default: return undefined;
-		}
-	}
-
-	const markerSymbolMap: Record<string, string> = {
-		circle: 'circle',
-		square: 'square',
-		triangle: 'triangle-up',
-		diamond: 'diamond',
-		cross: 'cross'
-	};
-
-	// 2D 도메인 추출 헬퍼 (배열 또는 객체 형식 지원)
-	function getDomain2D(domain: any, defaultVal: [number, number] = [-10, 10]): [number, number] {
-		if (!domain) return defaultVal;
-		if (Array.isArray(domain)) return domain as [number, number];
-		if (domain.x && Array.isArray(domain.x)) return domain.x as [number, number];
-		return defaultVal;
-	}
-
-	// ========== 2D Builders ==========
-	function buildFunction2DTraces(layer: LayerSpec) {
-		const expressions = normalizeExpressions(layer);
-		const colors = normalizeColors(layer);
-
-		return expressions.map((expr, i) => {
-			const f = compile(expr);
-			const [x0, x1] = getDomain2D(layer.domain);
-			const sampling = (layer.sampling as number) || 200;
-
-			const x: number[] = [];
-			const y: number[] = [];
-
-			for (let j = 0; j < sampling; j++) {
-				const xv = x0 + ((x1 - x0) * j) / (sampling - 1);
-				x.push(xv);
-				try {
-					y.push(f.evaluate({ x: xv }));
-				} catch {
-					y.push(NaN);
-				}
-			}
-
-			const legendName = expr.length > 30 ? expr.slice(0, 30) + '...' : expr;
-
-			return {
-				x, y,
-				type: 'scatter',
-				mode: 'lines',
-				line: {
-					color: colors[i] || undefined,
-					width: layer.style?.lineWidth ?? 2,
-					dash: getLineDash(layer.style?.lineStyle)
-				},
-				opacity: layer.style?.opacity,
-				name: legendName,
-				showlegend: expressions.length > 1
-			};
-		});
-	}
-
-	function buildParametric2DTraces(layer: LayerSpec) {
-		const expressions = normalizeExpressions(layer);
-		const colors = normalizeColors(layer);
-
-		if (expressions.length < 2) return [];
-
-		const fX = compile(expressions[0]);
-		const fY = compile(expressions[1]);
-		
-		// domain이 객체 형식 {t: [0, 2*pi]}이거나 배열 형식 [0, 2*pi]일 수 있음
-		let t0 = 0, t1 = Math.PI * 2;
-		if (layer.domain) {
-			const domain = layer.domain as any;
-			let domainArray: any[];
-			if (Array.isArray(domain)) {
-				domainArray = domain;
-			} else if (domain.t && Array.isArray(domain.t)) {
-				domainArray = domain.t;
-			} else {
-				domainArray = [t0, t1];
-			}
-			// 문자열 수식 평가 (예: "2*pi")
-			t0 = typeof domainArray[0] === 'string' ? compile(domainArray[0]).evaluate({}) : domainArray[0];
-			t1 = typeof domainArray[1] === 'string' ? compile(domainArray[1]).evaluate({}) : domainArray[1];
-		}
-		
-		// sampling도 객체 형식 {t: 200}이거나 숫자일 수 있음
-		let sampling = 200;
-		if (layer.sampling) {
-			const samplingVal = layer.sampling as any;
-			if (typeof samplingVal === 'number') {
-				sampling = samplingVal;
-			} else if (samplingVal.t) {
-				sampling = samplingVal.t;
-			}
-		}
-
-		const x: number[] = [];
-		const y: number[] = [];
-
-		for (let j = 0; j < sampling; j++) {
-			const t = t0 + ((t1 - t0) * j) / (sampling - 1);
-			try {
-				x.push(fX.evaluate({ t }));
-				y.push(fY.evaluate({ t }));
-			} catch {
-				x.push(NaN);
-				y.push(NaN);
-			}
-		}
-	
-
-		return [{
-			x, y,
-			type: 'scatter',
-			mode: 'lines',
-			line: {
-				color: colors[0] || undefined,
-				width: layer.style?.lineWidth ?? 2
-			},
-			showlegend: false
-		}];
-	}
-
-	function buildScatter2DTraces(layer: LayerSpec) {
-		const colors = normalizeColors(layer);
-		const data = layer.data || [];
-
-		if (data.length === 0) return [];
-
-		const x = data.map((point) => point[0]);
-		const y = data.map((point) => point[1]);
-
-		return [{
-			x, y,
-			type: 'scatter',
-			mode: 'markers',
-			marker: {
-				symbol: markerSymbolMap[layer.style?.marker || 'circle'] || 'circle',
-				size: layer.style?.size ?? 8,
-				color: colors[0] || '#1f77b4'
-			},
-			showlegend: false
-		}];
-	}
-
-	// vector_2d: 벡터/화살표 렌더링
-	function buildVector2DTraces(layer: LayerSpec) {
-		const data = layer.data || [];
-		
-		if (!Array.isArray(data) || data.length === 0) return [];
-
-		const traces: any[] = [];
-		
-		data.forEach((vector: any) => {
-			const start = vector.start || [0, 0];
-			const end = vector.end || [0, 0];
-			const color = vector.color || layer.style?.color || 'black';
-			const width = vector.width || layer.style?.lineWidth || layer.style?.width || 2;
-			const opacity = vector.opacity || layer.style?.opacity || 1;
-
-			// 벡터 선
-			traces.push({
-				x: [start[0], end[0]],
-				y: [start[1], end[1]],
-				type: 'scatter',
-				mode: 'lines',
-				line: {
-					color: color,
-					width: width
-				},
-				opacity: opacity,
-				showlegend: false,
-				hoverinfo: 'skip'
-			});
-
-			// 화살표 머리
-			const dx = end[0] - start[0];
-			const dy = end[1] - start[1];
-			const len = Math.sqrt(dx * dx + dy * dy);
-			
-			if (len > 0) {
-				const headLen = Math.min(0.15 * len, width * 0.05);
-				const angle = Math.atan2(dy, dx);
-				const angle1 = angle + Math.PI * 0.85;
-				const angle2 = angle - Math.PI * 0.85;
-				
-				const arrowX = [
-					end[0] + headLen * Math.cos(angle1),
-					end[0],
-					end[0] + headLen * Math.cos(angle2)
-				];
-				const arrowY = [
-					end[1] + headLen * Math.sin(angle1),
-					end[1],
-					end[1] + headLen * Math.sin(angle2)
-				];
-
-				traces.push({
-					x: arrowX,
-					y: arrowY,
-					type: 'scatter',
-					mode: 'lines',
-					fill: 'toself',
-					fillcolor: color,
-					line: {
-						color: color,
-						width: 1
-					},
-					opacity: opacity,
-					showlegend: false,
-					hoverinfo: 'skip'
-				});
-			}
-		});
-
-		return traces;
-	}
-
-	// histogram_2d: 히스토그램 (binEdges, counts)
-	function buildHistogram2DTraces(layer: LayerSpec) {
-		const colors = normalizeColors(layer);
-		const binEdges = layer.binEdges || [];
-		const counts = layer.counts || [];
-
-		if (binEdges.length === 0 || counts.length === 0) return [];
-
-		// binEdges의 중간점을 x 좌표로 사용
-		const x = [];
-		for (let i = 0; i < binEdges.length - 1; i++) {
-			x.push((binEdges[i] + binEdges[i + 1]) / 2);
-		}
-
-		// 막대 너비 계산
-		const barGap = layer.style?.barGap ?? 0.05;
-		const widths = [];
-		for (let i = 0; i < binEdges.length - 1; i++) {
-			const fullWidth = binEdges[i + 1] - binEdges[i];
-			widths.push(fullWidth * (1 - barGap));
-		}
-
-		return [{
-			x,
-			y: counts,
-			type: 'bar',
-			width: widths,
-			marker: {
-				color: colors[0] || layer.style?.color || 'steelblue',
-				opacity: layer.style?.opacity ?? 0.85
-			},
-			showlegend: false
-		}];
-	}
-
-	// point_2d: 산점도 (coordinates: [[x, y], ...]) - cartesian 그래프용
-	function buildPoint2DTraces(layer: LayerSpec) {
-		const colors = normalizeColors(layer);
-		const coordinates = (layer as any).coordinates || layer.data || [];
-
-		if (coordinates.length === 0) return [];
-
-		const x = coordinates.map((point: [number, number]) => point[0]);
-		const y = coordinates.map((point: [number, number]) => point[1]);
-
-		const shape = (layer.style as any)?.shape || layer.style?.marker || 'circle';
-
-		return [{
-			x, y,
-			type: 'scatter',
-			mode: 'markers',
-			marker: {
-				symbol: markerSymbolMap[shape] || 'circle',
-				size: layer.style?.size ?? 8,
-				color: colors[0] || '#1f77b4',
-				opacity: layer.style?.opacity ?? 0.8
-			},
-			showlegend: true,
-			name: 'data points'
-		}];
-	}
-
-	function buildPhasePlaneTraces(layer: LayerSpec) {
-		const expressions = normalizeExpressions(layer);
-		const colors = normalizeColors(layer);
-
-		if (expressions.length < 2) return [];
-
-		const fDx = compile(expressions[0]);
-		const fDy = compile(expressions[1]);
-		const [min, max] = (layer.domain as [number, number]) || [-5, 5];
-		const sampling = (layer.sampling as number) || 20;
-
-		const traces: any[] = [];
-		const step = (max - min) / (sampling - 1);
-		const arrowScale = step * 0.4;
-
-		for (let i = 0; i < sampling; i++) {
-			for (let j = 0; j < sampling; j++) {
-				const xv = min + i * step;
-				const yv = min + j * step;
-				try {
-					const dx = fDx.evaluate({ x: xv, y: yv });
-					const dy = fDy.evaluate({ x: xv, y: yv });
-					const mag = Math.sqrt(dx * dx + dy * dy);
-					if (mag > 0) {
-						traces.push({
-							x: [xv, xv + (dx / mag) * arrowScale],
-							y: [yv, yv + (dy / mag) * arrowScale],
-							type: 'scatter',
-							mode: 'lines',
-							line: { color: colors[0] || '#666', width: 1 },
-							showlegend: false,
-							hoverinfo: 'skip'
-						});
-					}
-				} catch {}
-			}
-		}
-		return traces;
-	}
-
-	// ========== 3D Helpers ==========
-	function getDomain3D(domain: Domain3D | undefined, key: 'x' | 'y' | 'u' | 'v' | 't', defaultVal: [number, number]): [number, number] {
-		if (!domain || Array.isArray(domain)) return defaultVal;
-		return domain[key] || defaultVal;
-	}
-
-	function getSampling3D(sampling: Sampling3D | number | undefined, key: 'x' | 'y' | 'u' | 'v' | 't', defaultVal: number): number {
-		if (!sampling) return defaultVal;
-		if (typeof sampling === 'number') return sampling;
-		return sampling[key] || defaultVal;
-	}
-
-	// ========== 3D Builders ==========
-	function buildFunction3DTraces(layer: LayerSpec) {
-		const expr = layer.expression || (layer.expressions ? normalizeExpressions(layer)[0] : 'x^2 + y^2');
-		const f = compile(expr);
-
-		const domain = layer.domain as Domain3D | undefined;
-		const [x0, x1] = getDomain3D(domain, 'x', [-2, 2]);
-		const [y0, y1] = getDomain3D(domain, 'y', [-2, 2]);
-
-		const sampling = layer.sampling as Sampling3D | number | undefined;
-		const xSampling = getSampling3D(sampling, 'x', 40);
-		const ySampling = getSampling3D(sampling, 'y', 40);
-
-		const xVals: number[] = [];
-		const yVals: number[] = [];
-		const zVals: number[][] = [];
-
-		for (let i = 0; i < xSampling; i++) {
-			xVals.push(x0 + ((x1 - x0) * i) / (xSampling - 1));
-		}
-		for (let j = 0; j < ySampling; j++) {
-			yVals.push(y0 + ((y1 - y0) * j) / (ySampling - 1));
-		}
-
-		for (let j = 0; j < ySampling; j++) {
-			const row: number[] = [];
-			for (let i = 0; i < xSampling; i++) {
-				try {
-					row.push(f.evaluate({ x: xVals[i], y: yVals[j] }));
-				} catch {
-					row.push(NaN);
-				}
-			}
-			zVals.push(row);
-		}
-
-		return [{
-			x: xVals, y: yVals, z: zVals,
-			type: 'surface',
-			colorscale: layer.style?.colorMap || 'Viridis',
-			opacity: layer.style?.opacity ?? 0.9,
-			showscale: false
-		}];
-	}
-
-	function buildParametric3DTraces(layer: LayerSpec) {
-		const expressions = normalizeExpressions(layer);
-		const colors = normalizeColors(layer);
-
-		if (expressions.length < 3) return [];
-
-		const fX = compile(expressions[0]);
-		const fY = compile(expressions[1]);
-		const fZ = compile(expressions[2]);
-
-		const domain = layer.domain as Domain3D | undefined;
-		const hasTDomain = domain && 't' in domain;
-		const hasUVDomain = domain && ('u' in domain || 'v' in domain);
-
-		if (hasTDomain || !hasUVDomain) {
-			const [t0, t1] = getDomain3D(domain, 't', [0, Math.PI * 2]);
-			const sampling = getSampling3D(layer.sampling as Sampling3D, 't', 100);
-
-			const x: number[] = [];
-			const y: number[] = [];
-			const z: number[] = [];
-
-			for (let i = 0; i < sampling; i++) {
-				const t = t0 + ((t1 - t0) * i) / (sampling - 1);
-				try {
-					x.push(fX.evaluate({ t }));
-					y.push(fY.evaluate({ t }));
-					z.push(fZ.evaluate({ t }));
-				} catch {
-					x.push(NaN);
-					y.push(NaN);
-					z.push(NaN);
-				}
-			}
-
-			return [{
-				x, y, z,
-				type: 'scatter3d',
-				mode: 'lines',
-				line: { color: colors[0] || 'red', width: layer.style?.lineWidth ?? 3 }
-			}];
-		} else {
-			const [u0, u1] = getDomain3D(domain, 'u', [0, Math.PI * 2]);
-			const [v0, v1] = getDomain3D(domain, 'v', [0, Math.PI]);
-			const uSampling = getSampling3D(layer.sampling as Sampling3D, 'u', 60);
-			const vSampling = getSampling3D(layer.sampling as Sampling3D, 'v', 30);
-
-			const xVals: number[][] = [];
-			const yVals: number[][] = [];
-			const zVals: number[][] = [];
-
-			for (let j = 0; j < vSampling; j++) {
-				const xRow: number[] = [];
-				const yRow: number[] = [];
-				const zRow: number[] = [];
-				const v = v0 + ((v1 - v0) * j) / (vSampling - 1);
-
-				for (let i = 0; i < uSampling; i++) {
-					const u = u0 + ((u1 - u0) * i) / (uSampling - 1);
-					try {
-						xRow.push(fX.evaluate({ u, v }));
-						yRow.push(fY.evaluate({ u, v }));
-						zRow.push(fZ.evaluate({ u, v }));
-					} catch {
-						xRow.push(NaN);
-						yRow.push(NaN);
-						zRow.push(NaN);
-					}
-				}
-				xVals.push(xRow);
-				yVals.push(yRow);
-				zVals.push(zRow);
-			}
-
-			return [{
-				x: xVals, y: yVals, z: zVals,
-				type: 'surface',
-				colorscale: layer.style?.colorMap || 'Plasma',
-				opacity: layer.style?.opacity ?? 0.9,
-				showscale: false
-			}];
-		}
-	}
-
-	function buildScatter3DTraces(layer: LayerSpec) {
-		const colors = normalizeColors(layer);
-		const data = (layer.data || []) as [number, number, number][];
-
-		if (data.length === 0) return [];
-
-		return [{
-			x: data.map(p => p[0]),
-			y: data.map(p => p[1]),
-			z: data.map(p => p[2]),
-			type: 'scatter3d',
-			mode: 'markers',
-			marker: {
-				size: layer.style?.size ?? 5,
-				color: colors[0] || 'blue'
-			}
-		}];
-	}
-
-	// point_3d: 단일 3D 점 (position: [x, y, z], label 지원)
-	function buildPoint3DTraces(layer: GraphSpecLayer) {
-		const colors = normalizeColors(layer);
-		const position = (layer as any).position as [number, number, number] | undefined;
-		const label = (layer as any).label || '';
-
-		if (!position || position.length !== 3) return [];
-
-		return [{
-			x: [position[0]],
-			y: [position[1]],
-			z: [position[2]],
-			type: 'scatter3d',
-			mode: label ? 'markers+text' : 'markers',
-			marker: {
-				symbol: layer.style?.marker === 'sphere' ? 'circle' : (layer.style?.marker || 'circle'),
-				size: layer.style?.size ?? 8,
-				color: colors[0] || 'red',
-				opacity: layer.style?.opacity ?? 1
-			},
-			text: label ? [label] : undefined,
-			textposition: 'top center',
-			textfont: { size: 12 },
-			name: label || 'point',
-			showlegend: true
-		}];
-	}
-
-	function buildLayer3DTraces(layer: LayerSpec): any[] {
-		switch (layer.type) {
-			case 'function_3d': return buildFunction3DTraces(layer);
-			case 'parametric_3d': return buildParametric3DTraces(layer);
-			case 'scatter_3d': return buildScatter3DTraces(layer);
-			case 'point_3d': return buildPoint3DTraces(layer as GraphSpecLayer);
-			default: return [];
-		}
-	}
-
-	function buildLayerTraces(layer: LayerSpec): any[] {
-		const hasCoordinates = !!(layer as any).coordinates;
-		const layerType = layer.type || (hasCoordinates ? 'point_2d' : (layer.data ? 'scatter_2d' : 'function_2d'));
-		switch (layerType) {
-			case 'parametric_2d': return buildParametric2DTraces(layer);
-			case 'phase_plane': return buildPhasePlaneTraces(layer);
-			case 'scatter_2d': return buildScatter2DTraces(layer);
-			case 'histogram_2d': return buildHistogram2DTraces(layer);
-			case 'vector_2d': return buildVector2DTraces(layer);
-			case 'point_2d': return buildPoint2DTraces(layer);
-			case 'function_2d': default: return buildFunction2DTraces(layer);
-		}
-	}
-
-	function buildCompositeTraces(spec: GraphSpec, is3D: boolean): any[] {
-		const layers = spec.layers || [];
-		const allTraces: any[] = [];
-		layers.forEach((layer) => {
-			const traces = is3D ? buildLayer3DTraces(layer) : buildLayerTraces(layer);
-			allTraces.push(...traces);
-		});
-		return allTraces;
-	}
-
-	function is3DGraph(type: string): boolean {
-		return ['function_3d', 'parametric_3d', 'scatter_3d', 'composite_3d'].includes(type);
-	}
-
-	function buildTraces(spec: GraphSpec) {
-		const is3D = is3DGraph(spec.type);
-		switch (spec.type) {
-			case 'composite_2d':
-			case 'multi_scatter_2d':
-			case 'cartesian': // cartesian = composite_2d
-				return buildCompositeTraces(spec, false);
-			case 'composite_3d':
-				return buildCompositeTraces(spec, true);
-			case 'parametric_2d': return buildParametric2DTraces(spec);
-			case 'phase_plane': return buildPhasePlaneTraces(spec);
-			case 'scatter_2d': return buildScatter2DTraces(spec);
-			case 'histogram_2d': return buildHistogram2DTraces(spec);
-			case 'vector_2d': return buildVector2DTraces(spec);
-			case 'function_3d': return buildFunction3DTraces(spec);
-			case 'parametric_3d': return buildParametric3DTraces(spec);
-			case 'scatter_3d': return buildScatter3DTraces(spec);
-			case 'function_2d':
-			default: return buildFunction2DTraces(spec);
-		}
 	}
 
 	function getLayout(dark: boolean) {
@@ -662,21 +77,29 @@
 			gridcolor: gridColor,
 			tickfont: { color: textColor }
 		};
-		
+
 		// Apply xRange and yRange if provided
 		if (spec.axis?.xRange) {
-			xaxis.range = spec.axis.xRange;
+			const xRange = spec.axis.xRange as any[];
+			xaxis.range = [
+				typeof xRange[0] === 'string' ? compile(xRange[0]).evaluate({}) : xRange[0],
+				typeof xRange[1] === 'string' ? compile(xRange[1]).evaluate({}) : xRange[1]
+			];
 		}
 		if (spec.axis?.yRange) {
-			yaxis.range = spec.axis.yRange;
+			const yRange = spec.axis.yRange as any[];
+			yaxis.range = [
+				typeof yRange[0] === 'string' ? compile(yRange[0]).evaluate({}) : yRange[0],
+				typeof yRange[1] === 'string' ? compile(yRange[1]).evaluate({}) : yRange[1]
+			];
 		}
-		
+
 		// Equal aspect ratio for phase_plane
 		if (spec.type === 'phase_plane') {
 			yaxis.scaleanchor = 'x';
 			yaxis.scaleratio = 1;
 		}
-		
+
 		// Build annotations if provided
 		const annotations: any[] = [];
 		if (spec.annotations && Array.isArray(spec.annotations)) {
@@ -690,7 +113,7 @@
 						'center': { xanchor: 'center', yanchor: 'middle' }
 					};
 					const anchor = anchorMap[ann.style?.anchor || 'bottom-left'] || anchorMap['bottom-left'];
-					
+
 					annotations.push({
 						x: ann.position.x,
 						y: ann.position.y,
@@ -707,7 +130,7 @@
 				}
 			});
 		}
-		
+
 		return {
 			...baseLayout,
 			xaxis,
@@ -864,7 +287,7 @@
 				<div class="h-[60vh] border border-gray-100 dark:border-gray-800 rounded-lg overflow-hidden">
 					<div bind:this={container} class="w-full h-full" />
 				</div>
-				
+
 				<!-- Meta data (title and caption) -->
 				{#if spec.meta}
 					<div class="mt-4 px-1">
