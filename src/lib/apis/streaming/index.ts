@@ -1,6 +1,12 @@
 import { EventSourceParserStream } from 'eventsource-parser/stream';
 import type { ParsedEvent } from 'eventsource-parser';
 
+export type ToolExecutionEvent = {
+	type: 'tool_executing' | 'tool_completed';
+	tool: string;
+	message: string;
+};
+
 type TextStreamUpdate = {
 	done: boolean;
 	value: string;
@@ -10,6 +16,7 @@ type TextStreamUpdate = {
 	selectedModelId?: any;
 	error?: any;
 	usage?: ResponseUsage;
+	toolEvent?: ToolExecutionEvent;
 };
 
 type ResponseUsage = {
@@ -82,6 +89,20 @@ async function* openAIStreamToIterator(
 				continue;
 			}
 
+			// Handle tool execution events
+			if (parsedData.type === 'tool_executing' || parsedData.type === 'tool_completed') {
+				yield {
+					done: false,
+					value: '',
+					toolEvent: {
+						type: parsedData.type,
+						tool: parsedData.data?.tool ?? parsedData.tool ?? '',
+						message: parsedData.data?.message ?? parsedData.message ?? ''
+					}
+				};
+				continue;
+			}
+
 			yield {
 				done: false,
 				value: parsedData.choices?.[0]?.delta?.content ?? ''
@@ -116,6 +137,10 @@ async function* streamLargeDeltasAsRandomChunks(
 			continue;
 		}
 		if (textStreamUpdate.usage) {
+			yield textStreamUpdate;
+			continue;
+		}
+		if (textStreamUpdate.toolEvent) {
 			yield textStreamUpdate;
 			continue;
 		}

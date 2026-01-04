@@ -1,9 +1,20 @@
 <script lang="ts">
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { compile } from 'mathjs';
-	import type { GraphSpec, GraphSpecLayer, Domain3D, Sampling3D } from '$lib/utils/marked/graph-spec-extension';
+	import type { GraphSpec } from '$lib/utils/marked/graph-spec-extension';
 	import GraphPreviewModal from './GraphPreviewModal.svelte';
 	import ArrowsPointingOut from '$lib/components/icons/ArrowsPointingOut.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+
+	// Import shared graph builder utilities
+	import {
+		normalizeExpressions,
+		buildTraces,
+		is3DGraph,
+		isTypeSupported,
+		validateTraces
+	} from '$lib/utils/graph-builder';
 
 	const i18n = getContext('i18n');
 
@@ -12,767 +23,12 @@
 	let container: HTMLDivElement;
 	let Plotly: any;
 	let showModal = false;
+	let renderError: string | null = null;
+	let showErrorJsonModal = false;
 
 	// 다크모드 감지
 	function isDarkMode(): boolean {
 		return document.documentElement.classList.contains('dark');
-	}
-
-	type LayerSpec = GraphSpec | GraphSpecLayer;
-
-	// expressions를 배열로 정규화 (expression 또는 expressions 지원)
-	function normalizeExpressions(layer: LayerSpec): string[] {
-		// expression (singular) 체크
-		if (layer.expression) {
-			return [layer.expression];
-		}
-		// expressions (plural) 체크
-		if (!layer.expressions) return [];
-		return Array.isArray(layer.expressions) ? layer.expressions : [layer.expressions];
-	}
-
-	// colors를 배열로 정규화
-	function normalizeColors(layer: LayerSpec): string[] {
-		if (!layer.style?.color) return [];
-		return Array.isArray(layer.style.color) ? layer.style.color : [layer.style.color];
-	}
-
-	// lineStyle을 Plotly dash 형식으로 변환
-	function getLineDash(lineStyle?: string): string | undefined {
-		switch (lineStyle) {
-			case 'dashed': return 'dash';
-			case 'dotted': return 'dot';
-			default: return undefined;
-		}
-	}
-
-	// marker 스타일 매핑
-	const markerSymbolMap: Record<string, string> = {
-		circle: 'circle',
-		square: 'square',
-		triangle: 'triangle-up',
-		diamond: 'diamond',
-		cross: 'cross'
-	};
-
-	// 2D 도메인 추출 헬퍼 (배열 또는 객체 형식 지원)
-	function getDomain2D(domain: any, defaultVal: [number, number] = [-10, 10]): [number, number] {
-		if (!domain) return defaultVal;
-		// 배열 형식: [-2, 2]
-		if (Array.isArray(domain)) return domain as [number, number];
-		// 객체 형식: { x: [-2, 2] }
-		if (domain.x && Array.isArray(domain.x)) return domain.x as [number, number];
-		return defaultVal;
-	}
-
-	// function_2d: y = f(x)
-	function buildFunction2DTraces(layer: LayerSpec) {
-		const expressions = normalizeExpressions(layer);
-		const colors = normalizeColors(layer);
-
-		return expressions.map((expr, i) => {
-			const f = compile(expr);
-			const [x0, x1] = getDomain2D(layer.domain);
-			const sampling = typeof layer.sampling === 'number' ? layer.sampling : 200;
-
-			const x: number[] = [];
-			const y: number[] = [];
-
-			for (let j = 0; j < sampling; j++) {
-				const xv = x0 + ((x1 - x0) * j) / (sampling - 1);
-				x.push(xv);
-				try {
-					y.push(f.evaluate({ x: xv }));
-				} catch {
-					y.push(NaN);
-				}
-			}
-
-			const legendName = expr.length > 20 ? expr.slice(0, 20) + '...' : expr;
-
-			return {
-				x,
-				y,
-				type: 'scatter',
-				mode: 'lines',
-				line: {
-					color: colors[i] || undefined,
-					width: layer.style?.lineWidth ?? 2,
-					dash: getLineDash(layer.style?.lineStyle)
-				},
-				opacity: layer.style?.opacity,
-				name: legendName,
-				showlegend: expressions.length > 1
-			};
-		});
-	}
-
-	// parametric_2d: x = f(t), y = g(t)
-	function buildParametric2DTraces(layer: LayerSpec) {
-		const expressions = normalizeExpressions(layer);
-		const colors = normalizeColors(layer);
-
-		if (expressions.length < 2) {
-			console.error('[FunctionGraph] parametric_2d requires 2 expressions');
-			return [];
-		}
-
-		const fX = compile(expressions[0]);
-		const fY = compile(expressions[1]);
-		
-		// domain이 객체 형식 {t: [0, 2*pi]}이거나 배열 형식 [0, 2*pi]일 수 있음
-		let t0 = 0, t1 = Math.PI * 2;
-		if (layer.domain) {
-			const domain = layer.domain as any;
-			let domainArray: any[];
-			if (Array.isArray(domain)) {
-				domainArray = domain;
-			} else if (domain.t && Array.isArray(domain.t)) {
-				domainArray = domain.t;
-			} else {
-				domainArray = [t0, t1];
-			}
-			// 문자열 수식 평가 (예: "2*pi")
-			t0 = typeof domainArray[0] === 'string' ? compile(domainArray[0]).evaluate({}) : domainArray[0];
-			t1 = typeof domainArray[1] === 'string' ? compile(domainArray[1]).evaluate({}) : domainArray[1];
-		}
-		
-		// sampling도 객체 형식 {t: 200}이거나 숫자일 수 있음
-		let sampling = 200;
-		if (layer.sampling) {
-			const samplingVal = layer.sampling as any;
-			if (typeof samplingVal === 'number') {
-				sampling = samplingVal;
-			} else if (samplingVal.t) {
-				sampling = samplingVal.t;
-			}
-		}
-
-		const x: number[] = [];
-		const y: number[] = [];
-
-		for (let j = 0; j < sampling; j++) {
-			const t = t0 + ((t1 - t0) * j) / (sampling - 1);
-			try {
-				x.push(fX.evaluate({ t }));
-				y.push(fY.evaluate({ t }));
-			} catch {
-				x.push(NaN);
-				y.push(NaN);
-			}
-		}
-
-		const name = `(${expressions[0]}, ${expressions[1]})`;
-		const legendName = name.length > 20 ? name.slice(0, 20) + '...' : name;
-
-		return [{
-			x,
-			y,
-			type: 'scatter',
-			mode: 'lines',
-			line: {
-				color: colors[0] || undefined,
-				width: layer.style?.lineWidth ?? 2,
-				dash: getLineDash(layer.style?.lineStyle)
-			},
-			opacity: layer.style?.opacity,
-			name: legendName,
-			showlegend: false
-		}];
-	}
-
-	// phase_plane: dx/dt = f(x,y), dy/dt = g(x,y) - vector field
-	function buildPhasePlaneTraces(layer: LayerSpec) {
-		const expressions = normalizeExpressions(layer);
-		const colors = normalizeColors(layer);
-
-		if (expressions.length < 2) {
-			console.error('[FunctionGraph] phase_plane requires 2 expressions');
-			return [];
-		}
-
-		const fDx = compile(expressions[0]);
-		const fDy = compile(expressions[1]);
-		const [min, max] = layer.domain || [-5, 5];
-		const sampling = layer.sampling || 20;
-
-		const x: number[] = [];
-		const y: number[] = [];
-		const u: number[] = [];
-		const v: number[] = [];
-
-		const step = (max - min) / (sampling - 1);
-
-		for (let i = 0; i < sampling; i++) {
-			for (let j = 0; j < sampling; j++) {
-				const xv = min + i * step;
-				const yv = min + j * step;
-				x.push(xv);
-				y.push(yv);
-				try {
-					const dx = fDx.evaluate({ x: xv, y: yv });
-					const dy = fDy.evaluate({ x: xv, y: yv });
-					// 정규화하여 화살표 크기 일정하게
-					const mag = Math.sqrt(dx * dx + dy * dy);
-					if (mag > 0) {
-						u.push(dx / mag);
-						v.push(dy / mag);
-					} else {
-						u.push(0);
-						v.push(0);
-					}
-				} catch {
-					u.push(0);
-					v.push(0);
-				}
-			}
-		}
-
-		// Plotly의 cone 또는 quiver 대신 annotation arrows 사용
-		// 간단히 scatter로 시작점과 끝점을 표현
-		const traces: any[] = [];
-		const arrowScale = step * 0.4;
-
-		for (let i = 0; i < x.length; i++) {
-			traces.push({
-				x: [x[i], x[i] + u[i] * arrowScale],
-				y: [y[i], y[i] + v[i] * arrowScale],
-				type: 'scatter',
-				mode: 'lines',
-				line: {
-					color: colors[0] || '#666',
-					width: layer.style?.lineWidth ?? 1
-				},
-				opacity: layer.style?.opacity,
-				showlegend: false,
-				hoverinfo: 'skip'
-			});
-		}
-
-		return traces;
-	}
-
-	// scatter_2d: 산점도 (data: [[x, y], ...])
-	function buildScatter2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
-		const colors = normalizeColors(layer);
-		const data = layer.data || [];
-
-		if (data.length === 0) {
-			console.error('[FunctionGraph] scatter_2d requires data array');
-			return [];
-		}
-
-		const x = data.map((point) => point[0]);
-		const y = data.map((point) => point[1]);
-		const name = legendName || layer.style?.marker || 'scatter';
-
-		return [{
-			x,
-			y,
-			type: 'scatter',
-			mode: 'markers',
-			marker: {
-				symbol: markerSymbolMap[layer.style?.marker || 'circle'] || 'circle',
-				size: layer.style?.size ?? 8,
-				color: colors[0] || '#1f77b4',
-				opacity: layer.style?.opacity
-			},
-			name,
-			showlegend: showLegend
-		}];
-	}
-
-	// vector_2d: 벡터/화살표 (data: [{start, end, color?, width?}, ...])
-	function buildVector2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
-		const data = layer.data || [];
-		
-		if (!Array.isArray(data) || data.length === 0) {
-			console.error('[FunctionGraph] vector_2d requires data array');
-			return [];
-		}
-
-		const traces: any[] = [];
-		
-		// 각 벡터를 화살표로 렌더링
-		data.forEach((vector: any, index: number) => {
-			const start = vector.start || [0, 0];
-			const end = vector.end || [0, 0];
-			const color = vector.color || layer.style?.color || 'black';
-			const width = vector.width || layer.style?.lineWidth || layer.style?.width || 2;
-			const opacity = vector.opacity || layer.style?.opacity || 1;
-
-			// 벡터 선
-			traces.push({
-				x: [start[0], end[0]],
-				y: [start[1], end[1]],
-				type: 'scatter',
-				mode: 'lines',
-				line: {
-					color: color,
-					width: width
-				},
-				opacity: opacity,
-				showlegend: false,
-				hoverinfo: 'skip'
-			});
-
-			// 화살표 머리 (간단한 삼각형)
-			const dx = end[0] - start[0];
-			const dy = end[1] - start[1];
-			const len = Math.sqrt(dx * dx + dy * dy);
-			
-			if (len > 0) {
-				const headLen = Math.min(0.15 * len, width * 0.05); // 화살표 크기
-				const angle = Math.atan2(dy, dx);
-				const angle1 = angle + Math.PI * 0.85;
-				const angle2 = angle - Math.PI * 0.85;
-				
-				const arrowX = [
-					end[0] + headLen * Math.cos(angle1),
-					end[0],
-					end[0] + headLen * Math.cos(angle2)
-				];
-				const arrowY = [
-					end[1] + headLen * Math.sin(angle1),
-					end[1],
-					end[1] + headLen * Math.sin(angle2)
-				];
-
-				traces.push({
-					x: arrowX,
-					y: arrowY,
-					type: 'scatter',
-					mode: 'lines',
-					fill: 'toself',
-					fillcolor: color,
-					line: {
-						color: color,
-						width: 1
-					},
-					opacity: opacity,
-					showlegend: false,
-					hoverinfo: 'skip'
-				});
-			}
-		});
-
-		return traces;
-	}
-
-
-	// histogram_2d: 히스토그램 (binEdges, counts)
-	function buildHistogram2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
-		const colors = normalizeColors(layer);
-		const binEdges = layer.binEdges || [];
-		const counts = layer.counts || [];
-
-		if (binEdges.length === 0 || counts.length === 0) {
-			console.error('[FunctionGraph] histogram_2d requires binEdges and counts arrays');
-			return [];
-		}
-
-		// binEdges의 중간점을 x 좌표로 사용
-		const x = [];
-		for (let i = 0; i < binEdges.length - 1; i++) {
-			x.push((binEdges[i] + binEdges[i + 1]) / 2);
-		}
-
-		// 막대 너비 계산
-		const barGap = layer.style?.barGap ?? 0.05;
-		const widths = [];
-		for (let i = 0; i < binEdges.length - 1; i++) {
-			const fullWidth = binEdges[i + 1] - binEdges[i];
-			widths.push(fullWidth * (1 - barGap));
-		}
-
-		const name = legendName || 'histogram';
-
-		return [{
-			x,
-			y: counts,
-			type: 'bar',
-			width: widths,
-			marker: {
-				color: colors[0] || layer.style?.color || 'steelblue',
-				opacity: layer.style?.opacity ?? 0.85
-			},
-			name,
-			showlegend: showLegend
-		}];
-	}
-
-	// point_2d: 산점도 (coordinates: [[x, y], ...]) - cartesian 그래프용
-	function buildPoint2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
-		const colors = normalizeColors(layer);
-		// coordinates 또는 data 필드 지원
-		const coordinates = (layer as any).coordinates || layer.data || [];
-
-		if (coordinates.length === 0) {
-			console.error('[FunctionGraph] point_2d requires coordinates array');
-			return [];
-		}
-
-		const x = coordinates.map((point: [number, number]) => point[0]);
-		const y = coordinates.map((point: [number, number]) => point[1]);
-		const name = legendName || 'points';
-
-		// shape 필드를 marker로 매핑
-		const shape = (layer.style as any)?.shape || layer.style?.marker || 'circle';
-
-		return [{
-			x,
-			y,
-			type: 'scatter',
-			mode: 'markers',
-			marker: {
-				symbol: markerSymbolMap[shape] || 'circle',
-				size: layer.style?.size ?? 8,
-				color: colors[0] || '#1f77b4',
-				opacity: layer.style?.opacity ?? 0.8
-			},
-			name,
-			showlegend: showLegend
-		}];
-	}
-
-	// ========== 3D Graph Builders ==========
-
-	// 3D 도메인 헬퍼
-	function getDomain3D(domain: Domain3D | undefined, key: 'x' | 'y' | 'u' | 'v' | 't', defaultVal: [number, number]): [number, number] {
-		if (!domain || Array.isArray(domain)) return defaultVal;
-		return domain[key] || defaultVal;
-	}
-
-	// 3D 샘플링 헬퍼
-	function getSampling3D(sampling: Sampling3D | number | undefined, key: 'x' | 'y' | 'u' | 'v' | 't', defaultVal: number): number {
-		if (!sampling) return defaultVal;
-		if (typeof sampling === 'number') return sampling;
-		return sampling[key] || defaultVal;
-	}
-
-	// function_3d: z = f(x, y) 표면
-	function buildFunction3DTraces(layer: LayerSpec) {
-		const expr = layer.expression || (layer.expressions ? normalizeExpressions(layer)[0] : 'x^2 + y^2');
-		const f = compile(expr);
-
-		const domain = layer.domain as Domain3D | undefined;
-		const [x0, x1] = getDomain3D(domain, 'x', [-2, 2]);
-		const [y0, y1] = getDomain3D(domain, 'y', [-2, 2]);
-
-		const sampling = layer.sampling as Sampling3D | number | undefined;
-		const xSampling = getSampling3D(sampling, 'x', 40);
-		const ySampling = getSampling3D(sampling, 'y', 40);
-
-		const xVals: number[] = [];
-		const yVals: number[] = [];
-		const zVals: number[][] = [];
-
-		for (let i = 0; i < xSampling; i++) {
-			xVals.push(x0 + ((x1 - x0) * i) / (xSampling - 1));
-		}
-		for (let j = 0; j < ySampling; j++) {
-			yVals.push(y0 + ((y1 - y0) * j) / (ySampling - 1));
-		}
-
-		for (let j = 0; j < ySampling; j++) {
-			const row: number[] = [];
-			for (let i = 0; i < xSampling; i++) {
-				try {
-					row.push(f.evaluate({ x: xVals[i], y: yVals[j] }));
-				} catch {
-					row.push(NaN);
-				}
-			}
-			zVals.push(row);
-		}
-
-		return [{
-			x: xVals,
-			y: yVals,
-			z: zVals,
-			type: 'surface',
-			colorscale: layer.style?.colorMap || 'Viridis',
-			opacity: layer.style?.opacity ?? 0.9,
-			showscale: false,
-			name: expr.length > 20 ? expr.slice(0, 20) + '...' : expr
-		}];
-	}
-
-	// parametric_3d: x = f(u,v), y = g(u,v), z = h(u,v) 또는 x = f(t), y = g(t), z = h(t)
-	function buildParametric3DTraces(layer: LayerSpec) {
-		const expressions = normalizeExpressions(layer);
-		const colors = normalizeColors(layer);
-
-		if (expressions.length < 3) {
-			console.error('[FunctionGraph] parametric_3d requires 3 expressions');
-			return [];
-		}
-
-		const fX = compile(expressions[0]);
-		const fY = compile(expressions[1]);
-		const fZ = compile(expressions[2]);
-
-		const domain = layer.domain as Domain3D | undefined;
-
-		// t 도메인이 있으면 곡선 (scatter3d), u/v 도메인이 있으면 표면 (surface)
-		const hasTDomain = domain && 't' in domain;
-		const hasUVDomain = domain && ('u' in domain || 'v' in domain);
-
-		if (hasTDomain || !hasUVDomain) {
-			// 3D 곡선 (t 파라미터)
-			const [t0, t1] = getDomain3D(domain, 't', [0, Math.PI * 2]);
-			const sampling = getSampling3D(layer.sampling as Sampling3D, 't', 100);
-
-			const x: number[] = [];
-			const y: number[] = [];
-			const z: number[] = [];
-
-			for (let i = 0; i < sampling; i++) {
-				const t = t0 + ((t1 - t0) * i) / (sampling - 1);
-				try {
-					x.push(fX.evaluate({ t }));
-					y.push(fY.evaluate({ t }));
-					z.push(fZ.evaluate({ t }));
-				} catch {
-					x.push(NaN);
-					y.push(NaN);
-					z.push(NaN);
-				}
-			}
-
-			return [{
-				x, y, z,
-				type: 'scatter3d',
-				mode: 'lines',
-				line: {
-					color: colors[0] || 'red',
-					width: layer.style?.lineWidth ?? 3
-				},
-				opacity: layer.style?.opacity,
-				name: `(${expressions[0]}, ${expressions[1]}, ${expressions[2]})`.slice(0, 20)
-			}];
-		} else {
-			// 3D 표면 (u, v 파라미터)
-			const [u0, u1] = getDomain3D(domain, 'u', [0, Math.PI * 2]);
-			const [v0, v1] = getDomain3D(domain, 'v', [0, Math.PI]);
-			const uSampling = getSampling3D(layer.sampling as Sampling3D, 'u', 60);
-			const vSampling = getSampling3D(layer.sampling as Sampling3D, 'v', 30);
-
-			const xVals: number[][] = [];
-			const yVals: number[][] = [];
-			const zVals: number[][] = [];
-
-			for (let j = 0; j < vSampling; j++) {
-				const xRow: number[] = [];
-				const yRow: number[] = [];
-				const zRow: number[] = [];
-				const v = v0 + ((v1 - v0) * j) / (vSampling - 1);
-
-				for (let i = 0; i < uSampling; i++) {
-					const u = u0 + ((u1 - u0) * i) / (uSampling - 1);
-					try {
-						xRow.push(fX.evaluate({ u, v }));
-						yRow.push(fY.evaluate({ u, v }));
-						zRow.push(fZ.evaluate({ u, v }));
-					} catch {
-						xRow.push(NaN);
-						yRow.push(NaN);
-						zRow.push(NaN);
-					}
-				}
-				xVals.push(xRow);
-				yVals.push(yRow);
-				zVals.push(zRow);
-			}
-
-			return [{
-				x: xVals,
-				y: yVals,
-				z: zVals,
-				type: 'surface',
-				colorscale: layer.style?.colorMap || 'Plasma',
-				opacity: layer.style?.opacity ?? 0.9,
-				showscale: false
-			}];
-		}
-	}
-
-	// scatter_3d: 3D 산점도 (data: [[x, y, z], ...])
-	function buildScatter3DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
-		const colors = normalizeColors(layer);
-		const data = (layer.data || []) as [number, number, number][];
-
-		if (data.length === 0) {
-			console.error('[FunctionGraph] scatter_3d requires data array');
-			return [];
-		}
-
-		const x = data.map((point) => point[0]);
-		const y = data.map((point) => point[1]);
-		const z = data.map((point) => point[2]);
-
-		return [{
-			x, y, z,
-			type: 'scatter3d',
-			mode: 'markers',
-			marker: {
-				symbol: layer.style?.marker === 'sphere' ? 'circle' : (layer.style?.marker || 'circle'),
-				size: layer.style?.size ?? 5,
-				color: colors[0] || 'blue',
-				opacity: layer.style?.opacity ?? 0.9
-			},
-			name: legendName || 'scatter',
-			showlegend: showLegend
-		}];
-	}
-
-	// point_3d: 단일 3D 점 (position: [x, y, z], label 지원)
-	function buildPoint3DTraces(layer: GraphSpecLayer, showLegend = false) {
-		const colors = normalizeColors(layer);
-		const position = (layer as any).position as [number, number, number] | undefined;
-		const label = (layer as any).label || '';
-
-		if (!position || position.length !== 3) {
-			console.error('[FunctionGraph] point_3d requires position array [x, y, z]');
-			return [];
-		}
-
-		return [{
-			x: [position[0]],
-			y: [position[1]],
-			z: [position[2]],
-			type: 'scatter3d',
-			mode: label ? 'markers+text' : 'markers',
-			marker: {
-				symbol: layer.style?.marker === 'sphere' ? 'circle' : (layer.style?.marker || 'circle'),
-				size: layer.style?.size ?? 8,
-				color: colors[0] || 'red',
-				opacity: layer.style?.opacity ?? 1
-			},
-			text: label ? [label] : undefined,
-			textposition: 'top center',
-			textfont: { size: 10 },
-			name: label || 'point',
-			showlegend: showLegend
-		}];
-	}
-
-	// 3D 레이어 trace 빌드
-	function buildLayer3DTraces(layer: LayerSpec, layerIndex: number, totalLayers: number): any[] {
-		const layerType = layer.type;
-		const showLegend = totalLayers > 1;
-		const legendName = `Layer ${layerIndex + 1}`;
-
-		switch (layerType) {
-			case 'function_3d':
-				return buildFunction3DTraces(layer);
-			case 'parametric_3d':
-				return buildParametric3DTraces(layer);
-			case 'scatter_3d':
-				return buildScatter3DTraces(layer, showLegend, legendName);
-			case 'point_3d':
-				return buildPoint3DTraces(layer, showLegend);
-			default:
-				return [];
-		}
-	}
-
-	// composite_3d: 여러 3D 레이어 합성
-	function buildComposite3DTraces(spec: GraphSpec): any[] {
-		const layers = spec.layers || [];
-		if (layers.length === 0) {
-			console.error('[FunctionGraph] composite_3d requires layers array');
-			return [];
-		}
-
-		const allTraces: any[] = [];
-		layers.forEach((layer, index) => {
-			const traces = buildLayer3DTraces(layer, index, layers.length);
-			allTraces.push(...traces);
-		});
-		return allTraces;
-	}
-
-	// 3D 그래프인지 확인
-	function is3DGraph(type: string): boolean {
-		return ['function_3d', 'parametric_3d', 'scatter_3d', 'composite_3d'].includes(type);
-	}
-
-	// ========== End 3D Graph Builders ==========
-
-	// 단일 레이어에 대한 trace 빌드
-	function buildLayerTraces(layer: LayerSpec, layerIndex: number, totalLayers: number): any[] {
-		// type이 없으면 data/coordinates 유무로 타입 추론
-		const hasCoordinates = !!(layer as any).coordinates;
-		const layerType = layer.type || (hasCoordinates ? 'point_2d' : (layer.data ? 'scatter_2d' : 'function_2d'));
-		const showLegend = totalLayers > 1;
-		const legendName = `Layer ${layerIndex + 1}`;
-
-		switch (layerType) {
-			case 'parametric_2d':
-				return buildParametric2DTraces(layer);
-			case 'phase_plane':
-				return buildPhasePlaneTraces(layer);
-			case 'scatter_2d':
-				return buildScatter2DTraces(layer, showLegend, legendName);
-			case 'histogram_2d':
-				return buildHistogram2DTraces(layer, showLegend, legendName);
-			case 'vector_2d':
-				return buildVector2DTraces(layer, showLegend, legendName);
-			case 'point_2d':
-				return buildPoint2DTraces(layer, showLegend, legendName);
-			case 'function_2d':
-			default:
-				return buildFunction2DTraces(layer);
-		}
-	}
-
-	// composite_2d: 여러 레이어를 합성
-	function buildComposite2DTraces(spec: GraphSpec): any[] {
-		const layers = spec.layers || [];
-		if (layers.length === 0) {
-			console.error('[FunctionGraph] composite_2d requires layers array');
-			return [];
-		}
-
-		const allTraces: any[] = [];
-		layers.forEach((layer, index) => {
-			const traces = buildLayerTraces(layer, index, layers.length);
-			allTraces.push(...traces);
-		});
-		return allTraces;
-	}
-
-	function buildTraces(spec: GraphSpec) {
-		switch (spec.type) {
-			// 2D graphs
-			case 'composite_2d':
-			case 'multi_scatter_2d':
-			case 'cartesian': // cartesian = composite_2d
-				return buildComposite2DTraces(spec);
-			case 'parametric_2d':
-				return buildParametric2DTraces(spec);
-			case 'phase_plane':
-				return buildPhasePlaneTraces(spec);
-			case 'scatter_2d':
-				return buildScatter2DTraces(spec);
-			case 'histogram_2d':
-				return buildHistogram2DTraces(spec);
-			case 'vector_2d':
-				return buildVector2DTraces(spec);
-			// 3D graphs
-			case 'function_3d':
-				return buildFunction3DTraces(spec);
-			case 'parametric_3d':
-				return buildParametric3DTraces(spec);
-			case 'scatter_3d':
-				return buildScatter3DTraces(spec);
-			case 'composite_3d':
-				return buildComposite3DTraces(spec);
-			case 'function_2d':
-			default:
-				return buildFunction2DTraces(spec);
-		}
 	}
 
 	function getLayout(dark: boolean) {
@@ -864,15 +120,23 @@
 			scaleanchor: spec.type === 'phase_plane' ? 'x' : undefined,
 			scaleratio: spec.type === 'phase_plane' ? 1 : undefined
 		};
-		
+
 		// Apply xRange and yRange if provided
 		if (spec.axis?.xRange) {
-			xaxis.range = spec.axis.xRange;
+			const xRange = spec.axis.xRange as any[];
+			xaxis.range = [
+				typeof xRange[0] === 'string' ? compile(xRange[0]).evaluate({}) : xRange[0],
+				typeof xRange[1] === 'string' ? compile(xRange[1]).evaluate({}) : xRange[1]
+			];
 		}
 		if (spec.axis?.yRange) {
-			yaxis.range = spec.axis.yRange;
+			const yRange = spec.axis.yRange as any[];
+			yaxis.range = [
+				typeof yRange[0] === 'string' ? compile(yRange[0]).evaluate({}) : yRange[0],
+				typeof yRange[1] === 'string' ? compile(yRange[1]).evaluate({}) : yRange[1]
+			];
 		}
-		
+
 		// Build annotations if provided
 		const annotations: any[] = [];
 		if (spec.annotations && Array.isArray(spec.annotations)) {
@@ -887,7 +151,7 @@
 						'center': { xanchor: 'center', yanchor: 'middle' }
 					};
 					const anchor = anchorMap[ann.style?.anchor || 'bottom-left'] || anchorMap['bottom-left'];
-					
+
 					annotations.push({
 						x: ann.position.x,
 						y: ann.position.y,
@@ -904,7 +168,7 @@
 				}
 			});
 		}
-		
+
 		return {
 			...baseLayout,
 			width: 192, // 썸네일 크기 (w-48 = 192px)
@@ -920,37 +184,61 @@
 		// 디버깅: graph spec 출력
 		console.log('[FunctionGraph] Received spec:', JSON.stringify(spec, null, 2));
 
-		// Dynamically import Plotly to avoid SSR issues
-		const plotlyModule = await import('plotly.js-dist-min');
-		Plotly = plotlyModule.default;
+		try {
+			// Check if graph type is supported
+			if (!isTypeSupported(spec.type)) {
+				renderError = `지원하지 않는 그래프 타입: ${spec.type}`;
+				console.error('[FunctionGraph] Unsupported type:', spec.type);
+				return;
+			}
 
-		const data = buildTraces(spec);
-		console.log('[FunctionGraph] Built traces:', data);
-		const dark = isDarkMode();
-		const layout = getLayout(dark);
+			// Dynamically import Plotly to avoid SSR issues
+			const plotlyModule = await import('plotly.js-dist-min');
+			Plotly = plotlyModule.default;
 
-		// 3D 그래프는 staticPlot: true 시 WebGL 렌더링 문제가 있을 수 있음
-		const is3D = is3DGraph(spec.type);
-		const config = {
-			responsive: !is3D, // 3D는 명시적 크기 사용
-			displayModeBar: false, // 썸네일에서는 모드바 숨김
-			displaylogo: false,
-			staticPlot: !is3D, // 3D는 staticPlot을 끄고 상호작용 허용 (드래그로 회전 가능)
-			scrollZoom: false // 썸네일에서는 줌 비활성화
-		};
+			const data = buildTraces(spec);
+			console.log('[FunctionGraph] Built traces:', data);
 
-		Plotly.newPlot(container, data, layout, config);
+			// Validate traces for NaN/Infinity issues
+			const validation = validateTraces(data);
+			if (!validation.valid) {
+				renderError = validation.error || '그래프 렌더링 오류';
+				console.error('[FunctionGraph] Validation failed:', validation.error);
+				return;
+			}
 
-		// 테마 변경 감지
-		const observer = new MutationObserver(() => {
-			const newDark = isDarkMode();
-			Plotly.relayout(container, getLayout(newDark));
-		});
+			const dark = isDarkMode();
+			const layout = getLayout(dark);
 
-		observer.observe(document.documentElement, {
-			attributes: true,
-			attributeFilter: ['class']
-		});
+			// 3D 그래프는 staticPlot: true 시 WebGL 렌더링 문제가 있을 수 있음
+			const is3D = is3DGraph(spec.type);
+			const config = {
+				responsive: !is3D, // 3D는 명시적 크기 사용
+				displayModeBar: false, // 썸네일에서는 모드바 숨김
+				displaylogo: false,
+				staticPlot: !is3D, // 3D는 staticPlot을 끄고 상호작용 허용 (드래그로 회전 가능)
+				scrollZoom: false // 썸네일에서는 줌 비활성화
+			};
+
+			Plotly.newPlot(container, data, layout, config);
+
+			// 테마 변경 감지
+			const observer = new MutationObserver(() => {
+				const newDark = isDarkMode();
+				if (Plotly && container && !renderError) {
+					Plotly.relayout(container, getLayout(newDark));
+				}
+			});
+
+			observer.observe(document.documentElement, {
+				attributes: true,
+				attributeFilter: ['class']
+			});
+		} catch (e) {
+			const errorMessage = e instanceof Error ? e.message : String(e);
+			renderError = `그래프 렌더링 실패: ${errorMessage}`;
+			console.error('[FunctionGraph] Render error:', e);
+		}
 	});
 
 	onDestroy(() => {
@@ -961,33 +249,97 @@
 </script>
 
 <!-- Thumbnail container with modal trigger -->
-<div class="relative w-48 group mb-2 rounded-lg border border-gray-100 dark:border-gray-850 overflow-hidden">
-	<!-- Graph thumbnail (정사각형) -->
-	<div class="w-48 h-48 bg-white dark:bg-gray-800">
-		<div bind:this={container} class="w-full h-full" />
-	</div>
-
-	<!-- Gradient overlay -->
-	<div
-		class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-gray-900 to-transparent pointer-events-none"
-	/>
-
-	<!-- View full graph button -->
+{#if renderError}
+	<!-- Error state - clickable to show JSON -->
 	<button
-		class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 text-[11px] text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-gray-900/80 px-2 py-1 rounded-full backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 transition z-10"
-		on:click={() => (showModal = true)}
+		class="relative w-48 mb-2 rounded-lg border border-red-200 dark:border-red-800 overflow-hidden bg-red-50 dark:bg-red-900/20 cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition text-left"
+		on:click={() => (showErrorJsonModal = true)}
 	>
-		<ArrowsPointingOut className="size-3" />
-		<span>{$i18n.t('확대')}</span>
+		<div class="w-48 h-48 flex flex-col items-center justify-center p-4 text-center">
+			<svg class="size-8 text-red-400 dark:text-red-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+			</svg>
+			<div class="text-xs text-red-600 dark:text-red-400 font-medium mb-1">
+				{$i18n.t('그래프 렌더링 오류')}
+			</div>
+			<div class="text-[10px] text-red-500 dark:text-red-400/80 leading-tight">
+				{renderError}
+			</div>
+			<div class="text-[9px] text-red-400 dark:text-red-500/60 mt-2">
+				{$i18n.t('클릭하여 JSON 보기')}
+			</div>
+		</div>
 	</button>
-</div>
+{:else}
+	<div class="relative w-48 group mb-2 rounded-lg border border-gray-100 dark:border-gray-850 overflow-hidden">
+		<!-- Graph thumbnail (정사각형) -->
+		<div class="w-48 h-48 bg-white dark:bg-gray-800">
+			<div bind:this={container} class="w-full h-full" />
+		</div>
 
-<!-- Meta data (title only) -->
-{#if spec.meta?.title}
+		<!-- Gradient overlay -->
+		<div
+			class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-gray-900 to-transparent pointer-events-none"
+		/>
+
+		<!-- View full graph button -->
+		<button
+			class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 text-[11px] text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-gray-900/80 px-2 py-1 rounded-full backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 transition z-10"
+			on:click={() => (showModal = true)}
+		>
+			<ArrowsPointingOut className="size-3" />
+			<span>{$i18n.t('확대')}</span>
+		</button>
+	</div>
+{/if}
+
+<!-- Meta data (title only) - hide when error -->
+{#if !renderError && spec.meta?.title}
 	<div class="mt-2 text-sm">
 		<div class="font-semibold text-gray-900 dark:text-gray-100">{spec.meta.title}</div>
 	</div>
 {/if}
 
-<!-- Graph preview modal -->
-<GraphPreviewModal bind:show={showModal} {spec} />
+<!-- Graph preview modal - only when no error -->
+{#if !renderError}
+	<GraphPreviewModal bind:show={showModal} {spec} />
+{/if}
+
+<!-- Error JSON modal -->
+<Modal bind:show={showErrorJsonModal} size="lg">
+	<div class="px-6 py-5 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl">
+		<!-- Header -->
+		<div class="flex justify-between items-center mb-4">
+			<div>
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					{$i18n.t('Graph Spec JSON')}
+				</h3>
+				<p class="text-sm text-red-500 dark:text-red-400 mt-1">
+					{renderError}
+				</p>
+			</div>
+			<button
+				class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+				on:click={() => (showErrorJsonModal = false)}
+			>
+				<XMark className="size-5 text-gray-500" />
+			</button>
+		</div>
+
+		<!-- JSON Content -->
+		<div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+			<div class="flex justify-between items-center px-3 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+				<span class="text-xs text-gray-500 dark:text-gray-400">graph_spec.json</span>
+				<button
+					class="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+					on:click={() => {
+						navigator.clipboard.writeText(JSON.stringify(spec, null, 2));
+					}}
+				>
+					{$i18n.t('복사')}
+				</button>
+			</div>
+			<pre class="p-4 text-xs font-mono bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 max-h-96 overflow-auto">{JSON.stringify(spec, null, 2)}</pre>
+		</div>
+	</div>
+</Modal>

@@ -548,6 +548,29 @@
 					} else {
 						toast.info(toastContent);
 					}
+				} else if (type === 'tool_executing') {
+					// Tool execution started
+					console.log('[Chat] Tool executing event received:', { tool: data.tool, message: data.message, messageId: event.message_id });
+					if (!message.toolExecutions) {
+						message.toolExecutions = {};
+					}
+					message.toolExecutions[data.tool] = {
+						status: 'executing',
+						message: data.message ?? `도구 실행 중: ${data.tool}`
+					};
+					history.messages[event.message_id] = message;
+					console.log('[Chat] Tool executions updated:', message.toolExecutions);
+				} else if (type === 'tool_completed') {
+					// Tool execution completed
+					console.log('[Chat] Tool completed event received:', { tool: data.tool, message: data.message, messageId: event.message_id });
+					if (message.toolExecutions && message.toolExecutions[data.tool]) {
+						message.toolExecutions[data.tool] = {
+							status: 'completed',
+							message: data.message ?? `도구 완료: ${data.tool}`
+						};
+						history.messages[event.message_id] = message;
+						console.log('[Chat] Tool executions updated:', message.toolExecutions);
+					}
 				} else if (type === 'confirmation') {
 					eventCallback = cb;
 
@@ -2198,7 +2221,18 @@
 										if (line.trim() && line.trim() !== 'data: [DONE]') {
 											try {
 												const data = JSON.parse(line.replace(/^data: /, ''));
-												if (data?.choices?.[0]?.delta?.content) {
+
+												// Handle tool execution events
+												if (data?.type === 'tool_executing' || data?.type === 'tool_completed') {
+													if (!responseMessage.toolExecutions) {
+														responseMessage.toolExecutions = {};
+													}
+													const toolName = data?.data?.tool ?? data?.tool ?? '';
+													responseMessage.toolExecutions[toolName] = {
+														status: data.type === 'tool_executing' ? 'executing' : 'completed',
+														message: data?.data?.message ?? data?.message ?? `${data.type === 'tool_executing' ? '도구 실행 중' : '도구 완료'}: ${toolName}`
+													};
+												} else if (data?.choices?.[0]?.delta?.content) {
 													responseMessage.content = (responseMessage.content ?? '') + data.choices[0].delta.content;
 												}
 											} catch (e) {
@@ -2218,6 +2252,24 @@
 								if (line.trim() && line.trim() !== 'data: [DONE]') {
 									try {
 										const data = JSON.parse(line.replace(/^data: /, ''));
+
+										// Handle tool execution events
+										if (data?.type === 'tool_executing' || data?.type === 'tool_completed') {
+											console.log('[sendMessageSocket] Tool event in stream:', { type: data.type, tool: data?.data?.tool ?? data?.tool, message: data?.data?.message ?? data?.message });
+											if (!responseMessage.toolExecutions) {
+												responseMessage.toolExecutions = {};
+											}
+											const toolName = data?.data?.tool ?? data?.tool ?? '';
+											responseMessage.toolExecutions[toolName] = {
+												status: data.type === 'tool_executing' ? 'executing' : 'completed',
+												message: data?.data?.message ?? data?.message ?? `${data.type === 'tool_executing' ? '도구 실행 중' : '도구 완료'}: ${toolName}`
+											};
+											history.messages[responseMessageId] = responseMessage;
+											console.log('[sendMessageSocket] Tool executions updated:', responseMessage.toolExecutions);
+											await tick();
+											continue;
+										}
+
 										if (data?.choices?.[0]?.delta?.content) {
 											responseMessage.content = (responseMessage.content ?? '') + data.choices[0].delta.content;
 											history.messages[responseMessageId] = responseMessage;
@@ -2463,11 +2515,24 @@
 				generationController = controller;
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 				for await (const update of textStream) {
-					const { value, done, sources, error, usage } = update;
+					const { value, done, sources, error, usage, toolEvent } = update;
 					if (error || done) {
 						generating = false;
 						generationController = null;
 						break;
+					}
+
+					// Handle tool execution events
+					if (toolEvent) {
+						if (!message.toolExecutions) {
+							message.toolExecutions = {};
+						}
+						message.toolExecutions[toolEvent.tool] = {
+							status: toolEvent.type === 'tool_executing' ? 'executing' : 'completed',
+							message: toolEvent.message
+						};
+						history.messages[messageId] = message;
+						continue;
 					}
 
 					if (mergedResponse.content == '' && value == '\n') {
