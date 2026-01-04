@@ -87,6 +87,44 @@ class MessageTagModel(BaseModel):
 
 
 ####################
+# Tag Feedback DB Schema
+####################
+class TagFeedback(Base):
+    """User feedback on tag definitions (not on individual message tags)."""
+    __tablename__ = "tag_feedback"
+
+    user_id = Column(String, primary_key=True)  # Composite PK
+    tag_id = Column(String, primary_key=True)   # Composite PK
+    status = Column(String, nullable=True)      # null, "not_interested", "understood", "confused"
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        Index("idx_tag_feedback_user", "user_id"),
+        Index("idx_tag_feedback_tag", "tag_id"),
+    )
+
+
+class TagFeedbackModel(BaseModel):
+    user_id: str
+    tag_id: str
+    status: Optional[str] = None
+    created_at: int
+    updated_at: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TagFeedbackForm(BaseModel):
+    tag_id: str
+    status: Optional[str] = None  # null to clear, or one of: "not_interested", "understood", "confused"
+
+
+# Valid feedback statuses
+VALID_FEEDBACK_STATUSES = {"not_interested", "understood", "confused", None}
+
+
+####################
 # Tagging Daemon Config DB Schema
 ####################
 class TaggingDaemonConfig(Base):
@@ -477,7 +515,96 @@ class TaggingDaemonConfigTable:
             return False
 
 
+class TagFeedbackTable:
+    """Table operations for tag_feedback."""
+
+    def upsert(
+        self, user_id: str, tag_id: str, status: Optional[str]
+    ) -> Optional[TagFeedbackModel]:
+        """Create or update feedback for a user-tag pair."""
+        # Validate status
+        if status not in VALID_FEEDBACK_STATUSES:
+            log.error(f"Invalid feedback status: {status}")
+            return None
+
+        try:
+            with get_db() as db:
+                now = int(time.time())
+                existing = db.query(TagFeedback).filter_by(
+                    user_id=user_id, tag_id=tag_id
+                ).first()
+
+                if existing:
+                    existing.status = status
+                    existing.updated_at = now
+                    db.commit()
+                    db.refresh(existing)
+                    return TagFeedbackModel.model_validate(existing)
+                else:
+                    feedback = TagFeedback(
+                        user_id=user_id,
+                        tag_id=tag_id,
+                        status=status,
+                        created_at=now,
+                        updated_at=now
+                    )
+                    db.add(feedback)
+                    db.commit()
+                    db.refresh(feedback)
+                    return TagFeedbackModel.model_validate(feedback)
+        except Exception as e:
+            log.error(f"Error upserting tag feedback: {e}")
+            return None
+
+    def get_by_user_and_tag(
+        self, user_id: str, tag_id: str
+    ) -> Optional[TagFeedbackModel]:
+        """Get feedback for a specific user-tag pair."""
+        with get_db() as db:
+            feedback = db.query(TagFeedback).filter_by(
+                user_id=user_id, tag_id=tag_id
+            ).first()
+            return TagFeedbackModel.model_validate(feedback) if feedback else None
+
+    def get_by_user(self, user_id: str) -> List[TagFeedbackModel]:
+        """Get all feedback for a user."""
+        with get_db() as db:
+            feedbacks = db.query(TagFeedback).filter_by(user_id=user_id).all()
+            return [TagFeedbackModel.model_validate(f) for f in feedbacks]
+
+    def get_by_tag(self, tag_id: str) -> List[TagFeedbackModel]:
+        """Get all feedback for a tag."""
+        with get_db() as db:
+            feedbacks = db.query(TagFeedback).filter_by(tag_id=tag_id).all()
+            return [TagFeedbackModel.model_validate(f) for f in feedbacks]
+
+    def delete(self, user_id: str, tag_id: str) -> bool:
+        """Delete feedback for a user-tag pair."""
+        try:
+            with get_db() as db:
+                result = db.query(TagFeedback).filter_by(
+                    user_id=user_id, tag_id=tag_id
+                ).delete()
+                db.commit()
+                return result > 0
+        except Exception as e:
+            log.error(f"Error deleting tag feedback: {e}")
+            return False
+
+    def delete_by_tag(self, tag_id: str) -> bool:
+        """Delete all feedback for a tag (used when deleting a tag definition)."""
+        try:
+            with get_db() as db:
+                db.query(TagFeedback).filter_by(tag_id=tag_id).delete()
+                db.commit()
+                return True
+        except Exception as e:
+            log.error(f"Error deleting tag feedbacks: {e}")
+            return False
+
+
 # Singleton instances
 MessageTags = MessageTagTable()
 MessageTagDefinitions = MessageTagDefinitionTable()
 TaggingDaemonConfigs = TaggingDaemonConfigTable()
+TagFeedbacks = TagFeedbackTable()

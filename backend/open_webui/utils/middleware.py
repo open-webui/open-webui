@@ -124,6 +124,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
+    AIOHTTP_CLIENT_SESSION_SSL,
 )
 from open_webui.constants import TASKS
 
@@ -3484,6 +3485,67 @@ async def process_chat_response(
 
             collected_content = []
 
+            # Initialize inline tool executor for fallback path
+            fallback_tool_executor = None
+            log.info(f"[MIDDLEWARE FALLBACK] Checking tool notifications: enable={metadata.get('enable_tool_notifications')}")
+
+            if metadata.get("enable_tool_notifications"):
+                tool_prompts_dict = metadata.get("tool_prompts_dict", {})
+                api_request_url = metadata.get("api_request_url")
+                api_headers = metadata.get("api_headers", {})
+                api_cookies = metadata.get("api_cookies", {})
+
+                if tool_prompts_dict and api_request_url:
+                    log.info(f"[MIDDLEWARE FALLBACK] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
+
+                    # Create LLM call function for inline tool execution
+                    async def make_fallback_inline_llm_call(system_prompt: str, user_message: str) -> dict:
+                        """Make a non-streaming LLM call for inline tool execution."""
+                        try:
+                            payload = {
+                                "model": form_data.get("model"),
+                                "messages": [
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_message}
+                                ],
+                                "stream": False
+                            }
+                            log.info(f"[MIDDLEWARE FALLBACK] Inline LLM call to: {api_request_url}")
+
+                            async with aiohttp.ClientSession() as session:
+                                async with session.post(
+                                    api_request_url,
+                                    json=payload,
+                                    headers=api_headers,
+                                    cookies=api_cookies,
+                                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                                ) as resp:
+                                    if resp.status == 200:
+                                        result = await resp.json()
+                                        text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                                        log.info(f"[MIDDLEWARE FALLBACK] Inline LLM call success: {len(text)} chars")
+                                        return {"success": True, "text": text}
+                                    else:
+                                        error_text = await resp.text()
+                                        log.error(f"[MIDDLEWARE FALLBACK] Inline LLM call failed: {resp.status} - {error_text[:200]}")
+                                        return {"success": False, "error": f"HTTP {resp.status}"}
+                        except Exception as e:
+                            log.error(f"[MIDDLEWARE FALLBACK] Inline LLM call exception: {e}")
+                            return {"success": False, "error": str(e)}
+
+                    # Dummy event emitter for fallback (just logs)
+                    async def dummy_event_emitter(event: dict):
+                        log.info(f"[MIDDLEWARE FALLBACK] Event (no WebSocket): {event.get('type', 'unknown')}")
+
+                    fallback_tool_executor = ToolInlineExecutor(
+                        event_emitter=dummy_event_emitter,
+                        tool_prompts=tool_prompts_dict,
+                        llm_call_fn=make_fallback_inline_llm_call
+                    )
+                    log.info(f"[MIDDLEWARE FALLBACK] ToolInlineExecutor created")
+                else:
+                    log.warning(f"[MIDDLEWARE FALLBACK] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url")
+
             for event in events:
                 event, _ = await process_filter_functions(
                     request=request,
@@ -3506,21 +3568,78 @@ async def process_chat_response(
                 )
 
                 if data:
-                    yield data
-                    # 스트리밍 데이터에서 content 추출
-                    try:
-                        data_str = data.decode('utf-8') if isinstance(data, bytes) else str(data)
-                        if data_str.startswith("data: "):
-                            json_str = data_str[6:].strip()
-                            if json_str and json_str != "[DONE]":
-                                chunk = json.loads(json_str)
-                                if "choices" in chunk:
-                                    for choice in chunk["choices"]:
-                                        delta = choice.get("delta", {})
+                    # Process content through inline tool executor
+                    should_yield = True
+                    modified_data = data
+
+                    if fallback_tool_executor:
+                        try:
+                            data_str = data.decode('utf-8') if isinstance(data, bytes) else str(data)
+                            if data_str.startswith("data: "):
+                                json_str = data_str[6:].strip()
+                                if json_str and json_str != "[DONE]":
+                                    chunk = json.loads(json_str)
+                                    if "choices" in chunk and len(chunk["choices"]) > 0:
+                                        delta = chunk["choices"][0].get("delta", {})
                                         if "content" in delta:
-                                            collected_content.append(delta["content"])
-                    except Exception:
-                        pass
+                                            original_content = delta["content"]
+                                            processed_content = await fallback_tool_executor.process_chunk(original_content)
+
+                                            if processed_content != original_content:
+                                                # Content was modified by tool executor
+                                                if processed_content:
+                                                    # Update the chunk with processed content
+                                                    chunk["choices"][0]["delta"]["content"] = processed_content
+                                                    modified_data = f"data: {json.dumps(chunk)}\n\n"
+                                                    if isinstance(data, bytes):
+                                                        modified_data = modified_data.encode('utf-8')
+                                                    collected_content.append(processed_content)
+                                                else:
+                                                    # Tool marker being processed, skip this chunk
+                                                    should_yield = False
+                                            else:
+                                                collected_content.append(original_content)
+                        except Exception as e:
+                            log.debug(f"[MIDDLEWARE FALLBACK] Tool processing error: {e}")
+                            # Fall back to original behavior
+                            pass
+
+                    if should_yield:
+                        yield modified_data
+
+                        # 스트리밍 데이터에서 content 추출 (fallback_tool_executor가 없는 경우)
+                        if not fallback_tool_executor:
+                            try:
+                                data_str = data.decode('utf-8') if isinstance(data, bytes) else str(data)
+                                if data_str.startswith("data: "):
+                                    json_str = data_str[6:].strip()
+                                    if json_str and json_str != "[DONE]":
+                                        chunk = json.loads(json_str)
+                                        if "choices" in chunk:
+                                            for choice in chunk["choices"]:
+                                                delta = choice.get("delta", {})
+                                                if "content" in delta:
+                                                    collected_content.append(delta["content"])
+                            except Exception:
+                                pass
+
+            # Flush any remaining content in tool executor buffer
+            if fallback_tool_executor:
+                try:
+                    remaining = await fallback_tool_executor.flush()
+                    if remaining:
+                        # Send remaining content as a final chunk
+                        final_chunk = {
+                            "choices": [{
+                                "delta": {"content": remaining},
+                                "finish_reason": None,
+                                "index": 0
+                            }]
+                        }
+                        yield f"data: {json.dumps(final_chunk)}\n\n"
+                        collected_content.append(remaining)
+                except Exception as e:
+                    log.error(f"[MIDDLEWARE FALLBACK] Error flushing tool executor: {e}")
 
             # 스트리밍 완료 후 DB에 저장
             if collected_content and metadata.get("chat_id") and metadata.get("message_id"):
