@@ -279,7 +279,7 @@ class KnowledgeTable:
             with get_db_context(db) as db:
                 # Base query: join Knowledge → KnowledgeFile → File
                 query = (
-                    db.query(File, User)
+                    db.query(File, User, Knowledge)
                     .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
                     .join(Knowledge, KnowledgeFile.knowledge_id == Knowledge.id)
                     .outerjoin(User, User.id == KnowledgeFile.user_id)
@@ -309,7 +309,7 @@ class KnowledgeTable:
                 rows = query.all()
 
                 items = []
-                for file, user in rows:
+                for file, user, knowledge in rows:
                     items.append(
                         FileUserResponse(
                             **FileModel.model_validate(file).model_dump(),
@@ -320,6 +320,7 @@ class KnowledgeTable:
                                 if user
                                 else None
                             ),
+                            collection=KnowledgeModel.model_validate(knowledge).model_dump(),
                         )
                     )
 

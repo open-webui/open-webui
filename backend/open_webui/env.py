@@ -428,12 +428,14 @@ PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
     "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
 )
 
+
 try:
+    PASSWORD_VALIDATION_REGEX_PATTERN = rf"{PASSWORD_VALIDATION_REGEX_PATTERN}"
     PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(PASSWORD_VALIDATION_REGEX_PATTERN)
 except Exception as e:
     log.error(f"Invalid PASSWORD_VALIDATION_REGEX_PATTERN: {e}")
     PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(
-        "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"
+        r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"
     )
 
 

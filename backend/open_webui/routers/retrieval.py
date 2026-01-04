@@ -505,6 +505,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
+        "CHUNK_MIN_SIZE_TARGET": request.app.state.config.CHUNK_MIN_SIZE_TARGET,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
@@ -699,6 +700,7 @@ class ConfigForm(BaseModel):
     TEXT_SPLITTER: Optional[str] = None
     ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: Optional[bool] = None
     CHUNK_SIZE: Optional[int] = None
+    CHUNK_MIN_SIZE_TARGET: Optional[int] = None
     CHUNK_OVERLAP: Optional[int] = None
 
     # File upload settings
@@ -1006,6 +1008,11 @@ async def update_rag_config(
         if form_data.CHUNK_SIZE is not None
         else request.app.state.config.CHUNK_SIZE
     )
+    request.app.state.config.CHUNK_MIN_SIZE_TARGET = (
+        form_data.CHUNK_MIN_SIZE_TARGET
+        if form_data.CHUNK_MIN_SIZE_TARGET is not None
+        else request.app.state.config.CHUNK_MIN_SIZE_TARGET
+    )
     request.app.state.config.CHUNK_OVERLAP = (
         form_data.CHUNK_OVERLAP
         if form_data.CHUNK_OVERLAP is not None
@@ -1205,6 +1212,7 @@ async def update_rag_config(
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
+        "CHUNK_MIN_SIZE_TARGET": request.app.state.config.CHUNK_MIN_SIZE_TARGET,
         "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
         # File upload settings
@@ -1286,6 +1294,85 @@ async def update_rag_config(
 ####################################
 
 
+def can_merge_chunks(a: Document, b: Document) -> bool:
+    if a.metadata.get("source") != b.metadata.get("source"):
+        return False
+
+    a_file_id = a.metadata.get("file_id")
+    b_file_id = b.metadata.get("file_id")
+
+    if a_file_id is not None and b_file_id is not None:
+        return a_file_id == b_file_id
+
+    return True
+
+
+def merge_docs_to_target_size(
+    request: Request,
+    chunks: list[Document],
+) -> list[Document]:
+    """
+    Best-effort normalization of chunk sizes.
+
+    Attempts to grow small chunks up to a desired minimum size,
+    without exceeding the maximum size or crossing source/file
+    boundaries.
+    """
+    min_chunk_size_target = request.app.state.config.CHUNK_MIN_SIZE_TARGET
+    max_chunk_size = request.app.state.config.CHUNK_SIZE
+
+    if min_chunk_size_target <= 0:
+        return chunks
+
+    measure_chunk_size = len
+    if request.app.state.config.TEXT_SPLITTER == "token":
+        encoding = tiktoken.get_encoding(
+            str(request.app.state.config.TIKTOKEN_ENCODING_NAME)
+        )
+        measure_chunk_size = lambda text: len(encoding.encode(text))
+
+    processed_chunks: list[Document] = []
+
+    current_chunk: Document | None = None
+    current_content: str = ""
+
+    for next_chunk in chunks:
+        if current_chunk is None:
+            current_chunk = next_chunk
+            current_content = next_chunk.page_content
+            continue  # First chunk initialization
+
+        proposed_content = f"{current_content}\n\n{next_chunk.page_content}"
+
+        can_merge = (
+            can_merge_chunks(current_chunk, next_chunk)
+            and measure_chunk_size(current_content) < min_chunk_size_target
+            and measure_chunk_size(proposed_content) <= max_chunk_size
+        )
+
+        if can_merge:
+            current_content = proposed_content
+        else:
+            processed_chunks.append(
+                Document(
+                    page_content=current_content,
+                    metadata={**current_chunk.metadata},
+                )
+            )
+            current_chunk = next_chunk
+            current_content = next_chunk.page_content
+
+    if current_chunk is not None:
+        processed_chunks.append(
+            Document(
+                page_content=current_content,
+                metadata={**current_chunk.metadata},
+            )
+        )
+
+    return processed_chunks
+
+
 def save_docs_to_vector_db(
     request: Request,
     docs,
@@ -1332,7 +1419,6 @@ def save_docs_to_vector_db(
     if split:
         if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
             log.info("Using markdown header text splitter")
-
             # Define headers to split on - covering most common markdown header levels
             markdown_splitter = MarkdownHeaderTextSplitter(
                 headers_to_split_on=[
@@ -1361,6 +1447,8 @@ def save_docs_to_vector_db(
                 )
 
             docs = split_docs
+            if request.app.state.config.CHUNK_MIN_SIZE_TARGET > 0:
+                docs = merge_docs_to_target_size(request, docs)
 
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(

@@ -667,6 +667,13 @@
 							</div>
 
 							<div class="flex w-full mt-2">
+								<SensitiveInput
+									placeholder={$i18n.t('Enter MinerU API Key')}
+									bind:value={RAGConfig.MINERU_API_KEY}
+								/>
+							</div>
+
+							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
 									<div class="self-center text-xs font-medium">
 										{$i18n.t('API Timeout')}
@@ -791,6 +798,35 @@
 								</div>
 							</div>
 						</div>
+
+						{#if RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER}
+							<div class="  mb-2.5 flex w-full justify-between">
+								<div class=" flex gap-1.5 w-full">
+									<div class="w-full">
+										<div class="self-center text-xs font-medium min-w-fit mb-1">
+											<Tooltip
+												placement="top-start"
+												content={$i18n.t(
+													'Chunks smaller than this threshold will be merged with neighboring chunks when possible. Set to 0 to disable merging.'
+												)}
+											>
+												{$i18n.t('Chunk Min Size Target')}
+											</Tooltip>
+										</div>
+										<div class="self-center">
+											<input
+												class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="number"
+												placeholder={$i18n.t('Enter Chunk Min Size Target')}
+												bind:value={RAGConfig.CHUNK_MIN_SIZE_TARGET}
+												autocomplete="off"
+												min="0"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						{/if}
 					{/if}
 				</div>
 

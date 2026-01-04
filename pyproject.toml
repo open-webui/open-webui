@@ -7,7 +7,7 @@ authors = [
 license = { file = "LICENSE" }
 dependencies = [
     "fastapi==0.128.0",
-    "uvicorn[standard]==0.37.0",
+    "uvicorn[standard]==0.40.0",
     "pydantic==2.12.5",
     "python-multipart==0.0.21",
     "itsdangerous==2.2.0",
@@ -60,7 +60,7 @@ dependencies = [
     "chromadb==1.4.0",
     "opensearch-py==3.1.0",
     "PyMySQL==1.1.2",
-    "boto3==1.42.17",
+    "boto3==1.42.19",
     
     "transformers==4.57.3",
     "sentence-transformers==5.2.0",
@@ -72,10 +72,10 @@ dependencies = [
     "chardet==5.2.0",
     "pypdf==6.5.0",
     "fpdf2==2.8.5",
-    "pymdown-extensions==10.19.1",
+    "pymdown-extensions==10.20",
     "docx2txt==0.9",
     "python-pptx==1.0.2",
-    "unstructured==0.18.21",
+    "unstructured==0.18.24",
     "msoffcrypto-tool==5.4.2",
     "nltk==3.9.2",
     "Markdown==3.10",
@@ -150,8 +150,8 @@ all = [
 
     "qdrant-client==1.16.2",
     
-    "weaviate-client==4.19.0",
-    "pymilvus==2.6.5",
+    "weaviate-client==4.19.2",
+    "pymilvus==2.6.6",
     "pinecone==6.0.2",
     "oracledb==3.4.1",
     "colbert-ai==0.2.22",
