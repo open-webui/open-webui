@@ -320,7 +320,7 @@
 {#if $user}
 	<div class="app relative">
 		<div
-			class=" text-gray-100 bg-[#E8EAF3] dark:bg-gray-950  h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+			class=" text-gray-100 bg-gradient-to-l from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800  h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 		>
 			{#if !['user', 'admin', 'professor'].includes($user?.role)}
 				<AccountPending />

@@ -22,6 +22,14 @@ export type TagDefinition = {
 	updated_at: number;
 };
 
+// Feedback 관련 타입
+export type FeedbackStatus = 'not_interested' | 'understood' | 'confused' | null;
+
+export type TagWithFeedback = TagDefinition & {
+	feedback_status: FeedbackStatus;
+	last_seen_at: number | null;
+};
+
 export type MessageTagsResponse = {
 	tags: MessageTag[];
 	definitions: TagDefinition[];
@@ -875,6 +883,118 @@ export const getTopTags = async (
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+// ============ User Feedback API Functions ============
+
+/**
+ * 내 상위 N개 태그 조회 (피드백 정보 포함)
+ * GET /message-tags/my-tags/top?limit=3
+ */
+export const getMyTopTags = async (
+	token: string,
+	limit: number = 3
+): Promise<TagWithFeedback[] | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/message-tags/my-tags/top?limit=${limit}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+/**
+ * 전체 유저 상위 N개 태그 조회
+ * GET /message-tags/global-tags/top?limit=3
+ */
+export const getGlobalTopTags = async (
+	token: string,
+	limit: number = 3
+): Promise<TagWithFeedback[] | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/message-tags/global-tags/top?limit=${limit}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+/**
+ * 태그에 대한 피드백 제출
+ * POST /message-tags/feedback
+ */
+export const setTagFeedback = async (
+	token: string,
+	tagId: string,
+	feedbackStatus: FeedbackStatus
+): Promise<TagWithFeedback | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/message-tags/feedback`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			tag_id: tagId,
+			feedback_status: feedbackStatus
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

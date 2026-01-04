@@ -52,12 +52,40 @@
 		};
 
 		if (is3DGraph(spec.type)) {
+			// Build 3D axis configs with optional range
+			const xaxis3d: any = { title: { text: spec.axis?.xLabel || 'X' }, showgrid: true, gridcolor: gridColor, tickfont: { color: textColor } };
+			const yaxis3d: any = { title: { text: spec.axis?.yLabel || 'Y' }, showgrid: true, gridcolor: gridColor, tickfont: { color: textColor } };
+			const zaxis3d: any = { title: { text: spec.axis?.zLabel || 'Z' }, showgrid: true, gridcolor: gridColor, tickfont: { color: textColor } };
+
+			// Apply axis ranges if provided
+			if (spec.axis?.xRange) {
+				const xRange = spec.axis.xRange as any[];
+				xaxis3d.range = [
+					typeof xRange[0] === 'string' ? compile(xRange[0]).evaluate({}) : xRange[0],
+					typeof xRange[1] === 'string' ? compile(xRange[1]).evaluate({}) : xRange[1]
+				];
+			}
+			if (spec.axis?.yRange) {
+				const yRange = spec.axis.yRange as any[];
+				yaxis3d.range = [
+					typeof yRange[0] === 'string' ? compile(yRange[0]).evaluate({}) : yRange[0],
+					typeof yRange[1] === 'string' ? compile(yRange[1]).evaluate({}) : yRange[1]
+				];
+			}
+			if (spec.axis?.zRange) {
+				const zRange = spec.axis.zRange as any[];
+				zaxis3d.range = [
+					typeof zRange[0] === 'string' ? compile(zRange[0]).evaluate({}) : zRange[0],
+					typeof zRange[1] === 'string' ? compile(zRange[1]).evaluate({}) : zRange[1]
+				];
+			}
+
 			return {
 				...baseLayout,
 				scene: {
-					xaxis: { title: { text: spec.axis?.xLabel || 'X' }, showgrid: true, gridcolor: gridColor, tickfont: { color: textColor } },
-					yaxis: { title: { text: spec.axis?.yLabel || 'Y' }, showgrid: true, gridcolor: gridColor, tickfont: { color: textColor } },
-					zaxis: { title: { text: spec.axis?.zLabel || 'Z' }, showgrid: true, gridcolor: gridColor, tickfont: { color: textColor } },
+					xaxis: xaxis3d,
+					yaxis: yaxis3d,
+					zaxis: zaxis3d,
 					bgcolor: 'transparent',
 					camera: { eye: { x: 1.5, y: 1.5, z: 1.2 } }
 				}

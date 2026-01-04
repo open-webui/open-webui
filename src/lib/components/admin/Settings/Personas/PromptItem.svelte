@@ -39,9 +39,9 @@
 
 		if (type === 'proficiency') {
 			switch (value) {
-				case '1': return '초급 (하)';
-				case '2': return '중급 (중)';
-				case '3': return '고급 (상)';
+				case '1': return '초급';
+				case '2': return '중급';
+				case '3': return '고급';
 				default: return value;
 			}
 		} else if (type === 'style') {

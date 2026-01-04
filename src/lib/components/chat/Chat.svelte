@@ -1366,6 +1366,11 @@
 			}
 		}
 
+		// Mark message as completed after chatCompleted API call
+		if (history.messages[responseMessageId]) {
+			history.messages[responseMessageId].completed = true;
+		}
+
 		taskIds = null;
 	};
 

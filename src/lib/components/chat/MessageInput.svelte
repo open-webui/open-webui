@@ -1461,47 +1461,68 @@
 									</div>
 								</div>
 
-								<!-- Right: Send button (always visible) -->
+								<!-- Right: Send/Stop button (always visible) -->
 								<div class="flex-none">
-									<Tooltip content={$i18n.t('Send message')}>
-										<!-- svelte-ignore a11y_consider_explicit_label -->
-										<button
-											id="send-message-button"
-											class="w-12 h-12 rounded-full shadow-[0px_3.6px_18px_rgba(0,0,0,0.1)] flex justify-center items-center transition {!(
-												prompt === '' && files.length === 0
-											)
-												? 'bg-[#076EF4] hover:bg-[#0561d9] text-white'
-												: 'bg-gray-300 dark:bg-gray-700 text-white cursor-not-allowed'}"
-											type="submit"
-											disabled={prompt === '' && files.length === 0}
-										>
-											<svg
-												width="40"
-												height="40"
-												viewBox="0 0 40 40"
-												fill="none"
-												xmlns="http://www.w3.org/2000/svg"
+									{#if generating}
+										<Tooltip content={$i18n.t('Stop generation')}>
+											<!-- svelte-ignore a11y_consider_explicit_label -->
+											<button
+												id="stop-response-button"
+												class="w-12 h-12 rounded-full shadow-[0px_3.6px_18px_rgba(0,0,0,0.1)] flex justify-center items-center transition bg-red-500 hover:bg-red-600 text-white"
+												type="button"
+												on:click={() => stopResponse()}
 											>
-												<mask
-													id="mask0_191_1153"
-													style="mask-type:alpha"
-													maskUnits="userSpaceOnUse"
-													x="0"
-													y="0"
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 24 24"
+													fill="currentColor"
+													class="w-6 h-6"
+												>
+													<rect x="6" y="6" width="12" height="12" rx="1" />
+												</svg>
+											</button>
+										</Tooltip>
+									{:else}
+										<Tooltip content={$i18n.t('Send message')}>
+											<!-- svelte-ignore a11y_consider_explicit_label -->
+											<button
+												id="send-message-button"
+												class="w-12 h-12 rounded-full shadow-[0px_3.6px_18px_rgba(0,0,0,0.1)] flex justify-center items-center transition {!(
+													prompt === '' && files.length === 0
+												)
+													? 'bg-[#076EF4] hover:bg-[#0561d9] text-white'
+													: 'bg-gray-300 dark:bg-gray-700 text-white cursor-not-allowed'}"
+												type="submit"
+												disabled={prompt === '' && files.length === 0}
+											>
+												<svg
 													width="40"
 													height="40"
+													viewBox="0 0 40 40"
+													fill="none"
+													xmlns="http://www.w3.org/2000/svg"
 												>
-													<rect width="40" height="40" fill="#D9D9D9" />
-												</mask>
-												<g mask="url(#mask0_191_1153)">
-													<path
-														d="M31.1657 11.0015L22.2211 32.9259C22.0814 33.2572 21.843 33.4598 21.506 33.5337C21.1687 33.6077 20.8822 33.5268 20.6465 33.2911L7.59483 20.2395C7.35918 20.0038 7.27832 19.7173 7.35224 19.38C7.42616 19.0429 7.62477 18.8006 7.94807 18.6529L29.8845 9.72027C30.2732 9.56621 30.6218 9.6434 30.9303 9.95185C31.2389 10.2605 31.3174 10.6103 31.1657 11.0015ZM20.904 30.7946L28.4356 12.4384L10.0076 19.8982L14.0309 23.9215L21.2033 19.6707L16.9046 26.7952L20.904 30.7946Z"
-														fill="#FDFEFE"
-													/>
-												</g>
-											</svg>
-										</button>
-									</Tooltip>
+													<mask
+														id="mask0_191_1153"
+														style="mask-type:alpha"
+														maskUnits="userSpaceOnUse"
+														x="0"
+														y="0"
+														width="40"
+														height="40"
+													>
+														<rect width="40" height="40" fill="#D9D9D9" />
+													</mask>
+													<g mask="url(#mask0_191_1153)">
+														<path
+															d="M31.1657 11.0015L22.2211 32.9259C22.0814 33.2572 21.843 33.4598 21.506 33.5337C21.1687 33.6077 20.8822 33.5268 20.6465 33.2911L7.59483 20.2395C7.35918 20.0038 7.27832 19.7173 7.35224 19.38C7.42616 19.0429 7.62477 18.8006 7.94807 18.6529L29.8845 9.72027C30.2732 9.56621 30.6218 9.6434 30.9303 9.95185C31.2389 10.2605 31.3174 10.6103 31.1657 11.0015ZM20.904 30.7946L28.4356 12.4384L10.0076 19.8982L14.0309 23.9215L21.2033 19.6707L16.9046 26.7952L20.904 30.7946Z"
+															fill="#FDFEFE"
+														/>
+													</g>
+												</svg>
+											</button>
+										</Tooltip>
+									{/if}
 								</div>
 							</div>
 

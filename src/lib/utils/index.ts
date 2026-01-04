@@ -85,6 +85,10 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
+	// First, clean up escaped quotes that might break markdown parsing
+	// Replace \" with " (common in JSON strings that weren't properly unescaped)
+	content = content.replace(/\\"/g, '"');
+
 	content = processChineseContent(content);
 	return content.trim();
 };

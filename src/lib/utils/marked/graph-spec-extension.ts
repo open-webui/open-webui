@@ -7,7 +7,7 @@
  */
 
 // 지원하는 태그 이름 목록 (export하여 외부에서 확인 가능)
-export const GRAPH_SPEC_TAGS = ['graph_spec', 'graph-spec', 'graphspec'];
+export const GRAPH_SPEC_TAGS = ['graph_spec', 'graph-spec', 'graphspec', 'base-graph-spec'];
 
 // 태그 이름들을 regex alternation 패턴으로 변환
 function buildTagPattern(tags: string[]): string {
@@ -23,6 +23,7 @@ export type Domain2D = [number, number];
 export type Domain3D = {
 	x?: [number, number];
 	y?: [number, number];
+	z?: [number, number]; // 3D vector field용
 	u?: [number, number];
 	v?: [number, number];
 	t?: [number, number];
@@ -33,6 +34,7 @@ export type Sampling2D = number;
 export type Sampling3D = {
 	x?: number;
 	y?: number;
+	z?: number; // 3D vector field용
 	u?: number;
 	v?: number;
 	t?: number;
@@ -97,8 +99,9 @@ export interface GraphSpec {
 		xLabel?: string;
 		yLabel?: string;
 		zLabel?: string; // 3D용
-		xRange?: [number, number]; // histogram_2d용 x축 범위
-		yRange?: [number, number]; // histogram_2d용 y축 범위
+		xRange?: [number, number]; // x축 범위
+		yRange?: [number, number]; // y축 범위
+		zRange?: [number, number]; // 3D용 z축 범위
 		grid?: boolean;
 	};
 	meta?: {
@@ -127,6 +130,7 @@ export interface GraphSpecToken {
 	raw: string;
 	spec: GraphSpec | null;
 	error?: string;
+	rawJson?: string; // 원본 JSON 내용 (파싱 실패 시 디버깅용)
 }
 
 function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
@@ -198,7 +202,23 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 		console.log('[GraphSpec Tokenizer] Processed JSON:', jsonContent);
 
 		try {
-			spec = JSON.parse(jsonContent);
+			let parsed = JSON.parse(jsonContent);
+
+			// Handle wrapper format: { "vector_field_3d": { "type": "vector_field_3d", ... } }
+			// or { "function_2d": { "type": "function_2d", ... } } etc.
+			// If parsed object has a single key that matches a known type, unwrap it
+			const knownTypes = [
+				'function_2d', 'parametric_2d', 'phase_plane', 'scatter_2d', 'composite_2d',
+				'multi_scatter_2d', 'line_2d', 'function_3d', 'parametric_3d', 'scatter_3d',
+				'composite_3d', 'cartesian', 'histogram_2d', 'vector_2d', 'vector_field_3d'
+			];
+			const keys = Object.keys(parsed);
+			if (keys.length === 1 && knownTypes.includes(keys[0]) && typeof parsed[keys[0]] === 'object') {
+				console.log('[GraphSpec Tokenizer] Unwrapping wrapper format:', keys[0]);
+				parsed = parsed[keys[0]];
+			}
+
+			spec = parsed as GraphSpec;
 			console.log('[GraphSpec Tokenizer] Parsed spec:', spec);
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Invalid JSON';
@@ -210,7 +230,8 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 			type: 'graphSpec',
 			raw: match[0],
 			spec,
-			error
+			error,
+			rawJson: error ? match[2].trim() : undefined // 파싱 실패 시 원본 JSON 포함
 		};
 	}
 }

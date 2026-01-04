@@ -682,7 +682,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class="px-4 pt-4 pb-2 flex flex-col justify-between bg-gray-50/70 text-gray-900 dark:text-gray-50 h-full z-10 transition-all dark:bg-gray-900/50"
+		class="px-4 pt-4 pb-2 flex flex-col justify-between bg-gray-50 text-gray-900 dark:text-gray-50 h-full z-10 transition-all dark:bg-gray-900/50"
 		id="sidebar"
 	>
 		<!-- Top: HYU Logo -->
@@ -811,7 +811,7 @@
 							stroke-linejoin="round"
 						/>
 					</svg>
-					<span class="text-body-3 text-[#FDFEFE]">
+					<span class="text-body-3 text-gray-50">
 						새 채팅
 					</span>
 				</a>
@@ -1035,8 +1035,7 @@
 				<!-- Tab Navigation -->
 				<div class="px-5 mt-5">
 					<div class="flex flex-row justify-center items-center w-full h-7
-						shadow-[inset_2px_2px_10px_rgba(255,255,255,0.05),inset_2px_2px_16px_rgba(206,212,229,0.12)]
-						drop-shadow-[4px_4px_20px_rgba(0,0,0,0.1)]
+						
 						backdrop-blur-sm
 						rounded-full">
 						<!-- Textbook Tab -->

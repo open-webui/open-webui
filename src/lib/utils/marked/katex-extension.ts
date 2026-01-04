@@ -119,17 +119,22 @@ function katexTokenizer(src, tokens, displayMode: boolean) {
 	const match = src.match(ruleReg);
 
 	if (match) {
+		// Extract the formula content from capture groups
+		// Skip match[0] (full match) and match[1] (outer wrapper group)
+		// Find the first non-empty capture group which contains the formula
 		const text = match
 			.slice(2)
-			.filter((item) => item)
-			.find((item) => item.trim());
+			.filter((item) => item !== undefined && item !== null)
+			.find((item) => item.trim().length > 0);
 
-		return {
-			type,
-			raw: match[0],
-			text: text,
-			displayMode
-		};
+		if (text) {
+			return {
+				type,
+				raw: match[0],
+				text: text.trim(),
+				displayMode
+			};
+		}
 	}
 }
 
