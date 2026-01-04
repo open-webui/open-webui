@@ -196,16 +196,58 @@
 														{...variableAttributes}
 													/>
 												{:else if variables[variable]?.type === 'month'}
-													<input
-														type="month"
-														class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
-														placeholder={variables[variable]?.placeholder ?? ''}
-														bind:value={variableValues[variable]}
-														autocomplete="off"
-														id="input-variable-{idx}"
-														required={variables[variable]?.required ?? false}
-														{...variableAttributes}
-													/>
+													{@const currentYear = new Date().getFullYear()}
+													{@const years = Array.from(
+														{ length: 21 },
+														(_, i) => currentYear - 10 + i
+													)}
+													{@const months = [
+														{ value: '01', label: 'January' },
+														{ value: '02', label: 'February' },
+														{ value: '03', label: 'March' },
+														{ value: '04', label: 'April' },
+														{ value: '05', label: 'May' },
+														{ value: '06', label: 'June' },
+														{ value: '07', label: 'July' },
+														{ value: '08', label: 'August' },
+														{ value: '09', label: 'September' },
+														{ value: '10', label: 'October' },
+														{ value: '11', label: 'November' },
+														{ value: '12', label: 'December' }
+													]}
+													<div class="flex gap-2">
+														<select
+															class="flex-1 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+															id="input-variable-{idx}"
+															value={variableValues[variable]?.split('-')[0] ?? ''}
+															on:change={(e) => {
+																const month = variableValues[variable]?.split('-')[1] ?? '';
+																variableValues[variable] = month
+																	? `${e.target.value}-${month}`
+																	: e.target.value;
+															}}
+														>
+															<option value="" disabled>{$i18n.t('Year')}</option>
+															{#each years as year}
+																<option value={year}>{year}</option>
+															{/each}
+														</select>
+														<select
+															class="flex-1 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+															value={variableValues[variable]?.split('-')[1] ?? ''}
+															on:change={(e) => {
+																const year = variableValues[variable]?.split('-')[0] ?? '';
+																variableValues[variable] = year
+																	? `${year}-${e.target.value}`
+																	: `-${e.target.value}`;
+															}}
+														>
+															<option value="" disabled>{$i18n.t('Month')}</option>
+															{#each months as month}
+																<option value={month.value}>{$i18n.t(month.label)}</option>
+															{/each}
+														</select>
+													</div>
 												{:else if variables[variable]?.type === 'number'}
 													<input
 														type="number"
