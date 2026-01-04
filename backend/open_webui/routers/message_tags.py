@@ -16,9 +16,13 @@ from open_webui.models.message_tags import (
     MessageTags,
     MessageTagDefinitions,
     TaggingDaemonConfigs,
+    TagFeedbacks,
     MessageTagModel,
     MessageTagDefinitionModel,
     TaggingDaemonConfigModel,
+    TagFeedbackModel,
+    TagFeedbackForm,
+    VALID_FEEDBACK_STATUSES,
 )
 from open_webui.models.chats import Chats
 from open_webui.env import SRC_LOG_LEVELS
@@ -254,9 +258,11 @@ async def list_all_tags(user=Depends(get_admin_user)):
 
 @router.delete("/admin/tags/{tag_id}")
 async def delete_tag(tag_id: str, user=Depends(get_admin_user)):
-    """Delete a tag definition and all associated message tags."""
+    """Delete a tag definition and all associated message tags and feedback."""
     # First remove all message_tag entries
     MessageTags.delete_by_tag(tag_id)
+    # Remove all feedback for this tag
+    TagFeedbacks.delete_by_tag(tag_id)
     # Then remove the definition
     success = MessageTagDefinitions.delete(tag_id)
     if not success:
@@ -622,3 +628,208 @@ async def get_my_tags(user=Depends(get_verified_user)):
             return [MessageTagDefinitionModel.model_validate(t) for t in tags]
 
     return []
+
+
+# ============================================================
+# Tag Feedback Endpoints
+# ============================================================
+
+class TagWithFeedbackResponse(BaseModel):
+    """Tag definition with user's feedback status."""
+    id: str
+    name: str
+    usage_count: int           # Global usage count
+    my_usage_count: int        # User's message count with this tag
+    chapter_id: Optional[str] = None
+    chapter_name: Optional[str] = None
+    feedback_status: Optional[str] = None  # User's feedback status
+
+
+@router.post("/feedback", response_model=TagFeedbackModel)
+async def set_tag_feedback(body: TagFeedbackForm, user=Depends(get_verified_user)):
+    """Set or update feedback for a tag."""
+    # Validate status
+    if body.status is not None and body.status not in VALID_FEEDBACK_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of: {list(VALID_FEEDBACK_STATUSES - {None})}"
+        )
+
+    # Verify tag exists
+    tag = MessageTagDefinitions.get_by_id(body.tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    feedback = TagFeedbacks.upsert(user.id, body.tag_id, body.status)
+    if not feedback:
+        raise HTTPException(status_code=500, detail="Failed to save feedback")
+
+    return feedback
+
+
+@router.get("/feedback", response_model=List[TagFeedbackModel])
+async def get_my_feedbacks(user=Depends(get_verified_user)):
+    """Get all feedback for the current user."""
+    return TagFeedbacks.get_by_user(user.id)
+
+
+@router.get("/feedback/{tag_id}", response_model=Optional[TagFeedbackModel])
+async def get_tag_feedback(tag_id: str, user=Depends(get_verified_user)):
+    """Get feedback for a specific tag."""
+    return TagFeedbacks.get_by_user_and_tag(user.id, tag_id)
+
+
+@router.delete("/feedback/{tag_id}")
+async def delete_tag_feedback(tag_id: str, user=Depends(get_verified_user)):
+    """Delete feedback for a tag (reset to null)."""
+    success = TagFeedbacks.delete(user.id, tag_id)
+    return {"success": success}
+
+
+@router.get("/my-tags/top", response_model=List[TagWithFeedbackResponse])
+async def get_my_top_tags(limit: int = 10, user=Depends(get_verified_user)):
+    """
+    Get top N tags from user's chats with feedback-based prioritization.
+
+    Priority order:
+    - "confused" tags first (user needs help)
+    - null feedback (no preference yet)
+    - "not_interested" and "understood" last (deprioritized)
+    """
+    from open_webui.internal.db import get_db
+    from open_webui.models.message_tags import MessageTag, MessageTagDefinition, TagFeedback
+    from open_webui.models.textbooks import TextbookChapter
+    from sqlalchemy import func, case, literal_column
+
+    with get_db() as db:
+        # Subquery to count user's messages per tag
+        my_usage_subq = db.query(
+            MessageTag.tag_id,
+            func.count(MessageTag.id).label("my_usage_count")
+        ).filter(
+            MessageTag.user_id == user.id
+        ).group_by(
+            MessageTag.tag_id
+        ).subquery()
+
+        # Priority calculation based on feedback status
+        priority = case(
+            (TagFeedback.status == "confused", literal_column("3")),
+            (TagFeedback.status.is_(None), literal_column("2")),
+            else_=literal_column("1")
+        ).label("priority")
+
+        # Main query with joins
+        results = db.query(
+            MessageTagDefinition,
+            my_usage_subq.c.my_usage_count,
+            TagFeedback.status.label("feedback_status"),
+            TextbookChapter.title.label("chapter_name"),
+            priority
+        ).join(
+            my_usage_subq,
+            MessageTagDefinition.id == my_usage_subq.c.tag_id
+        ).outerjoin(
+            TagFeedback,
+            (MessageTagDefinition.id == TagFeedback.tag_id) & (TagFeedback.user_id == user.id)
+        ).outerjoin(
+            TextbookChapter,
+            MessageTagDefinition.chapter_id == TextbookChapter.id
+        ).order_by(
+            priority.desc(),
+            my_usage_subq.c.my_usage_count.desc()
+        ).limit(limit).all()
+
+        return [
+            TagWithFeedbackResponse(
+                id=tag.id,
+                name=tag.name,
+                usage_count=tag.usage_count,
+                my_usage_count=my_count or 0,
+                chapter_id=tag.chapter_id,
+                chapter_name=chapter_name,
+                feedback_status=feedback_status
+            )
+            for tag, my_count, feedback_status, chapter_name, _ in results
+        ]
+
+
+@router.get("/global-tags/top", response_model=List[TagWithFeedbackResponse])
+async def get_global_top_tags(limit: int = 10, user=Depends(get_verified_user)):
+    """
+    Get top N tags by global usage, then prioritized by user's feedback.
+
+    1. First, fetch tags ordered by global usage (all users)
+    2. Then, re-order by user's feedback priority:
+       - "confused" first (user needs help)
+       - null feedback (no preference yet)
+       - "not_interested" / "understood" last (deprioritized)
+    """
+    from open_webui.internal.db import get_db
+    from open_webui.models.message_tags import MessageTag, MessageTagDefinition, TagFeedback
+    from open_webui.models.textbooks import TextbookChapter
+    from sqlalchemy import func, case, literal_column
+
+    with get_db() as db:
+        # Subquery to count global messages per tag
+        global_usage_subq = db.query(
+            MessageTag.tag_id,
+            func.count(MessageTag.id).label("global_count")
+        ).group_by(
+            MessageTag.tag_id
+        ).subquery()
+
+        # Subquery to count user's messages per tag (for my_usage_count)
+        my_usage_subq = db.query(
+            MessageTag.tag_id,
+            func.count(MessageTag.id).label("my_usage_count")
+        ).filter(
+            MessageTag.user_id == user.id
+        ).group_by(
+            MessageTag.tag_id
+        ).subquery()
+
+        # Priority calculation based on feedback status
+        priority = case(
+            (TagFeedback.status == "confused", literal_column("3")),
+            (TagFeedback.status.is_(None), literal_column("2")),
+            else_=literal_column("1")
+        ).label("priority")
+
+        # Main query - ordered by feedback priority, then global usage
+        results = db.query(
+            MessageTagDefinition,
+            global_usage_subq.c.global_count,
+            my_usage_subq.c.my_usage_count,
+            TagFeedback.status.label("feedback_status"),
+            TextbookChapter.title.label("chapter_name"),
+            priority
+        ).join(
+            global_usage_subq,
+            MessageTagDefinition.id == global_usage_subq.c.tag_id
+        ).outerjoin(
+            my_usage_subq,
+            MessageTagDefinition.id == my_usage_subq.c.tag_id
+        ).outerjoin(
+            TagFeedback,
+            (MessageTagDefinition.id == TagFeedback.tag_id) & (TagFeedback.user_id == user.id)
+        ).outerjoin(
+            TextbookChapter,
+            MessageTagDefinition.chapter_id == TextbookChapter.id
+        ).order_by(
+            priority.desc(),
+            global_usage_subq.c.global_count.desc()
+        ).limit(limit).all()
+
+        return [
+            TagWithFeedbackResponse(
+                id=tag.id,
+                name=tag.name,
+                usage_count=global_count or 0,
+                my_usage_count=my_count or 0,
+                chapter_id=tag.chapter_id,
+                chapter_name=chapter_name,
+                feedback_status=feedback_status
+            )
+            for tag, global_count, my_count, feedback_status, chapter_name, _ in results
+        ]
