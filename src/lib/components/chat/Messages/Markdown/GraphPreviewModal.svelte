@@ -33,14 +33,10 @@
 		}
 	};
 
-	// 다크모드 감지
-	function isDarkMode(): boolean {
-		return document.documentElement.classList.contains('dark');
-	}
-
-	function getLayout(dark: boolean) {
-		const textColor = dark ? '#FDFEFE' : '#1f2937';
-		const gridColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+	function getLayout() {
+		// 그래프는 항상 라이트 모드로 표시
+		const textColor = '#1f2937';
+		const gridColor = 'rgba(0,0,0,0.1)';
 
 		const baseLayout = {
 			margin: { t: 40, r: 40, b: 60, l: 70 },
@@ -174,8 +170,7 @@
 		Plotly = plotlyModule.default;
 
 		const data = buildTraces(spec);
-		const dark = isDarkMode();
-		const layout = getLayout(dark);
+		const layout = getLayout();
 
 		const config = {
 			responsive: true,
@@ -310,9 +305,9 @@
 
 		<!-- Content area -->
 		<div class="flex gap-4 {showJsonCode ? 'flex-row' : 'flex-col'}">
-			<!-- Graph container -->
+			<!-- Graph container - 항상 라이트 모드 배경 -->
 			<div class="flex-1 {showJsonCode ? 'w-1/2' : 'w-full'}">
-				<div class="h-[60vh] border border-gray-100 dark:border-gray-800 rounded-lg overflow-hidden">
+				<div class="h-[60vh] border border-gray-200 rounded-lg overflow-hidden bg-white">
 					<div bind:this={container} class="w-full h-full" />
 				</div>
 

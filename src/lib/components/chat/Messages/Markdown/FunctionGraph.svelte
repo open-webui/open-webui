@@ -26,14 +26,10 @@
 	let renderError: string | null = null;
 	let showErrorJsonModal = false;
 
-	// 다크모드 감지
-	function isDarkMode(): boolean {
-		return document.documentElement.classList.contains('dark');
-	}
-
-	function getLayout(dark: boolean) {
-		const textColor = dark ? '#FDFEFE' : '#1f2937';
-		const gridColor = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+	function getLayout() {
+		// 그래프는 항상 라이트 모드로 표시
+		const textColor = '#1f2937';
+		const gridColor = 'rgba(0,0,0,0.1)';
 		const expressions = normalizeExpressions(spec);
 
 		// 범례 표시 여부 결정
@@ -207,33 +203,19 @@
 				return;
 			}
 
-			const dark = isDarkMode();
-			const layout = getLayout(dark);
+		const layout = getLayout();
 
-			// 3D 그래프는 staticPlot: true 시 WebGL 렌더링 문제가 있을 수 있음
-			const is3D = is3DGraph(spec.type);
-			const config = {
-				responsive: !is3D, // 3D는 명시적 크기 사용
-				displayModeBar: false, // 썸네일에서는 모드바 숨김
-				displaylogo: false,
-				staticPlot: !is3D, // 3D는 staticPlot을 끄고 상호작용 허용 (드래그로 회전 가능)
-				scrollZoom: false // 썸네일에서는 줌 비활성화
-			};
+		// 3D 그래프 여부 확인
+		const is3D = is3DGraph(spec.type);
+		const config = {
+			responsive: !is3D, // 3D는 명시적 크기 사용
+			displayModeBar: false, // 썸네일에서는 모드바 숨김
+			displaylogo: false,
+			staticPlot: !is3D, // 3D는 staticPlot을 끄고 상호작용 허용 (드래그로 회전 가능)
+			scrollZoom: false // 썸네일에서는 줌 비활성화
+		};
 
-			Plotly.newPlot(container, data, layout, config);
-
-			// 테마 변경 감지
-			const observer = new MutationObserver(() => {
-				const newDark = isDarkMode();
-				if (Plotly && container && !renderError) {
-					Plotly.relayout(container, getLayout(newDark));
-				}
-			});
-
-			observer.observe(document.documentElement, {
-				attributes: true,
-				attributeFilter: ['class']
-			});
+		Plotly.newPlot(container, data, layout, config);
 		} catch (e) {
 			const errorMessage = e instanceof Error ? e.message : String(e);
 			renderError = `그래프 렌더링 실패: ${errorMessage}`;
@@ -271,20 +253,20 @@
 		</div>
 	</button>
 {:else}
-	<div class="relative w-48 group mb-2 rounded-lg border border-gray-100 dark:border-gray-850 overflow-hidden">
-		<!-- Graph thumbnail (정사각형) -->
-		<div class="w-48 h-48 bg-white dark:bg-gray-800">
+	<div class="relative w-48 group mb-2 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+		<!-- Graph thumbnail (정사각형) - 항상 라이트 모드 -->
+		<div class="w-48 h-48 bg-white">
 			<div bind:this={container} class="w-full h-full" />
 		</div>
 
-		<!-- Gradient overlay -->
+		<!-- Gradient overlay - 항상 라이트 모드 -->
 		<div
-			class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-gray-900 to-transparent pointer-events-none"
+			class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"
 		/>
 
-		<!-- View full graph button -->
+		<!-- View full graph button - 항상 라이트 모드 -->
 		<button
-			class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 text-[11px] text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-gray-900/80 px-2 py-1 rounded-full backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 transition z-10"
+			class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 text-[11px] text-gray-700 bg-white/90 px-2 py-1 rounded-full backdrop-blur-sm hover:bg-white transition shadow-sm z-10"
 			on:click={() => (showModal = true)}
 		>
 			<ArrowsPointingOut className="size-3" />
@@ -307,7 +289,7 @@
 
 <!-- Error JSON modal -->
 <Modal bind:show={showErrorJsonModal} size="lg">
-	<div class="px-6 py-5 w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl">
+	<div class="px-6 py-5 w-full max-w-2xl bg-white dark:bg-gray-white rounded-xl">
 		<!-- Header -->
 		<div class="flex justify-between items-center mb-4">
 			<div>
