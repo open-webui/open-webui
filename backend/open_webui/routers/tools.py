@@ -17,6 +17,7 @@ from open_webui.models.tools import (
     ToolModel,
     ToolResponse,
     ToolUserResponse,
+    ToolAccessResponse,
     Tools,
 )
 from open_webui.utils.plugin import (
@@ -157,13 +158,24 @@ async def get_tools(request: Request, user=Depends(get_verified_user), db: Sessi
 ############################
 
 
-@router.get("/list", response_model=list[ToolUserResponse])
+@router.get("/list", response_model=list[ToolAccessResponse])
 async def get_tool_list(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         tools = Tools.get_tools(db=db)
     else:
-        tools = Tools.get_tools_by_user_id(user.id, "write", db=db)
-    return tools
+        tools = Tools.get_tools_by_user_id(user.id, "read", db=db)
+
+    return [
+        ToolAccessResponse(
+            **tool.model_dump(),
+            write_access=(
+                (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                or user.id == tool.user_id
+                or has_access(user.id, "write", tool.access_control, db=db)
+            ),
+        )
+        for tool in tools
+    ]
 
 
 ############################
