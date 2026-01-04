@@ -6,6 +6,7 @@ import base64
 import textwrap
 
 import asyncio
+import aiohttp
 from aiocache import cached
 from typing import Any, Optional
 import random
@@ -103,6 +104,8 @@ from open_webui.utils.filter import (
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.tool_json_tracker import ToolJsonTracker
+from open_webui.utils.tool_inline_executor import ToolInlineExecutor
 
 
 from open_webui.config import (
@@ -1667,6 +1670,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
+    # Merge any updated metadata from form_data (e.g., tool notifications set by openai.py)
+    if form_data.get("metadata"):
+        form_metadata = form_data["metadata"]
+        # Merge tool-related keys that may have been set by chat completion handler
+        for key in ["enable_tool_notifications", "tool_commands", "tool_prompts_dict", "api_request_url", "api_headers", "api_cookies"]:
+            if key in form_metadata:
+                metadata[key] = form_metadata[key]
+        log.info(f"[MIDDLEWARE] Merged metadata from form_data: enable_tool_notifications={metadata.get('enable_tool_notifications')}, tool_commands={metadata.get('tool_commands')}")
+        log.info(f"[MIDDLEWARE] Tool prompts dict keys: {list(metadata.get('tool_prompts_dict', {}).keys())}")
+
     async def background_tasks_handler():
         message = None
         messages = []
@@ -1905,6 +1918,12 @@ async def process_chat_response(
         event_emitter = get_event_emitter(metadata)
         event_caller = get_event_call(metadata)
 
+    # Debug logging for response type
+    log.info(f"[MIDDLEWARE] Response type: {type(response).__name__}")
+    log.info(f"[MIDDLEWARE] Is StreamingResponse: {isinstance(response, StreamingResponse)}")
+    log.info(f"[MIDDLEWARE] event_emitter created: {'YES' if event_emitter else 'NO'}")
+    log.info(f"[MIDDLEWARE] session_id={metadata.get('session_id')}, chat_id={metadata.get('chat_id')}, message_id={metadata.get('message_id')}")
+
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
         # Check if we can save to DB (need chat_id and message_id)
@@ -2107,7 +2126,9 @@ async def process_chat_response(
     ]
 
     # Streaming response
+    log.info(f"[MIDDLEWARE] Checking streaming condition: event_emitter={bool(event_emitter)}, event_caller={bool(event_caller)}")
     if event_emitter and event_caller:
+        log.info("[MIDDLEWARE] Entering streaming response handler block")
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get("model", "")
 
@@ -2548,6 +2569,75 @@ async def process_chat_response(
 
                     response_tool_calls = []
 
+                    # Inline tool executor for prompt-based tools
+                    tool_executor = None
+                    log.info(f"[MIDDLEWARE] Checking tool notifications: enable={metadata.get('enable_tool_notifications')}")
+                    log.info(f"[MIDDLEWARE] tool_commands in metadata: {metadata.get('tool_commands')}")
+                    log.info(f"[MIDDLEWARE] event_emitter: {'SET' if event_emitter else 'NONE'}")
+
+                    if metadata.get("enable_tool_notifications"):
+                        tool_prompts_dict = metadata.get("tool_prompts_dict", {})
+                        api_request_url = metadata.get("api_request_url")
+                        api_headers = metadata.get("api_headers", {})
+                        api_cookies = metadata.get("api_cookies", {})
+
+                        if tool_prompts_dict and api_request_url:
+                            log.info(f"[MIDDLEWARE] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
+
+                            # Create LLM call function for inline tool execution
+                            async def make_inline_llm_call(system_prompt: str, user_message: str) -> dict:
+                                """Make a non-streaming LLM call for inline tool execution."""
+                                try:
+                                    payload = {
+                                        "model": form_data.get("model"),
+                                        "messages": [
+                                            {"role": "system", "content": system_prompt},
+                                            {"role": "user", "content": user_message}
+                                        ],
+                                        "stream": False
+                                    }
+                                    log.info(f"[MIDDLEWARE] Inline LLM call to: {api_request_url}")
+                                    log.info(f"[MIDDLEWARE] System prompt length: {len(system_prompt)} chars")
+
+                                    async with aiohttp.ClientSession(trust_env=True) as session:
+                                        async with session.post(
+                                            api_request_url,
+                                            data=json.dumps(payload),
+                                            headers=api_headers,
+                                            cookies=api_cookies,
+                                        ) as r:
+                                            if r.status >= 400:
+                                                error_text = await r.text()
+                                                log.error(f"[MIDDLEWARE] Inline LLM call failed: {r.status} - {error_text}")
+                                                return {"success": False, "error": f"HTTP {r.status}: {error_text}"}
+
+                                            response_json = await r.json()
+                                            text = ""
+                                            if response_json.get("choices") and len(response_json["choices"]) > 0:
+                                                choice = response_json["choices"][0]
+                                                if choice.get("message"):
+                                                    text = choice["message"].get("content", "")
+                                                elif choice.get("text"):
+                                                    text = choice["text"]
+
+                                            log.info(f"[MIDDLEWARE] Inline LLM response: {len(text)} chars")
+                                            return {"success": True, "text": text}
+
+                                except Exception as e:
+                                    log.error(f"[MIDDLEWARE] Inline LLM call exception: {e}")
+                                    return {"success": False, "error": str(e)}
+
+                            tool_executor = ToolInlineExecutor(
+                                event_emitter=event_emitter,
+                                tool_prompts=tool_prompts_dict,
+                                llm_call_fn=make_inline_llm_call
+                            )
+                            log.info(f"[MIDDLEWARE] ToolInlineExecutor created: {tool_executor}")
+                        else:
+                            log.warning(f"[MIDDLEWARE] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url")
+                    else:
+                        log.info("[MIDDLEWARE] Tool notifications disabled")
+
                     delta_count = 0
                     delta_chunk_size = max(
                         CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
@@ -2768,6 +2858,13 @@ async def process_chat_response(
                                         }
 
                                     if value:
+                                        # Process through inline tool executor if enabled
+                                        if tool_executor:
+                                            value = await tool_executor.process_chunk(value)
+                                            if not value:
+                                                # Tool marker detected and being processed - skip this chunk
+                                                continue
+
                                         if (
                                             content_blocks
                                             and content_blocks[-1]["type"]
@@ -2879,6 +2976,14 @@ async def process_chat_response(
                                 log.debug(f"Error: {e}")
                                 continue
                     await flush_pending_delta_data()
+
+                    # Flush tool executor if enabled
+                    if tool_executor:
+                        remaining = await tool_executor.flush()
+                        if remaining:
+                            content = f"{content}{remaining}"
+                            if content_blocks and content_blocks[-1]["type"] == "text":
+                                content_blocks[-1]["content"] += remaining
 
                     if content_blocks:
                         # Clean up the last text block

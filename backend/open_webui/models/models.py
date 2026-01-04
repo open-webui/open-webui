@@ -45,6 +45,17 @@ class ModelMeta(BaseModel):
 
     capabilities: Optional[dict] = None
 
+    # Tool handling mode for this model
+    # - "gating": Two-stage tool gating (select tools first, then generate with selected tools)
+    # - "concat": Include all tool prompts in system prompt (legacy mode)
+    # - "none": No tool prompts included
+    # - None: Use default behavior (based on backend type)
+    tool_mode: Optional[str] = None
+
+    # Prompt group ID to use for this model
+    # If set, prompts from this group will be used instead of default
+    prompt_group_id: Optional[str] = None
+
     model_config = ConfigDict(extra="allow")
 
     pass

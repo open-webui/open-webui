@@ -60,6 +60,7 @@ from open_webui.utils.tool_gating import (
     get_tool_prompts_by_commands,
     compose_stage2_system_prompt,
 )
+from open_webui.utils.tool_inline_executor import build_tool_hints
 
 
 log = logging.getLogger(__name__)
@@ -906,19 +907,32 @@ async def generate_chat_completion(
     tool_prompts = []
 
     # Check model info and override the payload
+    # Model-level settings for tool handling
+    model_tool_mode = None  # "gating" | "concat" | "none" | None
+
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
             model_id = model_info.base_model_id
 
         params = model_info.params.model_dump()
+        meta = model_info.meta.model_dump() if model_info.meta else {}
 
-        # Extract system and prompt_group_id from params (if they exist)
+        # Extract tool_mode and prompt_group_id from meta (model settings)
+        model_tool_mode = meta.get("tool_mode")  # "gating" | "concat" | "none" | None
+        prompt_group_id_from_meta = meta.get("prompt_group_id")
+
+        # Extract system and prompt_group_id from params (legacy support)
         system = None
-        prompt_group_id = None
+        prompt_group_id_from_params = None
         if params:
             system = params.pop("system", None)
-            prompt_group_id = params.pop("prompt_group_id", None)
+            prompt_group_id_from_params = params.pop("prompt_group_id", None)
+
+        # Priority: meta.prompt_group_id > params.prompt_group_id
+        prompt_group_id = prompt_group_id_from_meta or prompt_group_id_from_params
+
+        log.info(f"[OPENAI] Model settings - tool_mode: {model_tool_mode}, prompt_group_id: {prompt_group_id}")
 
         # Always try to compose prompts (even if params is None)
         # Get persona values from metadata (stored in chat)
@@ -927,9 +941,7 @@ async def generate_chat_completion(
 
         # Compose prompts with fallback logic
         # Priority: prompt_group_id > system > DEFAULT_PROMPT_GROUP_ID > none
-        # Note: First compose without tools, then decide based on backend
-        # - Gemini backend: use tool gating (include only tool catalog)
-        # - Other backends: legacy mode (include full tool content)
+        # Note: First compose without tools, then decide based on tool_mode
         composed_system, tool_prompts = compose_with_fallback(
             group_id=prompt_group_id,
             system_prompt=system,
@@ -938,7 +950,7 @@ async def generate_chat_completion(
             ),
             proficiency_level=proficiency_level,
             response_style=response_style,
-            include_tools=False,  # Don't auto-include tools, decide later based on backend
+            include_tools=False,  # Don't auto-include tools, decide based on tool_mode
         )
 
         # Store base system for later use (tool handling done after URL resolution)
@@ -1052,17 +1064,27 @@ async def generate_chat_completion(
             is_utility_request = True
             log.info("[OPENAI] Title generation detected in system prompt, skipping tool gating")
 
-    use_two_stage_tool_gating = (
-        is_gemini_backend
-        and len(tool_prompts) > 0
-        and not is_utility_request
-    )
+    # Determine tool handling mode based on model settings
+    # Priority: model_tool_mode > default behavior
+    # - "gating": two-stage tool gating (select tools first, then generate)
+    # - "concat": include all tool prompts in system prompt (legacy mode)
+    # - "none": no tool prompts included
+    # - "inline" or None: inline tool execution with short hints (default)
+    effective_tool_mode = model_tool_mode if model_tool_mode else "inline"
 
-    if use_two_stage_tool_gating:
-        log.info("=" * 80)
-        log.info(f"[OPENAI-TOOL-GATING] Starting FULL two-stage tool gating")
-        log.info(f"[OPENAI-TOOL-GATING] Available tools: {[t.command for t in tool_prompts]}")
-        log.info("=" * 80)
+    log.info("=" * 80)
+    log.info(f"[OPENAI] Tool handling mode: {effective_tool_mode} (model_tool_mode={model_tool_mode})")
+    log.info(f"[OPENAI] Available tools: {[t.command for t in tool_prompts]}")
+    log.info("=" * 80)
+
+    if is_utility_request:
+        # Utility requests skip tool handling
+        log.info("[OPENAI] Utility request - skipping tool handling")
+        effective_tool_mode = "none"
+
+    if effective_tool_mode == "gating" and tool_prompts:
+        # Two-stage tool gating: select tools first, then generate with selected tools
+        log.info(f"[OPENAI-TOOL-GATING] Starting two-stage tool gating")
 
         # Extract user query from messages (last user message)
         user_query = ""
@@ -1110,8 +1132,7 @@ async def generate_chat_completion(
 
             if not selected_tools:
                 # No tools needed - proceed to Stage 2 with base system only
-                # (Don't return early - continue to Stage 2 to preserve streaming)
-                log.info("[OPENAI-TOOL-GATING] No tools needed, proceeding to Stage 2 with base system only")
+                log.info("[OPENAI-TOOL-GATING] No tools needed, proceeding with base system only")
                 final_system = base_system
             else:
                 # Stage 2: Use selected tools' full content
@@ -1123,21 +1144,56 @@ async def generate_chat_completion(
                 log.info(f"[OPENAI-TOOL-GATING] Stage 2 System Prompt Length: {len(final_system)} chars")
                 log.info(f"[OPENAI-TOOL-GATING] Selected tools: {[t.command for t in selected_tool_prompts]}")
 
-    elif tool_prompts and not is_utility_request:
-        # Legacy mode for non-Gemini: include full tool content
+    elif effective_tool_mode == "concat" and tool_prompts:
+        # Legacy mode: include all tool prompts in system prompt
         final_system = compose_stage2_system_prompt(base_system or "", tool_prompts)
-        log.info(f"[OPENAI] Non-Gemini backend - using legacy mode with {len(tool_prompts)} tools included")
+        log.info(f"[OPENAI] Concat mode: all {len(tool_prompts)} tool prompts included")
+        log.info(f"[OPENAI] Final system prompt length: {len(final_system)} chars")
+
+    elif effective_tool_mode == "none" or not tool_prompts:
+        # No tools mode: just use base system
+        final_system = base_system
+        log.info(f"[OPENAI] No tools mode: base system only")
+
+    else:
+        # Default: Inline tool execution mode with short hints
+        # When tool markers are detected in stream, ToolInlineExecutor will call LLM with full prompt
+        tool_hints = build_tool_hints(tool_prompts)
+        final_system = f"{base_system}\n\n{tool_hints}" if base_system else tool_hints
+        log.info(f"[OPENAI] Inline tool execution mode with {len(tool_prompts)} tools (short hints)")
+        log.info(f"[OPENAI] Tool hints length: {len(tool_hints)} chars")
+
+    # Enable inline tool execution for streaming if using inline mode
+    if effective_tool_mode == "inline" and tool_prompts:
+        if metadata is None:
+            metadata = {}
+        metadata["enable_tool_notifications"] = True
+        metadata["tool_commands"] = {t.command for t in tool_prompts}
+        # Pass full tool prompts dict for inline execution
+        metadata["tool_prompts_dict"] = {
+            t.command.lstrip('/'): t.content for t in tool_prompts
+        }
+        # Pass API info for inline LLM calls
+        metadata["api_request_url"] = request_url
+        metadata["api_headers"] = dict(headers)
+        metadata["api_cookies"] = dict(cookies) if cookies else {}
+        log.info(f"[OPENAI] Inline tool execution enabled for: {metadata['tool_commands']}")
+        log.info(f"[OPENAI] Tool prompts dict keys: {list(metadata['tool_prompts_dict'].keys())}")
+
+        # Store updated metadata back in form_data for middleware access
+        form_data["metadata"] = metadata
+        log.info(f"[OPENAI] Updated metadata stored in form_data")
 
     # Apply system prompt to payload
     payload = apply_system_prompt_to_body(final_system, payload, metadata, user)
 
-    # Debug: Log the final system prompt being sent (Stage 2 for Gemini, or legacy)
+    # Debug: Log the final system prompt being sent
     log.info("=" * 80)
     log.info(f"[OPENAI] Final system prompt length: {len(final_system) if final_system else 0} chars")
     log.info(f"[OPENAI] Backend URL: {url}")
     log.info(f"[OPENAI] Is Gemini backend: {is_gemini_backend}")
     log.info(f"[OPENAI] Tool prompts count: {len(tool_prompts)}")
-    log.info(f"[OPENAI] Used two-stage tool gating: {use_two_stage_tool_gating}")
+    log.info(f"[OPENAI] Inline tool execution: {tool_prompts and not is_utility_request}")
     log.info("=" * 80)
 
     # Check if model is a reasoning model that needs special handling

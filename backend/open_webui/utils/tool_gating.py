@@ -68,11 +68,15 @@ def build_tool_selection_system_prompt(
 [IMPORTANT: Tool Selection Instructions]
 Before answering the user's question, determine if any of the above tools are needed.
 
-You MUST respond with ONLY a JSON object in one of these formats:
-- If tools are needed: {{"need_tools": ["tool-command-1", "tool-command-2"], "reason": "Why these tools are needed"}}
+Respond with ONLY a raw JSON object (no formatting):
+- If tools needed: {{"need_tools": ["tool-command-1", "tool-command-2"], "reason": "brief reason"}}
 - If no tools needed: {{"need_tools": [], "answer": "Your direct answer here"}}
 
-CRITICAL: Your response must contain ONLY the JSON object. No other text, no markdown, no explanations outside the JSON."""
+CRITICAL OUTPUT FORMAT RULES:
+1. Output ONLY the raw JSON object starting with {{ and ending with }}
+2. Do NOT wrap in markdown code blocks (no ```json or ```)
+3. Do NOT add any text before or after the JSON
+4. Start your response directly with the opening brace {{"""
 
 
 def parse_tool_selection_response(response: str) -> Tuple[List[str], Optional[str]]:
@@ -131,13 +135,22 @@ def get_tool_prompts_by_commands(
 
     Args:
         tool_prompts: All available tool prompts
-        selected_commands: List of selected tool commands
+        selected_commands: List of selected tool commands (may or may not have leading slash)
 
     Returns:
         Filtered list of tool prompts matching selected commands
     """
-    selected_set = set(selected_commands)
-    return [t for t in tool_prompts if t.command in selected_set]
+    # Normalize commands: strip leading slash for comparison
+    def normalize(cmd: str) -> str:
+        return cmd.lstrip('/') if cmd else ''
+
+    selected_normalized = {normalize(cmd) for cmd in selected_commands}
+
+    result = [t for t in tool_prompts if normalize(t.command) in selected_normalized]
+
+    log.info(f"[TOOL GATING] Command matching: selected={selected_commands}, normalized={selected_normalized}, matched={[t.command for t in result]}")
+
+    return result
 
 
 def compose_stage2_system_prompt(
