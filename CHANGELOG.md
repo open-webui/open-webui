@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📝 Document chunking now applies markdown header splitting as a preprocessing step before character or token splitting, requiring users who previously used the standalone "Markdown (Header)" text splitter to switch to "character" or "token" mode with the new "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER" toggle enabled. [Commit](https://github.com/open-webui/open-webui/commit/d3a682759f375c6cb0bc8c170f62863a070f712e), [Commit](https://github.com/open-webui/open-webui/commit/18a33a079bf07487edffc421a721c86194cc90c9), [Commit](https://github.com/open-webui/open-webui/commit/08bf4670ec862018f9dc57296cb19fd5eab14ef6)
 - 🖼️ The "Generate Image" action button has been removed from chat message interfaces. [Commit](https://github.com/open-webui/open-webui/commit/f0829ba6e6fd200702fb76efc43dd785cf87fec9)
 - 🔗 The Admin Evaluations page URL changed from "/admin/evaluations/feedbacks" to "/admin/evaluations/feedback" to use the correct uncountable form of the word. [#20296](https://github.com/open-webui/open-webui/pull/20296)
+
 ## [0.6.43] - 2025-12-22
 
 ### Fixed
