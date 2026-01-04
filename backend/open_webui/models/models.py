@@ -301,7 +301,7 @@ class ModelsTable:
                     db,
                     query,
                     filter,
-                    permission="write",
+                    permission="read",
                 )
 
                 tag = filter.get("tag")
