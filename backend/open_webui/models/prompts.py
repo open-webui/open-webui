@@ -64,6 +64,10 @@ class PromptUserResponse(PromptModel):
     user: Optional[UserResponse] = None
 
 
+class PromptAccessResponse(PromptUserResponse):
+    write_access: Optional[bool] = False
+
+
 class PromptForm(BaseModel):
     command: str
     title: str

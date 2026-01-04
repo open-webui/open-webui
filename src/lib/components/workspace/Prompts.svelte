@@ -26,6 +26,7 @@
 	import XMark from '../icons/XMark.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	let shiftKey = false;
 
@@ -329,6 +330,9 @@
 						<div class=" flex flex-col flex-1 space-x-4 cursor-pointer w-full pl-1">
 							<div class=" flex-1 flex items-center gap-2 self-start">
 								<div class=" font-medium line-clamp-1 capitalize">{prompt.title}</div>
+								{#if !prompt.write_access}
+									<Badge type="muted" content={$i18n.t('Read Only')} />
+								{/if}
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 									{prompt.command}
 								</div>
