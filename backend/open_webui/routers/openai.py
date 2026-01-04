@@ -918,6 +918,13 @@ async def generate_chat_completion(
     else:
         request_url = f"{url}/chat/completions"
 
+    # Force stream=False for image generation models to prevent "Chunk too big" errors
+    # These models return large base64 image data that can't be streamed properly
+    image_keywords = ["image", "draw", "paint", "picture", "art", "create-preview"]
+    if any(keyword in model_id.lower() for keyword in image_keywords):
+        log.info(f"Detected image generation model in OpenAI router: {model_id}, forcing stream=False")
+        payload["stream"] = False
+
     payload = json.dumps(payload)
 
     r = None

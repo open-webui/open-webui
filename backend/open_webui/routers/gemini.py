@@ -431,6 +431,17 @@ async def generate_chat_completion(
         "generationConfig": {}
     }
     
+    # Enable image output for image-capable models
+    # Check for keywords indicating image generation capabilities
+    image_keywords = ["image", "draw", "paint", "picture", "art", "create-preview"]
+    if any(keyword in gemini_model.lower() for keyword in image_keywords):
+        log.info(f"Detected image generation model: {gemini_model}")
+        gemini_payload["generationConfig"]["responseModalities"] = ["TEXT", "IMAGE"]
+        # Image generation typically doesn't support streaming
+        if stream:
+            log.info(f"Forcing stream=False for image model {gemini_model}")
+            stream = False
+    
     if system_instruction:
         gemini_payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
     
@@ -450,9 +461,7 @@ async def generate_chat_completion(
     # Determine authentication method based on config
     auth_type = api_config.get("auth_type", "bearer")
     headers = {"Content-Type": "application/json"}
-    if stream:
-        headers["Accept"] = "text/event-stream"
-        
+    
     if auth_type == "bearer" and key:
         # Use API key as query parameter for Gemini even if auth_type is bearer
         gemini_url = f"{url}/models/{gemini_model}:{endpoint}?key={key}"
