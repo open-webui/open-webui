@@ -712,6 +712,7 @@
 											bind:value={webConfig.DDGS_BACKEND}
 										>
 											<option value="auto">{$i18n.t('Auto (Random)')}</option>
+											<option value="bing">{$i18n.t('Bing')}</option>
 											<option value="duckduckgo">{$i18n.t('DuckDuckGo')}</option>
 											<option value="google">{$i18n.t('Google')}</option>
 											<option value="brave">{$i18n.t('Brave')}</option>
