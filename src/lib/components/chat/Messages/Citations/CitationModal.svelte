@@ -3,6 +3,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { settings } from '$lib/stores';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -163,7 +164,7 @@
 							{#if document.metadata?.html}
 								<iframe
 									class="w-full border-0 h-auto rounded-none"
-									sandbox="allow-scripts allow-forms allow-same-origin"
+									sandbox="allow-scripts allow-forms{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 									srcdoc={document.document}
 									title={$i18n.t('Content')}
 								></iframe>

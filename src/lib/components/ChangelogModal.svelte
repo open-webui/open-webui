@@ -23,6 +23,13 @@
 		changelog = await getChangelog();
 	};
 
+	const closeModal = async () => {
+		localStorage.version = $config.version;
+		await settings.set({ ...$settings, ...{ version: $config.version } });
+		await updateUserSettings(localStorage.token, { ui: $settings });
+		show = false;
+	};
+
 	$: if (show) {
 		init();
 	}
@@ -38,10 +45,7 @@
 			</div>
 			<button
 				class="self-center"
-				on:click={() => {
-					localStorage.version = $config.version;
-					show = false;
-				}}
+				on:click={closeModal}
 				aria-label={$i18n.t('Close')}
 			>
 				<XMark className={'size-5'}>
@@ -102,12 +106,7 @@
 		</div>
 		<div class="flex justify-end pt-3 text-sm font-medium">
 			<button
-				on:click={async () => {
-					localStorage.version = $config.version;
-					await settings.set({ ...$settings, ...{ version: $config.version } });
-					await updateUserSettings(localStorage.token, { ui: $settings });
-					show = false;
-				}}
+				on:click={closeModal}
 				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			>
 				<span class="relative">{$i18n.t("Okay, Let's Go!")}</span>

@@ -36,17 +36,16 @@ from open_webui.config import (
     WEB_LOADER_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
+    FIRECRAWL_TIMEOUT,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
     WEB_FETCH_FILTER_LIST,
 )
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.misc import is_string_allowed
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def resolve_hostname(hostname):
@@ -191,6 +190,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         continue_on_failure: bool = True,
         api_key: Optional[str] = None,
         api_url: Optional[str] = None,
+        timeout: Optional[int] = None,
         mode: Literal["crawl", "scrape", "map"] = "scrape",
         proxy: Optional[Dict[str, str]] = None,
         params: Optional[Dict] = None,
@@ -233,6 +233,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self.continue_on_failure = continue_on_failure
         self.api_key = api_key
         self.api_url = api_url
+        self.timeout = timeout
         self.mode = mode
         self.params = params or {}
 
@@ -255,7 +256,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 ignore_invalid_urls=True,
                 remove_base64_images=True,
                 max_age=300000,  # 5 minutes https://docs.firecrawl.dev/features/fast-scraping#common-maxage-values
-                wait_timeout=len(self.web_paths) * 3,
+                wait_timeout=self.timeout if self.timeout else len(self.web_paths) * 3,
                 **self.params,
             )
 
@@ -296,7 +297,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 ignore_invalid_urls=True,
                 remove_base64_images=True,
                 max_age=300000,  # 5 minutes https://docs.firecrawl.dev/features/fast-scraping#common-maxage-values
-                wait_timeout=len(self.web_paths) * 3,
+                wait_timeout=self.timeout if self.timeout else len(self.web_paths) * 3,
                 **self.params,
             )
 
@@ -699,6 +700,11 @@ def get_web_loader(
         WebLoaderClass = SafeFireCrawlLoader
         web_loader_args["api_key"] = FIRECRAWL_API_KEY.value
         web_loader_args["api_url"] = FIRECRAWL_API_BASE_URL.value
+        if FIRECRAWL_TIMEOUT.value:
+            try:
+                web_loader_args["timeout"] = int(FIRECRAWL_TIMEOUT.value)
+            except ValueError:
+                pass
 
     if WEB_LOADER_ENGINE.value == "tavily":
         WebLoaderClass = SafeTavilyLoader

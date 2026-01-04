@@ -28,13 +28,12 @@ from open_webui.config import (
     DEFAULT_ARENA_MODEL,
 )
 
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.models.users import UserModel
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
@@ -361,14 +360,20 @@ def check_model_access(user, model):
             raise Exception("Model not found")
 
 
-def get_filtered_models(models, user):
+def get_filtered_models(models, user, db=None):
     # Filter out models that the user does not have access to
     if (
         user.role == "user"
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
+        model_ids = [model["id"] for model in models if not model.get("arena")]
+        model_infos = {
+            model_info.id: model_info
+            for model_info in Models.get_models_by_ids(model_ids)
+        }
+
         filtered_models = []
-        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id, db=db)}
         for model in models:
             if model.get("arena"):
                 if has_access(
@@ -382,7 +387,7 @@ def get_filtered_models(models, user):
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = model_infos.get(model["id"], None)
             if model_info:
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)

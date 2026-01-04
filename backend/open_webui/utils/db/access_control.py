@@ -28,9 +28,7 @@ def has_permission(db, DocumentModel, query, filter: dict, permission: str = "re
             for gid in group_ids:
                 if dialect_name == "sqlite":
                     group_read_conditions.append(
-                        DocumentModel.access_control["read"]["group_ids"].contains(
-                            [gid]
-                        )
+                        DocumentModel.access_control["read"]["group_ids"].contains(gid)
                     )
                 elif dialect_name == "postgresql":
                     group_read_conditions.append(
@@ -63,9 +61,7 @@ def has_permission(db, DocumentModel, query, filter: dict, permission: str = "re
             for gid in group_ids:
                 if dialect_name == "sqlite":
                     group_write_conditions.append(
-                        DocumentModel.access_control["write"]["group_ids"].contains(
-                            [gid]
-                        )
+                        DocumentModel.access_control["write"]["group_ids"].contains(gid)
                     )
                 elif dialect_name == "postgresql":
                     group_write_conditions.append(
@@ -111,9 +107,7 @@ def has_permission(db, DocumentModel, query, filter: dict, permission: str = "re
         for gid in group_ids:
             if dialect_name == "sqlite":
                 group_conditions.append(
-                    DocumentModel.access_control[permission]["group_ids"].contains(
-                        [gid]
-                    )
+                    DocumentModel.access_control[permission]["group_ids"].contains(gid)
                 )
             elif dialect_name == "postgresql":
                 group_conditions.append(

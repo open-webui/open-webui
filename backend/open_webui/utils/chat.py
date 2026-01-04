@@ -55,12 +55,11 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 async def generate_direct_chat_completion(
@@ -311,7 +310,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     try:
         data = await process_pipeline_outlet_filter(request, data, user, models)
     except Exception as e:
-        return Exception(f"Error: {e}")
+        raise Exception(f"Error: {e}")
 
     metadata = {
         "chat_id": data["chat_id"],
@@ -347,7 +346,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         )
         return result
     except Exception as e:
-        return Exception(f"Error: {e}")
+        raise Exception(f"Error: {e}")
 
 
 async def chat_action(request: Request, action_id: str, form_data: dict, user: Any):
@@ -443,6 +442,6 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                 data = action(**params)
 
         except Exception as e:
-            return Exception(f"Error: {e}")
+            raise Exception(f"Error: {e}")
 
     return data

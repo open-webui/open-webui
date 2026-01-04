@@ -25,7 +25,7 @@
 </script>
 
 <div class=" max-h-full flex flex-col w-full gap-[0.5px]">
-	{#each files as file (file?.id ?? file?.tempId)}
+	{#each files as file (file?.id ?? file?.itemId ?? file?.tempId)}
 		<div
 			class=" flex cursor-pointer w-full px-1.5 py-0.5 bg-transparent dark:hover:bg-gray-850/50 hover:bg-white rounded-xl transition {selectedFileId
 				? ''
@@ -59,24 +59,29 @@
 				</div>
 
 				<div class="flex items-center gap-2 shrink-0">
-					<Tooltip content={dayjs(file.updated_at * 1000).format('LLLL')}>
-						<div>
-							{dayjs(file.updated_at * 1000).fromNow()}
-						</div>
-					</Tooltip>
-					<Tooltip
-						content={file?.user?.email ?? $i18n.t('Deleted User')}
-						className="flex shrink-0"
-						placement="top-start"
-					>
-						<div class="shrink-0 text-gray-500">
-							{$i18n.t('By {{name}}', {
-								name: capitalizeFirstLetter(
-									file?.user?.name ?? file?.user?.email ?? $i18n.t('Deleted User')
-								)
-							})}
-						</div>
-					</Tooltip>
+					{#if file?.updated_at}
+						<Tooltip content={dayjs(file.updated_at * 1000).format('LLLL')}>
+							<div>
+								{dayjs(file.updated_at * 1000).fromNow()}
+							</div>
+						</Tooltip>
+					{/if}
+
+					{#if file?.user}
+						<Tooltip
+							content={file?.user?.email ?? $i18n.t('Deleted User')}
+							className="flex shrink-0"
+							placement="top-start"
+						>
+							<div class="shrink-0 text-gray-500">
+								{$i18n.t('By {{name}}', {
+									name: capitalizeFirstLetter(
+										file?.user?.name ?? file?.user?.email ?? $i18n.t('Deleted User')
+									)
+								})}
+							</div>
+						</Tooltip>
+					{/if}
 				</div>
 			</button>
 

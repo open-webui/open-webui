@@ -7,12 +7,11 @@ import types
 import tempfile
 import logging
 
-from open_webui.env import SRC_LOG_LEVELS, PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS
+from open_webui.env import PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS, OFFLINE_MODE
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def extract_frontmatter(content):
@@ -265,6 +264,10 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
 
 
 def install_frontmatter_requirements(requirements: str):
+    if OFFLINE_MODE:
+        log.info("Offline mode enabled, skipping installation of requirements.")
+        return
+
     if requirements:
         try:
             req_list = [req.strip() for req in requirements.split(",")]
