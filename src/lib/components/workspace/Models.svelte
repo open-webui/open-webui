@@ -496,13 +496,13 @@
 													</a>
 												</Tooltip>
 
-												<div class="flex items-center gap-1">
+												<div class="flex items-center gap-1 w-full">
 													{#if !model.write_access}
-														<Badge type="muted" content={$i18n.t('Read Only')} />
+														<div>
+															<Badge type="muted" content={$i18n.t('Read Only')} />
+														</div>
 													{/if}
-													<div
-														class="flex justify-end w-full {model.is_active ? '' : 'text-gray-500'}"
-													>
+													<div class="flex justify-end {model.is_active ? '' : 'text-gray-500'}">
 														<div class="flex justify-between items-center w-full">
 															<div class=""></div>
 															<div class="flex flex-row gap-0.5 items-center">
