@@ -1895,5 +1895,10 @@
 	"Medium": "中等",
 	"High": "高",
 	"XHigh": "极高",
-	"Max": "最大"
+	"Max": "最大",
+	"Input Tokens": "输入 Tokens",
+	"Output Tokens": "输出 Tokens",
+	"Reasoning Tokens": "思考 Tokens",
+	"Total Tokens": "总消耗 Tokens",
+	"Total Cost": "总花费"
 }

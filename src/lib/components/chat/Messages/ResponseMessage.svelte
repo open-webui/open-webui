@@ -36,6 +36,7 @@
 		removeDetails,
 		removeAllDetails
 	} from '$lib/utils';
+	import { formatUsageStats } from '$lib/utils/formatUsageStats';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
@@ -1161,17 +1162,7 @@
 
 								{#if message.usage}
 									<Tooltip
-										content={message.usage
-											? `<pre>${sanitizeResponseContent(
-													JSON.stringify(message.usage, null, 2)
-														.replace(/"([^(")"]+)":/g, '$1:')
-														.slice(1, -1)
-														.split('\n')
-														.map((line) => line.slice(2))
-														.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
-														.join('\n')
-												)}</pre>`
-											: ''}
+										content={formatUsageStats(message.usage, model, $i18n.t.bind($i18n))}
 										placement="bottom"
 									>
 										<button
