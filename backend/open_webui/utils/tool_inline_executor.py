@@ -30,23 +30,40 @@ class ToolInlineExecutor:
     2. Call LLM with full tool prompt
     3. Insert result into stream
     4. Emit tool_completed event
+
+    When a tool-unsupported marker is detected:
+    1. Hide the marker from user
+    2. Make recovery LLM call to continue naturally
+    3. Insert recovery response into stream
     """
+
+    # Pattern for tool-unsupported marker
+    UNSUPPORTED_PATTERN = re.compile(
+        r'<tool-unsupported\s+tool="([^"]+)"\s+reason="([^"]+)"\s*/?>',
+        re.IGNORECASE
+    )
 
     def __init__(
         self,
         event_emitter: Optional[Callable[[dict], Awaitable[None]]] = None,
         tool_prompts: Optional[Dict[str, Any]] = None,
         llm_call_fn: Optional[Callable] = None,
+        conversation_context: Optional[str] = None,
     ):
         self.event_emitter = event_emitter
         # Map: normalized command -> full prompt content
         self.tool_prompts = tool_prompts or {}
         self.llm_call_fn = llm_call_fn
+        # Store conversation context for recovery calls
+        self.conversation_context = conversation_context or ""
 
         # Buffer for detecting markers across chunks
         self.buffer = ""
         self.in_tool_marker = False
         self.current_marker_start = -1
+
+        # Track content generated so far (for recovery context)
+        self.generated_content = ""
 
         # Build dynamic pattern from tool_prompts keys
         self._marker_pattern = self._build_marker_pattern()
@@ -90,16 +107,58 @@ class ToolInlineExecutor:
         Returns text to display immediately.
         When a tool marker is detected, returns text before marker,
         executes tool, and buffers rest for next call.
+        When tool-unsupported marker is detected, hide it and make recovery call.
         """
         if not self._marker_pattern:
+            # Still check for unsupported pattern even without tool markers
+            self.buffer += chunk
+            output = await self._process_unsupported_markers(self.buffer)
+            if output is not None:
+                # Unsupported marker was found and handled
+                self.buffer = ""
+                self.generated_content += output
+                return output
+            # No unsupported marker, pass through
+            self.generated_content += chunk
+            self.buffer = ""
             return chunk
 
         self.buffer += chunk
         output = ""
 
         while True:
-            # Look for tool markers in buffer
+            # First check for tool-unsupported markers (higher priority)
+            unsupported_match = self.UNSUPPORTED_PATTERN.search(self.buffer)
+
+            # Look for complete tool markers in buffer
             match = self._marker_pattern.search(self.buffer)
+
+            # Handle unsupported marker first if it appears before tool marker
+            if unsupported_match:
+                unsupported_pos = unsupported_match.start()
+                tool_pos = match.start() if match else float('inf')
+
+                if unsupported_pos < tool_pos:
+                    # Unsupported marker comes first - handle it
+                    # Output text before the unsupported marker
+                    text_before = self.buffer[:unsupported_pos]
+                    output += text_before
+                    self.generated_content += text_before
+
+                    tool_name = unsupported_match.group(1)
+                    reason = unsupported_match.group(2)
+
+                    log.info(f"[TOOL INLINE] Unsupported marker detected: tool={tool_name}, reason={reason}")
+
+                    # Handle recovery - make LLM call to continue naturally
+                    recovery_text = await self._handle_unsupported_tool(tool_name, reason)
+                    output += recovery_text
+                    self.generated_content += recovery_text
+
+                    # Remove processed unsupported marker and everything after from buffer
+                    # (LLM response after unsupported marker is likely incomplete/invalid)
+                    self.buffer = self.buffer[unsupported_match.end():]
+                    continue
 
             if match:
                 # Found a complete marker
@@ -107,7 +166,9 @@ class ToolInlineExecutor:
                 marker_end = match.end()
 
                 # Output text before marker
-                output += self.buffer[:marker_start]
+                text_before = self.buffer[:marker_start]
+                output += text_before
+                self.generated_content += text_before
 
                 # Extract tool info
                 tool_command = match.group(1)
@@ -121,29 +182,87 @@ class ToolInlineExecutor:
 
                 # Append tool result to output
                 output += tool_result
+                self.generated_content += tool_result
 
                 # Remove processed marker from buffer
                 self.buffer = self.buffer[marker_end:]
             else:
                 # No complete marker found
-                # Check for partial marker at end of buffer
-                # Look for any opening tag that might be incomplete
+                # Check if we're in the middle of a potential marker (opening tag seen but no closing tag yet)
+                in_marker = False
+                marker_start_pos = -1
+
+                for cmd in self.tool_prompts.keys():
+                    open_tag = f"<{cmd}>"
+                    close_tag = f"</{cmd}>"
+
+                    # Check if opening tag exists in buffer
+                    open_pos = self.buffer.find(open_tag)
+                    if open_pos != -1:
+                        # Opening tag found - check if closing tag exists
+                        close_pos = self.buffer.find(close_tag, open_pos + len(open_tag))
+                        if close_pos == -1:
+                            # Opening tag without closing tag - we're in the middle of a marker
+                            in_marker = True
+                            marker_start_pos = open_pos
+                            log.debug(f"[TOOL INLINE] Buffering partial marker: {cmd} at pos {open_pos}")
+                            break
+
+                # Also check for partial unsupported marker
+                unsupported_partial = "<tool-unsupported"
+                unsupported_pos = self.buffer.find(unsupported_partial)
+                if unsupported_pos != -1:
+                    # Check if the marker is complete (ends with />)
+                    end_pos = self.buffer.find("/>", unsupported_pos)
+                    if end_pos == -1:
+                        # Partial unsupported marker
+                        if not in_marker or unsupported_pos < marker_start_pos:
+                            in_marker = True
+                            marker_start_pos = unsupported_pos
+                            log.debug(f"[TOOL INLINE] Buffering partial unsupported marker at pos {unsupported_pos}")
+
+                if in_marker and marker_start_pos >= 0:
+                    # Output text before the opening tag, keep rest in buffer
+                    text_before = self.buffer[:marker_start_pos]
+                    output += text_before
+                    self.generated_content += text_before
+                    self.buffer = self.buffer[marker_start_pos:]
+                    log.debug(f"[TOOL INLINE] Buffer retained ({len(self.buffer)} chars): {self.buffer[:50]}...")
+                    break
+
+                # Check for partial opening tag at the end of buffer
                 found_partial = False
                 for cmd in self.tool_prompts.keys():
                     open_tag = f"<{cmd}>"
-                    # Check for partial opening tag
+                    # Check for partial opening tag at end
                     for i in range(1, len(open_tag)):
                         if self.buffer.endswith(open_tag[:i]):
-                            output += self.buffer[:-i]
+                            text_before = self.buffer[:-i]
+                            output += text_before
+                            self.generated_content += text_before
                             self.buffer = self.buffer[-i:]
                             found_partial = True
+                            log.debug(f"[TOOL INLINE] Partial opening tag retained: {self.buffer}")
                             break
                     if found_partial:
                         break
 
+                # Also check for partial unsupported tag at end
                 if not found_partial:
-                    # No partial marker, output entire buffer
+                    for i in range(1, len(unsupported_partial)):
+                        if self.buffer.endswith(unsupported_partial[:i]):
+                            text_before = self.buffer[:-i]
+                            output += text_before
+                            self.generated_content += text_before
+                            self.buffer = self.buffer[-i:]
+                            found_partial = True
+                            log.debug(f"[TOOL INLINE] Partial unsupported tag retained: {self.buffer}")
+                            break
+
+                if not found_partial:
+                    # No partial or in-progress marker, output entire buffer
                     output += self.buffer
+                    self.generated_content += self.buffer
                     self.buffer = ""
 
                 break
@@ -222,6 +341,98 @@ Do NOT include any explanatory text before or after the output block."""
                 return prompt
 
         return None
+
+    async def _process_unsupported_markers(self, text: str) -> Optional[str]:
+        """
+        Process unsupported markers in text when no tool pattern exists.
+
+        Returns processed text if unsupported marker found, None otherwise.
+        """
+        match = self.UNSUPPORTED_PATTERN.search(text)
+        if not match:
+            return None
+
+        # Output text before the unsupported marker
+        text_before = text[:match.start()]
+        tool_name = match.group(1)
+        reason = match.group(2)
+
+        log.info(f"[TOOL INLINE] Unsupported marker found (no-tool mode): tool={tool_name}, reason={reason}")
+
+        # Handle recovery
+        recovery_text = await self._handle_unsupported_tool(tool_name, reason)
+
+        # Return text before marker + recovery text (discard everything after marker)
+        return text_before + recovery_text
+
+    async def _handle_unsupported_tool(self, tool_name: str, reason: str) -> str:
+        """
+        Handle unsupported tool by making a recovery LLM call.
+
+        When a tool cannot process the request (e.g., complex ODE system),
+        this method makes a new LLM call to continue the conversation naturally
+        without the visualization.
+
+        Args:
+            tool_name: Name of the tool that couldn't process the request
+            reason: Reason why the tool couldn't process it
+
+        Returns:
+            Recovery text to insert into the stream
+        """
+        log.info(f"[TOOL INLINE] Handling unsupported tool: {tool_name}, reason: {reason}")
+
+        # Emit event for recovery
+        await self._emit_event("tool_recovery", tool_name, f"시각화 도구 복구 중: {tool_name}")
+
+        if not self.llm_call_fn:
+            log.warning("[TOOL INLINE] No LLM call function for recovery")
+            return f"\n\n(시각화를 생성할 수 없습니다: {reason})\n\n"
+
+        try:
+            # Build recovery system prompt
+            recovery_system = """당신은 수학 학습을 돕는 AI 튜터입니다.
+
+이전 응답에서 시각화 도구를 사용하려 했으나, 해당 내용을 시각화할 수 없습니다.
+시각화 없이 텍스트 설명으로 자연스럽게 계속 설명해주세요.
+
+주의사항:
+- 시각화를 생성할 수 없다는 것을 명시적으로 언급하지 마세요
+- 마치 처음부터 텍스트로 설명하려 했던 것처럼 자연스럽게 이어가세요
+- 수식이 필요하면 LaTeX 형식 ($...$)을 사용하세요
+- 간결하고 명확하게 설명하세요"""
+
+            # Build context from generated content so far
+            context_preview = self.generated_content[-1000:] if len(self.generated_content) > 1000 else self.generated_content
+
+            user_message = f"""지금까지 생성된 응답:
+{context_preview}
+
+도구 실패 이유: {reason}
+
+위 내용에서 자연스럽게 이어서 설명을 계속해주세요. 1-2문장 정도로 간결하게."""
+
+            log.info(f"[TOOL INLINE] Making recovery LLM call")
+
+            result = await self.llm_call_fn(
+                system_prompt=recovery_system,
+                user_message=user_message,
+            )
+
+            if result.get("success"):
+                recovery_text = result.get("text", "")
+                log.info(f"[TOOL INLINE] Recovery text received: {len(recovery_text)} chars")
+                await self._emit_event("tool_recovery_completed", tool_name, f"복구 완료: {tool_name}")
+                # Add space before recovery text for natural flow
+                return f" {recovery_text}"
+            else:
+                error = result.get("error", "Unknown error")
+                log.error(f"[TOOL INLINE] Recovery LLM call failed: {error}")
+                return ""
+
+        except Exception as e:
+            log.error(f"[TOOL INLINE] Exception during recovery: {e}")
+            return ""
 
     async def _emit_event(self, event_type: str, tool: str, message: str):
         """Emit socket event."""
