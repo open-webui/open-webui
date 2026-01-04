@@ -837,7 +837,10 @@ async def generate_chat_completion(
             if not (
                 user.id == model_info.user_id
                 or has_access(
-                    user.id, type="read", access_control=model_info.access_control, db=db
+                    user.id,
+                    type="read",
+                    access_control=model_info.access_control,
+                    db=db,
                 )
             ):
                 raise HTTPException(
@@ -1062,10 +1065,9 @@ async def embeddings(request: Request, form_data: dict, user):
             await cleanup_response(r, session)
 
 
-@router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
+async def _proxy_request(path: str, request: Request, user):
     """
-    Deprecated: proxy all requests to OpenAI API
+    Deprecated: proxy all requests to OpenAI API (internal implementation)
     """
 
     body = await request.body()
@@ -1153,3 +1155,27 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     finally:
         if not streaming:
             await cleanup_response(r, session)
+
+
+@router.get("/{path:path}")
+async def proxy_get(path: str, request: Request, user=Depends(get_verified_user)):
+    """Deprecated: proxy GET requests to OpenAI API"""
+    return await _proxy_request(path, request, user)
+
+
+@router.post("/{path:path}")
+async def proxy_post(path: str, request: Request, user=Depends(get_verified_user)):
+    """Deprecated: proxy POST requests to OpenAI API"""
+    return await _proxy_request(path, request, user)
+
+
+@router.put("/{path:path}")
+async def proxy_put(path: str, request: Request, user=Depends(get_verified_user)):
+    """Deprecated: proxy PUT requests to OpenAI API"""
+    return await _proxy_request(path, request, user)
+
+
+@router.delete("/{path:path}")
+async def proxy_delete(path: str, request: Request, user=Depends(get_verified_user)):
+    """Deprecated: proxy DELETE requests to OpenAI API"""
+    return await _proxy_request(path, request, user)
