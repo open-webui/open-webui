@@ -3,7 +3,20 @@
  *
  * Handles <graph_spec>...</graph_spec> blocks containing JSON graph specifications.
  * Used to render mathematical function graphs using math.js + Plotly.js
+ * Supports multiple tag names: graph_spec, graph-spec, graphspec
  */
+
+// 지원하는 태그 이름 목록 (export하여 외부에서 확인 가능)
+export const GRAPH_SPEC_TAGS = ['graph_spec', 'graph-spec', 'graphspec'];
+
+// 태그 이름들을 regex alternation 패턴으로 변환
+function buildTagPattern(tags: string[]): string {
+	return tags.map(tag => tag.replace(/-/g, '\\-')).join('|');
+}
+
+// 동적 regex 생성
+const TAG_PATTERN = buildTagPattern(GRAPH_SPEC_TAGS);
+const GRAPH_SPEC_REGEX = new RegExp(`^<(${TAG_PATTERN})>\\n?([\\s\\S]*?)\\n?<\\/(${TAG_PATTERN})>`);
 
 // 2D 도메인 (단순 튜플) 또는 3D 도메인 (객체)
 export type Domain2D = [number, number];
@@ -117,15 +130,15 @@ export interface GraphSpecToken {
 }
 
 function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
-	const regex = /^<graph_spec>\n?([\s\S]*?)\n?<\/graph_spec>/;
-	const match = regex.exec(src);
+	const match = GRAPH_SPEC_REGEX.exec(src);
 
 	if (match) {
-		let jsonContent = match[1].trim();
+		// match[1] = 여는 태그 이름, match[2] = 내용, match[3] = 닫는 태그 이름
+		let jsonContent = match[2].trim();
 		let spec: GraphSpec | null = null;
 		let error: string | undefined;
 
-		console.log('[GraphSpec Tokenizer] Raw JSON:', jsonContent);
+		//console.log('[GraphSpec Tokenizer] Raw JSON:', jsonContent);
 
 		// 문자열 외부에서만 수학 상수 변환 (문자열 내용은 보존)
 		// 문자열을 임시로 플레이스홀더로 치환 후 복원
@@ -203,8 +216,15 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 }
 
 function graphSpecStart(src: string): number {
-	const index = src.indexOf('<graph_spec>');
-	return index !== -1 ? index : -1;
+	// 모든 지원 태그 중 가장 먼저 나오는 위치 찾기
+	let minIndex = -1;
+	for (const tag of GRAPH_SPEC_TAGS) {
+		const index = src.indexOf(`<${tag}>`);
+		if (index !== -1 && (minIndex === -1 || index < minIndex)) {
+			minIndex = index;
+		}
+	}
+	return minIndex;
 }
 
 function graphSpecRenderer(token: GraphSpecToken): string {
