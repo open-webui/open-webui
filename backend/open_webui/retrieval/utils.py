@@ -543,8 +543,29 @@ async def query_collection_with_hybrid_search(
 ) -> dict:
     results = []
     error = False
-    # Fetch all collections in parallel to reduce latency
-    collection_results = await fetch_collection_data(collection_names)
+
+    # Optimization: Only fetch collection data if explicitly needed for BM25 or enrichment.
+    # Fetching massive collections (e.g. 160k docs) takes significant time (~30s) and memory.
+    should_fetch_data = hybrid_bm25_weight > 0 or enable_enriched_texts
+
+    if should_fetch_data:
+        # Optimization: If only one collection, fetch synchronously to avoid asyncio.to_thread overhead
+        # which can cause significant regression (e.g. 4s vs 28s) for large payloads.
+        if len(collection_names) == 1:
+            try:
+                col_name = collection_names[0]
+                log.debug(f"Fetching single collection synchronously: {col_name}")
+                data = VECTOR_DB_CLIENT.get(collection_name=col_name)
+                collection_results = {col_name: data}
+            except Exception as e:
+                log.exception(f"Failed to fetch collection {col_name}: {e}")
+                collection_results = {col_name: None}
+        else:
+            # Fetch all collections in parallel to reduce latency for multiple collections
+            collection_results = await fetch_collection_data(collection_names)
+    else:
+        log.debug("Skipping collection fetch: BM25 disabled and no text enrichment needed")
+        collection_results = {name: None for name in collection_names}
 
     log.info(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
@@ -570,13 +591,16 @@ async def query_collection_with_hybrid_search(
             return None, e
 
     # Prepare tasks for all collections and queries
-    # Avoid running any tasks for collections that failed to fetch data (have assigned None)
-    tasks = [
-        (collection_name, query)
-        for collection_name in collection_names
-        if collection_results[collection_name] is not None
-        for query in queries
-    ]
+    # If we skipped fetching (should_fetch_data=False), we still want to run the query (using vector search only).
+    # If we tried to fetch and failed (result is None), we skip.
+    tasks = []
+    for collection_name in collection_names:
+        data = collection_results.get(collection_name)
+        if data is None and should_fetch_data:
+             # We needed data but failed to fetch it, skip this collection
+             continue
+        for query in queries:
+             tasks.append((collection_name, query))
 
     # Run all queries in parallel using asyncio.gather
     task_results = await asyncio.gather(
