@@ -312,6 +312,7 @@ from open_webui.config import (
     YACY_PASSWORD,
     SERPER_API_KEY,
     SERPLY_API_KEY,
+    DDGS_BACKEND,
     SERPSTACK_API_KEY,
     SERPSTACK_HTTPS,
     TAVILY_API_KEY,
@@ -969,6 +970,7 @@ app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
 app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
 app.state.config.SERPER_API_KEY = SERPER_API_KEY
 app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
+app.state.config.DDGS_BACKEND = DDGS_BACKEND
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
 app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
 app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE

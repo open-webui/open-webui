@@ -3193,6 +3193,12 @@ SERPLY_API_KEY = PersistentConfig(
     os.getenv("SERPLY_API_KEY", ""),
 )
 
+DDGS_BACKEND = PersistentConfig(
+    "DDGS_BACKEND",
+    "rag.web.search.ddgs_backend",
+    os.getenv("DDGS_BACKEND", "auto"),
+)
+
 JINA_API_KEY = PersistentConfig(
     "JINA_API_KEY",
     "rag.web.search.jina_api_key",
