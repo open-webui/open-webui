@@ -896,7 +896,8 @@
 
 			if (!$user?.permissions?.chat?.temporary) {
 				await temporaryChatEnabled.set(false);
-				return;
+				// return;
+				// this will prevent normal users who are disabled temporary chat from creating new chat
 			}
 		}
 
