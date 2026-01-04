@@ -576,13 +576,29 @@ async def generate_chat_completion(
 
 def convert_gemini_to_openai(gemini_response: dict, model_id: str) -> dict:
     """Convert Gemini response to OpenAI format."""
+    log.info(f"Converting Gemini response: {json.dumps(gemini_response)[:500]}")
     candidates = gemini_response.get("candidates", [])
     
     choices = []
     for i, candidate in enumerate(candidates):
         content = candidate.get("content", {})
         parts = content.get("parts", [])
-        text = "".join(part.get("text", "") for part in parts)
+        
+        # Build content from all parts (text and images)
+        content_parts = []
+        for part in parts:
+            if "text" in part:
+                content_parts.append(part["text"])
+            elif "inlineData" in part:
+                # Handle inline image data (base64)
+                inline_data = part["inlineData"]
+                mime_type = inline_data.get("mimeType", "image/png")
+                data = inline_data.get("data", "")
+                # Convert to data URL format for display
+                content_parts.append(f"\n![Generated Image](data:{mime_type};base64,{data})\n")
+                log.info(f"Found inline image: mimeType={mime_type}, data_length={len(data)}")
+        
+        text = "".join(content_parts)
         
         choices.append({
             "index": i,
@@ -616,7 +632,20 @@ def convert_gemini_to_openai_stream(gemini_chunk: dict, model_id: str) -> dict:
     for i, candidate in enumerate(candidates):
         content = candidate.get("content", {})
         parts = content.get("parts", [])
-        text = "".join(part.get("text", "") for part in parts)
+        
+        # Build content from all parts (text and images)
+        content_parts = []
+        for part in parts:
+            if "text" in part:
+                content_parts.append(part["text"])
+            elif "inlineData" in part:
+                # Handle inline image data (base64)
+                inline_data = part["inlineData"]
+                mime_type = inline_data.get("mimeType", "image/png")
+                data = inline_data.get("data", "")
+                content_parts.append(f"\n![Generated Image](data:{mime_type};base64,{data})\n")
+        
+        text = "".join(content_parts)
         
         delta = {"content": text} if text else {}
         if candidate.get("finishReason"):
