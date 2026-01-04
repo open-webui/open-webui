@@ -263,6 +263,7 @@ async def generate_chat_completion(
             return await generate_function_chat_completion(
                 request, form_data, user=user, models=models
             )
+        log.info(f"Model ID: {model.get('id')}, Owned by: {model.get('owned_by')}")
         if model.get("owned_by") == "ollama":
             # Using /ollama/api/chat endpoint
             form_data = convert_payload_openai_to_ollama(form_data)
@@ -283,6 +284,7 @@ async def generate_chat_completion(
                 return convert_response_ollama_to_openai(response)
         elif model.get("owned_by") == "google":
             # Using Gemini API
+            log.info("Routing to Gemini API handler")
             return await generate_gemini_chat_completion(
                 request=request,
                 form_data=form_data,

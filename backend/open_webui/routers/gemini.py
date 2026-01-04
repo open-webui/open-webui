@@ -54,9 +54,9 @@ async def send_get_request(url: str, key: str = None, config: dict = None) -> di
             auth_type = (config or {}).get("auth_type", "bearer")
             
             if auth_type == "bearer" and key:
-                # Use Authorization header for Bearer auth (proxy compatible)
-                headers["Authorization"] = f"Bearer {key}"
-                full_url = url
+                # Use API key as query parameter for Gemini even if auth_type is bearer
+                # This ensures compatibility with standard Gemini API which expects ?key=
+                full_url = f"{url}?key={key}"
             elif auth_type == "none":
                 # No authentication
                 full_url = url
@@ -64,8 +64,15 @@ async def send_get_request(url: str, key: str = None, config: dict = None) -> di
                 # Default: Gemini uses API key as query parameter
                 full_url = f"{url}?key={key}" if key else url
             
+            log.info(f"send_get_request full_url: {full_url}")
             async with session.get(full_url, headers=headers) as response:
-                return await response.json()
+                try:
+                    return await response.json(content_type=None)
+                except Exception as json_error:
+                    # If JSON parsing fails, try to get text content for debugging
+                    text_content = await response.text()
+                    log.error(f"Failed to parse JSON response (status {response.status}): {text_content[:500]}")
+                    return {"error": {"message": f"Invalid response from Gemini API: {text_content[:200]}"}}
     except Exception as e:
         log.error(f"Connection error: {e}")
         return None
@@ -443,11 +450,12 @@ async def generate_chat_completion(
     # Determine authentication method based on config
     auth_type = api_config.get("auth_type", "bearer")
     headers = {"Content-Type": "application/json"}
-    
+    if stream:
+        headers["Accept"] = "text/event-stream"
+        
     if auth_type == "bearer" and key:
-        # Use Authorization header for Bearer auth (proxy compatible)
-        headers["Authorization"] = f"Bearer {key}"
-        gemini_url = f"{url}/models/{gemini_model}:{endpoint}"
+        # Use API key as query parameter for Gemini even if auth_type is bearer
+        gemini_url = f"{url}/models/{gemini_model}:{endpoint}?key={key}"
     elif auth_type == "none":
         # No authentication
         gemini_url = f"{url}/models/{gemini_model}:{endpoint}"
@@ -458,6 +466,83 @@ async def generate_chat_completion(
     if stream:
         gemini_url += ("&" if "?" in gemini_url else "?") + "alt=sse"
     
+    log.info(f"Gemini Chat Request: URL={gemini_url}, AuthType={auth_type}, Stream={stream}")
+    
+    if stream:
+        # For streaming, we need to keep the session alive inside the generator
+        async def stream_generator():
+            log.info("Starting stream generator with new session")
+            timeout = aiohttp.ClientTimeout(total=300)
+            try:
+                async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+                    async with session.post(
+                        gemini_url,
+                        json=gemini_payload,
+                        headers=headers,
+                    ) as response:
+                        log.info(f"Gemini Stream Response Status: {response.status}")
+                        log.info(f"Gemini Stream Response Headers: {response.headers}")
+                        
+                        if response.status != 200:
+                            try:
+                                error_data = await response.json(content_type=None)
+                            except Exception:
+                                error_text = await response.text()
+                                error_data = {"error": {"message": f"Gemini API Error: {error_text}"}}
+                            error_msg = error_data.get("error", {}).get("message", "Gemini API Error")
+                            yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                            return
+                        
+                        buffer = ""
+                        chunk_count = 0
+                        async for chunk in response.content.iter_any():
+                            chunk_count += 1
+                            chunk_text = chunk.decode("utf-8")
+                            if chunk_count <= 3:
+                                log.info(f"Stream chunk {chunk_count}: {chunk_text[:200]}")
+                            buffer += chunk_text
+                            
+                            # Process complete lines from buffer
+                            while "\n" in buffer:
+                                line, buffer = buffer.split("\n", 1)
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                if line.startswith("data: "):
+                                    data = line[6:]
+                                    if data == "[DONE]":
+                                        yield "data: [DONE]\n\n"
+                                        return
+                                    try:
+                                        gemini_response = json.loads(data)
+                                        openai_chunk = convert_gemini_to_openai_stream(gemini_response, model_id)
+                                        yield f"data: {json.dumps(openai_chunk)}\n\n"
+                                    except json.JSONDecodeError as e:
+                                        log.warning(f"JSON decode error: {e}, data: {data[:100]}")
+                                        continue
+                        
+                        # Handle remaining buffer
+                        if buffer.strip():
+                            log.info(f"Remaining buffer: {buffer[:200]}")
+                            try:
+                                gemini_response = json.loads(buffer)
+                                openai_chunk = convert_gemini_to_openai_stream(gemini_response, model_id)
+                                yield f"data: {json.dumps(openai_chunk)}\n\n"
+                            except json.JSONDecodeError:
+                                pass
+                        
+                        log.info(f"Stream ended, total chunks: {chunk_count}")
+                        yield "data: [DONE]\n\n"
+            except Exception as e:
+                log.exception(f"Error in stream generator: {e}")
+                yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
+        
+        return StreamingResponse(
+            stream_generator(),
+            media_type="text/event-stream"
+        )
+    
+    # Non-streaming response
     try:
         timeout = aiohttp.ClientTimeout(total=300)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
@@ -466,38 +551,21 @@ async def generate_chat_completion(
                 json=gemini_payload,
                 headers=headers,
             ) as response:
+                log.info(f"Gemini Chat Response Status: {response.status}")
                 if response.status != 200:
-                    error_data = await response.json()
+                    try:
+                        error_data = await response.json(content_type=None)
+                    except Exception:
+                        error_text = await response.text()
+                        error_data = {"error": {"message": f"Gemini API Error: {error_text}"}}
                     raise HTTPException(
                         status_code=response.status,
                         detail=error_data.get("error", {}).get("message", "Gemini API Error")
                     )
                 
-                if stream:
-                    async def stream_generator():
-                        async for line in response.content:
-                            line = line.decode("utf-8").strip()
-                            if line.startswith("data: "):
-                                data = line[6:]
-                                if data == "[DONE]":
-                                    yield "data: [DONE]\n\n"
-                                    break
-                                try:
-                                    gemini_response = json.loads(data)
-                                    # Convert Gemini response to OpenAI format
-                                    openai_chunk = convert_gemini_to_openai_stream(gemini_response, model_id)
-                                    yield f"data: {json.dumps(openai_chunk)}\n\n"
-                                except json.JSONDecodeError:
-                                    continue
-                    
-                    return StreamingResponse(
-                        stream_generator(),
-                        media_type="text/event-stream"
-                    )
-                else:
-                    gemini_response = await response.json()
-                    openai_response = convert_gemini_to_openai(gemini_response, model_id)
-                    return JSONResponse(content=openai_response)
+                gemini_response = await response.json(content_type=None)
+                openai_response = convert_gemini_to_openai(gemini_response, model_id)
+                return JSONResponse(content=openai_response)
                     
     except HTTPException:
         raise
