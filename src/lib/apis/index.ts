@@ -39,7 +39,8 @@ export const getModels = async (
 		throw error;
 	}
 
-	let models = res?.data ?? [];
+	// Handle both old format (res.data) and new format (res.items for ModelAccessListResponse)
+	let models = res?.data ?? (res?.items ?? []);
 
 	if (connections && !base) {
 		let localModels = [];
