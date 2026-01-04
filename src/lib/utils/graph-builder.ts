@@ -98,6 +98,7 @@ export function isTypeSupported(type: string): boolean {
 	const supportedTypes = [
 		'function_2d', 'parametric_2d', 'phase_plane', 'scatter_2d', 'point_2d', 'line_2d',
 		'composite_2d', 'multi_scatter_2d', 'cartesian', 'histogram_2d', 'vector_2d',
+		'pie_2d', 'bar_2d',
 		'function_3d', 'parametric_3d', 'scatter_3d', 'composite_3d', 'vector_field_3d'
 	];
 	return supportedTypes.includes(type);
@@ -682,6 +683,94 @@ export function buildPoint2DTraces(layer: LayerSpec, showLegend = false, legendN
 	}];
 }
 
+// pie_2d: 파이 차트
+export function buildPie2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
+	const layerAny = layer as any;
+	let labels = layerAny.labels || [];
+	let percentages = layerAny.percentages || [];
+
+	// data 배열 형식도 지원: [{label: ..., percentage: ...}, ...]
+	if (layerAny.data && Array.isArray(layerAny.data) && layerAny.data.length > 0) {
+		if (typeof layerAny.data[0] === 'object') {
+			labels = layerAny.data.map((item: any) => item.label || '');
+			percentages = layerAny.data.map((item: any) => item.percentage || item.value || 0);
+		}
+	}
+
+	if (labels.length === 0 || percentages.length === 0) {
+		console.error('[GraphBuilder] pie_2d requires labels and percentages arrays or data array');
+		return [];
+	}
+
+	if (labels.length !== percentages.length) {
+		console.error('[GraphBuilder] pie_2d labels and percentages must have the same length');
+		return [];
+	}
+
+	const colors = normalizeColors(layer);
+	const labelFormat = layer.style?.labelFormat || 'percent';
+	const textInfo = labelFormat === 'percent' ? 'label+percent' : 'label+value';
+
+	return [{
+		type: 'pie',
+		labels,
+		values: percentages,
+		marker: {
+			colors: colors.length > 0 ? colors : undefined
+		},
+		opacity: layer.style?.opacity ?? 1.0,
+		textinfo: textInfo,
+		textposition: 'auto',
+		hoverinfo: 'label+value+percent',
+		showlegend: showLegend !== undefined ? showLegend : true,
+		name: legendName
+	}];
+}
+
+// bar_2d: 막대 그래프
+export function buildBar2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
+	const layerAny = layer as any;
+	let categories = layerAny.categories || [];
+	let values = layerAny.values || [];
+	const orientation = layerAny.orientation || 'vertical';
+
+	// data 배열 형식도 지원: [{category: ..., value: ...}, ...]
+	if (layerAny.data && Array.isArray(layerAny.data) && layerAny.data.length > 0) {
+		if (typeof layerAny.data[0] === 'object') {
+			categories = layerAny.data.map((item: any) => item.category || item.label || '');
+			values = layerAny.data.map((item: any) => item.value || 0);
+		}
+	}
+
+	if (categories.length === 0 || values.length === 0) {
+		console.error('[GraphBuilder] bar_2d requires categories and values arrays or data array');
+		return [];
+	}
+
+	if (categories.length !== values.length) {
+		console.error('[GraphBuilder] bar_2d categories and values must have the same length');
+		return [];
+	}
+
+	const colors = normalizeColors(layer);
+	const isHorizontal = orientation === 'horizontal';
+	const barWidth = (layerAny.style?.barWidth !== undefined) ? layerAny.style.barWidth : undefined;
+
+	return [{
+		type: 'bar',
+		x: isHorizontal ? values : categories,
+		y: isHorizontal ? categories : values,
+		orientation: isHorizontal ? 'h' : 'v',
+		width: barWidth,
+		marker: {
+			color: colors[0] || '#17becf',
+			opacity: layer.style?.opacity ?? 1.0
+		},
+		showlegend: showLegend,
+		name: legendName
+	}];
+}
+
 // ========== 3D Graph Builders ==========
 
 // function_3d: z = f(x, y) 표면
@@ -1103,6 +1192,10 @@ export function buildLayerTraces(layer: LayerSpec, layerIndex: number, totalLaye
 			return buildVector2DTraces(layer, showLegend, legendName);
 		case 'point_2d':
 			return buildPoint2DTraces(layer, showLegend, legendName);
+		case 'pie_2d':
+			return buildPie2DTraces(layer, showLegend, legendName);
+		case 'bar_2d':
+			return buildBar2DTraces(layer, showLegend, legendName);
 		case 'function_2d':
 		default:
 			return buildFunction2DTraces(layer);
@@ -1154,6 +1247,10 @@ export function buildTraces(spec: GraphSpec): any[] {
 			return buildHistogram2DTraces(spec);
 		case 'vector_2d':
 			return buildVector2DTraces(spec);
+		case 'pie_2d':
+			return buildPie2DTraces(spec);
+		case 'bar_2d':
+			return buildBar2DTraces(spec);
 		// 3D graphs
 		case 'function_3d':
 			return buildFunction3DTraces(spec);

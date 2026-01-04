@@ -42,7 +42,8 @@ export type Sampling3D = {
 
 export interface GraphSpecLayer {
 	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'point_2d' | 'line_2d' |
-		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'point_3d' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d';
+		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'point_3d' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d' |
+		'pie_2d' | 'bar_2d';
 	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
 	field?: { dx?: string; dy?: string; dz?: string }; // vector field용 (phase_plane, vector_field_3d)
@@ -54,6 +55,11 @@ export interface GraphSpecLayer {
 	label?: string; // point_3d용 라벨
 	binEdges?: number[]; // histogram_2d용 구간 경계값
 	counts?: number[]; // histogram_2d용 각 구간의 빈도수
+	labels?: string[]; // pie_2d용 레이블 배열
+	percentages?: number[]; // pie_2d용 백분율 배열
+	categories?: string[]; // bar_2d용 카테고리 배열
+	values?: number[]; // bar_2d용 값 배열
+	orientation?: 'vertical' | 'horizontal'; // bar_2d용 방향
 	style?: {
 		color?: string | string[];
 		colorMap?: string; // 3D용 컬러맵 (viridis, plasma 등)
@@ -64,14 +70,17 @@ export interface GraphSpecLayer {
 		opacity?: number;
 		barGap?: number; // histogram_2d용 막대 간격 (0~1)
 		width?: number; // vector_2d용 선 두께
+		barWidth?: number; // bar_2d용 막대 너비 (0~1)
 		glyph?: 'arrow'; // vector field용 glyph 타입
 		scale?: number; // vector field용 arrow 길이 스케일
+		labelFormat?: 'percent' | 'value'; // pie_2d용 레이블 형식
 	};
 }
 
 export interface GraphSpec {
 	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d' | 'line_2d' |
-		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d' | 'cartesian' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d';
+		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d' | 'cartesian' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d' |
+		'pie_2d' | 'bar_2d';
 	expression?: string; // function_3d용 단일 표현식
 	expressions?: string | string[];
 	field?: { dx?: string; dy?: string; dz?: string }; // vector field용 (phase_plane, vector_field_3d)
@@ -80,6 +89,11 @@ export interface GraphSpec {
 	data?: any; // 2D/3D 데이터 또는 vector_2d의 {start, end, color, width}[] 형식
 	binEdges?: number[]; // histogram_2d용 구간 경계값
 	counts?: number[]; // histogram_2d용 각 구간의 빈도수
+	labels?: string[]; // pie_2d용 레이블 배열
+	percentages?: number[]; // pie_2d용 백분율 배열
+	categories?: string[]; // bar_2d용 카테고리 배열
+	values?: number[]; // bar_2d용 값 배열
+	orientation?: 'vertical' | 'horizontal'; // bar_2d용 방향
 	layers?: GraphSpecLayer[]; // composite용 레이어
 	annotations?: Annotation[]; // 텍스트 라벨 등
 	style?: {
@@ -92,8 +106,10 @@ export interface GraphSpec {
 		opacity?: number;
 		barGap?: number; // histogram_2d용 막대 간격 (0~1)
 		width?: number; // vector_2d용 선 두께
+		barWidth?: number; // bar_2d용 막대 너비 (0~1)
 		glyph?: 'arrow'; // vector field용 glyph 타입
 		scale?: number; // vector field용 arrow 길이 스케일
+		labelFormat?: 'percent' | 'value'; // pie_2d용 레이블 형식
 	};
 	axis?: {
 		xLabel?: string;

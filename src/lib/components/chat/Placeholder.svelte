@@ -352,17 +352,13 @@
 					</div>
 
 					<!-- 캐러셀 콘텐츠 -->
-					{#key currentCarouselIndex}
-						<div in:fade={{ duration: 200 }}>
-							<Suggestions
-								suggestionPrompts={currentCarouselIndex === 0 ? personalSuggestions : allSuggestions}
-								inputValue={prompt}
-								suggestionTitle=""
-								isPersonalized={currentCarouselIndex === 0}
-								{onSelect}
-							/>
-						</div>
-					{/key}
+					<Suggestions
+						suggestionPrompts={currentCarouselIndex === 0 ? personalSuggestions : allSuggestions}
+						inputValue={prompt}
+						suggestionTitle=""
+						isPersonalized={currentCarouselIndex === 0}
+						{onSelect}
+					/>
 				</div>
 			{/if}
 			</div>
@@ -546,17 +542,13 @@
 					</div>
 
 					<!-- 캐러셀 콘텐츠 -->
-					{#key currentCarouselIndex}
-						<div in:fade={{ duration: 200 }}>
-							<Suggestions
-								suggestionPrompts={currentCarouselIndex === 0 ? personalSuggestions : allSuggestions}
-								inputValue={prompt}
-								suggestionTitle=""
-								isPersonalized={currentCarouselIndex === 0}
-								{onSelect}
-							/>
-						</div>
-					{/key}
+					<Suggestions
+						suggestionPrompts={currentCarouselIndex === 0 ? personalSuggestions : allSuggestions}
+						inputValue={prompt}
+						suggestionTitle=""
+						isPersonalized={currentCarouselIndex === 0}
+						{onSelect}
+					/>
 				</div>
 			{/if}
 		</div>
