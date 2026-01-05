@@ -42,31 +42,35 @@ DOCKER = os.environ.get("DOCKER", "False").lower() == "true"
 
 # device type embedding models - "cpu" (default), "cuda" (nvidia gpu required) or "mps" (apple silicon) - choosing this right can lead to better performance
 USE_CUDA = os.environ.get("USE_CUDA_DOCKER", "false")
+SKIP_TORCH_IMPORT = os.environ.get("SKIP_TORCH_IMPORT", "false").lower() == "true"
 
-if USE_CUDA.lower() == "true":
+if SKIP_TORCH_IMPORT:
+    DEVICE_TYPE = "cpu"
+else:
+    if USE_CUDA.lower() == "true":
+        try:
+            import torch
+
+            assert torch.cuda.is_available(), "CUDA not available"
+            DEVICE_TYPE = "cuda"
+        except Exception as e:
+            cuda_error = (
+                "Error when testing CUDA but USE_CUDA_DOCKER is true. "
+                f"Resetting USE_CUDA_DOCKER to false: {e}"
+            )
+            os.environ["USE_CUDA_DOCKER"] = "false"
+            USE_CUDA = "false"
+            DEVICE_TYPE = "cpu"
+    else:
+        DEVICE_TYPE = "cpu"
+
     try:
         import torch
 
-        assert torch.cuda.is_available(), "CUDA not available"
-        DEVICE_TYPE = "cuda"
-    except Exception as e:
-        cuda_error = (
-            "Error when testing CUDA but USE_CUDA_DOCKER is true. "
-            f"Resetting USE_CUDA_DOCKER to false: {e}"
-        )
-        os.environ["USE_CUDA_DOCKER"] = "false"
-        USE_CUDA = "false"
-        DEVICE_TYPE = "cpu"
-else:
-    DEVICE_TYPE = "cpu"
-
-try:
-    import torch
-
-    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        DEVICE_TYPE = "mps"
-except Exception:
-    pass
+        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            DEVICE_TYPE = "mps"
+    except Exception:
+        pass
 
 ####################################
 # LOGGING
@@ -137,45 +141,49 @@ def parse_section(section):
     return items
 
 
-try:
-    changelog_path = BASE_DIR / "CHANGELOG.md"
-    with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
-        changelog_content = file.read()
+SKIP_CHANGELOG = os.environ.get("SKIP_CHANGELOG", "false").lower() == "true"
+if SKIP_CHANGELOG:
+    CHANGELOG = {}
+else:
+    try:
+        changelog_path = BASE_DIR / "CHANGELOG.md"
+        with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
+            changelog_content = file.read()
 
-except Exception:
-    changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
+    except Exception:
+        changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
 
-# Convert markdown content to HTML
-html_content = markdown.markdown(changelog_content)
+    # Convert markdown content to HTML
+    html_content = markdown.markdown(changelog_content)
 
-# Parse the HTML content
-soup = BeautifulSoup(html_content, "html.parser")
+    # Parse the HTML content
+    soup = BeautifulSoup(html_content, "html.parser")
 
-# Initialize JSON structure
-changelog_json = {}
+    # Initialize JSON structure
+    changelog_json = {}
 
-# Iterate over each version
-for version in soup.find_all("h2"):
-    version_number = version.get_text().strip().split(" - ")[0][1:-1]  # Remove brackets
-    date = version.get_text().strip().split(" - ")[1]
+    # Iterate over each version
+    for version in soup.find_all("h2"):
+        version_number = version.get_text().strip().split(" - ")[0][1:-1]  # Remove brackets
+        date = version.get_text().strip().split(" - ")[1]
 
-    version_data = {"date": date}
+        version_data = {"date": date}
 
-    # Find the next sibling that is a h3 tag (section title)
-    current = version.find_next_sibling()
+        # Find the next sibling that is a h3 tag (section title)
+        current = version.find_next_sibling()
 
-    while current and current.name != "h2":
-        if current.name == "h3":
-            section_title = current.get_text().lower()  # e.g., "added", "fixed"
-            section_items = parse_section(current.find_next_sibling("ul"))
-            version_data[section_title] = section_items
+        while current and current.name != "h2":
+            if current.name == "h3":
+                section_title = current.get_text().lower()  # e.g., "added", "fixed"
+                section_items = parse_section(current.find_next_sibling("ul"))
+                version_data[section_title] = section_items
 
-        # Move to the next element
-        current = current.find_next_sibling()
+            # Move to the next element
+            current = current.find_next_sibling()
 
-    changelog_json[version_number] = version_data
+        changelog_json[version_number] = version_data
 
-CHANGELOG = changelog_json
+    CHANGELOG = changelog_json
 
 ####################################
 # SAFE_MODE
