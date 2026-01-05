@@ -287,7 +287,7 @@ class ModelIdForm(BaseModel):
 
 
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
-@router.get("/model", response_model=Optional[ModelResponse])
+@router.get("/model", response_model=Optional[ModelAccessResponse])
 async def get_model_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     model = Models.get_model_by_id(id, db=db)
     if model:
@@ -296,7 +296,14 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: Session 
             or model.user_id == user.id
             or has_access(user.id, "read", model.access_control, db=db)
         ):
-            return model
+            return ModelAccessResponse(
+                **model.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == model.user_id
+                    or has_access(user.id, "write", model.access_control, db=db)
+                ),
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
