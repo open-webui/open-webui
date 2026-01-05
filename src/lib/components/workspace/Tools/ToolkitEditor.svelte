@@ -231,7 +231,6 @@ class Tools:
 									placeholder={$i18n.t('Tool Name')}
 									bind:value={name}
 									required
-									disabled={edit}
 								/>
 							</Tooltip>
 						</div>
@@ -282,7 +281,6 @@ class Tools:
 								placeholder={$i18n.t('Tool Description')}
 								bind:value={meta.description}
 								required
-								disabled={edit}
 							/>
 						</Tooltip>
 					</div>
@@ -294,7 +292,6 @@ class Tools:
 						value={content}
 						lang="python"
 						{boilerplate}
-						readOnly={edit}
 						onChange={(e) => {
 							_content = e;
 						}}

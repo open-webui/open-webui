@@ -24,7 +24,6 @@
 
 	export let boilerplate = '';
 	export let value = '';
-	export let readOnly = false;
 	export let onSave = () => {};
 	export let onChange = () => {};
 
@@ -221,8 +220,7 @@ print("${endTag}")
 		return false;
 	};
 
-	// Build base extensions
-	const baseExtensions = [
+	const extensions = [
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
 		indentUnit.of('    '),
@@ -236,10 +234,6 @@ print("${endTag}")
 		editorTheme.of([]),
 		editorLanguage.of([])
 	];
-	// Add read-only extensions if readOnly prop is true
-	let extensions = readOnly
-		? [...baseExtensions, EditorView.editable.of(false), EditorState.readOnly.of(true)]
-		: baseExtensions;
 
 	$: if (lang) {
 		setLanguage();
