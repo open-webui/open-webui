@@ -13,7 +13,7 @@
 	const i18n = getContext('i18n');
 
 	let tool = null;
-	let write_access = true;
+	let disabled = true;
 
 	const saveHandler = async (data) => {
 		console.log(data);
@@ -62,7 +62,7 @@
 			});
 
 			if (tool) {
-				write_access = tool.write_access ?? true;
+				disabled = !(tool.write_access ?? true);
 			}
 		}
 	});
@@ -71,7 +71,7 @@
 {#if tool}
 	<ToolkitEditor
 		edit={true}
-		{write_access}
+		{disabled}
 		id={tool.id}
 		name={tool.name}
 		meta={tool.meta}
