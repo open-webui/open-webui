@@ -1734,10 +1734,10 @@ def process_file(
                 db=db,
             )
             hash = calculate_sha256_string(text_content)
-            Files.update_file_hash_by_id(file.id, hash, db=db)
 
             if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
                 Files.update_file_data_by_id(file.id, {"status": "completed"}, db=db)
+                Files.update_file_hash_by_id(file.id, hash, db=db)
                 return {
                     "status": True,
                     "collection_name": None,
@@ -1774,6 +1774,7 @@ def process_file(
                             {"status": "completed"},
                             db=db,
                         )
+                        Files.update_file_hash_by_id(file.id, hash, db=db)
 
                         return {
                             "status": True,
