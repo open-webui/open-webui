@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from open_webui.config import (
     STORAGE_PROVIDER,
     S3_BUCKET_NAME,
+    JWT_EXPIRES_IN,
 )
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.tenants import Tenants
@@ -24,7 +25,8 @@ from open_webui.services.s3 import (
     object_exists,
     generate_presigned_url,
 )
-from open_webui.utils.auth import get_verified_user, get_admin_user
+from open_webui.utils.auth import get_verified_user, get_admin_user, create_token, SESSION_SECRET
+from open_webui.utils.misc import parse_duration
 
 router = APIRouter()
 
@@ -87,6 +89,24 @@ class RebuildTenantRequest(BaseModel):
 class RebuildUserRequest(BaseModel):
     tenant: str
     user: str
+
+
+def _build_user_jwt_token(user) -> str:
+    try:
+        expires_delta = parse_duration(str(JWT_EXPIRES_IN.value))
+    except Exception as e:
+        log.warning(f"Failed to parse JWT_EXPIRES_IN, defaulting to no expiry: {e}")
+        expires_delta = None
+
+    try:
+        log.info(f"Uploads JWT signing key: {SESSION_SECRET}")
+        return create_token(data={"id": user.id}, expires_delta=expires_delta)
+    except Exception as e:
+        log.error(f"Failed to create user JWT token: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create user token for request.",
+        )
 
 
 @router.post("", response_model=UploadResponse)
@@ -435,7 +455,8 @@ async def rebuild_tenant(
     payload = {
         "task": "rebuild-tenant",
         "bucket": S3_BUCKET_NAME,
-        "tenant": form_data.tenant
+        "tenant": form_data.tenant,
+        "jwt_token": _build_user_jwt_token(user),
     }
 
     try:
@@ -499,7 +520,8 @@ async def rebuild_user(
         "task": "rebuild-user",
         "bucket": S3_BUCKET_NAME,
         "tenant": form_data.tenant,
-        "user": form_data.user
+        "user": form_data.user,
+        "jwt_token": _build_user_jwt_token(user),
     }
 
     try:
@@ -573,6 +595,7 @@ async def ingest_uploaded_file(
         "task": "ingest-upload",
         "bucket": S3_BUCKET_NAME,
         "keys": deduped_keys,
+        "jwt_token": _build_user_jwt_token(user),
     }
 
     try:
