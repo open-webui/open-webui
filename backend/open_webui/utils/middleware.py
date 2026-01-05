@@ -1617,7 +1617,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 source.get("tool_result") for source in sources
             )
 
-            if is_full_context and not has_dynamic_content:
+            if (
+                is_full_context
+                and not has_dynamic_content
+                and request.app.state.config.RAG_KV_PREFIX_CACHING
+            ):
                 # Static knowledge: inject into system message for KV prefix caching
                 system_rag_content = rag_template(
                     request.app.state.config.RAG_TEMPLATE,
