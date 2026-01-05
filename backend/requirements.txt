@@ -81,7 +81,7 @@ psutil
 sentencepiece
 soundfile==0.13.1
 
-pillow==12.0.0
+pillow==12.1.0
 opencv-python-headless==4.12.0.88
 rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
@@ -115,7 +115,7 @@ psycopg2-binary==2.9.11
 pgvector==0.4.2
 
 PyMySQL==1.1.2
-boto3==1.42.19
+boto3==1.42.21
 
 pymilvus==2.6.6
 qdrant-client==1.16.2
