@@ -98,7 +98,10 @@ async def get_models(
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == model.user_id
-                    or has_access(user.id, "write", model.access_control, db=db)
+                    or (
+                        model.access_control is not None
+                        and has_access(user.id, "write", model.access_control, db=db)
+                    )
                 ),
             )
             for model in result.items

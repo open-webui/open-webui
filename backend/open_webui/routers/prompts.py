@@ -45,7 +45,10 @@ async def get_prompt_list(user=Depends(get_verified_user), db: Session = Depends
             write_access=(
                 (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                 or user.id == prompt.user_id
-                or has_access(user.id, "write", prompt.access_control, db=db)
+                or (
+                    prompt.access_control is not None
+                    and has_access(user.id, "write", prompt.access_control, db=db)
+                )
             ),
         )
         for prompt in prompts
@@ -113,7 +116,10 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user), d
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == prompt.user_id
-                    or has_access(user.id, "write", prompt.access_control, db=db)
+                    or (
+                        prompt.access_control is not None
+                        and has_access(user.id, "write", prompt.access_control, db=db)
+                    )
                 ),
             )
     else:
