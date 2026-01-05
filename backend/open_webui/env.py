@@ -356,6 +356,10 @@ ENABLE_REALTIME_CHAT_SAVE = (
 
 ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"
 
+RAG_SYSTEM_CONTEXT = (
+    os.environ.get("RAG_SYSTEM_CONTEXT", "False").lower() == "true"
+)
+
 ####################################
 # REDIS
 ####################################

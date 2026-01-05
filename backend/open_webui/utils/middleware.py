@@ -118,6 +118,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
+    RAG_SYSTEM_CONTEXT,
 )
 from open_webui.constants import TASKS
 
@@ -1600,15 +1601,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception("No user message found")
 
         if context_string != "":
-            if request.app.state.config.RAG_SYSTEM_CONTEXT:
+            if RAG_SYSTEM_CONTEXT:
                 # Inject into system message for KV prefix caching
-                system_rag_content = rag_template(
-                    request.app.state.config.RAG_TEMPLATE,
-                    context_string,
-                    "",  # Empty prompt keeps system message static across turns
-                )
                 form_data["messages"] = add_or_update_system_message(
-                    system_rag_content,
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
+                    ),
                     form_data["messages"],
                     append=True,
                 )
