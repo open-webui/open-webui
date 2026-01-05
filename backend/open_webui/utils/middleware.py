@@ -119,6 +119,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
+    RAG_SYSTEM_CONTEXT,
 )
 from open_webui.constants import TASKS
 
@@ -1622,15 +1623,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception("No user message found")
 
         if context_string != "":
-            form_data["messages"] = add_or_update_user_message(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE,
-                    context_string,
-                    prompt,
-                ),
-                form_data["messages"],
-                append=False,
-            )
+            if RAG_SYSTEM_CONTEXT:
+                # Inject into system message for KV prefix caching
+                form_data["messages"] = add_or_update_system_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
+                    ),
+                    form_data["messages"],
+                    append=True,
+                )
+            else:
+                # Inject into user message
+                form_data["messages"] = add_or_update_user_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
+                    ),
+                    form_data["messages"],
+                    append=False,
+                )
 
     # If there are citations, add them to the data_items
     sources = [
