@@ -114,6 +114,12 @@
 
 		const ldapConfig = await getLdapConfig(localStorage.token);
 		ENABLE_LDAP = ldapConfig.ENABLE_LDAP;
+		if (adminConfig) {
+			adminConfig.RAG_PERFORMANCE_PROFILE = adminConfig.RAG_PERFORMANCE_PROFILE ?? 'saver';
+			adminConfig.RAG_AUTO_SUSPEND = adminConfig.RAG_AUTO_SUSPEND ?? true;
+			adminConfig.RAG_AUTO_SUSPEND_IDLE_SECONDS =
+				adminConfig.RAG_AUTO_SUSPEND_IDLE_SECONDS ?? 300;
+		}
 	});
 </script>
 
@@ -225,6 +231,53 @@
 										src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
 									/>
 								</a>
+							</div>
+						</div>
+					</div>
+
+					<div class="mb-2.5">
+						<div class=" mt-0.5 mb-2.5 text-base font-medium">
+							{$i18n.t('RAG Performance')}
+						</div>
+
+						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+						<div class="mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Resource profile')}
+							</div>
+							<div class="flex items-center relative">
+								<select
+									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									bind:value={adminConfig.RAG_PERFORMANCE_PROFILE}
+								>
+									<option value="saver">{$i18n.t('Saver')}</option>
+									<option value="balanced">{$i18n.t('Balanced')}</option>
+									<option value="performance">{$i18n.t('Performance')}</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Auto suspend when no UI is open')}
+							</div>
+
+							<Switch bind:state={adminConfig.RAG_AUTO_SUSPEND} />
+						</div>
+
+						<div class="mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Idle seconds before suspend')}
+							</div>
+							<div class="flex items-center relative">
+								<input
+									type="number"
+									min="60"
+									step="30"
+									class="dark:bg-gray-900 w-28 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									bind:value={adminConfig.RAG_AUTO_SUSPEND_IDLE_SECONDS}
+								/>
 							</div>
 						</div>
 					</div>
