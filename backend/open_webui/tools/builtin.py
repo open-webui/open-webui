@@ -245,6 +245,15 @@ async def generate_image(
                     },
                 }
             )
+            # Return a message indicating the image is already displayed
+            return json.dumps(
+                {
+                    "status": "success",
+                    "message": "The image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.",
+                    "images": images,
+                },
+                ensure_ascii=False,
+            )
 
         return json.dumps({"status": "success", "images": images}, ensure_ascii=False)
     except Exception as e:
@@ -289,6 +298,15 @@ async def edit_image(
                         ]
                     },
                 }
+            )
+            # Return a message indicating the image is already displayed
+            return json.dumps(
+                {
+                    "status": "success",
+                    "message": "The edited image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.",
+                    "images": images,
+                },
+                ensure_ascii=False,
             )
 
         return json.dumps({"status": "success", "images": images}, ensure_ascii=False)
