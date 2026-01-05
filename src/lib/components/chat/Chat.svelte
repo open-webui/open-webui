@@ -391,7 +391,7 @@
 						scrollToBottom('smooth');
 					}
 				} else if (type === 'chat:message:favorite') {
-					// Update message favorite status (used by Pin Message action)
+					// Update message favorite status
 					message.favorite = data.favorite;
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
