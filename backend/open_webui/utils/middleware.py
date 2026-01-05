@@ -1241,42 +1241,44 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
 
     if model_knowledge:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "knowledge_search",
-                    "query": user_message,
-                    "done": False,
-                },
-            }
-        )
+        # Skip auto-injection when native FC is enabled - model can use query_knowledge tool
+        if metadata.get("params", {}).get("function_calling") != "native":
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "knowledge_search",
+                        "query": user_message,
+                        "done": False,
+                    },
+                }
+            )
 
-        knowledge_files = []
-        for item in model_knowledge:
-            if item.get("collection_name"):
-                knowledge_files.append(
-                    {
-                        "id": item.get("collection_name"),
-                        "name": item.get("name"),
-                        "legacy": True,
-                    }
-                )
-            elif item.get("collection_names"):
-                knowledge_files.append(
-                    {
-                        "name": item.get("name"),
-                        "type": "collection",
-                        "collection_names": item.get("collection_names"),
-                        "legacy": True,
-                    }
-                )
-            else:
-                knowledge_files.append(item)
+            knowledge_files = []
+            for item in model_knowledge:
+                if item.get("collection_name"):
+                    knowledge_files.append(
+                        {
+                            "id": item.get("collection_name"),
+                            "name": item.get("name"),
+                            "legacy": True,
+                        }
+                    )
+                elif item.get("collection_names"):
+                    knowledge_files.append(
+                        {
+                            "name": item.get("name"),
+                            "type": "collection",
+                            "collection_names": item.get("collection_names"),
+                            "legacy": True,
+                        }
+                    )
+                else:
+                    knowledge_files.append(item)
 
-        files = form_data.get("files", [])
-        files.extend(knowledge_files)
-        form_data["files"] = files
+            files = form_data.get("files", [])
+            files.extend(knowledge_files)
+            form_data["files"] = files
 
     variables = form_data.pop("variables", None)
 
@@ -1558,6 +1560,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             {
                 **extra_params,
                 "__event_emitter__": event_emitter,
+                "__model__": model,
             },
             features,
         )
