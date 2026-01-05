@@ -8,7 +8,7 @@ import asyncio
 import time
 import json
 import logging
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator
 import aiohttp
 
 log = logging.getLogger(__name__)
@@ -24,49 +24,91 @@ def create_heartbeat_event() -> bytes:
         "status": "model_thinking",
         "timestamp": int(time.time())
     }
-    return f"data: {json.dumps(data)}\n\n".encode("utf-8")
+    return f"data: {json.dumps(data)}\n".encode("utf-8")
 
 
-async def stream_with_heartbeat(
-    stream: aiohttp.StreamReader,
-    heartbeat_interval: float = HEARTBEAT_INTERVAL
-) -> AsyncIterator[bytes]:
+class HeartbeatStreamWrapper:
     """
-    Wrap a stream to send heartbeat events when waiting for data.
+    Wrapper around aiohttp.StreamReader that adds heartbeat support.
     
-    This is useful for reasoning models that may take a long time to respond,
-    allowing the frontend to know the connection is still alive.
+    Provides iter_chunks() method compatible with stream_chunks_handler.
+    When no data is received within the heartbeat interval, yields a heartbeat event
+    to keep the connection alive and inform the frontend that the model is still thinking.
+    
+    Usage:
+        wrapped = HeartbeatStreamWrapper(r.content)
+        stream_chunks_handler(wrapped)  # Works because we have iter_chunks()
+    """
+    
+    def __init__(self, stream: aiohttp.StreamReader, heartbeat_interval: float = HEARTBEAT_INTERVAL):
+        self._stream = stream
+        self._heartbeat_interval = heartbeat_interval
+    
+    def iter_chunks(self):
+        """
+        Return an async generator that yields (data, end_of_chunk) tuples.
+        Compatible with aiohttp.StreamReader.iter_chunks() interface.
+        Injects heartbeat events when idle.
+        """
+        return self._iter_chunks_with_heartbeat()
+    
+    async def _iter_chunks_with_heartbeat(self) -> AsyncIterator[tuple[bytes, bool]]:
+        """Internal async generator that wraps iter_chunks with heartbeat."""
+        original_iter = self._stream.iter_chunks()
+        it = original_iter.__aiter__()
+        
+        while True:
+            try:
+                # Wait for next chunk with timeout
+                chunk = await asyncio.wait_for(
+                    it.__anext__(),
+                    timeout=self._heartbeat_interval
+                )
+                yield chunk
+            except StopAsyncIteration:
+                # Stream ended normally
+                break
+            except asyncio.TimeoutError:
+                # No data within interval - send heartbeat
+                log.debug("💭 心跳信号 - 模型正在思考中...")
+                yield (create_heartbeat_event(), False)
+            except Exception as e:
+                log.debug(f"Stream error: {e}")
+                break
+    
+    # Support direct async iteration (for when stream is returned directly)
+    def __aiter__(self):
+        return self._direct_iter()
+    
+    async def _direct_iter(self) -> AsyncIterator[bytes]:
+        """Direct async iteration with heartbeat support."""
+        it = self._stream.__aiter__()
+        
+        while True:
+            try:
+                chunk = await asyncio.wait_for(
+                    it.__anext__(),
+                    timeout=self._heartbeat_interval
+                )
+                yield chunk
+            except StopAsyncIteration:
+                break
+            except asyncio.TimeoutError:
+                log.debug("💭 心跳信号 - 模型正在思考中...")
+                yield create_heartbeat_event()
+            except Exception as e:
+                log.debug(f"Stream error: {e}")
+                break
+
+
+def wrap_stream_with_heartbeat(stream: aiohttp.StreamReader) -> HeartbeatStreamWrapper:
+    """
+    Convenience function to wrap a stream with heartbeat support.
     
     Args:
-        stream: The aiohttp StreamReader
-        heartbeat_interval: Seconds between heartbeat events when idle
+        stream: The aiohttp StreamReader to wrap
         
-    Yields:
-        Original stream data interspersed with heartbeat events when idle
+    Returns:
+        HeartbeatStreamWrapper that can be used with stream_chunks_handler
     """
-    buffer = b""
-    
-    while True:
-        try:
-            # Try to read with timeout
-            chunk = await asyncio.wait_for(
-                stream.read(8192),
-                timeout=heartbeat_interval
-            )
-            
-            if not chunk:
-                # Stream ended
-                if buffer:
-                    yield buffer
-                break
-            
-            # Yield the data
-            yield chunk
-            
-        except asyncio.TimeoutError:
-            # No data received within interval, send heartbeat
-            log.debug("Sending heartbeat - model is still thinking")
-            yield create_heartbeat_event()
-        except Exception as e:
-            log.debug(f"Stream error: {e}")
-            break
+    return HeartbeatStreamWrapper(stream)
