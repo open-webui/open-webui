@@ -649,7 +649,7 @@
 							>
 								{#each message.files as file}
 									<div>
-										{#if file.type === 'image'}
+										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
 											<Image src={file.url} alt={message.content} />
 										{:else}
 											<FileItem

@@ -1734,7 +1734,7 @@
 					// Skip this check if image generation is enabled, as images may be for editing or are generated outputs in the history
 					const hasImages = createMessagesList(_history, parentId).some((message) =>
 						message.files?.some(
-							(file) => file.type === 'image' || file?.content_type?.startsWith('image/')
+							(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
 						)
 					);
 

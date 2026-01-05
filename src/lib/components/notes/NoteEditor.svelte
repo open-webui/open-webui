@@ -146,7 +146,9 @@
 	let inputElement = null;
 
 	// Computed HTML for editor: fall back to markdown if HTML is missing
-	$: editorHtml = note?.data?.content?.html || (note?.data?.content?.md ? marked.parse(note.data.content.md) : '');
+	$: editorHtml =
+		note?.data?.content?.html ||
+		(note?.data?.content?.md ? marked.parse(note.data.content.md) : '');
 
 	const init = async () => {
 		loading = true;
@@ -157,7 +159,7 @@
 
 		messages = [];
 
-	if (res) {
+		if (res) {
 			note = res;
 			files = res.data.files || [];
 
@@ -780,7 +782,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		await tick();
 
 		for (const file of files) {
-			if (file.type === 'image') {
+			if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) {
 				const e = new CustomEvent('data', { files: files });
 
 				const img = document.getElementById(`image:${file.id}`);
