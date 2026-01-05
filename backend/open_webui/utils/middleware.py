@@ -1600,29 +1600,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception("No user message found")
 
         if context_string != "":
-            # Determine if using full context mode (static knowledge)
-            files = metadata.get("files", []) or []
-            # Check if using full context mode via global flags or individual file settings
-            is_full_context = (
-                request.app.state.config.RAG_FULL_CONTEXT
-                or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
-                or (files and all(item.get("context") == "full" for item in files))
-            )
-
-            # Check for dynamic content that shouldn't be cached in system message
-            has_dynamic_content = any(
-                item.get("type") == "web_search" for item in files
-            ) if files else False
-            has_dynamic_content = has_dynamic_content or any(
-                source.get("tool_result") for source in sources
-            )
-
-            if (
-                is_full_context
-                and not has_dynamic_content
-                and request.app.state.config.RAG_KV_PREFIX_CACHING
-            ):
-                # Static knowledge: inject into system message for KV prefix caching
+            if request.app.state.config.RAG_SYSTEM_CONTEXT:
+                # Inject into system message for KV prefix caching
                 system_rag_content = rag_template(
                     request.app.state.config.RAG_TEMPLATE,
                     context_string,
@@ -1634,7 +1613,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     append=True,
                 )
             else:
-                # Dynamic/partial context: inject into user message
+                # Inject into user message
                 form_data["messages"] = add_or_update_user_message(
                     rag_template(
                         request.app.state.config.RAG_TEMPLATE,

@@ -2717,10 +2717,10 @@ RAG_FULL_CONTEXT = PersistentConfig(
     os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true",
 )
 
-RAG_KV_PREFIX_CACHING = PersistentConfig(
-    "RAG_KV_PREFIX_CACHING",
-    "rag.kv_prefix_caching",
-    os.getenv("RAG_KV_PREFIX_CACHING", "False").lower() == "true",
+RAG_SYSTEM_CONTEXT = PersistentConfig(
+    "RAG_SYSTEM_CONTEXT",
+    "rag.system_context",
+    os.getenv("RAG_SYSTEM_CONTEXT", "False").lower() == "true",
 )
 
 RAG_FILE_MAX_COUNT = PersistentConfig(
