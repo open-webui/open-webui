@@ -82,8 +82,13 @@
 	const init = async () => {
 		models = null;
 
-		workspaceModels = await getBaseModels(localStorage.token);
-		baseModels = await getModels(localStorage.token, null, true);
+		// 并行加载两个 API，提升加载速度
+		const [workspaceModelsResult, baseModelsResult] = await Promise.all([
+			getBaseModels(localStorage.token),
+			getModels(localStorage.token, null, true)
+		]);
+		workspaceModels = workspaceModelsResult;
+		baseModels = baseModelsResult;
 
 		models = baseModels.map((m) => {
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
@@ -347,6 +352,7 @@
 									<img
 										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}`}
 										alt="modelfile profile"
+										loading="lazy"
 										class=" rounded-full w-full h-auto object-cover"
 									/>
 								</div>

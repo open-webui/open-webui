@@ -291,8 +291,8 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 @router.get("/model/profile/image")
 async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
-    # Cache-control headers to prevent stale cached images
-    cache_headers = {"Cache-Control": "no-cache, must-revalidate"}
+    # Cache-control headers - cache for 1 hour to improve performance
+    cache_headers = {"Cache-Control": "public, max-age=3600"}
 
     if model:
         if model.meta.profile_image_url:

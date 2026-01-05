@@ -82,6 +82,12 @@ async function* openAIStreamToIterator(
 				continue;
 			}
 
+			// Handle heartbeat events (model is still thinking)
+			if (parsedData.type === 'heartbeat') {
+				console.log('💭 心跳信号 - 模型正在思考中...', parsedData.status);
+				continue; // Skip heartbeat, just keep connection alive
+			}
+
 			yield {
 				done: false,
 				value: parsedData.choices?.[0]?.delta?.content ?? ''
