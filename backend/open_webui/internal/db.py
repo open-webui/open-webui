@@ -164,7 +164,7 @@ get_db = contextmanager(get_session)
 
 @contextmanager
 def get_db_context(db: Optional[Session] = None):
-    if db:
+    if isinstance(db, Session):
         yield db
     else:
         with get_db() as session:

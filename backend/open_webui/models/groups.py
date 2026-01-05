@@ -159,40 +159,70 @@ class GroupTable:
             if filter:
                 if "query" in filter:
                     query = query.filter(Group.name.ilike(f"%{filter['query']}%"))
-                if "member_id" in filter:
-                    query = query.join(
-                        GroupMember, GroupMember.group_id == Group.id
-                    ).filter(GroupMember.user_id == filter["member_id"])
 
+                # When share filter is present, member check is handled in the share logic
                 if "share" in filter:
                     share_value = filter["share"]
-                    json_share = Group.data["config"]["share"].as_boolean()
+                    member_id = filter.get("member_id")
+                    json_share = Group.data["config"]["share"]
+                    json_share_bool = json_share.as_boolean()
+                    json_share_str = json_share.as_string()
 
                     if share_value:
-                        query = query.filter(
-                            or_(
-                                Group.data.is_(None),
-                                json_share.is_(None),
-                                json_share == True,
-                            )
+                        # Groups open to anyone: data is null, share is null, or share is true
+                        anyone_can_share = or_(
+                            Group.data.is_(None),
+                            json_share_bool.is_(None),
+                            json_share_bool == True,
                         )
+
+                        if member_id:
+                            # Also include member-only groups where user is a member
+                            member_groups_subq = (
+                                db.query(GroupMember.group_id)
+                                .filter(GroupMember.user_id == member_id)
+                                .subquery()
+                            )
+                            members_only_and_is_member = and_(
+                                json_share_str == "members",
+                                Group.id.in_(member_groups_subq),
+                            )
+                            query = query.filter(
+                                or_(anyone_can_share, members_only_and_is_member)
+                            )
+                        else:
+                            query = query.filter(anyone_can_share)
                     else:
                         query = query.filter(
-                            and_(Group.data.isnot(None), json_share == False)
+                            and_(Group.data.isnot(None), json_share_bool == False)
                         )
+
+                else:
+                    # Only apply member_id filter when share filter is NOT present
+                    if "member_id" in filter:
+                        query = query.join(
+                            GroupMember, GroupMember.group_id == Group.id
+                        ).filter(GroupMember.user_id == filter["member_id"])
+
             groups = query.order_by(Group.updated_at.desc()).all()
             return [
                 GroupResponse.model_validate(
                     {
                         **GroupModel.model_validate(group).model_dump(),
-                        "member_count": self.get_group_member_count_by_id(group.id, db=db),
+                        "member_count": self.get_group_member_count_by_id(
+                            group.id, db=db
+                        ),
                     }
                 )
                 for group in groups
             ]
 
     def search_groups(
-        self, filter: Optional[dict] = None, skip: int = 0, limit: int = 30, db: Optional[Session] = None
+        self,
+        filter: Optional[dict] = None,
+        skip: int = 0,
+        limit: int = 30,
+        db: Optional[Session] = None,
     ) -> GroupListResponse:
         with get_db_context(db) as db:
             query = db.query(Group)
@@ -228,7 +258,9 @@ class GroupTable:
                 "total": total,
             }
 
-    def get_groups_by_member_id(self, user_id: str, db: Optional[Session] = None) -> list[GroupModel]:
+    def get_groups_by_member_id(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> list[GroupModel]:
         with get_db_context(db) as db:
             return [
                 GroupModel.model_validate(group)
@@ -239,7 +271,9 @@ class GroupTable:
                 .all()
             ]
 
-    def get_group_by_id(self, id: str, db: Optional[Session] = None) -> Optional[GroupModel]:
+    def get_group_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[GroupModel]:
         try:
             with get_db_context(db) as db:
                 group = db.query(Group).filter_by(id=id).first()
@@ -247,7 +281,9 @@ class GroupTable:
         except Exception:
             return None
 
-    def get_group_user_ids_by_id(self, id: str, db: Optional[Session] = None) -> Optional[list[str]]:
+    def get_group_user_ids_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[list[str]]:
         with get_db_context(db) as db:
             members = (
                 db.query(GroupMember.user_id).filter(GroupMember.group_id == id).all()
@@ -258,7 +294,9 @@ class GroupTable:
 
             return [m[0] for m in members]
 
-    def get_group_user_ids_by_ids(self, group_ids: list[str], db: Optional[Session] = None) -> dict[str, list[str]]:
+    def get_group_user_ids_by_ids(
+        self, group_ids: list[str], db: Optional[Session] = None
+    ) -> dict[str, list[str]]:
         with get_db_context(db) as db:
             members = (
                 db.query(GroupMember.group_id, GroupMember.user_id)
@@ -275,7 +313,9 @@ class GroupTable:
 
             return group_user_ids
 
-    def set_group_user_ids_by_id(self, group_id: str, user_ids: list[str], db: Optional[Session] = None) -> None:
+    def set_group_user_ids_by_id(
+        self, group_id: str, user_ids: list[str], db: Optional[Session] = None
+    ) -> None:
         with get_db_context(db) as db:
             # Delete existing members
             db.query(GroupMember).filter(GroupMember.group_id == group_id).delete()
@@ -296,7 +336,9 @@ class GroupTable:
             db.add_all(new_members)
             db.commit()
 
-    def get_group_member_count_by_id(self, id: str, db: Optional[Session] = None) -> int:
+    def get_group_member_count_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> int:
         with get_db_context(db) as db:
             count = (
                 db.query(func.count(GroupMember.user_id))
@@ -306,7 +348,11 @@ class GroupTable:
             return count if count else 0
 
     def update_group_by_id(
-        self, id: str, form_data: GroupUpdateForm, overwrite: bool = False, db: Optional[Session] = None
+        self,
+        id: str,
+        form_data: GroupUpdateForm,
+        overwrite: bool = False,
+        db: Optional[Session] = None,
     ) -> Optional[GroupModel]:
         try:
             with get_db_context(db) as db:
@@ -341,7 +387,9 @@ class GroupTable:
             except Exception:
                 return False
 
-    def remove_user_from_all_groups(self, user_id: str, db: Optional[Session] = None) -> bool:
+    def remove_user_from_all_groups(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> bool:
         with get_db_context(db) as db:
             try:
                 # Find all groups the user belongs to
@@ -401,7 +449,9 @@ class GroupTable:
                         continue
             return new_groups
 
-    def sync_groups_by_group_names(self, user_id: str, group_names: list[str], db: Optional[Session] = None) -> bool:
+    def sync_groups_by_group_names(
+        self, user_id: str, group_names: list[str], db: Optional[Session] = None
+    ) -> bool:
         with get_db_context(db) as db:
             try:
                 now = int(time.time())
@@ -462,7 +512,10 @@ class GroupTable:
                 return False
 
     def add_users_to_group(
-        self, id: str, user_ids: Optional[list[str]] = None, db: Optional[Session] = None
+        self,
+        id: str,
+        user_ids: Optional[list[str]] = None,
+        db: Optional[Session] = None,
     ) -> Optional[GroupModel]:
         try:
             with get_db_context(db) as db:
@@ -500,7 +553,10 @@ class GroupTable:
             return None
 
     def remove_users_from_group(
-        self, id: str, user_ids: Optional[list[str]] = None, db: Optional[Session] = None
+        self,
+        id: str,
+        user_ids: Optional[list[str]] = None,
+        db: Optional[Session] = None,
     ) -> Optional[GroupModel]:
         try:
             with get_db_context(db) as db:

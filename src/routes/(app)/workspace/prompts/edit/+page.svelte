@@ -12,6 +12,8 @@
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
 	let prompt = null;
+	let write_access = true;
+
 	const onSubmit = async (_prompt) => {
 		console.log(_prompt);
 		const prompt = await updatePromptByCommand(localStorage.token, _prompt).catch((error) => {
@@ -38,6 +40,7 @@
 			});
 
 			if (_prompt) {
+				write_access = _prompt.write_access ?? true;
 				prompt = {
 					title: _prompt.title,
 					command: _prompt.command,
@@ -54,5 +57,5 @@
 </script>
 
 {#if prompt}
-	<PromptEditor {prompt} {onSubmit} edit />
+	<PromptEditor {prompt} {onSubmit} {write_access} edit />
 {/if}

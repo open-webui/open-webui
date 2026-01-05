@@ -39,11 +39,12 @@ async def get_groups(
 ):
 
     filter = {}
+
+    # Admins can share to all groups regardless of share setting
     if user.role != "admin":
         filter["member_id"] = user.id
-
-    if share is not None:
-        filter["share"] = share
+        if share is not None:
+            filter["share"] = share
 
     groups = Groups.get_groups(filter=filter, db=db)
 

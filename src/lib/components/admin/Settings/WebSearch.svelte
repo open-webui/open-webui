@@ -697,7 +697,37 @@
 								</div>
 							</div>
 						{/if}
+
+					{#if webConfig.WEB_SEARCH_ENGINE === 'duckduckgo'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('DDGS Backend')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<select
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={webConfig.DDGS_BACKEND}
+										>
+											<option value="auto">{$i18n.t('Auto (Random)')}</option>
+											<option value="bing">{$i18n.t('Bing')}</option>
+											<option value="brave">{$i18n.t('Brave')}</option>
+											<option value="duckduckgo">{$i18n.t('DuckDuckGo')}</option>
+											<option value="google">{$i18n.t('Google')}</option>
+											<option value="grokipedia">{$i18n.t('Grokipedia')}</option>
+											<option value="mojeek">{$i18n.t('Mojeek')}</option>
+											<option value="wikipedia">{$i18n.t('Wikipedia')}</option>
+											<option value="yahoo">{$i18n.t('Yahoo')}</option>
+											<option value="yandex">{$i18n.t('Yandex')}</option>
+										</select>
+									</div>
+								</div>
+							</div>
+						</div>
 					{/if}
+				{/if}
 
 					{#if webConfig.ENABLE_WEB_SEARCH}
 						<div class="mb-2.5 flex w-full flex-col">
