@@ -1,14 +1,16 @@
 import time
 import uuid
 from functools import lru_cache
-from pathlib import Path
 from typing import Optional
 
+from botocore.exceptions import BotoCoreError, ClientError
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
 from sqlalchemy.dialects.mysql import MEDIUMTEXT
 
 from open_webui.internal.db import Base, get_db
+from open_webui.config import S3_PROMPT_BUCKET_NAME, DEFAULT_HELP_S3_KEY
+from open_webui.services.s3 import get_s3_client
 
 
 class Tenant(Base):
@@ -61,18 +63,31 @@ class TenantUpdateForm(BaseModel):
     help_text: Optional[str] = None
 
 
-DEFAULT_HELP_PATH = (
-    Path(__file__).resolve().parents[1] / "static" / "help" / "default.md"
-)
-
-
 @lru_cache(maxsize=1)
 def _get_default_help_text() -> str:
-    if not DEFAULT_HELP_PATH.exists():
+    bucket = S3_PROMPT_BUCKET_NAME
+    key = DEFAULT_HELP_S3_KEY
+
+    if not bucket or not key:
         raise RuntimeError(
-            f"Default tenant help markdown not found at {DEFAULT_HELP_PATH}"
+            "S3_PROMPT_BUCKET_NAME and DEFAULT_HELP_S3_KEY must be configured."
         )
-    return DEFAULT_HELP_PATH.read_text(encoding="utf-8")
+
+    client = get_s3_client()
+    try:
+        obj = client.get_object(Bucket=bucket, Key=key)
+    except (ClientError, BotoCoreError) as exc:
+        raise RuntimeError(
+            f"Failed to load default help markdown from s3://{bucket}/{key}"
+        ) from exc
+
+    body = obj.get("Body")
+    if not body:
+        raise RuntimeError(
+            f"Empty response body when loading s3://{bucket}/{key}"
+        )
+
+    return body.read().decode("utf-8")
 
 
 def get_default_help_text() -> str:
