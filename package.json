@@ -47,7 +47,7 @@
 		"tailwindcss": "^4.0.0",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
-		"vite": "^5.4.14",
+		"vite": "^5.4.21",
 		"vitest": "^1.6.1"
 	},
 	"type": "module",
@@ -106,7 +106,7 @@
 		"i18next-resources-to-backend": "^1.2.0",
 		"idb": "^7.1.1",
 		"js-sha256": "^0.10.1",
-		"jspdf": "^3.0.0",
+		"jspdf": "^4.0.0",
 		"katex": "^0.16.22",
 		"kokoro-js": "^1.1.1",
 		"leaflet": "^1.9.4",
