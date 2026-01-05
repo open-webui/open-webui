@@ -28,5 +28,8 @@ export default defineConfig({
 	},
 	esbuild: {
 		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
+	},
+	optimizeDeps: {
+		include: ['yjs', 'y-prosemirror', 'prosemirror-keymap']
 	}
 });
