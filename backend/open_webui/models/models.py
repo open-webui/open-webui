@@ -130,12 +130,21 @@ class ModelUserResponse(ModelModel):
     user: Optional[UserResponse] = None
 
 
+class ModelAccessResponse(ModelUserResponse):
+    write_access: Optional[bool] = False
+
+
 class ModelResponse(ModelModel):
     pass
 
 
 class ModelListResponse(BaseModel):
     items: list[ModelUserResponse]
+    total: int
+
+
+class ModelAccessListResponse(BaseModel):
+    items: list[ModelAccessResponse]
     total: int
 
 
@@ -292,7 +301,7 @@ class ModelsTable:
                     db,
                     query,
                     filter,
-                    permission="write",
+                    permission="read",
                 )
 
                 tag = filter.get("tag")

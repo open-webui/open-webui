@@ -11,6 +11,8 @@ from open_webui.models.models import (
     ModelModel,
     ModelResponse,
     ModelListResponse,
+    ModelAccessListResponse,
+    ModelAccessResponse,
     Models,
 )
 
@@ -51,7 +53,7 @@ PAGE_ITEM_COUNT = 30
 
 
 @router.get(
-    "/list", response_model=ModelListResponse
+    "/list", response_model=ModelAccessListResponse
 )  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
     query: Optional[str] = None,
@@ -88,7 +90,21 @@ async def get_models(
 
         filter["user_id"] = user.id
 
-    return Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    result = Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    return ModelAccessListResponse(
+        items=[
+            ModelAccessResponse(
+                **model.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == model.user_id
+                    or has_access(user.id, "write", model.access_control, db=db)
+                ),
+            )
+            for model in result.items
+        ],
+        total=result.total,
+    )
 
 
 ###########################
@@ -290,7 +306,7 @@ class ModelIdForm(BaseModel):
 
 
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
-@router.get("/model", response_model=Optional[ModelResponse])
+@router.get("/model", response_model=Optional[ModelAccessResponse])
 async def get_model_by_id(
     id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
@@ -301,7 +317,14 @@ async def get_model_by_id(
             or model.user_id == user.id
             or has_access(user.id, "read", model.access_control, db=db)
         ):
-            return model
+            return ModelAccessResponse(
+                **model.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == model.user_id
+                    or has_access(user.id, "write", model.access_control, db=db)
+                ),
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
