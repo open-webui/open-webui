@@ -3,14 +3,9 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { onMount, getContext } from 'svelte';
 	import { settings, WEBUI_NAME, mobile, user } from '$lib/stores';
+	import { suggestionsStore } from '$lib/stores/suggestions';
 	import { WEBUI_VERSION } from '$lib/constants';
-	import {
-		getMyTopTags,
-		getGlobalTopTags,
-		setTagFeedback,
-		type TagWithFeedback,
-		type FeedbackStatus
-	} from '$lib/apis/message-tags';
+	import { type TagWithFeedback, type FeedbackStatus } from '$lib/apis/message-tags';
 	import { fade, fly } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
 
@@ -21,116 +16,41 @@
 	export let onSelect = (e) => {};
 	export let isPersonalized = true; // true: 개인화 (my-tags), false: 전체 유저 (global-tags)
 
-	let topTags: TagWithFeedback[] = [];
-	let loading = false;
-	let initialLoad = true; // 초기 로딩 여부
-	let cachedPersonalTags: TagWithFeedback[] = [];
-	let cachedGlobalTags: TagWithFeedback[] = [];
+	// store에서 개별 store 추출
+	const { personalTopTags, globalTopTags, loading: loadingStore } = suggestionsStore;
+
+	// store에서 데이터 구독
+	$: topTags = isPersonalized ? $personalTopTags : $globalTopTags;
+	$: loading = $loadingStore;
+
+	let initialLoad = true;
 
 	onMount(() => {
 		loadTopTags();
 	});
 
-	// isPersonalized가 변경될 때마다 데이터 다시 로드
+	// isPersonalized가 변경될 때 데이터 로드
 	$: if (isPersonalized !== undefined && !initialLoad) {
-		loadTopTagsSmooth();
+		loadTopTags();
 	}
 
 	async function loadTopTags() {
 		if (!$user?.token) return;
 
-		loading = true;
-		try {
-			// isPersonalized에 따라 다른 API 호출
-			const tags = isPersonalized
-				? await getMyTopTags($user.token, 3)
-				: await getGlobalTopTags($user.token, 3);
-			if (tags) {
-				topTags = tags;
-				// 캐시 저장
-				if (isPersonalized) {
-					cachedPersonalTags = tags;
-				} else {
-					cachedGlobalTags = tags;
-				}
-			}
-		} catch (err) {
-			console.error('Failed to load top tags:', err);
+		// store를 통해 데이터 로드 (캐시된 데이터가 있으면 API 호출 안함)
+		if (isPersonalized) {
+			await suggestionsStore.loadPersonalTopTags($user.token, 3);
+		} else {
+			await suggestionsStore.loadGlobalTopTags($user.token, 3);
 		}
-		loading = false;
 		initialLoad = false;
-	}
-
-	// 부드러운 전환을 위한 로딩 함수
-	async function loadTopTagsSmooth() {
-		if (!$user?.token) return;
-
-		// 캐시된 데이터가 있으면 즉시 표시
-		const cachedData = isPersonalized ? cachedPersonalTags : cachedGlobalTags;
-		if (cachedData.length > 0) {
-			topTags = cachedData;
-		}
-
-		// 백그라운드에서 새 데이터 로드
-		try {
-			const tags = isPersonalized
-				? await getMyTopTags($user.token, 3)
-				: await getGlobalTopTags($user.token, 3);
-			if (tags) {
-				// 캐시 업데이트
-				if (isPersonalized) {
-					cachedPersonalTags = tags;
-				} else {
-					cachedGlobalTags = tags;
-				}
-				
-				// 데이터가 변경되었으면 부드럽게 업데이트
-				topTags = tags;
-			}
-		} catch (err) {
-			console.error('Failed to load top tags:', err);
-		}
-		loading = false;
 	}
 
 	async function handleFeedback(tagId: string, status: FeedbackStatus) {
 		if (!$user?.token) return;
 
-		try {
-			// 1. 낙관적 업데이트: 피드백 상태를 먼저 로컬에서 업데이트
-			const updatedIndex = topTags.findIndex(t => t.id === tagId);
-			if (updatedIndex !== -1) {
-				topTags[updatedIndex].feedback_status = status;
-				topTags = [...topTags]; // 반응성 트리거
-			}
-
-			// 2. 서버에 피드백 저장
-			await setTagFeedback($user.token, tagId, status);
-
-			// 3. 백그라운드에서 새 목록 가져오기
-			const newTags = isPersonalized
-				? await getMyTopTags($user.token, 3)
-				: await getGlobalTopTags($user.token, 3);
-
-			if (newTags) {
-				// 4. 기존 태그와 새 태그를 비교하여 부드럽게 업데이트
-				const existingIds = new Set(topTags.map(t => t.id));
-				const newIds = new Set(newTags.map(t => t.id));
-				
-				// 제거된 태그 필터링
-				topTags = topTags.filter(t => newIds.has(t.id));
-				
-				// 새로운 태그 추가
-				const tagsToAdd = newTags.filter(t => !existingIds.has(t.id));
-				topTags = [...topTags, ...tagsToAdd];
-				
-				// 서버 순서대로 정렬
-				const orderMap = new Map(newTags.map((t, i) => [t.id, i]));
-				topTags.sort((a, b) => (orderMap.get(a.id) || 0) - (orderMap.get(b.id) || 0));
-			}
-		} catch (err) {
-			console.error('Failed to set feedback:', err);
-		}
+		// store를 통해 피드백 처리 (낙관적 업데이트 + API 호출 + 목록 새로고침)
+		await suggestionsStore.submitFeedback($user.token, tagId, status, isPersonalized, 3);
 	}
 
 	const handlePractice = (tag: TagWithFeedback) => {
@@ -170,14 +90,14 @@
 			role="list"
 			class="{$mobile
 				? 'flex flex-col gap-4 px-4'
-				: 'flex flex-row gap-4 overflow-x-hidden scrollbar-thin px-12 pb-4'} {className}"
+				: 'flex flex-row gap-4 overflow-x-hidden scrollbar-none pl-12 pr-4 pb-4'} {className}"
 		>
 			{#each topTags as tag (tag.id)}
 				<div
 					class="box-border flex flex-col items-start p-5 gap-2.5
-						{$mobile ? 'w-full' : 'min-w-[270px] w-[270px]'}
-						bg-[rgba(253,254,254,0.7)] dark:bg-[rgba(39,40,44,0.5)]
-						shadow-lg rounded-xl backdrop-blur-[20px]"
+						{$mobile ? 'w-full' : 'min-w-72 w-72'}
+						bg-gray-50/80 dark:bg-gray-800/50
+						shadow-lg rounded-xl backdrop-blur-xl"
 					in:fly={{ x: 100, duration: 400, delay: 100 }}
 					out:fly={{ x: -100, duration: 300 }}
 					animate:flip={{ duration: 400 }}
@@ -205,9 +125,9 @@
 					</div> -->
 
 					<!-- Content -->
-					<div class="flex flex-col gap-2">
+					<div class="flex flex-col gap-1">
 						<div
-							class="text-base font-medium text-[#1A1B1C] dark:text-white w-full overflow-hidden truncate max-w-[240px]"
+							class="text-caption-medium text-[#1A1B1C] dark:text-white w-full overflow-hidden truncate max-w-[240px]"
 						>
 							{tag.name}
 						</div>
@@ -237,77 +157,54 @@
 									/>
 								</g>
 							</svg>
-							<div class="text-caption text-gray-500 flex flex-row items-center gap-1 overflow-hidden truncate max-w-[180px]">{tag.chapter_name}</div>
+							<div
+								class="text-caption text-gray-500 flex flex-row items-center gap-1 overflow-hidden truncate max-w-[180px]"
+							>
+								{tag.chapter_name}
+							</div>
 						</div>
-						
 					</div>
-
-					<!-- Divider -->
-					<div
-						class="border-t w-full h-0 border-[rgba(206,212,229,0.2)] dark:border-gray-500/30"
-					></div>
 
 					<!-- Action Buttons -->
 					<div class="flex items-center justify-between w-full">
 						<!-- Left: Feedback buttons -->
-						<!-- Feedback Status Badge -->
-						{#if tag.feedback_status}
-							<div class="flex items-center gap-1 text-xs">
-								{#if tag.feedback_status === 'understood'}
-									<span
-										class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full"
-										>이해함</span
-									>
-								{:else if tag.feedback_status === 'confused'}
-									<span
-										class="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-full"
-										>잘 모르겠음</span
-									>
-								{:else if tag.feedback_status === 'not_interested'}
-									<span
-										class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full"
-										>관심없음</span
-									>
-								{/if}
-							</div>
-						{/if}
-
 
 						<div class="flex gap-1">
-							<!-- 이해함 -->
-							<Tooltip content="이해함" placement="bottom">
-								<button
-									class="w-7 h-7 p-0 border-none rounded-full cursor-pointer flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95
+							<div class="flex gap-1">
+								<!-- 이해함 -->
+								<Tooltip content="이해함" placement="bottom">
+									<button
+										class="w-7 h-7 p-0 border-none rounded-full cursor-pointer flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95
 										{tag.feedback_status === 'understood'
-										? 'bg-green-100 dark:bg-green-900/50'
-										: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}"
-									on:click|stopPropagation={() =>
-										handleFeedback(
-											tag.id,
-											tag.feedback_status === 'understood' ? null : 'understood'
-										)}
-									aria-label="이해함"
-								>
-									<svg
-										width="16"
-										height="16"
-										viewBox="0 0 16 16"
-										fill="none"
-										xmlns="http://www.w3.org/2000/svg"
+											? 'bg-green-100 dark:bg-green-900/50'
+											: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}"
+										on:click|stopPropagation={() =>
+											handleFeedback(
+												tag.id,
+												tag.feedback_status === 'understood' ? null : 'understood'
+											)}
+										aria-label="이해함"
 									>
-										<circle cx="8" cy="8" r="6" stroke="#34BE89" stroke-width="1.5" />
-										<path
-											d="M5 8L7 10L11 6"
-											stroke="#34BE89"
-											stroke-width="1.5"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										/>
-									</svg>
-								</button>
-							</Tooltip>
-							<!-- 잘 모르겠음 -->
-							<!-- <Tooltip content="잘 모르겠음" placement="bottom">
+										<svg
+											width="16"
+											height="16"
+											viewBox="0 0 16 16"
+											fill="none"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<circle cx="8" cy="8" r="6" stroke="#34BE89" stroke-width="1.5" />
+											<path
+												d="M5 8L7 10L11 6"
+												stroke="#34BE89"
+												stroke-width="1.5"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+								<!-- 잘 모르겠음 -->
+								<!-- <Tooltip content="잘 모르겠음" placement="bottom">
 								<button
 									class="w-7 h-7 p-0 border-none rounded-full cursor-pointer flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95
 										{tag.feedback_status === 'confused' ? 'bg-yellow-100 dark:bg-yellow-900/50' : 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}"
@@ -321,8 +218,8 @@
 									</svg>
 								</button>
 							</Tooltip> -->
-							<!-- 관심없음 -->
-							<!-- <Tooltip content="관심없음" placement="bottom">
+								<!-- 관심없음 -->
+								<!-- <Tooltip content="관심없음" placement="bottom">
 								<button
 									class="w-7 h-7 p-0 border-none rounded-full cursor-pointer flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95
 										{tag.feedback_status === 'not_interested' ? 'bg-gray-200 dark:bg-gray-600' : 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}"
@@ -335,16 +232,37 @@
 									</svg>
 								</button>
 							</Tooltip> -->
+							</div>
+							<!-- Feedback Status Badge -->
+							{#if tag.feedback_status}
+								<div class="flex items-center gap-1 text-xs">
+									{#if tag.feedback_status === 'understood'}
+										<span
+											class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full"
+											>이해함</span
+										>
+									{:else if tag.feedback_status === 'confused'}
+										<span
+											class="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-full"
+											>잘 모르겠음</span
+										>
+									{:else if tag.feedback_status === 'not_interested'}
+										<span
+											class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full"
+											>관심없음</span
+										>
+									{/if}
+								</div>
+							{/if}
 						</div>
-
 						<!-- Right: Practice button -->
 						<button
 							class="flex flex-row items-center py-1 pl-4 pr-3 gap-1 bg-[#076EF4] rounded-full border-none cursor-pointer
-								font-['Pretendard',sans-serif] font-normal text-sm leading-[21px] text-[#FDFEFE]
+								 text-caption leading-[21px] text-gray-50
 								transition-all duration-200 hover:bg-[#0558c7] hover:-translate-y-px active:translate-y-0"
 							on:click={() => handlePractice(tag)}
 						>
-							<span>복습하기</span>
+							<span>바로 연습</span>
 							<svg
 								width="20"
 								height="20"

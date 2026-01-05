@@ -35,11 +35,19 @@ export default defineConfig({
 				changeOrigin: true,
 				rewrite: (path: string) => path.replace(/^\/api/, '/api')
 			},
-			// forward websocket or socket requests if any
-			'/socket': {
-				target: 'ws://175.45.204.157:8080',
+			// forward websocket (socket.io) requests - must use http target for ws upgrade
+			'/ws/socket.io': {
+				target: 'http://175.45.204.157:8080',
 				ws: true,
-				changeOrigin: true
+				changeOrigin: true,
+				secure: false
+			},
+			// forward other socket requests if any
+			'/socket': {
+				target: 'http://175.45.204.157:8080',
+				ws: true,
+				changeOrigin: true,
+				secure: false
 			}
 		}
 	},

@@ -931,7 +931,7 @@
 							</div>
 
 							<!-- Mobile/Desktop Buttons Container -->
-							{#if message.done && !readOnly && !isToolExecuting}
+							{#if message.completed && !readOnly && !isToolExecuting}
 								<div class="flex flex-row items-center gap-1">
 									<!-- Regenerate Button -->
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
