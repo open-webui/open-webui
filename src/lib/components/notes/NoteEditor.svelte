@@ -145,6 +145,9 @@
 
 	let inputElement = null;
 
+	// Computed HTML for editor: fall back to markdown if HTML is missing
+	$: editorHtml = note?.data?.content?.html || (note?.data?.content?.md ? marked.parse(note.data.content.md) : '');
+
 	const init = async () => {
 		loading = true;
 		const res = await getNoteById(localStorage.token, id).catch((error) => {
@@ -154,7 +157,7 @@
 
 		messages = [];
 
-		if (res) {
+	if (res) {
 			note = res;
 			files = res.data.files || [];
 
@@ -1154,7 +1157,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							className="input-prose-sm px-0.5 h-[calc(100%-2rem)]"
 							json={true}
 							bind:value={note.data.content.json}
-							html={note.data?.content?.html}
+							html={editorHtml}
 							documentId={`note:${note.id}`}
 							collaboration={true}
 							socket={$socket}
