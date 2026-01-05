@@ -98,7 +98,7 @@ async def create_new_prompt(
 ############################
 
 
-@router.get("/command/{command}")
+@router.get("/command/{command}", response_model=Optional[PromptAccessResponse])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     prompt = Prompts.get_prompt_by_command(f"/{command}", db=db)
 
@@ -108,14 +108,14 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user), d
             or prompt.user_id == user.id
             or has_access(user.id, "read", prompt.access_control, db=db)
         ):
-            return {
+            return PromptAccessResponse(
                 **prompt.model_dump(),
-                "write_access": (
+                write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == prompt.user_id
                     or has_access(user.id, "write", prompt.access_control, db=db)
-                )
-            }
+                ),
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
