@@ -3,15 +3,16 @@ from open_webui.utils.misc import (
     deep_update,
     add_or_update_system_message,
     replace_system_message_content,
+    parse_duration,
 )
 from typing import Callable, Optional
 import logging
 import json
 from fastapi import HTTPException
-from open_webui.config import S3_BUCKET_NAME
-from open_webui.models.tenants import Tenants
+from open_webui.config import S3_BUCKET_NAME, JWT_EXPIRES_IN
 from open_webui.models.users import UserModel
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.utils.auth import create_token
 import sys
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -286,24 +287,29 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
 
     return ollama_messages
 
-def _get_tenant_info_by_id(tenant_id: str) -> str:
-    tenant = Tenants.get_tenant_by_id(tenant_id)
-    if not tenant or not tenant.s3_bucket:
-        raise HTTPException(
-            status_code=400,
-            detail="Tenant storage configuration missing.",
+
+def _build_user_jwt_token(user: UserModel) -> str:
+    """
+    Generate a session token for the provided user so downstream Luxor services can
+    authenticate the caller.
+    """
+    try:
+        expires_delta = parse_duration(str(JWT_EXPIRES_IN.value))
+    except Exception as e:
+        log.warning(f"Failed to parse JWT_EXPIRES_IN, defaulting to session token without expiry: {e}")
+        expires_delta = None
+
+    try:
+        return create_token(
+            data={"id": user.id},
+            expires_delta=expires_delta,
         )
-    return tenant.s3_bucket, tenant.table_name, tenant.system_config_client_name
-
-
-def _get_tenant_info_for_user(user: UserModel) -> str:
-    if not getattr(user, "tenant_id", None):
+    except Exception as e:
+        log.error(f"Failed to create user JWT token: {e}")
         raise HTTPException(
-            status_code=400,
-            detail="User is not associated with a tenant.",
+            status_code=500,
+            detail="Unable to create user token for Luxor request.",
         )
-
-    return _get_tenant_info_by_id(user.tenant_id)
 
 
 def convert_payload_openai_to_luxor(openai_payload: dict, user: Optional[UserModel]) -> dict:
@@ -334,35 +340,17 @@ def convert_payload_openai_to_luxor(openai_payload: dict, user: Optional[UserMod
             detail="Luxor storage bucket is not configured.",
         )
 
-    model_id = openai_payload.get("model", "")
     override_tenant_id = openai_payload.pop("luxor_tenant_id", None)
-    if override_tenant_id:
-        if getattr(user, "role", None) != "admin":
-            log.info("Tenant selection is restricted to admins.")
-
-            raise HTTPException(
-                status_code=403,
-                detail="Tenant selection is restricted to admins.",
-            )
-        
-        log.info(f"Get Tenant Bucket By Override Id {override_tenant_id}")
-
-        tenant_bucket, table_name, system_config_client_name  = _get_tenant_info_by_id(override_tenant_id)
-    else:
-        log.info(f"Get Tenant Bucket By User {user}")
-
-        tenant_bucket, table_name, system_config_client_name = _get_tenant_info_for_user(user)
+    
 
     messages = openai_payload.get("messages")
     luxor_payload["messages"] = messages
     luxor_payload["bucket"] = S3_BUCKET_NAME
-    luxor_payload["tenant"] = tenant_bucket
-    luxor_payload["table_name"] = table_name
-    luxor_payload["system_config_client_name"] = system_config_client_name
-    luxor_payload["user"] = user.id
-    luxor_payload["model"] = model_id or "luxor:latest"
     luxor_payload["task"] = openai_payload.get("task") or "generate-completion"
-    log.info(f"Complete complete!!!!!\n{luxor_payload}")
+    luxor_payload["jwt_token"] = _build_user_jwt_token(user)
+
+    if override_tenant_id:
+        luxor_payload["override_tenant_id"] = override_tenant_id    
 
     return luxor_payload
 

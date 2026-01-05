@@ -486,6 +486,7 @@ from open_webui.utils.prompt_suggestions import (
     normalize_prompt_suggestions,
     is_prompt_suggestions_stale,
 )
+from open_webui.utils.misc import parse_duration
 
 from open_webui.utils.models import (
     get_all_models,
@@ -508,6 +509,7 @@ from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
     get_verified_user,
+    create_token
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import (
@@ -1767,7 +1769,31 @@ def _get_prompt_suggestions_map(app: FastAPI) -> dict:
     return normalized
 
 
-async def _fetch_prompt_suggestions_for_tenant(tenant_bucket: str) -> Optional[dict]:
+def _build_prompt_suggestions_jwt(user: Optional[UserModel]) -> Optional[str]:
+    if not user:
+        return None
+
+    try:
+        expires_delta = parse_duration(str(JWT_EXPIRES_IN.value))
+    except Exception as e:
+        log.warning(
+            f"Failed to parse JWT_EXPIRES_IN for prompt suggestions, defaulting to no expiry: {e}"
+        )
+        expires_delta = None
+
+    try:
+        return create_token(data={"id": user.id}, expires_delta=expires_delta)
+    except Exception as e:
+        log.error(f"Failed to create prompt suggestions JWT token: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create user token for prompt suggestions request.",
+        )
+
+
+async def _fetch_prompt_suggestions_for_tenant(
+    tenant_bucket: str, user: Optional[UserModel] = None
+) -> Optional[dict]:
     if STORAGE_PROVIDER != "s3" or not S3_BUCKET_NAME:
         return None
 
@@ -1776,6 +1802,9 @@ async def _fetch_prompt_suggestions_for_tenant(tenant_bucket: str) -> Optional[d
         "bucket": S3_BUCKET_NAME,
         "tenant": tenant_bucket,
     }
+    token = _build_prompt_suggestions_jwt(user)
+    if token:
+        payload["jwt_token"] = token
 
     response = await rag_master_request(payload)
     if not isinstance(response, dict):
@@ -1838,7 +1867,7 @@ async def _get_prompt_suggestions_for_user(
         return default_suggestions
 
     if not entry or not entry.get("suggestions"):
-        entry = await _fetch_prompt_suggestions_for_tenant(tenant.s3_bucket)
+        entry = await _fetch_prompt_suggestions_for_tenant(tenant.s3_bucket, user=user)
         if entry:
             suggestions_map[tenant_id] = entry
             request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS = suggestions_map
