@@ -408,7 +408,7 @@
 								}}
 							/>
 						{:else}
-							<div class="flex flex-col justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
+							<div class="flex flex-col justify-center gap-1  w-fit px-5 max-w-xl">
 								<div class="text-body-2 text-gray-900 dark:text-gray-50">
 									안녕하세요! 공업수학 AI 튜터입니다.
 								</div>

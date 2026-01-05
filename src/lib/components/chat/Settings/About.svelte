@@ -2,7 +2,7 @@
 	import { getVersionUpdates } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
-	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
+	import { WEBUI_NAME, config, showChangelog, user } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 
@@ -49,10 +49,13 @@
 		<div>
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
-					{$WEBUI_NAME}
-					{$i18n.t('Version')}
+					<!-- {$WEBUI_NAME}
+					{$i18n.t('Version')} -->
+					HYU AI Tutor
+					DEV alpha 버전
 				</div>
 			</div>
+			{#if $user.role === 'admin'}
 			<div class="flex w-full justify-between items-center">
 				<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
 					<div class="flex gap-1">
@@ -95,9 +98,10 @@
 					</button>
 				{/if}
 			</div>
+			{/if}
 		</div>
 
-		{#if ollamaVersion}
+		<!-- {#if ollamaVersion}
 			<hr class=" border-gray-100 dark:border-gray-850" />
 
 			<div>
@@ -108,11 +112,11 @@
 					</div>
 				</div>
 			</div>
-		{/if}
+		{/if} -->
 
 		<hr class=" border-gray-100 dark:border-gray-850" />
 
-		{#if $config?.license_metadata}
+		<!-- {#if $config?.license_metadata}
 			<div class="mb-2 text-xs">
 				{#if !$WEBUI_NAME.includes('Open WebUI')}
 					<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
@@ -144,16 +148,16 @@
 					/>
 				</a>
 			</div>
-		{/if}
+		{/if} -->
 
-		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+		<!-- <div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 			Emoji graphics provided by
 			<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, licensed under
 			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
-		</div>
+		</div> -->
 
 		<div>
-			<pre
+			<!-- <pre
 				class="text-xs text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
 					href="https://openwebui.com"
 					target="_blank"
@@ -191,16 +195,16 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-</pre>
+</pre> -->
 		</div>
 
-		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+		<!-- <div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 			{$i18n.t('Created by')}
 			<a
 				class=" text-gray-500 dark:text-gray-300 font-medium"
 				href="https://github.com/tjbck"
 				target="_blank">Timothy J. Baek</a
 			>
-		</div>
+		</div> -->
 	</div>
 </div>

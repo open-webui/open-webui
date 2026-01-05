@@ -685,7 +685,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class="px-4 pt-4 pb-2 flex flex-col justify-between bg-gray-50 text-gray-900 dark:text-gray-50 h-full z-10 transition-all dark:bg-gray-900/50"
+		class="px-4 pt-4 pb-2 flex flex-col justify-between bg-gray-50 text-gray-900 dark:text-gray-50 h-full z-10 transition-all dark:bg-gray-900/50 items-center"
 		id="sidebar"
 	>
 		<!-- Top: HYU Logo -->
@@ -701,14 +701,14 @@
 		</div>
 
 		<!-- Bottom: Sidebar Toggle + User Profile -->
-		<div class="flex flex-col gap-2">
+		<div class="flex flex-col gap-2 items-center">
 			<!-- Sidebar Open Button -->
 			<Tooltip
 				content={$i18n.t('Open Sidebar')}
 				placement="right"
 			>
 				<button
-					class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
+					class="flex rounded-xl  justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
 						? 'cursor-pointer'
 						: 'cursor-[e-resize]'} text-gray-900 dark:text-gray-50"
 					on:click={() => {
@@ -836,199 +836,6 @@
 					}
 				}}
 			>
-				<!-- <div class="pb-1.5">
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-						<a
-							id="sidebar-new-chat-button"
-							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
-							href="/"
-							draggable="false"
-							on:click={newChatHandler}
-							aria-label={$i18n.t('New Chat')}
-						>
-							<div class="self-center">
-								<PencilSquare className=" size-4.5" strokeWidth="2" />
-							</div>
-
-							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
-							</div>
-
-							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
-						</a>
-					</div>
-
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-						<button
-							id="sidebar-search-button"
-							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
-							on:click={() => {
-								showSearch.set(true);
-							}}
-							draggable="false"
-							aria-label={$i18n.t('Search')}
-						>
-							<div class="self-center">
-								<Search strokeWidth="2" className="size-4.5" />
-							</div>
-
-							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
-							</div>
-							<HotkeyHint name="search" className=" group-hover:visible invisible" />
-						</button>
-					</div>
-
-					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-							<a
-								id="sidebar-notes-button"
-								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								href="/notes"
-								on:click={itemClickHandler}
-								draggable="false"
-								aria-label={$i18n.t('Notes')}
-							>
-								<div class="self-center">
-									<Note className="size-4.5" strokeWidth="2" />
-								</div>
-
-								<div class="flex self-center translate-y-[0.5px]">
-									<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
-								</div>
-							</a>
-						</div>
-					{/if}
-
-					
-				</div> -->
-				<!-- {#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-						<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 ">
-							<a
-								id="sidebar-workspace-button"
-								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								href="/workspace"
-								on:click={itemClickHandler}
-								draggable="false"
-								aria-label={$i18n.t('Workspace')}
-							>
-								<div class="self-center ">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke-width="2"
-										stroke="currentColor"
-										class="size-4.5"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-										/>
-									</svg>
-								</div>
-
-								<div class="flex self-center translate-y-[0.5px]">
-									<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
-								</div>
-							</a>
-						</div>
-					{/if} -->
-
-				<!-- {#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
-					<Folder
-						id="sidebar-models"
-						className="px-2 mt-0.5"
-						name={$i18n.t('Models')}
-						chevron={false}
-						dragAndDrop={false}
-					>
-						<PinnedModelList bind:selectedChatId {shiftKey} />
-					</Folder>
-				{/if} -->
-
-				<!-- {#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
-					<Folder
-						id="sidebar-channels"
-						className="px-2 mt-0.5"
-						name={$i18n.t('Channels')}
-						chevron={false}
-						dragAndDrop={false}
-						onAdd={async () => {
-							if ($user?.role === 'admin') {
-								await tick();
-
-								setTimeout(() => {
-									showCreateChannel = true;
-								}, 0);
-							}
-						}}
-						onAddLabel={$i18n.t('Create Channel')}
-					>
-						{#each $channels as channel}
-							<ChannelItem
-								{channel}
-								onUpdate={async () => {
-									await initChannels();
-								}}
-							/>
-						{/each}
-					</Folder>
-				{/if}
-
-				{#if folders}
-					<Folder
-						id="sidebar-folders"
-						className="px-2 mt-0.5"
-						name={$i18n.t('Folders')}
-						chevron={false}
-						onAdd={() => {
-							showCreateFolderModal = true;
-						}}
-						onAddLabel={$i18n.t('New Folder')}
-						on:drop={async (e) => {
-							const { type, id, item } = e.detail;
-
-							if (type === 'folder') {
-								if (folders[id].parent_id === null) {
-									return;
-								}
-
-								const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
-									(error) => {
-										toast.error(`${error}`);
-										return null;
-									}
-								);
-
-								if (res) {
-									await initFolders();
-								}
-							}
-						}}
-					>
-						<Folders
-							bind:folderRegistry
-							{folders}
-							{shiftKey}
-							onDelete={(folderId) => {
-								selectedFolder.set(null);
-								initChatList();
-							}}
-							on:update={() => {
-								initChatList();
-							}}
-							on:import={(e) => {
-								const { folderId, items } = e.detail;
-								importChatHandler(items, false, folderId);
-							}}
-							on:change={async () => {
-								initChatList();
-							}}
-						/>
-					</Folder>
-				{/if} -->
 
 				<!-- Separator Line -->
 				<div class="px-5">

@@ -1,7 +1,7 @@
 import { browser, dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'Open WebUI';
+export const APP_NAME = 'HYU AI Tutor';
 
 // Layout Constants
 export const SIDEBAR_WIDTH = 300; // Sidebar width in pixels
