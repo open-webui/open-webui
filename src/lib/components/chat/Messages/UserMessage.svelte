@@ -124,7 +124,7 @@
 	{#if !($settings?.chatBubble ?? true)}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
 			<ProfileImage
-				src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+				src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image?v=${user.updated_at}`}
 				className={'size-8 user-message-profile-image'}
 			/>
 		</div>
