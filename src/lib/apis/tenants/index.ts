@@ -7,6 +7,7 @@ export type TenantInfo = {
 	table_name?: string | null;
 	system_config_client_name?: string | null;
 	logo_image_url?: string | null;
+	help_text: string;
 	created_at?: number;
 	updated_at?: number;
 };
@@ -16,6 +17,7 @@ export type TenantCreatePayload = {
 	table_name?: string | null;
 	system_config_client_name?: string | null;
 	logo_image_url?: string | null;
+	help_text?: string | null;
 };
 
 export type TenantUpdatePayload = Partial<{
@@ -24,6 +26,7 @@ export type TenantUpdatePayload = Partial<{
 	table_name: string | null;
 	system_config_client_name: string | null;
 	logo_image_url: string | null;
+	help_text: string | null;
 }>;
 
 export type TenantPromptFile = {

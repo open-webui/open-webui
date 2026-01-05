@@ -31,6 +31,7 @@ class TenantInfo(BaseModel):
     table_name: Optional[str] = None
     system_config_client_name: Optional[str] = None
     logo_image_url: Optional[str] = None
+    help_text: str
     created_at: Optional[int] = None
     updated_at: Optional[int] = None
 
