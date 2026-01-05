@@ -951,7 +951,7 @@ async def generate_chat_completion(
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
-                stream_chunks_handler(stream_with_heartbeat(r.content)),
+                stream_chunks_handler(r.content),  # TODO: 心跳功能暂时禁用，需要重新实现
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(
