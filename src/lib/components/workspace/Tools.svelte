@@ -401,21 +401,23 @@
 								<div
 									class=" flex flex-1 space-x-3.5 w-full"
 								>
-									<div class="flex items-center text-left">
-										<div class=" flex-1 self-center">
-											<Tooltip content={tool.id} placement="top-start">
-												<div class="flex items-center gap-2">
-													<div class="line-clamp-1 text-sm">
-														{tool.name}
-													</div>
-													<Badge type="muted" content={$i18n.t('Read Only')} />
-													{#if tool?.meta?.manifest?.version}
-														<div class=" text-gray-500 text-xs font-medium shrink-0">
-															v{tool?.meta?.manifest?.version ?? ''}
+									<div class="flex items-center text-left w-full">
+										<div class="flex-1 self-center w-full">
+											<div class="flex items-center justify-between w-full gap-2">
+												<Tooltip content={tool.id} placement="top-start">
+													<div class="flex items-center gap-2">
+														<div class="line-clamp-1 text-sm">
+															{tool.name}
 														</div>
-													{/if}
-												</div>
-											</Tooltip>
+														{#if tool?.meta?.manifest?.version}
+															<div class=" text-gray-500 text-xs font-medium shrink-0">
+																v{tool?.meta?.manifest?.version ?? ''}
+															</div>
+														{/if}
+													</div>
+												</Tooltip>
+												<Badge type="muted" content={$i18n.t('Read Only')} />
+											</div>
 											<div class="px-0.5">
 												<div class="text-xs text-gray-500 shrink-0">
 													<Tooltip
