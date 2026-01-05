@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from open_webui.models.prompts import (
     PromptForm,
     PromptUserResponse,
+    PromptAccessResponse,
     PromptModel,
     Prompts,
 )
@@ -31,14 +32,24 @@ async def get_prompts(user=Depends(get_verified_user), db: Session = Depends(get
     return prompts
 
 
-@router.get("/list", response_model=list[PromptUserResponse])
+@router.get("/list", response_model=list[PromptAccessResponse])
 async def get_prompt_list(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         prompts = Prompts.get_prompts(db=db)
     else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "write", db=db)
+        prompts = Prompts.get_prompts_by_user_id(user.id, "read", db=db)
 
-    return prompts
+    return [
+        PromptAccessResponse(
+            **prompt.model_dump(),
+            write_access=(
+                (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                or user.id == prompt.user_id
+                or has_access(user.id, "write", prompt.access_control, db=db)
+            ),
+        )
+        for prompt in prompts
+    ]
 
 
 ############################
@@ -87,7 +98,7 @@ async def create_new_prompt(
 ############################
 
 
-@router.get("/command/{command}", response_model=Optional[PromptModel])
+@router.get("/command/{command}", response_model=Optional[PromptAccessResponse])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     prompt = Prompts.get_prompt_by_command(f"/{command}", db=db)
 
@@ -97,15 +108,17 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user), d
             or prompt.user_id == user.id
             or has_access(user.id, "read", prompt.access_control, db=db)
         ):
-            return prompt
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            return PromptAccessResponse(
+                **prompt.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == prompt.user_id
+                    or has_access(user.id, "write", prompt.access_control, db=db)
+                ),
             )
     else:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
