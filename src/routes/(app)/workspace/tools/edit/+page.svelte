@@ -13,7 +13,6 @@
 	const i18n = getContext('i18n');
 
 	let tool = null;
-	let disabled = true;
 
 	const saveHandler = async (data) => {
 		console.log(data);
@@ -60,10 +59,6 @@
 				goto('/workspace/tools');
 				return null;
 			});
-
-			if (tool) {
-				disabled = !(tool.write_access ?? true);
-			}
 		}
 	});
 </script>
@@ -71,7 +66,6 @@
 {#if tool}
 	<ToolkitEditor
 		edit={true}
-		{disabled}
 		id={tool.id}
 		name={tool.name}
 		meta={tool.meta}

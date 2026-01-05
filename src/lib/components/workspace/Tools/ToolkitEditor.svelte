@@ -21,7 +21,6 @@
 
 	export let edit = false;
 	export let clone = false;
-	export let disabled = true;
 
 	export let onSave = () => {};
 
@@ -156,10 +155,6 @@ class Tools:
 `;
 
 	const saveHandler = async () => {
-		if (disabled) {
-			toast.error($i18n.t('You do not have permission to edit this tool.'));
-			return;
-		}
 		loading = true;
 		onSave({
 			id,
@@ -236,32 +231,26 @@ class Tools:
 									placeholder={$i18n.t('Tool Name')}
 									bind:value={name}
 									required
-									disabled={disabled}
+									disabled={edit}
 								/>
 							</Tooltip>
 						</div>
 
-						{#if !disabled}
-							<div class="self-center shrink-0">
-								<button
-									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-									type="button"
-									on:click={() => {
-										showAccessControlModal = true;
-									}}
-								>
-									<LockClosed strokeWidth="2.5" className="size-3.5" />
+						<div class="self-center shrink-0">
+							<button
+								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+								type="button"
+								on:click={() => {
+									showAccessControlModal = true;
+								}}
+							>
+								<LockClosed strokeWidth="2.5" className="size-3.5" />
 
-									<div class="text-sm font-medium shrink-0">
-										{$i18n.t('Access')}
-									</div>
-								</button>
-							</div>
-						{:else}
-							<div class="text-xs shrink-0 text-gray-500">
-								{$i18n.t('Read Only')}
-							</div>
-						{/if}
+								<div class="text-sm font-medium shrink-0">
+									{$i18n.t('Access')}
+								</div>
+							</button>
+						</div>
 					</div>
 
 					<div class=" flex gap-2 px-1 items-center">
@@ -277,7 +266,7 @@ class Tools:
 									placeholder={$i18n.t('Tool ID')}
 									bind:value={id}
 									required
-									disabled={edit || disabled}
+									disabled={edit}
 								/>
 							</Tooltip>
 						{/if}
@@ -293,7 +282,7 @@ class Tools:
 								placeholder={$i18n.t('Tool Description')}
 								bind:value={meta.description}
 								required
-								disabled={disabled}
+								disabled={edit}
 							/>
 						</Tooltip>
 					</div>
@@ -305,7 +294,7 @@ class Tools:
 						value={content}
 						lang="python"
 						{boilerplate}
-						readOnly={!disabled}
+						readOnly={edit}
 						onChange={(e) => {
 							_content = e;
 						}}
@@ -328,17 +317,12 @@ class Tools:
 						</div>
 					</div>
 
-					<Tooltip content={!disabled ? $i18n.t('You do not have permission to save this tool.') : ''}>
-						<button
-							class="px-3.5 py-1.5 text-sm font-medium {disabled
-								? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full"
-							type="submit"
-							disabled={disabled}
-						>
-							{$i18n.t('Save')}
-						</button>
-					</Tooltip>
+					<button
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						type="submit"
+					>
+						{$i18n.t('Save')}
+					</button>
 				</div>
 			</div>
 		</form>
