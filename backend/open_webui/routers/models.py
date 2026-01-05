@@ -320,12 +320,14 @@ async def get_model_by_id(
 
 
 @router.get("/model/profile/image")
-async def get_model_profile_image(
+def get_model_profile_image(
     id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     model = Models.get_model_by_id(id, db=db)
 
     if model:
+        etag = f'"{model.updated_at}"' if model.updated_at else None
+
         if model.meta.profile_image_url:
             if model.meta.profile_image_url.startswith("http"):
                 return Response(
@@ -339,12 +341,14 @@ async def get_model_profile_image(
                     image_buffer = io.BytesIO(image_data)
                     media_type = header.split(";")[0].lstrip("data:")
 
+                    headers = {"Content-Disposition": "inline"}
+                    if etag:
+                        headers["ETag"] = etag
+
                     return StreamingResponse(
                         image_buffer,
                         media_type=media_type,
-                        headers={
-                            "Content-Disposition": "inline",
-                        },
+                        headers=headers,
                     )
                 except Exception as e:
                     pass
