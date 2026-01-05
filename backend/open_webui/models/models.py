@@ -176,31 +176,34 @@ class ModelsTable:
             log.exception(f"Failed to insert a new model: {e}")
             return None
 
-    def get_all_models(self, db: Optional[Session] = None) -> list[ModelModel]:
+    def get_all_models(self, skip_images: bool = False, db: Optional[Session] = None) -> list[ModelModel]:
         with get_db_context(db) as db:
-            return [ModelModel.model_validate(model) for model in db.query(Model).all()]
+            models = db.query(Model).all()
+            if skip_images:
+                result = []
+                for model in models:
+                    dump_exclude = {"meta": {"profile_image_url": True}} if model.meta.get("profile_image_url", "").startswith("data:image") else None
+                    model_data = ModelModel.model_validate(model).model_dump(exclude=dump_exclude)
+                    if dump_exclude:
+                        model_data["meta"]["profile_image_url"] = None
+                    result.append(ModelModel.model_validate(model_data))
+                return result
+            return [ModelModel.model_validate(model) for model in models]
 
     def get_models(self, skip_images: bool = False, db: Optional[Session] = None) -> list[ModelUserResponse]:
         with get_db_context(db) as db:
             all_models = db.query(Model).filter(Model.base_model_id != None).all()
-
             user_ids = list(set(model.user_id for model in all_models))
-
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
 
             models = []
             for model in all_models:
                 user = users_dict.get(model.user_id)
-                model_data = ModelModel.model_validate(model).model_dump()
-
-                if skip_images:
-                    if (
-                        model_data.get("meta", {})
-                        .get("profile_image_url", "")
-                        .startswith("data:image")
-                    ):
-                        model_data["meta"]["profile_image_url"] = None
+                dump_exclude = {"meta": {"profile_image_url": True}} if skip_images and model.meta.get("profile_image_url", "").startswith("data:image") else None
+                model_data = ModelModel.model_validate(model).model_dump(exclude=dump_exclude)
+                if dump_exclude:
+                    model_data["meta"]["profile_image_url"] = None
 
                 models.append(
                     ModelUserResponse.model_validate(
@@ -343,14 +346,10 @@ class ModelsTable:
 
             models = []
             for model, user in items:
-                model_data = ModelModel.model_validate(model).model_dump()
-                if skip_images:
-                    if (
-                        model_data.get("meta", {})
-                        .get("profile_image_url", "")
-                        .startswith("data:image")
-                    ):
-                        model_data["meta"]["profile_image_url"] = None
+                dump_exclude = {"meta": {"profile_image_url": True}} if skip_images and model.meta.get("profile_image_url", "").startswith("data:image") else None
+                model_data = ModelModel.model_validate(model).model_dump(exclude=dump_exclude)
+                if dump_exclude:
+                    model_data["meta"]["profile_image_url"] = None
 
                 models.append(
                     ModelUserResponse(

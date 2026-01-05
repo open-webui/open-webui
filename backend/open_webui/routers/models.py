@@ -110,9 +110,9 @@ async def get_base_models(user=Depends(get_admin_user), db: Session = Depends(ge
 @router.get("/tags", response_model=list[str])
 async def get_model_tags(user=Depends(get_verified_user), db: Session = Depends(get_session)):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        models = Models.get_models(db=db)
+        models = Models.get_models(skip_images=True, db=db)
     else:
-        models = Models.get_models_by_user_id(user.id, db=db)
+        models = Models.get_models_by_user_id(user.id, skip_images=True, db=db)
 
     tags_set = set()
     for model in models:
@@ -218,7 +218,10 @@ async def import_models(
         data = form_data.models
         if isinstance(data, list):
             for model_data in data:
-                # Here, you can add logic to validate model_data if needed
+                # Support both flat format and nested "info" format
+                if "info" in model_data:
+                    model_data = model_data["info"]
+
                 model_id = model_data.get("id")
 
                 if model_id and is_valid_model_id(model_id):

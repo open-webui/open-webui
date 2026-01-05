@@ -78,7 +78,7 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     return function_models + openai_models + ollama_models
 
 
-async def get_all_models(request, refresh: bool = False, user: UserModel = None):
+async def get_all_models(request, refresh: bool = False, skip_images: bool = False, user: UserModel = None):
     if (
         request.app.state.MODELS
         and request.app.state.BASE_MODELS
@@ -147,7 +147,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         for function in Functions.get_functions_by_type("filter", active_only=True)
     ]
 
-    custom_models = Models.get_all_models()
+    custom_models = Models.get_all_models(skip_images=skip_images)
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             # Applied directly to a base model

@@ -1457,7 +1457,7 @@ if audit_level != AuditLevel.NONE:
 async def get_models(
     request: Request, refresh: bool = False, user=Depends(get_verified_user)
 ):
-    all_models = await get_all_models(request, refresh=refresh, user=user)
+    all_models = await get_all_models(request, refresh=refresh, skip_images=True, user=user)
 
     models = []
     for model in all_models:

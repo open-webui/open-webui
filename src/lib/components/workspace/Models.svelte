@@ -18,6 +18,7 @@
 		deleteModelById,
 		getModelItems as getWorkspaceModels,
 		getModelTags,
+		importModels,
 		toggleModelById,
 		updateModelById
 	} from '$lib/apis/models';
@@ -302,27 +303,13 @@
 						return;
 					}
 
-					for (const model of savedModels) {
-						if (model?.info ?? false) {
-							if ($_models.find((m) => m.id === model.id)) {
-								await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-							} else {
-								await createNewModel(localStorage.token, model.info).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-							}
-						} else {
-							if (model?.id && model?.name) {
-								await createNewModel(localStorage.token, model).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-							}
-						}
+					try {
+						await importModels(localStorage.token, savedModels).catch((error) => {
+							toast.error(`${error}`);
+							return null;
+						});
+					} catch (e) {
+						console.error(e);
 					}
 
 					await _models.set(

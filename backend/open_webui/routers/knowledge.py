@@ -683,7 +683,7 @@ async def delete_knowledge_by_id(
     log.info(f"Deleting knowledge base: {id} (name: {knowledge.name})")
 
     # Get all models
-    models = Models.get_all_models(db=db)
+    models = Models.get_all_models(skip_images=True, db=db)
     log.info(f"Found {len(models)} models to check for knowledge base {id}")
 
     # Update models that reference this knowledge base
