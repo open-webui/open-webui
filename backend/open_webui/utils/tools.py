@@ -43,6 +43,10 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
 )
+from open_webui.tools.builtin import (
+    web_search, fetch_url, generate_image, edit_image,
+    memory_query, memory_add
+)
 
 import copy
 
@@ -316,6 +320,56 @@ async def get_tools(
                     function_name = f"{tool_id}_{function_name}"
 
                 tools_dict[function_name] = tool_dict
+
+    return tools_dict
+
+
+def get_builtin_tools(request: Request, extra_params: dict, features: dict = None) -> dict[str, dict]:
+    """
+    Get built-in tools for native function calling.
+    Only returns tools when BOTH the global config is enabled AND the feature is enabled for this chat.
+    """
+    tools_dict = {}
+    builtin_functions = []
+    features = features or {}
+
+    # Add web search tools if enabled globally AND for this chat
+    if (getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False) 
+        and features.get("web_search")):
+        builtin_functions.extend([web_search, fetch_url])
+
+    # Add image generation/edit tools if enabled globally AND for this chat
+    if (getattr(request.app.state.config, "ENABLE_IMAGE_GENERATION", False)
+        and features.get("image_generation")):
+        builtin_functions.append(generate_image)
+    if (getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False)
+        and features.get("image_generation")):
+        builtin_functions.append(edit_image)
+
+    # Add memory tools if enabled for this chat
+    if features.get("memory"):
+        builtin_functions.extend([memory_query, memory_add])
+
+    for func in builtin_functions:
+        callable = get_async_tool_function_and_apply_extra_params(
+            func,
+            {
+                "__request__": request,
+                "__user__": extra_params.get("__user__", {}),
+                "__event_emitter__": extra_params.get("__event_emitter__"),
+            },
+        )
+
+        # Generate spec from function
+        pydantic_model = convert_function_to_pydantic_model(func)
+        spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
+
+        tools_dict[func.__name__] = {
+            "tool_id": f"builtin:{func.__name__}",
+            "callable": callable,
+            "spec": spec,
+            "type": "builtin",
+        }
 
     return tools_dict
 

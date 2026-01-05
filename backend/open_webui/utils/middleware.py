@@ -44,6 +44,7 @@ from open_webui.routers.retrieval import (
     process_web_search,
     SearchForm,
 )
+from open_webui.utils.tools import get_builtin_tools
 from open_webui.routers.images import (
     image_generations,
     CreateImageForm,
@@ -1305,7 +1306,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise Exception(f"{e}")
 
-    features = form_data.pop("features", None)
+    features = form_data.pop("features", None) or {}
+    extra_params["__features__"] = features
     if features:
         if "voice" in features and features["voice"]:
             if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
@@ -1320,19 +1322,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if "memory" in features and features["memory"]:
-            form_data = await chat_memory_handler(
-                request, form_data, extra_params, user
-            )
+            # Skip forced memory injection when native FC is enabled - model can use memory tools
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data = await chat_memory_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "web_search" in features and features["web_search"]:
-            form_data = await chat_web_search_handler(
-                request, form_data, extra_params, user
-            )
+            # Skip forced RAG web search when native FC is enabled - model can use web_search tool
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data = await chat_web_search_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "image_generation" in features and features["image_generation"]:
-            form_data = await chat_image_generation_handler(
-                request, form_data, extra_params, user
-            )
+            # Skip forced image generation when native FC is enabled - model can use generate_image tool
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data = await chat_image_generation_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "code_interpreter" in features and features["code_interpreter"]:
             form_data["messages"] = add_or_update_user_message(
@@ -1542,6 +1550,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     if mcp_clients:
         metadata["mcp_clients"] = mcp_clients
+
+    # Always inject builtin tools for native function calling based on enabled features
+    if metadata.get("params", {}).get("function_calling") == "native":
+        builtin_tools = get_builtin_tools(
+            request,
+            {
+                **extra_params,
+                "__event_emitter__": event_emitter,
+            },
+            features,
+        )
+        for name, tool_dict in builtin_tools.items():
+            if name not in tools_dict:
+                tools_dict[name] = tool_dict
 
     if tools_dict:
         if metadata.get("params", {}).get("function_calling") == "native":
