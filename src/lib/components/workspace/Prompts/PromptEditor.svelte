@@ -15,7 +15,7 @@
 	export let edit = false;
 	export let prompt = null;
 	export let clone = false;
-	export let write_access = true;
+	export let disabled = true;
 
 	const i18n = getContext('i18n');
 
@@ -41,7 +41,7 @@
 	}
 
 	const submitHandler = async () => {
-		if (!write_access) {
+		if (disabled) {
 			toast.error($i18n.t('You do not have permission to edit this prompt.'));
 			return;
 		}
@@ -116,10 +116,14 @@
 							placeholder={$i18n.t('Title')}
 							bind:value={title}
 							required
-							disabled={!write_access}
+							{disabled}
 						/>
 
-						{#if write_access}
+						{#if disabled}
+							<div class="text-xs shrink-0 text-gray-500">
+								{$i18n.t('Read Only')}
+							</div>
+						{:else}
 							<div class="self-center shrink-0">
 								<button
 									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
@@ -135,10 +139,6 @@
 									</div>
 								</button>
 							</div>
-						{:else}
-							<div class="text-xs shrink-0 text-gray-500">
-								{$i18n.t('Read Only')}
-							</div>
 						{/if}
 					</div>
 
@@ -150,7 +150,7 @@
 							bind:value={command}
 							on:input={handleCommandInput}
 							required
-							disabled={edit || !write_access}
+							disabled={edit || disabled}
 						/>
 					</div>
 				</div>
@@ -170,7 +170,7 @@
 						bind:value={content}
 						rows={6}
 						required
-						disabled={!write_access}
+						readonly={disabled}
 					/>
 				</div>
 
@@ -194,13 +194,13 @@
 		</div>
 
 		<div class="my-4 flex justify-end pb-20">
-			<Tooltip content={!write_access ? $i18n.t('You do not have permission to save this prompt.') : ''}>
+			<Tooltip content={disabled ? $i18n.t('You do not have permission to save this prompt.') : ''}>
 				<button
-					class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-xl {loading || !write_access
+					class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-xl {loading || disabled
 						? ' cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
 						: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
 					type="submit"
-					disabled={loading || !write_access}
+					disabled={loading || disabled}
 				>
 					<div class=" self-center font-medium">{$i18n.t('Save & Create')}</div>
 					{#if loading}
