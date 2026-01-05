@@ -1,5 +1,7 @@
 import time
 import uuid
+from functools import lru_cache
+from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -18,6 +20,10 @@ class Tenant(Base):
     table_name = Column(String(255), nullable=True)
     system_config_client_name = Column(String(255), nullable=True)
     logo_image_url = Column(Text().with_variant(MEDIUMTEXT, "mysql"), nullable=True)
+    help_text = Column(
+        Text().with_variant(MEDIUMTEXT, "mysql"),
+        nullable=False,
+    )
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -30,6 +36,7 @@ class TenantModel(BaseModel):
     table_name: Optional[str] = None
     system_config_client_name: Optional[str] = None
     logo_image_url: Optional[str] = None
+    help_text: str
     created_at: int
     updated_at: int
 
@@ -42,6 +49,7 @@ class TenantForm(BaseModel):
     table_name: Optional[str] = None
     system_config_client_name: Optional[str] = None
     logo_image_url: Optional[str] = None
+    help_text: Optional[str] = None
 
 
 class TenantUpdateForm(BaseModel):
@@ -50,6 +58,25 @@ class TenantUpdateForm(BaseModel):
     table_name: Optional[str] = None
     system_config_client_name: Optional[str] = None
     logo_image_url: Optional[str] = None
+    help_text: Optional[str] = None
+
+
+DEFAULT_HELP_PATH = (
+    Path(__file__).resolve().parents[1] / "static" / "help" / "default.md"
+)
+
+
+@lru_cache(maxsize=1)
+def _get_default_help_text() -> str:
+    if not DEFAULT_HELP_PATH.exists():
+        raise RuntimeError(
+            f"Default tenant help markdown not found at {DEFAULT_HELP_PATH}"
+        )
+    return DEFAULT_HELP_PATH.read_text(encoding="utf-8")
+
+
+def get_default_help_text() -> str:
+    return _get_default_help_text()
 
 
 class TenantsTable:
@@ -70,6 +97,9 @@ class TenantsTable:
                     "table_name": form_data.table_name,
                     "system_config_client_name": form_data.system_config_client_name,
                     "logo_image_url": form_data.logo_image_url,
+                    "help_text": form_data.help_text
+                    if form_data.help_text is not None
+                    else _get_default_help_text(),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -114,6 +144,8 @@ class TenantsTable:
                 )
             if form_data.logo_image_url is not None:
                 update_payload["logo_image_url"] = form_data.logo_image_url
+            if form_data.help_text is not None:
+                update_payload["help_text"] = form_data.help_text
 
             if not update_payload:
                 return self.get_tenant_by_id(tenant_id)
