@@ -350,7 +350,7 @@ async def create_new_tools(
 ############################
 
 
-@router.get("/id/{id}", response_model=Optional[ToolModel])
+@router.get("/id/{id}", response_model=Optional[ToolAccessResponse])
 async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     tools = Tools.get_tool_by_id(id, db=db)
 
@@ -360,7 +360,14 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: Session 
             or tools.user_id == user.id
             or has_access(user.id, "read", tools.access_control, db=db)
         ):
-            return tools
+            return ToolAccessResponse(
+                **tools.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == tools.user_id
+                    or has_access(user.id, "write", tools.access_control, db=db)
+                ),
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

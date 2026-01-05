@@ -1,7 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getToolById, getTools, getToolList, updateToolById } from '$lib/apis/tools';
+	import { getToolById, getTools, updateToolById } from '$lib/apis/tools';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
 	import { WEBUI_VERSION } from '$lib/constants';
@@ -55,16 +55,15 @@
 	onMount(async () => {
 		const id = $page.url.searchParams.get('id');
 		if (id) {
-			// Get tool list to check write_access
-			const toolList = await getToolList(localStorage.token).catch(() => []);
-			const toolWithAccess = toolList.find(t => t.id === id);
-			write_access = toolWithAccess?.write_access ?? true;
-
 			tool = await getToolById(localStorage.token, id).catch((error) => {
 				toast.error(`${error}`);
 				goto('/workspace/tools');
 				return null;
 			});
+
+			if (tool) {
+				write_access = tool.write_access ?? true;
+			}
 		}
 	});
 </script>
