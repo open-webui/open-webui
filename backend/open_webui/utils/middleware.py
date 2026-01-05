@@ -726,6 +726,8 @@ def get_images_from_messages(message_list):
         for file in message.get("files", []):
             if file.get("type") == "image":
                 message_images.append(file.get("url"))
+            elif file.get("content_type", "").startswith("image/"):
+                message_images.append(file.get("url"))
 
         if message_images:
             images.append(message_images)
