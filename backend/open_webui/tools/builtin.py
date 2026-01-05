@@ -2,6 +2,8 @@
 Built-in tools for Open WebUI.
 
 These tools are automatically available when native function calling is enabled.
+
+IMPORTANT: DO NOT IMPORT THIS MODULE DIRECTLY IN OTHER PARTS OF THE CODEBASE.
 """
 
 import json
@@ -22,9 +24,11 @@ from open_webui.routers.images import (
 )
 from open_webui.routers.memories import (
     query_memory,
-    add_memory,
+    add_memory as _add_memory,
+    update_memory_by_id,
     QueryMemoryForm,
     AddMemoryForm,
+    MemoryUpdateModel,
 )
 from open_webui.models.notes import Notes
 from open_webui.models.chats import Chats
@@ -297,7 +301,7 @@ async def edit_image(
 # =============================================================================
 
 
-async def memory_query(
+async def search_memories(
     query: str,
     __request__: Request = None,
     __user__: dict = None,
@@ -323,6 +327,9 @@ async def memory_query(
         if results and hasattr(results, "documents") and results.documents:
             memories = []
             for doc_idx, doc in enumerate(results.documents[0]):
+                memory_id = None
+                if results.ids and results.ids[0]:
+                    memory_id = results.ids[0][doc_idx]
                 created_at = "Unknown"
                 if results.metadatas and results.metadatas[0][doc_idx].get(
                     "created_at"
@@ -331,16 +338,16 @@ async def memory_query(
                         "%Y-%m-%d",
                         time.localtime(results.metadatas[0][doc_idx]["created_at"]),
                     )
-                memories.append({"date": created_at, "content": doc})
+                memories.append({"id": memory_id, "date": created_at, "content": doc})
             return json.dumps(memories, ensure_ascii=False)
         else:
             return json.dumps([])
     except Exception as e:
-        log.exception(f"memory_query error: {e}")
+        log.exception(f"search_memories error: {e}")
         return json.dumps({"error": str(e)})
 
 
-async def memory_add(
+async def add_memory(
     content: str,
     __request__: Request = None,
     __user__: dict = None,
@@ -357,7 +364,7 @@ async def memory_add(
     try:
         user = UserModel(**__user__) if __user__ else None
 
-        memory = await add_memory(
+        memory = await _add_memory(
             __request__,
             AddMemoryForm(content=content),
             user,
@@ -365,7 +372,42 @@ async def memory_add(
 
         return json.dumps({"status": "success", "id": memory.id}, ensure_ascii=False)
     except Exception as e:
-        log.exception(f"memory_add error: {e}")
+        log.exception(f"add_memory error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+async def replace_memory_content(
+    memory_id: str,
+    content: str,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Update the content of an existing memory by its ID.
+
+    :param memory_id: The ID of the memory to update
+    :param content: The new content for the memory
+    :return: Confirmation that the memory was updated
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    try:
+        user = UserModel(**__user__) if __user__ else None
+
+        memory = await update_memory_by_id(
+            memory_id=memory_id,
+            request=__request__,
+            form_data=MemoryUpdateModel(content=content),
+            user=user,
+        )
+
+        return json.dumps(
+            {"status": "success", "id": memory.id, "content": memory.content},
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f"replace_memory_content error: {e}")
         return json.dumps({"error": str(e)})
 
 

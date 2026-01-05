@@ -48,8 +48,9 @@ from open_webui.tools.builtin import (
     fetch_url,
     generate_image,
     edit_image,
-    memory_query,
-    memory_add,
+    search_memories,
+    add_memory,
+    replace_memory_content,
     get_current_timestamp,
     calculate_timestamp,
     search_notes,
@@ -359,7 +360,7 @@ def get_builtin_tools(
 
     # Add memory tools if enabled for this chat
     if features.get("memory"):
-        builtin_functions.extend([memory_query, memory_add])
+        builtin_functions.extend([search_memories, add_memory, replace_memory_content])
 
     # Add web search tools if enabled globally AND for this chat
     if getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False) and features.get(
@@ -379,7 +380,9 @@ def get_builtin_tools(
 
     # Notes tools - search, view, create, and update user's notes (if notes enabled globally)
     if getattr(request.app.state.config, "ENABLE_NOTES", False):
-        builtin_functions.extend([search_notes, view_note, write_note, replace_note_content])
+        builtin_functions.extend(
+            [search_notes, view_note, write_note, replace_note_content]
+        )
 
     # Channels tools - search channels and messages (if channels enabled globally)
     if getattr(request.app.state.config, "ENABLE_CHANNELS", False):
