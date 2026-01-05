@@ -2723,6 +2723,9 @@ async def process_chat_response(
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:
+                                            # Flush any pending text first
+                                            await flush_pending_delta_data()
+
                                             pending_content_blocks = content_blocks + [
                                                 {
                                                     "type": "tool_calls",
