@@ -214,6 +214,8 @@ async def generate_image(
     __request__: Request = None,
     __user__: dict = None,
     __event_emitter__: callable = None,
+    __chat_id__: str = None,
+    __message_id__: str = None,
 ) -> str:
     """
     Generate an image based on a text prompt.
@@ -233,15 +235,24 @@ async def generate_image(
             user=user,
         )
 
+        # Prepare file entries for the images
+        image_files = [{"type": "image", "url": img["url"]} for img in images]
+
+        # Persist files to DB if chat context is available
+        if __chat_id__ and __message_id__ and images:
+            image_files = Chats.add_message_files_by_id_and_message_id(
+                __chat_id__,
+                __message_id__,
+                image_files,
+            )
+
         # Emit the images to the UI if event emitter is available
-        if __event_emitter__ and images:
+        if __event_emitter__ and image_files:
             await __event_emitter__(
                 {
-                    "type": "files",
+                    "type": "chat:message:files",
                     "data": {
-                        "files": [
-                            {"type": "image", "url": img["url"]} for img in images
-                        ]
+                        "files": image_files,
                     },
                 }
             )
@@ -263,17 +274,19 @@ async def generate_image(
 
 async def edit_image(
     prompt: str,
-    image_url: str,
+    image_urls: list[str],
     __request__: Request = None,
     __user__: dict = None,
     __event_emitter__: callable = None,
+    __chat_id__: str = None,
+    __message_id__: str = None,
 ) -> str:
     """
-    Edit an existing image based on a text prompt.
+    Edit existing images based on a text prompt.
 
-    :param prompt: A description of the changes to make to the image
-    :param image_url: The URL of the image to edit
-    :return: Confirmation that the image was edited, or an error message
+    :param prompt: A description of the changes to make to the images
+    :param image_urls: A list of URLs of the images to edit
+    :return: Confirmation that the images were edited, or an error message
     """
     if __request__ is None:
         return json.dumps({"error": "Request context not available"})
@@ -283,19 +296,28 @@ async def edit_image(
 
         images = await image_edits(
             request=__request__,
-            form_data=EditImageForm(prompt=prompt, image=image_url),
+            form_data=EditImageForm(prompt=prompt, image=image_urls),
             user=user,
         )
 
+        # Prepare file entries for the images
+        image_files = [{"type": "image", "url": img["url"]} for img in images]
+
+        # Persist files to DB if chat context is available
+        if __chat_id__ and __message_id__ and images:
+            image_files = Chats.add_message_files_by_id_and_message_id(
+                __chat_id__,
+                __message_id__,
+                image_files,
+            )
+
         # Emit the images to the UI if event emitter is available
-        if __event_emitter__ and images:
+        if __event_emitter__ and image_files:
             await __event_emitter__(
                 {
-                    "type": "files",
+                    "type": "chat:message:files",
                     "data": {
-                        "files": [
-                            {"type": "image", "url": img["url"]} for img in images
-                        ]
+                        "files": image_files,
                     },
                 }
             )

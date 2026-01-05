@@ -402,6 +402,8 @@ def get_builtin_tools(
                 "__request__": request,
                 "__user__": extra_params.get("__user__", {}),
                 "__event_emitter__": extra_params.get("__event_emitter__"),
+                "__chat_id__": extra_params.get("__chat_id__"),
+                "__message_id__": extra_params.get("__message_id__"),
             },
         )
 
