@@ -67,7 +67,11 @@ def run_migrations():
         log.exception(f"Error running migrations: {e}")
 
 
-run_migrations()
+SKIP_DB_MIGRATIONS = os.environ.get("SKIP_DB_MIGRATIONS", "False").lower() == "true"
+if SKIP_DB_MIGRATIONS:
+    log.info("Skipping database migrations (SKIP_DB_MIGRATIONS=true)")
+else:
+    run_migrations()
 
 
 class Config(Base):
@@ -1694,6 +1698,24 @@ ADMIN_EMAIL = PersistentConfig(
     "ADMIN_EMAIL",
     "auth.admin.email",
     os.environ.get("ADMIN_EMAIL", None),
+)
+
+RAG_PERFORMANCE_PROFILE = PersistentConfig(
+    "RAG_PERFORMANCE_PROFILE",
+    "rag.performance.profile",
+    os.environ.get("RAG_PERFORMANCE_PROFILE", "saver"),
+)
+
+RAG_AUTO_SUSPEND = PersistentConfig(
+    "RAG_AUTO_SUSPEND",
+    "rag.power.auto_suspend",
+    os.environ.get("RAG_AUTO_SUSPEND", "true").lower() == "true",
+)
+
+RAG_AUTO_SUSPEND_IDLE_SECONDS = PersistentConfig(
+    "RAG_AUTO_SUSPEND_IDLE_SECONDS",
+    "rag.power.idle_seconds",
+    int(os.environ.get("RAG_AUTO_SUSPEND_IDLE_SECONDS", "300")),
 )
 
 

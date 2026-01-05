@@ -1,3 +1,4 @@
+import os
 import re
 import uuid
 import time
@@ -946,6 +947,9 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
+        "RAG_PERFORMANCE_PROFILE": request.app.state.config.RAG_PERFORMANCE_PROFILE,
+        "RAG_AUTO_SUSPEND": request.app.state.config.RAG_AUTO_SUSPEND,
+        "RAG_AUTO_SUSPEND_IDLE_SECONDS": request.app.state.config.RAG_AUTO_SUSPEND_IDLE_SECONDS,
     }
 
 
@@ -968,12 +972,19 @@ class AdminConfig(BaseModel):
     PENDING_USER_OVERLAY_TITLE: Optional[str] = None
     PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
     RESPONSE_WATERMARK: Optional[str] = None
+    RAG_PERFORMANCE_PROFILE: Optional[str] = None
+    RAG_AUTO_SUSPEND: Optional[bool] = None
+    RAG_AUTO_SUSPEND_IDLE_SECONDS: Optional[int] = None
 
 
 @router.post("/admin/config")
 async def update_admin_config(
     request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
 ):
+    prev_profile = request.app.state.config.RAG_PERFORMANCE_PROFILE
+    prev_auto_suspend = request.app.state.config.RAG_AUTO_SUSPEND
+    prev_idle_seconds = request.app.state.config.RAG_AUTO_SUSPEND_IDLE_SECONDS
+
     request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
     request.app.state.config.WEBUI_URL = form_data.WEBUI_URL
     request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
@@ -1016,6 +1027,48 @@ async def update_admin_config(
     )
 
     request.app.state.config.RESPONSE_WATERMARK = form_data.RESPONSE_WATERMARK
+
+    if form_data.RAG_PERFORMANCE_PROFILE:
+        profile = form_data.RAG_PERFORMANCE_PROFILE.lower()
+        if profile in {"saver", "balanced", "performance"}:
+            request.app.state.config.RAG_PERFORMANCE_PROFILE = profile
+    if form_data.RAG_AUTO_SUSPEND is not None:
+        request.app.state.config.RAG_AUTO_SUSPEND = form_data.RAG_AUTO_SUSPEND
+    if form_data.RAG_AUTO_SUSPEND_IDLE_SECONDS is not None:
+        request.app.state.config.RAG_AUTO_SUSPEND_IDLE_SECONDS = max(
+            60, int(form_data.RAG_AUTO_SUSPEND_IDLE_SECONDS)
+        )
+
+    power_daemon_url = os.environ.get("RAG_POWER_DAEMON_URL", "").strip()
+    profile_changed = (
+        request.app.state.config.RAG_PERFORMANCE_PROFILE != prev_profile
+    )
+    suspend_changed = (
+        request.app.state.config.RAG_AUTO_SUSPEND != prev_auto_suspend
+        or request.app.state.config.RAG_AUTO_SUSPEND_IDLE_SECONDS != prev_idle_seconds
+    )
+    if power_daemon_url and (profile_changed or suspend_changed):
+        try:
+            async with ClientSession() as session:
+                if suspend_changed:
+                    await session.post(
+                        f"{power_daemon_url}/set-config",
+                        json={
+                            "auto_suspend_enabled": request.app.state.config.RAG_AUTO_SUSPEND,
+                            "idle_seconds": request.app.state.config.RAG_AUTO_SUSPEND_IDLE_SECONDS,
+                        },
+                        timeout=10,
+                    )
+                if profile_changed:
+                    await session.post(
+                        f"{power_daemon_url}/apply-profile",
+                        json={
+                            "profile": request.app.state.config.RAG_PERFORMANCE_PROFILE,
+                        },
+                        timeout=30,
+                    )
+        except Exception:
+            logging.exception("Failed to notify power manager daemon")
 
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
