@@ -14,7 +14,6 @@
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 
 	let model = null;
-	let write_access = true;
 
 	onMount(async () => {
 		const _id = $page.url.searchParams.get('id');
@@ -23,9 +22,7 @@
 				return null;
 			});
 
-			if (model) {
-				write_access = model.write_access ?? true;
-			} else {
+			if (!model) {
 				goto('/workspace/models');
 			}
 		} else {
@@ -50,5 +47,5 @@
 </script>
 
 {#if model}
-	<ModelEditor edit={true} {model} {write_access} {onSubmit} />
+	<ModelEditor edit={true} {model} {onSubmit} />
 {/if}
