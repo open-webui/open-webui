@@ -2721,6 +2721,26 @@ async def process_chat_response(
                                                             "arguments"
                                                         ] += delta_arguments
 
+                                        # Emit pending tool calls in real-time
+                                        if response_tool_calls:
+                                            pending_content_blocks = content_blocks + [
+                                                {
+                                                    "type": "tool_calls",
+                                                    "content": response_tool_calls,
+                                                    "pending": True,
+                                                }
+                                            ]
+                                            await event_emitter(
+                                                {
+                                                    "type": "chat:completion",
+                                                    "data": {
+                                                        "content": serialize_content_blocks(
+                                                            pending_content_blocks
+                                                        ),
+                                                    },
+                                                }
+                                            )
+
                                     image_urls = get_image_urls(
                                         delta.get("images", []), request, metadata, user
                                     )
