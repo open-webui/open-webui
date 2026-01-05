@@ -30,6 +30,7 @@ export const getModelItems = async (
 	if (page) {
 		searchParams.append('page', page.toString());
 	}
+	searchParams.append('skip_images', 'true');
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/list?${searchParams.toString()}`, {
 		method: 'GET',

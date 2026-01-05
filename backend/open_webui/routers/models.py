@@ -60,6 +60,7 @@ async def get_models(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,
+    skip_images: bool = True,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
@@ -88,7 +89,7 @@ async def get_models(
 
         filter["user_id"] = user.id
 
-    return Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    return Models.search_models(user.id, filter=filter, skip=skip, limit=limit, skip_images=skip_images, db=db)
 
 
 ###########################
@@ -301,8 +302,8 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: Session 
 @router.get("/model/profile/image")
 async def get_model_profile_image(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
     model = Models.get_model_by_id(id, db=db)
-    # Cache-control headers to prevent stale cached images
-    cache_headers = {"Cache-Control": "no-cache, must-revalidate"}
+    # Cache-control headers to allow browser caching
+    cache_headers = {"Cache-Control": "public, max-age=86400"}
 
     if model:
         if model.meta.profile_image_url:

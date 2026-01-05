@@ -180,7 +180,7 @@ class ModelsTable:
         with get_db_context(db) as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
-    def get_models(self, db: Optional[Session] = None) -> list[ModelUserResponse]:
+    def get_models(self, skip_images: bool = False, db: Optional[Session] = None) -> list[ModelUserResponse]:
         with get_db_context(db) as db:
             all_models = db.query(Model).filter(Model.base_model_id != None).all()
 
@@ -192,10 +192,20 @@ class ModelsTable:
             models = []
             for model in all_models:
                 user = users_dict.get(model.user_id)
+                model_data = ModelModel.model_validate(model).model_dump()
+
+                if skip_images:
+                    if (
+                        model_data.get("meta", {})
+                        .get("profile_image_url", "")
+                        .startswith("data:image")
+                    ):
+                        model_data["meta"]["profile_image_url"] = None
+
                 models.append(
                     ModelUserResponse.model_validate(
                         {
-                            **ModelModel.model_validate(model).model_dump(),
+                            **model_data,
                             "user": user.model_dump() if user else None,
                         }
                     )
@@ -209,10 +219,8 @@ class ModelsTable:
                 for model in db.query(Model).filter(Model.base_model_id == None).all()
             ]
 
-    def get_models_by_user_id(
-        self, user_id: str, permission: str = "write", db: Optional[Session] = None
-    ) -> list[ModelUserResponse]:
-        models = self.get_models(db=db)
+    def get_models_by_user_id(self, user_id: str, permission: str = "write", skip_images: bool = False, db: Optional[Session] = None) -> list[ModelUserResponse]:
+        models = self.get_models(skip_images=skip_images, db=db)
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id, db=db)}
         return [
             model
@@ -263,9 +271,7 @@ class ModelsTable:
 
         return query
 
-    def search_models(
-        self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30, db: Optional[Session] = None
-    ) -> ModelListResponse:
+    def search_models(self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30, skip_images: bool = False, db: Optional[Session] = None) -> ModelListResponse:
         with get_db_context(db) as db:
             # Join GroupMember so we can order by group_id when requested
             query = db.query(Model, User).outerjoin(User, User.id == Model.user_id)
@@ -337,9 +343,18 @@ class ModelsTable:
 
             models = []
             for model, user in items:
+                model_data = ModelModel.model_validate(model).model_dump()
+                if skip_images:
+                    if (
+                        model_data.get("meta", {})
+                        .get("profile_image_url", "")
+                        .startswith("data:image")
+                    ):
+                        model_data["meta"]["profile_image_url"] = None
+
                 models.append(
                     ModelUserResponse(
-                        **ModelModel.model_validate(model).model_dump(),
+                        **model_data,
                         user=(
                             UserResponse(**UserModel.model_validate(user).model_dump())
                             if user

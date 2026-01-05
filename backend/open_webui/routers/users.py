@@ -478,6 +478,9 @@ async def get_user_oauth_sessions_by_id(
 async def get_user_profile_image_by_id(
     user_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
+    # Cache-control headers to allow browser caching
+    cache_headers = {"Cache-Control": "public, max-age=86400"}
+
     user = Users.get_user_by_id(user_id, db=db)
     if user:
         if user.profile_image_url:
@@ -485,7 +488,7 @@ async def get_user_profile_image_by_id(
             if user.profile_image_url.startswith("http"):
                 return Response(
                     status_code=status.HTTP_302_FOUND,
-                    headers={"Location": user.profile_image_url},
+                    headers={"Location": user.profile_image_url, **cache_headers},
                 )
             elif user.profile_image_url.startswith("data:image"):
                 try:
@@ -497,11 +500,14 @@ async def get_user_profile_image_by_id(
                     return StreamingResponse(
                         image_buffer,
                         media_type=media_type,
-                        headers={"Content-Disposition": "inline"},
+                        headers={
+                            "Content-Disposition": "inline",
+                            **cache_headers,
+                        },
                     )
                 except Exception as e:
                     pass
-        return FileResponse(f"{STATIC_DIR}/user.png")
+        return FileResponse(f"{STATIC_DIR}/user.png", headers=cache_headers)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
