@@ -6,7 +6,7 @@
 
 	const i18n = getContext('i18n');
 
-	import { getPromptByCommand, getPrompts, getPromptList, updatePromptByCommand } from '$lib/apis/prompts';
+	import { getPromptByCommand, getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
 	import { page } from '$app/stores';
 
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
@@ -31,11 +31,6 @@
 	onMount(async () => {
 		const command = $page.url.searchParams.get('command');
 		if (command) {
-			// Get prompt list to check write_access
-			const promptList = await getPromptList(localStorage.token).catch(() => []);
-			const promptWithAccess = promptList.find(p => p.command === command || p.command === `/${command.replace(/\//g, '')}`);
-			write_access = promptWithAccess?.write_access ?? true;
-
 			const _prompt = await getPromptByCommand(
 				localStorage.token,
 				command.replace(/\//g, '')
@@ -45,6 +40,7 @@
 			});
 
 			if (_prompt) {
+				write_access = _prompt.write_access ?? true;
 				prompt = {
 					title: _prompt.title,
 					command: _prompt.command,
