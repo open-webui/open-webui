@@ -52,13 +52,17 @@
 	};
 
 	onMount(async () => {
+		console.log('mounted');
 		const id = $page.url.searchParams.get('id');
+
 		if (id) {
 			tool = await getToolById(localStorage.token, id).catch((error) => {
 				toast.error(`${error}`);
 				goto('/workspace/tools');
 				return null;
 			});
+
+			console.log(tool);
 		}
 	});
 </script>
