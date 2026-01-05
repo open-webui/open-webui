@@ -239,3 +239,157 @@ async def memory_add(
     except Exception as e:
         log.exception(f"memory_add error: {e}")
         return json.dumps({"error": str(e)})
+
+
+async def query_knowledge(
+    query: str,
+    k: int = 5,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model__: dict = None,
+    __event_emitter__: callable = None,
+) -> str:
+    """
+    Search the model's configured knowledge bases for relevant information.
+
+    :param query: The search query to find relevant documents
+    :param k: Maximum number of results to return (default: 5)
+    :return: JSON with matching documents, their metadata, and relevance scores
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if __model__ is None:
+        return json.dumps({"error": "Model context not available"})
+
+    try:
+        # Extract knowledge configuration from model metadata
+        model_knowledge = __model__.get("info", {}).get("meta", {}).get("knowledge", [])
+
+        if not model_knowledge:
+            return json.dumps({"error": "No knowledge bases configured for this model"})
+
+        # Emit status event
+        if __event_emitter__:
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "knowledge_search",
+                        "query": query,
+                        "done": False,
+                    },
+                }
+            )
+
+        # Extract collection names from knowledge configuration
+        collection_names = []
+        for item in model_knowledge:
+            if item.get("collection_name"):
+                collection_names.append(item.get("collection_name"))
+            elif item.get("collection_names"):
+                collection_names.extend(item.get("collection_names"))
+            elif item.get("id"):  # Direct ID reference
+                collection_names.append(item.get("id"))
+
+        if not collection_names:
+            return json.dumps(
+                {"error": "No valid collection names found in knowledge configuration"}
+            )
+
+        user = UserModel(**__user__) if __user__ else None
+
+        # Import here to avoid circular dependency
+        from open_webui.retrieval.utils import (
+            query_collection,
+            query_collection_with_hybrid_search,
+        )
+
+        # Use hybrid search if enabled
+        if __request__.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+            result = await query_collection_with_hybrid_search(
+                collection_names=collection_names,
+                queries=[query],
+                embedding_function=lambda q, prefix: __request__.app.state.EMBEDDING_FUNCTION(
+                    q, prefix=prefix, user=user
+                ),
+                k=k,
+                reranking_function=(
+                    (
+                        lambda q, documents: __request__.app.state.RERANKING_FUNCTION(
+                            q, documents, user=user
+                        )
+                    )
+                    if __request__.app.state.RERANKING_FUNCTION
+                    else None
+                ),
+                k_reranker=__request__.app.state.config.TOP_K_RERANKER,
+                r=__request__.app.state.config.RELEVANCE_THRESHOLD,
+                hybrid_bm25_weight=__request__.app.state.config.HYBRID_BM25_WEIGHT,
+                enable_enriched_texts=__request__.app.state.config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
+            )
+        else:
+            result = await query_collection(
+                collection_names=collection_names,
+                queries=[query],
+                embedding_function=lambda q, prefix: __request__.app.state.EMBEDDING_FUNCTION(
+                    q, prefix=prefix, user=user
+                ),
+                k=k,
+            )
+
+        # Emit completion status
+        if __event_emitter__:
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "knowledge_search",
+                        "query": query,
+                        "done": True,
+                    },
+                }
+            )
+
+        # Format results with only essential metadata
+        if result and "documents" in result and result["documents"]:
+            documents = []
+            for doc_idx, doc in enumerate(result["documents"][0]):
+                full_metadata = {}
+                if "metadatas" in result and result["metadatas"] and result["metadatas"][0]:
+                    full_metadata = (
+                        result["metadatas"][0][doc_idx]
+                        if doc_idx < len(result["metadatas"][0])
+                        else {}
+                    )
+
+                # Filter metadata to only essential fields
+                filtered_metadata = {}
+                if "name" in full_metadata:
+                    filtered_metadata["name"] = full_metadata["name"]
+                if "page" in full_metadata:
+                    filtered_metadata["page"] = full_metadata["page"]
+                if "total_pages" in full_metadata:
+                    filtered_metadata["total_pages"] = full_metadata["total_pages"]
+                if "creationdate" in full_metadata:
+                    filtered_metadata["creationdate"] = full_metadata["creationdate"]
+
+                doc_entry = {
+                    "content": doc,
+                    "metadata": filtered_metadata,
+                }
+
+                # Include relevance score if available
+                if "distances" in result and result["distances"] and result["distances"][0]:
+                    if doc_idx < len(result["distances"][0]):
+                        doc_entry["score"] = result["distances"][0][doc_idx]
+
+                documents.append(doc_entry)
+
+            return json.dumps({"documents": documents}, ensure_ascii=False)
+        else:
+            return json.dumps({"documents": []})
+
+    except Exception as e:
+        log.exception(f"query_knowledge error: {e}")
+        return json.dumps({"error": str(e)})

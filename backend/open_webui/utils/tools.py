@@ -45,7 +45,7 @@ from open_webui.env import (
 )
 from open_webui.tools.builtin import (
     web_search, fetch_url, generate_image, edit_image,
-    memory_query, memory_add
+    memory_query, memory_add, query_knowledge
 )
 
 import copy
@@ -350,6 +350,12 @@ def get_builtin_tools(request: Request, extra_params: dict, features: dict = Non
     if features.get("memory"):
         builtin_functions.extend([memory_query, memory_add])
 
+    # Add knowledge query tool if model has knowledge configured
+    model = extra_params.get("__model__", {})
+    model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
+    if model_knowledge:  # Only add if model has knowledge bases
+        builtin_functions.append(query_knowledge)
+
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(
             func,
@@ -357,6 +363,7 @@ def get_builtin_tools(request: Request, extra_params: dict, features: dict = Non
                 "__request__": request,
                 "__user__": extra_params.get("__user__", {}),
                 "__event_emitter__": extra_params.get("__event_emitter__"),
+                "__model__": extra_params.get("__model__", {}),
             },
         )
 
