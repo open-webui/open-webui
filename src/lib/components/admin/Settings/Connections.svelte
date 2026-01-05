@@ -329,7 +329,7 @@
 									</Tooltip>
 								</div>
 
-								<div class="flex flex-col gap-1.5 mt-1.5">
+								<div class="grid grid-cols-2 gap-1.5 mt-1.5">
 									{#each OPENAI_API_BASE_URLS as url, idx}
 										<OpenAIConnection
 											bind:url={OPENAI_API_BASE_URLS[idx]}
@@ -394,7 +394,7 @@
 								</Tooltip>
 							</div>
 
-							<div class="flex flex-col gap-1.5 mt-1.5">
+							<div class="grid grid-cols-2 gap-1.5 mt-1.5">
 								{#each GEMINI_API_BASE_URLS as url, idx}
 									<GeminiConnection
 										bind:url={GEMINI_API_BASE_URLS[idx]}
