@@ -9,6 +9,7 @@ IMPORTANT: DO NOT IMPORT THIS MODULE DIRECTLY IN OTHER PARTS OF THE CODEBASE.
 import json
 import logging
 import time
+import asyncio
 from typing import Optional
 
 from fastapi import Request
@@ -190,7 +191,7 @@ async def fetch_url(
         return json.dumps({"error": "Request context not available"})
 
     try:
-        content, _ = get_content_from_url(__request__, url)
+        content, _ = await asyncio.to_thread(get_content_from_url, __request__, url)
 
         # Truncate if too long (avoid overwhelming context)
         max_length = 50000
