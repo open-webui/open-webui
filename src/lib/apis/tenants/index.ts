@@ -271,3 +271,34 @@ export const deleteTenantPromptFile = async (token: string, tenantId: string, ke
 		throw error;
 	}
 };
+
+export const getTenantDefaultHelp = async (token?: string | null): Promise<{ help_text: string }> => {
+	let error: string | null = null;
+
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json'
+	};
+	if (token) {
+		headers.Authorization = `Bearer ${token}`;
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tenants/default-help`, {
+		method: 'GET',
+		headers
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err?.detail ?? 'Failed to load default help.';
+			return null;
+		});
+
+	if (error || !res) {
+		throw error ?? 'Failed to load default help.';
+	}
+
+	return res;
+};

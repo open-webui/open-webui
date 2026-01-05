@@ -8,7 +8,12 @@ from pydantic import BaseModel
 
 from open_webui.config import STORAGE_PROVIDER, S3_BUCKET_NAME
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.models.tenants import Tenants, TenantForm, TenantUpdateForm
+from open_webui.models.tenants import (
+    Tenants,
+    TenantForm,
+    TenantUpdateForm,
+    get_default_help_text,
+)
 from open_webui.models.users import Users
 from open_webui.services.s3 import (
     get_s3_client,
@@ -53,10 +58,19 @@ class TenantPromptUploadResponse(BaseModel):
     url: str
 
 
+class DefaultHelpResponse(BaseModel):
+    help_text: str
+
+
 @router.get("", response_model=list[TenantInfo])
 def list_tenants(admin=Depends(get_admin_user)):
     tenants = Tenants.get_tenants()
     return [TenantInfo(**tenant.model_dump()) for tenant in tenants]
+
+
+@router.get("/default-help", response_model=DefaultHelpResponse)
+def get_default_help():
+    return DefaultHelpResponse(help_text=get_default_help_text())
 
 
 @router.post("", response_model=TenantInfo)

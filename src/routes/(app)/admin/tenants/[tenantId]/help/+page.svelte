@@ -2,11 +2,10 @@
 	import { getContext, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import DOMPurify from 'dompurify';
-	import { marked } from 'marked';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import {
 		getTenantById,
 		updateTenant,
@@ -20,11 +19,10 @@
 
 	let tenant: TenantInfo | null = null;
 	let helpText = '';
-	let loading = true;
-	let saving = false;
-	let loadError: string | null = null;
-	let activeTab: 'edit' | 'preview' = 'edit';
-	let previewHtml = '';
+let loading = true;
+let saving = false;
+let loadError: string | null = null;
+let activeTab: 'edit' | 'preview' = 'edit';
 
 	const formatDate = (timestamp?: number) => {
 		if (!timestamp) return '—';
@@ -86,9 +84,6 @@
 		}
 		};
 
-		$: previewHtml = DOMPurify.sanitize(
-			marked.parse(helpText && helpText.trim().length ? helpText : '')
-		);
 </script>
 
 <svelte:head>
@@ -208,7 +203,14 @@
 									</p>
 								{:else}
 									<div class="markdown-prose max-w-none">
-										{@html previewHtml}
+										<Markdown
+											id="tenant-help-preview"
+											content={helpText}
+											done={true}
+											save={false}
+											preview={true}
+											editCodeBlock={false}
+										/>
 									</div>
 								{/if}
 							</div>

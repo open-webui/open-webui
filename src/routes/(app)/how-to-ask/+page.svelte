@@ -1,23 +1,26 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import DOMPurify from 'dompurify';
-	import { marked } from 'marked';
 
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import TenantSelector from '$lib/components/chat/TenantSelector.svelte';
+	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 
-import {
-	getTenantById,
-	getUploadTenants,
-	type TenantInfo
-} from '$lib/apis/tenants';
-import { user } from '$lib/stores';
+	import {
+		getTenantById,
+		getTenantDefaultHelp,
+		getUploadTenants,
+		type TenantInfo
+	} from '$lib/apis/tenants';
+	import { user } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 	const TENANT_OVERRIDE_STORAGE_KEY = 'luxor_tenant_override';
 
-	let helpHtml = '';
+	let defaultHelp = '';
+	let defaultLoaded = false;
+
+	let helpMarkdown = '';
 	let helpLoading = true;
 	let helpError: string | null = null;
 
@@ -28,15 +31,11 @@ import { user } from '$lib/stores';
 
 	let selectedOverrideId: string | null = null;
 	let lastLoadedKey: string | null = null;
-	let currentLoadKey: string | null = null;
 
 	let userReady = false;
 	let initialized = false;
 
 	const isBrowser = typeof window !== 'undefined';
-
-	const sanitizeMarkdown = (text: string) =>
-		DOMPurify.sanitize(marked.parse(text ?? '', { mangle: false, headerIds: false }));
 
 	const getStoredOverride = () => {
 		if (!isBrowser) return null;
@@ -60,14 +59,31 @@ import { user } from '$lib/stores';
 		return $user?.tenant_id ?? null;
 	};
 
+	const ensureDefaultHelp = async () => {
+		if (defaultLoaded) return;
+
+		try {
+			const token = typeof localStorage !== 'undefined' ? localStorage.token : null;
+			const res = await getTenantDefaultHelp(token ?? null);
+			defaultHelp = res?.help_text ?? '';
+		} catch (error) {
+			defaultHelp =
+				'# How to Ask Luxor\n\nThe default help content could not be loaded. Please contact your administrator.';
+		} finally {
+			defaultLoaded = true;
+		}
+	};
+
 	const applyHelpText = (text: string | null | undefined) => {
-		const content = text && text.trim().length > 0 ? text : '';
-		helpHtml = sanitizeMarkdown(content);
+		const content = text && text.trim().length > 0 ? text : defaultHelp;
+		helpMarkdown = content;
 	};
 
 	const loadHelpForTenant = async (tenantId: string | null) => {
+		await ensureDefaultHelp();
+
 		const loadKey = tenantId ?? '__default__';
-		currentLoadKey = loadKey;
+		lastLoadedKey = loadKey;
 		helpLoading = true;
 		helpError = null;
 
@@ -87,12 +103,12 @@ import { user } from '$lib/stores';
 			}
 		} else if (tenantId && !hasToken) {
 			helpError = $i18n.t('You must be signed in to view tenant help.');
+		} else {
+			helpText = defaultHelp;
 		}
 
-		if (currentLoadKey === loadKey) {
-			applyHelpText(helpText);
-			helpLoading = false;
-		}
+		applyHelpText(helpText);
+		helpLoading = false;
 	};
 
 	const loadTenantOptions = async () => {
@@ -122,8 +138,8 @@ import { user } from '$lib/stores';
 	const refreshHelp = () => {
 		const activeTenantId = getActiveTenantId();
 		const key = activeTenantId ?? '__default__';
-		if (key !== lastLoadedKey) {
-			lastLoadedKey = key;
+
+		if (key !== lastLoadedKey || !defaultLoaded) {
 			loadHelpForTenant(activeTenantId);
 		}
 	};
@@ -134,7 +150,7 @@ import { user } from '$lib/stores';
 		refreshHelp();
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		refreshHelp();
 	});
 
@@ -155,8 +171,8 @@ import { user } from '$lib/stores';
 		loadTenantOptions();
 	}
 
-	$: if (userReady) {
-		const key = (getActiveTenantId() ?? '__default__');
+	$: if (userReady && defaultLoaded) {
+		const key = getActiveTenantId() ?? '__default__';
 		if (key !== lastLoadedKey) {
 			refreshHelp();
 		}
@@ -168,21 +184,21 @@ import { user } from '$lib/stores';
 </svelte:head>
 
 <main class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 lg:px-8">
-	{#if $user?.role === 'admin'}
-		<div class="rounded-2xl border border-gray-100 bg-white/80 p-4 dark:border-gray-800 dark:bg-gray-900/60">
-			<TenantSelector
-				tenants={tenantOptions}
-				selectedTenantId={selectedOverrideId}
-				loading={tenantOptionsLoading}
-				error={tenantLoadError}
-				on:change={handleTenantScopeChange}
-			/>
-			<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-				{$i18n.t('Select a tenant to preview their help experience.')}
-			</p>
-		</div>
-	{/if}
-	
+
+		{#if $user?.role === 'admin'}
+			<div class="rounded-2xl border border-gray-100 bg-white/80 p-4 dark:border-gray-800 dark:bg-gray-900/60">
+				<TenantSelector
+					tenants={tenantOptions}
+					selectedTenantId={selectedOverrideId}
+					loading={tenantOptionsLoading}
+					error={tenantLoadError}
+					on:change={handleTenantScopeChange}
+				/>
+				<p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+					{$i18n.t('Select a tenant to preview their help experience.')}
+				</p>
+			</div>
+		{/if}
 
 	<section class="rounded-2xl border border-gray-100 bg-white/90 p-6 dark:border-gray-800 dark:bg-gray-900/70">
 		{#if helpLoading}
@@ -195,8 +211,16 @@ import { user } from '$lib/stores';
 					{helpError}
 				</div>
 			{/if}
+
 			<div class="markdown-prose max-w-none text-gray-900 dark:text-gray-100">
-				{@html helpHtml}
+				<Markdown
+					id="how-to-ask-content"
+					content={helpMarkdown}
+					done={true}
+					save={false}
+					preview={true}
+					editCodeBlock={false}
+				/>
 			</div>
 		{/if}
 	</section>
