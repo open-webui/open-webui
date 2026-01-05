@@ -141,6 +141,90 @@ DEFAULT_SOLUTION_TAGS = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 DEFAULT_CODE_INTERPRETER_TAGS = [("<code_interpreter>", "</code_interpreter>")]
 
 
+def convert_tool_result_to_source(
+    tool_name: str,
+    tool_params: dict,
+    tool_result: str,
+    tool_id: str = ""
+) -> dict:
+    """Convert tool result to source structure for citation support."""
+
+    try:
+        if tool_name == "web_search":
+            # Parse JSON array: [{"title": "...", "link": "...", "snippet": "..."}]
+            results = json.loads(tool_result)
+            documents = []
+            metadata = []
+
+            for result in results:
+                title = result.get("title", "")
+                link = result.get("link", "")
+                snippet = result.get("snippet", "")
+
+                documents.append(f"{title}\n{snippet}")
+                metadata.append({
+                    "source": link,
+                    "name": title,
+                    "url": link,
+                })
+
+            return {
+                "source": {"name": "web_search", "id": "web_search"},
+                "document": documents,
+                "metadata": metadata,
+            }
+
+        elif tool_name == "query_knowledge":
+            # Parse JSON: {"documents": [{"content": "...", "metadata": {...}, "score": ...}]}
+            result_obj = json.loads(tool_result)
+            documents = []
+            metadata = []
+
+            for doc in result_obj.get("documents", []):
+                content = doc.get("content", "")
+                doc_metadata = doc.get("metadata", {})
+
+                documents.append(content)
+
+                file_name = doc_metadata.get("name", "Knowledge Base")
+                source_id = doc_metadata.get("source", file_name)
+
+                meta_entry = {
+                    "source": source_id,
+                    "name": file_name,
+                }
+
+                if "page" in doc_metadata:
+                    meta_entry["page"] = doc_metadata["page"]
+                if "total_pages" in doc_metadata:
+                    meta_entry["total_pages"] = doc_metadata["total_pages"]
+
+                metadata.append(meta_entry)
+
+            return {
+                "source": {"name": "query_knowledge", "id": "query_knowledge"},
+                "document": documents,
+                "metadata": metadata,
+            }
+
+        else:
+            # Fallback for other tools
+            return {
+                "source": {"name": tool_name, "id": tool_id or tool_name},
+                "document": [str(tool_result)],
+                "metadata": [{"source": tool_id or tool_name, "parameters": tool_params}],
+            }
+
+    except Exception as e:
+        log.exception(f"Error parsing tool result for {tool_name}: {e}")
+        # Fallback to simple string conversion
+        return {
+            "source": {"name": tool_name, "id": tool_id or tool_name},
+            "document": [str(tool_result)],
+            "metadata": [{"source": tool_id or tool_name}],
+        }
+
+
 def process_tool_result(
     request,
     tool_function_name,
@@ -2937,6 +3021,7 @@ async def process_chat_response(
                 await stream_body_handler(response, form_data)
 
                 tool_call_retries = 0
+                native_fc_sources = []  # Track sources from native FC tools
 
                 while (
                     len(tool_calls) > 0
@@ -3071,6 +3156,19 @@ async def process_chat_response(
                             )
                         )
 
+                        # Convert tool result to source for citation support (native FC)
+                        if tool_function_name in ["web_search", "query_knowledge"]:
+                            try:
+                                source = convert_tool_result_to_source(
+                                    tool_name=tool_function_name,
+                                    tool_params=tool_function_params,
+                                    tool_result=tool_result,
+                                    tool_id=tool.get("tool_id", "") if tool else ""
+                                )
+                                native_fc_sources.append(source)
+                            except Exception as e:
+                                log.exception(f"Error converting tool result to source: {e}")
+
                         results.append(
                             {
                                 "tool_call_id": tool_call_id,
@@ -3089,6 +3187,20 @@ async def process_chat_response(
                         )
 
                     content_blocks[-1]["results"] = results
+
+                    # Emit source events for UI display
+                    if native_fc_sources:
+                        for source in native_fc_sources:
+                            try:
+                                await event_emitter(
+                                    {
+                                        "type": "source",
+                                        "data": source,
+                                    }
+                                )
+                            except Exception as e:
+                                log.exception(f"Error emitting source event: {e}")
+
                     content_blocks.append(
                         {
                             "type": "text",
@@ -3104,6 +3216,58 @@ async def process_chat_response(
                             },
                         }
                     )
+
+                    # Inject sources into context for citation support (native FC)
+                    if native_fc_sources:
+                        try:
+                            # Build context string from sources (same logic as lines 1598-1636)
+                            context_string = ""
+                            citation_idx_map = {}
+
+                            for source in native_fc_sources:
+                                if "document" in source:
+                                    for document_text, document_metadata in zip(
+                                        source["document"], source["metadata"]
+                                    ):
+                                        source_name = source.get("source", {}).get("name", None)
+                                        source_id = (
+                                            document_metadata.get("source", None)
+                                            or source.get("source", {}).get("id", None)
+                                            or "N/A"
+                                        )
+
+                                        if source_id not in citation_idx_map:
+                                            citation_idx_map[source_id] = len(citation_idx_map) + 1
+
+                                        context_string += (
+                                            f'<source id="{citation_idx_map[source_id]}"'
+                                            + (f' name="{source_name}"' if source_name else "")
+                                            + f">{document_text}</source>\n"
+                                        )
+
+                            context_string = context_string.strip()
+
+                            if context_string:
+                                # Get the last user message
+                                user_message = get_last_user_message(form_data["messages"])
+
+                                if user_message:
+                                    # Update form_data messages with RAG template
+                                    form_data["messages"] = add_or_update_user_message(
+                                        rag_template(
+                                            request.app.state.config.RAG_TEMPLATE,
+                                            context_string,
+                                            user_message,
+                                        ),
+                                        form_data["messages"],
+                                        append=False,
+                                    )
+
+                            # Clear sources for next iteration
+                            native_fc_sources = []
+
+                        except Exception as e:
+                            log.exception(f"Error injecting sources into RAG template: {e}")
 
                     try:
                         new_form_data = {

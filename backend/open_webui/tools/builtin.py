@@ -29,6 +29,11 @@ async def web_search(
     """
     Search the web for information on a given topic.
 
+    Use this tool when:
+    - Information is NOT available in configured knowledge bases (check query_knowledge first!)
+    - Looking for current events, real-time information, or recent updates
+    - Need information from external/public sources not in local knowledge bases
+
     :param query: The search query to look up
     :param count: Number of results to return (default: 5)
     :return: JSON with search results containing title, link, and snippet for each result
@@ -251,6 +256,9 @@ async def query_knowledge(
 ) -> str:
     """
     Search the model's configured knowledge bases for relevant information.
+
+    IMPORTANT: Always check knowledge bases FIRST before using web_search. Knowledge bases contain
+    curated, verified information that should be prioritized over web searches.
 
     :param query: The search query to find relevant documents
     :param k: Maximum number of results to return (default: 5)
