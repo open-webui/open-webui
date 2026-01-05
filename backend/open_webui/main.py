@@ -1496,7 +1496,7 @@ async def get_models(
             )
         )
 
-    models = get_filtered_models(models, user)
+    models = await get_filtered_models(models, user)
 
     log.debug(
         f"/api/models returned filtered models accessible to the user: {json.dumps([model.get('id') for model in models])}"
@@ -1564,14 +1564,14 @@ async def chat_completion(
                 raise Exception("Model not found")
 
             model = request.app.state.MODELS[model_id]
-            model_info = Models.get_model_by_id(model_id)
+            model_info = await Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (
                 user.role != "admin" or not BYPASS_ADMIN_ACCESS_CONTROL
             ):
                 try:
-                    check_model_access(user, model)
+                    await check_model_access(user, model)
                 except Exception as e:
                     raise e
         else:

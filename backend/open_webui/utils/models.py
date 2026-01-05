@@ -147,7 +147,7 @@ async def get_all_models(request, refresh: bool = False, skip_images: bool = Fal
         for function in Functions.get_functions_by_type("filter", active_only=True)
     ]
 
-    custom_models = Models.get_all_models(skip_images=skip_images)
+    custom_models = await Models.get_all_models(skip_images=skip_images)
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             # Applied directly to a base model
@@ -337,7 +337,7 @@ async def get_all_models(request, refresh: bool = False, skip_images: bool = Fal
     return models
 
 
-def check_model_access(user, model, db=None):
+async def check_model_access(user, model, db=None):
     if model.get("arena"):
         if not has_access(
             user.id,
@@ -349,7 +349,7 @@ def check_model_access(user, model, db=None):
         ):
             raise Exception("Model not found")
     else:
-        model_info = Models.get_model_by_id(model.get("id"), db=db)
+        model_info = await Models.get_model_by_id(model.get("id"), db=db)
         if not model_info:
             raise Exception("Model not found")
         elif not (
@@ -361,7 +361,7 @@ def check_model_access(user, model, db=None):
             raise Exception("Model not found")
 
 
-def get_filtered_models(models, user, db=None):
+async def get_filtered_models(models, user, db=None):
     # Filter out models that the user does not have access to
     if (
         user.role == "user"
@@ -370,7 +370,7 @@ def get_filtered_models(models, user, db=None):
         model_ids = [model["id"] for model in models if not model.get("arena")]
         model_infos = {
             model_info.id: model_info
-            for model_info in Models.get_models_by_ids(model_ids)
+            for model_info in await Models.get_models_by_ids(model_ids)
         }
 
         filtered_models = []

@@ -150,7 +150,7 @@ class ModelForm(BaseModel):
 
 
 class ModelsTable:
-    def insert_new_model(
+    async def insert_new_model(
         self, form_data: ModelForm, user_id: str, db: Optional[Session] = None
     ) -> Optional[ModelModel]:
         model = ModelModel(
@@ -176,7 +176,7 @@ class ModelsTable:
             log.exception(f"Failed to insert a new model: {e}")
             return None
 
-    def get_all_models(self, skip_images: bool = False, db: Optional[Session] = None) -> list[ModelModel]:
+    async def get_all_models(self, skip_images: bool = False, db: Optional[Session] = None) -> list[ModelModel]:
         with get_db_context(db) as db:
             models = db.query(Model).all()
             if skip_images:
@@ -190,7 +190,7 @@ class ModelsTable:
                 return result
             return [ModelModel.model_validate(model) for model in models]
 
-    def get_models(self, skip_images: bool = False, db: Optional[Session] = None) -> list[ModelUserResponse]:
+    async def get_models(self, skip_images: bool = False, db: Optional[Session] = None) -> list[ModelUserResponse]:
         with get_db_context(db) as db:
             all_models = db.query(Model).filter(Model.base_model_id != None).all()
             user_ids = list(set(model.user_id for model in all_models))
@@ -215,15 +215,15 @@ class ModelsTable:
                 )
             return models
 
-    def get_base_models(self, db: Optional[Session] = None) -> list[ModelModel]:
+    async def get_base_models(self, db: Optional[Session] = None) -> list[ModelModel]:
         with get_db_context(db) as db:
             return [
                 ModelModel.model_validate(model)
                 for model in db.query(Model).filter(Model.base_model_id == None).all()
             ]
 
-    def get_models_by_user_id(self, user_id: str, permission: str = "write", skip_images: bool = False, db: Optional[Session] = None) -> list[ModelUserResponse]:
-        models = self.get_models(skip_images=skip_images, db=db)
+    async def get_models_by_user_id(self, user_id: str, permission: str = "write", skip_images: bool = False, db: Optional[Session] = None) -> list[ModelUserResponse]:
+        models = await self.get_models(skip_images=skip_images, db=db)
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id, db=db)}
         return [
             model
@@ -274,7 +274,7 @@ class ModelsTable:
 
         return query
 
-    def search_models(self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30, skip_images: bool = False, db: Optional[Session] = None) -> ModelListResponse:
+    async def search_models(self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30, skip_images: bool = False, db: Optional[Session] = None) -> ModelListResponse:
         with get_db_context(db) as db:
             # Join GroupMember so we can order by group_id when requested
             query = db.query(Model, User).outerjoin(User, User.id == Model.user_id)
@@ -364,7 +364,7 @@ class ModelsTable:
 
             return ModelListResponse(items=models, total=total)
 
-    def get_model_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ModelModel]:
+    async def get_model_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ModelModel]:
         try:
             with get_db_context(db) as db:
                 model = db.get(Model, id)
@@ -372,7 +372,7 @@ class ModelsTable:
         except Exception:
             return None
 
-    def get_models_by_ids(self, ids: list[str], db: Optional[Session] = None) -> list[ModelModel]:
+    async def get_models_by_ids(self, ids: list[str], db: Optional[Session] = None) -> list[ModelModel]:
         try:
             with get_db_context(db) as db:
                 models = db.query(Model).filter(Model.id.in_(ids)).all()
@@ -380,7 +380,7 @@ class ModelsTable:
         except Exception:
             return []
 
-    def toggle_model_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ModelModel]:
+    async def toggle_model_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ModelModel]:
         with get_db_context(db) as db:
             try:
                 is_active = db.query(Model).filter_by(id=id).first().is_active
@@ -393,11 +393,11 @@ class ModelsTable:
                 )
                 db.commit()
 
-                return self.get_model_by_id(id, db=db)
+                return await self.get_model_by_id(id, db=db)
             except Exception:
                 return None
 
-    def update_model_by_id(self, id: str, model: ModelForm, db: Optional[Session] = None) -> Optional[ModelModel]:
+    async def update_model_by_id(self, id: str, model: ModelForm, db: Optional[Session] = None) -> Optional[ModelModel]:
         try:
             with get_db_context(db) as db:
                 # update only the fields that are present in the model
@@ -413,7 +413,7 @@ class ModelsTable:
             log.exception(f"Failed to update the model by id {id}: {e}")
             return None
 
-    def delete_model_by_id(self, id: str, db: Optional[Session] = None) -> bool:
+    async def delete_model_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
                 db.query(Model).filter_by(id=id).delete()
@@ -423,7 +423,7 @@ class ModelsTable:
         except Exception:
             return False
 
-    def delete_all_models(self, db: Optional[Session] = None) -> bool:
+    async def delete_all_models(self, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
                 db.query(Model).delete()
@@ -433,7 +433,7 @@ class ModelsTable:
         except Exception:
             return False
 
-    def sync_models(self, user_id: str, models: list[ModelModel], db: Optional[Session] = None) -> list[ModelModel]:
+    async def sync_models(self, user_id: str, models: list[ModelModel], db: Optional[Session] = None) -> list[ModelModel]:
         try:
             with get_db_context(db) as db:
                 # Get existing models
