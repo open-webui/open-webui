@@ -350,6 +350,15 @@
 				reader.onload = (event) => {
 					let originalImageUrl = `${event.target?.result}`;
 
+					// For animated formats (gif, webp), skip resizing to preserve animation
+					const fileType = (inputFiles[0] as any)?.['type'];
+					if (fileType === 'image/gif' || fileType === 'image/webp') {
+						info.meta.profile_image_url = originalImageUrl;
+						inputFiles = null;
+						filesInputElement.value = '';
+						return;
+					}
+
 					const img = new Image();
 					img.src = originalImageUrl;
 
