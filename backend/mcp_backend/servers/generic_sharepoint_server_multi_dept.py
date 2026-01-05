@@ -75,7 +75,7 @@ class DepartmentSharePointConfig:
         self.department_prefix = department_prefix.upper()
 
         # Global settings (shared across all departments)
-        # Force delegated access only - no application fallback allowed
+        # Delegated access is always enabled - no application fallback
         self.use_delegated_access = True
         self.obo_scope = clean_env_var(
             os.getenv(
@@ -93,15 +93,6 @@ class DepartmentSharePointConfig:
         )
 
         # Department-specific settings
-        self.client_id = clean_env_var(
-            os.getenv(f"{self.department_prefix}_SHP_ID_APP", "")
-        )
-        self.client_secret = clean_env_var(
-            os.getenv(f"{self.department_prefix}_SHP_ID_APP_SECRET", "")
-        )
-        self.tenant_id = clean_env_var(
-            os.getenv(f"{self.department_prefix}_SHP_TENANT_ID", "")
-        )
         self.site_url = clean_env_var(
             os.getenv(f"{self.department_prefix}_SHP_SITE_URL", "")
         )
@@ -134,18 +125,10 @@ class DepartmentSharePointConfig:
 
     def validate_config(self):
         """Validate that required configuration is present"""
-        required_vars = [
-            (f"{self.department_prefix}_SHP_ID_APP", self.client_id),
-            (f"{self.department_prefix}_SHP_ID_APP_SECRET", self.client_secret),
-            (f"{self.department_prefix}_SHP_TENANT_ID", self.tenant_id),
-            (f"{self.department_prefix}_SHP_SITE_URL", self.site_url),
-        ]
-
-        missing_vars = [var_name for var_name, value in required_vars if not value]
-
-        if missing_vars:
+        # Only site URL is required for delegated access mode
+        if not self.site_url:
             raise ValueError(
-                f"Missing required environment variables for {self.department_prefix}: {missing_vars}"
+                f"Missing required environment variable: {self.department_prefix}_SHP_SITE_URL"
             )
 
 
@@ -163,11 +146,8 @@ def initialize_department_server(department_prefix: str):
         # Load department-specific configuration
         config = DepartmentSharePointConfig(department_prefix)
 
-        # Initialize OAuth client with department-specific settings
+        # Initialize OAuth client with delegated access (credentials are placeholders)
         oauth_client = SharePointOAuthClient(
-            client_id=config.client_id,
-            client_secret=config.client_secret,
-            tenant_id=config.tenant_id,
             site_url=config.site_url,
             use_delegated_access=config.use_delegated_access,
             obo_scope=config.obo_scope,

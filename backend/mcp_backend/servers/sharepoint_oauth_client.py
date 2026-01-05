@@ -58,8 +58,21 @@ class SharePointOAuthClient:
             "https://graph.microsoft.com/Sites.Read.All https://graph.microsoft.com/Files.Read.All",
         )
 
-        if not all([self.client_id, self.client_secret, self.tenant_id, self.site_url]):
-            raise ValueError("Missing required SharePoint OAuth configuration")
+        # Validation - different requirements based on access mode
+        if self.use_delegated_access:
+            # For delegated access, only site_url is required
+            if not self.site_url:
+                raise ValueError(
+                    "Missing required SharePoint site URL for delegated access"
+                )
+        else:
+            # For application access, all credentials are required
+            if not all(
+                [self.client_id, self.client_secret, self.tenant_id, self.site_url]
+            ):
+                raise ValueError(
+                    "Missing required SharePoint OAuth configuration for application access"
+                )
 
         # OAuth2 endpoints
         self.token_endpoint = (
