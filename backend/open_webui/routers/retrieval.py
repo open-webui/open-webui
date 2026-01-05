@@ -1794,6 +1794,8 @@ def process_file(
                 {"status": "failed"},
                 db=db,
             )
+            # Clear the hash so the file can be re-uploaded after fixing the issue
+            Files.update_file_hash_by_id(file.id, None, db=db)
 
             if "No pandoc was found" in str(e):
                 raise HTTPException(
