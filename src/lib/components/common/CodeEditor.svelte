@@ -24,6 +24,7 @@
 
 	export let boilerplate = '';
 	export let value = '';
+
 	export let onSave = () => {};
 	export let onChange = () => {};
 
@@ -220,7 +221,7 @@ print("${endTag}")
 		return false;
 	};
 
-	const extensions = [
+	let extensions = [
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
 		indentUnit.of('    '),
