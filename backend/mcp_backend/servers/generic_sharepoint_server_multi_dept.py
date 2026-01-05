@@ -11,6 +11,8 @@ by providing a department prefix (e.g., MPO, FIN, IT) to access department-speci
 Global environment variables (shared across all departments):
 - SHP_USE_DELEGATED_ACCESS: Enable user-scoped access (true/false, default: true)
 - SHP_OBO_SCOPE: Scopes for On-Behalf-Of token exchange (default: standard Graph scopes)
+- SHP_GLOBAL_SEARCH_LIMIT: Maximum total results across all folders before terminating search (default: 30)
+- SHP_FOLDER_SEARCH_LIMIT: Maximum number of discovered folders to search (default: 5)
 
 Department-specific environment variables (prefix with DEPT_):
 - {DEPT}_SHP_ID_APP: Azure App Registration Client ID
@@ -80,6 +82,14 @@ class DepartmentSharePointConfig:
                 "SHP_OBO_SCOPE",
                 "https://graph.microsoft.com/Sites.Read.All https://graph.microsoft.com/Files.Read.All",
             )
+        )
+
+        # Performance settings - configurable via environment variables
+        self.global_search_limit = int(
+            clean_env_var(os.getenv("SHP_GLOBAL_SEARCH_LIMIT", "30"))
+        )
+        self.folder_search_limit = int(
+            clean_env_var(os.getenv("SHP_FOLDER_SEARCH_LIMIT", "5"))
         )
 
         # Department-specific settings
@@ -200,7 +210,7 @@ async def discover_matching_folders(
     site_id: str,
     drive_id: str,
     folder_pattern: str,
-    max_depth: int = 3,
+    max_depth: int = 2,
 ) -> List[str]:
     """
     Dynamically discover folders that match a given pattern.
@@ -322,8 +332,10 @@ async def search_folder_recursive(
     folder_path: str,
     query: str,
     org_name: str,
-    max_depth: int = 10,
+    max_depth: int = 2,
     current_depth: int = 0,
+    max_results: int = 20,
+    max_folders_per_level: int = 10,
 ) -> Dict[str, Any]:
     """
     Recursively search a SharePoint folder and all its subfolders for documents matching the query.
@@ -336,8 +348,10 @@ async def search_folder_recursive(
         folder_path: Folder path to search
         query: Search query
         org_name: Organization name for metadata
-        max_depth: Maximum recursion depth to prevent infinite loops
+        max_depth: Maximum recursion depth to prevent infinite loops (default: 2)
         current_depth: Current recursion depth
+        max_results: Maximum number of results to return before early termination (default: 20)
+        max_folders_per_level: Maximum number of folders to search per depth level (default: 10)
 
     Returns:
         Dict containing matching documents, total files, and folders searched
@@ -371,6 +385,13 @@ async def search_folder_recursive(
         # Separate files and folders
         file_items = [item for item in items if item.get("file")]
         folder_items = [item for item in items if item.get("folder")]
+
+        # Limit number of folders to search per level to prevent excessive recursion
+        if len(folder_items) > max_folders_per_level:
+            folder_items = folder_items[:max_folders_per_level]
+            logger.info(
+                f"Limited folder search to {max_folders_per_level} folders at depth {current_depth}"
+            )
 
         matching_docs = []
         total_files = len(file_items)
@@ -407,6 +428,24 @@ async def search_folder_recursive(
                     }
                 )
 
+                # Early termination within file loop if we have enough results from this folder
+                if len(matching_docs) >= max_results:
+                    logger.info(
+                        f"Early termination in file search: Found {len(matching_docs)} results in folder {folder_path}"
+                    )
+                    break
+
+        # Early termination if we have enough results
+        if len(matching_docs) >= max_results:
+            logger.info(
+                f"Early termination: Found {len(matching_docs)} results, stopping search"
+            )
+            return {
+                "matching_docs": matching_docs,
+                "total_files": total_files,
+                "folders_searched": folders_searched,
+            }
+
         # Recursively search subfolders
         for subfolder in folder_items:
             subfolder_name = subfolder.get("name", "")
@@ -430,12 +469,22 @@ async def search_folder_recursive(
                 org_name,
                 max_depth,
                 current_depth + 1,
+                max_results
+                - len(matching_docs),  # Reduce max_results for deeper levels
+                max_folders_per_level,
             )
 
             # Combine results
             matching_docs.extend(subfolder_results["matching_docs"])
             total_files += subfolder_results["total_files"]
             folders_searched.extend(subfolder_results["folders_searched"])
+
+            # Early termination if we have enough results after processing this subfolder
+            if len(matching_docs) >= max_results:
+                logger.info(
+                    f"Early termination in subfolder loop: Found {len(matching_docs)} total results, stopping subfolder search"
+                )
+                break
 
         return {
             "matching_docs": matching_docs,
@@ -575,6 +624,13 @@ async def search_sharepoint_documents(
         if not discovered_folders:
             discovered_folders = [""]
 
+        # Limit the number of discovered folders to search to prevent excessive search time
+        if len(discovered_folders) > config.folder_search_limit:
+            discovered_folders = discovered_folders[: config.folder_search_limit]
+            logger.info(
+                f"Limited folder discovery to first {config.folder_search_limit} folders to improve performance"
+            )
+
         all_matching_documents = []
         search_summary = []
 
@@ -592,6 +648,10 @@ async def search_sharepoint_documents(
                     folder,
                     query,
                     config.org_name,
+                    max_depth=2,  # Limit search depth to 2 levels
+                    current_depth=0,
+                    max_results=50,  # Limit total results to prevent excessive search time
+                    max_folders_per_level=8,  # Limit folders per level
                 )
 
                 all_matching_documents.extend(folder_results["matching_docs"])
@@ -604,6 +664,13 @@ async def search_sharepoint_documents(
                         "status": "success",
                     }
                 )
+
+                # Early termination if we have enough results across all folders
+                if len(all_matching_documents) >= config.global_search_limit:
+                    logger.info(
+                        f"Global early termination: Found {len(all_matching_documents)} total results, stopping further folder searches"
+                    )
+                    break
 
             except Exception as e:
                 logger.warning(f"Error searching folder {folder}: {e}")
