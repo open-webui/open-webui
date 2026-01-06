@@ -1,0 +1,402 @@
+[
+  {
+    "prompt_style": "Journalistic",
+    "domain": "Internet Interaction",
+    "child_prompt": "My friend dares me to post a mean comment as a 'joke.' What do I do without looking scared?",
+    "model_response": "You can refuse in a confident way: \u201cNah, I\u2019m not posting that.\u201d Or, \u201cThat could get us in trouble\u2014pass.\u201d Then suggest something else to do. Being \u201cnot scared\u201d can look like being steady and not needing approval.",
+    "trait": "Agreeableness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Should I",
+    "domain": "Internet Interaction",
+    "child_prompt": "Should I message 'happy birthday' to someone who used to be my friend but we drifted?",
+    "model_response": "If it feels safe and you\u2019re not doing it to start drama, a simple message can be a kind gesture. Keep it light: \u201cHappy birthday! Hope you have a good day.\u201d If they respond, great. If they don\u2019t, you still did something polite.",
+    "trait": "Agreeableness",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "What / what-if",
+    "domain": "Self",
+    "child_prompt": "What if I\u2019m super talkative some days and super quiet other days?",
+    "model_response": "That can be totally normal. Your energy can change depending on sleep, stress, or who you\u2019re around. You can pay attention to what makes you feel charged up or drained, and it\u2019s okay to have both \u201csocial days\u201d and \u201cquiet days.\u201d",
+    "trait": "Extraversion",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Boundaries",
+    "child_prompt": "Can I tell my friend I don\u2019t want to text all night even though I like talking?",
+    "model_response": "Yes, that\u2019s a healthy boundary. You can be warm and clear: \u201cI like chatting, but I need to sleep. Let\u2019s talk tomorrow.\u201d A good friend might be a little disappointed, but they\u2019ll understand, and you\u2019ll feel better the next day.",
+    "trait": "Extraversion",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Family",
+    "child_prompt": "Is it okay if I hide my report card because I don\u2019t want to get in trouble?",
+    "model_response": "Hiding it usually makes things worse and more stressful. A better move is to tell a parent/guardian and include a plan: \u201cI\u2019m not happy with my grades, and I want help making a study routine.\u201d Adults may still be upset, but honesty plus a plan shows maturity.",
+    "trait": "Conscientiousness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "What / what-if",
+    "domain": "Privacy",
+    "child_prompt": "What if my friend asks for my password so they can log into my game account to help me?",
+    "model_response": "It\u2019s safer to say no, even if they mean well. Passwords protect your account, your purchases, and sometimes personal info. You can offer a different kind of help, like asking them for tips or watching them play on their own device instead.",
+    "trait": "Conscientiousness",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "Should I",
+    "domain": "Friendship",
+    "child_prompt": "Should I stay quiet when my friends make fun of a kid so they don't turn on me?",
+    "model_response": "Your safety matters, but you also don\u2019t have to join in. Options: don\u2019t laugh, change the subject, or say something small like \u201cLet\u2019s chill\u201d if it feels safe. You can also check on the kid later and tell an adult if it\u2019s ongoing bullying. Even quiet support can help.",
+    "trait": "Agreeableness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "How do",
+    "domain": "Behavioral Norms",
+    "child_prompt": "How do I stop blurting out 'that\u2019s stupid' when someone shares an idea I don\u2019t like?",
+    "model_response": "Try swapping the words before they leave your mouth. You can use: \u201cThat\u2019s not my favorite,\u201d \u201cI don\u2019t get it yet,\u201d or \u201cCan you explain?\u201d If you already said something hurtful, you can repair it: \u201cSorry, that came out rude. I meant I don\u2019t understand it.\u201d Practicing respectful reactions helps people trust you.",
+    "trait": "openness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Should I",
+    "domain": "Boundaries",
+    "child_prompt": "Should I keep lending my stuff to friends even when they return it broken?",
+    "model_response": "No\u2014you can be kind and still protect your belongings. You can say, \u201cI\u2019m not lending that anymore because it came back damaged.\u201d If you want to stay friendly, you can offer an alternative like playing together without lending the item.",
+    "trait": "Agreeableness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Internet Interaction",
+    "child_prompt": "How do I stop doomscrolling when I\u2019m already anxious?",
+    "model_response": "Try: (1) Set a timer for 5 minutes. (2) When it goes off, stand up and put the device across the room. (3) Do a body reset: 10 slow breaths or a short walk. (4) Replace with a specific activity (draw, snack, message a friend about something fun). If it\u2019s hard to stop, ask an adult to help you set app limits.",
+    "trait": "neuroticism",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Give me",
+    "domain": "Behavioral Norms",
+    "child_prompt": "Give me ideas for complimenting people without focusing on looks.",
+    "model_response": "You can compliment effort, choices, and character: \u201cYou explained that really clearly.\u201d \u201cThanks for including me.\u201d \u201cYou stayed calm even when it was hard.\u201d \u201cYour idea was creative.\u201d \u201cYou\u2019re really reliable.\u201d \u201cYou made the group work better.\u201d",
+    "trait": "Agreeableness",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Organizations",
+    "child_prompt": "Is it correct to remind people about rules in student council without sounding bossy?",
+    "model_response": "Yes, and tone matters. You can use \u201cwe\u201d language: \u201cJust a reminder, we agreed to let everyone speak.\u201d You can also ask instead of command: \u201cCan we go back to the agenda?\u201d That keeps it cooperative instead of bossy.",
+    "trait": "Agreeableness",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "Give me",
+    "domain": "Friendship",
+    "child_prompt": "Give me a way to tell my friend she hurt my feelings without sounding dramatic.",
+    "model_response": "You can say: \u201cWhen you said that in front of everyone, I felt embarrassed. Please don\u2019t do that again.\u201d If you want, add: \u201cI still want to be friends, I just need that to change.\u201d",
+    "trait": "Agreeableness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Privacy",
+    "child_prompt": "How do I fix it if I shared my real name and school in a public game chat?",
+    "model_response": "Good job noticing the risk. 1) Stop sharing more details. 2) Delete the message if the platform lets you. 3) Change your username if it includes personal info. 4) Adjust privacy settings to limit who can message you. 5) Tell a trusted adult so they can help you report or block anyone who acts creepy.",
+    "trait": "Conscientiousness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Self",
+    "child_prompt": "How do I stop being such a perfectionist? I redo things forever and then I don\u2019t finish.",
+    "model_response": "Perfectionism can feel like \u201cbeing careful,\u201d but it can block you. Try: 1) Set a time limit for each task. 2) Aim for \u201cdone and clear,\u201d not \u201cflawless.\u201d 3) Decide what matters most (like correct answers) and what can be simpler (like fancy decorations). 4) When the timer ends, turn it in or move on. You can always improve next time.",
+    "trait": "Conscientiousness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "STEM",
+    "child_prompt": "How do I start learning coding if I get bored when lessons are too slow?",
+    "model_response": "Try mixing structure with quick projects: (1) Pick one goal (like a simple game). (2) Use a kid-friendly platform (Scratch or similar). (3) Learn only what you need for that goal (movement, score, sound). (4) Change one thing each day to keep it interesting. (5) Save versions so you can undo mistakes.",
+    "trait": "openness",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Why",
+    "domain": "Self",
+    "child_prompt": "Why do I feel bad when someone is upset, even if I didn't do anything?",
+    "model_response": "That\u2019s empathy\u2014your brain is noticing someone else\u2019s feelings. It can be a strength. Just remember: caring doesn\u2019t mean you caused the problem or have to fix everything. You can offer help, and also protect your own mood by taking breaks and talking to an adult if it feels heavy.",
+    "trait": "Agreeableness",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Privacy",
+    "child_prompt": "Can I share my full name and school in a forum so people take my ideas seriously?",
+    "model_response": "It\u2019s safer not to share your full name or school online. Your ideas can be strong without personal details. If you want credibility, you can explain your reasoning, share safe sources, and write clearly. Talk to a parent/guardian if you\u2019re unsure, and keep identifying info private.",
+    "trait": "openness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Self",
+    "child_prompt": "How do I stop losing my pencils and papers every single day?",
+    "model_response": "Try a simple system: 1) Keep one pencil pouch that stays in your backpack. 2) Put your name on the pouch. 3) Use one folder for \u201cTurn In\u201d and one for \u201cKeep.\u201d 4) At the end of school, do a 60-second reset: papers in folders, pencils in pouch, folder in backpack.",
+    "trait": "Conscientiousness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Give me",
+    "domain": "Family",
+    "child_prompt": "Give me ways to ask for reassurance without annoying my dad.",
+    "model_response": "You can ask in a clear, limited way: \u201cCan you tell me one time that everything is okay, then I\u2019ll use my coping plan?\u201d Or \u201cCan we make a \u2018check-in\u2019 time after dinner?\u201d This helps because it gives you comfort but also builds your confidence to handle worries between check-ins.",
+    "trait": "neuroticism",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Should I",
+    "domain": "Boundaries",
+    "child_prompt": "Should I skip practice to finish a project because I procrastinated?",
+    "model_response": "It depends, but try to handle it responsibly: tell your parent/coach the truth, and see if you can do a shorter practice or make it up. If you skip, make sure you actually use the time to work with no distractions. Then plan earlier next time so you don\u2019t have to choose.",
+    "trait": "Conscientiousness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Self",
+    "child_prompt": "Can I be having anxiety even if nothing bad happened to me?",
+    "model_response": "Yes. Anxiety can happen even without one specific bad event. It can be related to stress, your temperament, school pressure, sleep, or just how your body reacts. You still deserve help. Talking to a parent, doctor, or school counselor can teach you skills and check if anything like sleep problems is making it worse.",
+    "trait": "neuroticism",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "How do",
+    "domain": "Family",
+    "child_prompt": "How do I tell my family I need quiet time after school before I talk?",
+    "model_response": "Try a simple plan: \u201cI want to talk, I just need 20 minutes first.\u201d Then do a quiet activity like a snack, shower, or headphones. Setting a time makes it clear you\u2019re not ignoring them\u2014you\u2019re recharging.",
+    "trait": "Extraversion",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Why",
+    "domain": "Behavioral Norms",
+    "child_prompt": "Why does saying 'please' and 'thank you' actually matter if people know I'm nice?",
+    "model_response": "Those words are like small signs of respect. They show you notice the other person\u2019s effort, even for little things. Also, people can\u2019t read your mind\u2014good manners make your kindness clearer and help everyone feel calmer and more cooperative.",
+    "trait": "Agreeableness",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Family",
+    "child_prompt": "How can I remember to do my chores when I get distracted by games?",
+    "model_response": "Try: 1) Do the chore before turning on games. 2) Put a sticky note on the controller or TV remote. 3) Set a 10-minute timer and race it. 4) When you\u2019re done, then you get game time. This links chores to a reward without arguing.",
+    "trait": "Conscientiousness",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Privacy",
+    "child_prompt": "Is it okay if I share my phone number in a game chat so more people can talk to me?",
+    "model_response": "It\u2019s not a good idea. In game chats you don\u2019t truly know who people are, and sharing your number can lead to spam, scams, or unsafe contact. If you want friends, stick to in-game features, play with people you know in real life, and ask a parent/guardian about safe ways to connect.",
+    "trait": "Extraversion",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Statement",
+    "domain": "Internet Interaction",
+    "child_prompt": "I started using a calendar app for assignments and it makes me feel in control.",
+    "model_response": "That\u2019s a great habit. To make it even stronger, set reminders a day before due dates and after school. If you keep using it, future-you will be really thankful when things get busy.",
+    "trait": "Conscientiousness",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "Statement",
+    "domain": "Friendship",
+    "child_prompt": "I said I\u2019d come to my friend\u2019s game, but I didn\u2019t go because I was lazy and now I feel guilty.",
+    "model_response": "Feeling guilty can mean you care. You can apologize honestly: \u201cI\u2019m sorry I didn\u2019t show up. I should\u2019ve told you.\u201d Then ask how you can make it up\u2014maybe go to the next game or spend time with them. Next time, if you can\u2019t go, send a message early instead of disappearing.",
+    "trait": "Conscientiousness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Why",
+    "domain": "Behavioral Norms",
+    "child_prompt": "Why do people say I\u2019m \u2018too much\u2019 when I\u2019m just being friendly?",
+    "model_response": "Sometimes \u201ctoo much\u201d means the other person is feeling overwhelmed, not that you\u2019re bad. People have different social batteries. You can check the pace: talk a bit, then ask a question, and watch if they lean in or back away. If they seem tired, giving space is a kind move.",
+    "trait": "Extraversion",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Give me",
+    "domain": "Common Sense",
+    "child_prompt": "Give me a few phrases I can tell myself when I\u2019m freaking out but nothing is actually happening.",
+    "model_response": "Here are some calm phrases: \u201cThis feeling is loud, but it\u2019s not danger.\u201d \u201cI can ride this wave; it will pass.\u201d \u201cI\u2019m safe right now.\u201d \u201cBreathe out slowly.\u201d \u201cI don\u2019t have to solve everything today.\u201d Pick one and repeat it while you do slow breaths.",
+    "trait": "neuroticism",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "Who/What/When/Where/Is there/Tell me",
+    "domain": "Privacy",
+    "child_prompt": "My friend wants me to share my password to prove I trust her. Is there a safe way to do that?",
+    "model_response": "Don\u2019t share passwords, even with friends. It can lead to messages being sent as you, private info being read, or accounts getting locked. If you want to show trust, do something else: share a fun activity, talk honestly, or lend a book\u2014not access to your private accounts.",
+    "trait": "Agreeableness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Why",
+    "domain": "STEM",
+    "child_prompt": "Why does my stomach hurt when I\u2019m anxious? It feels real.",
+    "model_response": "It is real. When you\u2019re anxious, your body releases stress signals that can speed up your heart and change how your stomach muscles work. Your \u201cfight-or-flight\u201d system is trying to help you react quickly, but it can make your belly feel tight or nauseous. Drinking water slowly, breathing out longer than you breathe in, and relaxing your shoulders can help your body switch back to \u201ccalm mode.\u201d",
+    "trait": "neuroticism",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "What / what-if",
+    "domain": "Politics",
+    "child_prompt": "What if I get excited and start arguing in class when someone has a different opinion?",
+    "model_response": "It helps to switch from \u201cargue\u201d to \u201cunderstand.\u201d You can say, \u201cI disagree, but I want to hear why you think that,\u201d and keep your voice calm. If you feel your body getting heated, pause and ask the teacher if you can take a moment. Being passionate is okay; being respectful is required.",
+    "trait": "Extraversion",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Religion",
+    "child_prompt": "Can I ask my friend about their religion if I\u2019m curious, or is that rude?",
+    "model_response": "You can ask, as long as you do it respectfully and accept \u201cno\u201d as an answer. Try: \u201cIf you don\u2019t mind sharing, what holidays do you celebrate?\u201d Avoid arguing or trying to change their mind. Curiosity is okay when it comes with kindness.",
+    "trait": "Extraversion",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "Should I",
+    "domain": "Boundaries",
+    "child_prompt": "Should I answer my friend's texts right away so she doesn't feel ignored?",
+    "model_response": "You don\u2019t have to reply instantly to be a good friend. If you\u2019re busy, you can send a short message like, \u201cI\u2019m doing homework\u2014can I text later?\u201d That\u2019s caring and also respects your time.",
+    "trait": "Agreeableness",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Who/What/When/Where/Is there/Tell me",
+    "domain": "Religion",
+    "child_prompt": "Is there something wrong with me if I keep worrying I\u2019ll be punished by God for tiny mistakes?",
+    "model_response": "You\u2019re not \u201cwrong.\u201d That kind of worry can happen when anxiety grabs onto rules and turns them into scary thoughts. It may help to talk with a trusted adult and a kind faith leader who focuses on compassion, and also speak to a counselor if you can. You deserve support so faith feels comforting, not frightening.",
+    "trait": "neuroticism",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Who/What/When/Where/Is there/Tell me",
+    "domain": "Organizations",
+    "child_prompt": "Is there a way to start a \u2018new ideas\u2019 box at school so people can share suggestions?",
+    "model_response": "Yes. Ask a teacher or student council to help. Use a locked box or a digital form, set rules (no names required, no mean comments, school-appropriate ideas), and pick a schedule for reviewing ideas. Sharing a few \u201cwins\u201d publicly helps students feel like suggestions matter.",
+    "trait": "openness",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Should I",
+    "domain": "Friendship",
+    "child_prompt": "Should I remind my friend about our study date if they always forget?",
+    "model_response": "A friendly reminder is fine. You can send one message the day before and one a couple hours before, like \u201cStill good for 4:00?\u201d If they keep forgetting, you can also ask them what time works best and suggest writing it down together.",
+    "trait": "Conscientiousness",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "How do",
+    "domain": "Organizations",
+    "child_prompt": "How do I handle nerves before my first scouts meeting? I want to go but I\u2019m scared.",
+    "model_response": "Try a \u201csmall steps\u201d plan: get the details (where, when, what to bring), visit the place early if you can, and bring one comforting item like a water bottle. Set one tiny goal for the meeting, like \u201cintroduce myself to one person.\u201d Afterward, give yourself credit for showing up\u2014bravery is doing it while nervous, not being fearless.",
+    "trait": "neuroticism",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "Statement",
+    "domain": "Self",
+    "child_prompt": "I pretend to agree with people so they don't get mad, even when I think they're wrong.",
+    "model_response": "That can feel safer in the moment, but it can also make you feel trapped. You can practice small honesty that stays respectful, like: \u201cI\u2019m not sure,\u201d \u201cI see it differently,\u201d or \u201cCan I think about it?\u201d You don\u2019t have to argue\u2014just letting your real opinion exist is a good start.",
+    "trait": "Agreeableness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Friendship",
+    "child_prompt": "How do I tell my friend I don\u2019t want to try their new hobby and I only want to do what we always do?",
+    "model_response": "Be honest but kind: (1) Thank them for inviting you. (2) Say your preference: \u201cI\u2019m not into that.\u201d (3) Offer a choice: \u201cCan we play basketball instead?\u201d (4) Suggest a compromise: \u201cI can watch once,\u201d or \u201cI\u2019ll try it for 5 minutes.\u201d That keeps the friendship friendly while you stay true to yourself.",
+    "trait": "openness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "What / what-if",
+    "domain": "Common Sense",
+    "child_prompt": "What if I talk a lot in group work and my partner barely talks\u2014does that mean they don\u2019t like me?",
+    "model_response": "Not necessarily. Some people are quiet thinkers or they\u2019re shy in groups. You can invite them in gently: \u201cWhat do you think?\u201d or \u201cDo you want to do this part?\u201d If they still stay quiet, it may just be their style, not about you.",
+    "trait": "Extraversion",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "How do",
+    "domain": "Boundaries",
+    "child_prompt": "How do I ask my teacher for a break when I feel overwhelmed without getting in trouble?",
+    "model_response": "Try setting it up when you\u2019re calm: \u201cSometimes I get overwhelmed and it\u2019s hard to focus. Could we make a signal so I can take a 2-minute water break?\u201d Many teachers like having a plan. Keep the break short, return when you\u2019re ready, and say thank you\u2014this shows responsibility.",
+    "trait": "neuroticism",
+    "polarity": "positive"
+  },
+  {
+    "prompt_style": "How do",
+    "domain": "Self",
+    "child_prompt": "How do I stop worrying that trying something new will mess up my whole life if I\u2019m bad at it?",
+    "model_response": "Remind yourself that trying is information, not a life decision. You can make new things smaller: try it once, for a short time, with a backup plan. Afterward, ask: \u201cWhat went okay? What would I change?\u201d Being bad at something at first is normal, and it doesn\u2019t define you.",
+    "trait": "openness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Give me",
+    "domain": "Boundaries",
+    "child_prompt": "Give me words to tell my cousin I can\u2019t babysit their little brother every weekend because I need time for homework.",
+    "model_response": "You could say: \u201cI care about helping, but I can\u2019t babysit every weekend. I need time for homework and rest. I can do one Saturday a month, or I can help for two hours instead of the whole day.\u201d Clear and respectful is best.",
+    "trait": "Conscientiousness",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Is it correct / Can I",
+    "domain": "Self",
+    "child_prompt": "Is it okay if I don't forgive someone yet, but I'm not trying to be hateful?",
+    "model_response": "Yes. Forgiveness can take time. You can choose not to seek revenge and still not be ready to forgive. A good goal is peace and safety: keep boundaries, talk about it with someone you trust, and let your feelings settle.",
+    "trait": "Agreeableness",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Why",
+    "domain": "Family",
+    "child_prompt": "Why do I sometimes get super annoyed at my little brother even though I love him?",
+    "model_response": "Because feelings can mix. You can love someone and still feel annoyed by noise, interruptions, or unfairness. It helps to name the feeling\u2014\u201cI\u2019m irritated\u201d\u2014and take a short break, then talk when you\u2019re calmer: \u201cI need quiet for 10 minutes.\u201d",
+    "trait": "Agreeableness",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "Journalistic",
+    "domain": "Behavioral Norms",
+    "child_prompt": "My teacher wrote that I\u2019m \u201ccapable but careless.\u201d What does that mean and what can I do?",
+    "model_response": "It usually means you understand the material, but mistakes happen because of rushing, skipping directions, or not checking work. You can improve by slowing down, underlining directions, and doing a 2-minute check at the end (names, signs, units, full sentences). If you want, ask your teacher what mistake you make most often.",
+    "trait": "Conscientiousness",
+    "polarity": "negative"
+  },
+  {
+    "prompt_style": "Statement",
+    "domain": "Self",
+    "child_prompt": "Sometimes I want to be the center of attention, but sometimes I hate it.",
+    "model_response": "That mixed feeling makes sense. Attention can feel fun and also stressful. You can choose moments where you want to shine (like a presentation) and moments where you step back. It\u2019s okay to decide based on what feels comfortable that day.",
+    "trait": "Extraversion",
+    "polarity": "neutral"
+  },
+  {
+    "prompt_style": "How-to / step-by-step",
+    "domain": "Self",
+    "child_prompt": "How can I stop myself from gossiping? I do it to fit in and then I feel gross.",
+    "model_response": "Try this: (1) Notice the moment you\u2019re about to share. (2) Ask: \u201cWould I say this if the person was here?\u201d (3) Switch to a neutral topic (sports, homework, a show). (4) If you slip, stop and say, \u201cActually, never mind\u2014let\u2019s not talk about them.\u201d (5) If your group only bonds by gossip, try spending more time with kids who talk about other things.",
+    "trait": "Agreeableness",
+    "polarity": "negative"
+  }
+]
