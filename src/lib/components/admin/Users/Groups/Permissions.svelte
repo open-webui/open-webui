@@ -7,8 +7,7 @@
 
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
 
-	export let permissions = {};
-	export let defaultPermissions = {};
+	let { permissions = {}, defaultPermissions = {} } = $props();
 
 	$effect(() => {
 		permissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
