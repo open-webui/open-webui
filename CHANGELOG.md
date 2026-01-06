@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔥 Administrators can now configure Firecrawl timeout values using the "FIRECRAWL_TIMEOUT" environment variable to control web scraping wait times. [#19973](https://github.com/open-webui/open-webui/pull/19973), [Commit](https://github.com/open-webui/open-webui/commit/89ad1c68d1aadf849960b5e202aa4651096b05f5)
 - 💾 Administrators can now use openGauss as the vector database backend for knowledge base document storage and retrieval. [#20179](https://github.com/open-webui/open-webui/pull/20179)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Spanish (es-ES), Simplified Chinese, Traditional Chinese, and Polish (pl-PL) were enhanced and expanded.
+- 🌐 Translations for Spanish (es-ES), Simplified Chinese, Traditional Chinese, and Polish were enhanced and expanded.
 
 ### Fixed
 
