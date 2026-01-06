@@ -15,8 +15,8 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	let {
-		onSubmit = () => {},
-		onDelete = () => {},
+		onSubmit,
+		onDelete,
 		show = false,
 		edit = false,
 		group = null,
