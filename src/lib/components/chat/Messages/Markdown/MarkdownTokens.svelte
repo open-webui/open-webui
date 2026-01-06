@@ -84,12 +84,12 @@
 		{/if}
 	{:else if token.type === 'table'}
 		<div class="relative w-full group mb-2">
-			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
+			<div class="scrollbar relative overflow-x-auto overflow-y-auto max-w-full max-h-96">
 				<table
 					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
 				>
 					<thead
-						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
+						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none sticky top-0 z-10"
 					>
 						<tr class="">
 							{#each token.header as header, headerIdx}
