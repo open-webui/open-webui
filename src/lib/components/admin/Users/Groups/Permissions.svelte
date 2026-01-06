@@ -847,7 +847,7 @@
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 	<div>
-		<div class=" mb-2 text-sm font-medium">{$i18n.t('UI Permissions')}</div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Settings Permissions')}</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
