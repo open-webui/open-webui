@@ -93,7 +93,8 @@ export const queryCrewMCP = async (
 		.catch((err) => {
 			clearTimeout(timeoutId);
 			if (err.name === 'AbortError') {
-				error = 'CrewAI MCP: Request timeout after 3 minutes. The analysis may be too complex or the SharePoint site has too many documents.';
+				error =
+					'CrewAI MCP: Request timeout after 3 minutes. The analysis may be too complex or the SharePoint site has too many documents.';
 			} else {
 				error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
 			}
