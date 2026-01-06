@@ -913,6 +913,8 @@
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
 
+		const defaultModels = $config?.default_models ? $config?.default_models.split(',') : [];
+
 		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
 			const urlModels = (
 				$page.url.searchParams.get('models') ||
@@ -921,8 +923,8 @@
 			)?.split(',');
 
 			if (urlModels.length === 1) {
-				const m = $models.find((m) => m.id === urlModels[0]);
-				if (!m) {
+				if (!$models.find((m) => m.id === urlModels[0])) {
+					// Model not found; open model selector and prefill
 					const modelSelectorButton = document.getElementById('model-selector-0-button');
 					if (modelSelectorButton) {
 						modelSelectorButton.click();
@@ -936,37 +938,51 @@
 						}
 					}
 				} else {
+					// Model found; set it as selected
 					selectedModels = urlModels;
 				}
 			} else {
+				// Multiple models; set as selected
 				selectedModels = urlModels;
 			}
 
+			// Unavailable models filtering
 			selectedModels = selectedModels.filter((modelId) =>
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
 			if ($selectedFolder?.data?.model_ids) {
+				// Set from folder model IDs
 				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
 				if (sessionStorage.selectedModels) {
+					// Set from session storage (temporary selection)
 					selectedModels = JSON.parse(sessionStorage.selectedModels);
 					sessionStorage.removeItem('selectedModels');
 				} else {
 					if ($settings?.models) {
+						// Set from user settings
 						selectedModels = $settings?.models;
-					} else if ($config?.default_models) {
-						console.log($config?.default_models.split(',') ?? '');
-						selectedModels = $config?.default_models.split(',');
+					} else if (defaultModels && defaultModels.length > 0) {
+						// Set from default models
+						selectedModels = defaultModels;
 					}
 				}
 			}
 
+			// Unavailable & hidden models filtering
 			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
 		}
 
+		// Ensure at least one model is selected
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
 			if (availableModels.length > 0) {
+				if (defaultModels && defaultModels.length > 0) {
+					// Set from default models
+					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
+				}
+
+				// Set to first available model
 				selectedModels = [availableModels?.at(0) ?? ''];
 			} else {
 				selectedModels = [''];
