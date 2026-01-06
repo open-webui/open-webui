@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 import base64
 import io
+import datetime
 
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -328,6 +329,23 @@ async def update_user_info_by_session_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
+
+
+############################
+# AcceptUserEulaBySessionUser
+############################
+
+
+@router.post("/user/eula/accept", response_model=Optional[dict])
+async def accept_user_eula_by_session_user(user=Depends(get_verified_user)):
+    now = datetime.datetime.utcnow()
+    updated_user = Users.update_user_by_id(user.id, {"eula_signed_at": now})
+    if updated_user:
+        return {"eula_signed_at": updated_user.eula_signed_at}
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=ERROR_MESSAGES.USER_NOT_FOUND,
+    )
 
 
 ############################

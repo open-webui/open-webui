@@ -11,7 +11,7 @@ from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict, constr
-from sqlalchemy import BigInteger, Column, String, Text, Date
+from sqlalchemy import BigInteger, Column, String, Text, Date, DateTime
 from sqlalchemy import or_
 
 import datetime
@@ -40,6 +40,7 @@ class User(Base):
     bio = Column(Text, nullable=True)
     gender = Column(Text, nullable=True)
     date_of_birth = Column(Date, nullable=True)
+    eula_signed_at = Column(DateTime, nullable=True)
 
     info = Column(JSONField, nullable=True)
     settings = Column(JSONField, nullable=True)
@@ -77,6 +78,7 @@ class UserModel(BaseModel):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
+    eula_signed_at: Optional[datetime.datetime] = None
     tenant_id: Optional[str] = None
 
     info: Optional[dict] = None

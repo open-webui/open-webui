@@ -1,6 +1,7 @@
 import logging
 import uuid
 from typing import Optional
+import datetime
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.users import UserModel, Users
@@ -53,6 +54,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     profile_image_url: str
+    eula_signed_at: Optional[datetime.datetime] = None
 
 
 class SigninResponse(Token, UserResponse):

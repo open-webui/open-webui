@@ -16,7 +16,7 @@
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
-	import { getUserSettings } from '$lib/apis/users';
+	import { acceptUserEula, getUserSettings } from '$lib/apis/users';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -44,6 +44,7 @@
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import TermsAndConditionsModal from '$lib/components/TermsAndConditionsModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -56,6 +57,7 @@
 	let localDBChats = [];
 
 	let version;
+	let showTermsModal = false;
 
 	const clearChatInputStorage = () => {
 		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
@@ -292,6 +294,8 @@
 		loaded = true;
 	});
 
+	$: showTermsModal = Boolean($user) && $user.eula_signed_at == null;
+
 	const checkForVersionUpdates = async () => {
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
@@ -300,10 +304,21 @@
 			};
 		});
 	};
+
+	const handleEulaAgree = async () => {
+		try {
+			const res = await acceptUserEula(localStorage.token);
+			const signedAt = res?.eula_signed_at ?? new Date().toISOString();
+			user.set({ ...$user, eula_signed_at: signedAt });
+		} catch (error) {
+			toast.error($i18n.t('Failed to accept terms. Please try again.'));
+		}
+	};
 </script>
 
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
+<TermsAndConditionsModal bind:show={showTermsModal} on:agree={handleEulaAgree} />
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>

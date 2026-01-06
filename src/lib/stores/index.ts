@@ -298,6 +298,7 @@ export type SessionUser = {
 	bio?: string | null;
 	gender?: string | null;
 	date_of_birth?: string | null;
+	eula_signed_at?: string | null;
 	token?: string;
 	token_type?: string;
 	expires_at?: number;
