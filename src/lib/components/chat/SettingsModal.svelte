@@ -31,15 +31,10 @@
 
 	const i18n = getContext('i18n');
 
-	let { show = false } = $props();
+	export let show = false;
 
-	$effect(() => {
-		if (show) {
-			addScrollListener();
-		} else {
-			removeScrollListener();
-		}
-	});
+	// React to show changes
+	$: show ? addScrollListener() : removeScrollListener();
 
 	interface SettingsTab {
 		id: string;

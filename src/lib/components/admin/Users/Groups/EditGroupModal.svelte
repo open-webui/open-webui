@@ -14,26 +14,31 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
-	let {
-		onSubmit,
-		onDelete,
-		show = false,
-		edit = false,
-		group = null,
-		defaultPermissions = {},
-		custom = true,
-		tabs = ['general', 'permissions', 'users'],
-		name = '',
-		description = '',
-		data = {},
-		permissions = DEFAULT_PERMISSIONS
-	} = $props();
+	export let onSubmit: Function = () => {};
+	export let onDelete: Function = () => {};
+
+	export let show = false;
+	export let edit = false;
+
+	export let group = null;
+	export let defaultPermissions = {};
+
+	export let custom = true;
+
+	export let tabs = ['general', 'permissions', 'users'];
 
 	let selectedTab = 'general';
 	let loading = false;
 	let showDeleteConfirmDialog = false;
 
 	let userCount = 0;
+	let initialized = false;
+
+	export let name = '';
+	export let description = '';
+	export let data = {};
+
+	export let permissions = DEFAULT_PERMISSIONS;
 
 	const submitHandler = async () => {
 		loading = true;
@@ -52,7 +57,8 @@
 	};
 
 	const init = () => {
-		if (group) {
+		if (group && !initialized) {
+			initialized = true;
 			name = group.name;
 			description = group.description;
 			const loadedPermissions = group?.permissions ?? {};
@@ -70,11 +76,8 @@
 		}
 	};
 
-	$effect(() => {
-		if (show) {
-			init();
-		}
-	});
+	// Track group and show changes to call init
+	$: group, show && init();
 
 	onMount(() => {
 		selectedTab = tabs[0];
