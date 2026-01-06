@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_terminal import terminal_blueprint, configure_logger
-
+import os
 
 app = Flask("flaskXterm")
 app.logger = configure_logger("flaskXterm")
@@ -39,6 +39,14 @@ def is_authenticated():
 
 # Register the terminal blueprint
 app.register_blueprint(terminal_blueprint, url_prefix="/terminal")
+
+with open(".terminalrc", "w") as f:
+    f.write("#!/bin/sh\n")
+    f.write("bash ./enter_pico.sh\n") 
+
+# Set the ENV variable to use this RC file
+os.environ["ENV"] = os.path.abspath(".terminalrc")
+
 
 if __name__ == "__main__":
     app.run(
