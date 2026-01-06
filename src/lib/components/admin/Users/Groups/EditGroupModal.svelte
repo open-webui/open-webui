@@ -74,9 +74,11 @@
 		}
 	};
 
-	$: if (show) {
-		init();
-	}
+	$effect(() => {
+		if (show) {
+			init();
+		}
+	});
 
 	onMount(() => {
 		selectedTab = tabs[0];

@@ -33,11 +33,13 @@
 
 	export let show = false;
 
-	$: if (show) {
-		addScrollListener();
-	} else {
-		removeScrollListener();
-	}
+	$effect(() => {
+		if (show) {
+			addScrollListener();
+		} else {
+			removeScrollListener();
+		}
+	});
 
 	interface SettingsTab {
 		id: string;

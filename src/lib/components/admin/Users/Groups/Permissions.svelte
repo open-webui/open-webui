@@ -10,10 +10,9 @@
 	export let permissions = {};
 	export let defaultPermissions = {};
 
-	// Reactive statement to ensure all fields are present in `permissions`
-	$: {
+	$effect(() => {
 		permissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
-	}
+	});
 
 	function fillMissingProperties(obj: any, defaults: any) {
 		return {
