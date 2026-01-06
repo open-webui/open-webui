@@ -3,6 +3,7 @@
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import { toast } from 'svelte-sonner';
+	import { goto } from '$app/navigation';
 
 import Modal from '$lib/components/common/Modal.svelte';
 import Files from '$lib/components/upload/Files.svelte';
@@ -278,6 +279,18 @@ let initializedTenantId: string | null = null;
 						path={promptsPath}
 						useTenantPromptApi={true}
 					/>
+					<div class="mt-4 flex justify-end">
+						<button
+							type="button"
+							class="inline-flex items-center rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+							on:click={() => {
+								closeModal();
+								goto(`/admin/tenants/${encodeURIComponent(tenant.id)}/help`);
+							}}
+						>
+							{$i18n.t('Edit Help Text')}
+						</button>
+					</div>
 				</div>
 		{:else}
 			<p class="text-sm text-gray-500 dark:text-gray-400">

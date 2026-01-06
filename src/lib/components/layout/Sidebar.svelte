@@ -62,6 +62,7 @@ import Sidebar from '../icons/Sidebar.svelte';
 import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 import Note from '../icons/Note.svelte';
 import CloudArrowUp from '../icons/CloudArrowUp.svelte';
+import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 
@@ -700,6 +701,28 @@ import CloudArrowUp from '../icons/CloudArrowUp.svelte';
 						</Tooltip>
 					</div>
 				{/if}
+
+				<div class="">
+					<Tooltip content={$i18n.t('How to Ask Luxor')} placement="right">
+						<a
+							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							href="/how-to-ask"
+							on:click={async (e) => {
+								e.stopImmediatePropagation();
+								e.preventDefault();
+
+								goto('/how-to-ask');
+								itemClickHandler();
+							}}
+							aria-label={$i18n.t('How to Ask Luxor')}
+							draggable="false"
+						>
+							<div class=" self-center flex items-center justify-center size-9">
+								<QuestionMarkCircle className="size-4.5" />
+							</div>
+						</a>
+					</Tooltip>
+				</div>
 			</div>
 		</button>
 
@@ -930,6 +953,25 @@ import CloudArrowUp from '../icons/CloudArrowUp.svelte';
 							</a>
 						</div>
 					{/if}
+
+					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<a
+							id="sidebar-how-to-ask-button"
+							class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							href="/how-to-ask"
+							on:click={itemClickHandler}
+							draggable="false"
+							aria-label={$i18n.t('How to Ask Luxor')}
+						>
+							<div class="self-center">
+								<QuestionMarkCircle className="size-4.5" />
+							</div>
+
+							<div class="flex self-center translate-y-[0.5px]">
+								<div class=" self-center text-sm font-primary">{$i18n.t('How to Ask Luxor')}</div>
+							</div>
+						</a>
+					</div>
 				</div>
 
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}

@@ -906,6 +906,10 @@ S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", None)
 S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", None)
 S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
+S3_PROMPT_BUCKET_NAME = os.environ.get("S3_PROMPT_BUCKET_NAME", S3_BUCKET_NAME)
+DEFAULT_HELP_S3_KEY = os.environ.get(
+    "DEFAULT_HELP_S3_KEY", "prompts/default-help.md"
+)
 S3_KEY_PREFIX = os.environ.get("S3_KEY_PREFIX", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 S3_USE_ACCELERATE_ENDPOINT = (
