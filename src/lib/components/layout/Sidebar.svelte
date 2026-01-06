@@ -1279,7 +1279,7 @@
 						</div>
 					</div>
 
-					<!-- Step 2: Moderation Scenarios -->
+					<!-- Step 2: Review Scenarios -->
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
 							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {unlock_moderation ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
@@ -1303,7 +1303,7 @@
 								</div>
 							</div>
 							<div class="flex self-center translate-y-[0.5px]">
-								<div class="font-medium text-sm font-primary">Moderation Scenarios</div>
+								<div class="font-medium text-sm font-primary">Review Scenarios</div>
 							</div>
 						</button>
 					</div>

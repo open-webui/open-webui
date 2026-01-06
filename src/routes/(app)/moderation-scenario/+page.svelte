@@ -328,20 +328,13 @@ import { finalizeModeration } from '$lib/apis/workflow';
     //
     // =================================================================================================
 
-    // Initialize showWarmup synchronously based on warmup completion status
+    // TUTORIAL DISABLED: Tutorial feature has been disabled
+    // Initialize showWarmup synchronously - always set to false to disable tutorial
     // This prevents the flash where regular UI renders before tutorial check completes
     $: if ($user?.id) {
-        try {
-            const warmupKey = `moderationWarmupCompleted_${$user.id}`;
-            warmupCompleted = localStorage.getItem(warmupKey) === 'true';
-            // Set showWarmup immediately based on completion status
-            // This ensures correct initial render without flash
-            showWarmup = !warmupCompleted;
-        } catch (e) {
-            console.warn('Failed to check warmup completion', e);
-            // Default to showing warmup if check fails
-            showWarmup = true;
-        }
+        // Tutorial is disabled - always set showWarmup to false
+        showWarmup = false;
+        warmupCompleted = true; // Mark as completed so tutorial never shows
     }
 
     // Session-level lock to prevent re-ordering once restored/corrected
@@ -1307,11 +1300,16 @@ function clearModerationLocalKeys() {
 	
 	// Derive current step from completion flags
 	// Gate reactive updates during scenario loading to prevent flashing
+	// SIMPLIFIED FLOW: Only Steps 1 and 2 are active (identification-only experiment)
+	// Step 3 (moderation) is disabled - see UI block comment for restoration instructions
 	$: initialDecisionStep = isLoadingScenario ? 1 : (() => {
 		if (!step1Completed) return 1;
 		if (!step2Completed) return 2;
-		if (!step3Completed) return 3;
-		return 3; // Stay on step 3 even when completed (for viewing final state)
+		// SIMPLIFIED FLOW: Step 2 is now the final step
+		// Original code for Step 3 (commented out for future restoration):
+		// if (!step3Completed) return 3;
+		// return 3; // Stay on step 3 even when completed (for viewing final state)
+		return 2; // Stay on step 2 when completed (simplified flow ends here)
 	})();
 	
 	// Step 2 (Assess): Concern assessment fields
@@ -1324,10 +1322,12 @@ function clearModerationLocalKeys() {
 	let nextAction: 'try_again' | 'move_on' | null = null;
 	
 	// Derived UI visibility states
-	// Allow showing pane for completed scenarios (read-only view)
+	// SIMPLIFIED FLOW: Only show pane for Steps 1 and 2, close when scenario is complete
 	// Gate reactive updates during scenario loading to prevent flashing
 	$: showInitialDecisionPane = isLoadingScenario ? false : 
-		(initialDecisionStep >= 1 && initialDecisionStep <= 3) && 
+		(initialDecisionStep >= 1 && initialDecisionStep <= 2) && 
+		!markedNotApplicable &&
+		(confirmedVersionIndex === null) && // Close pane when scenario is complete
 		(!isCustomScenario || customScenarioGenerated);
 	// moderationPanelVisible is now set explicitly after state restoration to prevent flashing
 	// See loadScenario() for explicit setting after all state is restored
@@ -2758,16 +2758,20 @@ function cancelReset() {}
 	}
 	
 	/**
-	 * Step 2: Complete concern assessment (Assess).
+	 * Step 2: Complete concern assessment (Assess) and mark scenario as complete.
 	 * 
-	 * Saves to backend with version_number: 0 (UPDATE existing row).
+	 * SIMPLIFIED FLOW: This is now the final step - marks scenario as complete.
+	 * (Step 3 moderation has been commented out for the identification-only experiment)
+	 * 
+	 * Saves to backend with version_number: 0 and is_final_version: true.
 	 * 
 	 * Saves:
-	 *   - concern_level: Pre-moderation concern level 1-5 (to DIRECT COLUMN)
 	 *   - concern_reason: User's explanation of concern level (to session_metadata.concern_reason)
 	 *   - highlighted_texts: Preserves highlights from Step 1
+	 *   - initial_decision: 'identification' (marks this as identification-only completion)
+	 *   - is_final_version: true (marks scenario as complete)
 	 * 
-	 * Navigates to Step 3 (Update) after saving.
+	 * Marks scenario as complete and navigates to next scenario if available.
 	 */
 	async function completeStep2() {
 		// Validate explanation field is filled
@@ -2782,10 +2786,20 @@ function cancelReset() {}
 			return;
 		}
 		
-		step2Completed = true; // Mark step 2 complete to move to step 3
+		// Mark step 2 and step 3 as complete (simplified flow - no Step 3)
+		step2Completed = true;
+		step3Completed = true; // Mark step 3 complete since we're skipping moderation
+		
+		// Mark scenario as complete by setting confirmedVersionIndex
+		// This triggers isScenarioCompleted() to return true
+		confirmedVersionIndex = 0; // 0 indicates original/identification is confirmed
+		
+		// Save state to trigger sidebar reactive updates
+		// This updates scenarioStates Map which triggers scenarioStatesUpdateTrigger
+		// and scenarioCompletionStatuses reactive array to recompute
 		saveCurrentScenarioState();
 		
-		// Save concern assessment data to backend immediately so it persists across page refreshes
+		// Save identification completion to backend with is_final_version: true
 		// Use try-catch to ensure errors don't prevent step completion
 		try {
 			const sessionId = `scenario_${selectedScenarioIndex}`;
@@ -2799,28 +2813,44 @@ function cancelReset() {}
 				session_number: sessionNumber,
 				scenario_prompt: childPrompt1,
 				original_response: originalResponse1,
-				initial_decision: undefined, // No decision yet, just saving concern assessment
+				initial_decision: 'accept_original', // Simplified flow - identification only (uses accept_original as semantic match)
 				concern_level: undefined, // No longer collected in Step 2
 				concern_reason: concernReason.trim(),
-				saved_at: Date.now(),
+				decided_at: Date.now(),
 				strategies: [],
 				custom_instructions: [],
 				highlighted_texts: [...highlightedTexts1],
 				refactored_response: undefined,
-				is_final_version: false,
+				is_final_version: true, // Mark as final - scenario is complete
 				is_attention_check: isAttentionCheckScenario,
 				attention_check_selected: attentionCheckSelected,
 				attention_check_passed: false
 			});
-			console.log('✅ Concern assessment data saved to backend successfully');
+			console.log('✅ Identification complete - scenario marked as final');
 		} catch (e) {
-			console.error('Failed to save concern assessment data (non-blocking):', e);
+			console.error('Failed to save identification completion (non-blocking):', e);
 			// Don't throw - allow step to complete even if backend save fails
+		}
+		
+		// Navigate to next scenario if available
+		if (selectedScenarioIndex < scenarioList.length - 1) {
+			setTimeout(() => {
+				loadScenario(selectedScenarioIndex + 1, false);
+			}, 500);
+		} else {
+			toast.success('All scenarios completed!');
 		}
 	}
 	
+	// ============================================================================
+	// STEP 3 FUNCTION - PRESERVED FOR DISABLED STEP 3 UI (identification-only experiment)
+	// This function is only called by the Step 3 UI block which is disabled via {#if false && ...}
+	// The function is kept uncommented to satisfy TypeScript type checking.
+	// To fully disable: Comment out when Step 3 UI is removed entirely.
+	// ============================================================================
 	/**
 	 * Step 3: Submit satisfaction check after version created.
+	 * NOTE: This function is only used by the disabled Step 3 UI.
 	 * 
 	 * Saves satisfaction level (1-5 Likert), reason, and next action to backend.
 	 * 
@@ -2914,14 +2944,17 @@ function cancelReset() {}
 		
 		saveCurrentScenarioState();
 	}
+	// END STEP 3 FUNCTION BLOCK
 	
 	// Removed old completeStep3() - Step 3 is now "Update" which uses submitSatisfactionCheck() after version creation
 	
-	// Navigate to a specific step (for back navigation) - 3-step flow (1, 2, 3)
+	// Navigate to a specific step (for back navigation)
+	// SIMPLIFIED FLOW: Only Steps 1 and 2 are active (Step 3 is disabled for identification-only experiment)
 	// Sets/unsets completion flags to control which step is shown (step is derived from flags)
 	function navigateToStep(step: number) {
-		// Type guard - only allow steps 1, 2, or 3
-		if (step !== 1 && step !== 2 && step !== 3) return;
+		// Type guard - only allow steps 1 or 2 (Step 3 is disabled)
+		// Original: if (step !== 1 && step !== 2 && step !== 3) return;
+		if (step !== 1 && step !== 2) return;
 		
 		// Set/unset completion flags to control which step is shown
 		if (step === 1) {
@@ -2935,14 +2968,16 @@ function cancelReset() {}
 			step2Completed = false;
 			moderationPanelVisible = false;
 			showInitialDecisionPane = true; // Explicitly keep pane open
-		} else if (step === 3) {
-			// Go to step 3 - ensure steps 1-2 are complete, unset step 3
-			step1Completed = true;
-			step2Completed = true;
-			step3Completed = false;
-			moderationPanelVisible = false;
-			showInitialDecisionPane = true; // Explicitly keep pane open
 		}
+		// COMMENTED OUT - Step 3 navigation disabled for identification-only experiment
+		// else if (step === 3) {
+		// 	// Go to step 3 - ensure steps 1-2 are complete, unset step 3
+		// 	step1Completed = true;
+		// 	step2Completed = true;
+		// 	step3Completed = false;
+		// 	moderationPanelVisible = false;
+		// 	showInitialDecisionPane = true; // Explicitly keep pane open
+		// }
 		saveCurrentScenarioState();
 	}
 	
@@ -3023,6 +3058,22 @@ function cancelReset() {}
 		saveCurrentScenarioState();
 		toast.info('Scenario unmarked - please make a decision');
 		console.log('User unmarked scenario as not applicable:', selectedScenarioIndex);
+	}
+
+	/**
+	 * Undo scenario completion (identification-only flow).
+	 * Resets the scenario to allow editing the identification.
+	 */
+	function undoScenarioCompleted() {
+		confirmedVersionIndex = null;
+		step2Completed = false;
+		step3Completed = false;
+		// Navigate back to Step 2 to allow editing
+		step1Completed = true; // Keep step 1 completed
+		showInitialDecisionPane = true;
+		saveCurrentScenarioState();
+		toast.info('Scenario unmarked - you can edit your identification');
+		console.log('User undid scenario completion:', selectedScenarioIndex);
 	}
 
 	function clearSelections() {
@@ -3807,7 +3858,7 @@ onMount(async () => {
 </script>
 
 <svelte:head>
-	<title>Moderation Scenarios</title>
+	<title>Review Scenarios</title>
 </svelte:head>
 
 {#if showWarmup}
@@ -4027,13 +4078,15 @@ onMount(async () => {
 						aria-label="Open scenarios"
 					>Scenarios</button>
 				{:else}
-					<div class="flex items-center text-xl font-semibold">Moderation Scenarios</div>
+					<div class="flex items-center text-xl font-semibold">Review Scenarios</div>
 				{/if}
 			</div>
 			
 			<!-- Controls -->
 			<div class="flex items-center space-x-3 {!sidebarOpen ? 'max-md:hidden' : ''}">
-				<!-- Help Button -->
+				<!-- Help Button - HIDDEN -->
+				<!-- Help button has been hidden for the time being -->
+				<!--
 				<button
 					on:click={() => showHelpVideo = true}
 					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -4041,6 +4094,7 @@ onMount(async () => {
 				>
 					Help
 				</button>
+				-->
 				<!-- Navigation Buttons -->
 				<div class="flex items-center space-x-2">
 					<!-- Previous Task Button -->
@@ -4079,17 +4133,8 @@ onMount(async () => {
 				<div class="flex items-center justify-between">
 					<h1 class="text-xl font-bold text-gray-900 dark:text-white">Scenarios</h1>
 					<div class="flex items-center space-x-2">
-						<button 
-							class="text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 flex items-center space-x-1" 
-							on:click={showTutorial}
-							aria-label="Show tutorial"
-							title="Show Tutorial"
-						>
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-							</svg>
-							<span class="hidden sm:inline">Tutorial</span>
-						</button>
+						<!-- Tutorial Button - DISABLED -->
+						<!-- Tutorial feature has been disabled -->
 						<button class="text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800" on:click={() => { sidebarOpen = !sidebarOpen; }} aria-label="Toggle scenarios">{sidebarOpen ? 'Hide' : 'Show'}</button>
 					</div>
 				</div>
@@ -4408,27 +4453,6 @@ onMount(async () => {
 							</div>
 						{/if}
 						
-					<!-- Not Applicable Indicator -->
-					{#if markedNotApplicable}
-						<div class="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
-							<div class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-								<div class="flex items-center space-x-2">
-									<svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
-									</svg>
-									<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-										Marked as not applicable
-									</span>
-								</div>
-								<button
-									on:click={unmarkNotApplicable}
-									class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-								>
-									Undo
-								</button>
-							</div>
-						</div>
-					{/if}
 							
 							
 						{#if highlightedTexts1.length > 0 && showOriginal1 && !markedNotApplicable}
@@ -4487,16 +4511,19 @@ onMount(async () => {
 				{/if}
 
 		<!-- Unified Initial Decision Pane -->
-		{#if showInitialDecisionPane && !step3Completed && !markedNotApplicable && (initialDecisionStep >= 1 && initialDecisionStep <= 3) && (!isCustomScenario || customScenarioGenerated)}
+		<!-- SIMPLIFIED FLOW: Only Steps 1 and 2 are shown (Step 3 is disabled) -->
+		{#if showInitialDecisionPane && !markedNotApplicable && (initialDecisionStep >= 1 && initialDecisionStep <= 2) && (!isCustomScenario || customScenarioGenerated)}
 			<div class="flex justify-center mt-6">
 				<div class="w-full max-w-4xl px-4">
 					<div class="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
 						<!-- Step Indicators -->
+						<!-- SIMPLIFIED FLOW: Only showing Steps 1 (Highlight) and 2 (Reflect) -->
+						<!-- Step 3 (Moderate) has been removed for identification-only experiment -->
 						<div class="flex items-center justify-between mb-6">
-							{#each [1, 2, 3] as step}
-								{@const stepCompleted = (step === 1 && step1Completed) || (step === 2 && step2Completed) || (step === 3 && step3Completed)}
+							{#each [1, 2] as step}
+								{@const stepCompleted = (step === 1 && step1Completed) || (step === 2 && step2Completed)}
 								{@const stepCurrent = step === initialDecisionStep}
-								{@const stepLocked = (step > 1 && !step1Completed) || (step > 2 && !step2Completed) || (step > 3 && !step3Completed)}
+								{@const stepLocked = (step > 1 && !step1Completed) || (step > 2 && !step2Completed)}
 								<button
 									on:click={() => navigateToStep(step)}
 									disabled={stepLocked}
@@ -4520,12 +4547,12 @@ onMount(async () => {
 										{/if}
 									</div>
 									<span class="text-sm font-medium hidden sm:inline">
-										{step === 1 ? 'Highlight' : step === 2 ? 'Reflect' : 'Moderate'}
+										{step === 1 ? 'Highlight' : 'Reflect'}
 									</span>
 								</button>
-								{#if step < 3}
+								{#if step < 2}
 									<div class="flex-1 h-0.5 mx-2 transition-colors {
-										((step === 1 && step1Completed) || (step === 2 && step2Completed) || (step === 3 && step3Completed)) ? 'bg-gray-400 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700'
+										((step === 1 && step1Completed) || (step === 2 && step2Completed)) ? 'bg-gray-400 dark:bg-gray-500' : 'bg-gray-200 dark:bg-gray-700'
 									}"></div>
 								{/if}
 							{/each}
@@ -4639,14 +4666,19 @@ onMount(async () => {
 										disabled={!concernReason.trim() || concernReason.trim().length < 10}
 										class="w-full px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
 									>
-										Continue
+										Submit
 									</button>
 								</div>
 							</div>
 						{/if}
 
+						<!-- ============================================================================
+						     STEP 3 (MODERATION) - COMMENTED OUT FOR IDENTIFICATION-ONLY EXPERIMENT
+						     This entire block is disabled but preserved for future restoration.
+						     To restore: Change `{#if false && initialDecisionStep === 3}` back to `{#if initialDecisionStep === 3}`
+						     ============================================================================ -->
 						<!-- Step 3: Update -->
-						{#if initialDecisionStep === 3}
+						{#if false && initialDecisionStep === 3}
 							<div class="space-y-4">
 								<div>
 									<div class="flex items-center justify-between mb-2">
@@ -5028,6 +5060,50 @@ onMount(async () => {
 							</div>
 						{/if}
 					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Completion Indicator for identification-only flow (shows after Submit) -->
+		{#if confirmedVersionIndex === 0 && versions.length === 0}
+			<div class="mt-3">
+				<div class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+					<div class="flex items-center space-x-2">
+						<svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+						</svg>
+						<span class="text-xs font-medium text-green-700 dark:text-green-300">
+							Scenario Completed
+						</span>
+					</div>
+					<button
+						on:click={undoScenarioCompleted}
+						class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+					>
+						Undo
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Not Applicable Indicator (moved from response bubble) -->
+		{#if markedNotApplicable}
+			<div class="mt-3">
+				<div class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+					<div class="flex items-center space-x-2">
+						<svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+						</svg>
+						<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+							Marked as not applicable
+						</span>
+					</div>
+					<button
+						on:click={unmarkNotApplicable}
+						class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+					>
+						Undo
+					</button>
 				</div>
 			</div>
 		{/if}
