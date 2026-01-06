@@ -201,6 +201,11 @@
 	window.navigation.addEventListener("navigate", (event) => {
 	    stopAudio();
 	})
+	document.addEventListener("visibilitychange", (event) => {
+	  if (document.visibilityState != "visible") {
+	    stopAudio();
+	  }
+	});
 
 	const speak = async () => {
 		if (!(message?.content ?? '').trim().length) {
