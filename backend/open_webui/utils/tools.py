@@ -44,8 +44,26 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
 )
 from open_webui.tools.builtin import (
-    web_search, fetch_url, generate_image, edit_image,
-    memory_query, memory_add, query_knowledge
+    web_search,
+    fetch_url,
+    generate_image,
+    edit_image,
+    search_memories,
+    add_memory,
+    replace_memory_content,
+    get_current_timestamp,
+    calculate_timestamp,
+    search_notes,
+    search_chats,
+    search_channels,
+    search_channel_messages,
+    view_note,
+    view_chat,
+    view_channel_message,
+    view_channel_thread,
+    replace_note_content,
+    write_note,
+    query_knowledge,
 )
 
 import copy
@@ -324,7 +342,9 @@ async def get_tools(
     return tools_dict
 
 
-def get_builtin_tools(request: Request, extra_params: dict, features: dict = None) -> dict[str, dict]:
+def get_builtin_tools(
+    request: Request, extra_params: dict, features: dict = None
+) -> dict[str, dict]:
     """
     Get built-in tools for native function calling.
     Only returns tools when BOTH the global config is enabled AND the feature is enabled for this chat.
@@ -333,22 +353,48 @@ def get_builtin_tools(request: Request, extra_params: dict, features: dict = Non
     builtin_functions = []
     features = features or {}
 
-    # Add web search tools if enabled globally AND for this chat
-    if (getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False) 
-        and features.get("web_search")):
-        builtin_functions.extend([web_search, fetch_url])
+    # Time utilities - always available for date calculations
+    builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
-    # Add image generation/edit tools if enabled globally AND for this chat
-    if (getattr(request.app.state.config, "ENABLE_IMAGE_GENERATION", False)
-        and features.get("image_generation")):
-        builtin_functions.append(generate_image)
-    if (getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False)
-        and features.get("image_generation")):
-        builtin_functions.append(edit_image)
+    # Chats tools - search and fetch user's chat history (always available)
+    builtin_functions.extend([search_chats, view_chat])
 
     # Add memory tools if enabled for this chat
     if features.get("memory"):
-        builtin_functions.extend([memory_query, memory_add])
+        builtin_functions.extend([search_memories, add_memory, replace_memory_content])
+
+    # Add web search tools if enabled globally AND for this chat
+    if getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False) and features.get(
+        "web_search"
+    ):
+        builtin_functions.extend([web_search, fetch_url])
+
+    # Add image generation/edit tools if enabled globally AND for this chat
+    if getattr(
+        request.app.state.config, "ENABLE_IMAGE_GENERATION", False
+    ) and features.get("image_generation"):
+        builtin_functions.append(generate_image)
+    if getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False) and features.get(
+        "image_generation"
+    ):
+        builtin_functions.append(edit_image)
+
+    # Notes tools - search, view, create, and update user's notes (if notes enabled globally)
+    if getattr(request.app.state.config, "ENABLE_NOTES", False):
+        builtin_functions.extend(
+            [search_notes, view_note, write_note, replace_note_content]
+        )
+
+    # Channels tools - search channels and messages (if channels enabled globally)
+    if getattr(request.app.state.config, "ENABLE_CHANNELS", False):
+        builtin_functions.extend(
+            [
+                search_channels,
+                search_channel_messages,
+                view_channel_thread,
+                view_channel_message,
+            ]
+        )
 
     # Add knowledge query tool if model has knowledge configured
     model = extra_params.get("__model__", {})
@@ -364,6 +410,8 @@ def get_builtin_tools(request: Request, extra_params: dict, features: dict = Non
                 "__user__": extra_params.get("__user__", {}),
                 "__event_emitter__": extra_params.get("__event_emitter__"),
                 "__model__": extra_params.get("__model__", {}),
+                "__chat_id__": extra_params.get("__chat_id__"),
+                "__message_id__": extra_params.get("__message_id__"),
             },
         )
 

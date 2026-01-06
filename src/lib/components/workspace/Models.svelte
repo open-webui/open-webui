@@ -44,6 +44,7 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Pagination from '../common/Pagination.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	let shiftKey = false;
 
@@ -457,14 +458,10 @@
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
-							class="  flex cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl w-full p-2.5"
+							class="flex transition rounded-2xl w-full p-2.5 {model.write_access ? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50' : 'cursor-not-allowed opacity-60'}"
 							id="model-item-{model.id}"
 							on:click={() => {
-								if (
-									$user?.role === 'admin' ||
-									model.user_id === $user?.id ||
-									model.access_control.write.group_ids.some((wg) => groupIds.includes(wg))
-								) {
+								if (model.write_access) {
 									goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
 								}
 							}}
@@ -499,91 +496,95 @@
 													</a>
 												</Tooltip>
 
-												<div class=" flex items-center gap-1">
-													<div
-														class="flex justify-end w-full {model.is_active ? '' : 'text-gray-500'}"
-													>
-														<div class="flex justify-between items-center w-full">
-															<div class=""></div>
-															<div class="flex flex-row gap-0.5 items-center">
-																{#if shiftKey}
-																	<Tooltip
-																		content={model?.meta?.hidden
-																			? $i18n.t('Show')
-																			: $i18n.t('Hide')}
-																	>
-																		<button
-																			class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																			type="button"
-																			on:click={(e) => {
-																				e.stopPropagation();
-																				hideModelHandler(model);
-																			}}
-																		>
-																			{#if model?.meta?.hidden}
-																				<EyeSlash />
-																			{:else}
-																				<Eye />
-																			{/if}
-																		</button>
-																	</Tooltip>
+												<div class="flex items-center gap-1">
+													{#if !model.write_access}
+														<div>
+															<Badge type="muted" content={$i18n.t('Read Only')} />
+														</div>
+													{/if}
 
-																	<Tooltip content={$i18n.t('Delete')}>
-																		<button
-																			class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																			type="button"
-																			on:click={(e) => {
-																				e.stopPropagation();
-																				deleteModelHandler(model);
-																			}}
-																		>
-																			<GarbageBin />
-																		</button>
-																	</Tooltip>
-																{:else}
-																	<ModelMenu
-																		user={$user}
-																		{model}
-																		editHandler={() => {
-																			goto(
-																				`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
-																			);
-																		}}
-																		shareHandler={() => {
-																			shareModelHandler(model);
-																		}}
-																		cloneHandler={() => {
-																			cloneModelHandler(model);
-																		}}
-																		exportHandler={() => {
-																			exportModelHandler(model);
-																		}}
-																		hideHandler={() => {
+													{#if model.write_access || $user?.role === 'admin'}
+													<div class="flex {model.is_active ? '' : 'text-gray-500'}">
+														<div class="flex items-center gap-0.5">
+															{#if shiftKey}
+																<Tooltip
+																	content={model?.meta?.hidden
+																		? $i18n.t('Show')
+																		: $i18n.t('Hide')}
+																>
+																	<button
+																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		type="button"
+																		on:click={(e) => {
+																			e.stopPropagation();
 																			hideModelHandler(model);
 																		}}
-																		pinModelHandler={() => {
-																			pinModelHandler(model.id);
-																		}}
-																		copyLinkHandler={() => {
-																			copyLinkHandler(model);
-																		}}
-																		deleteHandler={() => {
-																			selectedModel = model;
-																			showModelDeleteConfirm = true;
-																		}}
-																		onClose={() => {}}
 																	>
-																		<div
-																			class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																		>
-																			<EllipsisHorizontal className="size-5" />
-																		</div>
-																	</ModelMenu>
-																{/if}
-															</div>
+																		{#if model?.meta?.hidden}
+																			<EyeSlash />
+																		{:else}
+																			<Eye />
+																		{/if}
+																	</button>
+																</Tooltip>
+
+																<Tooltip content={$i18n.t('Delete')}>
+																	<button
+																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		type="button"
+																		on:click={(e) => {
+																			e.stopPropagation();
+																			deleteModelHandler(model);
+																		}}
+																	>
+																		<GarbageBin />
+																	</button>
+																</Tooltip>
+															{:else}
+																<ModelMenu
+																	user={$user}
+																	{model}
+																	editHandler={() => {
+																		goto(
+																			`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
+																		);
+																	}}
+																	shareHandler={() => {
+																		shareModelHandler(model);
+																	}}
+																	cloneHandler={() => {
+																		cloneModelHandler(model);
+																	}}
+																	exportHandler={() => {
+																		exportModelHandler(model);
+																	}}
+																	hideHandler={() => {
+																		hideModelHandler(model);
+																	}}
+																	pinModelHandler={() => {
+																		pinModelHandler(model.id);
+																	}}
+																	copyLinkHandler={() => {
+																		copyLinkHandler(model);
+																	}}
+																	deleteHandler={() => {
+																		selectedModel = model;
+																		showModelDeleteConfirm = true;
+																	}}
+																	onClose={() => {}}
+																>
+																	<div
+																		class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																	>
+																		<EllipsisHorizontal className="size-5" />
+																	</div>
+																</ModelMenu>
+															{/if}
 														</div>
 													</div>
+													{/if}
 
+													{#if model.write_access}
 													<button
 														on:click={(e) => {
 															e.stopPropagation();
@@ -607,6 +608,7 @@
 															/>
 														</Tooltip>
 													</button>
+													{/if}
 												</div>
 											</div>
 

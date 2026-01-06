@@ -257,7 +257,7 @@ class FilesTable:
                 return None
 
     def update_file_hash_by_id(
-        self, id: str, hash: str, db: Optional[Session] = None
+        self, id: str, hash: Optional[str], db: Optional[Session] = None
     ) -> Optional[FileModel]:
         with get_db_context(db) as db:
             try:

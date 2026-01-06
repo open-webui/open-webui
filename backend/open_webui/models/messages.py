@@ -521,5 +521,34 @@ class MessageTable:
             db.commit()
             return True
 
+    def search_messages_by_channel_ids(
+        self,
+        channel_ids: list[str],
+        query: str,
+        start_timestamp: Optional[int] = None,
+        end_timestamp: Optional[int] = None,
+        limit: int = 10,
+        db: Optional[Session] = None,
+    ) -> list[MessageModel]:
+        """Search messages in specified channels by content."""
+        with get_db_context(db) as db:
+            query_builder = db.query(Message).filter(
+                Message.channel_id.in_(channel_ids),
+                Message.content.ilike(f"%{query}%"),
+            )
+
+            if start_timestamp:
+                query_builder = query_builder.filter(Message.created_at >= start_timestamp)
+            if end_timestamp:
+                query_builder = query_builder.filter(Message.created_at <= end_timestamp)
+
+            messages = (
+                query_builder
+                .order_by(Message.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+            return [MessageModel.model_validate(msg) for msg in messages]
+
 
 Messages = MessageTable()

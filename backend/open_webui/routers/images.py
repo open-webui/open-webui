@@ -707,7 +707,10 @@ async def image_generations(
                 "n": form_data.n,
             }
 
-            if request.app.state.config.IMAGE_STEPS is not None or form_data.steps is not None:
+            if (
+                request.app.state.config.IMAGE_STEPS is not None
+                or form_data.steps is not None
+            ):
                 data["steps"] = (
                     form_data.steps
                     if form_data.steps is not None
@@ -770,7 +773,10 @@ async def image_generations(
                 "height": height,
             }
 
-            if request.app.state.config.IMAGE_STEPS is not None or form_data.steps is not None:
+            if (
+                request.app.state.config.IMAGE_STEPS is not None
+                or form_data.steps is not None
+            ):
                 data["steps"] = (
                     form_data.steps
                     if form_data.steps is not None
@@ -856,6 +862,9 @@ async def image_edits(
     try:
 
         async def load_url_image(data):
+            if data.startswith("data:"):
+                return data
+
             if data.startswith("http://") or data.startswith("https://"):
                 r = await asyncio.to_thread(requests.get, data)
                 r.raise_for_status()
@@ -863,10 +872,14 @@ async def image_edits(
                 image_data = base64.b64encode(r.content).decode("utf-8")
                 return f"data:{r.headers['content-type']};base64,{image_data}"
 
-            elif data.startswith("/api/v1/files"):
-                file_id = data.split("/api/v1/files/")[1].split("/content")[0]
-                file_response = await get_file_content_by_id(file_id, user)
+            else:
+                file_id = None
+                if data.startswith("/api/v1/files"):
+                    file_id = data.split("/api/v1/files/")[1].split("/content")[0]
+                else:
+                    file_id = data
 
+                file_response = await get_file_content_by_id(file_id, user)
                 if isinstance(file_response, FileResponse):
                     file_path = file_response.path
 
@@ -876,7 +889,6 @@ async def image_edits(
                         mime_type, _ = mimetypes.guess_type(file_path)
 
                     return f"data:{mime_type};base64,{image_data}"
-
             return data
 
         # Load image(s) from URL(s) if necessary

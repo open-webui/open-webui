@@ -350,6 +350,15 @@
 				reader.onload = (event) => {
 					let originalImageUrl = `${event.target?.result}`;
 
+					// For animated formats (gif, webp), skip resizing to preserve animation
+					const fileType = (inputFiles[0] as any)?.['type'];
+					if (fileType === 'image/gif' || fileType === 'image/webp') {
+						info.meta.profile_image_url = originalImageUrl;
+						inputFiles = null;
+						filesInputElement.value = '';
+						return;
+					}
+
 					const img = new Image();
 					img.src = originalImageUrl;
 
@@ -382,7 +391,7 @@
 						ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
 
 						// Get the base64 representation of the compressed image
-						const compressedSrc = canvas.toDataURL();
+						const compressedSrc = canvas.toDataURL('image/webp', 0.8);
 
 						// Display the compressed image
 						info.meta.profile_image_url = compressedSrc;

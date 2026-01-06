@@ -256,12 +256,12 @@ class NoteTable:
             if filter:
                 query_key = filter.get("query")
                 if query_key:
+                    # Normalize search by removing hyphens and spaces (e.g., "todo" matches "to-do" and "to do")
+                    normalized_query = query_key.replace("-", "").replace(" ", "")
                     query = query.filter(
                         or_(
-                            Note.title.ilike(f"%{query_key}%"),
-                            cast(Note.data["content"]["md"], Text).ilike(
-                                f"%{query_key}%"
-                            ),
+                            func.replace(func.replace(Note.title, "-", ""), " ", "").ilike(f"%{normalized_query}%"),
+                            func.replace(func.replace(cast(Note.data["content"]["md"], Text), "-", ""), " ", "").ilike(f"%{normalized_query}%"),
                         )
                     )
 

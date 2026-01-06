@@ -119,6 +119,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
+    RAG_SYSTEM_CONTEXT,
 )
 from open_webui.constants import TASKS
 
@@ -809,6 +810,8 @@ def get_images_from_messages(message_list):
         for file in message.get("files", []):
             if file.get("type") == "image":
                 message_images.append(file.get("url"))
+            elif file.get("content_type", "").startswith("image/"):
+                message_images.append(file.get("url"))
 
         if message_images:
             images.append(message_images)
@@ -1281,6 +1284,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         "__oauth_token__": oauth_token,
         "__request__": request,
         "__model__": model,
+        "__chat_id__": metadata.get("chat_id"),
+        "__message_id__": metadata.get("message_id"),
     }
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
@@ -1709,15 +1714,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception("No user message found")
 
         if context_string != "":
-            form_data["messages"] = add_or_update_user_message(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE,
-                    context_string,
-                    prompt,
-                ),
-                form_data["messages"],
-                append=False,
-            )
+            if RAG_SYSTEM_CONTEXT:
+                # Inject into system message for KV prefix caching
+                form_data["messages"] = add_or_update_system_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
+                    ),
+                    form_data["messages"],
+                    append=True,
+                )
+            else:
+                # Inject into user message
+                form_data["messages"] = add_or_update_user_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
+                    ),
+                    form_data["messages"],
+                    append=False,
+                )
 
     # If there are citations, add them to the data_items
     sources = [
@@ -2807,6 +2825,29 @@ async def process_chat_response(
                                                         ][
                                                             "arguments"
                                                         ] += delta_arguments
+
+                                        # Emit pending tool calls in real-time
+                                        if response_tool_calls:
+                                            # Flush any pending text first
+                                            await flush_pending_delta_data()
+
+                                            pending_content_blocks = content_blocks + [
+                                                {
+                                                    "type": "tool_calls",
+                                                    "content": response_tool_calls,
+                                                    "pending": True,
+                                                }
+                                            ]
+                                            await event_emitter(
+                                                {
+                                                    "type": "chat:completion",
+                                                    "data": {
+                                                        "content": serialize_content_blocks(
+                                                            pending_content_blocks
+                                                        ),
+                                                    },
+                                                }
+                                            )
 
                                     image_urls = get_image_urls(
                                         delta.get("images", []), request, metadata, user

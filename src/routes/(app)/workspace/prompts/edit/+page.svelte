@@ -12,7 +12,7 @@
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
 	let prompt = null;
-	let write_access = true;
+	let disabled = true;
 
 	const onSubmit = async (_prompt) => {
 		console.log(_prompt);
@@ -40,7 +40,7 @@
 			});
 
 			if (_prompt) {
-				write_access = _prompt.write_access ?? true;
+				disabled = !_prompt.write_access ?? true;
 				prompt = {
 					title: _prompt.title,
 					command: _prompt.command,
@@ -57,5 +57,5 @@
 </script>
 
 {#if prompt}
-	<PromptEditor {prompt} {onSubmit} {write_access} edit />
+	<PromptEditor {prompt} {onSubmit} {disabled} edit />
 {/if}

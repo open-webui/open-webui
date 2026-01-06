@@ -11,6 +11,8 @@ from open_webui.models.models import (
     ModelModel,
     ModelResponse,
     ModelListResponse,
+    ModelAccessListResponse,
+    ModelAccessResponse,
     Models,
 )
 
@@ -51,7 +53,7 @@ PAGE_ITEM_COUNT = 30
 
 
 @router.get(
-    "/list", response_model=ModelListResponse
+    "/list", response_model=ModelAccessListResponse
 )  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
     query: Optional[str] = None,
@@ -88,7 +90,21 @@ async def get_models(
 
         filter["user_id"] = user.id
 
-    return Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    result = Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    return ModelAccessListResponse(
+        items=[
+            ModelAccessResponse(
+                **model.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == model.user_id
+                    or has_access(user.id, "write", model.access_control, db=db)
+                ),
+            )
+            for model in result.items
+        ],
+        total=result.total,
+    )
 
 
 ###########################
@@ -97,7 +113,9 @@ async def get_models(
 
 
 @router.get("/base", response_model=list[ModelResponse])
-async def get_base_models(user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def get_base_models(
+    user=Depends(get_admin_user), db: Session = Depends(get_session)
+):
     return Models.get_base_models(db=db)
 
 
@@ -107,7 +125,9 @@ async def get_base_models(user=Depends(get_admin_user), db: Session = Depends(ge
 
 
 @router.get("/tags", response_model=list[str])
-async def get_model_tags(user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_model_tags(
+    user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         models = Models.get_models(db=db)
     else:
@@ -175,9 +195,16 @@ async def create_new_model(
 
 
 @router.get("/export", response_model=list[ModelModel])
-async def export_models(request: Request, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def export_models(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
     if user.role != "admin" and not has_permission(
-        user.id, "workspace.models_export", request.app.state.config.USER_PERMISSIONS, db=db
+        user.id,
+        "workspace.models_export",
+        request.app.state.config.USER_PERMISSIONS,
+        db=db,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -207,7 +234,10 @@ async def import_models(
     db: Session = Depends(get_session),
 ):
     if user.role != "admin" and not has_permission(
-        user.id, "workspace.models_import", request.app.state.config.USER_PERMISSIONS, db=db
+        user.id,
+        "workspace.models_import",
+        request.app.state.config.USER_PERMISSIONS,
+        db=db,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -236,7 +266,9 @@ async def import_models(
                         model_data["meta"] = model_data.get("meta", {})
                         model_data["params"] = model_data.get("params", {})
                         new_model = ModelForm(**model_data)
-                        Models.insert_new_model(user_id=user.id, form_data=new_model, db=db)
+                        Models.insert_new_model(
+                            user_id=user.id, form_data=new_model, db=db
+                        )
             return True
         else:
             raise HTTPException(status_code=400, detail="Invalid JSON format")
@@ -256,7 +288,10 @@ class SyncModelsForm(BaseModel):
 
 @router.post("/sync", response_model=list[ModelModel])
 async def sync_models(
-    request: Request, form_data: SyncModelsForm, user=Depends(get_admin_user), db: Session = Depends(get_session)
+    request: Request,
+    form_data: SyncModelsForm,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
 ):
     return Models.sync_models(user.id, form_data.models, db=db)
 
@@ -271,8 +306,10 @@ class ModelIdForm(BaseModel):
 
 
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
-@router.get("/model", response_model=Optional[ModelResponse])
-async def get_model_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+@router.get("/model", response_model=Optional[ModelAccessResponse])
+async def get_model_by_id(
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     model = Models.get_model_by_id(id, db=db)
     if model:
         if (
@@ -280,7 +317,14 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: Session 
             or model.user_id == user.id
             or has_access(user.id, "read", model.access_control, db=db)
         ):
-            return model
+            return ModelAccessResponse(
+                **model.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == model.user_id
+                    or has_access(user.id, "write", model.access_control, db=db)
+                ),
+            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -299,17 +343,19 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: Session 
 
 
 @router.get("/model/profile/image")
-async def get_model_profile_image(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+def get_model_profile_image(
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     model = Models.get_model_by_id(id, db=db)
-    # Cache-control headers to prevent stale cached images
-    cache_headers = {"Cache-Control": "no-cache, must-revalidate"}
 
     if model:
+        etag = f'"{model.updated_at}"' if model.updated_at else None
+
         if model.meta.profile_image_url:
             if model.meta.profile_image_url.startswith("http"):
                 return Response(
                     status_code=status.HTTP_302_FOUND,
-                    headers={"Location": model.meta.profile_image_url, **cache_headers},
+                    headers={"Location": model.meta.profile_image_url},
                 )
             elif model.meta.profile_image_url.startswith("data:image"):
                 try:
@@ -318,20 +364,21 @@ async def get_model_profile_image(id: str, user=Depends(get_verified_user), db: 
                     image_buffer = io.BytesIO(image_data)
                     media_type = header.split(";")[0].lstrip("data:")
 
+                    headers = {"Content-Disposition": "inline"}
+                    if etag:
+                        headers["ETag"] = etag
+
                     return StreamingResponse(
                         image_buffer,
                         media_type=media_type,
-                        headers={
-                            "Content-Disposition": "inline",
-                            **cache_headers,
-                        },
+                        headers=headers,
                     )
                 except Exception as e:
                     pass
 
-        return FileResponse(f"{STATIC_DIR}/favicon.png", headers=cache_headers)
+        return FileResponse(f"{STATIC_DIR}/favicon.png")
     else:
-        return FileResponse(f"{STATIC_DIR}/favicon.png", headers=cache_headers)
+        return FileResponse(f"{STATIC_DIR}/favicon.png")
 
 
 ############################
@@ -340,7 +387,9 @@ async def get_model_profile_image(id: str, user=Depends(get_verified_user), db: 
 
 
 @router.post("/model/toggle", response_model=Optional[ModelResponse])
-async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def toggle_model_by_id(
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     model = Models.get_model_by_id(id, db=db)
     if model:
         if (
@@ -397,7 +446,9 @@ async def update_model_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    model = Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()), db=db)
+    model = Models.update_model_by_id(
+        form_data.id, ModelForm(**form_data.model_dump()), db=db
+    )
     return model
 
 
@@ -407,7 +458,11 @@ async def update_model_by_id(
 
 
 @router.post("/model/delete", response_model=bool)
-async def delete_model_by_id(form_data: ModelIdForm, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def delete_model_by_id(
+    form_data: ModelIdForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
     model = Models.get_model_by_id(form_data.id, db=db)
     if not model:
         raise HTTPException(
@@ -430,6 +485,8 @@ async def delete_model_by_id(form_data: ModelIdForm, user=Depends(get_verified_u
 
 
 @router.delete("/delete/all", response_model=bool)
-async def delete_all_models(user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def delete_all_models(
+    user=Depends(get_admin_user), db: Session = Depends(get_session)
+):
     result = Models.delete_all_models(db=db)
     return result
