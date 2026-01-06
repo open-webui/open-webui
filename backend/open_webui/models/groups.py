@@ -271,6 +271,27 @@ class GroupTable:
                 .all()
             ]
 
+    def get_groups_by_member_ids(
+        self, user_ids: list[str], db: Optional[Session] = None
+    ) -> dict[str, list[GroupModel]]:
+        """Fetch groups for multiple users in a single query to avoid N+1."""
+        with get_db_context(db) as db:
+            # Query GroupMember joined with Group, filtering by user_ids
+            results = (
+                db.query(GroupMember.user_id, Group)
+                .join(Group, Group.id == GroupMember.group_id)
+                .filter(GroupMember.user_id.in_(user_ids))
+                .order_by(Group.updated_at.desc())
+                .all()
+            )
+
+            # Group groups by user_id
+            user_groups: dict[str, list[GroupModel]] = {uid: [] for uid in user_ids}
+            for user_id, group in results:
+                user_groups[user_id].append(GroupModel.model_validate(group))
+
+            return user_groups
+
     def get_group_by_id(
         self, id: str, db: Optional[Session] = None
     ) -> Optional[GroupModel]:

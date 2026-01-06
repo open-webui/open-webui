@@ -84,15 +84,16 @@ async def get_users(
     users = result["users"]
     total = result["total"]
 
+    # Fetch groups for all users in a single query to avoid N+1
+    user_ids = [user.id for user in users]
+    user_groups = Groups.get_groups_by_member_ids(user_ids, db=db)
+
     return {
         "users": [
             UserGroupIdsModel(
                 **{
                     **user.model_dump(),
-                    "group_ids": [
-                        group.id
-                        for group in Groups.get_groups_by_member_id(user.id, db=db)
-                    ],
+                    "group_ids": [group.id for group in user_groups.get(user.id, [])],
                 }
             )
             for user in users
