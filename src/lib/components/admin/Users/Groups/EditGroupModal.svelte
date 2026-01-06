@@ -14,30 +14,26 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
-	export let onSubmit: Function = () => {};
-	export let onDelete: Function = () => {};
-
-	export let show = false;
-	export let edit = false;
-
-	export let group = null;
-	export let defaultPermissions = {};
-
-	export let custom = true;
-
-	export let tabs = ['general', 'permissions', 'users'];
+	let {
+		onSubmit = () => {},
+		onDelete = () => {},
+		show = false,
+		edit = false,
+		group = null,
+		defaultPermissions = {},
+		custom = true,
+		tabs = ['general', 'permissions', 'users'],
+		name = '',
+		description = '',
+		data = {},
+		permissions = DEFAULT_PERMISSIONS
+	} = $props();
 
 	let selectedTab = 'general';
 	let loading = false;
 	let showDeleteConfirmDialog = false;
 
 	let userCount = 0;
-
-	export let name = '';
-	export let description = '';
-	export let data = {};
-
-	export let permissions = DEFAULT_PERMISSIONS;
 
 	const submitHandler = async () => {
 		loading = true;
