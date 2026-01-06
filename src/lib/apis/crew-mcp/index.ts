@@ -64,6 +64,11 @@ export const queryCrewMCP = async (
 ) => {
 	let error = null;
 
+	// Create an AbortController with extended timeout for long-running MCP operations
+	// SharePoint document analysis can take 60-120 seconds with delegated access
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes timeout
+
 	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {
 		method: 'POST',
 		headers: {
@@ -77,14 +82,22 @@ export const queryCrewMCP = async (
 			selected_tools: selectedTools,
 			chat_id: chatId,
 			session_id: sessionId
-		})
+		}),
+		signal: controller.signal
 	})
 		.then(async (res) => {
+			clearTimeout(timeoutId);
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
 		.catch((err) => {
-			error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			clearTimeout(timeoutId);
+			if (err.name === 'AbortError') {
+				error =
+					'CrewAI MCP: Request timeout after 3 minutes. The analysis may be too complex or the SharePoint site has too many documents.';
+			} else {
+				error = `CrewAI MCP: ${err?.detail ?? err?.error?.message ?? err?.message ?? 'Network Problem'}`;
+			}
 			return null;
 		});
 

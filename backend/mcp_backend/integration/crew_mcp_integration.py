@@ -20,6 +20,9 @@ from mcp import StdioServerParameters
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# CrewAI verbosity control - disable in production for cleaner logs
+CREW_VERBOSE = os.getenv("CREW_VERBOSE", "false").lower() == "true"
+
 
 # Azure OpenAI Configuration
 class AzureConfig(BaseModel):
@@ -136,7 +139,7 @@ class CrewMCPManager:
                     backstory="I am an AI specialist focused on time-related queries. I have access to time tools via MCP and can provide current time in various formats and timezones.",
                     tools=mcp_tools,  # Pass MCP tools to agent
                     llm=llm,
-                    verbose=True,
+                    verbose=CREW_VERBOSE,
                 )
 
                 # Create task for time query
@@ -151,7 +154,7 @@ class CrewMCPManager:
                     agents=[time_agent],
                     tasks=[time_task],
                     process=Process.sequential,
-                    verbose=True,
+                    verbose=CREW_VERBOSE,
                 )
 
                 # Execute the crew
@@ -205,7 +208,7 @@ class CrewMCPManager:
                     backstory="I am an AI specialist focused on news and current events. I have access to NewsDesk via MCP tools and can fetch the latest headlines. My role is to pass through the news information exactly as provided by the tools, preserving all formatting, emojis, language (French/English), and structure without translation or summarization.",
                     tools=mcp_tools,  # Pass MCP tools to agent
                     llm=llm,
-                    verbose=True,
+                    verbose=CREW_VERBOSE,
                 )
 
                 # Create task for news query
@@ -220,7 +223,7 @@ class CrewMCPManager:
                     agents=[news_agent],
                     tasks=[news_task],
                     process=Process.sequential,
-                    verbose=True,
+                    verbose=CREW_VERBOSE,
                 )
 
                 # Execute the crew
@@ -281,7 +284,7 @@ class CrewMCPManager:
                     backstory="I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the analyze_all_documents_for_content tool which traverses every folder, downloads all documents, and analyzes their content concurrently using up to 8 parallel threads. This approach bypasses unreliable search APIs and ensures I find all relevant documents quickly - typically in 20-60 seconds even for large collections. I provide focused, intelligent answers based on the most relevant documents I discover.",
                     tools=mcp_tools,  # Pass MCP tools to agent
                     llm=llm,
-                    verbose=True,
+                    verbose=CREW_VERBOSE,
                 )
 
                 # Create task for SharePoint query
@@ -333,7 +336,7 @@ AVOID: Dumping entire document contents or being overly verbose.""",
                     agents=[sharepoint_agent],
                     tasks=[sharepoint_task],
                     process=Process.sequential,
-                    verbose=True,
+                    verbose=CREW_VERBOSE,
                 )
 
                 # Execute the crew
@@ -517,7 +520,7 @@ AVOID: Dumping entire document contents or being overly verbose.""",
                 3. Whether one specialist is sufficient or multiple are needed
                 
                 Focus on the user's actual intent and information needs, not just keywords.""",
-                verbose=True,
+                verbose=CREW_VERBOSE,
                 allow_delegation=False,
                 llm=llm,
             )
@@ -565,7 +568,7 @@ Be decisive and specific. Only route to specialists that are actually needed."""
                 agents=[router_agent],
                 tasks=[routing_task],
                 process=Process.sequential,
-                verbose=True,
+                verbose=CREW_VERBOSE,
             )
 
             logger.info("Executing routing decision...")
