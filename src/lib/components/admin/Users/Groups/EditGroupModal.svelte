@@ -14,31 +14,27 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
-	export let onSubmit: Function = () => {};
-	export let onDelete: Function = () => {};
+	let {
+		onSubmit = () => {},
+		onDelete = () => {},
+		show = false,
+		edit = false,
+		group = null,
+		defaultPermissions = {},
+		custom = true,
+		tabs = ['general', 'permissions', 'users'],
+		name = '',
+		description = '',
+		data = {},
+		permissions = DEFAULT_PERMISSIONS
+	} = $props();
 
-	export let show = false;
-	export let edit = false;
+	let selectedTab = $state('general');
+	let loading = $state(false);
+	let showDeleteConfirmDialog = $state(false);
 
-	export let group = null;
-	export let defaultPermissions = {};
-
-	export let custom = true;
-
-	export let tabs = ['general', 'permissions', 'users'];
-
-	let selectedTab = 'general';
-	let loading = false;
-	let showDeleteConfirmDialog = false;
-
-	let userCount = 0;
-	let initialized = false;
-
-	export let name = '';
-	export let description = '';
-	export let data = {};
-
-	export let permissions = DEFAULT_PERMISSIONS;
+	let userCount = $state(0);
+	let initializedGroupId = $state(null);
 
 	const submitHandler = async () => {
 		loading = true;
@@ -56,13 +52,13 @@
 		show = false;
 	};
 
-	const init = () => {
-		if (group && !initialized) {
-			initialized = true;
+	// Track group changes and initialize when group.id changes (new group opened)
+	$effect(() => {
+		if (group && group.id !== initializedGroupId) {
+			initializedGroupId = group.id;
 			name = group.name;
 			description = group.description;
 			const loadedPermissions = group?.permissions ?? {};
-			// Create fresh object from defaults, then overlay loaded values
 			permissions = {
 				workspace: { ...DEFAULT_PERMISSIONS.workspace, ...loadedPermissions.workspace },
 				sharing: { ...DEFAULT_PERMISSIONS.sharing, ...loadedPermissions.sharing },
@@ -71,17 +67,12 @@
 				settings: { ...DEFAULT_PERMISSIONS.settings, ...loadedPermissions.settings }
 			};
 			data = group?.data ?? {};
-
 			userCount = group?.member_count ?? 0;
 		}
-	};
-
-	// Track group and show changes to call init
-	$: group, show && init();
+	});
 
 	onMount(() => {
 		selectedTab = tabs[0];
-		init();
 	});
 </script>
 

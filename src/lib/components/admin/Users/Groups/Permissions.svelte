@@ -7,8 +7,7 @@
 
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
 
-	export let permissions = {};
-	export let defaultPermissions = {};
+	let { permissions = {}, defaultPermissions = {} } = $props();
 
 	// Local state initialized from prop with defaults filled in
 	let localPermissions = $state(fillMissingProperties(permissions, DEFAULT_PERMISSIONS));
@@ -26,7 +25,9 @@
 	}
 
 	// Update local state when prop changes
-	$: permissions, (localPermissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS));
+	$effect(() => {
+		localPermissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
+	});
 
 	onMount(() => {
 		localPermissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
