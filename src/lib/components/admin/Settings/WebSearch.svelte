@@ -43,29 +43,42 @@
 
 	const submitHandler = async () => {
 		// Convert domain filter string to array before sending
-		if (webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST) {
+		if (typeof webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST === 'string' && webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST) {
 			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.split(',')
 				.map((domain) => domain.trim())
 				.filter((domain) => domain.length > 0);
-		} else {
+		} else if (!Array.isArray(webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST)) {
 			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = [];
 		}
 
 		// Convert Youtube loader language string to array before sending
-		if (webConfig.YOUTUBE_LOADER_LANGUAGE) {
+		if (typeof webConfig.YOUTUBE_LOADER_LANGUAGE === 'string' && webConfig.YOUTUBE_LOADER_LANGUAGE) {
 			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.split(',')
 				.map((lang) => lang.trim())
 				.filter((lang) => lang.length > 0);
-		} else {
+		} else if (!Array.isArray(webConfig.YOUTUBE_LOADER_LANGUAGE)) {
 			webConfig.YOUTUBE_LOADER_LANGUAGE = [];
+		}
+
+		// Convert numeric timeout values to strings (backend expects strings)
+		if (typeof webConfig.FIRECRAWL_TIMEOUT === 'number') {
+			webConfig.FIRECRAWL_TIMEOUT = webConfig.FIRECRAWL_TIMEOUT.toString();
+		}
+		if (typeof webConfig.PLAYWRIGHT_TIMEOUT === 'number') {
+			webConfig.PLAYWRIGHT_TIMEOUT = webConfig.PLAYWRIGHT_TIMEOUT.toString();
 		}
 
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig
 		});
 
-		webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
-		webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
+		// Convert arrays back to strings for display
+		if (Array.isArray(webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST)) {
+			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
+		}
+		if (Array.isArray(webConfig.YOUTUBE_LOADER_LANGUAGE)) {
+			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
+		}
 	};
 
 	onMount(async () => {
@@ -75,11 +88,31 @@
 			webConfig = res.web;
 
 			// Convert array back to comma-separated string for display
-			if (webConfig?.WEB_SEARCH_DOMAIN_FILTER_LIST) {
+			if (Array.isArray(webConfig?.WEB_SEARCH_DOMAIN_FILTER_LIST)) {
 				webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
+			} else if (!webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST) {
+				webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = '';
 			}
 
-			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
+			if (Array.isArray(webConfig?.YOUTUBE_LOADER_LANGUAGE)) {
+				webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
+			} else if (!webConfig.YOUTUBE_LOADER_LANGUAGE) {
+				webConfig.YOUTUBE_LOADER_LANGUAGE = '';
+			}
+
+			// Convert timeout strings to numbers for number input fields
+			if (webConfig.FIRECRAWL_TIMEOUT && typeof webConfig.FIRECRAWL_TIMEOUT === 'string') {
+				const parsed = parseInt(webConfig.FIRECRAWL_TIMEOUT);
+				if (!isNaN(parsed)) {
+					webConfig.FIRECRAWL_TIMEOUT = parsed;
+				}
+			}
+			if (webConfig.PLAYWRIGHT_TIMEOUT && typeof webConfig.PLAYWRIGHT_TIMEOUT === 'string') {
+				const parsed = parseInt(webConfig.PLAYWRIGHT_TIMEOUT);
+				if (!isNaN(parsed)) {
+					webConfig.PLAYWRIGHT_TIMEOUT = parsed;
+				}
+			}
 		}
 	});
 </script>
