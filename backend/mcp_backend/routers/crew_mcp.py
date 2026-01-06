@@ -338,54 +338,29 @@ async def run_crew_query(
         log.info(f"Selected tools: {request.selected_tools}")
         log.info(f"User access token available: {bool(user_access_token)}")
 
-        # Set user token globally for ALL MCP servers to use for delegated access
-        if user_access_token:
-            crew_mcp_manager.set_user_token(user_access_token)
-            log.info(
-                "Successfully set user access token for SharePoint delegated access"
-            )
-        else:
-            # In local development, provide a more helpful error message
-            import os
+        # Check SharePoint authentication mode
+        import os
 
-            environment = os.getenv("ENVIRONMENT", "")
+        use_delegated_access = os.getenv(
+            "SHP_USE_DELEGATED_ACCESS", "true"
+        ).lower() in ("true", "1", "yes")
 
-            # Local development is detected by absence of "canchat-" prefix
-            # All k8s environments (dev/staging/prod) start with "canchat-"
-            is_local_dev = not environment.startswith("canchat-")
-
-            # Check if application access is configured for local development
-            use_delegated_access = os.getenv(
-                "SHP_USE_DELEGATED_ACCESS", "true"
-            ).lower() in ("true", "1", "yes")
-
-            if is_local_dev and use_delegated_access:
-                log.warning(
-                    "Local development environment detected - SharePoint access requires OAuth2 proxy configuration"
-                )
-                # For local development with delegated access, we should provide a clear message about the limitation
-                if any(
-                    "sharepoint" in str(tool).lower()
-                    for tool in (request.selected_tools or [])
-                ):
-                    return CrewMCPResponse(
-                        result="SharePoint delegated access is unavailable in local development mode. "
-                        "Delegated access requires OAuth2 proxy services that are configured only in production deployments. "
-                        "For full SharePoint testing with user permissions, please utilize the staging or production environments where Azure AD authentication is properly established. "
-                        "For local development, set SHP_USE_DELEGATED_ACCESS=false in your .env file to use application access instead, "
-                        "which will authenticate using client credentials and provide access to SharePoint resources.",
-                        tools_used=[],
-                        success=False,
-                        error="Local environment lacks OAuth2 proxy for SharePoint delegated access",
-                    )
-            elif is_local_dev and not use_delegated_access:
-                log.info(
-                    "Local development with application access - SharePoint will use client credentials flow"
-                )
+        if use_delegated_access:
+            # Delegated access (OBO flow) - use user token
+            if user_access_token:
+                crew_mcp_manager.set_user_token(user_access_token)
+                log.info("Using SharePoint delegated access (OBO flow) with user token")
             else:
+                crew_mcp_manager.set_user_token(None)
                 log.warning(
-                    "No Graph API access token available - SharePoint access may fail"
+                    "SHP_USE_DELEGATED_ACCESS=true but no user token available - SharePoint access may fail"
                 )
+        else:
+            # Application access (client credentials flow) - no user token needed
+            crew_mcp_manager.set_user_token(None)
+            log.info(
+                "Using SharePoint application access (client credentials flow) - SHP_USE_DELEGATED_ACCESS=false"
+            )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
@@ -491,30 +466,29 @@ async def run_multi_server_crew_query(
         )
         log.info(f"User access token available: {bool(user_access_token)}")
 
-        # Set user token globally for ALL MCP servers to use for delegated access
-        if user_access_token:
-            crew_mcp_manager.set_user_token(user_access_token)
-            log.info(
-                "Successfully set user access token for SharePoint delegated access"
-            )
-        else:
-            # In local development, provide a more helpful error message
-            import os
+        # Check SharePoint authentication mode
+        import os
 
-            environment = os.getenv("ENVIRONMENT", "")
+        use_delegated_access = os.getenv(
+            "SHP_USE_DELEGATED_ACCESS", "true"
+        ).lower() in ("true", "1", "yes")
 
-            # Local development is detected by absence of "canchat-" prefix
-            # All k8s environments (dev/staging/prod) start with "canchat-"
-            is_local_dev = not environment.startswith("canchat-")
-
-            if is_local_dev:
-                log.warning(
-                    "Local development environment detected - SharePoint access requires OAuth2 proxy configuration"
-                )
+        if use_delegated_access:
+            # Delegated access (OBO flow) - use user token
+            if user_access_token:
+                crew_mcp_manager.set_user_token(user_access_token)
+                log.info("Using SharePoint delegated access (OBO flow) with user token")
             else:
+                crew_mcp_manager.set_user_token(None)
                 log.warning(
-                    "No Graph API access token available - SharePoint access may fail"
+                    "SHP_USE_DELEGATED_ACCESS=true but no user token available - SharePoint access may fail"
                 )
+        else:
+            # Application access (client credentials flow) - no user token needed
+            crew_mcp_manager.set_user_token(None)
+            log.info(
+                "Using SharePoint application access (client credentials flow) - SHP_USE_DELEGATED_ACCESS=false"
+            )
 
         # Get available tools first
         tools = crew_mcp_manager.get_available_tools()
