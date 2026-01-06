@@ -198,6 +198,10 @@
 		}
 	};
 
+	window.navigation.addEventListener("navigate", (event) => {
+	    stopAudio();
+	})
+
 	const speak = async () => {
 		if (!(message?.content ?? '').trim().length) {
 			toast.info($i18n.t('No content to speak'));
