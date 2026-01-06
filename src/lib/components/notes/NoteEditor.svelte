@@ -796,8 +796,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	onMount(async () => {
 		await tick();
 
-		if ($settings?.models) {
-			selectedModelId = $settings?.models[0];
+		// Check if user has valid models set (not just an empty array or array with empty strings)
+		const hasValidUserModels = $settings?.models?.length > 0 && $settings.models.some((m) => m);
+		if (hasValidUserModels) {
+			selectedModelId = $settings.models[0];
 		} else if ($config?.default_models) {
 			selectedModelId = $config?.default_models.split(',')[0];
 		} else {

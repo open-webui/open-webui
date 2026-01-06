@@ -953,8 +953,10 @@
 					selectedModels = JSON.parse(sessionStorage.selectedModels);
 					sessionStorage.removeItem('selectedModels');
 				} else {
-					if ($settings?.models) {
-						selectedModels = $settings?.models;
+					// Check if user has valid models set (not just an empty array or array with empty strings)
+					const hasValidUserModels = $settings?.models?.length > 0 && $settings.models.some((m) => m);
+					if (hasValidUserModels) {
+						selectedModels = $settings.models;
 					} else if ($config?.default_models) {
 						console.log($config?.default_models.split(',') ?? '');
 						selectedModels = $config?.default_models.split(',');
