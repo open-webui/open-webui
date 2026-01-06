@@ -398,9 +398,11 @@ async def get_all_documents_comprehensive(
 
     try:
         # Silent comprehensive folder traversal
-        # Get authentication token
+        # Get authentication token - check environment variable if not provided
+        effective_token = user_token or os.getenv("USER_JWT_TOKEN")
+
         if config.use_delegated_access:
-            access_token = await oauth_client.get_access_token(user_token)
+            access_token = await oauth_client.get_access_token(effective_token)
         else:
             access_token = await oauth_client.get_application_token()
 
@@ -548,8 +550,11 @@ async def analyze_all_documents_for_content(
 
         start_time = time.time()
 
+        # Get user token from parameter or environment variable
+        effective_token = user_token or os.getenv("USER_JWT_TOKEN")
+
         # Get all documents using comprehensive traversal (no verbose logging)
-        all_docs_result = await get_all_documents_comprehensive(user_token)
+        all_docs_result = await get_all_documents_comprehensive(effective_token)
 
         if all_docs_result.get("status") != "success":
             return all_docs_result
@@ -561,7 +566,7 @@ async def analyze_all_documents_for_content(
         # Use highly parallel processing for much faster analysis with crash prevention
         try:
             relevant_documents = await _analyze_documents_parallel_ultra_fast(
-                all_documents, search_terms, user_token
+                all_documents, search_terms, effective_token
             )
 
             # Ensure we have a valid list
@@ -860,8 +865,11 @@ async def check_sharepoint_permissions(
             f"Checking {config.org_name} SharePoint permissions and connection status"
         )
 
+        # Get user token from parameter or environment variable
+        effective_token = user_token or os.getenv("USER_JWT_TOKEN")
+
         # Test OAuth connection with OBO flow
-        test_result = await oauth_client.test_connection(user_token)
+        test_result = await oauth_client.test_connection(effective_token)
 
         return {
             "status": "success",
