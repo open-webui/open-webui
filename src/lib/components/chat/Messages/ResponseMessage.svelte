@@ -220,19 +220,31 @@
 				.replace(/</g, '&lt;')
 				.replace(/>/g, '&gt;')
 				.replace(/"/g, '&quot;');
+		
+		const normalizeTimestampText = (text: string) =>
+			text.replace(/(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})\.\d+(?:Z)?/, '$1');
 
-		const header = token.header.map((headerCell) => escapeHtml(headerCell.text));
+		const header = token.header.map((headerCell) =>
+			escapeHtml(normalizeTimestampText(headerCell.text))
+		);
 
 		const rows = token.rows.map((row) =>
 			row.map((cell) => {
 				const cellContent = cell.tokens.map((token) => token.text).join('');
-				return escapeHtml(cellContent);
+				return escapeHtml(normalizeTimestampText(cellContent));
 			})
 		);
 
 		const tableRows = [
-			`<tr>${header.map((cell) => `<th>${cell}</th>`).join('')}</tr>`,
-			...rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`)
+			`<tr>${header
+				.map((cell) => `<th style="mso-number-format:\\@;">${cell}</th>`)
+				.join('')}</tr>`,
+			...rows.map(
+				(row) =>
+					`<tr>${row
+						.map((cell) => `<td style="mso-number-format:\\@;">${cell}</td>`)
+						.join('')}</tr>`
+			)
 		];
 
 		const html = `

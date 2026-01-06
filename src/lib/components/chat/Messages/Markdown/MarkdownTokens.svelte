@@ -41,6 +41,26 @@
 		return 'h' + depth;
 	};
 
+	const normalizeTimestampText = (text: string) =>
+		text.replace(/(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})\.\d+(?:Z)?/, '$1');
+	
+	const normalizeTokens = (tokens = []) =>
+		tokens.map((token) => {
+			const updated = { ...token };
+			if (updated.text) {
+				updated.text = normalizeTimestampText(updated.text);
+			}
+			if (updated.raw) {
+				updated.raw = normalizeTimestampText(updated.raw);
+			} else if (updated.text) {
+				updated.raw = updated.text;
+			}
+			if (Array.isArray(updated.tokens)) {
+				updated.tokens = normalizeTokens(updated.tokens);
+			}
+			return updated;
+		});
+
 </script>
 
 <!-- {JSON.stringify(tokens)} -->
@@ -102,7 +122,7 @@
 										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
-												tokens={header.tokens}
+												tokens={normalizeTokens(header.tokens)}
 												{done}
 												{onSourceClick}
 											/>
@@ -124,10 +144,11 @@
 											: 'border-b border-gray-50! dark:border-gray-850!'}"
 										style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
 									>
+										{@const displayTokens = normalizeTokens(cell.tokens ?? [])}
 										<div class="break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
-												tokens={cell.tokens}
+												tokens={displayTokens}
 												{done}
 												{onSourceClick}
 											/>
