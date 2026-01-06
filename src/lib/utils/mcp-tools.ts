@@ -16,7 +16,10 @@ const getMCPToolDescription = (toolName: string, i18n: any): string => {
 	const toolDescriptions: Record<string, string> = {
 		get_current_time: 'Get current date and time in any timezone',
 		get_top_headlines: 'Get latest news headlines from around the world',
-		search_sharepoint_documents: 'Search and retrieve MPO SharePoint documents'
+		analyze_all_documents_for_content: 'Search and retrieve MPO SharePoint documents',
+		get_sharepoint_document_content: 'Search and retrieve MPO SharePoint documents',
+		get_all_documents_comprehensive: 'Search and retrieve MPO SharePoint documents',
+		check_sharepoint_permissions: 'Search and retrieve MPO SharePoint documents'
 	};
 
 	const englishDescription = toolDescriptions[actualToolName];
@@ -39,7 +42,10 @@ export const getMCPToolName = (toolName: string, i18n: any): string => {
 	const toolNames: Record<string, string> = {
 		get_current_time: 'MCP: Current Time',
 		get_top_headlines: 'MCP: News Headlines',
-		search_sharepoint_documents: 'MCP: MPO SharePoint'
+		analyze_all_documents_for_content: 'MCP: MPO SharePoint',
+		get_sharepoint_document_content: 'MCP: MPO SharePoint',
+		get_all_documents_comprehensive: 'MCP: MPO SharePoint',
+		check_sharepoint_permissions: 'MCP: MPO SharePoint'
 	};
 
 	const englishName = toolNames[actualToolName];

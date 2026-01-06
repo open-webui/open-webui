@@ -277,8 +277,8 @@ class CrewMCPManager:
                 # Create SharePoint specialist agent with MCP tools
                 sharepoint_agent = Agent(
                     role="SharePoint Document Specialist",
-                    goal="Search and retrieve information from SharePoint documents based on user queries, providing accurate and relevant document content and metadata using Microsoft Graph API with user-scoped access",
-                    backstory="I am an AI specialist focused on SharePoint document retrieval and search using Microsoft Graph API with On-Behalf-Of flow. I have user-scoped access to SharePoint via MCP tools and can search documents, retrieve content, explore folder structures, and provide detailed information about SharePoint resources. I excel at understanding user information needs and finding the most relevant documents across any organizational structure while maintaining proper user permissions.",
+                    goal="Find and retrieve relevant information from SharePoint by analyzing all documents comprehensively using parallel processing for optimal speed and accuracy",
+                    backstory="I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the analyze_all_documents_for_content tool which traverses every folder, downloads all documents, and analyzes their content concurrently using up to 8 parallel threads. This approach bypasses unreliable search APIs and ensures I find all relevant documents quickly - typically in 20-60 seconds even for large collections. I provide focused, intelligent answers based on the most relevant documents I discover.",
                     tools=mcp_tools,  # Pass MCP tools to agent
                     llm=llm,
                     verbose=True,
@@ -288,30 +288,43 @@ class CrewMCPManager:
                 sharepoint_task = Task(
                     description=f"""Process this SharePoint-related query: {query}
                     
-Available tools include:
-- search_sharepoint_documents: Search for documents based on keywords
-- list_sharepoint_folder_contents: Explore folder structures and get counts  
-- get_sharepoint_document_content: Retrieve specific document content
-- get_sharepoint_folder_tree: Get hierarchical folder structure
-- find_folders_by_pattern: Find folders matching specific patterns
-- get_sharepoint_configuration: Check current SharePoint settings
+Available tools:
+- analyze_all_documents_for_content: PRIMARY TOOL - Analyzes all documents using parallel processing
+- get_all_documents_comprehensive: Get all documents by traversing every folder (used internally by analyze tool)
+- get_sharepoint_document_content: Retrieve individual document content (used internally)
+- check_sharepoint_permissions: Test connection and permissions (for debugging only)
+                    
+PRIMARY STRATEGY:
+Use analyze_all_documents_for_content with the user's search terms. This tool:
+- Traverses every SharePoint folder to find all documents
+- Analyzes each document's content using parallel processing (8 concurrent threads)
+- Uses smart caching to avoid re-downloading documents
+- Terminates early when enough high-quality results are found
+- Typical performance: 20-60 seconds for large collections
+- Returns documents sorted by relevance with content matches
 
-Use the most appropriate tools for the query. For counting projects or understanding structure, use folder exploration tools. For finding specific documents, use search tools.
+RESPONSE STRATEGY:
+1. Call analyze_all_documents_for_content with the user's search terms
+2. Extract the KEY ANSWER from the most relevant document(s)
+3. Provide a CONCISE, DIRECT response to the user's question
+4. Include document name and source for credibility
+5. Focus on the specific information requested
+6. DON'T dump entire document contents in your response
+                    """,
+                    expected_output="""Provide a CONCISE, INTELLIGENT answer to the user's specific question based on SharePoint search results.
 
-IMPORTANT: If the user is asking a specific question (like "What is the projected length?", "How many jobs?", "What is the cost?"), analyze the retrieved document content and extract the specific answer. Do not just regurgitate the entire document - provide a direct, intelligent answer to their question.""",
-                    expected_output="""Provide a direct, intelligent answer to the user's specific question based on the SharePoint search results. 
+RESPONSE RULES:
+- Extract the key answer from the most relevant document
+- Provide a direct response to what the user asked for
+- Include document name and source for credibility
+- Keep your answer focused and concise
+- DON'T copy-paste entire document contents
+- Focus on the specific information requested
 
-If the user asked a specific question:
-- Extract the exact answer from the document content (e.g., "1,000 km", "$50 billion", "51,000 jobs")
-- Provide the answer clearly and concisely
-- Include the source document name and relevant context
-- If the answer involves numbers, dates, or specific facts, quote them exactly
+EXAMPLE GOOD RESPONSE:
+"Based on the document 'MPO - Transformative strategies.pdf' from the Major Projects Office, Canada's first high-speed railway is projected to span approximately 1,000 km from Toronto to Québec City, reaching speeds of up to 300 km/hour."
 
-If the user asked for general information:
-- Provide a comprehensive summary with document titles, key points, and relevant excerpts
-- Include links and folder locations for easy access
-
-Format your response to directly address what the user actually asked for.""",
+AVOID: Dumping entire document contents or being overly verbose.""",
                     agent=sharepoint_agent,
                 )
 
@@ -739,14 +752,16 @@ Be decisive and specific. Only route to specialists that are actually needed."""
         """Get all available MCP servers dynamically"""
         servers = {}
 
-        # Define known servers (can be extended in the future)
+        # Define known servers (using MPO SharePoint, not generic SharePoint)
         known_servers = {
             "time_server": self.time_server_path,
             "news_server": self.news_server_path,
+            "mpo_sharepoint_server": self.mpo_sharepoint_server_path,
         }
 
         # Add any other fastmcp_*.py servers found in the backend directory
-        for server_file in self.backend_dir.glob("fastmcp_*.py"):
+        servers_dir = self.backend_dir / "mcp_backend" / "servers"
+        for server_file in servers_dir.glob("fastmcp_*.py"):
             server_name = server_file.stem  # Remove .py extension
             if server_name not in known_servers:
                 servers[server_name] = server_file

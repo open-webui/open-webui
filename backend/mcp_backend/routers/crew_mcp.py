@@ -334,24 +334,34 @@ async def run_crew_query(
             # All k8s environments (dev/staging/prod) start with "canchat-"
             is_local_dev = not environment.startswith("canchat-")
 
-            if is_local_dev:
+            # Check if application access is configured for local development
+            use_delegated_access = os.getenv(
+                "SHP_USE_DELEGATED_ACCESS", "true"
+            ).lower() in ("true", "1", "yes")
+
+            if is_local_dev and use_delegated_access:
                 log.warning(
                     "Local development environment detected - SharePoint access requires OAuth2 proxy configuration"
                 )
-                # For local development, we should provide a clear message about the limitation
+                # For local development with delegated access, we should provide a clear message about the limitation
                 if any(
                     "sharepoint" in str(tool).lower()
                     for tool in (request.selected_tools or [])
                 ):
                     return CrewMCPResponse(
-                        result="Microsoft Graph authentication is unavailable in local development mode. "
-                        "This integration depends on OAuth2 proxy services that are configured only in production deployments. "
-                        "For full SharePoint testing, please utilize the staging or production environments where Azure AD authentication is properly established. "
-                        "Local developers can modify the test token configuration in extract_graph_access_token to simulate authenticated requests.",
+                        result="SharePoint delegated access is unavailable in local development mode. "
+                        "Delegated access requires OAuth2 proxy services that are configured only in production deployments. "
+                        "For full SharePoint testing with user permissions, please utilize the staging or production environments where Azure AD authentication is properly established. "
+                        "For local development, set SHP_USE_DELEGATED_ACCESS=false in your .env file to use application access instead, "
+                        "which will authenticate using client credentials and provide access to SharePoint resources.",
                         tools_used=[],
                         success=False,
-                        error="Local environment lacks OAuth2 proxy for SharePoint access",
+                        error="Local environment lacks OAuth2 proxy for SharePoint delegated access",
                     )
+            elif is_local_dev and not use_delegated_access:
+                log.info(
+                    "Local development with application access - SharePoint will use client credentials flow"
+                )
             else:
                 log.warning(
                     "No Graph API access token available - SharePoint access may fail"

@@ -1424,7 +1424,7 @@
 								let displayResult = crewResponse.result;
 								if (
 									displayResult.startsWith(
-										'Microsoft Graph authentication is unavailable in local development mode'
+										'SharePoint delegated access is unavailable in local development mode'
 									) ||
 									displayResult.startsWith('Local environment lacks OAuth2 proxy')
 								) {
@@ -1435,9 +1435,9 @@
 								// These translation keys need to be preserved by i18n parser
 								// They are used dynamically above
 								$i18n.t(
-									'Microsoft Graph authentication is unavailable in local development mode. This integration depends on OAuth2 proxy services that are configured only in production deployments. For full SharePoint testing, please utilize the staging or production environments where Azure AD authentication is properly established. Local developers can modify the test token configuration in extract_graph_access_token to simulate authenticated requests.'
+									'SharePoint delegated access is unavailable in local development mode. Delegated access requires OAuth2 proxy services that are configured only in production deployments. For full SharePoint testing with user permissions, please utilize the staging or production environments where Azure AD authentication is properly established. For local development, set SHP_USE_DELEGATED_ACCESS=false in your .env file to use application access instead, which will authenticate using client credentials and provide access to SharePoint resources.'
 								);
-								$i18n.t('Local environment lacks OAuth2 proxy for SharePoint access');
+								$i18n.t('Local environment lacks OAuth2 proxy for SharePoint delegated access');
 
 								// Update message content with CrewAI response (translated if needed)
 								responseMessage.content = displayResult;

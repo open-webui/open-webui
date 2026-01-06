@@ -49,9 +49,13 @@ class SharePointOAuthClient:
         self.tenant_id = tenant_id or os.getenv("SHP_TENANT_ID")
         self.site_url = site_url or os.getenv("SHP_SITE_URL")
 
-        # Global settings with defaults - enforce delegated access only
-        # Always use delegated access - no application fallback allowed
-        self.use_delegated_access = True
+        # Global settings with defaults - check environment override for testing
+        env_delegated = os.getenv("SHP_USE_DELEGATED_ACCESS", "true").lower()
+        self.use_delegated_access = (
+            use_delegated_access
+            if use_delegated_access is not None
+            else (env_delegated in ("true", "1", "yes"))
+        )
 
         self.obo_scope = obo_scope or os.getenv(
             "SHP_OBO_SCOPE",
@@ -124,10 +128,50 @@ class SharePointOAuthClient:
             logger.error(f"Error obtaining OBO token: {e}")
             return None
 
+    async def get_application_token(self) -> Optional[str]:
+        """
+        Get application access token using client credentials flow.
+
+        Returns:
+            Access token string or None if failed
+        """
+        try:
+            async with aiohttp.ClientSession() as session:
+                token_data = {
+                    "grant_type": "client_credentials",
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                    "scope": "https://graph.microsoft.com/.default",
+                }
+
+                async with session.post(
+                    self.token_endpoint, data=token_data
+                ) as response:
+                    if response.status == 200:
+                        token_response = await response.json()
+                        access_token = token_response.get("access_token")
+
+                        if access_token:
+                            # Suppress verbose logging during parallel processing
+                            return access_token
+                        else:
+                            logger.error("No access token in response")
+                            return None
+                    else:
+                        error_text = await response.text()
+                        logger.error(
+                            f"Token request failed: {response.status} - {error_text}"
+                        )
+                        return None
+
+        except Exception as e:
+            logger.error(f"Error obtaining application token: {e}")
+            return None
+
     async def get_access_token(self, user_token: Optional[str] = None) -> Optional[str]:
         """
         Get appropriate access token based on configuration.
-        Only supports delegated access (OBO flow) - no application fallback.
+        Supports both delegated access (OBO flow) and application access.
 
         Args:
             user_token: Optional user access token for OBO flow
@@ -135,29 +179,32 @@ class SharePointOAuthClient:
         Returns:
             Access token string or None if failed
         """
-        # Ensure we have delegated access enabled
-        if not self.use_delegated_access:
-            logger.error("Delegated access is disabled. Only OBO flow is supported.")
-            return None
+        if self.use_delegated_access:
+            # Delegated access requires user token
+            if (
+                not user_token
+                or user_token == "user_token_placeholder"
+                or not user_token.strip()
+            ):
+                logger.error(
+                    "No valid user token provided for OBO flow. Delegated access requires user authentication."
+                )
+                return None
 
-        # Require a valid user token for OBO flow
-        if (
-            not user_token
-            or user_token == "user_token_placeholder"
-            or not user_token.strip()
-        ):
-            logger.error(
-                "No valid user token provided for OBO flow. Delegated access requires user authentication."
-            )
-            return None
+            logger.info("Attempting delegated access (OBO flow)")
+            obo_token = await self.get_obo_token(user_token)
 
-        logger.info("Attempting delegated access (OBO flow)")
-        obo_token = await self.get_obo_token(user_token)
+            if not obo_token:
+                logger.error(
+                    "OBO flow failed. User may not have appropriate SharePoint permissions."
+                )
+                return None
 
-        if not obo_token:
-            logger.error(
-                "OBO flow failed. User may not have appropriate SharePoint permissions."
-            )
+            return obo_token
+        else:
+            # Application access - use client credentials flow
+            logger.info("Attempting application access (client credentials flow)")
+            return await self.get_application_token()
             return None
 
         logger.info("Successfully obtained OBO token")
