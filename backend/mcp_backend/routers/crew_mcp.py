@@ -35,6 +35,11 @@ def extract_graph_access_token(request: Request) -> Optional[str]:
     """
     Extract the Graph API access token from OAuth2 proxy headers.
     This token will be used by ALL MCP servers for delegated SharePoint access.
+
+    Checks multiple possible header names to support different OAuth2 proxy configurations:
+    - x-forwarded-access-token (default/main UAT proxy)
+    - authorization (fallback for PCO proxy or standard OAuth)
+    - x-auth-request-access-token (alternative OAuth2 proxy config)
     """
     # Test token for local development (uncomment to test with real token)
     # TEST_ACCESS_TOKEN = "use-your-real-access-token-here-for-testing"
@@ -42,15 +47,30 @@ def extract_graph_access_token(request: Request) -> Optional[str]:
     # For testing: uncomment the line below to simulate having a real access token
     # return TEST_ACCESS_TOKEN
 
-    token = request.headers.get(GRAPH_ACCESS_TOKEN_HEADER)
-    if token and token != "user_token_placeholder":
-        logging.info(
-            f"Found Graph API access token in header {GRAPH_ACCESS_TOKEN_HEADER} (length: {len(token)})"
-        )
-        return token
+    # List of possible header names to check (in priority order)
+    possible_headers = [
+        GRAPH_ACCESS_TOKEN_HEADER,  # Primary: x-forwarded-access-token
+        "authorization",  # Fallback: Standard OAuth header
+        "x-auth-request-access-token",  # Alternative OAuth2 proxy header
+        "x-forwarded-authorization",  # Another common proxy header
+    ]
 
+    for header_name in possible_headers:
+        token = request.headers.get(header_name)
+        if token:
+            # Strip "Bearer " prefix if present
+            if token.startswith("Bearer "):
+                token = token[7:]  # Remove "Bearer " (7 characters)
+
+            if token and token != "user_token_placeholder":
+                logging.info(
+                    f"Found Graph API access token in header '{header_name}' (length: {len(token)})"
+                )
+                return token
+
+    # No token found in any header
     logging.warning(
-        f"No Graph API access token found in header {GRAPH_ACCESS_TOKEN_HEADER}"
+        f"No Graph API access token found in any checked headers: {possible_headers}"
     )
     available_headers = list(request.headers.keys())
     logging.warning(f"Available headers: {available_headers}")
