@@ -1485,19 +1485,36 @@
 							}
 						} catch (error) {
 							console.error('CrewAI Error:', error);
-							toast.error(`CrewAI Error: ${(error as Error).message || error}`);
+							const errorMessage = (error as Error).message || String(error);
 
-							// Fall back to regular chat completion - reset message state
-							responseMessage.content = '';
-							responseMessage.done = false;
-							delete responseMessage.crewAI;
-							delete responseMessage.crewMetadata;
+							// Show error toast
+							toast.error(`CrewAI Error: ${errorMessage}`);
+
+							// Display error message in chat instead of falling back
+							responseMessage.content = `⚠️ **CrewAI MCP Error**\n\n${errorMessage}\n\n*The selected tool(s) could not complete this request. This may be due to:*\n- Request timeout (processing took too long)\n- Network connectivity issues\n- SharePoint permissions or authentication problems\n\nPlease try again, or contact support if the issue persists.`;
+							responseMessage.done = true;
+							responseMessage.error = true;
 							history.messages[responseMessageId] = responseMessage;
+
+							// Save the error state
 							await tick();
+							if ($chatId && !$temporaryChatEnabled) {
+								const messages = createMessagesList(responseMessageId);
+								chat = await updateChatById(localStorage.token, $chatId, {
+									models: selectedModels,
+									messages: messages,
+									history: history,
+									params: params,
+									files: chatFiles
+								});
+							}
+
+							// Don't fall back to regular completion - return early to show error
+							return;
 						}
 					}
 
-					// Only proceed with regular completion if CrewAI wasn't used or failed
+					// Only proceed with regular completion if CrewAI wasn't used
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();

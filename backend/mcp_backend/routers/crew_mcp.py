@@ -402,12 +402,13 @@ async def run_crew_query(
         log.info("Using intelligent crew with manager agent for routing")
 
         # Always use the intelligent crew - it will handle routing internally
-        # Run in executor to prevent blocking the main thread and causing health check failures
+        # Run in dedicated executor to prevent blocking the main thread and causing health check failures
+        # Use max_workers=1 to limit resource usage and prevent thread pool exhaustion
         import asyncio
         import concurrent.futures
 
         loop = asyncio.get_event_loop()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             result = await loop.run_in_executor(
                 executor,
                 crew_mcp_manager.run_intelligent_crew,
@@ -524,8 +525,20 @@ async def run_multi_server_crew_query(
             )
 
         # Run the intelligent crew (same as regular query, since manager handles everything)
+        # Use dedicated executor to prevent blocking the main thread and causing health check failures
+        import asyncio
+        import concurrent.futures
+
         selected_tools = request.selected_tools or []
-        result = crew_mcp_manager.run_intelligent_crew(request.query, selected_tools)
+
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            result = await loop.run_in_executor(
+                executor,
+                crew_mcp_manager.run_intelligent_crew,
+                request.query,
+                selected_tools,
+            )
 
         return CrewMCPResponse(
             result=result, tools_used=[tool["name"] for tool in tools], success=True
