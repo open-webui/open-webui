@@ -1556,8 +1556,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if mcp_clients:
         metadata["mcp_clients"] = mcp_clients
 
-    # Always inject builtin tools for native function calling based on enabled features
-    if metadata.get("params", {}).get("function_calling") == "native":
+    # Inject builtin tools for native function calling based on enabled features and model capability
+    # Check if builtin_tools capability is enabled for this model (defaults to True if not specified)
+    builtin_tools_enabled = model.get("info", {}).get("meta", {}).get("capabilities", {}).get("builtin_tools", True)
+    if metadata.get("params", {}).get("function_calling") == "native" and builtin_tools_enabled:
         builtin_tools = get_builtin_tools(
             request,
             {

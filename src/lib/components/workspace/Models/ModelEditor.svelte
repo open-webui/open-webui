@@ -99,7 +99,8 @@
 		code_interpreter: true,
 		citations: true,
 		status_updates: true,
-		usage: undefined
+		usage: undefined,
+		builtin_tools: true
 	};
 	let defaultFeatureIds = [];
 
