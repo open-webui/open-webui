@@ -45,6 +45,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
 )
 from open_webui.config import (
+    AIOHTTP_CLIENT_TIMEOUT,
     RAG_EMBEDDING_QUERY_PREFIX,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_PREFIX_FIELD_NAME,
@@ -596,7 +597,8 @@ async def agenerate_openai_batch_embeddings(
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
 
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        async with aiohttp.ClientSession(trust_env=True, timeout=timeout) as session:
             async with session.post(
                 f"{url}/embeddings", headers=headers, json=form_data
             ) as r:
