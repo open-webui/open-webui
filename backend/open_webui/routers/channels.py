@@ -773,14 +773,16 @@ async def get_channel_messages(
         )  # Ensure user is a member of the channel
 
     message_list = Messages.get_messages_by_channel_id(id, skip, limit, db=db)
-    users = {}
+
+    if not message_list:
+        return []
+
+    # Batch fetch all users in a single query (fixes N+1 problem)
+    user_ids = list(set(m.user_id for m in message_list))
+    users = {u.id: u for u in Users.get_users_by_user_ids(user_ids, db=db)}
 
     messages = []
     for message in message_list:
-        if message.user_id not in users:
-            user = Users.get_user_by_id(message.user_id, db=db)
-            users[message.user_id] = user
-
         thread_replies = Messages.get_thread_replies_by_message_id(message.id, db=db)
         latest_thread_reply_at = (
             thread_replies[0].created_at if thread_replies else None
