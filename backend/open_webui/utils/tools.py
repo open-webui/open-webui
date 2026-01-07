@@ -63,6 +63,11 @@ from open_webui.tools.builtin import (
     view_channel_thread,
     replace_note_content,
     write_note,
+    list_knowledge_bases,
+    search_knowledge_bases,
+    search_knowledge_files,
+    view_knowledge_file,
+    query_knowledge_bases,
 )
 
 import copy
@@ -360,8 +365,13 @@ def get_builtin_tools(
     # Time utilities - always available for date calculations
     builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
-    # Chats tools - search and fetch user's chat history (always available)
+    # Chats tools - search and fetch user's chat history
     builtin_functions.extend([search_chats, view_chat])
+
+    # Knowledge base tools - list, search, query, and view user's accessible knowledge bases
+    builtin_functions.extend(
+        [list_knowledge_bases, search_knowledge_bases, search_knowledge_files, view_knowledge_file, query_knowledge_bases]
+    )
 
     # Add memory tools if enabled for this chat
     if features.get("memory"):
