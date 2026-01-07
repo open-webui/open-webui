@@ -6,7 +6,7 @@ import aiohttp
 from pathlib import Path
 from typing import Optional
 
-from backend.open_webui.env import AIOHTTP_CLIENT_TIMEOUT
+from open_webui.env import AIOHTTP_CLIENT_TIMEOUT
 from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
