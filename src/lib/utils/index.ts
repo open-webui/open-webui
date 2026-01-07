@@ -93,28 +93,31 @@ export const processResponseContent = (content: string) => {
 	return content.trim();
 };
 
-function isChineseChar(char: string): boolean {
-	return /\p{Script=Han}/u.test(char);
+function isCJKChar(char: string): boolean {
+	// Check for Chinese (Han), Korean (Hangul), or Japanese (Hiragana/Katakana)
+	return /[\p{Script=Han}\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(char);
 }
 
-// Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
+// Keep for backward compatibility
+function isChineseChar(char: string): boolean {
+	return isCJKChar(char);
+}
+
+// Tackle "Model output issue not following the standard Markdown/LaTeX format" in CJK languages.
 function processChineseContent(content: string): string {
 	// This function is used to process the response content before the response content is rendered.
 	const lines = content.split('\n');
 	const processedLines = lines.map((line) => {
-		if (/[\u4e00-\u9fa5]/.test(line)) {
-			// Problems caused by Chinese parentheses
+		// Check for Chinese (Han), Korean (Hangul), or Japanese (Hiragana/Katakana)
+		if (/[\u4e00-\u9fa5\uAC00-\uD7AF\u3040-\u309F\u30A0-\u30FF]/.test(line)) {
+			// Problems caused by parentheses and other delimiters
 			/* Discription:
-			 *   When `*` has Chinese delimiters on the inside, markdown parser ignore bold or italic style.
-			 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
-			 *          instead of `<strong>中文名（English）</strong>中文内容`.
+			 *   When `*` has delimiters on the inside, markdown parser ignore bold or italic style.
+			 *   - e.g. `**포텐셜 이론(Potential Theory)**은` will be parsed directly,
+			 *          instead of `<strong>포텐셜 이론(Potential Theory)</strong>은`.
 			 * Solution:
 			 *   Adding a `space` before and after the bold/italic part can solve the problem.
-			 *   - e.g. `**中文名（English）**中文内容` -> ` **中文名（English）** 中文内容`
-			 * Note:
-			 *   Similar problem was found with English parentheses and other full delimiters,
-			 *   but they are not handled here because they are less likely to appear in LLM output.
-			 *   Change the behavior in future if needed.
+			 *   - e.g. `**포텐셜 이론(Potential Theory)**은` -> ` **포텐셜 이론(Potential Theory)** 은`
 			 */
 			if (line.includes('*')) {
 				// Handle **bold** and *italic*
@@ -124,9 +127,24 @@ function processChineseContent(content: string): string {
 					line = processChineseDelimiters(line, '*', '（', '）');
 				}
 				// 2. With Chinese quotations
-				if (/“|”/.test(line)) {
-					line = processChineseDelimiters(line, '**', '“', '”');
-					line = processChineseDelimiters(line, '*', '“', '”');
+				if (/"|"/.test(line)) {
+					line = processChineseDelimiters(line, '**', '"', '"');
+					line = processChineseDelimiters(line, '*', '"', '"');
+				}
+				// 3. With English parentheses (common in Korean/Japanese text with English terms)
+				if (/\(|\)/.test(line)) {
+					line = processChineseDelimiters(line, '**', '(', ')');
+					line = processChineseDelimiters(line, '*', '(', ')');
+				}
+				// 4. With English quotations
+				if (/"/.test(line)) {
+					line = processChineseDelimiters(line, '**', '"', '"');
+					line = processChineseDelimiters(line, '*', '"', '"');
+				}
+				// 5. With single quotes
+				if (/'/.test(line)) {
+					line = processChineseDelimiters(line, '**', "'", "'");
+					line = processChineseDelimiters(line, '*', "'", "'");
 				}
 			}
 		}

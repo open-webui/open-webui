@@ -15,10 +15,24 @@ export type LayerSpec = GraphSpec | GraphSpecLayer;
 // ========== Helper Functions ==========
 
 // expressions를 배열로 정규화 (expression 또는 expressions 지원)
+// expression 객체 형식 {x: "...", y: "..."} 또는 {x: "...", y: "...", z: "..."} 도 지원
 export function normalizeExpressions(layer: LayerSpec): string[] {
 	// expression (singular) 체크
 	if (layer.expression) {
-		return [layer.expression];
+		// 객체 형식: {x: "...", y: "..."} 또는 {x: "...", y: "...", z: "..."}
+		if (typeof layer.expression === 'object' && layer.expression !== null) {
+			const exprObj = layer.expression as { x?: string; y?: string; z?: string };
+			if (exprObj.x !== undefined && exprObj.y !== undefined) {
+				if (exprObj.z !== undefined) {
+					return [exprObj.x, exprObj.y, exprObj.z];
+				}
+				return [exprObj.x, exprObj.y];
+			}
+		}
+		// 문자열 형식
+		if (typeof layer.expression === 'string') {
+			return [layer.expression];
+		}
 	}
 	// expressions (plural) 체크
 	if (!layer.expressions) return [];
@@ -96,7 +110,7 @@ export function is3DGraph(type: string): boolean {
 // 지원되는 그래프 타입인지 확인
 export function isTypeSupported(type: string): boolean {
 	const supportedTypes = [
-		'function_2d', 'parametric_2d', 'phase_plane', 'scatter_2d', 'point_2d', 'line_2d',
+		'function_2d', 'parametric_2d', 'function_parametric_2d', 'phase_plane', 'scatter_2d', 'point_2d', 'line_2d',
 		'composite_2d', 'multi_scatter_2d', 'cartesian', 'histogram_2d', 'vector_2d',
 		'pie_2d', 'bar_2d',
 		'function_3d', 'parametric_3d', 'scatter_3d', 'composite_3d', 'vector_field_3d'
@@ -775,7 +789,15 @@ export function buildBar2DTraces(layer: LayerSpec, showLegend = false, legendNam
 
 // function_3d: z = f(x, y) 표면
 export function buildFunction3DTraces(layer: LayerSpec) {
-	const expr = layer.expression || (layer.expressions ? normalizeExpressions(layer)[0] : 'x^2 + y^2');
+	// expression이 문자열인 경우만 사용, 객체면 normalizeExpressions 사용
+	let expr: string;
+	if (typeof layer.expression === 'string') {
+		expr = layer.expression;
+	} else if (layer.expressions) {
+		expr = normalizeExpressions(layer)[0] || 'x^2 + y^2';
+	} else {
+		expr = 'x^2 + y^2';
+	}
 	const f = compile(expr);
 
 	const domain = layer.domain as Domain3D | undefined;
@@ -1179,6 +1201,7 @@ export function buildLayerTraces(layer: LayerSpec, layerIndex: number, totalLaye
 
 	switch (layerType) {
 		case 'parametric_2d':
+		case 'function_parametric_2d':
 			return buildParametric2DTraces(layer);
 		case 'phase_plane':
 			return buildPhasePlaneTraces(layer);
@@ -1236,6 +1259,7 @@ export function buildTraces(spec: GraphSpec): any[] {
 		case 'cartesian': // cartesian = composite_2d
 			return buildComposite2DTraces(spec);
 		case 'parametric_2d':
+		case 'function_parametric_2d':
 			return buildParametric2DTraces(spec);
 		case 'phase_plane':
 			return buildPhasePlaneTraces(spec);
