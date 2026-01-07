@@ -234,3 +234,177 @@ export const generateFollowUpPrompt = async (
 
 	return res;
 };
+
+// New scenario assignment APIs
+
+export interface ScenarioAssignRequest {
+	participant_id: string;
+	child_profile_id?: string;
+	assignment_position?: number;
+	alpha?: number;  // Weighted sampling alpha parameter (default: 1.0)
+}
+
+export interface ScenarioAssignResponse {
+	assignment_id: string;
+	scenario_id: string;
+	prompt_text: string;
+	response_text: string;
+	assignment_position?: number;
+	sampling_audit?: {
+		eligible_pool_size: number;
+		n_assigned_before: number;
+		weight: number;
+		sampling_prob: number;
+	};
+}
+
+export interface ScenarioStatusUpdateRequest {
+	assignment_id: string;
+	skip_stage?: string;
+	skip_reason?: string;
+	skip_reason_text?: string;
+}
+
+export interface ScenarioStatusResponse {
+	status: string;
+	assignment_id: string;
+	issue_any?: number;  // For completed status
+	reassigned?: boolean;  // For abandoned status
+	new_assignment_id?: string;  // For abandoned status with reassignment
+	new_scenario_id?: string;  // For abandoned status with reassignment
+	message?: string;  // For abandoned status without reassignment
+}
+
+export interface HighlightCreateRequest {
+	assignment_id: string;
+	selected_text: string;
+	source: 'prompt' | 'response';
+	start_offset?: number;
+	end_offset?: number;
+	context?: string;
+}
+
+export interface HighlightResponse {
+	id: string;
+	assignment_id: string;
+	selected_text: string;
+	source: string;
+	start_offset?: number;
+	end_offset?: number;
+	created_at: number;
+}
+
+// Scenario assignment API functions
+
+export const assignScenario = async (
+	token: string,
+	payload: ScenarioAssignRequest
+): Promise<ScenarioAssignResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/assign`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const startScenario = async (
+	token: string,
+	payload: ScenarioStatusUpdateRequest
+): Promise<ScenarioStatusResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/start`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const completeScenario = async (
+	token: string,
+	payload: ScenarioStatusUpdateRequest
+): Promise<ScenarioStatusResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/complete`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const skipScenario = async (
+	token: string,
+	payload: ScenarioStatusUpdateRequest
+): Promise<ScenarioStatusResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/skip`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const abandonScenario = async (
+	token: string,
+	payload: ScenarioStatusUpdateRequest
+): Promise<ScenarioStatusResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/abandon`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+// Highlights API functions
+
+export const createHighlight = async (
+	token: string,
+	payload: HighlightCreateRequest
+): Promise<HighlightResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/highlights`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const getHighlights = async (
+	token: string,
+	assignment_id: string
+): Promise<HighlightResponse[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/highlights/${assignment_id}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};

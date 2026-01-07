@@ -4,7 +4,8 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON, Index
+from sqlalchemy import BigInteger, Column, String, Text, JSON, Index, Integer, ForeignKey
+from sqlalchemy.orm import relationship
 
 ####################
 # TEXT SELECTION: Database schema for storing user text selections
@@ -28,8 +29,16 @@ class Selection(Base):
     context = Column(Text, nullable=True)  # Surrounding context for analysis
     meta = Column(JSON, nullable=True)  # Additional metadata (model used, timestamp, etc.)
     
+    # Assignment tracking fields (added for scenario assignment tracking)
+    assignment_id = Column(String, ForeignKey("scenario_assignments.assignment_id"), nullable=True)
+    start_offset = Column(Integer, nullable=True)  # Character offset where selection starts
+    end_offset = Column(Integer, nullable=True)  # Character offset where selection ends
+    
     created_at = Column(BigInteger)  # When selection was made
     updated_at = Column(BigInteger)
+    
+    # Relationships
+    assignment = relationship("ScenarioAssignment", back_populates="selections", foreign_keys=[assignment_id])
 
     # Indexes for efficient querying
     __table_args__ = (
@@ -39,6 +48,7 @@ class Selection(Base):
         Index('idx_selection_created_at', 'created_at'),
         Index('idx_selection_scenario_id', 'scenario_id'),
         Index('idx_selection_source', 'source'),
+        Index('idx_selection_assignment_id', 'assignment_id'),
     )
 
 class SelectionModel(BaseModel):
@@ -55,6 +65,9 @@ class SelectionModel(BaseModel):
     source: Optional[str] = None
     context: Optional[str] = None
     meta: Optional[dict] = None
+    assignment_id: Optional[str] = None
+    start_offset: Optional[int] = None
+    end_offset: Optional[int] = None
     created_at: int
     updated_at: int
 
@@ -68,6 +81,9 @@ class SelectionForm(BaseModel):
     source: Optional[str] = None  # 'prompt' | 'response'
     context: Optional[str] = None
     meta: Optional[dict] = None
+    assignment_id: Optional[str] = None
+    start_offset: Optional[int] = None
+    end_offset: Optional[int] = None
 
 class SelectionTable:
     def insert_new_selection(
@@ -116,6 +132,15 @@ class SelectionTable:
         with get_db() as db:
             selections = db.query(Selection).filter(
                 Selection.chat_id == chat_id
+            ).order_by(Selection.created_at.asc()).all()
+            
+            return [SelectionModel.model_validate(selection) for selection in selections]
+    
+    def get_selections_by_assignment(self, assignment_id: str) -> list[SelectionModel]:
+        """Get all selections for a specific assignment"""
+        with get_db() as db:
+            selections = db.query(Selection).filter(
+                Selection.assignment_id == assignment_id
             ).order_by(Selection.created_at.asc()).all()
             
             return [SelectionModel.model_validate(selection) for selection in selections]

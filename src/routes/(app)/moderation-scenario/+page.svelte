@@ -6,7 +6,7 @@
 	import { get } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession, getModerationSessions, postSessionActivity } from '$lib/apis/moderation';
+import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession, getModerationSessions, postSessionActivity, assignScenario, startScenario, completeScenario, skipScenario, abandonScenario, createHighlight, getHighlights, type ScenarioAssignResponse } from '$lib/apis/moderation';
 import { finalizeModeration } from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -925,28 +925,96 @@ function clearModerationLocalKeys() {
 			}
 		}
 
-		// Load random scenarios from scenario bank
+		// Load scenarios from backend using weighted sampling
 		try {
-			// Get seen scenario IDs to exclude them from sampling
-			// For now, we'll use an empty array - proper implementation would query backend
-			const seenIds: string[] = [];
+			const token = localStorage.getItem('token') || '';
+			if (!token) {
+				console.error('❌ No authentication token found');
+				toast.error('Please log in to continue.');
+				return;
+			}
+
+			// Get user ID from user store
+			const userObj = $user as any;
+			const participantId = userObj?.id;
+			if (!participantId) {
+				console.error('❌ No user ID found');
+				toast.error('User information not available. Please refresh the page.');
+				return;
+			}
+
+			// Assign scenarios one by one using weighted sampling
+			const basePairs: Array<[string, string]> = [];
+			const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> = new Map();
 			
-			// Sample random scenarios from bank
-			const randomScenarios: QAPair[] = await getRandomScenarios(SCENARIOS_PER_SESSION, seenIds);
-			
-			if (randomScenarios.length === 0) {
-				console.error('❌ No scenarios loaded from scenario bank');
+			for (let i = 0; i < SCENARIOS_PER_SESSION; i++) {
+				try {
+					const assignResponse = await assignScenario(token, {
+						participant_id: participantId,
+						child_profile_id: selectedChildId,
+						assignment_position: i,
+						alpha: 1.0 // Default alpha for weighted sampling
+					});
+
+					basePairs.push([assignResponse.prompt_text, assignResponse.response_text]);
+					assignmentMap.set(i, {
+						assignment_id: assignResponse.assignment_id,
+						scenario_id: assignResponse.scenario_id
+					});
+
+					console.log(`✅ Assigned scenario ${i + 1}/${SCENARIOS_PER_SESSION}: ${assignResponse.scenario_id}`);
+				} catch (error: any) {
+					console.error(`Error assigning scenario ${i + 1}:`, error);
+					// Continue with remaining scenarios even if one fails
+					if (error?.detail?.includes('No eligible scenarios')) {
+						console.warn(`⚠️ No eligible scenarios available for position ${i + 1}`);
+						// If we have some scenarios, continue; otherwise show error
+						if (basePairs.length === 0) {
+							toast.error('No scenarios available. Please contact support.');
+							return;
+						}
+					}
+				}
+			}
+
+			if (basePairs.length === 0) {
+				console.error('❌ No scenarios assigned from backend');
 				toast.error('Failed to load scenarios. Please refresh the page or contact support if the issue persists.');
 				return;
 			}
-			
-			console.log(`✅ Loaded ${randomScenarios.length} random scenarios from scenario bank`);
-			
-			// Convert QAPair[] to [string, string][] format
-			const basePairs: Array<[string, string]> = randomScenarios.map(qa => [qa.question, qa.response]);
+
+			console.log(`✅ Loaded ${basePairs.length} scenarios from backend`);
 			
 			// Build final list (loads attention check, shuffles it in, and adds custom scenario)
 			scenarioList = await buildScenarioList(basePairs);
+			
+			// Store assignment IDs in scenario states
+			assignmentMap.forEach((assignment, index) => {
+				const existingState = scenarioStates.get(index) || {
+					versions: [],
+					currentVersionIndex: -1,
+					confirmedVersionIndex: null,
+					highlightedTexts1: [],
+					selectedModerations: new Set(),
+					customInstructions: [],
+					showOriginal1: false,
+					showComparisonView: false,
+					attentionCheckSelected: false,
+					attentionCheckPassed: false,
+					markedNotApplicable: false,
+					step1Completed: false,
+					step2Completed: false,
+					step3Completed: false,
+					concernLevel: null,
+					concernReason: '',
+					satisfactionLevel: null,
+					satisfactionReason: '',
+					nextAction: null
+				};
+				existingState.assignment_id = assignment.assignment_id;
+				existingState.scenario_id = assignment.scenario_id;
+				scenarioStates.set(index, existingState);
+			});
 			
 			// Persist the scenario package
 			if (scenarioList.length > 0) {
@@ -964,7 +1032,7 @@ function clearModerationLocalKeys() {
 				scenariosLockedForSession = false;
 			}
 		} catch (error) {
-			console.error('Error loading random scenarios:', error);
+			console.error('Error loading scenarios from backend:', error);
 			toast.error('Failed to load scenarios. Please refresh the page or contact support if the issue persists.');
 		}
 	}
@@ -1164,6 +1232,10 @@ function clearModerationLocalKeys() {
 		satisfactionLevel: number | null; // Step 3 (Update): Satisfaction level (1-5 Likert scale)
 		satisfactionReason: string; // Step 3 (Update): "Why?" for satisfaction
 		nextAction: 'try_again' | 'move_on' | null; // Step 3 (Update): Next action after satisfaction check
+		// Assignment tracking (new system)
+		assignment_id?: string; // Backend assignment ID for this scenario
+		scenario_id?: string; // Backend scenario ID
+		assignmentStarted?: boolean; // Whether /start endpoint has been called
 	}
 	
 	let scenarioStates: Map<number, ScenarioState> = new Map();
@@ -1473,7 +1545,7 @@ let currentRequestId: number = 0;
 	 * Note: This is separate from the batch save to `moderation_session.highlighted_texts`
 	 * which happens in `completeStep1()` when user presses "Continue".
 	 */
-	function saveSelection() {
+	async function saveSelection() {
 		const text = currentSelection1;
 		
 		if (!text) return;
@@ -1482,34 +1554,83 @@ let currentRequestId: number = 0;
 			// Add to local state array
 			highlightedTexts1 = [...highlightedTexts1, text];
 
-			// Save to `selection` table immediately (real-time save)
-			// This happens BEFORE user presses "Continue" or "Skip"
+			// Save to new `/moderation/highlights` API with assignment_id and offset tracking
 			try {
-				const scenarioId = `scenario_${selectedScenarioIndex}`;
-				const source = selectionInPrompt ? 'prompt' : 'response';
-				const role = selectionInPrompt ? 'user' : 'assistant';
-				const body = {
-					chat_id: scenarioId,
-					message_id: `${scenarioId}:${source}`,
-					role,
+				const state = scenarioStates.get(selectedScenarioIndex);
+				const assignmentId = state?.assignment_id;
+				
+				if (!assignmentId) {
+					console.warn('No assignment_id found for scenario, skipping highlight save');
+					// Fallback to old API for custom scenarios or scenarios without assignments
+					const scenarioId = `scenario_${selectedScenarioIndex}`;
+					const source = selectionInPrompt ? 'prompt' : 'response';
+					const role = selectionInPrompt ? 'user' : 'assistant';
+					const body = {
+						chat_id: scenarioId,
+						message_id: `${scenarioId}:${source}`,
+						role,
+						selected_text: text,
+						child_id: selectedChildId || 'unknown',
+						scenario_id: scenarioId,
+						source,
+						context: null,
+						meta: {}
+					};
+					fetch(`${WEBUI_API_BASE_URL}/selections`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${localStorage.token}`
+						},
+						body: JSON.stringify(body)
+					});
+					return;
+				}
+
+				// Calculate character offsets
+				const targetText = selectionInPrompt ? childPrompt1 : originalResponse1;
+				const startOffset = targetText.indexOf(text);
+				const endOffset = startOffset >= 0 ? startOffset + text.length : undefined;
+
+				// Save to new highlights API
+				await createHighlight(localStorage.token, {
+					assignment_id: assignmentId,
 					selected_text: text,
-					child_id: selectedChildId || 'unknown',
-					scenario_id: scenarioId,
-					source,
-					context: null,
-					meta: {}
-				};
-				// POST to `/api/v1/selections` - saves to `selection` table
-				fetch(`${WEBUI_API_BASE_URL}/selections`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${localStorage.token}`
-					},
-					body: JSON.stringify(body)
+					source: selectionInPrompt ? 'prompt' : 'response',
+					start_offset: startOffset >= 0 ? startOffset : undefined,
+					end_offset: endOffset,
+					context: null
 				});
+				console.log('✅ Highlight saved to new API:', { assignmentId, text, startOffset, endOffset });
 			} catch (e) {
-				console.error('Failed to persist selection to selection table', e);
+				console.error('Failed to persist highlight to highlights API', e);
+				// Fallback to old API on error
+				try {
+					const scenarioId = `scenario_${selectedScenarioIndex}`;
+					const source = selectionInPrompt ? 'prompt' : 'response';
+					const role = selectionInPrompt ? 'user' : 'assistant';
+					const body = {
+						chat_id: scenarioId,
+						message_id: `${scenarioId}:${source}`,
+						role,
+						selected_text: text,
+						child_id: selectedChildId || 'unknown',
+						scenario_id: scenarioId,
+						source,
+						context: null,
+						meta: {}
+					};
+					fetch(`${WEBUI_API_BASE_URL}/selections`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${localStorage.token}`
+						},
+						body: JSON.stringify(body)
+					});
+				} catch (fallbackError) {
+					console.error('Failed to persist selection via fallback API', fallbackError);
+				}
 			}
 		}
 		selectionButtonsVisible1 = false;
@@ -1647,6 +1768,74 @@ let currentRequestId: number = 0;
 		const secs = seconds % 60;
 		return `${mins}:${secs.toString().padStart(2, '0')}`;
 	}
+	
+	/**
+	 * Check if a scenario should be abandoned and call /abandon endpoint if needed.
+	 * A scenario is abandoned if it's been started but not completed within the timeout period.
+	 */
+	async function checkAndAbandonScenario(index: number) {
+		const state = scenarioStates.get(index);
+		if (!state?.assignment_id) return;
+		
+		// Check if scenario is completed
+		const isCompleted = state.step2Completed && state.step3Completed;
+		if (isCompleted) {
+			// Scenario is completed, no need to abandon
+			return;
+		}
+		
+		// Check if scenario was started
+		if (!state.assignmentStarted) {
+			// Scenario was never started, no need to abandon
+			return;
+		}
+		
+		// Check timeout
+		const startTime = scenarioStartTimes.get(index);
+		if (!startTime) return;
+		
+		const elapsed = Date.now() - startTime;
+		if (elapsed < ABANDONMENT_TIMEOUT_MS) {
+			// Not yet timed out, reset timeout
+			if (abandonmentTimeout) {
+				clearTimeout(abandonmentTimeout);
+			}
+			abandonmentTimeout = setTimeout(() => {
+				checkAndAbandonScenario(index);
+			}, ABANDONMENT_TIMEOUT_MS - elapsed);
+			return;
+		}
+		
+		// Scenario has timed out - abandon it
+		try {
+			const [prompt] = scenarioList[index] || [];
+			if (prompt === CUSTOM_SCENARIO_PROMPT) return; // Don't abandon custom scenarios
+			
+			const abandonResponse = await abandonScenario(localStorage.token, {
+				assignment_id: state.assignment_id
+			});
+			
+			console.log('✅ Abandoned scenario due to timeout:', state.assignment_id);
+			
+			// If reassigned, update the scenario list and state
+			if (abandonResponse.reassigned && abandonResponse.new_assignment_id) {
+				// Update scenario list with new prompt/response
+				if (abandonResponse.new_prompt_text && abandonResponse.new_response_text) {
+					scenarioList[index] = [abandonResponse.new_prompt_text, abandonResponse.new_response_text];
+				}
+				
+				// Update state with new assignment
+				state.assignment_id = abandonResponse.new_assignment_id;
+				state.scenario_id = abandonResponse.new_scenario_id;
+				state.assignmentStarted = false; // Reset so /start will be called again
+				scenarioStates.set(index, state);
+				
+				console.log('✅ Scenario reassigned:', abandonResponse.new_assignment_id);
+			}
+		} catch (e) {
+			console.error('Failed to abandon scenario (non-blocking):', e);
+		}
+	}
 
 	function saveCurrentScenarioState() {
 		// Get existing customPrompt if we're saving state for a custom scenario
@@ -1672,7 +1861,11 @@ let currentRequestId: number = 0;
 			concernReason,
 			satisfactionLevel,
 			satisfactionReason,
-			nextAction
+			nextAction,
+			// Assignment tracking (preserve existing values)
+			assignment_id: existingState?.assignment_id,
+			scenario_id: existingState?.scenario_id,
+			assignmentStarted: existingState?.assignmentStarted
 		};
 		scenarioStates.set(selectedScenarioIndex, currentState);
 		// Force reactive update by reassigning the Map
@@ -1840,6 +2033,35 @@ let currentRequestId: number = 0;
 		}
 		
 		const savedState = scenarioStates.get(index);
+		
+		// Call /start endpoint if this scenario has an assignment_id and hasn't been started yet
+		// Skip for custom scenarios and attention checks (they don't have assignments)
+		if (savedState?.assignment_id && !savedState.assignmentStarted && prompt !== CUSTOM_SCENARIO_PROMPT) {
+			try {
+				await startScenario(localStorage.token, {
+					assignment_id: savedState.assignment_id
+				});
+				// Mark as started in state
+				if (savedState) {
+					savedState.assignmentStarted = true;
+					scenarioStates.set(index, savedState);
+				}
+				// Track start time for abandonment detection
+				scenarioStartTimes.set(index, Date.now());
+				// Reset abandonment timeout
+				if (abandonmentTimeout) {
+					clearTimeout(abandonmentTimeout);
+				}
+				// Set new abandonment timeout
+				abandonmentTimeout = setTimeout(() => {
+					checkAndAbandonScenario(index);
+				}, ABANDONMENT_TIMEOUT_MS);
+				console.log('✅ Called /start endpoint for assignment:', savedState.assignment_id);
+			} catch (e) {
+				console.error('Failed to call /start endpoint (non-blocking):', e);
+				// Continue loading even if start fails
+			}
+		}
 		
 		// Restore data from backend first (primary source), then fall back to localStorage
 		if (backendSession) {
@@ -2679,6 +2901,24 @@ function cancelReset() {}
 			step2Completed = true; // Skip steps 2 and 3
 			step3Completed = true;
 			
+			// Call /skip endpoint for new assignment tracking system
+			const state = scenarioStates.get(selectedScenarioIndex);
+			const [prompt] = scenarioList[selectedScenarioIndex] || [];
+			if (state?.assignment_id && prompt !== CUSTOM_SCENARIO_PROMPT) {
+				try {
+					await skipScenario(localStorage.token, {
+						assignment_id: state.assignment_id,
+						skip_stage: 'step1',
+						skip_reason: 'not_applicable',
+						skip_reason_text: 'User marked scenario as not applicable'
+					});
+					console.log('✅ Called /skip endpoint for assignment:', state.assignment_id);
+				} catch (e) {
+					console.error('Failed to call /skip endpoint (non-blocking):', e);
+					// Continue even if skip endpoint fails
+				}
+			}
+			
 			// Save skip decision immediately to backend
 			// Note: Highlights in `selection` table remain untouched (already saved when user highlighted)
 			// Only `moderation_session.highlighted_texts` is set to empty array
@@ -2798,6 +3038,20 @@ function cancelReset() {}
 		// This updates scenarioStates Map which triggers scenarioStatesUpdateTrigger
 		// and scenarioCompletionStatuses reactive array to recompute
 		saveCurrentScenarioState();
+		
+		// Call /complete endpoint for new assignment tracking system
+		const state = scenarioStates.get(selectedScenarioIndex);
+		if (state?.assignment_id && prompt !== CUSTOM_SCENARIO_PROMPT) {
+			try {
+				const completeResponse = await completeScenario(localStorage.token, {
+					assignment_id: state.assignment_id
+				});
+				console.log('✅ Called /complete endpoint for assignment:', state.assignment_id, 'issue_any:', completeResponse.issue_any);
+			} catch (e) {
+				console.error('Failed to call /complete endpoint (non-blocking):', e);
+				// Continue even if complete endpoint fails
+			}
+		}
 		
 		// Save identification completion to backend with is_final_version: true
 		// Use try-catch to ensure errors don't prevent step completion
@@ -3777,6 +4031,11 @@ onMount(async () => {
 		saveCurrentScenarioState();
 		// Clean up timer on component destroy
 		stopTimer();
+		// Cleanup abandonment timeout
+		if (abandonmentTimeout) {
+			clearTimeout(abandonmentTimeout);
+			abandonmentTimeout = null;
+		}
 		// Remove event listener
 		window.removeEventListener('child-profiles-updated', handleProfileUpdate);
 	});
