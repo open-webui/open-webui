@@ -2,7 +2,6 @@ import logging
 import os
 import uuid
 import json
-from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -377,35 +376,39 @@ async def search_files(
         description="Filename pattern to search for. Supports wildcards such as '*.txt'",
     ),
     content: bool = Query(True),
+    skip: int = Query(0, ge=0, description="Number of files to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of files to return"),
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
     """
     Search for files by filename with support for wildcard patterns.
+    Uses SQL-based filtering with pagination for better performance.
     """
-    # Get files according to user role
-    if user.role == "admin":
-        files = Files.get_files(db=db)
-    else:
-        files = Files.get_files_by_user_id(user.id, db=db)
+    # Determine user_id: null for admin (search all), user.id for regular users
+    user_id = None if user.role == "admin" else user.id
 
-    # Get matching files
-    matching_files = [
-        file for file in files if fnmatch(file.filename.lower(), filename.lower())
-    ]
+    # Use optimized database query with pagination
+    files = Files.search_files(
+        user_id=user_id,
+        filename=filename,
+        skip=skip,
+        limit=limit,
+        db=db,
+    )
 
-    if not matching_files:
+    if not files:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No files found matching the pattern.",
         )
 
     if not content:
-        for file in matching_files:
-            if "content" in file.data:
+        for file in files:
+            if file.data and "content" in file.data:
                 del file.data["content"]
 
-    return matching_files
+    return files
 
 
 ############################
