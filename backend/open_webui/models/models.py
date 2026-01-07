@@ -81,7 +81,7 @@ class Model(Base):
 
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
-    # - `None`: Public access, available to all users with the "user" role.
+    # - `None`: PRIVATE access, restricted exclusively to the owner (creator only).
     # - `{}`: Private access, restricted exclusively to the owner.
     # - Custom permissions: Specific access control for reading and writing;
     #   Can specify group or user-level restrictions:
@@ -95,6 +95,7 @@ class Model(Base):
     #          "user_ids":  ["user_id1", "user_id2"]
     #      }
     #   }
+    # NOTE: Models are PRIVATE by default. They must be explicitly shared via group assignments.
 
     is_active = Column(Boolean, default=True)
 
@@ -179,14 +180,30 @@ class ModelsTable:
     def get_all_models(
         self, user_id, user_email: str = None, permission: str = "read"
     ) -> list[ModelModel]:
+        from open_webui.utils.workspace_access import item_assigned_to_user_groups
+        
         with get_db() as db:
             raw_models = db.query(Model).all()
 
         filtered = []
         for model in raw_models:
-            if model.created_by == user_email or has_access(
-                user_id, permission, model.access_control
-            ):
+            # If user is the creator, always include
+            if model.created_by == user_email:
+                filtered.append(model)
+                continue
+            
+            # ENFORCE: If access_control is None, treat as PRIVATE (skip for other users)
+            # DEFAULT BEHAVIOR: Models are PRIVATE by default, NOT public
+            if model.access_control is None:
+                continue  # Skip models without access_control (private to creator only)
+            
+            # Check group assignments (NEW)
+            if item_assigned_to_user_groups(user_id, model, permission):
+                filtered.append(model)
+                continue
+            
+            # Check has_access for models with explicit access_control
+            if has_access(user_id, permission, model.access_control):
                 filtered.append(model)
 
         return [ModelModel.model_validate(m) for m in filtered]

@@ -151,65 +151,87 @@ async def get_function_models(request, user: UserModel = None):
     if user is None:
         return []
     
+    from open_webui.models.groups import Groups
+    from open_webui.models.users import Users
+    from open_webui.models.models import Models
+    
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
     for pipe in pipes:
-        if (user.role == "admin" and pipe.created_by == user.email) or (user.role == "user") or is_super_admin(user):
-            function_module = get_function_module_by_id(request, pipe.id)
+        # For super admins: show all pipes
+        if is_super_admin(user):
+            # Process pipe and add to pipe_models (continue to processing logic below)
+            pass
+        # For admins: only show pipes they created
+        elif user.role == "admin":
+            if pipe.created_by != user.email:
+                continue  # Skip pipes created by other admins
+        # For users: only show pipes where creator has models assigned to user's groups
+        elif user.role == "user":
+            # Get user's groups
+            user_groups = Groups.get_groups_by_member_id(user.id)
+            user_group_ids = [g.id for g in user_groups]
+            
+            # Get pipe creator (admin)
+            pipe_creator = Users.get_user_by_email(pipe.created_by)
+            if not pipe_creator:
+                continue  # Skip if creator not found
+            
+            # Check if pipe creator has any models assigned to user's groups
+            has_access = False
+            creator_models = Models.get_all_models(pipe_creator.id, pipe_creator.email)
+            for model in creator_models:
+                if model.access_control:
+                    read_groups = model.access_control.get("read", {}).get("group_ids", [])
+                    if any(gid in user_group_ids for gid in read_groups):
+                        has_access = True
+                        break
+            
+            if not has_access:
+                continue  # Skip this pipe - user doesn't have access via group assignments
+        else:
+            # Unknown role - skip for safety
+            log.warning(f"Unknown user role '{user.role}' for user {user.email} - skipping pipe {pipe.id}")
+            continue
+        
+        # If we reach here, the user has access to this pipe - process it
+        function_module = get_function_module_by_id(request, pipe.id)
 
-            # Check if function is a manifold
-            if hasattr(function_module, "pipes"):
+        # Check if function is a manifold
+        if hasattr(function_module, "pipes"):
+            sub_pipes = []
+
+            # Handle pipes being a list, sync function, or async function
+            try:
+                if callable(function_module.pipes):
+                    if asyncio.iscoroutinefunction(function_module.pipes):
+                        sub_pipes = await function_module.pipes()
+                    else:
+                        sub_pipes = function_module.pipes()
+                else:
+                    sub_pipes = function_module.pipes
+            except Exception as e:
+                log.exception(e)
                 sub_pipes = []
 
-                # Handle pipes being a list, sync function, or async function
-                try:
-                    if callable(function_module.pipes):
-                        if asyncio.iscoroutinefunction(function_module.pipes):
-                            sub_pipes = await function_module.pipes()
-                        else:
-                            sub_pipes = function_module.pipes()
-                    else:
-                        sub_pipes = function_module.pipes
-                except Exception as e:
-                    log.exception(e)
-                    sub_pipes = []
+            log.debug(
+                f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
+            )
 
-                log.debug(
-                    f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
-                )
+            for p in sub_pipes:
+                sub_pipe_id = f'{pipe.id}.{p["id"]}'
+                sub_pipe_name = p["name"]
 
-                for p in sub_pipes:
-                    sub_pipe_id = f'{pipe.id}.{p["id"]}'
-                    sub_pipe_name = p["name"]
+                if hasattr(function_module, "name"):
+                    sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
 
-                    if hasattr(function_module, "name"):
-                        sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
-
-                    pipe_flag = {"type": pipe.type}
-
-                    pipe_models.append(
-                        {
-                            "id": sub_pipe_id,
-                            "name": sub_pipe_name,
-                            "object": "model",
-                            "created": pipe.created_at,
-                            "owned_by": "openai",
-                            "pipe": pipe_flag,
-                            "created_by": pipe.created_by,
-                        }
-                    )
-            else:
-                pipe_flag = {"type": "pipe"}
-
-                log.debug(
-                    f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
-                )
+                pipe_flag = {"type": pipe.type}
 
                 pipe_models.append(
                     {
-                        "id": pipe.id,
-                        "name": pipe.name,
+                        "id": sub_pipe_id,
+                        "name": sub_pipe_name,
                         "object": "model",
                         "created": pipe.created_at,
                         "owned_by": "openai",
@@ -217,6 +239,24 @@ async def get_function_models(request, user: UserModel = None):
                         "created_by": pipe.created_by,
                     }
                 )
+        else:
+            pipe_flag = {"type": "pipe"}
+
+            log.debug(
+                f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
+            )
+
+            pipe_models.append(
+                {
+                    "id": pipe.id,
+                    "name": pipe.name,
+                    "object": "model",
+                    "created": pipe.created_at,
+                    "owned_by": "openai",
+                    "pipe": pipe_flag,
+                    "created_by": pipe.created_by,
+                }
+            )
 
     return pipe_models
 

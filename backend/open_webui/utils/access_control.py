@@ -120,11 +120,10 @@ def has_access(
     type: str = "write",
     access_control: Optional[dict] = None,
 ) -> bool:
+    # ENFORCE: access_control=None means PRIVATE (creator only), NOT public
+    # This function should only be called for models with explicit access_control
     if access_control is None:
-        user = Users.get_user_by_id(user_id)
-        if user.role == "user":
-            return type == "read"
-        return False
+        return False  # Private by default - no access unless user is creator
 
     user_groups = Groups.get_groups_by_member_id(user_id)
     user_group_ids = [group.id for group in user_groups]

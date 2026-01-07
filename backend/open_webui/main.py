@@ -1176,9 +1176,24 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
             model_info = model_info_dict.get(model["id"])
             if model_info:
                 # Model exists in database - check database access control
-                if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                ):
+                from open_webui.utils.workspace_access import item_assigned_to_user_groups
+                
+                # Check if user is creator
+                if user.id == model_info.user_id:
+                    filtered_models.append(model)
+                    continue
+                
+                # ENFORCE: If access_control is None, treat as PRIVATE (skip for other users)
+                if model_info.access_control is None:
+                    continue  # Skip models without access_control (private to creator only)
+                
+                # Check group assignments
+                if item_assigned_to_user_groups(user.id, model_info, "read"):
+                    filtered_models.append(model)
+                    continue
+                
+                # Check has_access for models with explicit access_control
+                if has_access(user.id, type="read", access_control=model_info.access_control):
                     filtered_models.append(model)
             else:
                 # Model not in database (e.g., Portkey/external models)

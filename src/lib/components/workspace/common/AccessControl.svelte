@@ -21,7 +21,21 @@
 	onMount(async () => {
   groups = await getGroups(localStorage.token);
 
-  if (accessControl !== null) {
+  // ENFORCE: If accessControl is null (legacy models), convert to PRIVATE format
+  // Models are PRIVATE by default and must be explicitly shared via group assignments
+  if (accessControl === null || accessControl === undefined) {
+    accessControl = {
+      read: {
+        group_ids: [],
+        user_ids: []
+      },
+      write: {
+        group_ids: [],
+        user_ids: []
+      }
+    };
+  } else {
+    // Normalize existing accessControl to ensure proper structure
     accessControl = {
       read: {
         group_ids: accessControl?.read?.group_ids ?? [],
@@ -96,32 +110,27 @@
 				<select
 					id="models"
 					class="outline-hidden bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
-					value={accessControl !== null ? 'private' : 'public'}
+					value={accessControl !== null ? 'private' : 'private'}
 					on:change={(e) => {
-						if (e.target.value === 'public') {
-							accessControl = null;
-						} else {
-							accessControl = {
-								read: {
-									group_ids: []
-								},
-								write: {
-									group_ids: []
-								}
-							};
-						}
+						// ENFORCE: Models are always PRIVATE by default
+						// Public option removed - models must be explicitly shared via group assignments
+						// If user wants to share, they must add groups to access_control
+						accessControl = {
+							read: {
+								group_ids: []
+							},
+							write: {
+								group_ids: []
+							}
+						};
 					}}
+					disabled
 				>
-					<option class=" text-gray-700" value="private" selected={accessControl !== null}>Private</option>
-					<option class=" text-gray-700" value="public" selected={accessControl === null}>Public</option>
+					<option class=" text-gray-700" value="private" selected>Private</option>
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
-					{#if accessControl !== null}
-						{$i18n.t('Only select users and groups with permission can access')}
-					{:else}
-						{$i18n.t('Accessible to all users')}
-					{/if}
+					{$i18n.t('Only select users and groups with permission can access. Add groups below to share.')}
 				</div>
 			</div>
 		</div>

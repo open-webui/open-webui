@@ -229,6 +229,8 @@ async def get_all_models(request, user: UserModel = None):
 
 
 def check_model_access(user, model):
+    from open_webui.utils.workspace_access import item_assigned_to_user_groups
+    
     if model.get("arena"):
         if not has_access(
             user.id,
@@ -242,10 +244,22 @@ def check_model_access(user, model):
         model_info = Models.get_model_by_id(model.get("id"))
         if not model_info:
             raise Exception("Model not found")
-        elif not (
-            user.id == model_info.user_id
-            or has_access(
-                user.id, type="read", access_control=model_info.access_control
-            )
-        ):
-            raise Exception("Model not found")
+        
+        # Check if user is creator
+        if user.id == model_info.user_id:
+            return  # Creator has access
+        
+        # ENFORCE: If access_control is None, treat as PRIVATE (creator only)
+        if model_info.access_control is None:
+            raise Exception("Model not found")  # Private to creator only
+        
+        # Check group assignments
+        if item_assigned_to_user_groups(user.id, model_info, "read"):
+            return  # User has access via group assignment
+        
+        # Check has_access for models with explicit access_control
+        if has_access(user.id, type="read", access_control=model_info.access_control):
+            return  # User has explicit access
+        
+        # No access
+        raise Exception("Model not found")

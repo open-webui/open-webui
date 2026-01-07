@@ -94,7 +94,8 @@
 	export let accessControl;
 
 	$: if (!edit && !clone && accessControl === undefined) {
-	// New tool: default to private access
+		// ENFORCE: Default to PRIVATE access (not public)
+		// Models are PRIVATE by default and must be explicitly shared via group assignments
 		accessControl = {
 			read: { group_ids: [], user_ids: [] },
 			write: { group_ids: [], user_ids: [] }
