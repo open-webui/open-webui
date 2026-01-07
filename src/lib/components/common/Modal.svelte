@@ -8,6 +8,7 @@
 	export let size = 'md';
 	export let containerClassName = 'p-3';
 	export let className = 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-4xl';
+	export let dismissable = true;
 
 	let modalElement = null;
 	let mounted = false;
@@ -40,7 +41,7 @@
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape' && isTopModal()) {
+		if (dismissable && event.key === 'Escape' && isTopModal()) {
 			console.log('Escape');
 			show = false;
 		}
@@ -95,7 +96,9 @@
 		style="scrollbar-gutter: stable;"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
-			show = false;
+			if (dismissable) {
+				show = false;
+			}
 		}}
 	>
 		<div
