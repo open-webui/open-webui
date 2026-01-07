@@ -70,6 +70,7 @@ from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.azure import search_azure
 from open_webui.retrieval.web.exa import search_exa
+from open_webui.retrieval.web.linkup import search_linkup
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
 from open_webui.retrieval.web.firecrawl import search_firecrawl
@@ -541,6 +542,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "BING_SEARCH_V7_ENDPOINT": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
+            "LINKUP_API_KEY": request.app.state.config.LINKUP_API_KEY,
+            "LINKUP_DEPTH": request.app.state.config.LINKUP_DEPTH,
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -601,6 +604,8 @@ class WebConfig(BaseModel):
     BING_SEARCH_V7_ENDPOINT: Optional[str] = None
     BING_SEARCH_V7_SUBSCRIPTION_KEY: Optional[str] = None
     EXA_API_KEY: Optional[str] = None
+    LINKUP_API_KEY: Optional[str] = None
+    LINKUP_DEPTH: Optional[str] = None
     PERPLEXITY_API_KEY: Optional[str] = None
     PERPLEXITY_MODEL: Optional[str] = None
     PERPLEXITY_SEARCH_CONTEXT_USAGE: Optional[str] = None
@@ -1088,6 +1093,8 @@ async def update_rag_config(
             form_data.web.BING_SEARCH_V7_SUBSCRIPTION_KEY
         )
         request.app.state.config.EXA_API_KEY = form_data.web.EXA_API_KEY
+        request.app.state.config.LINKUP_API_KEY = form_data.web.LINKUP_API_KEY
+        request.app.state.config.LINKUP_DEPTH = form_data.web.LINKUP_DEPTH
         request.app.state.config.PERPLEXITY_API_KEY = form_data.web.PERPLEXITY_API_KEY
         request.app.state.config.PERPLEXITY_MODEL = form_data.web.PERPLEXITY_MODEL
         request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE = (
@@ -1234,6 +1241,8 @@ async def update_rag_config(
             "BING_SEARCH_V7_ENDPOINT": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
+            "LINKUP_API_KEY": request.app.state.config.LINKUP_API_KEY,
+            "LINKUP_DEPTH": request.app.state.config.LINKUP_DEPTH,
             "PERPLEXITY_API_KEY": request.app.state.config.PERPLEXITY_API_KEY,
             "PERPLEXITY_MODEL": request.app.state.config.PERPLEXITY_MODEL,
             "PERPLEXITY_SEARCH_CONTEXT_USAGE": request.app.state.config.PERPLEXITY_SEARCH_CONTEXT_USAGE,
@@ -1993,6 +2002,17 @@ def search_web(
             )
         else:
             raise Exception("No EXA_API_KEY found in environment variables")
+    elif engine == "linkup":
+        if request.app.state.config.LINKUP_API_KEY:
+            return search_linkup(
+                request.app.state.config.LINKUP_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                depth=request.app.state.config.LINKUP_DEPTH,
+            )
+        else:
+            raise Exception("No LINKUP_API_KEY found in environment variables")
     elif engine == "searchapi":
         if request.app.state.config.SEARCHAPI_API_KEY:
             return search_searchapi(
