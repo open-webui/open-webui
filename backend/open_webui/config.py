@@ -1470,6 +1470,10 @@ USER_PERMISSIONS_FEATURES_API_KEYS = (
     os.environ.get("USER_PERMISSIONS_FEATURES_API_KEYS", "False").lower() == "true"
 )
 
+USER_PERMISSIONS_FEATURES_MEMORIES = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_MEMORIES", "True").lower() == "true"
+)
+
 
 USER_PERMISSIONS_SETTINGS_INTERFACE = (
     os.environ.get("USER_PERMISSIONS_SETTINGS_INTERFACE", "True").lower() == "true"
@@ -1533,6 +1537,7 @@ DEFAULT_USER_PERMISSIONS = {
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
+        "memories": USER_PERMISSIONS_FEATURES_MEMORIES,
     },
     "settings": {
         "interface": USER_PERMISSIONS_SETTINGS_INTERFACE,
@@ -2081,6 +2086,12 @@ ENABLE_CODE_INTERPRETER = PersistentConfig(
     "ENABLE_CODE_INTERPRETER",
     "code_interpreter.enable",
     os.environ.get("ENABLE_CODE_INTERPRETER", "True").lower() == "true",
+)
+
+ENABLE_MEMORIES = PersistentConfig(
+    "ENABLE_MEMORIES",
+    "memories.enable",
+    os.environ.get("ENABLE_MEMORIES", "True").lower() == "true",
 )
 
 CODE_INTERPRETER_ENGINE = PersistentConfig(
