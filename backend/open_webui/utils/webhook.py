@@ -3,7 +3,7 @@ import logging
 import aiohttp
 
 from open_webui.config import WEBUI_FAVICON_URL
-from open_webui.env import VERSION
+from open_webui.env import AIOHTTP_CLIENT_TIMEOUT, VERSION
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,9 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
             payload = {**event_data}
 
         log.debug(f"payload: {payload}")
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        ) as session:
             async with session.post(url, json=payload) as r:
                 r_text = await r.text()
                 r.raise_for_status()

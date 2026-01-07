@@ -923,6 +923,48 @@ def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
+def inject_file_context_into_messages(messages: list) -> None:
+    """
+    Inject file context into each user message that has files.
+    Modifies messages in-place by prepending file info to message content.
+    """
+    for message in messages:
+        if message.get("role") != "user":
+            continue
+        
+        files = message.get("files", [])
+        if not files:
+            continue
+        
+        # Build XML context for this message's files
+        file_entries = []
+        for file in files:
+            if not file.get("url"):
+                continue
+            
+            attrs = [f'type="{file.get("type", "file")}"']
+            if file.get("content_type"):
+                attrs.append(f'content_type="{file["content_type"]}"')
+            if file.get("name"):
+                attrs.append(f'name="{file["name"]}"')
+            attrs.append(f'url="{file["url"]}"')
+            file_entries.append(f'<file {" ".join(attrs)}/>')
+        
+        if not file_entries:
+            continue
+        
+        files_context = "<attached_files>\n" + "\n".join(file_entries) + "\n</attached_files>\n\n"
+        
+        # Prepend to message content
+        content = message.get("content", "")
+        if isinstance(content, str):
+            message["content"] = files_context + content
+        elif isinstance(content, list):
+            # For multimodal content, prepend as text item
+            message["content"] = [{"type": "text", "text": files_context}] + content
+
+
+
 async def chat_image_generation_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
@@ -1748,6 +1790,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 {"type": "function", "function": tool.get("spec", {})}
                 for tool in tools_dict.values()
             ]
+            # Inject file context into each user message that has files attached
+            inject_file_context_into_messages(form_data.get("messages", []))
+
+
         else:
             # If the function calling is not native, then call the tools function calling handler
             try:
