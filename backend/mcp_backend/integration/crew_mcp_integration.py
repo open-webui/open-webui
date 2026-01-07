@@ -193,23 +193,19 @@ class CrewMCPManager:
     def get_azure_llm_config(self) -> LLM:
         """Get Azure OpenAI LLM configuration for CrewAI"""
         # Set environment variables for LiteLLM/CrewAI Azure OpenAI
+        # CrewAI 1.7.2 uses LiteLLM which requires specific Azure env var format
         os.environ["AZURE_API_KEY"] = self.azure_config.api_key
         os.environ["AZURE_API_BASE"] = self.azure_config.endpoint
         os.environ["AZURE_API_VERSION"] = self.azure_config.api_version
 
-        # Also set the alternative environment variable names
-        os.environ["OPENAI_API_KEY"] = self.azure_config.api_key
-        os.environ["OPENAI_API_BASE"] = self.azure_config.endpoint
-
         # Create LLM instance with Azure configuration
-        # Use the environment variables approach which CrewAI handles better
-        # Set low temperature for more consistent formatting preservation
+        # CrewAI 1.7.2 LiteLLM format: azure/<deployment_name>
+        # Must NOT include base_url or api_key - LiteLLM reads from env vars
         # Add timeout to prevent hanging in K8s environments
+        # O3-mini doesn't support temperature or max_completion_tokens parameters
         return LLM(
             model=f"azure/{self.azure_config.deployment}",
-            temperature=0.0,
             timeout=30,  # 30 second timeout per LLM API call
-            max_tokens=4000,  # Limit response length
         )
 
     def run_time_crew(self, query: str = "What's the current time?") -> str:
