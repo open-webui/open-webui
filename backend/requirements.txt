@@ -1,6 +1,6 @@
 fastapi==0.111.0
 uvicorn[standard]==0.30.6
-pydantic==2.11.10
+pydantic>=2.11.9,<2.12  # crewai 1.7.2 requires ~=2.11.9
 python-multipart==0.0.18
 
 Flask==3.1.0
@@ -128,7 +128,7 @@ grpcio>=1.49.1,<=1.67.1
 # Azure Storage for NewsDesk integration
 azure-storage-blob==12.25.1
 
-# Opentelemetry
-opentelemetry-api==1.39.1
-opentelemetry-sdk==1.39.1
-opentelemetry-exporter-otlp==1.39.1
+# Opentelemetry - versions constrained by crewai 1.7.2 (~=1.34.0)
+opentelemetry-api>=1.34.0,<1.35
+opentelemetry-sdk>=1.34.0,<1.35
+opentelemetry-exporter-otlp>=1.34.0,<1.35
