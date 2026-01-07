@@ -2,17 +2,19 @@
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import { getModels as _getModels, getToolServersData } from '$lib/apis';
+	import { getTools } from '$lib/apis/tools';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { models, settings, toolServers, user } from '$lib/stores';
+	import { models, settings, tools, toolServers, user } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Connection from './Tools/Connection.svelte';
+	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
 
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
 
@@ -21,6 +23,8 @@
 	let servers = null;
 	let showConnectionModal = false;
 
+	let selectedToolIds = [];
+
 	const addConnectionHandler = async (server) => {
 		servers = [...servers, server];
 		await updateHandler();
@@ -28,7 +32,8 @@
 
 	const updateHandler = async () => {
 		await saveSettings({
-			toolServers: servers
+			toolServers: servers,
+			toolIds: selectedToolIds
 		});
 
 		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
@@ -48,6 +53,11 @@
 	};
 
 	onMount(async () => {
+		if ($tools === null) {
+			await tools.set(await getTools(localStorage.token));
+		}
+
+		selectedToolIds = $settings.toolIds ?? [];
 		servers = $settings?.toolServers ?? [];
 	});
 </script>
@@ -64,6 +74,24 @@
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if servers !== null}
 			<div class="">
+				<div class="mb-2">
+					<div class="flex w-full justify-between mb-2">
+						<div class=" self-center text-sm font-medium">{$i18n.t('Default Tools')}</div>
+					</div>
+
+					{#if $tools}
+						<ToolsSelector tools={$tools} bind:selectedToolIds />
+					{:else}
+						<div class="flex justify-center">
+							<div class="my-auto">
+								<Spinner className="size-6" />
+							</div>
+						</div>
+					{/if}
+				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
 				<div class="pr-1.5">
 					<!-- {$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
 						URL: 'server?.url'

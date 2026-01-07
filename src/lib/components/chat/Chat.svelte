@@ -248,6 +248,16 @@
 		onSelectedModelIdsChange();
 	}
 
+	let settingsLoaded = false;
+
+	$: if (settingsLoaded === false && $settings && Object.keys($settings).length > 0) {
+		settingsLoaded = true;
+
+		if ($chatId === '' && Object.keys(history.messages).length === 0) {
+			setDefaults();
+		}
+	}
+
 	const onSelectedModelIdsChange = () => {
 		resetInput();
 		oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModelIds));
@@ -266,12 +276,26 @@
 	};
 
 	const setDefaults = async () => {
-		if (!$tools) {
-			tools.set(await getTools(localStorage.token));
+		let _tools = await $tools;
+
+		if (!_tools) {
+			_tools = await getTools(localStorage.token);
+			tools.set(_tools);
 		}
+
 		if (!$functions) {
 			functions.set(await getFunctions(localStorage.token));
 		}
+
+		if ($settings?.toolIds) {
+			selectedToolIds = [
+				...new Set([
+					...selectedToolIds,
+					...($settings.toolIds ?? []).filter((id) => _tools?.find((t) => t.id === id))
+				])
+			];
+		}
+
 		if (selectedModels.length !== 1 && !atSelectedModel) {
 			return;
 		}
@@ -282,7 +306,9 @@
 			if (model?.info?.meta?.toolIds) {
 				selectedToolIds = [
 					...new Set(
-						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
+						[...selectedToolIds, ...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
+							_tools?.find((t) => t.id === id)
+						)
 					)
 				];
 			}
