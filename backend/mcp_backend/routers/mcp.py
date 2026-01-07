@@ -199,14 +199,29 @@ async def get_all_mcp_tools(request: Request) -> Dict[str, List]:
     """Get all tools from all configured MCP servers"""
     all_tools = []
 
-    # First, get tools from FastMCP manager (built-in servers)
+    # First, get tools from CrewAI singleton adapters (built-in servers)
+    # This uses pre-initialized adapters instead of creating fresh connections
     try:
-        if hasattr(request.app.state, "mcp_manager") and request.app.state.mcp_manager:
-            fastmcp_tools = await request.app.state.mcp_manager.get_all_tools()
-            all_tools.extend(fastmcp_tools)
-            log.info(f"Got {len(fastmcp_tools)} tools from FastMCP manager")
+        from mcp_backend.routers.crew_mcp import crew_mcp_manager
+
+        if crew_mcp_manager:
+            crew_tools = crew_mcp_manager.get_available_tools()
+
+            # Convert CrewAI tool format to MCP tool format
+            for crew_tool in crew_tools:
+                tool_dict = {
+                    "name": crew_tool["name"],
+                    "description": crew_tool["description"],
+                    "inputSchema": {},  # CrewAI tools don't expose schema
+                    "mcp_server_name": crew_tool["server"],
+                    "mcp_server_idx": 0,  # Not applicable for singleton adapters
+                    "is_builtin": True,
+                }
+                all_tools.append(tool_dict)
+
+            log.info(f"Got {len(crew_tools)} tools from CrewAI singleton adapters")
     except Exception as e:
-        log.exception(f"Error getting tools from FastMCP manager: {e}")
+        log.exception(f"Error getting tools from CrewAI singleton adapters: {e}")
 
     # Then, get tools from external MCP servers (if any configured)
     try:

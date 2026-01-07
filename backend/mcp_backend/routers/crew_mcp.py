@@ -293,6 +293,8 @@ crew_mcp_manager = None
 if CrewMCPManager:
     try:
         crew_mcp_manager = CrewMCPManager()
+        # Initialize MCP adapters once at startup
+        crew_mcp_manager.initialize_mcp_adapters()
     except Exception as e:
         logging.error(f"Failed to initialize CrewMCPManager: {e}")
 
