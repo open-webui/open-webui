@@ -385,6 +385,7 @@ async def run_crew_query(
         import concurrent.futures
 
         loop = asyncio.get_event_loop()
+        log.info("Starting crew execution in thread pool executor")
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             result = await loop.run_in_executor(
                 executor,
@@ -393,7 +394,14 @@ async def run_crew_query(
                 selected_tools,
             )
 
+        log.info(
+            f"Crew execution finished. Result type: {type(result)}, length: {len(result) if result else 0}"
+        )
+
         used_tools = [tool["name"] for tool in tools]  # All tools potentially available
+
+        log.info(f"Crew execution completed. Result length: {len(result)} characters")
+        log.info(f"Crew result preview: {result[:200]}...")
 
         # Generate proper title and tags if chat_id is provided (like standard chat flow)
         if request.chat_id:
@@ -436,11 +444,20 @@ async def run_crew_query(
                 # Completely isolate any background task creation exceptions
                 pass
 
-        return CrewMCPResponse(result=result, tools_used=used_tools, success=True)
+        log.info(
+            f"Returning CrewMCPResponse with success=True, result length={len(result)}"
+        )
+        response = CrewMCPResponse(result=result, tools_used=used_tools, success=True)
+        log.info(f"CrewMCPResponse object created successfully")
+        return response
 
     except Exception as e:
         log.exception(f"Error running CrewAI query: {e}")
-        return CrewMCPResponse(result="", tools_used=[], success=False, error=str(e))
+        error_response = CrewMCPResponse(
+            result="", tools_used=[], success=False, error=str(e)
+        )
+        log.info(f"Returning error response")
+        return error_response
 
 
 @router.post("/multi")
