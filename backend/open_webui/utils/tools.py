@@ -44,7 +44,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
 )
 from open_webui.tools.builtin import (
-    web_search,
+    search_web,
     fetch_url,
     generate_image,
     edit_image,
@@ -389,7 +389,7 @@ def get_builtin_tools(
     if getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False) and get_model_capability(
         "web_search"
     ):
-        builtin_functions.extend([web_search, fetch_url])
+        builtin_functions.extend([search_web, fetch_url])
 
     # Add image generation/edit tools if enabled globally AND model has image_generation capability
     if getattr(

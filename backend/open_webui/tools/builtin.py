@@ -15,7 +15,7 @@ from typing import Optional
 from fastapi import Request
 
 from open_webui.models.users import UserModel
-from open_webui.routers.retrieval import search_web
+from open_webui.routers.retrieval import search_web as _search_web
 from open_webui.retrieval.utils import get_content_from_url
 from open_webui.routers.images import (
     image_generations,
@@ -142,14 +142,16 @@ async def calculate_timestamp(
 # =============================================================================
 
 
-async def web_search(
+async def search_web(
     query: str,
     count: int = 5,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
     """
-    Search the web for information on a given topic.
+    Search the public web for information. Best for current events, external references,
+    or topics not covered in internal documents. If knowledge base tools are available,
+    consider checking those first for internal information.
 
     :param query: The search query to look up
     :param count: Number of results to return (default: 5)
@@ -162,7 +164,7 @@ async def web_search(
         engine = __request__.app.state.config.WEB_SEARCH_ENGINE
         user = UserModel(**__user__) if __user__ else None
 
-        results = search_web(__request__, engine, query, user)
+        results = _search_web(__request__, engine, query, user)
 
         # Limit results
         results = results[:count] if results else []
@@ -172,7 +174,7 @@ async def web_search(
             ensure_ascii=False,
         )
     except Exception as e:
-        log.exception(f"web_search error: {e}")
+        log.exception(f"search_web error: {e}")
         return json.dumps({"error": str(e)})
 
 
@@ -1416,8 +1418,9 @@ async def query_knowledge_bases(
     __model_knowledge__: list[dict] = None,
 ) -> str:
     """
-    Search knowledge bases using semantic/vector search to find relevant content chunks.
-    Handles collections (KBs), individual files, and notes.
+    Search internal knowledge bases using semantic/vector search. This should be your first
+    choice for finding information before searching the web. Searches across collections (KBs),
+    individual files, and notes that the user has access to.
 
     :param query: The search query to find semantically relevant content
     :param knowledge_ids: Optional list of KB ids to limit search to specific knowledge bases

@@ -159,7 +159,7 @@ def get_citation_source_from_tool_result(
     Returns a list of sources (usually one, but query_knowledge_bases may return multiple).
     """
     try:
-        if tool_name == "web_search":
+        if tool_name == "search_web":
             # Parse JSON array: [{"title": "...", "link": "...", "snippet": "..."}]
             results = json.loads(tool_result)
             documents = []
@@ -178,7 +178,7 @@ def get_citation_source_from_tool_result(
                 })
 
             return [{
-                "source": {"name": "web_search", "id": "web_search"},
+                "source": {"name": "search_web", "id": "search_web"},
                 "document": documents,
                 "metadata": metadata,
             }]
@@ -3233,7 +3233,7 @@ async def process_chat_response(
                         )
 
                         # Extract citation sources from tool results
-                        if tool_function_name in ["web_search", "view_knowledge_file", "query_knowledge_bases"] and tool_result:
+                        if tool_function_name in ["search_web", "view_knowledge_file", "query_knowledge_bases"] and tool_result:
                             try:
                                 citation_sources = get_citation_source_from_tool_result(
                                     tool_name=tool_function_name,
