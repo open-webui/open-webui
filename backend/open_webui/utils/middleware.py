@@ -147,12 +147,16 @@ def get_citation_source_from_tool_result(
     tool_params: dict,
     tool_result: str,
     tool_id: str = ""
-) -> dict:
+) -> list[dict]:
     """
-    Parse a tool's result and convert it to a source dict for citation display.
+    Parse a tool's result and convert it to source dicts for citation display.
     
-    For web_search: extracts title, link, snippet from each search result.
-    For other tools: wraps the raw result as a generic source.
+    Follows the source format conventions from get_sources_from_items:
+    - source: file/item info object with id, name, type
+    - document: list of document contents  
+    - metadata: list of metadata objects with source, file_id, name fields
+    
+    Returns a list of sources (usually one, but query_knowledge_bases may return multiple).
     """
     try:
         if tool_name == "web_search":
@@ -173,25 +177,90 @@ def get_citation_source_from_tool_result(
                     "url": link,
                 })
 
-            return {
+            return [{
                 "source": {"name": "web_search", "id": "web_search"},
                 "document": documents,
                 "metadata": metadata,
-            }
+            }]
+
+        elif tool_name == "view_knowledge_file":
+            file_data = json.loads(tool_result)
+            filename = file_data.get("filename", "Unknown File")
+            file_id = file_data.get("id", "")
+            knowledge_name = file_data.get("knowledge_name", "")
+            
+            return [{
+                "source": {
+                    "id": file_id,
+                    "name": filename,
+                    "type": "file",
+                },
+                "document": [file_data.get("content", "")],
+                "metadata": [{
+                    "file_id": file_id,
+                    "name": filename,
+                    "source": filename,
+                    **({"knowledge_name": knowledge_name} if knowledge_name else {}),
+                }],
+            }]
+
+        elif tool_name == "query_knowledge_bases":
+            chunks = json.loads(tool_result)
+            
+            # Group chunks by source for better citation display
+            # Each unique source becomes a separate source entry
+            sources_by_file = {}
+            
+            for chunk in chunks:
+                source_name = chunk.get("source", "Unknown")
+                file_id = chunk.get("file_id", "")
+                note_id = chunk.get("note_id", "")
+                chunk_type = chunk.get("type", "file")
+                content = chunk.get("content", "")
+                
+                # Use file_id or note_id as the key
+                key = file_id or note_id or source_name
+                
+                if key not in sources_by_file:
+                    sources_by_file[key] = {
+                        "source": {
+                            "id": file_id or note_id,
+                            "name": source_name,
+                            "type": chunk_type,
+                        },
+                        "document": [],
+                        "metadata": [],
+                    }
+                
+                sources_by_file[key]["document"].append(content)
+                sources_by_file[key]["metadata"].append({
+                    "file_id": file_id,
+                    "name": source_name,
+                    "source": source_name,
+                    **({"note_id": note_id} if note_id else {}),
+                })
+            
+            # Return all grouped sources as a list
+            if sources_by_file:
+                return list(sources_by_file.values())
+            
+            # Empty result fallback
+            return []
+
         else:
             # Fallback for other tools
-            return {
-                "source": {"name": tool_name, "id": tool_id or tool_name},
+            return [{
+                "source": {"name": tool_name, "type": "tool", "id": tool_id or tool_name},
                 "document": [str(tool_result)],
-                "metadata": [{"source": tool_id or tool_name, "parameters": tool_params}],
-            }
+                "metadata": [{"source": tool_name, "name": tool_name}],
+            }]
     except Exception as e:
         log.exception(f"Error parsing tool result for {tool_name}: {e}")
-        return {
-            "source": {"name": tool_name, "id": tool_id or tool_name},
+        return [{
+            "source": {"name": tool_name, "type": "tool"},
             "document": [str(tool_result)],
-            "metadata": [{"source": tool_id or tool_name}],
-        }
+            "metadata": [{"source": tool_name}],
+        }]
 
 
 def apply_source_context_to_messages(
@@ -3163,16 +3232,16 @@ async def process_chat_response(
                             )
                         )
 
-                        # Extract citation sources from web_search results
-                        if tool_function_name == "web_search" and tool_result:
+                        # Extract citation sources from tool results
+                        if tool_function_name in ["web_search", "view_knowledge_file", "query_knowledge_bases"] and tool_result:
                             try:
-                                citation_source = get_citation_source_from_tool_result(
+                                citation_sources = get_citation_source_from_tool_result(
                                     tool_name=tool_function_name,
                                     tool_params=tool_function_params,
                                     tool_result=tool_result,
                                     tool_id=tool.get("tool_id", "") if tool else ""
                                 )
-                                tool_call_sources.append(citation_source)
+                                tool_call_sources.extend(citation_sources)
                             except Exception as e:
                                 log.exception(f"Error extracting citation source: {e}")
 
