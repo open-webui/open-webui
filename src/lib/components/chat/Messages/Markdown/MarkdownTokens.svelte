@@ -144,11 +144,10 @@
 											: 'border-b border-gray-50! dark:border-gray-850!'}"
 										style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
 									>
-										{@const displayTokens = normalizeTokens(cell.tokens ?? [])}
 										<div class="break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
-												tokens={displayTokens}
+												tokens={normalizeTokens(cell.tokens ?? [])}
 												{done}
 												{onSourceClick}
 											/>
