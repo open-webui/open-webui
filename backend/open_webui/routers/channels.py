@@ -841,14 +841,16 @@ async def get_pinned_channel_messages(
     limit = PAGE_ITEM_COUNT_PINNED
 
     message_list = Messages.get_pinned_messages_by_channel_id(id, skip, limit, db=db)
-    users = {}
+
+    if not message_list:
+        return []
+
+    # Batch fetch all users in a single query (fixes N+1 problem)
+    user_ids = list(set(m.user_id for m in message_list))
+    users = {u.id: u for u in Users.get_users_by_user_ids(user_ids, db=db)}
 
     messages = []
     for message in message_list:
-        if message.user_id not in users:
-            user = Users.get_user_by_id(message.user_id, db=db)
-            users[message.user_id] = user
-
         messages.append(
             MessageWithReactionsResponse(
                 **{
