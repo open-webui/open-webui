@@ -224,8 +224,11 @@
 </div>
 
 {#if mode === 'signin'}
-<div class="mt-1 text-sm font-medium text-gray-400">
-AMD Employees please use Microsoft Login
+<div class="mt-1 text-sm font-medium text-gray-400 flex items-center justify-center gap-1">
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="size-4">
+		<path fill="#007dc1" d="M12 0C5.389 0 0 5.389 0 12s5.389 12 12 12 12-5.389 12-12S18.611 0 12 0zm0 18c-3.314 0-6-2.686-6-6s2.686-6 6-6 6 2.686 6 6-2.686 6-6 6z"/>
+	</svg>
+	AMD Employees please use OKTA Login
 </div>
 {/if}
 
@@ -288,7 +291,7 @@ AMD Employees please use Microsoft Login
 												fill="#ffb900"
 											/>
 										</svg>
-										<span>{$i18n.t('Continue with {{provider}}', { provider: 'Microsoft' })}</span>
+										<span>{$i18n.t('Continue with {{provider}}', { provider: 'OKTA' })}</span>
 									</button>
 								{/if}
 								{#if $config?.oauth?.providers?.github}
