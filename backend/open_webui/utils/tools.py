@@ -365,9 +365,6 @@ def get_builtin_tools(
     # Time utilities - always available for date calculations
     builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
-    # Chats tools - search and fetch user's chat history
-    builtin_functions.extend([search_chats, view_chat])
-
     # Knowledge base tools - conditional injection based on model knowledge
     # If model has attached knowledge (any type), only provide query_knowledge_bases
     # Otherwise, provide all KB browsing tools
@@ -380,6 +377,9 @@ def get_builtin_tools(
         builtin_functions.extend(
             [list_knowledge_bases, search_knowledge_bases, search_knowledge_files, view_knowledge_file, query_knowledge_bases]
         )
+
+    # Chats tools - search and fetch user's chat history
+    builtin_functions.extend([search_chats, view_chat])
 
     # Add memory tools if enabled for this chat
     if features.get("memory"):
