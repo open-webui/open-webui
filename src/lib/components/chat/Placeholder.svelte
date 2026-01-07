@@ -325,7 +325,7 @@
 					<div class="flex flex-row justify-center items-center gap-10 mt-5">
 						<!-- 이전 버튼 -->
 						<button
-							class="w-5 h-5 flex items-center justify-center text-[#B4BCD0] hover:text-gray-50 transition-colors"
+							class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
 							on:click={goToPrevSlide}
 							aria-label="이전"
 						>
@@ -341,7 +341,7 @@
 
 						<!-- 다음 버튼 -->
 						<button
-							class="w-5 h-5 flex items-center justify-center text-[#B4BCD0] hover:text-gray-50 transition-colors"
+							class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
 							on:click={goToNextSlide}
 							aria-label="다음"
 						>

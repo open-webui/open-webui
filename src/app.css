@@ -272,6 +272,36 @@ textarea::placeholder {
 	@apply underline;
 }
 
+/* User message bubble - always use light text on blue background */
+.user-message-bubble,
+.user-message-bubble .markdown-prose,
+.user-message-bubble .prose,
+.user-message-bubble p,
+.user-message-bubble strong,
+.user-message-bubble em,
+.user-message-bubble a,
+.user-message-bubble li,
+.user-message-bubble ul,
+.user-message-bubble ol,
+.user-message-bubble h1,
+.user-message-bubble h2,
+.user-message-bubble h3,
+.user-message-bubble h4,
+.user-message-bubble h5,
+.user-message-bubble h6,
+.user-message-bubble blockquote,
+.user-message-bubble code {
+	color: #f3f4f6 !important; /* text-gray-100 equivalent */
+}
+
+.user-message-bubble a {
+	@apply underline;
+}
+
+.user-message-bubble code {
+	background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
 .font-primary {
 	font-family: 'Archivo', 'Vazirmatn', sans-serif;
 }
