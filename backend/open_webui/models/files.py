@@ -233,6 +233,44 @@ class FilesTable:
                 for file in db.query(File).filter_by(user_id=user_id).all()
             ]
 
+    def search_files(
+        self,
+        user_id: Optional[str] = None,
+        filename_pattern: str = "*",
+        skip: int = 0,
+        limit: int = 100,
+        db: Optional[Session] = None,
+    ) -> list[FileModel]:
+        """Search files with wildcard pattern, optional user filter, and pagination."""
+        with get_db_context(db) as db:
+            query = db.query(File)
+
+            if user_id:
+                query = query.filter_by(user_id=user_id)
+
+            # Convert fnmatch pattern to SQL LIKE pattern
+            # Order matters: escape special chars first, then convert wildcards
+            # fnmatch: * = any chars, ? = single char (but commonly used as 0 or 1)
+            # SQL LIKE: % = any chars, _ = single char
+            sql_pattern = filename_pattern.replace("\\", "\\\\")  # Escape backslashes
+            sql_pattern = sql_pattern.replace("%", "\\%")  # Escape %
+            sql_pattern = sql_pattern.replace("_", "\\_")  # Escape _
+            sql_pattern = sql_pattern.replace("*", "%")  # * -> %
+            # For ?: fnmatch ? matches single char, but SQL _ is strict
+            # Convert ? to % for more lenient matching (matches 0 or 1 chars)
+            sql_pattern = sql_pattern.replace("?", "%")  # ? -> % (lenient)
+
+            if sql_pattern and sql_pattern != "%":  # If not just a catch-all
+                query = query.filter(File.filename.ilike(sql_pattern, escape="\\"))
+
+            return [
+                FileModel.model_validate(file)
+                for file in query.order_by(File.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            ]
+
     def update_file_by_id(
         self, id: str, form_data: FileUpdateForm, db: Optional[Session] = None
     ) -> Optional[FileModel]:
