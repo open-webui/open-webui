@@ -120,7 +120,7 @@ fastmcp==2.5.2
 pytz==2025.2
 
 ## CrewAI MCP Integration
-crewai==1.7.2  # Latest version - supports max_iter parameter for agent iteration limiting
+crewai[azure-ai-inference]==1.7.2  # Latest version - supports max_iter parameter, azure-ai-inference extra required for Azure OpenAI
 crewai-tools[mcp]>=0.76.0
 protobuf>=5.26.1,<6.0.0
 grpcio>=1.49.1,<=1.67.1
