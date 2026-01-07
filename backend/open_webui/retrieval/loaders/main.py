@@ -3,6 +3,7 @@ import logging
 import ftfy
 import sys
 import json
+import os
 
 from azure.identity import DefaultAzureCredential
 from langchain_community.document_loaders import (
@@ -131,19 +132,56 @@ class TikaLoader:
 
 
 class DoclingLoader:
-    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None):
+    """
+    Document loader for Docling OCR service with support for page-level extraction.
+    
+    This loader can extract text from documents using the Docling service and optionally
+    split the content into page-level chunks with metadata, enabling page-specific citations.
+    """
+    
+    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None, extract_pages=True):
+        """
+        Initialize the DoclingLoader.
+        
+        Args:
+            url (str): Base URL of the Docling service
+            api_key (str, optional): API key for authentication
+            file_path (str): Path to the document file
+            mime_type (str, optional): MIME type of the document
+            params (dict, optional): Additional parameters for the Docling API
+            extract_pages (bool, optional): Whether to extract individual pages with metadata.
+                                        Defaults to True. When False, returns single document.
+        """
         self.url = url.rstrip("/")
         self.api_key = api_key
         self.file_path = file_path
         self.mime_type = mime_type
-
+        self.file_name = os.path.basename(file_path) if file_path else "unknown"
+        self.file_size = os.path.getsize(file_path) if file_path and os.path.exists(file_path) else 0
         self.params = params or {}
+        self.extract_pages = extract_pages
 
     def load(self) -> list[Document]:
+        """
+        Load and process the document using Docling OCR.
+        
+        Returns:
+            list[Document]: List of Document objects, either page-level or single document
+            
+        Raises:
+            Exception: If the Docling API call fails
+        """
         with open(self.file_path, "rb") as f:
             headers = {}
             if self.api_key:
                 headers["X-Api-Key"] = f"Bearer {self.api_key}"
+
+            # Request both JSON and markdown formats to enable page extraction
+            request_params = {
+                "image_export_mode": "placeholder",
+                "to_formats": ["json", "md"],  # Request JSON for page info
+                **self.params,
+            }
 
             r = requests.post(
                 f"{self.url}/v1/convert/file",
@@ -154,19 +192,33 @@ class DoclingLoader:
                         self.mime_type or "application/octet-stream",
                     )
                 },
-                data={
-                    "image_export_mode": "placeholder",
-                    **self.params,
-                },
+                data=request_params,
                 headers=headers,
             )
+        
         if r.ok:
             result = r.json()
             document_data = result.get("document", {})
+            
+            # Extract page-level documents from JSON content if enabled
+            json_content = document_data.get("json_content")
+            if json_content and self.extract_pages:
+                documents = self._extract_pages_from_json(json_content)
+                if documents:
+                    log.debug(f"Docling extracted {len(documents)} pages from document")
+                    return documents
+            
+            # Fallback to markdown if page extraction is disabled or JSON extraction fails
             text = document_data.get("md_content", "<No text content found>")
-
-            metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
-
+            metadata = {
+                "Content-Type": self.mime_type,
+                "file_name": self.file_name,
+                "processing_engine": "docling",
+            } if self.mime_type else {
+                "file_name": self.file_name,
+                "processing_engine": "docling",
+            }
+            
             log.debug("Docling extracted text: %s", text)
             return [Document(page_content=text, metadata=metadata)]
         else:
@@ -179,6 +231,74 @@ class DoclingLoader:
                 except Exception:
                     error_msg += f" - {r.text}"
             raise Exception(f"Error calling Docling: {error_msg}")
+
+    def _extract_pages_from_json(self, json_content: dict) -> list[Document]:
+        """
+        Extract page-level documents from Docling JSON content.
+        
+        This method parses the structured JSON output from Docling to create
+        separate Document objects for each page, preserving page metadata
+        for citation purposes.
+        
+        Args:
+            json_content (dict): JSON content from Docling API response
+            
+        Returns:
+            list[Document]: List of Document objects, one per page
+        """
+        documents = []
+        
+        try:
+            # DoclingDocument structure has pages info
+            pages = json_content.get("pages", {})
+            texts = json_content.get("texts", [])
+            
+            if not pages:
+                log.debug("No pages found in Docling JSON content")
+                return []
+            
+            total_pages = len(pages)
+            
+            # Group text items by page
+            page_contents = {page_no: [] for page_no in pages.keys()}
+            
+            for text_item in texts:
+                # Each text item has a prov (provenance) that indicates page
+                prov = text_item.get("prov", [])
+                for p in prov:
+                    page_no = p.get("page_no")
+                    if page_no is not None and str(page_no) in page_contents:
+                        page_contents[str(page_no)].append(text_item.get("text", ""))
+            
+            # Create documents per page
+            for page_no, page_data in pages.items():
+                page_index = int(page_no)
+                content_parts = page_contents.get(str(page_no), [])
+                page_content = "\n".join(content_parts).strip()
+                
+                if not page_content:
+                    continue
+                
+                documents.append(
+                    Document(
+                        page_content=page_content,
+                        metadata={
+                            "page": page_index - 1,  # 0-based index for consistency
+                            "page_label": page_index,  # 1-based label for display
+                            "total_pages": total_pages,
+                            "file_name": self.file_name,
+                            "file_size": self.file_size,
+                            "processing_engine": "docling",
+                            "content_length": len(page_content),
+                        },
+                    )
+                )
+            
+            return documents
+            
+        except Exception as e:
+            log.warning(f"Failed to extract pages from Docling JSON: {e}")
+            return []
 
 
 class Loader:
@@ -300,6 +420,7 @@ class Loader:
                     file_path=file_path,
                     mime_type=file_content_type,
                     params=params,
+                    extract_pages=self.kwargs.get("DOCLING_EXTRACT_PAGES", "true").lower() == "true",
                 )
         elif (
             self.engine == "document_intelligence"

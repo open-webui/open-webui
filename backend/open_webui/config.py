@@ -2589,6 +2589,12 @@ DOCLING_PARAMS = PersistentConfig(
     docling_params,
 )
 
+DOCLING_EXTRACT_PAGES = PersistentConfig(
+    "DOCLING_EXTRACT_PAGES",
+    "rag.docling_extract_pages",
+    os.environ.get("DOCLING_EXTRACT_PAGES", "true").lower() == "true",
+)
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",
