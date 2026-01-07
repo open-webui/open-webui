@@ -207,6 +207,30 @@
 		tableTokens = [];
 	}
 
+	const findParentQuestion = () => {
+			const parentId = message?.parentId;
+			if (!parentId || !history?.messages?.[parentId]?.content) {
+				return '';
+			}
+			const parentMessage = history.messages[parentId];
+			if (parentMessage?.role !== 'user') {
+				return '';
+			}
+			return String(parentMessage.content || '');
+		};
+
+	const slugifyQuestion = (text: string) => {
+			text = text.replace(/\s+/g, ' ');
+			text = text.split(' ').slice(0, 10).join(" ");
+			const normalized = text
+				.toLowerCase()
+				.replace(/[^a-z0-9\s-]/g, '')
+				.replace(/\s+/g, '-')
+				.replace(/-+/g, '-')
+				.replace(/^-|-$/g, '');
+			return normalized;
+		};
+
 	const exportFirstTableToExcel = () => {
 		if (!tableTokens.length) {
 			return;
@@ -227,6 +251,10 @@
 		const header = token.header.map((headerCell) =>
 			escapeHtml(normalizeTimestampText(headerCell.text))
 		);
+
+		const timestamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
+		const questionSlug = slugifyQuestion(findParentQuestion());
+		const filename = `${questionSlug}-${timestamp}.xls`;
 
 		const rows = token.rows.map((row) =>
 			row.map((cell) => {
@@ -259,7 +287,7 @@
 		`.trim();
 
 		const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=UTF-8' });
-		saveAs(blob, `table-${message.id}.xls`);
+		saveAs(blob, filename);
 	};
 
 	const copyToClipboard = async (text) => {
