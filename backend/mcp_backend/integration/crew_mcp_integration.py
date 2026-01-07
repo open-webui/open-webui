@@ -204,7 +204,13 @@ class CrewMCPManager:
         # Create LLM instance with Azure configuration
         # Use the environment variables approach which CrewAI handles better
         # Set low temperature for more consistent formatting preservation
-        return LLM(model=f"azure/{self.azure_config.deployment}", temperature=0.0)
+        # Add timeout to prevent hanging in K8s environments
+        return LLM(
+            model=f"azure/{self.azure_config.deployment}",
+            temperature=0.0,
+            timeout=30,  # 30 second timeout per LLM API call
+            max_tokens=4000,  # Limit response length
+        )
 
     def run_time_crew(self, query: str = "What's the current time?") -> str:
         """
@@ -244,6 +250,7 @@ class CrewMCPManager:
                 tools=mcp_tools,  # Pass MCP tools to agent
                 llm=llm,
                 verbose=CREW_VERBOSE,
+                max_iter=3,  # Limit iterations to prevent excessive thinking
             )
 
             # Create task for time query
@@ -311,6 +318,7 @@ class CrewMCPManager:
                 tools=mcp_tools,  # Pass MCP tools to agent
                 llm=llm,
                 verbose=CREW_VERBOSE,
+                max_iter=5,  # Limit iterations to prevent excessive thinking
             )
 
             # Create task for news query
@@ -380,6 +388,7 @@ class CrewMCPManager:
                 tools=mcp_tools,  # Pass MCP tools to agent
                 llm=llm,
                 verbose=CREW_VERBOSE,
+                max_iter=5,  # Limit iterations to prevent excessive thinking in high-latency environments
             )
 
             # Create task for SharePoint query
@@ -595,6 +604,24 @@ AVOID: Dumping entire document contents or being overly verbose.""",
 
             logger.info(f"Available specialists: {available_specialists}")
 
+            # FAST PATH: If user explicitly selected tools for a single specialist, skip router overhead
+            if len(available_specialists) == 1:
+                specialist = available_specialists[0]
+                logger.info(
+                    f"🚀 FAST PATH: Single specialist detected ({specialist}), skipping router crew overhead"
+                )
+
+                if specialist == "TIME":
+                    return self.run_time_crew(query)
+                elif specialist == "NEWS":
+                    return self.run_news_crew(query)
+                elif specialist == "SHAREPOINT":
+                    return self.run_sharepoint_crew(query)
+
+            logger.info(
+                "Using intelligent router (multiple specialists or auto-detect mode)"
+            )
+
             # Create router agent that makes intelligent routing decisions
             router_agent = Agent(
                 role="Intelligent Query Router",
@@ -618,6 +645,7 @@ AVOID: Dumping entire document contents or being overly verbose.""",
                 verbose=CREW_VERBOSE,
                 allow_delegation=False,
                 llm=llm,
+                max_iter=3,  # Limit iterations - routing should be fast and decisive
             )
 
             # Create routing decision task
