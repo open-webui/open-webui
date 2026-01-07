@@ -269,7 +269,9 @@ class UsersTable:
             else:
                 return None
 
-    def get_user_by_id(self, id: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def get_user_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
                 user = db.query(User).filter_by(id=id).first()
@@ -277,7 +279,9 @@ class UsersTable:
         except Exception:
             return None
 
-    def get_user_by_api_key(self, api_key: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def get_user_by_api_key(
+        self, api_key: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
                 user = (
@@ -290,7 +294,9 @@ class UsersTable:
         except Exception:
             return None
 
-    def get_user_by_email(self, email: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def get_user_by_email(
+        self, email: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
                 user = db.query(User).filter_by(email=email).first()
@@ -298,7 +304,9 @@ class UsersTable:
         except Exception:
             return None
 
-    def get_user_by_oauth_sub(self, provider: str, sub: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def get_user_by_oauth_sub(
+        self, provider: str, sub: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:  # type: Session
                 dialect_name = db.bind.dialect.name
@@ -455,7 +463,9 @@ class UsersTable:
                 "total": total,
             }
 
-    def get_users_by_group_id(self, group_id: str, db: Optional[Session] = None) -> list[UserModel]:
+    def get_users_by_group_id(
+        self, group_id: str, db: Optional[Session] = None
+    ) -> list[UserModel]:
         with get_db_context(db) as db:
             users = (
                 db.query(User)
@@ -465,7 +475,9 @@ class UsersTable:
             )
             return [UserModel.model_validate(user) for user in users]
 
-    def get_users_by_user_ids(self, user_ids: list[str], db: Optional[Session] = None) -> list[UserStatusModel]:
+    def get_users_by_user_ids(
+        self, user_ids: list[str], db: Optional[Session] = None
+    ) -> list[UserStatusModel]:
         with get_db_context(db) as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
@@ -486,7 +498,9 @@ class UsersTable:
         except Exception:
             return None
 
-    def get_user_webhook_url_by_id(self, id: str, db: Optional[Session] = None) -> Optional[str]:
+    def get_user_webhook_url_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[str]:
         try:
             with get_db_context(db) as db:
                 user = db.query(User).filter_by(id=id).first()
@@ -511,7 +525,9 @@ class UsersTable:
             )
             return query.count()
 
-    def update_user_role_by_id(self, id: str, role: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def update_user_role_by_id(
+        self, id: str, role: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
                 db.query(User).filter_by(id=id).update({"role": role})
@@ -552,7 +568,9 @@ class UsersTable:
             return None
 
     @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
-    def update_last_active_by_id(self, id: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def update_last_active_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
                 db.query(User).filter_by(id=id).update(
@@ -597,7 +615,9 @@ class UsersTable:
         except Exception:
             return None
 
-    def update_user_by_id(self, id: str, updated: dict, db: Optional[Session] = None) -> Optional[UserModel]:
+    def update_user_by_id(
+        self, id: str, updated: dict, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
                 db.query(User).filter_by(id=id).update(updated)
@@ -610,7 +630,9 @@ class UsersTable:
             print(e)
             return None
 
-    def update_user_settings_by_id(self, id: str, updated: dict, db: Optional[Session] = None) -> Optional[UserModel]:
+    def update_user_settings_by_id(
+        self, id: str, updated: dict, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
                 user = db.query(User).filter_by(id=id).first()
@@ -651,7 +673,9 @@ class UsersTable:
         except Exception:
             return False
 
-    def get_user_api_key_by_id(self, id: str, db: Optional[Session] = None) -> Optional[str]:
+    def get_user_api_key_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[str]:
         try:
             with get_db_context(db) as db:
                 api_key = db.query(ApiKey).filter_by(user_id=id).first()
@@ -659,7 +683,9 @@ class UsersTable:
         except Exception:
             return None
 
-    def update_user_api_key_by_id(self, id: str, api_key: str, db: Optional[Session] = None) -> bool:
+    def update_user_api_key_by_id(
+        self, id: str, api_key: str, db: Optional[Session] = None
+    ) -> bool:
         try:
             with get_db_context(db) as db:
                 db.query(ApiKey).filter_by(user_id=id).delete()
@@ -690,7 +716,9 @@ class UsersTable:
         except Exception:
             return False
 
-    def get_valid_user_ids(self, user_ids: list[str], db: Optional[Session] = None) -> list[str]:
+    def get_valid_user_ids(
+        self, user_ids: list[str], db: Optional[Session] = None
+    ) -> list[str]:
         with get_db_context(db) as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [user.id for user in users]

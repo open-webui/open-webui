@@ -51,7 +51,9 @@ class TagChatIdForm(BaseModel):
 
 
 class TagTable:
-    def insert_new_tag(self, name: str, user_id: str, db: Optional[Session] = None) -> Optional[TagModel]:
+    def insert_new_tag(
+        self, name: str, user_id: str, db: Optional[Session] = None
+    ) -> Optional[TagModel]:
         with get_db_context(db) as db:
             id = name.replace(" ", "_").lower()
             tag = TagModel(**{"id": id, "user_id": user_id, "name": name})
@@ -79,7 +81,9 @@ class TagTable:
         except Exception:
             return None
 
-    def get_tags_by_user_id(self, user_id: str, db: Optional[Session] = None) -> list[TagModel]:
+    def get_tags_by_user_id(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> list[TagModel]:
         with get_db_context(db) as db:
             return [
                 TagModel.model_validate(tag)
@@ -97,7 +101,9 @@ class TagTable:
                 )
             ]
 
-    def delete_tag_by_name_and_user_id(self, name: str, user_id: str, db: Optional[Session] = None) -> bool:
+    def delete_tag_by_name_and_user_id(
+        self, name: str, user_id: str, db: Optional[Session] = None
+    ) -> bool:
         try:
             with get_db_context(db) as db:
                 id = name.replace(" ", "_").lower()

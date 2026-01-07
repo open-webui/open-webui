@@ -538,15 +538,16 @@ class MessageTable:
             )
 
             if start_timestamp:
-                query_builder = query_builder.filter(Message.created_at >= start_timestamp)
+                query_builder = query_builder.filter(
+                    Message.created_at >= start_timestamp
+                )
             if end_timestamp:
-                query_builder = query_builder.filter(Message.created_at <= end_timestamp)
+                query_builder = query_builder.filter(
+                    Message.created_at <= end_timestamp
+                )
 
             messages = (
-                query_builder
-                .order_by(Message.created_at.desc())
-                .limit(limit)
-                .all()
+                query_builder.order_by(Message.created_at.desc()).limit(limit).all()
             )
             return [MessageModel.model_validate(msg) for msg in messages]
 

@@ -43,11 +43,7 @@
 				{$WEBUI_NAME}
 				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
 			</div>
-			<button
-				class="self-center"
-				on:click={closeModal}
-				aria-label={$i18n.t('Close')}
-			>
+			<button class="self-center" on:click={closeModal} aria-label={$i18n.t('Close')}>
 				<XMark className={'size-5'}>
 					<p class="sr-only">{$i18n.t('Close')}</p>
 				</XMark>

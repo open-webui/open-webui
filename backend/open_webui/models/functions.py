@@ -104,7 +104,11 @@ class FunctionValves(BaseModel):
 
 class FunctionsTable:
     def insert_new_function(
-        self, user_id: str, type: str, form_data: FunctionForm, db: Optional[Session] = None
+        self,
+        user_id: str,
+        type: str,
+        form_data: FunctionForm,
+        db: Optional[Session] = None,
     ) -> Optional[FunctionModel]:
         function = FunctionModel(
             **{
@@ -131,7 +135,10 @@ class FunctionsTable:
             return None
 
     def sync_functions(
-        self, user_id: str, functions: list[FunctionWithValvesModel], db: Optional[Session] = None
+        self,
+        user_id: str,
+        functions: list[FunctionWithValvesModel],
+        db: Optional[Session] = None,
     ) -> list[FunctionWithValvesModel]:
         # Synchronize functions for a user by updating existing ones, inserting new ones, and removing those that are no longer present.
         try:
@@ -178,7 +185,9 @@ class FunctionsTable:
             log.exception(f"Error syncing functions for user {user_id}: {e}")
             return []
 
-    def get_function_by_id(self, id: str, db: Optional[Session] = None) -> Optional[FunctionModel]:
+    def get_function_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[FunctionModel]:
         try:
             with get_db_context(db) as db:
                 function = db.get(Function, id)
@@ -206,7 +215,9 @@ class FunctionsTable:
                     FunctionModel.model_validate(function) for function in functions
                 ]
 
-    def get_function_list(self, db: Optional[Session] = None) -> list[FunctionUserResponse]:
+    def get_function_list(
+        self, db: Optional[Session] = None
+    ) -> list[FunctionUserResponse]:
         with get_db_context(db) as db:
             functions = db.query(Function).order_by(Function.updated_at.desc()).all()
             user_ids = list(set(func.user_id for func in functions))
@@ -245,7 +256,9 @@ class FunctionsTable:
                     for function in db.query(Function).filter_by(type=type).all()
                 ]
 
-    def get_global_filter_functions(self, db: Optional[Session] = None) -> list[FunctionModel]:
+    def get_global_filter_functions(
+        self, db: Optional[Session] = None
+    ) -> list[FunctionModel]:
         with get_db_context(db) as db:
             return [
                 FunctionModel.model_validate(function)
@@ -254,7 +267,9 @@ class FunctionsTable:
                 .all()
             ]
 
-    def get_global_action_functions(self, db: Optional[Session] = None) -> list[FunctionModel]:
+    def get_global_action_functions(
+        self, db: Optional[Session] = None
+    ) -> list[FunctionModel]:
         with get_db_context(db) as db:
             return [
                 FunctionModel.model_validate(function)
@@ -263,7 +278,9 @@ class FunctionsTable:
                 .all()
             ]
 
-    def get_function_valves_by_id(self, id: str, db: Optional[Session] = None) -> Optional[dict]:
+    def get_function_valves_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[dict]:
         with get_db_context(db) as db:
             try:
                 function = db.get(Function, id)
@@ -352,7 +369,9 @@ class FunctionsTable:
             )
             return None
 
-    def update_function_by_id(self, id: str, updated: dict, db: Optional[Session] = None) -> Optional[FunctionModel]:
+    def update_function_by_id(
+        self, id: str, updated: dict, db: Optional[Session] = None
+    ) -> Optional[FunctionModel]:
         with get_db_context(db) as db:
             try:
                 db.query(Function).filter_by(id=id).update(

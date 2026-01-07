@@ -222,7 +222,9 @@ class ModelsTable:
         self, user_id: str, permission: str = "write", db: Optional[Session] = None
     ) -> list[ModelUserResponse]:
         models = self.get_models(db=db)
-        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id, db=db)}
+        user_group_ids = {
+            group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
+        }
         return [
             model
             for model in models
@@ -273,7 +275,12 @@ class ModelsTable:
         return query
 
     def search_models(
-        self, user_id: str, filter: dict = {}, skip: int = 0, limit: int = 30, db: Optional[Session] = None
+        self,
+        user_id: str,
+        filter: dict = {},
+        skip: int = 0,
+        limit: int = 30,
+        db: Optional[Session] = None,
     ) -> ModelListResponse:
         with get_db_context(db) as db:
             # Join GroupMember so we can order by group_id when requested
@@ -359,7 +366,9 @@ class ModelsTable:
 
             return ModelListResponse(items=models, total=total)
 
-    def get_model_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ModelModel]:
+    def get_model_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[ModelModel]:
         try:
             with get_db_context(db) as db:
                 model = db.get(Model, id)
@@ -367,7 +376,9 @@ class ModelsTable:
         except Exception:
             return None
 
-    def get_models_by_ids(self, ids: list[str], db: Optional[Session] = None) -> list[ModelModel]:
+    def get_models_by_ids(
+        self, ids: list[str], db: Optional[Session] = None
+    ) -> list[ModelModel]:
         try:
             with get_db_context(db) as db:
                 models = db.query(Model).filter(Model.id.in_(ids)).all()
@@ -375,7 +386,9 @@ class ModelsTable:
         except Exception:
             return []
 
-    def toggle_model_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ModelModel]:
+    def toggle_model_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[ModelModel]:
         with get_db_context(db) as db:
             try:
                 is_active = db.query(Model).filter_by(id=id).first().is_active
@@ -392,7 +405,9 @@ class ModelsTable:
             except Exception:
                 return None
 
-    def update_model_by_id(self, id: str, model: ModelForm, db: Optional[Session] = None) -> Optional[ModelModel]:
+    def update_model_by_id(
+        self, id: str, model: ModelForm, db: Optional[Session] = None
+    ) -> Optional[ModelModel]:
         try:
             with get_db_context(db) as db:
                 # update only the fields that are present in the model
@@ -428,7 +443,9 @@ class ModelsTable:
         except Exception:
             return False
 
-    def sync_models(self, user_id: str, models: list[ModelModel], db: Optional[Session] = None) -> list[ModelModel]:
+    def sync_models(
+        self, user_id: str, models: list[ModelModel], db: Optional[Session] = None
+    ) -> list[ModelModel]:
         try:
             with get_db_context(db) as db:
                 # Get existing models

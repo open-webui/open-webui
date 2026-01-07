@@ -117,7 +117,9 @@ async def get_channels(
         last_message = Messages.get_last_message_by_channel_id(channel.id, db=db)
         last_message_at = last_message.created_at if last_message else None
 
-        channel_member = Channels.get_member_by_channel_and_user_id(channel.id, user.id, db=db)
+        channel_member = Channels.get_member_by_channel_and_user_id(
+            channel.id, user.id, db=db
+        )
         unread_count = (
             Messages.get_unread_message_count(
                 channel.id, user.id, channel_member.last_read_at, db=db
@@ -135,7 +137,10 @@ async def get_channels(
             ]
             users = [
                 UserIdNameStatusResponse(
-                    **{**user.model_dump(), "is_active": Users.is_user_active(user.id, db=db)}
+                    **{
+                        **user.model_dump(),
+                        "is_active": Users.is_user_active(user.id, db=db),
+                    }
                 )
                 for user in Users.get_users_by_user_ids(user_ids, db=db)
             ]
@@ -187,11 +192,15 @@ async def get_dm_channel_by_user_id(
         )
 
     try:
-        existing_channel = Channels.get_dm_channel_by_user_ids([user.id, user_id], db=db)
+        existing_channel = Channels.get_dm_channel_by_user_ids(
+            [user.id, user_id], db=db
+        )
         if existing_channel:
             participant_ids = [
                 member.user_id
-                for member in Channels.get_members_by_channel_id(existing_channel.id, db=db)
+                for member in Channels.get_members_by_channel_id(
+                    existing_channel.id, db=db
+                )
             ]
 
             await emit_to_users(
@@ -203,7 +212,9 @@ async def get_dm_channel_by_user_id(
                 f"channel:{existing_channel.id}", participant_ids
             )
 
-            Channels.update_member_active_status(existing_channel.id, user.id, True, db=db)
+            Channels.update_member_active_status(
+                existing_channel.id, user.id, True, db=db
+            )
             return ChannelModel(**existing_channel.model_dump())
 
         channel = Channels.insert_new_channel(
@@ -288,7 +299,9 @@ async def create_new_channel(
                     f"channel:{existing_channel.id}", participant_ids
                 )
 
-                Channels.update_member_active_status(existing_channel.id, user.id, True, db=db)
+                Channels.update_member_active_status(
+                    existing_channel.id, user.id, True, db=db
+                )
                 return ChannelModel(**existing_channel.model_dump())
 
         channel = Channels.insert_new_channel(form_data, user.id, db=db)
@@ -353,17 +366,23 @@ async def get_channel_by_id(
             )
 
         user_ids = [
-            member.user_id for member in Channels.get_members_by_channel_id(channel.id, db=db)
+            member.user_id
+            for member in Channels.get_members_by_channel_id(channel.id, db=db)
         ]
 
         users = [
             UserIdNameStatusResponse(
-                **{**user.model_dump(), "is_active": Users.is_user_active(user.id, db=db)}
+                **{
+                    **user.model_dump(),
+                    "is_active": Users.is_user_active(user.id, db=db),
+                }
             )
             for user in Users.get_users_by_user_ids(user_ids, db=db)
         ]
 
-        channel_member = Channels.get_member_by_channel_and_user_id(channel.id, user.id, db=db)
+        channel_member = Channels.get_member_by_channel_and_user_id(
+            channel.id, user.id, db=db
+        )
         unread_count = Messages.get_unread_message_count(
             channel.id, user.id, channel_member.last_read_at if channel_member else None
         )
@@ -373,7 +392,9 @@ async def get_channel_by_id(
                 **channel.model_dump(),
                 "user_ids": user_ids,
                 "users": users,
-                "is_manager": Channels.is_user_channel_manager(channel.id, user.id, db=db),
+                "is_manager": Channels.is_user_channel_manager(
+                    channel.id, user.id, db=db
+                ),
                 "write_access": True,
                 "user_count": len(user_ids),
                 "last_read_at": channel_member.last_read_at if channel_member else None,
@@ -389,12 +410,18 @@ async def get_channel_by_id(
             )
 
         write_access = has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False, db=db
+            user.id,
+            type="write",
+            access_control=channel.access_control,
+            strict=False,
+            db=db,
         )
 
         user_count = len(get_users_with_access("read", channel.access_control))
 
-        channel_member = Channels.get_member_by_channel_and_user_id(channel.id, user.id, db=db)
+        channel_member = Channels.get_member_by_channel_and_user_id(
+            channel.id, user.id, db=db
+        )
         unread_count = Messages.get_unread_message_count(
             channel.id, user.id, channel_member.last_read_at if channel_member else None
         )
@@ -404,7 +431,9 @@ async def get_channel_by_id(
                 **channel.model_dump(),
                 "user_ids": user_ids,
                 "users": users,
-                "is_manager": Channels.is_user_channel_manager(channel.id, user.id, db=db),
+                "is_manager": Channels.is_user_channel_manager(
+                    channel.id, user.id, db=db
+                ),
                 "write_access": write_access or user.role == "admin",
                 "user_count": user_count,
                 "last_read_at": channel_member.last_read_at if channel_member else None,
@@ -453,7 +482,8 @@ async def get_channel_members_by_id(
 
     if channel.type == "dm":
         user_ids = [
-            member.user_id for member in Channels.get_members_by_channel_id(channel.id, db=db)
+            member.user_id
+            for member in Channels.get_members_by_channel_id(channel.id, db=db)
         ]
         users = Users.get_users_by_user_ids(user_ids, db=db)
         total = len(users)
@@ -533,7 +563,9 @@ async def update_is_active_member_by_id_and_user_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    Channels.update_member_active_status(channel.id, user.id, form_data.is_active, db=db)
+    Channels.update_member_active_status(
+        channel.id, user.id, form_data.is_active, db=db
+    )
     return True
 
 
@@ -626,7 +658,9 @@ async def remove_members_by_id(
         )
 
     try:
-        deleted = Channels.remove_members_from_channel(channel.id, form_data.user_ids, db=db)
+        deleted = Channels.remove_members_from_channel(
+            channel.id, form_data.user_ids, db=db
+        )
 
         return deleted
     except Exception as e:
@@ -794,7 +828,9 @@ async def get_channel_messages(
                     **message.model_dump(),
                     "reply_count": len(thread_replies),
                     "latest_reply_at": latest_thread_reply_at,
-                    "reactions": Messages.get_reactions_by_message_id(message.id, db=db),
+                    "reactions": Messages.get_reactions_by_message_id(
+                        message.id, db=db
+                    ),
                     "user": UserNameResponse(**users[message.user_id].model_dump()),
                 }
             )
@@ -857,7 +893,9 @@ async def get_pinned_channel_messages(
             MessageWithReactionsResponse(
                 **{
                     **message.model_dump(),
-                    "reactions": Messages.get_reactions_by_message_id(message.id, db=db),
+                    "reactions": Messages.get_reactions_by_message_id(
+                        message.id, db=db
+                    ),
                     "user": UserNameResponse(**users[message.user_id].model_dump()),
                 }
             )
@@ -871,7 +909,9 @@ async def get_pinned_channel_messages(
 ############################
 
 
-async def send_notification(name, webui_url, channel, message, active_user_ids, db=None):
+async def send_notification(
+    name, webui_url, channel, message, active_user_ids, db=None
+):
     users = get_users_with_access("read", channel.access_control)
 
     for user in users:
@@ -966,7 +1006,9 @@ async def model_response_handler(request, channel, message, user, db=None):
                 for thread_message in thread_messages:
                     message_user = None
                     if thread_message.user_id not in message_users:
-                        message_user = Users.get_user_by_id(thread_message.user_id, db=db)
+                        message_user = Users.get_user_by_id(
+                            thread_message.user_id, db=db
+                        )
                         message_users[thread_message.user_id] = message_user
                     else:
                         message_user = message_users[thread_message.user_id]
@@ -1098,7 +1140,11 @@ async def new_message_handler(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False, db=db
+            user.id,
+            type="write",
+            access_control=channel.access_control,
+            strict=False,
+            db=db,
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1417,7 +1463,9 @@ async def get_channel_thread_messages(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
-    message_list = Messages.get_messages_by_parent_id(id, message_id, skip, limit, db=db)
+    message_list = Messages.get_messages_by_parent_id(
+        id, message_id, skip, limit, db=db
+    )
 
     if not message_list:
         return []
@@ -1434,7 +1482,9 @@ async def get_channel_thread_messages(
                     **message.model_dump(),
                     "reply_count": 0,
                     "latest_reply_at": None,
-                    "reactions": Messages.get_reactions_by_message_id(message.id, db=db),
+                    "reactions": Messages.get_reactions_by_message_id(
+                        message.id, db=db
+                    ),
                     "user": UserNameResponse(**users[message.user_id].model_dump()),
                 }
             )
@@ -1554,7 +1604,11 @@ async def add_reaction_to_message(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False, db=db
+            user.id,
+            type="write",
+            access_control=channel.access_control,
+            strict=False,
+            db=db,
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1629,7 +1683,11 @@ async def remove_reaction_by_id_and_user_id_and_name(
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False, db=db
+            user.id,
+            type="write",
+            access_control=channel.access_control,
+            strict=False,
+            db=db,
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()

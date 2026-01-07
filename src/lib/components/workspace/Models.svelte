@@ -458,7 +458,9 @@
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
-							class="flex transition rounded-2xl w-full p-2.5 {model.write_access ? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50' : 'cursor-not-allowed opacity-60'}"
+							class="flex transition rounded-2xl w-full p-2.5 {model.write_access
+								? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50'
+								: 'cursor-not-allowed opacity-60'}"
 							id="model-item-{model.id}"
 							on:click={() => {
 								if (model.write_access) {
@@ -504,110 +506,110 @@
 													{/if}
 
 													{#if model.write_access || $user?.role === 'admin'}
-													<div class="flex {model.is_active ? '' : 'text-gray-500'}">
-														<div class="flex items-center gap-0.5">
-															{#if shiftKey}
-																<Tooltip
-																	content={model?.meta?.hidden
-																		? $i18n.t('Show')
-																		: $i18n.t('Hide')}
-																>
-																	<button
-																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																		type="button"
-																		on:click={(e) => {
-																			e.stopPropagation();
+														<div class="flex {model.is_active ? '' : 'text-gray-500'}">
+															<div class="flex items-center gap-0.5">
+																{#if shiftKey}
+																	<Tooltip
+																		content={model?.meta?.hidden
+																			? $i18n.t('Show')
+																			: $i18n.t('Hide')}
+																	>
+																		<button
+																			class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																			type="button"
+																			on:click={(e) => {
+																				e.stopPropagation();
+																				hideModelHandler(model);
+																			}}
+																		>
+																			{#if model?.meta?.hidden}
+																				<EyeSlash />
+																			{:else}
+																				<Eye />
+																			{/if}
+																		</button>
+																	</Tooltip>
+
+																	<Tooltip content={$i18n.t('Delete')}>
+																		<button
+																			class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																			type="button"
+																			on:click={(e) => {
+																				e.stopPropagation();
+																				deleteModelHandler(model);
+																			}}
+																		>
+																			<GarbageBin />
+																		</button>
+																	</Tooltip>
+																{:else}
+																	<ModelMenu
+																		user={$user}
+																		{model}
+																		editHandler={() => {
+																			goto(
+																				`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
+																			);
+																		}}
+																		shareHandler={() => {
+																			shareModelHandler(model);
+																		}}
+																		cloneHandler={() => {
+																			cloneModelHandler(model);
+																		}}
+																		exportHandler={() => {
+																			exportModelHandler(model);
+																		}}
+																		hideHandler={() => {
 																			hideModelHandler(model);
 																		}}
-																	>
-																		{#if model?.meta?.hidden}
-																			<EyeSlash />
-																		{:else}
-																			<Eye />
-																		{/if}
-																	</button>
-																</Tooltip>
-
-																<Tooltip content={$i18n.t('Delete')}>
-																	<button
-																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																		type="button"
-																		on:click={(e) => {
-																			e.stopPropagation();
-																			deleteModelHandler(model);
+																		pinModelHandler={() => {
+																			pinModelHandler(model.id);
 																		}}
+																		copyLinkHandler={() => {
+																			copyLinkHandler(model);
+																		}}
+																		deleteHandler={() => {
+																			selectedModel = model;
+																			showModelDeleteConfirm = true;
+																		}}
+																		onClose={() => {}}
 																	>
-																		<GarbageBin />
-																	</button>
-																</Tooltip>
-															{:else}
-																<ModelMenu
-																	user={$user}
-																	{model}
-																	editHandler={() => {
-																		goto(
-																			`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
-																		);
-																	}}
-																	shareHandler={() => {
-																		shareModelHandler(model);
-																	}}
-																	cloneHandler={() => {
-																		cloneModelHandler(model);
-																	}}
-																	exportHandler={() => {
-																		exportModelHandler(model);
-																	}}
-																	hideHandler={() => {
-																		hideModelHandler(model);
-																	}}
-																	pinModelHandler={() => {
-																		pinModelHandler(model.id);
-																	}}
-																	copyLinkHandler={() => {
-																		copyLinkHandler(model);
-																	}}
-																	deleteHandler={() => {
-																		selectedModel = model;
-																		showModelDeleteConfirm = true;
-																	}}
-																	onClose={() => {}}
-																>
-																	<div
-																		class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																	>
-																		<EllipsisHorizontal className="size-5" />
-																	</div>
-																</ModelMenu>
-															{/if}
+																		<div
+																			class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		>
+																			<EllipsisHorizontal className="size-5" />
+																		</div>
+																	</ModelMenu>
+																{/if}
+															</div>
 														</div>
-													</div>
 													{/if}
 
 													{#if model.write_access}
-													<button
-														on:click={(e) => {
-															e.stopPropagation();
-														}}
-													>
-														<Tooltip
-															content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+														<button
+															on:click={(e) => {
+																e.stopPropagation();
+															}}
 														>
-															<Switch
-																bind:state={model.is_active}
-																on:change={async () => {
-																	toggleModelById(localStorage.token, model.id);
-																	_models.set(
-																		await getModels(
-																			localStorage.token,
-																			$config?.features?.enable_direct_connections &&
-																				($settings?.directConnections ?? null)
-																		)
-																	);
-																}}
-															/>
-														</Tooltip>
-													</button>
+															<Tooltip
+																content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+															>
+																<Switch
+																	bind:state={model.is_active}
+																	on:change={async () => {
+																		toggleModelById(localStorage.token, model.id);
+																		_models.set(
+																			await getModels(
+																				localStorage.token,
+																				$config?.features?.enable_direct_connections &&
+																					($settings?.directConnections ?? null)
+																			)
+																		);
+																	}}
+																/>
+															</Tooltip>
+														</button>
 													{/if}
 												</div>
 											</div>

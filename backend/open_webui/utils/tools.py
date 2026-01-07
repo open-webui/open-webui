@@ -360,7 +360,12 @@ def get_builtin_tools(
 
     # Helper to get model capabilities (defaults to True if not specified)
     def get_model_capability(name: str, default: bool = True) -> bool:
-        return model.get("info", {}).get("meta", {}).get("capabilities", {}).get(name, default)
+        return (
+            model.get("info", {})
+            .get("meta", {})
+            .get("capabilities", {})
+            .get(name, default)
+        )
 
     # Time utilities - always available for date calculations
     builtin_functions.extend([get_current_timestamp, calculate_timestamp])
@@ -375,7 +380,13 @@ def get_builtin_tools(
     else:
         # No model knowledge - allow full KB browsing
         builtin_functions.extend(
-            [list_knowledge_bases, search_knowledge_bases, search_knowledge_files, view_knowledge_file, query_knowledge_bases]
+            [
+                list_knowledge_bases,
+                search_knowledge_bases,
+                search_knowledge_files,
+                view_knowledge_file,
+                query_knowledge_bases,
+            ]
         )
 
     # Chats tools - search and fetch user's chat history
@@ -386,9 +397,9 @@ def get_builtin_tools(
         builtin_functions.extend([search_memories, add_memory, replace_memory_content])
 
     # Add web search tools if enabled globally AND model has web_search capability
-    if getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False) and get_model_capability(
-        "web_search"
-    ):
+    if getattr(
+        request.app.state.config, "ENABLE_WEB_SEARCH", False
+    ) and get_model_capability("web_search"):
         builtin_functions.extend([search_web, fetch_url])
 
     # Add image generation/edit tools if enabled globally AND model has image_generation capability
@@ -396,9 +407,9 @@ def get_builtin_tools(
         request.app.state.config, "ENABLE_IMAGE_GENERATION", False
     ) and get_model_capability("image_generation"):
         builtin_functions.append(generate_image)
-    if getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False) and get_model_capability(
-        "image_generation"
-    ):
+    if getattr(
+        request.app.state.config, "ENABLE_IMAGE_EDIT", False
+    ) and get_model_capability("image_generation"):
         builtin_functions.append(edit_image)
 
     # Notes tools - search, view, create, and update user's notes (if notes enabled globally)

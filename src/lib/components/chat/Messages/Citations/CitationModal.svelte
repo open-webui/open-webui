@@ -161,7 +161,8 @@
 											href={snippetUrl}
 											target="_blank"
 											class="underline hover:text-gray-500 dark:hover:text-gray-100"
-										>{$i18n.t('Content')}</a>
+											>{$i18n.t('Content')}</a
+										>
 									{:else}
 										{$i18n.t('Content')}
 									{/if}
@@ -207,7 +208,10 @@
 							{#if document.metadata?.html}
 								<iframe
 									class="w-full border-0 h-auto rounded-none"
-									sandbox="allow-scripts allow-forms{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
+									sandbox="allow-scripts allow-forms{($settings?.iframeSandboxAllowSameOrigin ??
+									false)
+										? ' allow-same-origin'
+										: ''}"
 									srcdoc={document.document}
 									title={$i18n.t('Content')}
 								></iframe>
@@ -215,7 +219,7 @@
 								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">{document.document
 										.trim()
 										.replace(/\n\n+/g, '\n\n')}</pre>
-						{/if}
+							{/if}
 						</div>
 					</div>
 				{/each}

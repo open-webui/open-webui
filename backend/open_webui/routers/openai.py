@@ -837,7 +837,10 @@ async def generate_chat_completion(
             if not (
                 user.id == model_info.user_id
                 or has_access(
-                    user.id, type="read", access_control=model_info.access_control, db=db
+                    user.id,
+                    type="read",
+                    access_control=model_info.access_control,
+                    db=db,
                 )
             ):
                 raise HTTPException(

@@ -18,8 +18,6 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-
-
 @router.get("/ef")
 async def get_embeddings(request: Request):
     return {"result": await request.app.state.EMBEDDING_FUNCTION("hello world")}
@@ -32,7 +30,9 @@ async def get_embeddings(request: Request):
 
 @router.get("/", response_model=list[MemoryModel])
 async def get_memories(
-    request: Request, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
@@ -40,7 +40,9 @@ async def get_memories(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(user.id, "features.memories", request.app.state.config.USER_PERMISSIONS):
+    if not has_permission(
+        user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -75,7 +77,9 @@ async def add_memory(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(user.id, "features.memories", request.app.state.config.USER_PERMISSIONS):
+    if not has_permission(
+        user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -112,7 +116,10 @@ class QueryMemoryForm(BaseModel):
 
 @router.post("/query")
 async def query_memory(
-    request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    request: Request,
+    form_data: QueryMemoryForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
@@ -120,7 +127,9 @@ async def query_memory(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(user.id, "features.memories", request.app.state.config.USER_PERMISSIONS):
+    if not has_permission(
+        user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -146,7 +155,9 @@ async def query_memory(
 ############################
 @router.post("/reset", response_model=bool)
 async def reset_memory_from_vector_db(
-    request: Request, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
@@ -154,12 +165,14 @@ async def reset_memory_from_vector_db(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(user.id, "features.memories", request.app.state.config.USER_PERMISSIONS):
+    if not has_permission(
+        user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-        
+
     VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
 
     memories = Memories.get_memories_by_user_id(user.id, db=db)
@@ -198,7 +211,9 @@ async def reset_memory_from_vector_db(
 
 @router.delete("/delete/user", response_model=bool)
 async def delete_memory_by_user_id(
-    request: Request, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
@@ -206,7 +221,9 @@ async def delete_memory_by_user_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(user.id, "features.memories", request.app.state.config.USER_PERMISSIONS):
+    if not has_permission(
+        user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -243,7 +260,9 @@ async def update_memory_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(user.id, "features.memories", request.app.state.config.USER_PERMISSIONS):
+    if not has_permission(
+        user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -283,7 +302,10 @@ async def update_memory_by_id(
 
 @router.delete("/{memory_id}", response_model=bool)
 async def delete_memory_by_id(
-    memory_id: str, request: Request, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    memory_id: str,
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
@@ -291,7 +313,9 @@ async def delete_memory_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if not has_permission(user.id, "features.memories", request.app.state.config.USER_PERMISSIONS):
+    if not has_permission(
+        user.id, "features.memories", request.app.state.config.USER_PERMISSIONS
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

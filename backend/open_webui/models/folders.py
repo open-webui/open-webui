@@ -84,7 +84,11 @@ class FolderUpdateForm(BaseModel):
 
 class FolderTable:
     def insert_new_folder(
-        self, user_id: str, form_data: FolderForm, parent_id: Optional[str] = None, db: Optional[Session] = None
+        self,
+        user_id: str,
+        form_data: FolderForm,
+        parent_id: Optional[str] = None,
+        db: Optional[Session] = None,
     ) -> Optional[FolderModel]:
         with get_db_context(db) as db:
             id = str(uuid.uuid4())
@@ -149,7 +153,9 @@ class FolderTable:
         except Exception:
             return None
 
-    def get_folders_by_user_id(self, user_id: str, db: Optional[Session] = None) -> list[FolderModel]:
+    def get_folders_by_user_id(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> list[FolderModel]:
         with get_db_context(db) as db:
             return [
                 FolderModel.model_validate(folder)
@@ -157,7 +163,11 @@ class FolderTable:
             ]
 
     def get_folder_by_parent_id_and_user_id_and_name(
-        self, parent_id: Optional[str], user_id: str, name: str, db: Optional[Session] = None
+        self,
+        parent_id: Optional[str],
+        user_id: str,
+        name: str,
+        db: Optional[Session] = None,
     ) -> Optional[FolderModel]:
         try:
             with get_db_context(db) as db:
@@ -213,7 +223,11 @@ class FolderTable:
             return
 
     def update_folder_by_id_and_user_id(
-        self, id: str, user_id: str, form_data: FolderUpdateForm, db: Optional[Session] = None
+        self,
+        id: str,
+        user_id: str,
+        form_data: FolderUpdateForm,
+        db: Optional[Session] = None,
     ) -> Optional[FolderModel]:
         try:
             with get_db_context(db) as db:
@@ -278,7 +292,9 @@ class FolderTable:
             log.error(f"update_folder: {e}")
             return
 
-    def delete_folder_by_id_and_user_id(self, id: str, user_id: str, db: Optional[Session] = None) -> list[str]:
+    def delete_folder_by_id_and_user_id(
+        self, id: str, user_id: str, db: Optional[Session] = None
+    ) -> list[str]:
         try:
             folder_ids = []
             with get_db_context(db) as db:

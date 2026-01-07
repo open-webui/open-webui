@@ -1302,7 +1302,10 @@ async def generate_chat_completion(
             if not (
                 user.id == model_info.user_id
                 or has_access(
-                    user.id, type="read", access_control=model_info.access_control, db=db
+                    user.id,
+                    type="read",
+                    access_control=model_info.access_control,
+                    db=db,
                 )
             ):
                 raise HTTPException(
@@ -1409,7 +1412,10 @@ async def generate_openai_completion(
             if not (
                 user.id == model_info.user_id
                 or has_access(
-                    user.id, type="read", access_control=model_info.access_control, db=db
+                    user.id,
+                    type="read",
+                    access_control=model_info.access_control,
+                    db=db,
                 )
             ):
                 raise HTTPException(
@@ -1493,7 +1499,10 @@ async def generate_openai_chat_completion(
             if not (
                 user.id == model_info.user_id
                 or has_access(
-                    user.id, type="read", access_control=model_info.access_control, db=db
+                    user.id,
+                    type="read",
+                    access_control=model_info.access_control,
+                    db=db,
                 )
             ):
                 raise HTTPException(
@@ -1592,7 +1601,10 @@ async def get_openai_models(
             model_info = Models.get_model_by_id(model["id"], db=db)
             if model_info:
                 if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control, db=db
+                    user.id,
+                    type="read",
+                    access_control=model_info.access_control,
+                    db=db,
                 ):
                     filtered_models.append(model)
         models = filtered_models

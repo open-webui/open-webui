@@ -115,7 +115,11 @@ class ToolValves(BaseModel):
 
 class ToolsTable:
     def insert_new_tool(
-        self, user_id: str, form_data: ToolForm, specs: list[dict], db: Optional[Session] = None
+        self,
+        user_id: str,
+        form_data: ToolForm,
+        specs: list[dict],
+        db: Optional[Session] = None,
     ) -> Optional[ToolModel]:
         with get_db_context(db) as db:
             tool = ToolModel(
@@ -141,7 +145,9 @@ class ToolsTable:
                 log.exception(f"Error creating a new tool: {e}")
                 return None
 
-    def get_tool_by_id(self, id: str, db: Optional[Session] = None) -> Optional[ToolModel]:
+    def get_tool_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[ToolModel]:
         try:
             with get_db_context(db) as db:
                 tool = db.get(Tool, id)
@@ -175,7 +181,9 @@ class ToolsTable:
         self, user_id: str, permission: str = "write", db: Optional[Session] = None
     ) -> list[ToolUserModel]:
         tools = self.get_tools(db=db)
-        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id, db=db)}
+        user_group_ids = {
+            group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
+        }
 
         return [
             tool
@@ -184,7 +192,9 @@ class ToolsTable:
             or has_access(user_id, permission, tool.access_control, user_group_ids)
         ]
 
-    def get_tool_valves_by_id(self, id: str, db: Optional[Session] = None) -> Optional[dict]:
+    def get_tool_valves_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[dict]:
         try:
             with get_db_context(db) as db:
                 tool = db.get(Tool, id)
@@ -193,7 +203,9 @@ class ToolsTable:
             log.exception(f"Error getting tool valves by id {id}")
             return None
 
-    def update_tool_valves_by_id(self, id: str, valves: dict, db: Optional[Session] = None) -> Optional[ToolValves]:
+    def update_tool_valves_by_id(
+        self, id: str, valves: dict, db: Optional[Session] = None
+    ) -> Optional[ToolValves]:
         try:
             with get_db_context(db) as db:
                 db.query(Tool).filter_by(id=id).update(
@@ -249,7 +261,9 @@ class ToolsTable:
             )
             return None
 
-    def update_tool_by_id(self, id: str, updated: dict, db: Optional[Session] = None) -> Optional[ToolModel]:
+    def update_tool_by_id(
+        self, id: str, updated: dict, db: Optional[Session] = None
+    ) -> Optional[ToolModel]:
         try:
             with get_db_context(db) as db:
                 db.query(Tool).filter_by(id=id).update(

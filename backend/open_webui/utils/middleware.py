@@ -948,7 +948,7 @@ def get_image_urls(delta_images, request, metadata, user) -> list[str]:
 
 def add_file_context(messages: list, chat_id: str, user) -> list:
     """
-    Add file URLs to user messages for native function calling.
+    Add file URLs to messages for native function calling.
     """
     if not chat_id or chat_id.startswith("local:"):
         return messages
@@ -961,7 +961,6 @@ def add_file_context(messages: list, chat_id: str, user) -> list:
     stored_messages = get_message_list(
         history.get("messages", {}), history.get("currentId")
     )
-    stored_user_messages = [msg for msg in stored_messages if msg.get("role") == "user"]
 
     def format_file_tag(file):
         attrs = f'type="{file.get("type", "file")}" url="{file["url"]}"'
@@ -971,9 +970,7 @@ def add_file_context(messages: list, chat_id: str, user) -> list:
             attrs += f' name="{file["name"]}"'
         return f"<file {attrs}/>"
 
-    user_messages = [msg for msg in messages if msg.get("role") == "user"]
-
-    for message, stored_message in zip(user_messages, stored_user_messages):
+    for message, stored_message in zip(messages, stored_messages):
         files_with_urls = [
             file for file in stored_message.get("files", []) if file.get("url")
         ]

@@ -1378,7 +1378,9 @@ async def view_knowledge_file(
             if (
                 user_role == "admin"
                 or knowledge_base.user_id == user_id
-                or has_access(user_id, "read", knowledge_base.access_control, user_group_ids)
+                or has_access(
+                    user_id, "read", knowledge_base.access_control, user_group_ids
+                )
             ):
                 has_knowledge_access = True
                 knowledge_info = {"id": knowledge_base.id, "name": knowledge_base.name}
@@ -1463,7 +1465,9 @@ async def query_knowledge_bases(
                     if knowledge and (
                         user_role == "admin"
                         or knowledge.user_id == user_id
-                        or has_access(user_id, "read", knowledge.access_control, user_group_ids)
+                        or has_access(
+                            user_id, "read", knowledge.access_control, user_group_ids
+                        )
                     ):
                         collection_names.append(item_id)
 
@@ -1482,12 +1486,14 @@ async def query_knowledge_bases(
                         or has_access(user_id, "read", note.access_control)
                     ):
                         content = note.data.get("content", {}).get("md", "")
-                        note_results.append({
-                            "content": content,
-                            "source": note.title,
-                            "note_id": note.id,
-                            "type": "note",
-                        })
+                        note_results.append(
+                            {
+                                "content": content,
+                                "source": note.title,
+                                "note_id": note.id,
+                                "type": "note",
+                            }
+                        )
 
         elif knowledge_ids:
             # User specified specific KBs
@@ -1496,7 +1502,9 @@ async def query_knowledge_bases(
                 if knowledge and (
                     user_role == "admin"
                     or knowledge.user_id == user_id
-                    or has_access(user_id, "read", knowledge.access_control, user_group_ids)
+                    or has_access(
+                        user_id, "read", knowledge.access_control, user_group_ids
+                    )
                 ):
                     collection_names.append(knowledge_id)
         else:
@@ -1535,7 +1543,9 @@ async def query_knowledge_bases(
                 for idx, doc in enumerate(documents):
                     chunk_info = {
                         "content": doc,
-                        "source": metadatas[idx].get("source", metadatas[idx].get("name", "Unknown")),
+                        "source": metadatas[idx].get(
+                            "source", metadatas[idx].get("name", "Unknown")
+                        ),
                         "file_id": metadatas[idx].get("file_id", ""),
                     }
                     if idx < len(distances):

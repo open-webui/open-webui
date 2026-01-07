@@ -383,7 +383,7 @@ def calculate_chat_stats(
 def generate_chat_stats_jsonl_generator(user_id, filter):
     """
     Synchronous generator for streaming chat stats export.
-    
+
     NOTE: We intentionally do NOT pass a shared db session here. Instead, we let
     each batch create its own short-lived session via get_db_context(None).
     This is critical for SQLite in low-resource environments because:

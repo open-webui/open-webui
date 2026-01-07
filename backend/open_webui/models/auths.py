@@ -135,7 +135,9 @@ class AuthsTable:
         except Exception:
             return None
 
-    def authenticate_user_by_api_key(self, api_key: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def authenticate_user_by_api_key(
+        self, api_key: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_api_key: {api_key}")
         # if no api_key, return None
         if not api_key:
@@ -147,7 +149,9 @@ class AuthsTable:
         except Exception:
             return False
 
-    def authenticate_user_by_email(self, email: str, db: Optional[Session] = None) -> Optional[UserModel]:
+    def authenticate_user_by_email(
+        self, email: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_email: {email}")
         try:
             with get_db_context(db) as db:
@@ -158,7 +162,9 @@ class AuthsTable:
         except Exception:
             return None
 
-    def update_user_password_by_id(self, id: str, new_password: str, db: Optional[Session] = None) -> bool:
+    def update_user_password_by_id(
+        self, id: str, new_password: str, db: Optional[Session] = None
+    ) -> bool:
         try:
             with get_db_context(db) as db:
                 result = (
@@ -169,7 +175,9 @@ class AuthsTable:
         except Exception:
             return False
 
-    def update_email_by_id(self, id: str, email: str, db: Optional[Session] = None) -> bool:
+    def update_email_by_id(
+        self, id: str, email: str, db: Optional[Session] = None
+    ) -> bool:
         try:
             with get_db_context(db) as db:
                 result = db.query(Auth).filter_by(id=id).update({"email": email})

@@ -1,4 +1,3 @@
-
 import time
 from typing import Optional
 
@@ -100,7 +99,9 @@ class PromptsTable:
         except Exception:
             return None
 
-    def get_prompt_by_command(self, command: str, db: Optional[Session] = None) -> Optional[PromptModel]:
+    def get_prompt_by_command(
+        self, command: str, db: Optional[Session] = None
+    ) -> Optional[PromptModel]:
         try:
             with get_db_context(db) as db:
                 prompt = db.query(Prompt).filter_by(command=command).first()
@@ -135,7 +136,9 @@ class PromptsTable:
         self, user_id: str, permission: str = "write", db: Optional[Session] = None
     ) -> list[PromptUserResponse]:
         prompts = self.get_prompts(db=db)
-        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id, db=db)}
+        user_group_ids = {
+            group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
+        }
 
         return [
             prompt
@@ -159,7 +162,9 @@ class PromptsTable:
         except Exception:
             return None
 
-    def delete_prompt_by_command(self, command: str, db: Optional[Session] = None) -> bool:
+    def delete_prompt_by_command(
+        self, command: str, db: Optional[Session] = None
+    ) -> bool:
         try:
             with get_db_context(db) as db:
                 db.query(Prompt).filter_by(command=command).delete()

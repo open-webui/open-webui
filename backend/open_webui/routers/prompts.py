@@ -23,7 +23,9 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[PromptModel])
-async def get_prompts(user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_prompts(
+    user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         prompts = Prompts.get_prompts(db=db)
     else:
@@ -33,7 +35,9 @@ async def get_prompts(user=Depends(get_verified_user), db: Session = Depends(get
 
 
 @router.get("/list", response_model=list[PromptAccessResponse])
-async def get_prompt_list(user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_prompt_list(
+    user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         prompts = Prompts.get_prompts(db=db)
     else:
@@ -59,11 +63,17 @@ async def get_prompt_list(user=Depends(get_verified_user), db: Session = Depends
 
 @router.post("/create", response_model=Optional[PromptModel])
 async def create_new_prompt(
-    request: Request, form_data: PromptForm, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    request: Request,
+    form_data: PromptForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     if user.role != "admin" and not (
         has_permission(
-            user.id, "workspace.prompts", request.app.state.config.USER_PERMISSIONS, db=db
+            user.id,
+            "workspace.prompts",
+            request.app.state.config.USER_PERMISSIONS,
+            db=db,
         )
         or has_permission(
             user.id,
@@ -99,7 +109,9 @@ async def create_new_prompt(
 
 
 @router.get("/command/{command}", response_model=Optional[PromptAccessResponse])
-async def get_prompt_by_command(command: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_prompt_by_command(
+    command: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     prompt = Prompts.get_prompt_by_command(f"/{command}", db=db)
 
     if prompt:
@@ -169,7 +181,9 @@ async def update_prompt_by_command(
 
 
 @router.delete("/command/{command}/delete", response_model=bool)
-async def delete_prompt_by_command(command: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def delete_prompt_by_command(
+    command: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     prompt = Prompts.get_prompt_by_command(f"/{command}", db=db)
     if not prompt:
         raise HTTPException(
