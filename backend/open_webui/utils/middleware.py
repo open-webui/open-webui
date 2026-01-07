@@ -44,6 +44,7 @@ from open_webui.routers.retrieval import (
     process_web_search,
     SearchForm,
 )
+from open_webui.utils.tools import get_builtin_tools
 from open_webui.routers.images import (
     image_generations,
     CreateImageForm,
@@ -60,6 +61,7 @@ from open_webui.utils.webhook import post_webhook
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
+    get_image_base64_from_url,
     get_image_url_from_base64,
 )
 
@@ -110,7 +112,6 @@ from open_webui.config import (
     CODE_INTERPRETER_BLOCKED_MODULES,
 )
 from open_webui.env import (
-    SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
     ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
@@ -118,13 +119,13 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
+    RAG_SYSTEM_CONTEXT,
 )
 from open_webui.constants import TASKS
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 DEFAULT_REASONING_TAGS = [
@@ -345,7 +346,7 @@ async def chat_completion_tools_handler(
     sources = []
 
     specs = [tool["spec"] for tool in tools.values()]
-    tools_specs = json.dumps(specs)
+    tools_specs = json.dumps(specs, ensure_ascii=False)
 
     if request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE != "":
         template = request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
@@ -725,6 +726,8 @@ def get_images_from_messages(message_list):
         for file in message.get("files", []):
             if file.get("type") == "image":
                 message_images.append(file.get("url"))
+            elif file.get("content_type", "").startswith("image/"):
+                message_images.append(file.get("url"))
 
         if message_images:
             images.append(message_images)
@@ -758,10 +761,10 @@ async def chat_image_generation_handler(
 ):
     metadata = extra_params.get("__metadata__", {})
     chat_id = metadata.get("chat_id", None)
-    if not chat_id:
-        return form_data
+    __event_emitter__ = extra_params.get("__event_emitter__", None)
 
-    __event_emitter__ = extra_params["__event_emitter__"]
+    if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
+        return form_data
 
     if chat_id.startswith("local:"):
         message_list = form_data.get("messages", [])
@@ -800,6 +803,10 @@ async def chat_image_generation_handler(
             images = await image_edits(
                 request=request,
                 form_data=EditImageForm(**{"prompt": prompt, "image": input_images}),
+                metadata={
+                    "chat_id": metadata.get("chat_id", None),
+                    "message_id": metadata.get("message_id", None),
+                },
                 user=user,
             )
 
@@ -825,7 +832,7 @@ async def chat_image_generation_handler(
                 }
             )
 
-            system_message_content = "<context>The requested image has been created and is now being shown to the user. Let them know that it has been generated.</context>"
+            system_message_content = "<context>The requested image has been edited and created and is now being shown to the user. Let them know that it has been generated.</context>"
         except Exception as e:
             log.debug(e)
 
@@ -884,6 +891,10 @@ async def chat_image_generation_handler(
             images = await image_generations(
                 request=request,
                 form_data=CreateImageForm(**{"prompt": prompt}),
+                metadata={
+                    "chat_id": metadata.get("chat_id", None),
+                    "message_id": metadata.get("message_id", None),
+                },
                 user=user,
             )
 
@@ -1100,11 +1111,51 @@ def apply_params_to_form_data(form_data, model):
 
         if "logit_bias" in params and params["logit_bias"] is not None:
             try:
-                form_data["logit_bias"] = json.loads(
-                    convert_logit_bias_input_to_json(params["logit_bias"])
-                )
+                logit_bias = convert_logit_bias_input_to_json(params["logit_bias"])
+
+                if logit_bias:
+                    form_data["logit_bias"] = json.loads(logit_bias)
             except Exception as e:
                 log.exception(f"Error parsing logit_bias: {e}")
+
+    return form_data
+
+
+async def convert_url_images_to_base64(form_data):
+    messages = form_data.get("messages", [])
+
+    for message in messages:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+
+        new_content = []
+
+        for item in content:
+            if not isinstance(item, dict) or item.get("type") != "image_url":
+                new_content.append(item)
+                continue
+
+            image_url = item.get("image_url", {}).get("url", "")
+            if image_url.startswith("data:image/"):
+                new_content.append(item)
+                continue
+
+            try:
+                base64_data = await asyncio.to_thread(
+                    get_image_base64_from_url, image_url
+                )
+                new_content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": base64_data},
+                    }
+                )
+            except Exception as e:
+                log.debug(f"Error converting image URL to base64: {e}")
+                new_content.append(item)
+
+        message["content"] = new_content
 
     return form_data
 
@@ -1125,6 +1176,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )  # Required to handle system prompt variables
         except:
             pass
+
+    form_data = await convert_url_images_to_base64(form_data)
 
     event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)
@@ -1147,6 +1200,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         "__oauth_token__": oauth_token,
         "__request__": request,
         "__model__": model,
+        "__chat_id__": metadata.get("chat_id"),
+        "__message_id__": metadata.get("message_id"),
     }
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
@@ -1256,7 +1311,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise Exception(f"{e}")
 
-    features = form_data.pop("features", None)
+    features = form_data.pop("features", None) or {}
+    extra_params["__features__"] = features
     if features:
         if "voice" in features and features["voice"]:
             if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
@@ -1271,19 +1327,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if "memory" in features and features["memory"]:
-            form_data = await chat_memory_handler(
-                request, form_data, extra_params, user
-            )
+            # Skip forced memory injection when native FC is enabled - model can use memory tools
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data = await chat_memory_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "web_search" in features and features["web_search"]:
-            form_data = await chat_web_search_handler(
-                request, form_data, extra_params, user
-            )
+            # Skip forced RAG web search when native FC is enabled - model can use web_search tool
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data = await chat_web_search_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "image_generation" in features and features["image_generation"]:
-            form_data = await chat_image_generation_handler(
-                request, form_data, extra_params, user
-            )
+            # Skip forced image generation when native FC is enabled - model can use generate_image tool
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data = await chat_image_generation_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "code_interpreter" in features and features["code_interpreter"]:
             form_data["messages"] = add_or_update_user_message(
@@ -1494,6 +1556,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if mcp_clients:
         metadata["mcp_clients"] = mcp_clients
 
+    # Always inject builtin tools for native function calling based on enabled features
+    if metadata.get("params", {}).get("function_calling") == "native":
+        builtin_tools = get_builtin_tools(
+            request,
+            {
+                **extra_params,
+                "__event_emitter__": event_emitter,
+            },
+            features,
+        )
+        for name, tool_dict in builtin_tools.items():
+            if name not in tools_dict:
+                tools_dict[name] = tool_dict
+
     if tools_dict:
         if metadata.get("params", {}).get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
@@ -1551,15 +1627,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception("No user message found")
 
         if context_string != "":
-            form_data["messages"] = add_or_update_user_message(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE,
-                    context_string,
-                    prompt,
-                ),
-                form_data["messages"],
-                append=False,
-            )
+            if RAG_SYSTEM_CONTEXT:
+                # Inject into system message for KV prefix caching
+                form_data["messages"] = add_or_update_system_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
+                    ),
+                    form_data["messages"],
+                    append=True,
+                )
+            else:
+                # Inject into user message
+                form_data["messages"] = add_or_update_user_message(
+                    rag_template(
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
+                    ),
+                    form_data["messages"],
+                    append=False,
+                )
 
     # If there are citations, add them to the data_items
     sources = [
@@ -2556,8 +2645,42 @@ async def process_chat_response(
                                         continue
 
                                     delta = choices[0].get("delta", {})
-                                    delta_tool_calls = delta.get("tool_calls", None)
 
+                                    # Handle delta annotations
+                                    annotations = delta.get("annotations")
+                                    if annotations:
+                                        for annotation in annotations:
+                                            if (
+                                                annotation.get("type") == "url_citation"
+                                                and "url_citation" in annotation
+                                            ):
+                                                url_citation = annotation[
+                                                    "url_citation"
+                                                ]
+
+                                                url = url_citation.get("url", "")
+                                                title = url_citation.get("title", url)
+
+                                                await event_emitter(
+                                                    {
+                                                        "type": "source",
+                                                        "data": {
+                                                            "source": {
+                                                                "name": title,
+                                                                "url": url,
+                                                            },
+                                                            "document": [title],
+                                                            "metadata": [
+                                                                {
+                                                                    "source": url,
+                                                                    "name": title,
+                                                                }
+                                                            ],
+                                                        },
+                                                    }
+                                                )
+
+                                    delta_tool_calls = delta.get("tool_calls", None)
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
                                             tool_call_index = delta_tool_call.get(
@@ -2615,6 +2738,29 @@ async def process_chat_response(
                                                         ][
                                                             "arguments"
                                                         ] += delta_arguments
+
+                                        # Emit pending tool calls in real-time
+                                        if response_tool_calls:
+                                            # Flush any pending text first
+                                            await flush_pending_delta_data()
+
+                                            pending_content_blocks = content_blocks + [
+                                                {
+                                                    "type": "tool_calls",
+                                                    "content": response_tool_calls,
+                                                    "pending": True,
+                                                }
+                                            ]
+                                            await event_emitter(
+                                                {
+                                                    "type": "chat:completion",
+                                                    "data": {
+                                                        "content": serialize_content_blocks(
+                                                            pending_content_blocks
+                                                        ),
+                                                    },
+                                                }
+                                            )
 
                                     image_urls = get_image_urls(
                                         delta.get("images", []), request, metadata, user
@@ -2696,7 +2842,17 @@ async def process_chat_response(
 
                                         if ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION:
                                             value = convert_markdown_base64_images(
-                                                request, value, metadata, user
+                                                request,
+                                                value,
+                                                {
+                                                    "chat_id": metadata.get(
+                                                        "chat_id", None
+                                                    ),
+                                                    "message_id": metadata.get(
+                                                        "message_id", None
+                                                    ),
+                                                },
+                                                user,
                                             )
 
                                         content = f"{content}{value}"

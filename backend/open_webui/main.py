@@ -102,7 +102,9 @@ from open_webui.routers.retrieval import (
     get_rf,
 )
 
-from open_webui.internal.db import Session, engine
+
+from sqlalchemy.orm import Session
+from open_webui.internal.db import ScopedSession, engine, get_session
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -206,6 +208,7 @@ from open_webui.config import (
     PLAYWRIGHT_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
+    FIRECRAWL_TIMEOUT,
     WEB_LOADER_ENGINE,
     WEB_LOADER_CONCURRENT_REQUESTS,
     WEB_LOADER_TIMEOUT,
@@ -227,6 +230,7 @@ from open_webui.config import (
     RAG_RERANKING_MODEL,
     RAG_EXTERNAL_RERANKER_URL,
     RAG_EXTERNAL_RERANKER_API_KEY,
+    RAG_EXTERNAL_RERANKER_TIMEOUT,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
@@ -249,6 +253,7 @@ from open_webui.config import (
     RAG_OLLAMA_BASE_URL,
     RAG_OLLAMA_API_KEY,
     CHUNK_OVERLAP,
+    CHUNK_MIN_SIZE_TARGET,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
     DATALAB_MARKER_API_KEY,
@@ -264,6 +269,7 @@ from open_webui.config import (
     MINERU_API_MODE,
     MINERU_API_URL,
     MINERU_API_KEY,
+    MINERU_API_TIMEOUT,
     MINERU_PARAMS,
     DATALAB_MARKER_USE_LLM,
     EXTERNAL_DOCUMENT_LOADER_URL,
@@ -278,6 +284,7 @@ from open_webui.config import (
     MISTRAL_OCR_API_BASE_URL,
     MISTRAL_OCR_API_KEY,
     RAG_TEXT_SPLITTER,
+    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
     PDF_EXTRACT_IMAGES,
     YOUTUBE_LOADER_LANGUAGE,
@@ -293,16 +300,19 @@ from open_webui.config import (
     WEB_SEARCH_DOMAIN_FILTER_LIST,
     OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
     JINA_API_KEY,
+    JINA_API_BASE_URL,
     SEARCHAPI_API_KEY,
     SEARCHAPI_ENGINE,
     SERPAPI_API_KEY,
     SERPAPI_ENGINE,
     SEARXNG_QUERY_URL,
+    SEARXNG_LANGUAGE,
     YACY_QUERY_URL,
     YACY_USERNAME,
     YACY_PASSWORD,
     SERPER_API_KEY,
     SERPLY_API_KEY,
+    DDGS_BACKEND,
     SERPSTACK_API_KEY,
     SERPSTACK_HTTPS,
     TAVILY_API_KEY,
@@ -355,6 +365,7 @@ from open_webui.config import (
     ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
     API_KEYS_ALLOWED_ENDPOINTS,
     ENABLE_FOLDERS,
+    FOLDER_MAX_FILE_COUNT,
     ENABLE_CHANNELS,
     ENABLE_NOTES,
     ENABLE_COMMUNITY_SHARING,
@@ -437,6 +448,7 @@ from open_webui.config import (
     reset_config,
 )
 from open_webui.env import (
+    ENABLE_CUSTOM_MODEL_FALLBACK,
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
@@ -449,7 +461,6 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     MAX_BODY_LOG_SIZE,
     SAFE_MODE,
-    SRC_LOG_LEVELS,
     VERSION,
     DEPLOYMENT_ID,
     INSTANCE_ID,
@@ -473,6 +484,7 @@ from open_webui.env import (
     EXTERNAL_PWA_MANIFEST_URL,
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
+    ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
 )
 
 
@@ -530,7 +542,6 @@ if SAFE_MODE:
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class SPAStaticFiles(StaticFiles):
@@ -772,6 +783,7 @@ app.state.config.BANNERS = WEBUI_BANNERS
 
 
 app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
+app.state.config.FOLDER_MAX_FILE_COUNT = FOLDER_MAX_FILE_COUNT
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
@@ -880,13 +892,20 @@ app.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY
 app.state.config.MINERU_API_MODE = MINERU_API_MODE
 app.state.config.MINERU_API_URL = MINERU_API_URL
 app.state.config.MINERU_API_KEY = MINERU_API_KEY
+app.state.config.MINERU_API_TIMEOUT = MINERU_API_TIMEOUT
 app.state.config.MINERU_PARAMS = MINERU_PARAMS
 
 app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
+app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = (
+    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER
+)
+
 app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
 
 app.state.config.CHUNK_SIZE = CHUNK_SIZE
+app.state.config.CHUNK_MIN_SIZE_TARGET = CHUNK_MIN_SIZE_TARGET
 app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
+
 
 app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
@@ -897,6 +916,7 @@ app.state.config.RAG_RERANKING_ENGINE = RAG_RERANKING_ENGINE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
 app.state.config.RAG_EXTERNAL_RERANKER_URL = RAG_EXTERNAL_RERANKER_URL
 app.state.config.RAG_EXTERNAL_RERANKER_API_KEY = RAG_EXTERNAL_RERANKER_API_KEY
+app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT = RAG_EXTERNAL_RERANKER_TIMEOUT
 
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
@@ -937,6 +957,7 @@ app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
 
 app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = OLLAMA_CLOUD_WEB_SEARCH_API_KEY
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
+app.state.config.SEARXNG_LANGUAGE = SEARXNG_LANGUAGE
 app.state.config.YACY_QUERY_URL = YACY_QUERY_URL
 app.state.config.YACY_USERNAME = YACY_USERNAME
 app.state.config.YACY_PASSWORD = YACY_PASSWORD
@@ -950,12 +971,14 @@ app.state.config.SERPSTACK_API_KEY = SERPSTACK_API_KEY
 app.state.config.SERPSTACK_HTTPS = SERPSTACK_HTTPS
 app.state.config.SERPER_API_KEY = SERPER_API_KEY
 app.state.config.SERPLY_API_KEY = SERPLY_API_KEY
+app.state.config.DDGS_BACKEND = DDGS_BACKEND
 app.state.config.TAVILY_API_KEY = TAVILY_API_KEY
 app.state.config.SEARCHAPI_API_KEY = SEARCHAPI_API_KEY
 app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
 app.state.config.SERPAPI_API_KEY = SERPAPI_API_KEY
 app.state.config.SERPAPI_ENGINE = SERPAPI_ENGINE
 app.state.config.JINA_API_KEY = JINA_API_KEY
+app.state.config.JINA_API_BASE_URL = JINA_API_BASE_URL
 app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
 app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
 app.state.config.EXA_API_KEY = EXA_API_KEY
@@ -975,6 +998,7 @@ app.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL
 app.state.config.PLAYWRIGHT_TIMEOUT = PLAYWRIGHT_TIMEOUT
 app.state.config.FIRECRAWL_API_BASE_URL = FIRECRAWL_API_BASE_URL
 app.state.config.FIRECRAWL_API_KEY = FIRECRAWL_API_KEY
+app.state.config.FIRECRAWL_TIMEOUT = FIRECRAWL_TIMEOUT
 app.state.config.TAVILY_EXTRACT_DEPTH = TAVILY_EXTRACT_DEPTH
 
 app.state.EMBEDDING_FUNCTION = None
@@ -998,6 +1022,7 @@ try:
             app.state.config.RAG_RERANKING_MODEL,
             app.state.config.RAG_EXTERNAL_RERANKER_URL,
             app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+            app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         )
     else:
         app.state.rf = None
@@ -1319,7 +1344,7 @@ app.add_middleware(APIKeyRestrictionMiddleware)
 async def commit_session_after_request(request: Request, call_next):
     response = await call_next(request)
     # log.debug("Commit session after request")
-    Session.commit()
+    ScopedSession.commit()
     return response
 
 
@@ -1535,6 +1560,7 @@ async def chat_completion(
 
     metadata = {}
     try:
+        model_info = None
         if not model_item.get("direct", False):
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
@@ -1552,7 +1578,6 @@ async def chat_completion(
                     raise e
         else:
             model = model_item
-            model_info = None
 
             request.state.direct = True
             request.state.model = model
@@ -1560,6 +1585,26 @@ async def chat_completion(
         model_info_params = (
             model_info.params.model_dump() if model_info and model_info.params else {}
         )
+
+        # Check base model existence for custom models
+        if model_info_params.get("base_model_id"):
+            base_model_id = model_info_params.get("base_model_id")
+            if base_model_id not in request.app.state.MODELS:
+                if ENABLE_CUSTOM_MODEL_FALLBACK:
+                    default_models = (
+                        request.app.state.config.DEFAULT_MODELS or ""
+                    ).split(",")
+
+                    fallback_model_id = (
+                        default_models[0].strip() if default_models[0] else None
+                    )
+
+                    if fallback_model_id:
+                        request.base_model_id = fallback_model_id
+                    else:
+                        raise Exception("Model not found")
+                else:
+                    raise Exception("Model not found")
 
         # Chat Params
         stream_delta_chunk_size = form_data.get("params", {}).get(
@@ -1581,6 +1626,7 @@ async def chat_completion(
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
             "message_id": form_data.pop("id", None),
+            "parent_message": form_data.pop("parent_message", None),
             "parent_message_id": form_data.pop("parent_id", None),
             "session_id": form_data.pop("session_id", None),
             "filter_ids": form_data.pop("filter_ids", []),
@@ -1605,14 +1651,37 @@ async def chat_completion(
             },
         }
 
-        if metadata.get("chat_id") and (user and user.role != "admin"):
-            if not metadata["chat_id"].startswith("local:"):
+        if metadata.get("chat_id") and user:
+            if not metadata["chat_id"].startswith(
+                "local:"
+            ):  # temporary chats are not stored
+
+                # Verify chat ownership
                 chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
-                if chat is None:
+                if chat is None and user.role != "admin":  # admins can access any chat
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail=ERROR_MESSAGES.DEFAULT(),
                     )
+
+                # Insert chat files from parent message if any
+                parent_message = metadata.get("parent_message") or {}
+                parent_message_files = parent_message.get("files", [])
+                if parent_message_files:
+                    try:
+                        Chats.insert_chat_files(
+                            metadata["chat_id"],
+                            parent_message.get("id"),
+                            [
+                                file_item.get("id")
+                                for file_item in parent_message_files
+                                if file_item.get("type") == "file"
+                            ],
+                            user.id,
+                        )
+                    except Exception as e:
+                        log.debug(f"Error inserting chat files: {e}")
+                        pass
 
         request.state.metadata = metadata
         form_data["metadata"] = metadata
@@ -1848,10 +1917,12 @@ async def get_app_config(request: Request):
             "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
+            "enable_public_active_users_count": ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_folders": app.state.config.ENABLE_FOLDERS,
+                    "folder_max_file_count": app.state.config.FOLDER_MAX_FILE_COUNT,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_notes": app.state.config.ENABLE_NOTES,
                     "enable_web_search": app.state.config.ENABLE_WEB_SEARCH,
@@ -2025,10 +2096,19 @@ async def get_current_usage(user=Depends(get_verified_user)):
     This is an experimental endpoint and subject to change.
     """
     try:
+        # If public visibility is disabled, only allow admins to access this endpoint
+        if not ENABLE_PUBLIC_ACTIVE_USERS_COUNT and user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Only administrators can view usage statistics.",
+            )
+
         return {
             "model_ids": get_models_in_use(),
             "user_count": Users.get_active_user_count(),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         log.error(f"Error getting usage statistics: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -2222,8 +2302,13 @@ async def oauth_login(provider: str, request: Request):
 #    - Email addresses are considered unique, so we fail registration if the email address is already taken
 @app.get("/oauth/{provider}/login/callback")
 @app.get("/oauth/{provider}/callback")  # Legacy endpoint
-async def oauth_login_callback(provider: str, request: Request, response: Response):
-    return await oauth_manager.handle_callback(request, provider, response)
+async def oauth_login_callback(
+    provider: str,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_session),
+):
+    return await oauth_manager.handle_callback(request, provider, response, db=db)
 
 
 @app.get("/manifest.json")
@@ -2282,7 +2367,7 @@ async def healthcheck():
 
 @app.get("/health/db")
 async def healthcheck_with_db():
-    Session.execute(text("SELECT 1;")).all()
+    ScopedSession.execute(text("SELECT 1;")).all()
     return {"status": True}
 
 

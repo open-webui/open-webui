@@ -6,7 +6,7 @@
 
 	export let overlay = false;
 
-	const getSrcUrl = (url: string, chatId?: string, messageId?: string) => {
+	const getSrcUrl = (url: string, chatId?: string, messageId?: string, sourceId: string) => {
 		try {
 			const parsed = new URL(url);
 
@@ -18,6 +18,10 @@
 				parsed.searchParams.set('message_id', messageId);
 			}
 
+			if (sourceId) {
+				parsed.searchParams.set('source_id', sourceId);
+			}
+
 			return parsed.toString();
 		} catch {
 			// Fallback for relative URLs or invalid input
@@ -26,6 +30,7 @@
 
 			if (chatId) parts.push(`chat_id=${encodeURIComponent(chatId)}`);
 			if (messageId) parts.push(`message_id=${encodeURIComponent(messageId)}`);
+			if (sourceId) parts.push(`source_id=${encodeURIComponent(sourceId)}`);
 
 			if (parts.length === 0) return url;
 
@@ -68,7 +73,7 @@
 			{/if}
 
 			<FullHeightIframe
-				src={getSrcUrl($embed?.url ?? '', $embed?.chatId, $embed?.messageId)}
+				src={getSrcUrl($embed?.url ?? '', $embed?.chatId, $embed?.messageId, $embed?.sourceId)}
 				payload={$embed?.source ?? null}
 				iframeClassName="w-full h-full"
 			/>

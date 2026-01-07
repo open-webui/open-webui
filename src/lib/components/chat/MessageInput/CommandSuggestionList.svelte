@@ -110,13 +110,6 @@
 								type: 'file',
 								data: data
 							});
-						} else if (type === 'youtube') {
-							insertTextHandler('');
-
-							onUpload({
-								type: 'youtube',
-								data: data
-							});
 						} else if (type === 'web') {
 							insertTextHandler('');
 

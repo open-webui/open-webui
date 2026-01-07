@@ -277,6 +277,7 @@ type Config = {
 		enable_direct_connections: boolean;
 		enable_version_update_check: boolean;
 		translation_languages: string[];
+		folder_max_file_count?: number;
 	};
 	oauth: {
 		providers: {
@@ -285,7 +286,7 @@ type Config = {
 	};
 	ui?: {
 		pending_user_overlay_title?: string;
-		pending_user_overlay_description?: string;
+		pending_user_overlay_content?: string;
 	};
 };
 

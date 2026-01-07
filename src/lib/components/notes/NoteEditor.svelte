@@ -24,7 +24,7 @@
 
 	import { compressImage, copyToClipboard, splitStream, convertHeicToJpeg } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { uploadFile } from '$lib/apis/files';
+	import { getFileById, uploadFile } from '$lib/apis/files';
 	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import {
@@ -144,6 +144,11 @@
 	let stopResponseFlag = false;
 
 	let inputElement = null;
+
+	// Computed HTML for editor: fall back to markdown if HTML is missing
+	$: editorHtml =
+		note?.data?.content?.html ||
+		(note?.data?.content?.md ? marked.parse(note.data.content.md) : '');
 
 	const init = async () => {
 		loading = true;
@@ -426,11 +431,7 @@ ${content}
 			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
 			if (uploadedFile) {
-				console.log('File upload completed:', {
-					id: uploadedFile.id,
-					name: fileItem.name,
-					collection: uploadedFile?.meta?.collection_name
-				});
+				console.log('File upload completed:', uploadedFile);
 
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
@@ -438,12 +439,15 @@ ${content}
 				}
 
 				fileItem.status = 'uploaded';
-				fileItem.file = uploadedFile;
+				fileItem.file = await getFileById(localStorage.token, uploadedFile.id).catch((e) => {
+					toast.error(`${e}`);
+					return null;
+				});
 				fileItem.id = uploadedFile.id;
 				fileItem.collection_name =
 					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 
-				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+				fileItem.url = `${uploadedFile.id}`;
 
 				files = files;
 			} else {
@@ -778,7 +782,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		await tick();
 
 		for (const file of files) {
-			if (file.type === 'image') {
+			if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) {
 				const e = new CustomEvent('data', { files: files });
 
 				const img = document.getElementById(`image:${file.id}`);
@@ -1155,7 +1159,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							className="input-prose-sm px-0.5 h-[calc(100%-2rem)]"
 							json={true}
 							bind:value={note.data.content.json}
-							html={note.data?.content?.html}
+							html={editorHtml}
 							documentId={`note:${note.id}`}
 							collaboration={true}
 							socket={$socket}

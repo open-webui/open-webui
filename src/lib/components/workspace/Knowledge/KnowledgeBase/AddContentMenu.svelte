@@ -10,10 +10,14 @@
 	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let onClose: Function = () => {};
+
+	export let onSync: Function = () => {};
+	export let onUpload: Function = (data) => {};
 
 	let show = false;
 </script>
@@ -59,7 +63,7 @@
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
 				on:click={() => {
-					dispatch('upload', { type: 'files' });
+					onUpload({ type: 'files' });
 				}}
 			>
 				<ArrowUpCircle strokeWidth="2" />
@@ -69,7 +73,7 @@
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
 				on:click={() => {
-					dispatch('upload', { type: 'directory' });
+					onUpload({ type: 'directory' });
 				}}
 			>
 				<FolderOpen strokeWidth="2" />
@@ -85,7 +89,7 @@
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
 					on:click={() => {
-						dispatch('sync', { type: 'directory' });
+						onSync();
 					}}
 				>
 					<ArrowPath strokeWidth="2" />
@@ -96,7 +100,17 @@
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
 				on:click={() => {
-					dispatch('upload', { type: 'text' });
+					onUpload({ type: 'web' });
+				}}
+			>
+				<GlobeAlt strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Add webpage')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
+				on:click={() => {
+					onUpload({ type: 'text' });
 				}}
 			>
 				<BarsArrowUp strokeWidth="2" />

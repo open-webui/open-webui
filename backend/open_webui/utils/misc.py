@@ -13,10 +13,9 @@ import mimeparse
 
 
 import collections.abc
-from open_webui.env import SRC_LOG_LEVELS, CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def deep_update(d, u):
@@ -374,6 +373,34 @@ def sanitize_filename(file_name):
     return final_file_name
 
 
+def sanitize_text_for_db(text: str) -> str:
+    """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
+    if not isinstance(text, str):
+        return text
+    # Remove null bytes
+    text = text.replace("\x00", "").replace("\u0000", "")
+    # Remove invalid UTF-8 surrogate characters that can cause encoding errors
+    # This handles cases where binary data or encoding issues introduced surrogates
+    try:
+        text = text.encode("utf-8", errors="surrogatepass").decode(
+            "utf-8", errors="ignore"
+        )
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        pass
+    return text
+
+
+def sanitize_data_for_db(obj):
+    """Recursively sanitize all strings in a data structure for database storage."""
+    if isinstance(obj, str):
+        return sanitize_text_for_db(obj)
+    elif isinstance(obj, dict):
+        return {k: sanitize_data_for_db(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_data_for_db(v) for v in obj]
+    return obj
+
+
 def extract_folders_after_data_docs(path):
     # Convert the path to a Path object if it's not already
     path = Path(path)
@@ -523,16 +550,18 @@ def parse_ollama_modelfile(model_text):
     return data
 
 
-def convert_logit_bias_input_to_json(user_input):
-    logit_bias_pairs = user_input.split(",")
-    logit_bias_json = {}
-    for pair in logit_bias_pairs:
-        token, bias = pair.split(":")
-        token = str(token.strip())
-        bias = int(bias.strip())
-        bias = 100 if bias > 100 else -100 if bias < -100 else bias
-        logit_bias_json[token] = bias
-    return json.dumps(logit_bias_json)
+def convert_logit_bias_input_to_json(user_input) -> Optional[str]:
+    if user_input:
+        logit_bias_pairs = user_input.split(",")
+        logit_bias_json = {}
+        for pair in logit_bias_pairs:
+            token, bias = pair.split(":")
+            token = str(token.strip())
+            bias = int(bias.strip())
+            bias = 100 if bias > 100 else -100 if bias < -100 else bias
+            logit_bias_json[token] = bias
+        return json.dumps(logit_bias_json)
+    return None
 
 
 def freeze(value):
@@ -592,6 +621,10 @@ def strict_match_mime_type(supported: list[str] | str, header: str) -> Optional[
             supported = supported.split(",")
 
         supported = [s for s in supported if s.strip() and "/" in s]
+
+        if len(supported) == 0:
+            # Default to common types if none are specified
+            supported = ["audio/*", "video/webm"]
 
         match = mimeparse.best_match(supported, header)
         if not match:
