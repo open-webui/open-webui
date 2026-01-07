@@ -57,7 +57,7 @@
 		`w-4 h-4 transition-transform duration-200 text-[#1A1B1C] dark:text-[#FDFEFE] ${isOpen ? 'rotate-180' : ''}`;
 </script>
 
-<div class="w-full px-12 py-10 flex justify-between items-center border-b border-gray-200 dark:border-gray-950 bg-gradient-to-l from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800  backdrop-blur-xl">
+<div class="w-full px-12 py-10 flex justify-between items-center border-b border-gray-200 dark:border-gray-950 bg-gradient-to-l from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950  backdrop-blur-xl">
 	<!-- Title and Subtitle Section (Left) -->
 	<div class="flex flex-col justify-start gap-1 flex-1">
 		{#if hasChapter}

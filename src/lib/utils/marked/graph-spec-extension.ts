@@ -41,10 +41,10 @@ export type Sampling3D = {
 };
 
 export interface GraphSpecLayer {
-	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'point_2d' | 'line_2d' |
+	type: 'function_2d' | 'parametric_2d' | 'function_parametric_2d' | 'phase_plane' | 'scatter_2d' | 'point_2d' | 'line_2d' |
 		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'point_3d' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d' |
 		'pie_2d' | 'bar_2d';
-	expression?: string; // function_3d용 단일 표현식
+	expression?: string | { x: string; y: string; z?: string }; // 문자열 또는 객체 형식 지원
 	expressions?: string | string[];
 	field?: { dx?: string; dy?: string; dz?: string }; // vector field용 (phase_plane, vector_field_3d)
 	domain?: Domain2D | Domain3D;
@@ -78,10 +78,10 @@ export interface GraphSpecLayer {
 }
 
 export interface GraphSpec {
-	type: 'function_2d' | 'parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d' | 'line_2d' |
+	type: 'function_2d' | 'parametric_2d' | 'function_parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d' | 'line_2d' |
 		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d' | 'cartesian' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d' |
 		'pie_2d' | 'bar_2d';
-	expression?: string; // function_3d용 단일 표현식
+	expression?: string | { x: string; y: string; z?: string }; // 문자열 또는 객체 형식 지원
 	expressions?: string | string[];
 	field?: { dx?: string; dy?: string; dz?: string }; // vector field용 (phase_plane, vector_field_3d)
 	domain?: Domain2D | Domain3D;
@@ -224,7 +224,7 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 			// or { "function_2d": { "type": "function_2d", ... } } etc.
 			// If parsed object has a single key that matches a known type, unwrap it
 			const knownTypes = [
-				'function_2d', 'parametric_2d', 'phase_plane', 'scatter_2d', 'composite_2d',
+				'function_2d', 'parametric_2d', 'function_parametric_2d', 'phase_plane', 'scatter_2d', 'composite_2d',
 				'multi_scatter_2d', 'line_2d', 'function_3d', 'parametric_3d', 'scatter_3d',
 				'composite_3d', 'cartesian', 'histogram_2d', 'vector_2d', 'vector_field_3d'
 			];
