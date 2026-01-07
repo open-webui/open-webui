@@ -4,7 +4,7 @@
 	import type { i18n as i18nType } from 'i18next';
 	import { DropdownMenu } from 'bits-ui';
 	import type { PromptGroupWithMappings, PersonaPrompt } from '$lib/apis/prompt-groups';
-	import { getGroupPrompts } from '$lib/apis/prompt-groups';
+	import { getGroupPrompts, isToolType } from '$lib/apis/prompt-groups';
 
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
@@ -61,7 +61,7 @@
 	$: basePrompts = groupPrompts.filter((p) => p.prompt_type === 'base');
 	$: proficiencyPrompts = groupPrompts.filter((p) => p.prompt_type === 'proficiency');
 	$: stylePrompts = groupPrompts.filter((p) => p.prompt_type === 'style');
-	$: toolPrompts = groupPrompts.filter((p) => p.prompt_type === 'tool');
+	$: toolPrompts = groupPrompts.filter((p) => isToolType(p.prompt_type));
 	$: generalPrompts = groupPrompts.filter((p) => p.prompt_type === null);
 </script>
 

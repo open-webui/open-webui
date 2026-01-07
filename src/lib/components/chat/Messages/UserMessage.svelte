@@ -211,7 +211,7 @@
 
 			{#if edit === true}
 				<div class="flex flex-col items-end w-full">
-					<div class="flex flex-col justify-center items-start p-4 px-7 gap-4 w-full max-w-[90%]
+					<div class="flex flex-col justify-center items-start p-4 px-7 gap-4 w-full max-w-[90%] @md:max-w-[75%]
 						bg-primary-500/40
 						shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_10px_rgba(255,255,255,0.05),inset_2px_2px_16px_rgba(206,212,229,0.12)]
 						backdrop-blur-sm
@@ -329,8 +329,8 @@
 				<div class="w-full">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
-							class="rounded-3xl {($settings?.chatBubble ?? true)
-								? `max-w-[90%] px-4 py-1.5  bg-primary-500 text-gray-100 ${
+							class="rounded-3xl user-message-bubble {($settings?.chatBubble ?? true)
+								? `max-w-[90%] @md:max-w-[75%] px-4 py-1.5  bg-primary-500 text-gray-100 ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
 								: ' w-full'}"

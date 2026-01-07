@@ -8,6 +8,7 @@
 	import Search from '$lib/components/icons/Search.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import type { PersonaPrompt, PromptType } from '$lib/apis/prompt-groups';
+	import { isToolType } from '$lib/apis/prompt-groups';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -223,7 +224,7 @@
 										({prompt.persona_value})
 									</span>
 								{/if}
-								{#if prompt.prompt_type === 'tool' && prompt.tool_priority !== undefined && prompt.tool_priority > 0}
+								{#if isToolType(prompt.prompt_type) && prompt.tool_priority !== undefined && prompt.tool_priority > 0}
 									<span class="text-xs px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
 										P:{prompt.tool_priority}
 									</span>
@@ -231,7 +232,7 @@
 							</div>
 							<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
 								{prompt.command}
-								{#if prompt.prompt_type === 'tool' && prompt.tool_description}
+								{#if isToolType(prompt.prompt_type) && prompt.tool_description}
 									<span class="ml-2 text-amber-600 dark:text-amber-400">• {prompt.tool_description}</span>
 								{/if}
 							</div>

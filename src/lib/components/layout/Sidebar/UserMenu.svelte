@@ -128,15 +128,40 @@
 						showThemeSubmenu = !showThemeSubmenu;
 					}}
 				>
-					<svg slot="icon" width="16" height="16" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path
-							d="M11.0002 3.66667C7.31833 3.66667 4.3335 6.6515 4.3335 10.3333C4.3335 14.0152 7.31833 17 11.0002 17C14.682 17 17.6668 14.0152 17.6668 10.3333C17.6668 9.99617 17.6442 9.66417 17.6002 9.33883C17.0168 10.2478 16.0127 10.8517 14.8613 10.8517C13.0738 10.8517 11.6252 9.403 11.6252 7.6155C11.6252 6.464 12.2292 5.45983 13.1382 4.87633C12.8128 4.83233 12.4808 4.80967 12.1437 4.80967"
-							class="stroke-gray-900 dark:stroke-[#FDFEFE]"
-							stroke-width="1.5"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
+					<div slot="icon">
+					{#if $theme === 'light'}
+						<!-- Sun icon for light mode -->
+						<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="10" cy="10" r="4" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5"/>
+							<path d="M10 2V4" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5" stroke-linecap="round"/>
+							<path d="M10 16V18" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5" stroke-linecap="round"/>
+							<path d="M18 10H16" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5" stroke-linecap="round"/>
+							<path d="M4 10H2" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5" stroke-linecap="round"/>
+							<path d="M15.66 4.34L14.24 5.76" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5" stroke-linecap="round"/>
+							<path d="M5.76 14.24L4.34 15.66" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5" stroke-linecap="round"/>
+							<path d="M15.66 15.66L14.24 14.24" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5" stroke-linecap="round"/>
+							<path d="M5.76 5.76L4.34 4.34" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5" stroke-linecap="round"/>
+						</svg>
+					{:else if $theme === 'system'}
+						<!-- System/Computer icon -->
+						<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<rect x="3" y="4" width="14" height="10" rx="1" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5"/>
+							<path d="M7 17H13" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5" stroke-linecap="round"/>
+							<path d="M10 14V17" class="stroke-gray-900 dark:stroke-[#FDFEFE]" stroke-width="1.5"/>
+						</svg>
+					{:else}
+						<!-- Moon icon for dark mode (default) -->
+						<svg width="16" height="16" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path
+								d="M11.0002 3.66667C7.31833 3.66667 4.3335 6.6515 4.3335 10.3333C4.3335 14.0152 7.31833 17 11.0002 17C14.682 17 17.6668 14.0152 17.6668 10.3333C17.6668 9.99617 17.6442 9.66417 17.6002 9.33883C17.0168 10.2478 16.0127 10.8517 14.8613 10.8517C13.0738 10.8517 11.6252 9.403 11.6252 7.6155C11.6252 6.464 12.2292 5.45983 13.1382 4.87633C12.8128 4.83233 12.4808 4.80967 12.1437 4.80967"
+								class="stroke-gray-900 dark:stroke-[#FDFEFE]"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					{/if}
+				</div>
 				</TooltipButton>
 
 				<!-- Theme Submenu -->
