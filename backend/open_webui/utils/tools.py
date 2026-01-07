@@ -342,15 +342,20 @@ async def get_tools(
 
 
 def get_builtin_tools(
-    request: Request, extra_params: dict, features: dict = None
+    request: Request, extra_params: dict, features: dict = None, model: dict = None
 ) -> dict[str, dict]:
     """
     Get built-in tools for native function calling.
-    Only returns tools when BOTH the global config is enabled AND the feature is enabled for this chat.
+    Only returns tools when BOTH the global config is enabled AND the model capability allows it.
     """
     tools_dict = {}
     builtin_functions = []
     features = features or {}
+    model = model or {}
+
+    # Helper to get model capabilities (defaults to True if not specified)
+    def get_model_capability(name: str, default: bool = True) -> bool:
+        return model.get("info", {}).get("meta", {}).get("capabilities", {}).get(name, default)
 
     # Time utilities - always available for date calculations
     builtin_functions.extend([get_current_timestamp, calculate_timestamp])
@@ -362,18 +367,18 @@ def get_builtin_tools(
     if features.get("memory"):
         builtin_functions.extend([search_memories, add_memory, replace_memory_content])
 
-    # Add web search tools if enabled globally AND for this chat
-    if getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False) and features.get(
+    # Add web search tools if enabled globally AND model has web_search capability
+    if getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False) and get_model_capability(
         "web_search"
     ):
         builtin_functions.extend([web_search, fetch_url])
 
-    # Add image generation/edit tools if enabled globally AND for this chat
+    # Add image generation/edit tools if enabled globally AND model has image_generation capability
     if getattr(
         request.app.state.config, "ENABLE_IMAGE_GENERATION", False
-    ) and features.get("image_generation"):
+    ) and get_model_capability("image_generation"):
         builtin_functions.append(generate_image)
-    if getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False) and features.get(
+    if getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False) and get_model_capability(
         "image_generation"
     ):
         builtin_functions.append(edit_image)
