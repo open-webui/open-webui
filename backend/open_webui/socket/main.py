@@ -186,6 +186,123 @@ async def usage(sid, data):
     await sio.emit("usage", {"models": get_models_in_use()})
 
 
+@sio.on("crew-mcp-query")
+async def crew_mcp_query(sid, data):
+    """Handle CrewMCP query via WebSocket"""
+    try:
+        # Authenticate user from session
+        if sid not in SESSION_POOL:
+            await sio.emit(
+                "crew-mcp-error",
+                {"error": "Unauthorized - session not found", "code": 401},
+                room=sid,
+            )
+            return
+
+        user_session = SESSION_POOL[sid]
+
+        # Extract request data
+        query = data.get("query", "")
+        model = data.get("model", "")
+        selected_tools = data.get("selected_tools", [])
+        chat_id = data.get("chat_id", "")
+
+        if not query:
+            await sio.emit(
+                "crew-mcp-error", {"error": "Query is required", "code": 400}, room=sid
+            )
+            return
+
+        log.info(
+            f"CrewMCP WebSocket query from user {user_session.get('id')}: {query[:100]}"
+        )
+
+        # Emit processing status
+        await sio.emit(
+            "crew-mcp-status",
+            {"status": "processing", "message": "CrewAI is analyzing your request..."},
+            room=sid,
+        )
+
+        # Import crew_mcp_manager
+        try:
+            from mcp_backend.integration.crew_mcp_integration import CrewMCPManager
+            from mcp_backend.routers.crew_mcp import extract_graph_access_token
+            import os
+            import asyncio
+            import concurrent.futures
+        except ImportError as e:
+            log.error(f"Failed to import CrewMCP dependencies: {e}")
+            await sio.emit(
+                "crew-mcp-error",
+                {"error": "CrewMCP integration not available", "code": 503},
+                room=sid,
+            )
+            return
+
+        # Initialize CrewMCPManager
+        crew_mcp_manager = CrewMCPManager()
+
+        # Handle user token for SharePoint access (if needed)
+        use_delegated_access = (
+            os.getenv("SHP_USE_DELEGATED_ACCESS", "false").lower() == "true"
+        )
+        if use_delegated_access:
+            # For WebSocket, we'd need to pass the token in the data or extract from environ
+            # For now, we'll set it to None and let it use app credentials
+            crew_mcp_manager.set_user_token(None)
+            log.info(
+                "WebSocket CrewMCP: Using application access (no user token available in WebSocket)"
+            )
+
+        # Get available tools
+        tools = crew_mcp_manager.get_available_tools()
+        if not tools:
+            await sio.emit(
+                "crew-mcp-error",
+                {
+                    "error": "No MCP tools available. Check MCP server configuration.",
+                    "code": 503,
+                },
+                room=sid,
+            )
+            return
+
+        log.info(f"Selected tools: {selected_tools}")
+        log.info("Using intelligent crew with manager agent for routing")
+
+        # Run crew in executor to prevent blocking
+        loop = asyncio.get_event_loop()
+        log.info("Starting crew execution in thread pool executor via WebSocket")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            result = await loop.run_in_executor(
+                executor,
+                crew_mcp_manager.run_intelligent_crew,
+                query,
+                selected_tools,
+            )
+
+        log.info(
+            f"Crew execution finished via WebSocket. Result length: {len(result) if result else 0}"
+        )
+
+        used_tools = [tool["name"] for tool in tools]
+
+        # Emit success result
+        await sio.emit(
+            "crew-mcp-result",
+            {"result": result, "tools_used": used_tools, "success": True},
+            room=sid,
+        )
+
+        log.info(f"CrewMCP WebSocket query completed successfully")
+
+    except Exception as e:
+        log.error(f"CrewMCP WebSocket error: {e}", exc_info=True)
+        await sio.emit("crew-mcp-error", {"error": str(e), "code": 500}, room=sid)
+
+
 @sio.event
 async def connect(sid, environ, auth):
     user = None

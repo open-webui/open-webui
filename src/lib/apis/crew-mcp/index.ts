@@ -1,4 +1,7 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { get } from 'svelte/store';
+import { socket } from '$lib/stores';
+import type { Socket } from 'socket.io-client';
 
 export const getCrewMCPStatus = async (token: string = '') => {
 	let error = null;
@@ -106,4 +109,67 @@ export const queryCrewMCP = async (
 	}
 
 	return res;
+};
+
+export const queryCrewMCPWebSocket = async (
+	query: string,
+	model: string = '',
+	selectedTools: string[] = [],
+	chatId: string = '',
+	onStatus?: (message: string) => void
+): Promise<{ result: string; tools_used: string[]; success: boolean }> => {
+	return new Promise((resolve, reject) => {
+		const _socket = get(socket) as Socket | null;
+
+		if (!_socket || !_socket.connected) {
+			reject(new Error('WebSocket not connected'));
+			return;
+		}
+
+		// Set up timeout (10 minutes for very long operations)
+		const timeoutId = setTimeout(() => {
+			_socket.off('crew-mcp-status');
+			_socket.off('crew-mcp-result');
+			_socket.off('crew-mcp-error');
+			reject(new Error('CrewAI MCP: Request timeout after 10 minutes'));
+		}, 600000);
+
+		// Listen for status updates
+		const statusHandler = (data: { status: string; message: string }) => {
+			console.log('CrewMCP status:', data);
+			if (onStatus) {
+				onStatus(data.message);
+			}
+		};
+
+		// Listen for result
+		const resultHandler = (data: { result: string; tools_used: string[]; success: boolean }) => {
+			clearTimeout(timeoutId);
+			_socket.off('crew-mcp-status', statusHandler);
+			_socket.off('crew-mcp-result', resultHandler);
+			_socket.off('crew-mcp-error', errorHandler);
+			resolve(data);
+		};
+
+		// Listen for errors
+		const errorHandler = (data: { error: string; code?: number }) => {
+			clearTimeout(timeoutId);
+			_socket.off('crew-mcp-status', statusHandler);
+			_socket.off('crew-mcp-result', resultHandler);
+			_socket.off('crew-mcp-error', errorHandler);
+			reject(new Error(`CrewAI MCP: ${data.error}`));
+		};
+
+		_socket.on('crew-mcp-status', statusHandler);
+		_socket.on('crew-mcp-result', resultHandler);
+		_socket.on('crew-mcp-error', errorHandler);
+
+		// Emit query
+		_socket.emit('crew-mcp-query', {
+			query: query,
+			model: model,
+			selected_tools: selectedTools,
+			chat_id: chatId
+		});
+	});
 };

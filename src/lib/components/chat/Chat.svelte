@@ -73,7 +73,7 @@
 		stopTask
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
-	import { queryCrewMCP } from '$lib/apis/crew-mcp';
+	import { queryCrewMCPWebSocket } from '$lib/apis/crew-mcp';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -1410,13 +1410,17 @@
 							await tick();
 							scrollToBottom();
 
-							const crewResponse = await queryCrewMCP(
-								localStorage.token,
+							const crewResponse = await queryCrewMCPWebSocket(
 								prompt,
 								model.id,
 								selectedToolIds,
 								$chatId,
-								$socket?.id
+								(statusMessage: string) => {
+									// Update UI with status from CrewAI
+									responseMessage.content = statusMessage;
+									history.messages[responseMessageId] = responseMessage;
+									tick();
+								}
 							);
 
 							if (crewResponse && crewResponse.result) {
