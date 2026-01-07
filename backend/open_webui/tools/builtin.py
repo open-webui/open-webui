@@ -1183,7 +1183,7 @@ async def list_knowledge_bases(
         result = Knowledges.search_knowledge_bases(
             user_id,
             filter={
-                "query": "",  # Empty query to get all
+                "query": "",
                 "user_id": user_id,
                 "group_ids": user_group_ids,
             },
@@ -1193,7 +1193,6 @@ async def list_knowledge_bases(
 
         knowledge_bases = []
         for knowledge_base in result.items:
-            # Get file count for this KB
             files = Knowledges.get_files_by_id(knowledge_base.id)
             file_count = len(files) if files else 0
 
@@ -1211,6 +1210,7 @@ async def list_knowledge_bases(
     except Exception as e:
         log.exception(f"list_knowledge_bases error: {e}")
         return json.dumps({"error": str(e)})
+
 
 async def search_knowledge_bases(
     query: str,
@@ -1252,7 +1252,6 @@ async def search_knowledge_bases(
 
         knowledge_bases = []
         for knowledge_base in result.items:
-            # Get file count for this KB
             files = Knowledges.get_files_by_id(knowledge_base.id)
             file_count = len(files) if files else 0
 
@@ -1287,7 +1286,7 @@ async def search_knowledge_files(
     :param knowledge_id: Optional KB id to limit search to a specific knowledge base
     :param count: Maximum number of results to return (default: 5)
     :param skip: Number of results to skip for pagination (default: 0)
-    :return: JSON with matching files containing id, filename, knowledge_id, knowledge_name, and updated_at
+    :return: JSON with matching files containing id, filename, and updated_at
     """
     if __request__ is None:
         return json.dumps({"error": "Request context not available"})
@@ -1302,7 +1301,6 @@ async def search_knowledge_files(
         user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
 
         if knowledge_id:
-            # Search within a specific KB
             result = Knowledges.search_files_by_id(
                 knowledge_id=knowledge_id,
                 user_id=user_id,
@@ -1311,7 +1309,6 @@ async def search_knowledge_files(
                 limit=count,
             )
         else:
-            # Search across all accessible KBs
             result = Knowledges.search_knowledge_files(
                 filter={
                     "query": query,
@@ -1329,12 +1326,9 @@ async def search_knowledge_files(
                 "filename": file.filename,
                 "updated_at": file.updated_at,
             }
-
-            # Add KB info if available (from search_knowledge_files)
             if hasattr(file, "collection") and file.collection:
                 file_info["knowledge_id"] = file.collection.get("id", "")
                 file_info["knowledge_name"] = file.collection.get("name", "")
-
             files.append(file_info)
 
         return json.dumps(files, ensure_ascii=False)
@@ -1369,16 +1363,15 @@ async def view_knowledge_file(
         user_role = __user__.get("role", "user")
         user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
 
-        # Get the file
         file = Files.get_file_by_id(file_id)
         if not file:
             return json.dumps({"error": "File not found"})
 
-        # Check if user has access via any KB containing this file
+        # Check access via any KB containing this file
         knowledges = Knowledges.get_knowledges_by_file_id(file_id)
-
         has_knowledge_access = False
         knowledge_info = None
+
         for knowledge_base in knowledges:
             if (
                 user_role == "admin"
@@ -1390,11 +1383,9 @@ async def view_knowledge_file(
                 break
 
         if not has_knowledge_access:
-            # Also allow if user owns the file directly
             if file.user_id != user_id and user_role != "admin":
                 return json.dumps({"error": "Access denied"})
 
-        # Get file content (extracted text stored during upload)
         content = ""
         if file.data:
             content = file.data.get("content", "")
@@ -1406,7 +1397,6 @@ async def view_knowledge_file(
             "updated_at": file.updated_at,
             "created_at": file.created_at,
         }
-
         if knowledge_info:
             result["knowledge_id"] = knowledge_info["id"]
             result["knowledge_name"] = knowledge_info["name"]
@@ -1423,9 +1413,11 @@ async def query_knowledge_bases(
     count: int = 5,
     __request__: Request = None,
     __user__: dict = None,
+    __model_knowledge__: list[dict] = None,
 ) -> str:
     """
     Search knowledge bases using semantic/vector search to find relevant content chunks.
+    Handles collections (KBs), individual files, and notes.
 
     :param query: The search query to find semantically relevant content
     :param knowledge_ids: Optional list of KB ids to limit search to specific knowledge bases
@@ -1440,6 +1432,8 @@ async def query_knowledge_bases(
 
     try:
         from open_webui.models.knowledge import Knowledges
+        from open_webui.models.files import Files
+        from open_webui.models.notes import Notes
         from open_webui.retrieval.utils import query_collection
         from open_webui.utils.access_control import has_access
 
@@ -1447,16 +1441,53 @@ async def query_knowledge_bases(
         user_role = __user__.get("role", "user")
         user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
 
-        # Get embedding function from app state
         embedding_function = __request__.app.state.EMBEDDING_FUNCTION
         if not embedding_function:
             return json.dumps({"error": "Embedding function not configured"})
 
-        # Determine which KB collections to search
         collection_names = []
+        note_results = []  # Notes aren't vectorized, handle separately
 
-        if knowledge_ids:
-            # Search specific KBs - verify access for each
+        # If model has attached knowledge, use those
+        if __model_knowledge__:
+            for item in __model_knowledge__:
+                item_type = item.get("type")
+                item_id = item.get("id")
+
+                if item_type == "collection":
+                    # Knowledge base - use KB ID as collection name
+                    knowledge = Knowledges.get_knowledge_by_id(item_id)
+                    if knowledge and (
+                        user_role == "admin"
+                        or knowledge.user_id == user_id
+                        or has_access(user_id, "read", knowledge.access_control, user_group_ids)
+                    ):
+                        collection_names.append(item_id)
+
+                elif item_type == "file":
+                    # Individual file - use file-{id} as collection name
+                    file = Files.get_file_by_id(item_id)
+                    if file and (user_role == "admin" or file.user_id == user_id):
+                        collection_names.append(f"file-{item_id}")
+
+                elif item_type == "note":
+                    # Note - always return full content as context
+                    note = Notes.get_note_by_id(item_id)
+                    if note and (
+                        user_role == "admin"
+                        or note.user_id == user_id
+                        or has_access(user_id, "read", note.access_control)
+                    ):
+                        content = note.data.get("content", {}).get("md", "")
+                        note_results.append({
+                            "content": content,
+                            "source": note.title,
+                            "note_id": note.id,
+                            "type": "note",
+                        })
+
+        elif knowledge_ids:
+            # User specified specific KBs
             for knowledge_id in knowledge_ids:
                 knowledge = Knowledges.get_knowledge_by_id(knowledge_id)
                 if knowledge and (
@@ -1466,7 +1497,7 @@ async def query_knowledge_bases(
                 ):
                     collection_names.append(knowledge_id)
         else:
-            # Search all accessible KBs
+            # No model knowledge and no specific IDs - search all accessible KBs
             result = Knowledges.search_knowledge_bases(
                 user_id,
                 filter={
@@ -1475,40 +1506,41 @@ async def query_knowledge_bases(
                     "group_ids": user_group_ids,
                 },
                 skip=0,
-                limit=50,  # Get up to 50 accessible KBs
+                limit=50,
             )
             collection_names = [knowledge_base.id for knowledge_base in result.items]
 
-        if not collection_names:
-            return json.dumps([])
-
-        # Perform vector search across collections
-        query_results = await query_collection(
-            collection_names=collection_names,
-            queries=[query],
-            embedding_function=embedding_function,
-            k=count,
-        )
-
-        # Format results
         chunks = []
-        if query_results and "documents" in query_results:
-            documents = query_results.get("documents", [[]])[0]
-            metadatas = query_results.get("metadatas", [[]])[0]
-            distances = query_results.get("distances", [[]])[0]
 
-            for idx, doc in enumerate(documents):
-                chunk_info = {
-                    "content": doc,
-                    "source": metadatas[idx].get("source", metadatas[idx].get("name", "Unknown")),
-                    "file_id": metadatas[idx].get("file_id", ""),
-                }
+        # Add note results first
+        chunks.extend(note_results)
 
-                # Add relevance score if available
-                if idx < len(distances):
-                    chunk_info["distance"] = distances[idx]
+        # Query vector collections if any
+        if collection_names:
+            query_results = await query_collection(
+                collection_names=collection_names,
+                queries=[query],
+                embedding_function=embedding_function,
+                k=count,
+            )
 
-                chunks.append(chunk_info)
+            if query_results and "documents" in query_results:
+                documents = query_results.get("documents", [[]])[0]
+                metadatas = query_results.get("metadatas", [[]])[0]
+                distances = query_results.get("distances", [[]])[0]
+
+                for idx, doc in enumerate(documents):
+                    chunk_info = {
+                        "content": doc,
+                        "source": metadatas[idx].get("source", metadatas[idx].get("name", "Unknown")),
+                        "file_id": metadatas[idx].get("file_id", ""),
+                    }
+                    if idx < len(distances):
+                        chunk_info["distance"] = distances[idx]
+                    chunks.append(chunk_info)
+
+        # Limit to requested count
+        chunks = chunks[:count]
 
         return json.dumps(chunks, ensure_ascii=False)
     except Exception as e:

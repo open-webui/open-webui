@@ -1343,7 +1343,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     user_message = get_last_user_message(form_data["messages"])
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
 
-    if model_knowledge:
+    if model_knowledge and metadata.get("params", {}).get("function_calling") != "native":
         await event_emitter(
             {
                 "type": "status",

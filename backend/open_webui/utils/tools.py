@@ -368,10 +368,18 @@ def get_builtin_tools(
     # Chats tools - search and fetch user's chat history
     builtin_functions.extend([search_chats, view_chat])
 
-    # Knowledge base tools - list, search, query, and view user's accessible knowledge bases
-    builtin_functions.extend(
-        [list_knowledge_bases, search_knowledge_bases, search_knowledge_files, view_knowledge_file, query_knowledge_bases]
-    )
+    # Knowledge base tools - conditional injection based on model knowledge
+    # If model has attached knowledge (any type), only provide query_knowledge_bases
+    # Otherwise, provide all KB browsing tools
+    model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
+    if model_knowledge:
+        # Model has attached knowledge - only allow semantic search within it
+        builtin_functions.append(query_knowledge_bases)
+    else:
+        # No model knowledge - allow full KB browsing
+        builtin_functions.extend(
+            [list_knowledge_bases, search_knowledge_bases, search_knowledge_files, view_knowledge_file, query_knowledge_bases]
+        )
 
     # Add memory tools if enabled for this chat
     if features.get("memory"):
@@ -419,6 +427,7 @@ def get_builtin_tools(
                 "__event_emitter__": extra_params.get("__event_emitter__"),
                 "__chat_id__": extra_params.get("__chat_id__"),
                 "__message_id__": extra_params.get("__message_id__"),
+                "__model_knowledge__": model_knowledge,
             },
         )
 
