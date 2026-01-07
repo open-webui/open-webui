@@ -5,7 +5,8 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import PromptTypeSelector from './PromptTypeSelector.svelte';
-	import type { PersonaPrompt, PromptType } from '$lib/apis/prompt-groups';
+	import type { PersonaPrompt, PromptType, ValidationRules } from '$lib/apis/prompt-groups';
+	import { isToolType } from '$lib/apis/prompt-groups';
 	import { slugify } from '$lib/utils';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
@@ -22,6 +23,7 @@
 	let personaValue: string | null = null;
 	let toolDescription: string = '';
 	let toolPriority: number = 0;
+	let validationRules: ValidationRules | null = null;
 
 	let hasManualEdit = false;
 
@@ -42,6 +44,7 @@
 		personaValue = null;
 		toolDescription = '';
 		toolPriority = 0;
+		validationRules = null;
 		hasManualEdit = false;
 	};
 
@@ -54,6 +57,7 @@
 			personaValue = prompt.persona_value;
 			toolDescription = prompt.tool_description ?? '';
 			toolPriority = prompt.tool_priority ?? 0;
+			validationRules = prompt.validation_rules ?? null;
 			hasManualEdit = true;
 		}
 	};
@@ -63,8 +67,8 @@
 			return;
 		}
 
-		// Validate tool fields when prompt_type is 'tool'
-		if (promptType === 'tool' && !toolDescription.trim()) {
+		// Validate tool fields when prompt_type is a tool type
+		if (isToolType(promptType) && !toolDescription.trim()) {
 			return;
 		}
 
@@ -78,10 +82,15 @@
 			persona_value: personaValue
 		};
 
-		// Include tool fields only when prompt_type is 'tool'
-		if (promptType === 'tool') {
+		// Include tool fields only when prompt_type is a tool type
+		if (isToolType(promptType)) {
 			eventData.tool_description = toolDescription.trim();
 			eventData.tool_priority = toolPriority;
+		}
+
+		// Include validation_rules for json_tool type
+		if (promptType === 'json_tool' && validationRules) {
+			eventData.validation_rules = validationRules;
 		}
 
 		dispatch(editMode ? 'update' : 'create', eventData);
@@ -175,7 +184,7 @@
 			</div>
 
 			<!-- Prompt Type -->
-			<PromptTypeSelector bind:promptType bind:personaValue bind:toolDescription bind:toolPriority />
+			<PromptTypeSelector bind:promptType bind:personaValue bind:toolDescription bind:toolPriority bind:validationRules />
 
 			<!-- Content -->
 			<div class="flex-1 flex flex-col">

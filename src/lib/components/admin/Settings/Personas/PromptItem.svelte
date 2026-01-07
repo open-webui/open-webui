@@ -4,6 +4,7 @@
 	import type { i18n as i18nType } from 'i18next';
 	import { DropdownMenu } from 'bits-ui';
 	import type { PersonaPrompt, PromptType } from '$lib/apis/prompt-groups';
+	import { isToolType } from '$lib/apis/prompt-groups';
 
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
@@ -27,8 +28,13 @@
 				return { text: 'proficiency', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' };
 			case 'style':
 				return { text: 'style', class: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' };
+			case 'basic_tool':
+				return { text: 'basic_tool', class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' };
+			case 'json_tool':
+				return { text: 'json_tool', class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' };
 			case 'tool':
-				return { text: 'tool', class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' };
+				// Legacy support - display as json_tool
+				return { text: 'json_tool', class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' };
 			default:
 				return { text: 'general', class: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' };
 		}
@@ -88,7 +94,7 @@
 					({personaLabel})
 				</span>
 			{/if}
-			{#if prompt.prompt_type === 'tool' && prompt.tool_priority !== undefined && prompt.tool_priority > 0}
+			{#if isToolType(prompt.prompt_type) && prompt.tool_priority !== undefined && prompt.tool_priority > 0}
 				<span class="text-xs px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
 					P:{prompt.tool_priority}
 				</span>
@@ -96,7 +102,7 @@
 		</div>
 		<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
 			{prompt.command}
-			{#if prompt.prompt_type === 'tool' && prompt.tool_description}
+			{#if isToolType(prompt.prompt_type) && prompt.tool_description}
 				<span class="ml-2 text-amber-600 dark:text-amber-400">• {prompt.tool_description}</span>
 			{/if}
 		</div>

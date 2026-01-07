@@ -1,7 +1,18 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 // Types
-export type PromptType = 'base' | 'proficiency' | 'style' | 'tool' | null;
+export type PromptType = 'base' | 'proficiency' | 'style' | 'tool' | 'basic_tool' | 'json_tool' | null;
+
+// Tool type checker helper
+export const isToolType = (type: PromptType): boolean => {
+	return type === 'basic_tool' || type === 'json_tool' || type === 'tool';
+};
+
+// Validation rules for json_tool type
+export interface ValidationRules {
+	allow?: Record<string, string>;     // pattern name -> regex
+	forbidden?: Record<string, string>; // pattern name -> regex
+}
 
 export interface PersonaPrompt {
 	command: string;
@@ -11,6 +22,7 @@ export interface PersonaPrompt {
 	persona_value: string | null;
 	tool_description?: string;
 	tool_priority?: number;
+	validation_rules?: ValidationRules;
 	access_control?: object;
 }
 
@@ -445,6 +457,9 @@ export const createPersonaPrompt = async (
 				content: data.content,
 				prompt_type: data.prompt_type,
 				persona_value: data.persona_value,
+				tool_description: data.tool_description,
+				tool_priority: data.tool_priority,
+				validation_rules: data.validation_rules,
 				access_control: data.access_control
 			})
 		});
@@ -471,7 +486,10 @@ export const createPersonaPrompt = async (
 			title: data.title,
 			content: data.content,
 			prompt_type: data.prompt_type,
-			persona_value: data.persona_value
+			persona_value: data.persona_value,
+			tool_description: data.tool_description,
+			tool_priority: data.tool_priority,
+			validation_rules: data.validation_rules
 		};
 		localPrompts = [...localPrompts, newPrompt];
 		return newPrompt;

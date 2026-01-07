@@ -2,15 +2,20 @@
 	import { getContext, onMount } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { getAvailablePersonas } from '$lib/apis/prompt-groups';
-	import type { AvailablePersonas, PersonaOption } from '$lib/apis/prompt-groups';
+	import { getAvailablePersonas, isToolType } from '$lib/apis/prompt-groups';
+	import type { AvailablePersonas, PersonaOption, ValidationRules, PromptType } from '$lib/apis/prompt-groups';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	export let promptType: 'base' | 'proficiency' | 'style' | 'tool' | null = null;
+	export let promptType: PromptType = null;
 	export let personaValue: string | null = null;
 	export let toolDescription: string = '';
 	export let toolPriority: number = 0;
+	export let validationRules: ValidationRules | null = null;
+
+	// Validation rules JSON string for textarea
+	let validationRulesJson: string = '';
+	let validationRulesError: string = '';
 
 	// 동적 페르소나 옵션
 	let availablePersonas: AvailablePersonas | null = null;
@@ -49,11 +54,52 @@
 		isAddingNewStyle = false;
 	}
 
-	// Reset tool fields when type is not tool
-	$: if (promptType !== 'tool') {
+	// Reset tool fields when type is not a tool type
+	$: if (!isToolType(promptType)) {
 		toolDescription = '';
 		toolPriority = 0;
+		validationRules = null;
+		validationRulesJson = '';
+		validationRulesError = '';
 	}
+
+	// Reset validation rules when changing from json_tool to other tool types
+	$: if (promptType !== 'json_tool') {
+		validationRules = null;
+		validationRulesJson = '';
+		validationRulesError = '';
+	}
+
+	// Initialize validationRulesJson from validationRules prop
+	$: if (validationRules && promptType === 'json_tool' && !validationRulesJson) {
+		validationRulesJson = JSON.stringify(validationRules, null, 2);
+	}
+
+	// Parse validation rules JSON
+	const parseValidationRules = () => {
+		validationRulesError = '';
+		if (!validationRulesJson.trim()) {
+			validationRules = null;
+			return;
+		}
+		try {
+			const parsed = JSON.parse(validationRulesJson);
+			// Validate structure
+			if (typeof parsed !== 'object' || parsed === null) {
+				throw new Error('Must be an object');
+			}
+			if (parsed.allow && typeof parsed.allow !== 'object') {
+				throw new Error('allow must be an object');
+			}
+			if (parsed.forbidden && typeof parsed.forbidden !== 'object') {
+				throw new Error('forbidden must be an object');
+			}
+			validationRules = parsed;
+		} catch (e) {
+			validationRulesError = e instanceof Error ? e.message : 'Invalid JSON';
+			validationRules = null;
+		}
+	};
 
 	// 새 값 추가 처리
 	const handleProficiencySelectChange = (e: Event) => {
@@ -119,7 +165,8 @@
 			<option value="base">{$i18n.t('기본 (base)')}</option>
 			<option value="proficiency">{$i18n.t('난이도 (proficiency)')}</option>
 			<option value="style">{$i18n.t('스타일 (style)')}</option>
-			<option value="tool">{$i18n.t('도구 (tool)')}</option>
+			<option value="basic_tool">{$i18n.t('기본 도구 (basic_tool)')}</option>
+			<option value="json_tool">{$i18n.t('JSON 검증 도구 (json_tool)')}</option>
 		</select>
 		<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 			{#if promptType === 'base'}
@@ -128,8 +175,10 @@
 				{$i18n.t('학생 숙련도에 따라 선택되는 프롬프트')}
 			{:else if promptType === 'style'}
 				{$i18n.t('응답 스타일에 따라 선택되는 프롬프트')}
-			{:else if promptType === 'tool'}
-				{$i18n.t('Tool gating으로 선택 시에만 포함되는 도구 프롬프트')}
+			{:else if promptType === 'basic_tool'}
+				{$i18n.t('Tool gating으로 선택 시 포함되는 기본 도구 프롬프트')}
+			{:else if promptType === 'json_tool'}
+				{$i18n.t('JSON 출력 검증 규칙이 포함된 도구 프롬프트')}
 			{:else}
 				{$i18n.t('페르소나와 무관한 일반 프롬프트 (채팅에서 /명령어로 사용)')}
 			{/if}
@@ -249,7 +298,7 @@
 				{/if}
 			{/if}
 		</div>
-	{:else if promptType === 'tool'}
+	{:else if isToolType(promptType)}
 		<!-- Tool-specific fields -->
 		<div class="space-y-3">
 			<div>
@@ -286,6 +335,37 @@
 					{$i18n.t('숫자가 높을수록 우선 선택됩니다 (기본값: 0)')}
 				</p>
 			</div>
+
+			{#if promptType === 'json_tool'}
+				<!-- Validation Rules JSON Editor -->
+				<div>
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+						{$i18n.t('검증 규칙 (JSON)')}
+					</label>
+					<textarea
+						class="w-full min-h-[200px] px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition {validationRulesError ? 'border-red-500' : ''}"
+						placeholder={`{
+  "allow": {
+    "graph_spec_wrapper": "^\\\\s*<graph_spec>[\\\\s\\\\S]*</graph_spec>\\\\s*$"
+  },
+  "forbidden": {
+    "wrong_tag": "</diagram_spec>"
+  }
+}`}
+						bind:value={validationRulesJson}
+						on:blur={parseValidationRules}
+					></textarea>
+					{#if validationRulesError}
+						<p class="mt-1 text-xs text-red-500">
+							{$i18n.t('JSON 파싱 오류')}: {validationRulesError}
+						</p>
+					{:else}
+						<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t('LLM 출력을 검증하는 정규표현식 규칙입니다. allow는 매칭되어야 하고, forbidden은 매칭되면 안됩니다.')}
+						</p>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>

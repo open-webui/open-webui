@@ -834,7 +834,7 @@
 						<div class="flex flex-col @md:flex-row @md:items-end gap-2">
 							<div
 								bind:this={contentContainerElement}
-								class="max-w-full @md:max-w-[80%] w-fit flex flex-col relative {edit
+								class="max-w-full @md:max-w-[75%] w-fit flex flex-col relative {edit
 									? 'hidden'
 									: ''}
 								bg-white/50 dark:bg-white/5

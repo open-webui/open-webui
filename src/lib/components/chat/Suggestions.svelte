@@ -6,8 +6,7 @@
 	import { suggestionsStore } from '$lib/stores/suggestions';
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { type TagWithFeedback, type FeedbackStatus } from '$lib/apis/message-tags';
-	import { fade, fly } from 'svelte/transition';
-	import { flip } from 'svelte/animate';
+	import { fade } from 'svelte/transition';
 
 	const i18n = getContext('i18n');
 
@@ -64,7 +63,7 @@
 	>
 		{#if topTags.length > 0 || loading}
 			<!-- <Bolt /> -->
-			<p class="text-body-3-medium text-[#1A1B1C] dark:text-gray-50">{suggestionTitle}</p>
+			<p class="text-body-3-medium text-gray-900 dark:text-gray-50">{suggestionTitle}</p>
 			<!-- {$i18n.t('Suggested')} -->
 		{:else}
 			<!-- Keine Vorschläge -->
@@ -90,17 +89,18 @@
 			role="list"
 			class="{$mobile
 				? 'flex flex-col gap-4 px-4'
-				: 'flex flex-row gap-4 overflow-x-hidden scrollbar-none pl-12 pr-4 pb-4'} {className}"
+				: 'flex flex-row gap-4 overflow-hidden scrollbar-none justify-start max-w-[932px] mx-auto pb-4'} {className}"
 		>
-			{#each topTags as tag (tag.id)}
+			{#each topTags as tag (`${isPersonalized}-${tag.id}`)}
 				<div
-					class="box-border flex flex-col items-start p-5 gap-2.5
-						{$mobile ? 'w-full' : 'min-w-72 w-72'}
-						bg-gray-50/80 dark:bg-gray-800/50
-						shadow-lg rounded-xl backdrop-blur-xl"
-					in:fly={{ x: 100, duration: 400, delay: 100 }}
-					out:fly={{ x: -100, duration: 300 }}
-					animate:flip={{ duration: 400 }}
+					class="box-border flex flex-col items-start p-5 gap-3
+			{$mobile ? 'w-full' : 'min-w-[18.75rem] w-[18.75rem]'}
+			h-32
+			bg-white/70 dark:bg-gray-800/70
+			shadow-sm
+			backdrop-blur-md
+			rounded-2xl"
+					transition:fade={{ duration: 300 }}
 				>
 					<!-- Usage Count Info -->
 					<!-- <div class="flex items-center gap-1">
@@ -114,20 +114,20 @@
 						>
 							<path
 								d="M9.5 3L3 9.5L10.5 17L17 10.5L9.5 3Z"
-								class="stroke-[#596172] dark:stroke-[#B4BCD0]"
+								class="stroke-gray-500 dark:stroke-gray-400"
 								stroke-width="1.5"
 								stroke-linecap="round"
 								stroke-linejoin="round"
 							/>
 							<circle cx="7" cy="7" r="1.5" class="fill-[#596172] dark:fill-[#B4BCD0]" />
 						</svg>
-						<span class="text-xs text-[#596172] dark:text-[#B4BCD0]">{tag.usage_count}회 학습</span>
+						<span class="text-xs text-gray-500 dark:text-gray-400">{tag.usage_count}회 학습</span>
 					</div> -->
 
 					<!-- Content -->
 					<div class="flex flex-col gap-1">
 						<div
-							class="text-caption-medium text-[#1A1B1C] dark:text-white w-full overflow-hidden truncate max-w-[240px]"
+							class="text-caption-medium text-gray-900 dark:text-white w-full overflow-hidden truncate max-w-[15rem]"
 						>
 							{tag.name}
 						</div>
