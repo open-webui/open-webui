@@ -145,6 +145,7 @@ from open_webui.config import (
     CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
     CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
     CODE_INTERPRETER_JUPYTER_TIMEOUT,
+    ENABLE_MEMORIES,
     # Image
     AUTOMATIC1111_API_AUTH,
     AUTOMATIC1111_BASE_URL,
@@ -1106,6 +1107,7 @@ app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT = CODE_INTERPRETER_JUPYTER_TIM
 app.state.config.IMAGE_GENERATION_ENGINE = IMAGE_GENERATION_ENGINE
 app.state.config.ENABLE_IMAGE_GENERATION = ENABLE_IMAGE_GENERATION
 app.state.config.ENABLE_IMAGE_PROMPT_GENERATION = ENABLE_IMAGE_PROMPT_GENERATION
+app.state.config.ENABLE_MEMORIES = ENABLE_MEMORIES
 
 app.state.config.IMAGE_GENERATION_MODEL = IMAGE_GENERATION_MODEL
 app.state.config.IMAGE_SIZE = IMAGE_SIZE
@@ -1935,6 +1937,7 @@ async def get_app_config(request: Request):
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_memories": app.state.config.ENABLE_MEMORIES,
                     **(
                         {
                             "enable_onedrive_personal": ENABLE_ONEDRIVE_PERSONAL,
