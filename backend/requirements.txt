@@ -1,5 +1,5 @@
 fastapi==0.111.0
-uvicorn[standard]==0.30.6
+uvicorn[standard]>=0.31.1  # crewai 1.7.2 -> mcp>=1.16.0 -> uvicorn>=0.31.1
 pydantic>=2.11.9,<2.12  # crewai 1.7.2 requires ~=2.11.9
 python-multipart==0.0.18
 
@@ -52,7 +52,7 @@ datasets>=3.0.0
 transformers>=4.45.0,<4.50.0  # crewai 1.7.2 requires tokenizers<0.21, transformers>=4.50 needs tokenizers>=0.21
 # tokenizers version controlled by crewai dependency (0.20.3) - don't override
 txtai[graph]==9.0.0
-sentence-transformers>=5.0.0
+sentence-transformers>=3.0.0,<5.0.0  # compatible with transformers 4.45.x
 sacremoses==0.1.1
 
 colbert-ai==0.2.21
