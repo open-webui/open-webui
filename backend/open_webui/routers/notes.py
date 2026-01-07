@@ -71,10 +71,19 @@ async def get_notes(
         skip = (page - 1) * limit
 
     notes = []
-    for note in Notes.get_notes_by_user_id(
+    raw_notes = Notes.get_notes_by_user_id(
         user.id, "read", skip=skip, limit=limit, db=db
-    ):
-        note_user = Users.get_user_by_id(note.user_id, db=db)
+    )
+
+    if not raw_notes:
+        return []
+
+    # Batch fetch all users in a single query (fixes N+1 problem)
+    user_ids = list(set(note.user_id for note in raw_notes))
+    users = {user.id: user for user in Users.get_users_by_user_ids(user_ids, db=db)}
+
+    for note in raw_notes:
+        note_user = users.get(note.user_id)
         if note_user:
             notes.append(
                 NoteUserResponse(
