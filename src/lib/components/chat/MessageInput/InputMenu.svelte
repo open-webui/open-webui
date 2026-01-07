@@ -184,7 +184,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="min-w-30 flex flex-col items-start p-2 gap-3 min-w-max bg-gray-200/20 dark:bg-gray-600/30 shadow-lg backdrop-blur-xl rounded-2xl rounded-bl z-50 text-gray-950 dark:text-white text-body-4 border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+			class="min-w-30 flex flex-col items-start p-2  min-w-max bg-gray-200/20 dark:bg-gray-600/30 shadow-lg backdrop-blur-xl rounded-2xl rounded-bl z-50 text-gray-950 dark:text-white text-body-4 border-0 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
@@ -194,7 +194,7 @@
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
 					<!-- 학습 설정 섹션 -->
-					<div class="w-full pb-2 mb-2 border-b border-gray-200/50 dark:border-gray-200/50">
+					<div class="w-full pb-0 mb-0 border-b border-gray-200/50 dark:border-gray-200/50">
 						<button
 							class="flex flex-row items-center justify-between p-6 gap-1 w-full h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 							on:click={() => {
@@ -670,7 +670,7 @@
 					</DropdownMenu.Item>
 
 					<!-- 캡처 버튼 -->
-					<DropdownMenu.Item
+					<!-- <DropdownMenu.Item
 						class="flex flex-row items-center py-3 px-4 gap-1 w-full m-2  h-7 rounded-xl hover:bg-gray-200/20 dark:hover:bg-gray-600/30 transition cursor-pointer text-body-4"
 						on:click={() => {
 							if (!detectMobile()) {
@@ -683,12 +683,11 @@
 							}
 						}}
 					>
-						<!-- markdown_paste/capture icon -->
 						<svg class="size-5" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<path d="M11.2544 17C11.0431 17 10.8646 16.9281 10.7188 16.7844C10.5729 16.6406 10.5 16.4625 10.5 16.25V12C10.5 11.725 10.5979 11.4896 10.7937 11.2938C10.9896 11.0979 11.225 11 11.5 11H16C16.275 11 16.5104 11.0979 16.7063 11.2938C16.9021 11.4896 17 11.725 17 12V16.25C17 16.4625 16.9285 16.6406 16.7856 16.7844C16.6427 16.9281 16.4656 17 16.2544 17C16.0431 17 15.8646 16.9281 15.7188 16.7844C15.5729 16.6406 15.5 16.4625 15.5 16.25V12.5H14.5V14.75C14.5 14.9625 14.4285 15.1406 14.2856 15.2844C14.1427 15.4281 13.9656 15.5 13.7544 15.5C13.5431 15.5 13.3646 15.4281 13.2188 15.2844C13.0729 15.1406 13 14.9625 13 14.75V12.5H12V16.25C12 16.4625 11.9285 16.6406 11.7856 16.7844C11.6427 16.9281 11.4656 17 11.2544 17ZM4.5 17C4.0875 17 3.73437 16.8531 3.44062 16.5594C3.14687 16.2656 3 15.9125 3 15.5V4.5C3 4.0875 3.14687 3.73437 3.44062 3.44062C3.73437 3.14687 4.0875 3 4.5 3H8.0625C8.1736 2.5694 8.4063 2.2118 8.7604 1.9271C9.1146 1.6424 9.5278 1.5 10 1.5C10.4722 1.5 10.8854 1.6424 11.2396 1.9271C11.5938 2.2118 11.8264 2.5694 11.9375 3H15.5C15.9125 3 16.2656 3.14687 16.5594 3.44062C16.8531 3.73437 17 4.0875 17 4.5V8.75C17 8.9625 16.9285 9.1406 16.7856 9.2844C16.6427 9.4281 16.4656 9.5 16.2544 9.5C16.0431 9.5 15.8646 9.4281 15.7188 9.2844C15.5729 9.1406 15.5 8.9625 15.5 8.75V4.5H14V6.25C14 6.4625 13.9281 6.6406 13.7844 6.7844C13.6406 6.9281 13.4625 7 13.25 7H6.75C6.5375 7 6.3594 6.9281 6.2156 6.7844C6.0719 6.6406 6 6.4625 6 6.25V4.5H4.5V15.5H8.25C8.4625 15.5 8.6406 15.5715 8.7844 15.7144C8.9281 15.8573 9 16.0344 9 16.2456C9 16.4569 8.9281 16.6354 8.7844 16.7812C8.6406 16.9271 8.4625 17 8.25 17H4.5ZM9.9956 4.5C10.2069 4.5 10.3854 4.4285 10.5312 4.2856C10.6771 4.1427 10.75 3.9656 10.75 3.7544C10.75 3.5431 10.6785 3.3646 10.5356 3.2188C10.3927 3.0729 10.2156 3 10.0044 3C9.7931 3 9.6146 3.0715 9.4688 3.2144C9.3229 3.3573 9.25 3.5344 9.25 3.7456C9.25 3.9569 9.3215 4.1354 9.4644 4.2812C9.6073 4.4271 9.7844 4.5 9.9956 4.5Z" class="fill-gray-500 dark:fill-current"/>
 						</svg>
 						<span>캡처</span>
-					</DropdownMenu.Item>
+					</DropdownMenu.Item> -->
 
 					<!-- 링크 버튼 -->
 					<!-- <DropdownMenu.Item

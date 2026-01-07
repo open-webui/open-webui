@@ -1,3 +1,22 @@
+<style>
+	/* Force all text in user messages to be white, overriding any inline styles */
+	:global(.force-white-text),
+	:global(.force-white-text *) {
+		color: rgb(243 244 246) !important; /* text-gray-100 */
+	}
+	
+	/* Preserve link styling but keep white text */
+	:global(.force-white-text a) {
+		color: rgb(243 244 246) !important;
+		text-decoration: underline;
+	}
+	
+	/* Code blocks can have different background but text stays visible */
+	:global(.force-white-text code) {
+		color: rgb(243 244 246) !important;
+	}
+</style>
+
 <script lang="ts">
 	import dayjs from 'dayjs';
 	import { toast } from 'svelte-sonner';
@@ -17,7 +36,6 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
-
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
 
@@ -188,7 +206,7 @@
 		<div class="chat-{message.role} w-full min-w-full markdown-prose">
 			{#if edit !== true}
 				{#if message.files}
-					<div class="mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
+					<div class="mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap ml-16 md:ml-0">
 						{#each message.files as file}
 							<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
 								{#if file.type === 'image'}
@@ -210,8 +228,8 @@
 			{/if}
 
 			{#if edit === true}
-				<div class="flex flex-col items-end w-full">
-					<div class="flex flex-col justify-center items-start p-4 px-7 gap-4 w-full max-w-[90%] @md:max-w-[75%]
+				<div class="flex flex-col items-end w-full pl-16 md:pl-0">
+					<div class="flex flex-col justify-center items-start p-4 px-7 gap-4 w-full max-w-[80%] md:max-w-[75%]
 						bg-primary-500/40
 						shadow-[4px_4px_20px_rgba(0,0,0,0.1),inset_2px_2px_10px_rgba(255,255,255,0.05),inset_2px_2px_16px_rgba(206,212,229,0.12)]
 						backdrop-blur-sm
@@ -326,11 +344,11 @@
 					</div>
 				</div>
 			{:else if message.content !== ''}
-				<div class="w-full">
+				<div class="w-full pl-0 md:pl-16">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
-							class="rounded-3xl user-message-bubble {($settings?.chatBubble ?? true)
-								? `max-w-[90%] @md:max-w-[75%] px-4 py-1.5  bg-primary-500 text-gray-100 ${
+							class="rounded-3xl user-message-bubble force-white-text {($settings?.chatBubble ?? true)
+								? `max-w-[80%] md:max-w-[80%] lg:max-w-[75%] xl:max-w-[70%] 2xl:max-w-[60%] px-4 py-1.5  bg-primary-800 text-gray-100 ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
 								: ' w-full'}"
