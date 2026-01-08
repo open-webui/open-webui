@@ -994,9 +994,7 @@ class ChannelTable:
     ) -> Optional[ChannelWebhookModel]:
         with get_db_context(db) as db:
             webhook = (
-                db.query(ChannelWebhook)
-                .filter(ChannelWebhook.id == webhook_id)
-                .first()
+                db.query(ChannelWebhook).filter(ChannelWebhook.id == webhook_id).first()
             )
             return ChannelWebhookModel.model_validate(webhook) if webhook else None
 
@@ -1022,9 +1020,7 @@ class ChannelTable:
     ) -> Optional[ChannelWebhookModel]:
         with get_db_context(db) as db:
             webhook = (
-                db.query(ChannelWebhook)
-                .filter(ChannelWebhook.id == webhook_id)
-                .first()
+                db.query(ChannelWebhook).filter(ChannelWebhook.id == webhook_id).first()
             )
             if not webhook:
                 return None
@@ -1039,9 +1035,7 @@ class ChannelTable:
     ) -> bool:
         with get_db_context(db) as db:
             webhook = (
-                db.query(ChannelWebhook)
-                .filter(ChannelWebhook.id == webhook_id)
-                .first()
+                db.query(ChannelWebhook).filter(ChannelWebhook.id == webhook_id).first()
             )
             if not webhook:
                 return False

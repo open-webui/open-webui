@@ -238,8 +238,11 @@ async def generate_chat_completion(
                         yield chunk
 
                 response = await generate_chat_completion(
-                    request, form_data, user, bypass_filter=True,
-                    bypass_system_prompt=bypass_system_prompt
+                    request,
+                    form_data,
+                    user,
+                    bypass_filter=True,
+                    bypass_system_prompt=bypass_system_prompt,
                 )
                 return StreamingResponse(
                     stream_wrapper(response.body_iterator),
@@ -250,8 +253,11 @@ async def generate_chat_completion(
                 return {
                     **(
                         await generate_chat_completion(
-                            request, form_data, user, bypass_filter=True,
-                            bypass_system_prompt=bypass_system_prompt
+                            request,
+                            form_data,
+                            user,
+                            bypass_filter=True,
+                            bypass_system_prompt=bypass_system_prompt,
                         )
                     ),
                     "selected_model_id": selected_model_id,

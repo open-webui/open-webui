@@ -334,7 +334,8 @@ async def update_user_settings_by_session_user(
 @router.get("/user/status")
 async def get_user_status_by_session_user(
     request: Request,
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     if not request.app.state.config.ENABLE_USER_STATUS:
         raise HTTPException(

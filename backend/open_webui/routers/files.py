@@ -377,7 +377,9 @@ async def search_files(
     ),
     content: bool = Query(True),
     skip: int = Query(0, ge=0, description="Number of files to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of files to return"),
+    limit: int = Query(
+        100, ge=1, le=1000, description="Maximum number of files to return"
+    ),
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
