@@ -154,91 +154,103 @@ async def get_function_models(request, user: UserModel = None):
     from open_webui.models.groups import Groups
     from open_webui.models.users import Users
     from open_webui.models.models import Models
+    from open_webui.internal.db import get_db
+    from open_webui.models.models import Model
     
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
-
+    
+    # OPTIMIZATION: Pre-fetch data needed for filtering ONCE, not per-pipe
+    # This avoids N database queries in the loop
+    
+    # For users: pre-fetch user's groups and all models with group assignments
+    user_group_ids = []
+    creator_to_accessible_groups = {}  # Map: creator_email -> set of group_ids they assigned models to
+    
+    if user.role == "user":
+        # Fetch user's groups ONCE
+        user_groups = Groups.get_groups_by_member_id(user.id)
+        user_group_ids = set(g.id for g in user_groups)
+        
+        # Fetch ALL models with access_control in ONE query
+        # Then build a map of which creators have models assigned to which groups
+        with get_db() as db:
+            all_models_with_access = db.query(Model).filter(
+                Model.access_control.isnot(None),
+                Model.created_by.isnot(None)
+            ).all()
+        
+        for model in all_models_with_access:
+            if model.access_control:
+                read_groups = model.access_control.get("read", {}).get("group_ids", [])
+                if read_groups:
+                    if model.created_by not in creator_to_accessible_groups:
+                        creator_to_accessible_groups[model.created_by] = set()
+                    creator_to_accessible_groups[model.created_by].update(read_groups)
+    
+    # STEP 1: Filter pipes based on access (fast, no module loading)
+    accessible_pipes = []
     for pipe in pipes:
         # For super admins: show all pipes
         if is_super_admin(user):
-            # Process pipe and add to pipe_models (continue to processing logic below)
-            pass
+            accessible_pipes.append(pipe)
         # For admins: only show pipes they created
         elif user.role == "admin":
-            if pipe.created_by != user.email:
-                continue  # Skip pipes created by other admins
+            if pipe.created_by == user.email:
+                accessible_pipes.append(pipe)
         # For users: only show pipes where creator has models assigned to user's groups
         elif user.role == "user":
-            # Get user's groups
-            user_groups = Groups.get_groups_by_member_id(user.id)
-            user_group_ids = [g.id for g in user_groups]
-            
-            # Get pipe creator (admin)
-            pipe_creator = Users.get_user_by_email(pipe.created_by)
-            if not pipe_creator:
-                continue  # Skip if creator not found
-            
-            # Check if pipe creator has any models CREATED BY THEM assigned to user's groups
-            # IMPORTANT: Only check models CREATED BY the pipe creator, not models they have access to
-            has_access = False
-            # Directly query database for models created by the pipe creator
-            from open_webui.internal.db import get_db
-            from open_webui.models.models import Model
-            with get_db() as db:
-                creator_created_models = db.query(Model).filter(
-                    Model.created_by == pipe_creator.email
-                ).all()
-            
-            for model in creator_created_models:
-                # Only check models with explicit access_control (group assignments)
-                if model.access_control:
-                    read_groups = model.access_control.get("read", {}).get("group_ids", [])
-                    if any(gid in user_group_ids for gid in read_groups):
-                        has_access = True
-                        break
-            
-            if not has_access:
-                continue  # Skip this pipe - user doesn't have access via group assignments
+            creator_email = pipe.created_by
+            if not creator_email:
+                continue  # Skip pipes without a creator
+            # Check if this creator has any models assigned to user's groups
+            creator_groups = creator_to_accessible_groups.get(creator_email, set())
+            if creator_groups & user_group_ids:  # Set intersection - O(min(len(a), len(b)))
+                accessible_pipes.append(pipe)
+        # Unknown role - skip for safety
         else:
-            # Unknown role - skip for safety
             log.warning(f"Unknown user role '{user.role}' for user {user.email} - skipping pipe {pipe.id}")
-            continue
-        
-        # If we reach here, the user has access to this pipe - process it
-        function_module = get_function_module_by_id(request, pipe.id)
-
-        # Check if function is a manifold
-        if hasattr(function_module, "pipes"):
-            sub_pipes = []
-
-            # Handle pipes being a list, sync function, or async function
-            try:
-                if callable(function_module.pipes):
-                    if asyncio.iscoroutinefunction(function_module.pipes):
-                        sub_pipes = await function_module.pipes()
-                    else:
-                        sub_pipes = function_module.pipes()
-                else:
-                    sub_pipes = function_module.pipes
-            except Exception as e:
-                log.exception(e)
+    
+    # STEP 2: Load modules and fetch models only for accessible pipes
+    # OPTIMIZATION: Process pipes in parallel to avoid sequential HTTP calls
+    
+    async def process_single_pipe(pipe):
+        """Process a single pipe and return its models."""
+        models = []
+        try:
+            function_module = get_function_module_by_id(request, pipe.id)
+            
+            # Check if function is a manifold
+            if hasattr(function_module, "pipes"):
                 sub_pipes = []
-
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
-            )
-
-            for p in sub_pipes:
-                sub_pipe_id = f'{pipe.id}.{p["id"]}'
-                sub_pipe_name = p["name"]
-
-                if hasattr(function_module, "name"):
-                    sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
-
-                pipe_flag = {"type": pipe.type}
-
-                pipe_models.append(
-                    {
+                
+                # Handle pipes being a list, sync function, or async function
+                try:
+                    if callable(function_module.pipes):
+                        if asyncio.iscoroutinefunction(function_module.pipes):
+                            sub_pipes = await function_module.pipes()
+                        else:
+                            # Run sync function in thread pool to avoid blocking
+                            loop = asyncio.get_running_loop()
+                            sub_pipes = await loop.run_in_executor(None, function_module.pipes)
+                    else:
+                        sub_pipes = function_module.pipes
+                except Exception as e:
+                    log.exception(f"Error fetching sub-pipes for {pipe.id}: {e}")
+                    sub_pipes = []
+                
+                log.debug(f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}")
+                
+                for p in sub_pipes:
+                    sub_pipe_id = f'{pipe.id}.{p["id"]}'
+                    sub_pipe_name = p["name"]
+                    
+                    if hasattr(function_module, "name"):
+                        sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
+                    
+                    pipe_flag = {"type": pipe.type}
+                    
+                    models.append({
                         "id": sub_pipe_id,
                         "name": sub_pipe_name,
                         "object": "model",
@@ -246,17 +258,13 @@ async def get_function_models(request, user: UserModel = None):
                         "owned_by": "openai",
                         "pipe": pipe_flag,
                         "created_by": pipe.created_by,
-                    }
-                )
-        else:
-            pipe_flag = {"type": "pipe"}
-
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
-            )
-
-            pipe_models.append(
-                {
+                    })
+            else:
+                pipe_flag = {"type": "pipe"}
+                
+                log.debug(f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}")
+                
+                models.append({
                     "id": pipe.id,
                     "name": pipe.name,
                     "object": "model",
@@ -264,8 +272,20 @@ async def get_function_models(request, user: UserModel = None):
                     "owned_by": "openai",
                     "pipe": pipe_flag,
                     "created_by": pipe.created_by,
-                }
-            )
+                })
+        except Exception as e:
+            log.exception(f"Error processing pipe {pipe.id}: {e}")
+        
+        return models
+    
+    # Run all pipe processing in parallel
+    if accessible_pipes:
+        results = await asyncio.gather(*[process_single_pipe(pipe) for pipe in accessible_pipes], return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                log.error(f"Pipe processing failed: {result}")
+            elif result:
+                pipe_models.extend(result)
 
     return pipe_models
 
