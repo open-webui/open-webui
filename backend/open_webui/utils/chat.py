@@ -76,7 +76,7 @@ except ImportError:
             _log = logging.getLogger(__name__)
             try:
                 _log.debug(f"[trace_span_async] Generator entering (OTEL unavailable, no-op) for span '{span_name}'")
-                yield None
+            yield None
                 _log.debug(f"[trace_span_async] Generator exiting normally (OTEL unavailable, no-op) for span '{span_name}'")
             except GeneratorExit as ge:
                 _log.debug(f"[trace_span_async] GeneratorExit caught (OTEL unavailable, no-op) for span '{span_name}': {ge}")
@@ -438,7 +438,7 @@ async def generate_chat_completion(
                             form_data=form_data,
                             user=user,
                             bypass_filter=bypass_filter,
-                        )
+                    )
                 elif model.get("owned_by") == "ollama":
                     # Using /ollama/api/chat endpoint
                     form_data = convert_payload_openai_to_ollama(form_data)

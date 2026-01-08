@@ -185,15 +185,15 @@ class Loader:
                     mime_type=file_content_type,
                 )
         elif use_doc_intel and (
-            file_ext in ["pdf", "xls", "xlsx", "docx", "ppt", "pptx"]
-            or file_content_type
-            in [
-                "application/vnd.ms-excel",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "application/vnd.ms-powerpoint",
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            ]
+                file_ext in ["pdf", "xls", "xlsx", "docx", "ppt", "pptx"]
+                or file_content_type
+                in [
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ]
         ):
             loader = AzureAIDocumentIntelligenceLoader(
                 file_path=file_path,

@@ -713,10 +713,10 @@ async def generate_autocompletion(
     
     # Check per-admin config (inherits from group admin if user is in a group)
     if not request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION.get(user.email):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Autocompletion generation is disabled",
-        )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Autocompletion generation is disabled",
+            )
 
     type = form_data.get("type")
     prompt = form_data.get("prompt")

@@ -262,4 +262,4 @@ def check_model_access(user, model):
             return  # User has explicit access
         
         # No access
-        raise Exception("Model not found")
+            raise Exception("Model not found")

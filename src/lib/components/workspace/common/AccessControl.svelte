@@ -115,14 +115,14 @@
 						// ENFORCE: Models are always PRIVATE by default
 						// Public option removed - models must be explicitly shared via group assignments
 						// If user wants to share, they must add groups to access_control
-						accessControl = {
-							read: {
-								group_ids: []
-							},
-							write: {
-								group_ids: []
-							}
-						};
+							accessControl = {
+								read: {
+									group_ids: []
+								},
+								write: {
+									group_ids: []
+								}
+							};
 					}}
 					disabled
 				>

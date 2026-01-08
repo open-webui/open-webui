@@ -58,7 +58,7 @@ except ImportError:
             _log = logging.getLogger(__name__)
             try:
                 _log.debug(f"[trace_span_async] Generator entering (OTEL unavailable, no-op) for span '{span_name}'")
-                yield None
+            yield None
                 _log.debug(f"[trace_span_async] Generator exiting normally (OTEL unavailable, no-op) for span '{span_name}'")
             except GeneratorExit as ge:
                 _log.debug(f"[trace_span_async] GeneratorExit caught (OTEL unavailable, no-op) for span '{span_name}': {ge}")
@@ -159,7 +159,7 @@ async def get_function_models(request, user: UserModel = None):
     
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
-    
+
     # OPTIMIZATION: Pre-fetch data needed for filtering ONCE, not per-pipe
     # This avoids N database queries in the loop
     
@@ -168,7 +168,9 @@ async def get_function_models(request, user: UserModel = None):
     accessible_model_ids = set()  # Model IDs assigned to user's groups
     accessible_pipe_ids = set()  # Pipe IDs that have models assigned to user's groups
     
-    if user.role == "user":
+    # For users AND admins (co-admins), we need to check group-based access
+    # Pre-fetch groups for both roles
+    if user.role in ("user", "admin"):
         # Fetch user's groups ONCE
         user_groups = Groups.get_groups_by_member_id(user.id)
         user_group_ids = set(g.id for g in user_groups)
@@ -228,9 +230,14 @@ async def get_function_models(request, user: UserModel = None):
         # For super admins: show all pipes
         if is_super_admin(user):
             accessible_pipes.append(pipe)
-        # For admins: only show pipes they created
+        # For admins: show pipes they created OR pipes with models assigned to their groups (co-admin)
         elif user.role == "admin":
+            # Admin created this pipe
             if pipe.created_by == user.email:
+                accessible_pipes.append(pipe)
+            # OR admin is a co-admin (member of a group that has access to models from this pipe)
+            elif pipe.id in accessible_pipe_ids:
+                log.debug(f"[MODEL_VISIBILITY] Admin {user.email} has co-admin access to pipe '{pipe.id}'")
                 accessible_pipes.append(pipe)
         # For users: only show pipes that have models assigned to user's groups
         elif user.role == "user":
@@ -254,11 +261,11 @@ async def get_function_models(request, user: UserModel = None):
         models = []
         try:
             function_module = get_function_module_by_id(request, pipe.id)
-            
+
             # Check if function is a manifold
             if hasattr(function_module, "pipes"):
                 sub_pipes = []
-                
+
                 # Handle pipes being a list, sync function, or async function
                 try:
                     if callable(function_module.pipes):
@@ -284,10 +291,13 @@ async def get_function_models(request, user: UserModel = None):
                 except Exception as e:
                     log.exception(f"Error fetching sub-pipes for {pipe.id}: {e}")
                     sub_pipes = []
-                
+
                 log.debug(f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}")
-                
+
                 # Iterate over sub_pipes and validate each entry
+                # Determine if this admin is the creator or a co-admin
+                is_pipe_creator = (user.role == "admin" and pipe.created_by == user.email)
+                
                 for p in sub_pipes:
                     # Defensive check: ensure p is a dict with required keys
                     if not isinstance(p, dict):
@@ -298,46 +308,50 @@ async def get_function_models(request, user: UserModel = None):
                         continue
                     sub_pipe_id = f'{pipe.id}.{p["id"]}'
                     sub_pipe_name = p["name"]
-                    
-                    # For users: only include models that are explicitly assigned to their groups
-                    if user.role == "user":
+
+                    # For users AND co-admins: only include models that are explicitly assigned to their groups
+                    # Admins who created the pipe see all models; co-admins see only assigned models
+                    if user.role == "user" or (user.role == "admin" and not is_pipe_creator):
                         if sub_pipe_id not in accessible_model_ids:
-                            log.debug(f"Skipping model {sub_pipe_id} - not assigned to user's groups")
+                            log.debug(f"Skipping model {sub_pipe_id} - not assigned to user's/co-admin's groups")
                             continue
                     
                     if hasattr(function_module, "name"):
                         sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
-                    
+
                     pipe_flag = {"type": pipe.type}
-                    
+
                     models.append({
-                        "id": sub_pipe_id,
-                        "name": sub_pipe_name,
+                            "id": sub_pipe_id,
+                            "name": sub_pipe_name,
+                            "object": "model",
+                            "created": pipe.created_at,
+                            "owned_by": "openai",
+                            "pipe": pipe_flag,
+                            "created_by": pipe.created_by,
+                    })
+            else:
+                pipe_flag = {"type": "pipe"}
+
+                # Determine if this admin is the creator or a co-admin
+                is_pipe_creator = (user.role == "admin" and pipe.created_by == user.email)
+
+                # For users AND co-admins: only include models that are explicitly assigned to their groups
+                if user.role == "user" or (user.role == "admin" and not is_pipe_creator):
+                    if pipe.id not in accessible_model_ids:
+                        log.debug(f"Skipping model {pipe.id} - not assigned to user's/co-admin's groups")
+                        return models  # Return empty list
+                
+                log.debug(f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}")
+
+                models.append({
+                        "id": pipe.id,
+                        "name": pipe.name,
                         "object": "model",
                         "created": pipe.created_at,
                         "owned_by": "openai",
                         "pipe": pipe_flag,
                         "created_by": pipe.created_by,
-                    })
-            else:
-                pipe_flag = {"type": "pipe"}
-                
-                # For users: only include models that are explicitly assigned to their groups
-                if user.role == "user":
-                    if pipe.id not in accessible_model_ids:
-                        log.debug(f"Skipping model {pipe.id} - not assigned to user's groups")
-                        return models  # Return empty list
-                
-                log.debug(f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}")
-                
-                models.append({
-                    "id": pipe.id,
-                    "name": pipe.name,
-                    "object": "model",
-                    "created": pipe.created_at,
-                    "owned_by": "openai",
-                    "pipe": pipe_flag,
-                    "created_by": pipe.created_by,
                 })
         except Exception as e:
             log.exception(f"Error processing pipe {pipe.id}: {e}")
@@ -525,9 +539,9 @@ async def generate_function_chat_completion(
                             return
 
                         # Process different response types
-                        if isinstance(res, str):
-                            message = openai_chat_chunk_message_template(form_data["model"], res)
-                            yield f"data: {json.dumps(message)}\n\n"
+                    if isinstance(res, str):
+                        message = openai_chat_chunk_message_template(form_data["model"], res)
+                        yield f"data: {json.dumps(message)}\n\n"
                             # Send finish message for string responses
                             finish_message = openai_chat_chunk_message_template(
                                 form_data["model"], ""
@@ -537,9 +551,9 @@ async def generate_function_chat_completion(
                             yield "data: [DONE]"
                             return
 
-                        if isinstance(res, Iterator):
-                            for line in res:
-                                yield process_line(form_data, line)
+                    if isinstance(res, Iterator):
+                        for line in res:
+                            yield process_line(form_data, line)
                             # Send finish message for Iterator responses
                             finish_message = openai_chat_chunk_message_template(
                                 form_data["model"], ""
@@ -549,9 +563,9 @@ async def generate_function_chat_completion(
                             yield "data: [DONE]"
                             return
 
-                        if isinstance(res, AsyncGenerator):
-                            async for line in res:
-                                yield process_line(form_data, line)
+                    if isinstance(res, AsyncGenerator):
+                        async for line in res:
+                            yield process_line(form_data, line)
                             # Send finish message for AsyncGenerator responses
                             finish_message = openai_chat_chunk_message_template(
                                 form_data["model"], ""
@@ -565,12 +579,12 @@ async def generate_function_chat_completion(
                             for line in res:
                                 yield process_line(form_data, line)
                             # Send finish message for Generator responses
-                            finish_message = openai_chat_chunk_message_template(
-                                form_data["model"], ""
-                            )
-                            finish_message["choices"][0]["finish_reason"] = "stop"
-                            yield f"data: {json.dumps(finish_message)}\n\n"
-                            yield "data: [DONE]"
+                        finish_message = openai_chat_chunk_message_template(
+                            form_data["model"], ""
+                        )
+                        finish_message["choices"][0]["finish_reason"] = "stop"
+                        yield f"data: {json.dumps(finish_message)}\n\n"
+                        yield "data: [DONE]"
                             return
 
                     except Exception as e:
