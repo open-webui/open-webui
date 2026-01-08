@@ -165,6 +165,24 @@ def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]
 
 
 def update_message_content(message: dict, content: str, append: bool = True) -> dict:
+    # Get existing text content for duplicate check
+    existing_text = ""
+    if isinstance(message.get("content"), list):
+        for item in message["content"]:
+            if item.get("type") == "text":
+                existing_text = item.get("text", "")
+                break
+    else:
+        existing_text = message.get("content", "")
+
+    # Skip update if content already present (fixes system prompt duplication
+    # during native function calling tool iterations - GitHub #19169)
+    if existing_text and content:
+        existing_stripped = existing_text.strip()
+        content_stripped = content.strip()
+        if existing_stripped.startswith(content_stripped):
+            return message
+
     if isinstance(message["content"], list):
         for item in message["content"]:
             if item["type"] == "text":
