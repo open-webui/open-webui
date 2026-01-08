@@ -16,12 +16,6 @@ from open_webui.env import (
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock
 
-# Import for MCP SharePoint OAuth token extraction (only used during websocket connect)
-try:
-    from mcp_backend.routers.crew_mcp import extract_graph_access_token
-except ImportError:
-    extract_graph_access_token = None
-
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
@@ -325,18 +319,32 @@ async def crew_mcp_query(sid, data):
 
 @sio.event
 async def connect(sid, environ, auth):
+    log.info(f"WebSocket connect event: sid={sid}, auth present={bool(auth)}")
+    log.info(
+        f"WebSocket environ keys: {sorted([k for k in environ.keys() if k.startswith('HTTP_')])}"
+    )
     user = None
     if auth and "token" in auth:
         data = decode_token(auth["token"])
 
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
+            log.info(
+                f"WebSocket connect: Authenticated user {user.id if user else 'None'}"
+            )
 
         if user:
             session_data = user.model_dump()
 
             # Extract OAuth access token for MCP SharePoint (environ only available here during connect)
-            if extract_graph_access_token:
+            # Import locally to avoid circular import (crew_mcp imports get_event_emitter from this module)
+            try:
+                from mcp_backend.routers.crew_mcp import extract_graph_access_token
+
+                log.info(
+                    "WebSocket connect: extract_graph_access_token imported successfully"
+                )
+
                 try:
 
                     class MinimalRequest:
@@ -351,16 +359,35 @@ async def connect(sid, environ, auth):
                             header_name = key[5:].replace("_", "-").lower()
                             headers[header_name] = value
 
+                    log.info(
+                        f"WebSocket connect: Extracted {len(headers)} HTTP headers from environ"
+                    )
+                    log.debug(f"WebSocket connect: Headers = {list(headers.keys())}")
+
                     request_obj = MinimalRequest(headers)
-                    graph_access_token = await extract_graph_access_token(request_obj)
+                    graph_access_token = extract_graph_access_token(request_obj)
+
+                    log.info(
+                        f"WebSocket connect: extract_graph_access_token returned token: {bool(graph_access_token)}"
+                    )
 
                     if graph_access_token:
                         session_data["graph_access_token"] = graph_access_token
                         log.info(
                             f"Stored Graph access token for user {user.id} (length: {len(graph_access_token)})"
                         )
+                    else:
+                        log.warning(
+                            f"extract_graph_access_token returned None/empty - no OAuth token found in headers"
+                        )
                 except Exception as e:
-                    log.warning(f"Could not extract Graph access token: {e}")
+                    log.error(
+                        f"Could not extract Graph access token: {e}", exc_info=True
+                    )
+            except ImportError as import_error:
+                log.error(
+                    f"Could not import extract_graph_access_token (circular import protection): {import_error}"
+                )
 
             SESSION_POOL[sid] = session_data
             if user.id in USER_POOL:
