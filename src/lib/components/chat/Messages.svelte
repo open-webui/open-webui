@@ -20,7 +20,7 @@
 	import MetricCard from './Messages/ResponseMessage/MetricCard.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { extractMetricValue, extractTimeframe } from '$lib/utils/metric';
+	import { extractMetricValue, extractMetricTitle, extractTimeframe } from '$lib/utils/metric';
 
 	import ChatPlaceholder from './ChatPlaceholder.svelte';
 
@@ -469,9 +469,14 @@
 										? history?.messages?.[message.parentId]?.content ?? ''
 										: ''}
 									{@const timeframeValue = extractTimeframe(parentContent)}
+									{@const titleValue = extractMetricTitle(message?.content ?? '')}
 									{#if message?.done && metricValue}
 										<div class="hidden md:block flex-shrink-0">
-											<MetricCard {message} timeframe={timeframeValue || undefined} />
+											<MetricCard
+												metricValue={metricValue || undefined}
+												title={titleValue || undefined}
+												timeframe={timeframeValue || undefined}
+											/>
 										</div>
 									{/if}
 								{/if}

@@ -1,19 +1,15 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { extractMetricValue } from '$lib/utils/metric';
 
-  export let title = 'DOWN & INVERTED';
-  export let width = '180px';
-  export let message;
+  export let title;
+  export let metricValue;
   export let timeframe;
 
   const dispatch = createEventDispatcher();
   const onClose = () => dispatch('close');
-
-  $: metricValue = extractMetricValue(message?.content ?? '');
 </script>
 
-<div class="rounded-xl border-2 p-2 shadow-lg bg-white dark:bg-gray-900" style="width: {width}; border-color: rgba(23,206,211,0.5);">
+<div class="rounded-xl border-2 p-2 shadow-lg bg-white dark:bg-gray-900" style="width: 180px; border-color: rgba(23,206,211,0.5);">
   <div class="flex items-start justify-between mb-1">
     <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{title}</div>
     <button

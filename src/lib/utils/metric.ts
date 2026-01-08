@@ -274,3 +274,99 @@ export const extractTimeframe = (content: string): string => {
 
 	return '';
 };
+
+const normalizeTitleWord = (word: string): string => {
+	return word.charAt(0).toUpperCase() + word.slice(1);
+};
+
+export const extractMetricTitle = (content: string): string => {
+	if (!content) {
+		return '';
+	}
+
+	let text = stripCodeBlockWrapper(content).trim();
+	if (!text) {
+		return '';
+	}
+
+	const jsonMetric = parseJsonMetric(text);
+	if (jsonMetric) {
+		text = jsonMetric;
+	} else {
+		text =
+			text
+				.split('\n')
+				.map((line) => line.trim())
+				.find((line) => line.length > 0) || '';
+		text = text.replace(/^["'`*_~]+|["'`*_~]+$/g, '');
+	}
+
+	if (!text) {
+		return '';
+	}
+
+	let normalized = text.replace(/\s+/g, ' ').trim().toLowerCase();
+	normalized = normalized.replace(
+		/\b(?:in\s+the\s+)?(past|last|previous)\s+\d+\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|wks?|wk|w|months?|mons?|mo|years?|yrs?|yr|y)\b/g,
+		' '
+	);
+	normalized = normalized.replace(
+		/\b\d+\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|wks?|wk|w|months?|mons?|mo|years?|yrs?|yr|y)\s+ago\b/g,
+		' '
+	);
+	normalized = normalized.replace(/\b(today|yesterday)\b/g, ' ');
+	normalized = normalized.replace(/\b(this|last|past)\s+(week|month|year|quarter)\b/g, ' ');
+	normalized = stripDateTime(normalized);
+	normalized = normalized.replace(/\b[-+]?\d[\d,]*(?:\.\d+)?(?:e[-+]?\d+)?\b/g, ' ');
+	normalized = normalized.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+
+	if (!normalized) {
+		return '';
+	}
+
+	const stopwords = new Set([
+		'the',
+		'a',
+		'an',
+		'and',
+		'or',
+		'of',
+		'for',
+		'in',
+		'on',
+		'at',
+		'to',
+		'with',
+		'by',
+		'from',
+		'is',
+		'are',
+		'was',
+		'were',
+		'be',
+		'been',
+		'being',
+		'total',
+		'number',
+		'count',
+		'amount',
+		'value',
+		'detected',
+		'past',
+		'last',
+		'previous',
+		'infeed',
+		'system'
+	]);
+
+	const words = normalized
+		.split(' ')
+		.filter((word) => word.length > 1 && !stopwords.has(word));
+
+	if (!words.length) {
+		return '';
+	}
+
+	const titleWords = words.slice(0, 3).map((word) => normalizeTitleWord(word));
+	return titleWords.join(' ');
+};
