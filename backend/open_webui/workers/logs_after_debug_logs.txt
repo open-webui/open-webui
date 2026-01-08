@@ -1,0 +1,786 @@
+/app/backend/open_webui
+/app/backend
+/app
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+ERROR [open_webui.env] Error running migrations: Can't locate revision identified by '817da597db81'
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/base.py", line 254, in _catch_revision_errors
+    yield
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/base.py", line 462, in _upgrade_revs
+    for script in reversed(list(revs))
+                           ^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/revision.py", line 814, in iterate_revisions
+    revisions, heads = fn(
+                       ^^^
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/revision.py", line 1475, in _collect_upgrade_revisions
+    current_revisions = self.get_revisions(lower)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/revision.py", line 542, in get_revisions
+    return sum([self.get_revisions(id_elem) for id_elem in id_], ())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/revision.py", line 542, in <listcomp>
+    return sum([self.get_revisions(id_elem) for id_elem in id_], ())
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/revision.py", line 565, in get_revisions
+    return tuple(
+           ^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/revision.py", line 566, in <genexpr>
+    self._revision_for_ident(rev_id, branch_label)
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/revision.py", line 637, in _revision_for_ident
+    raise ResolutionError(
+alembic.script.revision.ResolutionError: No such revision or branch '817da597db81'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/backend/open_webui/config.py", line 61, in run_migrations
+    command.upgrade(alembic_cfg, "head")
+  File "/usr/local/lib/python3.11/site-packages/alembic/command.py", line 406, in upgrade
+    script.run_env()
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/usr/local/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/alembic/util/pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/open_webui/migrations/env.py", line 81, in <module>
+    run_migrations_online()
+  File "/app/backend/open_webui/migrations/env.py", line 75, in run_migrations_online
+    context.run_migrations()
+  File "<string>", line 8, in run_migrations
+  File "/usr/local/lib/python3.11/site-packages/alembic/runtime/environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+  File "/usr/local/lib/python3.11/site-packages/alembic/runtime/migration.py", line 611, in run_migrations
+    for step in self._migrations_fn(heads, self):
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/alembic/command.py", line 395, in upgrade
+    return script._upgrade_revs(revision, rev)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/base.py", line 450, in _upgrade_revs
+    with self._catch_revision_errors(
+  File "/usr/local/lib/python3.11/contextlib.py", line 158, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/usr/local/lib/python3.11/site-packages/alembic/script/base.py", line 286, in _catch_revision_errors
+    raise util.CommandError(resolution) from re
+alembic.util.exc.CommandError: Can't locate revision identified by '817da597db81'
+Column 'email' already exists
+INFO  [open_webui.env] 'ENABLE_OPENAI_API' loaded from the latest database entry
+INFO  [open_webui.env] 'OPENAI_API_KEYS' loaded from the latest database entry
+INFO  [open_webui.env] 'OPENAI_API_BASE_URLS' loaded from the latest database entry
+INFO  [open_webui.env] 'OPENAI_API_CONFIGS' loaded from the latest database entry
+INFO  [open_webui.env] 'DEFAULT_LOCALE' loaded from the latest database entry
+INFO  [open_webui.env] 'DEFAULT_PROMPT_SUGGESTIONS' loaded from the latest database entry
+INFO  [open_webui.env] 'WEBUI_BANNERS' loaded from the latest database entry
+INFO  [open_webui.env] 'TASK_MODEL' loaded from the latest database entry
+INFO  [open_webui.env] 'TITLE_GENERATION_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'TAGS_GENERATION_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'QUERY_GENERATION_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH' loaded from the latest database entry
+INFO  [open_webui.env] 'TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'ENABLE_GOOGLE_DRIVE_INTEGRATION' loaded from the latest database entry
+INFO  [open_webui.env] 'ENABLE_ONEDRIVE_INTEGRATION' loaded from the latest database entry
+INFO  [open_webui.env] 'CONTENT_EXTRACTION_ENGINE' loaded from the latest database entry
+INFO  [open_webui.env] 'TIKA_SERVER_URL' loaded from the latest database entry
+INFO  [open_webui.env] 'DOCUMENT_INTELLIGENCE_ENDPOINT' loaded from the latest database entry
+INFO  [open_webui.env] 'DOCUMENT_INTELLIGENCE_KEY' loaded from the latest database entry
+INFO  [open_webui.env] 'BYPASS_EMBEDDING_AND_RETRIEVAL' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_RELEVANCE_THRESHOLD' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_FILE_MAX_COUNT' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_FILE_MAX_SIZE' loaded from the latest database entry
+INFO  [open_webui.env] 'ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_EMBEDDING_ENGINE' loaded from the latest database entry
+INFO  [open_webui.env] 'PDF_EXTRACT_IMAGES' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_EMBEDDING_MODEL' loaded from the latest database entry
+INFO  [open_webui.env] Embedding model set: @openai-embedding/text-embedding-3-small
+INFO  [open_webui.env] 'RAG_EMBEDDING_BATCH_SIZE' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_TEXT_SPLITTER' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_OPENAI_API_BASE_URL' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_OLLAMA_BASE_URL' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_OLLAMA_API_KEY' loaded from the latest database entry
+INFO  [open_webui.env] 'YOUTUBE_LOADER_LANGUAGE' loaded from the latest database entry
+INFO  [open_webui.env] 'YOUTUBE_LOADER_PROXY_URL' loaded from the latest database entry
+INFO  [open_webui.env] 'DEEPGRAM_API_KEY' loaded from the latest database entry
+INFO  [open_webui.retrieval.vector.dbs.pgvector] Initialization complete.
+INFO  [open_webui.retrieval.vector.connector] âœ… Using Pgvector as vector database (VECTOR_DB=pgvector)
+WARNI [langchain_community.utils.user_agent] USER_AGENT environment variable not set, consider setting it to identify your requests.
+
+ â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•— â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•— â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ–ˆâ•—   â–ˆâ–ˆâ•—    â–ˆâ–ˆâ•—    â–ˆâ–ˆâ•—â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•— â–ˆâ–ˆâ•—   â–ˆâ–ˆâ•—â–ˆâ–ˆâ•—
+â–ˆâ–ˆâ•”â•â•â•â–ˆâ–ˆâ•—â–ˆâ–ˆâ•”â•â•â–ˆâ–ˆâ•—â–ˆâ–ˆâ•”â•â•â•â•â•â–ˆâ–ˆâ–ˆâ–ˆâ•—  â–ˆâ–ˆâ•‘    â–ˆâ–ˆâ•‘    â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•”â•â•â•â•â•â–ˆâ–ˆâ•”â•â•â–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•‘
+â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—  â–ˆâ–ˆâ•”â–ˆâ–ˆâ•— â–ˆâ–ˆâ•‘    â–ˆâ–ˆâ•‘ â–ˆâ•— â–ˆâ–ˆâ•‘â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—  â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•‘
+â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•”â•â•â•â• â–ˆâ–ˆâ•”â•â•â•  â–ˆâ–ˆâ•‘â•šâ–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘    â–ˆâ–ˆâ•‘â–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•”â•â•â•  â–ˆâ–ˆâ•”â•â•â–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•‘
+â•šâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ•‘     â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘ â•šâ–ˆâ–ˆâ–ˆâ–ˆâ•‘    â•šâ–ˆâ–ˆâ–ˆâ•”â–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â•šâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ•‘
+ â•šâ•â•â•â•â•â• â•šâ•â•     â•šâ•â•â•â•â•â•â•â•šâ•â•  â•šâ•â•â•â•     â•šâ•â•â•â•šâ•â•â• â•šâ•â•â•â•â•â•â•â•šâ•â•â•â•â•â•  â•šâ•â•â•â•â•â• â•šâ•â•
+
+
+v0.5.14 - building the best open-source AI user interface.
+
+https://github.com/open-webui/open-webui
+
+[32mINFO[0m:     Started server process [[36m1[0m]
+[32mINFO[0m:     Waiting for application startup.
+[32m2025-12-30 11:43:28.831 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.logger[0m:[36mstart_logger[0m:[36m196[0m - [1mGLOBAL_LOG_LEVEL: INFO[0m - {}
+[32m2025-12-30 11:43:28.952 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.otel_config[0m:[36minitialize_otel[0m:[36m158[0m - [1mInitializing OpenTelemetry SDK...[0m - {}
+[32m2025-12-30 11:43:28.962 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.otel_config[0m:[36minitialize_otel[0m:[36m265[0m - [1mOpenTelemetry initialized successfully: service=open-webui, version=0.5.14, endpoint=http://localhost:4317, protocol=grpc, sampling=0.1[0m - {}
+[32m2025-12-30 11:43:28.962 EST[0m | [1mINFO    [0m | [36mopen_webui.main[0m:[36mlifespan[0m:[36m519[0m - [1mOpenTelemetry SDK initialized successfully[0m - {}
+[32m2025-12-30 11:43:29.050 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.otel_config[0m:[36minstrument_fastapi[0m:[36m367[0m - [1mInstrumenting FastAPI application...[0m - {}
+[32m2025-12-30 11:43:29.051 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.otel_config[0m:[36minstrument_fastapi[0m:[36m388[0m - [1mFastAPI auto-instrumentation enabled (excluded paths: /health,/health/db,/static)[0m - {}
+[32m2025-12-30 11:43:29.051 EST[0m | [1mINFO    [0m | [36mopen_webui.main[0m:[36mlifespan[0m:[36m525[0m - [1mFastAPI auto-instrumentation enabled[0m - {}
+[32m2025-12-30 11:43:29.052 EST[0m | [33m[1mWARNING [0m | [36mopen_webui.utils.otel_config[0m:[36minstrument_requests[0m:[36m451[0m - [33m[1mRequests instrumentation package not available: No module named 'opentelemetry.instrumentation.requests'. Install with: pip install opentelemetry-instrumentation-requests[0m - {}
+Column 'created_by' already exists
+ Column 'created_by' already exists
+Column 'created_by' already exists
+Column 'created_by' already exists
+Column 'group_id' already exists
+******************** Found node_modules at /app/node_modules. Current working directory is /app/backend ********************
+[32m2025-12-30 11:45:54.164 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET / HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.302 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /static/loader.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.381 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/entry/start.DmK55FVB.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.422 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/entry.D04l5sdS.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.426 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/scheduler.B4fFOT5P.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.454 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/preload-helper.C1FmrZbK.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.455 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/entry/app.xy2FsBj3.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.456 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.phcTrxyH.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.462 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.DBvmHR98.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.528 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /static/splash.png HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.837 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.DtXZb6F5.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.838 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/pyodide.worker.CdwZPS-c.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.839 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/stores.BvOqyGYT.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.845 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.CGwCSIWv.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.862 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/globals.D0QH3NT1.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.863 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/nodes/0.YovCvN84.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.923 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/assets/_commonjsHelpers.DQwrSZtH.css HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.928 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/assets/0.DY_QJHe2.css HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.939 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/assets/Modal.CyLKLEmt.css HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:54.985 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/assets/ConfirmDialog.kaSBQ3kP.css HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.010 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/assets/2.DCaWBdws.css HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.040 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/assets/RichTextInput.Bx2lu9jm.css HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.063 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/assets/Markdown.n0yu5Luq.css HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.064 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/assets/Help.DWXbWWSy.css HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.065 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/assets/Messages.Bbuu_qma.css HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.088 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/each.CjZZOyyM.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.113 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/spread.CgU5AtxT.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.146 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.CwSQeOJJ.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.148 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/_commonjsHelpers.DfDzzA-g.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.158 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.CBAaO4tn.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.163 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.BXIFxXD-.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.189 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.QO0hahxl.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.231 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/i18next.B1Cj3nBs.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.240 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/relativeTime.CxoRbF58.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.256 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/marked.esm._0_gBwjO.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.260 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.CEcRx8dk.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.264 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Tooltip.D8iDu41D.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.265 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.CceWzu30.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.308 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/nodes/1.Dy5o-pfQ.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.351 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/FileSaver.min.DU81mdZt.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.358 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.B6rnU_2I.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.359 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Loader.BN2lwsqH.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.365 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.Ccw7PXcW.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.371 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/nodes/2.Cac1AB-S.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.379 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.CQLEh32L.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.434 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/AddConnectionModal.CrOsWbj2.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.439 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.D-0D5x2j.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.456 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Modal.BLgP9CeP.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.457 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.BFuekP1B.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.461 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Plus.DdLCba_G.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.734 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/updater.DHRSIv16.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.742 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.Cv2RNQl5.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.743 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Switch.uBrevI8x.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.744 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/UserMenu.CxxTUJj6.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.758 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/ConfirmDialog.DUXjdoxf.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.810 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/menu-trigger.B5P1b5IE.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.818 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.DNMphcin.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.831 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Tags.Xxz-pQcD.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.835 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/XMark.DTD1ntLX.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.844 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Dropdown.CwWNgMRe.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.942 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/DocumentDuplicate.LQLevigZ.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.944 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Pencil.C6d74BJj.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.945 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Check.C6_oxCZI.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.954 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.B2WOGCLI.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.966 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/GarbageBin.BmSSIyJF.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:55.999 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Spinner.Bw_7YxJs.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.020 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/ChevronRight.z_vH0kff.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.031 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/ChevronDown.BSNYHsXt.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.038 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/ChevronUp.D19LixDG.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.042 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/FolderOpen.BhB_USVU.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.043 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Collapsible.C4Tlz8qm.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.066 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/EllipsisHorizontal.BK_qXtBr.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.095 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.DUy0HzYr.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.115 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.CBrcDZoT.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.115 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/AccessControl.BTZClN6s.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.121 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Badge.Cdw6xT5m.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.131 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Cog6.B1IvVF34.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.178 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/AdvancedParams.BtAGo06R.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.180 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.Wq33F_Vt.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.191 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Search.DtkXf2kv.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.198 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/User.WeRyOmcv.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.200 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/nodes/7.B_a5UjiW.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.202 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/transformers.B_i_4WXY.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.257 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Help.CO5ocAKg.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.262 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/FilesOverlay.CVO-jSV_.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.279 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Drawer.B64j65tV.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.283 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.Cg3WdvpK.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.289 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.DBXYfSiB.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.382 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/WrenchSolid.CMv2MMXW.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.385 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.Vcq4gwWv.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.392 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/RichTextInput.n2V9IzBE.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.394 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.CDOQ0hdB.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.439 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.Ix1l_1DF.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.457 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/fuse.CU2r43ac.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.471 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/FileItem.DEyOHzuF.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.472 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Markdown.nynQRleL.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.486 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/katex.CfZphoad.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.504 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/CodeEditor.nvaqW-HF.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.565 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/GlobeAlt.C_JFpSmZ.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.573 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.dCxLdwyN.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.574 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/ArrowDownTray.DxLX-nsz.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.585 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Messages.CCTOlpOa.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.587 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/MagnifyingGlass.DwPEkBVs.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.587 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.DJXwY8Dw.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.646 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/MenuLines.BYpzSjpy.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.656 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Selector.BBZzAZ_y.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.666 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/index.BvE9-B9w.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.667 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/Heart.DMSnHprF.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.674 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/EllipsisVertical.CmU4NQm2.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:56.719 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /favicon/favicon.ico HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:57.026 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/config HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:57.030 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /static/favicon.png HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:57.107 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/translation.CG011JoF.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:57.115 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/chunks/translation.BatuwMr8.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:57.143 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/auths/ HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:57.272 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/config HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:58.850 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/changelog HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:58.899 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/users/user/settings HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:58.981 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/configs/banners HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:59.589 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/tools/ HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:45:59.597 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.openai[0m:[36mget_all_models[0m:[36m465[0m - [1mget_all_models()[0m - {}
+[32m2025-12-30 11:45:59.997 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_test1[0m - {}
+[32m2025-12-30 11:46:00.345 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_fuse_ms15138[0m - {}
+[32m2025-12-30 11:46:00.571 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_beta_jy4421[0m - {}
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[32m2025-12-30 11:46:00.719 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_german_professor[0m - {}
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[32m2025-12-30 11:46:00.863 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_coadmin_professor2_admin[0m - {}
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[32m2025-12-30 11:46:00.996 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_jy4421[0m - {}
+[32m2025-12-30 11:46:01.031 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_dummy_coadmin1[0m - {}
+[32m2025-12-30 11:46:01.069 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_sm11538[0m - {}
+[32m2025-12-30 11:46:01.098 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llms[0m - {}
+[32m2025-12-30 11:46:01.127 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_function_admin1[0m - {}
+[32m2025-12-30 11:46:01.161 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_rss9347[0m - {}
+[32m2025-12-30 11:46:01.190 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_ps5226[0m - {}
+[32m2025-12-30 11:46:01.219 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_cg4532[0m - {}
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[32m2025-12-30 11:46:01.326 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_dummy_admin1[0m - {}
+[32m2025-12-30 11:46:01.358 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llms_aa12947[0m - {}
+[32m2025-12-30 11:46:01.388 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_stutimshra[0m - {}
+[32m2025-12-30 11:46:01.988 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/models HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.151 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /ollama/api/version HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.162 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/channels/ HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.252 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /static/user_temp.png HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.254 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /static/favicon-white.png HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.254 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/version/updates HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.255 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /static/favicon-violet.png HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.274 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/users/user/settings HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.280 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /assets/fonts/Archivo-Variable.ttf HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.335 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/all/tags HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.425 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/pinned HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.521 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/folders/ HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.523 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:02.648 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /assets/fonts/Inter-Variable.ttf HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:04.644 EST[0m | [1mINFO    [0m | [36mopen_webui.models.chats[0m:[36minsert_new_chat[0m:[36m158[0m - [1mUser's primary group: None[0m - {}
+[32m2025-12-30 11:46:04.679 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/v1/chats/new HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:04.686 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /static/flower-violet.png HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:04.772 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:04.966 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/v1/chats/acf79f7c-9482-46d0-b517-9f13b7ee3c37 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:05.043 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:05.157 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.middleware[0m:[36mprocess_chat_payload[0m:[36m833[0m - [1mWorking within inbuilt RAG: {'id': 'llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite', 'name': 'FUSE Gemini 2.5 Flash Lite', 'object': 'model', 'created': 1765751654, 'owned_by': 'openai', 'pipe': {'type': 'pipe'}, 'created_by': 'ms15138@nyu.edu', 'actions': []}[0m - {}
+[32m2025-12-30 11:46:05.158 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.middleware[0m:[36mprocess_chat_payload[0m:[36m834[0m - [1mModels: {'id': 'llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite', 'name': 'FUSE Gemini 2.5 Flash Lite', 'object': 'model', 'created': 1765751654, 'owned_by': 'openai', 'pipe': {'type': 'pipe'}, 'created_by': 'ms15138@nyu.edu', 'actions': []}[0m - {}
+[32m2025-12-30 11:46:05.216 EST[0m | [1mINFO    [0m | [36mopen_webui.tasks[0m:[36mcreate_task[0m:[36m757[0m - [1mTask created: task_id=1e021f20-a25a-42a6-bc2a-16e8fc2b20d3, pod_id=open-webui-0-1, status=running[0m - {}
+[32m2025-12-30 11:46:06.103 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/chat/completions HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:06.896 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:06.905 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.openai[0m:[36mget_all_models[0m:[36m465[0m - [1mget_all_models()[0m - {}
+[32m2025-12-30 11:46:06.993 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/chat/completed HTTP/1.1" 200[0m - {}
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[32m2025-12-30 11:46:09.383 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.tasks[0m:[36muser_has_access_to_task_model[0m:[36m147[0m - [1mUser ms15138@nyu.edu has access to Gemini Flash Lite model: llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite[0m - {}
+[32m2025-12-30 11:46:10.045 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.openai[0m:[36mget_all_models[0m:[36m465[0m - [1mget_all_models()[0m - {}
+[32m2025-12-30 11:46:10.107 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/v1/chats/acf79f7c-9482-46d0-b517-9f13b7ee3c37 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:10.265 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:10.588 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[32m2025-12-30 11:46:11.784 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.tasks[0m:[36muser_has_access_to_task_model[0m:[36m147[0m - [1mUser ms15138@nyu.edu has access to Gemini Flash Lite model: llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite[0m - {}
+[32m2025-12-30 11:46:12.868 EST[0m | [1mINFO    [0m | [36mopen_webui.tasks[0m:[36mcleanup_callback[0m:[36m802[0m - [1mTask completed: task_id=1e021f20-a25a-42a6-bc2a-16e8fc2b20d3, pod_id=open-webui-0-1[0m - {}
+[32m2025-12-30 11:46:13.034 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/acf79f7c-9482-46d0-b517-9f13b7ee3c37 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:13.365 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/all/tags HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:52.836 EST[0m | [33m[1mWARNING [0m | [36mpython_multipart.multipart[0m:[36m_internal_write[0m:[36m1401[0m - [33m[1mSkipping data after last boundary[0m - {}
+[32m2025-12-30 11:46:52.846 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.files[0m:[36mupload_file[0m:[36m45[0m - [1mfile.content_type: application/pdf[0m - {}
+================================================================================
+[PROCESS FILE] Starting file processing request
+  file_id: 526bf7e1-ed2f-4697-aed5-c2e470174a48
+  user.email: ms15138@nyu.edu
+  user.id: 199e3d14-0c91-4668-a0fd-8fd6e2dd99d1
+  user.role: admin
+[32m2025-12-30 11:46:52.939 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2566[0m - [1m================================================================================[0m - {}
+[32m2025-12-30 11:46:52.940 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2567[0m - [1m[PROCESS FILE] Starting file processing request[0m - {}
+[32m2025-12-30 11:46:52.941 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2568[0m - [1m  file_id: 526bf7e1-ed2f-4697-aed5-c2e470174a48, user.email: ms15138@nyu.edu, user.id: 199e3d14-0c91-4668-a0fd-8fd6e2dd99d1, user.role: admin[0m - {}
+  [STEP 1] Checking embedding engine: portkey
+[32m2025-12-30 11:46:52.941 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2572[0m - [1m  [STEP 1] Checking embedding engine: portkey[0m - {}
+  [STEP 1.1] Engine is OpenAI/Portkey, retrieving API key...
+[32m2025-12-30 11:46:52.942 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2576[0m - [1m  [STEP 1.1] Engine is OpenAI/Portkey, retrieving API key...[0m - {}
+  [STEP 1.2] API key retrieval result:
+    embedding_api_key is None: False
+    embedding_api_key is empty: False
+    embedding_api_key length: 28
+    embedding_api_key ends with: ...jXGT
+[32m2025-12-30 11:46:52.957 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2587[0m - [1m  [STEP 1.2] API key retrieval result:[0m - {}
+[32m2025-12-30 11:46:52.958 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2588[0m - [1m    embedding_api_key is None: False[0m - {}
+[32m2025-12-30 11:46:52.959 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2589[0m - [1m    embedding_api_key is empty: False[0m - {}
+[32m2025-12-30 11:46:52.959 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2590[0m - [1m    embedding_api_key length: 28[0m - {}
+  [STEP 1.3] âœ… API key retrieved and validated
+[32m2025-12-30 11:46:52.959 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2617[0m - [1m  [STEP 1.3] âœ… API key retrieved and validated[0m - {}
+[32m2025-12-30 11:46:52.995 EST[0m | [1mINFO    [0m | [33mtrace_id=f76b89affad9ec3eea6af822d1906ba0[0m | [33mspan_id=ae2311b6a5bd9778[0m | [36mopen_webui.utils.job_queue[0m:[36menqueue_file_processing_job[0m:[36m314[0m - [1mEnqueued file processing job: job_id=file_processing_526bf7e1-ed2f-4697-aed5-c2e470174a48, file_id=526bf7e1-ed2f-4697-aed5-c2e470174a48, queue=file_processing[0m - {"trace_id": "f76b89affad9ec3eea6af822d1906ba0", "span_id": "ae2311b6a5bd9778"}
+[32m2025-12-30 11:46:52.995 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.retrieval[0m:[36mprocess_file[0m:[36m2640[0m - [1mSuccessfully enqueued job file_processing_526bf7e1-ed2f-4697-aed5-c2e470174a48 for file_id=526bf7e1-ed2f-4697-aed5-c2e470174a48[0m - {}
+[32m2025-12-30 11:46:53.005 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/v1/files/ HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:54.472 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.openai[0m:[36mget_all_models[0m:[36m465[0m - [1mget_all_models()[0m - {}
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[32m2025-12-30 11:46:56.056 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.tasks[0m:[36muser_has_access_to_task_model[0m:[36m147[0m - [1mUser ms15138@nyu.edu has access to Gemini Flash Lite model: llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite[0m - {}
+[32m2025-12-30 11:46:57.176 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/v1/tasks/auto/completions HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:57.190 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/files/526bf7e1-ed2f-4697-aed5-c2e470174a48/status HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:57.467 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/files/526bf7e1-ed2f-4697-aed5-c2e470174a48/status HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:46:59.173 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/files/526bf7e1-ed2f-4697-aed5-c2e470174a48/status HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:01.473 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/files/526bf7e1-ed2f-4697-aed5-c2e470174a48/status HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:03.180 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/files/526bf7e1-ed2f-4697-aed5-c2e470174a48/status HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:05.183 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/files/526bf7e1-ed2f-4697-aed5-c2e470174a48/status HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:07.177 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/files/526bf7e1-ed2f-4697-aed5-c2e470174a48/status HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:19.049 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.openai[0m:[36mget_all_models[0m:[36m465[0m - [1mget_all_models()[0m - {}
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[32m2025-12-30 11:47:22.738 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.tasks[0m:[36muser_has_access_to_task_model[0m:[36m147[0m - [1mUser ms15138@nyu.edu has access to Gemini Flash Lite model: llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite[0m - {}
+[32m2025-12-30 11:47:23.985 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/v1/tasks/auto/completions HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:24.442 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/v1/chats/acf79f7c-9482-46d0-b517-9f13b7ee3c37 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:24.544 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:24.656 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.openai[0m:[36mget_all_models[0m:[36m465[0m - [1mget_all_models()[0m - {}
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[DEBUG] pipes() called - fetching models from Portkey API
+[DEBUG] API URL: https://api.portkey.ai/v2/models
+[DEBUG] Successfully fetched 9 models from Portkey API
+[DEBUG] Response status: 200
+[DEBUG] Model: @openai-embedding/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @text-embedding-d47871/text-embedding-3-small -> Text Embedding 3 Small
+[DEBUG] Model: @gpt-4o-mini/gpt-4o-mini -> GPT 4o Mini
+[DEBUG] Model: @gpt-4o/gpt-4o -> GPT 4o
+[DEBUG] Model: @vertexai/gemini-embedding-001 -> Gemini Embedding 001
+[DEBUG] Model: @vertexai/gemini-3-pro-preview -> Gemini 3 Pro Preview
+[DEBUG] Model: @vertexai/gemini-2.5-pro -> Gemini 2.5 Pro
+[DEBUG] Model: @vertexai/gemini-2.5-flash-lite -> Gemini 2.5 Flash Lite
+[DEBUG] Model: @vertexai/gemini-2.5-flash -> Gemini 2.5 Flash
+[DEBUG] Returning 9 models to user
+[32m2025-12-30 11:47:25.909 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.tasks[0m:[36muser_has_access_to_task_model[0m:[36m147[0m - [1mUser ms15138@nyu.edu has access to Gemini Flash Lite model: llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite[0m - {}
+[32m2025-12-30 11:47:26.840 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mget_sources_from_files[0m:[36m680[0m - [1m[RAG Query] file_id=526bf7e1-ed2f-4697-aed5-c2e470174a48 | collection_names=['file-526bf7e1-ed2f-4697-aed5-c2e470174a48'] | queries_count=3[0m - {}
+[32m2025-12-30 11:47:26.912 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mgenerate_embeddings[0m:[36m1046[0m - [1mUsing RBAC-scoped embedding API key for ms15138@nyu.edu (key length: 28, accessible only to this user and their group admin's groups)[0m - {}
+[32m2025-12-30 11:47:26.913 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mgenerate_portkey_embeddings_sdk[0m:[36m889[0m - [1mPortkey SDK init: base_url=https://ai-gateway.apps.cloud.rt.nyu.edu/v1, api_key=set (28 chars, ends with ...jXGT)[0m - {}
+[32m2025-12-30 11:47:26.997 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mgenerate_portkey_embeddings_sdk[0m:[36m925[0m - [1mGenerating Portkey embeddings via SDK: model=@openai-embedding/text-embedding-3-small, texts_count=1, encoding_format=float[0m - {}
+[32m2025-12-30 11:47:27.247 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mgenerate_embeddings[0m:[36m1046[0m - [1mUsing RBAC-scoped embedding API key for ms15138@nyu.edu (key length: 28, accessible only to this user and their group admin's groups)[0m - {}
+[32m2025-12-30 11:47:27.248 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mgenerate_portkey_embeddings_sdk[0m:[36m889[0m - [1mPortkey SDK init: base_url=https://ai-gateway.apps.cloud.rt.nyu.edu/v1, api_key=set (28 chars, ends with ...jXGT)[0m - {}
+[32m2025-12-30 11:47:27.323 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mgenerate_portkey_embeddings_sdk[0m:[36m925[0m - [1mGenerating Portkey embeddings via SDK: model=@openai-embedding/text-embedding-3-small, texts_count=1, encoding_format=float[0m - {}
+[32m2025-12-30 11:47:27.516 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mgenerate_embeddings[0m:[36m1046[0m - [1mUsing RBAC-scoped embedding API key for ms15138@nyu.edu (key length: 28, accessible only to this user and their group admin's groups)[0m - {}
+[32m2025-12-30 11:47:27.517 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mgenerate_portkey_embeddings_sdk[0m:[36m889[0m - [1mPortkey SDK init: base_url=https://ai-gateway.apps.cloud.rt.nyu.edu/v1, api_key=set (28 chars, ends with ...jXGT)[0m - {}
+[32m2025-12-30 11:47:27.610 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mgenerate_portkey_embeddings_sdk[0m:[36m925[0m - [1mGenerating Portkey embeddings via SDK: model=@openai-embedding/text-embedding-3-small, texts_count=1, encoding_format=float[0m - {}
+[32m2025-12-30 11:47:28.143 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mquery_doc[0m:[36m90[0m - [1mquery_doc:result [['7beed8c4-596b-4962-81e6-0e199b164536', 'd05fb1a6-6c33-46b3-8a3a-ac98006f4db9', 'a5ec031b-57c0-486d-963a-4ec6781d5206', '1e27cc0a-95c3-4c43-954b-1522152afacb', 'f65304f2-ba3b-4071-88b2-93e46863afa7', 'e8b658c2-8344-463a-8cc8-945f52955349', '6fca378c-b657-4d69-a60a-d7ea644337c6', 'e8edc905-4609-447d-a281-fb05907de578', '136061ba-ad51-4905-9aad-95d23843247d', '94bf34a2-9fb3-43f2-bb2b-eb0943a089cd']] [[{'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 16, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2633, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 9, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2574, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 21, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 3479, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 21, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 0, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 10, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2573, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 18, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2684, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 16, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 855, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 21, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 1758, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 20, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2640, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 9, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 884, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}]][0m - {}
+[32m2025-12-30 11:47:28.244 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mquery_doc[0m:[36m90[0m - [1mquery_doc:result [['a24b0898-e6ce-46a6-9c3b-0682c6b36fa5', 'd05fb1a6-6c33-46b3-8a3a-ac98006f4db9', '1e27cc0a-95c3-4c43-954b-1522152afacb', '136061ba-ad51-4905-9aad-95d23843247d', '7beed8c4-596b-4962-81e6-0e199b164536', 'bd264a5c-71a4-4d54-bf31-ea185de88f7f', 'fc23f95d-77cb-4110-8993-19e45d4d580d', 'db82a101-0c69-4b92-a5a2-46f719541607', 'eed98e2e-4412-47b0-b5b2-1fc676e9b175', 'e8b658c2-8344-463a-8cc8-945f52955349']] [[{'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 4, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 941, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 9, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2574, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 21, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 0, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 20, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2640, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 16, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2633, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 15, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 1734, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 11, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 0, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 19, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 1736, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 17, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2625, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 18, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2684, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}]][0m - {}
+[32m2025-12-30 11:47:28.252 EST[0m | [1mINFO    [0m | [36mopen_webui.retrieval.utils[0m:[36mquery_doc[0m:[36m90[0m - [1mquery_doc:result [['d05fb1a6-6c33-46b3-8a3a-ac98006f4db9', '5af8a7e0-524e-4875-815a-d446c1982c27', '1e27cc0a-95c3-4c43-954b-1522152afacb', 'aa687beb-5bc0-4288-bb49-ba7eb57cfa6a', '7beed8c4-596b-4962-81e6-0e199b164536', 'd8cdaf10-d451-4491-ae32-c2af77394c9c', 'd5636ce9-2f96-4f4b-8672-2436493a76c4', '9b5d2480-a44c-499e-b14f-e8935ae1d1aa', 'bd264a5c-71a4-4d54-bf31-ea185de88f7f', 'a5ec031b-57c0-486d-963a-4ec6781d5206']] [[{'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 9, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2574, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 21, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 898, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 21, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 0, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 17, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 0, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 16, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 2633, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 27, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 1775, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 22, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 971, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 27, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 875, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 15, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 1734, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}, {'hash': '1c392a85d03fe7a18cf8df47516415e35f47fba9db845cdbde140d1285a1c2aa', 'name': 'The Lord of the Rings - Wikipedia.pdf', 'page': 21, 'source': 'The Lord of the Rings - Wikipedia.pdf', 'file_id': '526bf7e1-ed2f-4697-aed5-c2e470174a48', 'created_by': '199e3d14-0c91-4668-a0fd-8fd6e2dd99d1', 'start_index': 3479, 'embedding_config': '{"engine": "portkey", "model": "@openai-embedding/text-embedding-3-small"}'}]][0m - {}
+[32m2025-12-30 11:47:28.256 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.middleware[0m:[36mprocess_chat_payload[0m:[36m833[0m - [1mWorking within inbuilt RAG: {'id': 'llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite', 'name': 'FUSE Gemini 2.5 Flash Lite', 'object': 'model', 'created': 1765751654, 'owned_by': 'openai', 'pipe': {'type': 'pipe'}, 'created_by': 'ms15138@nyu.edu', 'actions': []}[0m - {}
+[32m2025-12-30 11:47:28.257 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.middleware[0m:[36mprocess_chat_payload[0m:[36m834[0m - [1mModels: {'id': 'llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite', 'name': 'FUSE Gemini 2.5 Flash Lite', 'object': 'model', 'created': 1765751654, 'owned_by': 'openai', 'pipe': {'type': 'pipe'}, 'created_by': 'ms15138@nyu.edu', 'actions': []}[0m - {}
+[32m2025-12-30 11:47:28.389 EST[0m | [1mINFO    [0m | [36mopen_webui.tasks[0m:[36mcreate_task[0m:[36m757[0m - [1mTask created: task_id=2071e5c4-75f0-4287-82ca-eaee9961460b, pod_id=open-webui-0-1, status=running[0m - {}
+[32m2025-12-30 11:47:28.403 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/chat/completions HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:28.970 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:29.612 EST[0m | [1mINFO    [0m | [36mopen_webui.tasks[0m:[36mcleanup_callback[0m:[36m802[0m - [1mTask completed: task_id=2071e5c4-75f0-4287-82ca-eaee9961460b, pod_id=open-webui-0-1[0m - {}
+[32m2025-12-30 11:47:29.700 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/chat/completed HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:29.952 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "POST /api/v1/chats/acf79f7c-9482-46d0-b517-9f13b7ee3c37 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:47:30.094 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:01.881 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/655cc9ce-d9e5-461f-8470-433c3ebb4879 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:02.017 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/b68e0d7f-30e1-4fbb-8a7a-e952d03c2f6a HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:02.049 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/d59550b7-a3b3-41f8-b54f-1b1a31ec353d HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:02.069 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/4e75a227-8c4e-4426-a181-94a0af88b9d0 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:02.173 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/044a5c67-479a-48f7-ad20-9590eeb1804a HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:02.196 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /_app/immutable/nodes/15.kq8vfwOq.js HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:02.231 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/68bdd33b-8e91-490d-841b-7786b94b2315 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:02.232 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/627d9f7c-98b7-441f-b6be-4df3425373e7 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:02.234 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/655cc9ce-d9e5-461f-8470-433c3ebb4879 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:16.780 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/3a08fcf2-3684-4c13-86e7-84b2e0e9703b HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:16.813 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/acf79f7c-9482-46d0-b517-9f13b7ee3c37 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:16.815 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/69e8f8dc-0e10-41a1-804f-2d6bc28eeb73 HTTP/1.1" 200[0m - {}
+[32m2025-12-30 11:48:16.896 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.10.60:0 - "GET /api/v1/chats/69e8f8dc-0e10-41a1-804f-2d6bc28eeb73 HTTP/1.1" 200[0m - {}

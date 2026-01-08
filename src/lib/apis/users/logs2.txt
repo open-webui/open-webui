@@ -1,0 +1,271 @@
+INFO  [open_webui.env] 'ENABLE_OPENAI_API' loaded from the latest database entry
+INFO  [open_webui.env] 'OPENAI_API_KEYS' loaded from the latest database entry
+INFO  [open_webui.env] 'OPENAI_API_BASE_URLS' loaded from the latest database entry
+INFO  [open_webui.env] 'OPENAI_API_CONFIGS' loaded from the latest database entry
+INFO  [open_webui.env] 'DEFAULT_LOCALE' loaded from the latest database entry
+INFO  [open_webui.env] 'DEFAULT_PROMPT_SUGGESTIONS' loaded from the latest database entry
+INFO  [open_webui.env] 'WEBUI_BANNERS' loaded from the latest database entry
+INFO  [open_webui.env] 'TASK_MODEL' loaded from the latest database entry
+INFO  [open_webui.env] 'TITLE_GENERATION_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'TAGS_GENERATION_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'QUERY_GENERATION_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH' loaded from the latest database entry
+INFO  [open_webui.env] 'TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE' loaded from the latest database entry
+INFO  [open_webui.env] 'ENABLE_GOOGLE_DRIVE_INTEGRATION' loaded from the latest database entry
+INFO  [open_webui.env] 'ENABLE_ONEDRIVE_INTEGRATION' loaded from the latest database entry
+INFO  [open_webui.env] 'CONTENT_EXTRACTION_ENGINE' loaded from the latest database entry
+INFO  [open_webui.env] 'TIKA_SERVER_URL' loaded from the latest database entry
+INFO  [open_webui.env] 'DOCUMENT_INTELLIGENCE_ENDPOINT' loaded from the latest database entry
+INFO  [open_webui.env] 'DOCUMENT_INTELLIGENCE_KEY' loaded from the latest database entry
+INFO  [open_webui.env] 'BYPASS_EMBEDDING_AND_RETRIEVAL' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_RELEVANCE_THRESHOLD' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_FILE_MAX_COUNT' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_FILE_MAX_SIZE' loaded from the latest database entry
+INFO  [open_webui.env] 'ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_EMBEDDING_ENGINE' loaded from the latest database entry
+INFO  [open_webui.env] 'PDF_EXTRACT_IMAGES' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_EMBEDDING_MODEL' loaded from the latest database entry
+INFO  [open_webui.env] Embedding model set: @openai-embedding/text-embedding-3-small
+INFO  [open_webui.env] 'RAG_EMBEDDING_BATCH_SIZE' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_TEXT_SPLITTER' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_OPENAI_API_BASE_URL' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_OLLAMA_BASE_URL' loaded from the latest database entry
+INFO  [open_webui.env] 'RAG_OLLAMA_API_KEY' loaded from the latest database entry
+INFO  [open_webui.env] 'YOUTUBE_LOADER_LANGUAGE' loaded from the latest database entry
+INFO  [open_webui.env] 'YOUTUBE_LOADER_PROXY_URL' loaded from the latest database entry
+INFO  [open_webui.env] 'DEEPGRAM_API_KEY' loaded from the latest database entry
+INFO  [open_webui.retrieval.vector.dbs.pgvector] Initialization complete.
+INFO  [open_webui.retrieval.vector.connector] âœ… Using Pgvector as vector database (VECTOR_DB=pgvector)
+WARNI [langchain_community.utils.user_agent] USER_AGENT environment variable not set, consider setting it to identify your requests.
+
+ â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•— â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•— â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ–ˆâ•—   â–ˆâ–ˆâ•—    â–ˆâ–ˆâ•—    â–ˆâ–ˆâ•—â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•— â–ˆâ–ˆâ•—   â–ˆâ–ˆâ•—â–ˆâ–ˆâ•—
+â–ˆâ–ˆâ•”â•â•â•â–ˆâ–ˆâ•—â–ˆâ–ˆâ•”â•â•â–ˆâ–ˆâ•—â–ˆâ–ˆâ•”â•â•â•â•â•â–ˆâ–ˆâ–ˆâ–ˆâ•—  â–ˆâ–ˆâ•‘    â–ˆâ–ˆâ•‘    â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•”â•â•â•â•â•â–ˆâ–ˆâ•”â•â•â–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•‘
+â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—  â–ˆâ–ˆâ•”â–ˆâ–ˆâ•— â–ˆâ–ˆâ•‘    â–ˆâ–ˆâ•‘ â–ˆâ•— â–ˆâ–ˆâ•‘â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—  â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•‘
+â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•”â•â•â•â• â–ˆâ–ˆâ•”â•â•â•  â–ˆâ–ˆâ•‘â•šâ–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘    â–ˆâ–ˆâ•‘â–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•”â•â•â•  â–ˆâ–ˆâ•”â•â•â–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘â–ˆâ–ˆâ•‘
+â•šâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ•‘     â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘ â•šâ–ˆâ–ˆâ–ˆâ–ˆâ•‘    â•šâ–ˆâ–ˆâ–ˆâ•”â–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â•šâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•â–ˆâ–ˆâ•‘
+ â•šâ•â•â•â•â•â• â•šâ•â•     â•šâ•â•â•â•â•â•â•â•šâ•â•  â•šâ•â•â•â•     â•šâ•â•â•â•šâ•â•â• â•šâ•â•â•â•â•â•â•â•šâ•â•â•â•â•â•  â•šâ•â•â•â•â•â• â•šâ•â•
+
+
+v0.5.14 - building the best open-source AI user interface.
+
+https://github.com/open-webui/open-webui
+
+[32mINFO[0m:     Started server process [[36m1[0m]
+[32mINFO[0m:     Waiting for application startup.
+[32m2026-01-08 13:31:26.790 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.logger[0m:[36mstart_logger[0m:[36m196[0m - [1mGLOBAL_LOG_LEVEL: INFO[0m - {}
+[32m2026-01-08 13:31:26.911 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.otel_config[0m:[36minitialize_otel[0m:[36m158[0m - [1mInitializing OpenTelemetry SDK...[0m - {}
+[32m2026-01-08 13:31:26.922 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.otel_config[0m:[36minitialize_otel[0m:[36m265[0m - [1mOpenTelemetry initialized successfully: service=open-webui, version=0.5.14, endpoint=http://localhost:4317, protocol=grpc, sampling=0.1[0m - {}
+[32m2026-01-08 13:31:26.923 EST[0m | [1mINFO    [0m | [36mopen_webui.main[0m:[36mlifespan[0m:[36m519[0m - [1mOpenTelemetry SDK initialized successfully[0m - {}
+[32m2026-01-08 13:31:27.004 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.otel_config[0m:[36minstrument_fastapi[0m:[36m367[0m - [1mInstrumenting FastAPI application...[0m - {}
+[32m2026-01-08 13:31:27.004 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.otel_config[0m:[36minstrument_fastapi[0m:[36m388[0m - [1mFastAPI auto-instrumentation enabled (excluded paths: /health,/health/db,/static)[0m - {}
+[32m2026-01-08 13:31:27.005 EST[0m | [1mINFO    [0m | [36mopen_webui.main[0m:[36mlifespan[0m:[36m525[0m - [1mFastAPI auto-instrumentation enabled[0m - {}
+[32m2026-01-08 13:31:27.005 EST[0m | [33m[1mWARNING [0m | [36mopen_webui.utils.otel_config[0m:[36minstrument_requests[0m:[36m451[0m - [33m[1mRequests instrumentation package not available: No module named 'opentelemetry.instrumentation.requests'. Install with: pip install opentelemetry-instrumentation-requests[0m - {}
+Column 'created_by' already exists
+ Column 'created_by' already exists
+Column 'created_by' already exists
+Column 'created_by' already exists
+Column 'group_id' already exists
+******************** Found node_modules at /app/node_modules. Current working directory is /app/backend ********************
+[32m2026-01-08 13:35:15.054 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/nodes/6.5DEZdkll.js HTTP/1.1" 404[0m - {}
+[32m2026-01-08 13:35:15.072 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/nodes/21.DUS8DZRd.js HTTP/1.1" 404[0m - {}
+[32m2026-01-08 13:35:15.761 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET / HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:15.850 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /static/loader.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:15.850 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/entry/start.2oAis7mk.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:15.920 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/scheduler.B4fFOT5P.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:15.924 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/entry.CyjLJ0US.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:15.964 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/entry/app.B-CCKdd1.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:15.966 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.phcTrxyH.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:15.979 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/preload-helper.C1FmrZbK.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:15.980 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.DBvmHR98.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:15.988 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /static/splash.png HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.055 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /favicon/favicon.ico HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.102 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/nodes/0.CpC-5aci.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.105 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/globals.D0QH3NT1.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.111 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.CGwCSIWv.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.111 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.DtXZb6F5.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.113 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/pyodide.worker.CdwZPS-c.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.120 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/assets/_commonjsHelpers.DQwrSZtH.css HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.176 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/assets/0.DY_QJHe2.css HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.185 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/assets/Modal.CyLKLEmt.css HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.212 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/assets/ConfirmDialog.kaSBQ3kP.css HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.225 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/assets/2.DCaWBdws.css HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.250 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/assets/RichTextInput.Bx2lu9jm.css HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.278 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/assets/Markdown.n0yu5Luq.css HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.294 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/assets/Messages.Bbuu_qma.css HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.299 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/assets/Help.DWXbWWSy.css HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.302 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/stores.DBAKtmQv.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.315 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/each.CjZZOyyM.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.344 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/spread.CgU5AtxT.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.364 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/_commonjsHelpers.DfDzzA-g.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.373 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.CwSQeOJJ.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.374 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.CBAaO4tn.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.378 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.BXIFxXD-.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.408 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.QO0hahxl.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.424 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/i18next.B1Cj3nBs.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.434 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.CEcRx8dk.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.447 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/relativeTime.CxoRbF58.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.450 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/marked.esm._0_gBwjO.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.450 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.CceWzu30.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.471 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Tooltip.D8iDu41D.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.491 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/nodes/1.DA158yPD.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.499 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/nodes/2.CqjeHcVT.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.516 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/FileSaver.min.DU81mdZt.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.518 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Loader.BN2lwsqH.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.532 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.B6rnU_2I.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.555 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.Ccw7PXcW.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.573 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.CQLEh32L.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.582 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/AddConnectionModal.CrOsWbj2.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.597 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.D-0D5x2j.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.620 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Modal.BLgP9CeP.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.640 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.BFuekP1B.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.648 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Plus.DdLCba_G.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.660 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Switch.uBrevI8x.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.685 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/updater.DHRSIv16.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.706 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.CkqGsQRN.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.711 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/ConfirmDialog.DUXjdoxf.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.716 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/UserMenu.Br4hz5Ng.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.727 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/menu-trigger.B5P1b5IE.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.749 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.DNMphcin.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.779 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Tags.Xxz-pQcD.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.784 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/XMark.DTD1ntLX.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.785 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Dropdown.CwWNgMRe.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.791 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/GarbageBin.BmSSIyJF.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.827 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Pencil.C6d74BJj.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.844 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/DocumentDuplicate.LQLevigZ.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.856 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.B2WOGCLI.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.859 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Check.C6_oxCZI.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.861 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Spinner.Bw_7YxJs.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.898 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/ChevronDown.BSNYHsXt.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.908 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/ChevronRight.z_vH0kff.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.929 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/ChevronUp.D19LixDG.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.932 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/FolderOpen.BhB_USVU.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.934 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Collapsible.C4Tlz8qm.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.959 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/EllipsisHorizontal.BK_qXtBr.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.969 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.DUy0HzYr.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:16.994 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/AccessControl.Dn1axTYY.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.000 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.CBrcDZoT.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.007 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Badge.Cdw6xT5m.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.025 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Cog6.B1IvVF34.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.033 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/AdvancedParams.BtAGo06R.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.064 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/transformers.B_i_4WXY.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.067 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.Wq33F_Vt.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.069 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/User.WeRyOmcv.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.089 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/nodes/7.t8S3IUeS.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.092 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Search.DtkXf2kv.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.097 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Help.DpH8FEJr.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.146 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Drawer.B64j65tV.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.153 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.DBXYfSiB.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.161 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/FilesOverlay.CVO-jSV_.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.165 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.Cg3WdvpK.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.212 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/WrenchSolid.CMv2MMXW.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.219 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/RichTextInput.n2V9IzBE.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.238 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.CDOQ0hdB.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.240 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.Vcq4gwWv.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.243 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.Ix1l_1DF.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.309 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/fuse.CU2r43ac.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.317 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Markdown.nynQRleL.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.318 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/FileItem.DEyOHzuF.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.320 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/katex.CfZphoad.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.437 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/CodeEditor.nvaqW-HF.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.447 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/ArrowDownTray.DxLX-nsz.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.529 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/GlobeAlt.C_JFpSmZ.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.547 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.DJXwY8Dw.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.550 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Messages.CCTOlpOa.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.556 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.dCxLdwyN.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.607 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/MagnifyingGlass.DwPEkBVs.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.614 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Selector.DzfA5m3f.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.619 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/MenuLines.BYpzSjpy.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.646 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/index.BvE9-B9w.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.667 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/Heart.DMSnHprF.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:17.676 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/EllipsisVertical.CmU4NQm2.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:18.069 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/config HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:18.073 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /static/favicon.png HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:18.191 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/translation.CG011JoF.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:18.193 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /_app/immutable/chunks/translation.BatuwMr8.js HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:18.217 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/auths/ HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:18.330 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/config HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:20.020 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/changelog HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:20.056 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/users/user/settings HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:20.126 EST[0m | [1mINFO    [0m | [36mopen_webui.routers.openai[0m:[36mget_all_models[0m:[36m465[0m - [1mget_all_models()[0m - {}
+[32m2026-01-08 13:35:20.141 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/configs/banners HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:20.979 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m176[0m - [1m[MODEL_VISIBILITY] User user_jan7@gmail.com (id=6caa46c3-c4ac-4304-b30e-69824a9bd202) belongs to 1 groups[0m - {}
+[32m2026-01-08 13:35:20.979 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m177[0m - [1m[MODEL_VISIBILITY] User group IDs: {'ed01996c-6903-42d7-882e-e6c37c2a12c4'}[0m - {}
+[32m2026-01-08 13:35:21.000 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m186[0m - [1m[MODEL_VISIBILITY] Found 71 models with access_control set[0m - {}
+[32m2026-01-08 13:35:21.001 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'hi' has read groups: {'f6f26194-0326-4f8c-96eb-1b938d3006a4'}[0m - {}
+[32m2026-01-08 13:35:21.001 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'dec2-kb-testing-model' has read groups: {'3422726f-5789-4887-9c45-d7d0cd8a148b'}[0m - {}
+[32m2026-01-08 13:35:21.002 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'nsf' has read groups: {'b80b6e37-4eaa-4cb2-903f-bb1cfd80df3a'}[0m - {}
+[32m2026-01-08 13:35:21.002 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'dec2-coadmin-created-model' has read groups: {'3422726f-5789-4887-9c45-d7d0cd8a148b'}[0m - {}
+[32m2026-01-08 13:35:21.002 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'nsftest' has read groups: {'b80b6e37-4eaa-4cb2-903f-bb1cfd80df3a'}[0m - {}
+[32m2026-01-08 13:35:21.002 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'mathally' has read groups: {'4a3b342a-cd3a-42fd-bfe3-d6ac405c0848'}[0m - {}
+[32m2026-01-08 13:35:21.003 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model '1204-knowledge-base-testing' has read groups: {'7aa37de0-27d1-4ddd-b648-07e42aab2676'}[0m - {}
+[32m2026-01-08 13:35:21.003 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'dec15-superadmin' has read groups: {'46b8a9ff-67e9-4164-8d2a-a49209a66deb'}[0m - {}
+[32m2026-01-08 13:35:21.003 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'mermaid-artist' has read groups: set()[0m - {}
+[32m2026-01-08 13:35:21.003 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model '1210-functional-testing' has read groups: {'5e33d63f-a7e1-4c21-99c9-c15a7fa380c3'}[0m - {}
+[32m2026-01-08 13:35:21.003 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model '1215-functional-testing' has read groups: {'fd49c8d3-8737-4949-bcb9-e9144eaf399b'}[0m - {}
+[32m2026-01-08 13:35:21.004 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'llm_admin1.@gpt-4o-mini/gpt-4o-mini' has read groups: {'5e33d63f-a7e1-4c21-99c9-c15a7fa380c3'}[0m - {}
+[32m2026-01-08 13:35:21.004 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'model2' has read groups: {'405d993a-82c9-4d4f-affe-894d8f34168f'}[0m - {}
+[32m2026-01-08 13:35:21.004 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'model1' has read groups: {'405d993a-82c9-4d4f-affe-894d8f34168f'}[0m - {}
+[32m2026-01-08 13:35:21.004 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'jan-7-testing' has read groups: {'d59f0fc7-6896-4571-afb0-17cf80b59493'}[0m - {}
+[32m2026-01-08 13:35:21.005 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'jan-7-prof-1-testing-model' has read groups: set()[0m - {}
+[32m2026-01-08 13:35:21.005 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'jan-7-testing-cathy' has read groups: {'ed6e6feb-e7dd-410b-bc96-00e1b6fd3b24'}[0m - {}
+[32m2026-01-08 13:35:21.005 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m191[0m - [1m[MODEL_VISIBILITY] Model 'llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite' has read groups: {'ed01996c-6903-42d7-882e-e6c37c2a12c4'}[0m - {}
+[32m2026-01-08 13:35:21.005 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m194[0m - [1m[MODEL_VISIBILITY] MATCH! User has access to model 'llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite'[0m - {}
+[32m2026-01-08 13:35:21.005 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m202[0m - [1m[MODEL_VISIBILITY] Extracted pipe_id 'llm_fuse_ms15138' from model 'llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite'[0m - {}
+[32m2026-01-08 13:35:21.006 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m207[0m - [1m[MODEL_VISIBILITY] User user_jan7@gmail.com has access to 1 models: {'llm_fuse_ms15138.@vertexai/gemini-2.5-flash-lite'}[0m - {}
+[32m2026-01-08 13:35:21.006 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m208[0m - [1m[MODEL_VISIBILITY] User user_jan7@gmail.com has access to pipes: {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.006 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m212[0m - [1m[MODEL_VISIBILITY] Total active pipes: 18[0m - {}
+[32m2026-01-08 13:35:21.006 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_jy4421' (created_by=jy4421@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.015 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_jy4421' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.016 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_test1' (created_by=test1@gmail.com)[0m - {}
+[32m2026-01-08 13:35:21.021 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_test1' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.021 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_beta_jy4421' (created_by=jy4421@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.028 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_beta_jy4421' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.028 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_german_professor' (created_by=german_professor@gmail.com)[0m - {}
+[32m2026-01-08 13:35:21.037 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_german_professor' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.038 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_fuse_ms15138' (created_by=ms15138@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.045 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m226[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_fuse_ms15138' is accessible to user[0m - {}
+[32m2026-01-08 13:35:21.045 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_coadmin_professor2_admin' (created_by=professor2_admin@gmail.com)[0m - {}
+[32m2026-01-08 13:35:21.049 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_coadmin_professor2_admin' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.050 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_ak12378' (created_by=ak12378@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.056 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_ak12378' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.056 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_stutimshra' (created_by=stutimshra@gmail.com)[0m - {}
+[32m2026-01-08 13:35:21.060 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_stutimshra' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.061 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_models_26_ht2490' (created_by=ht2490@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.066 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_models_26_ht2490' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.067 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_ps5226' (created_by=ps5226@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.072 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_ps5226' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.073 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_rss9347' (created_by=rss9347@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.078 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_rss9347' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.079 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_cg4532' (created_by=cg4532@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.083 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_cg4532' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.083 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_dummy_admin1' (created_by=dummy_admin1@gmail.com)[0m - {}
+[32m2026-01-08 13:35:21.089 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_dummy_admin1' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.090 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llms_aa12947' (created_by=aa12947@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.095 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llms_aa12947' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.095 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_function_admin1' (created_by=admin1@gmail.com)[0m - {}
+[32m2026-01-08 13:35:21.099 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_function_admin1' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.100 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_prof1' (created_by=prof1@gmail.com)[0m - {}
+[32m2026-01-08 13:35:21.105 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_prof1' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.106 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_sm11538' (created_by=sm11538@nyu.edu)[0m - {}
+[32m2026-01-08 13:35:21.110 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_sm11538' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.111 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m214[0m - [1m[MODEL_VISIBILITY] Checking pipe 'llm_dummy_coadmin1' (created_by=dummy_coadmin1@gmail.com)[0m - {}
+[32m2026-01-08 13:35:21.138 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m229[0m - [1m[MODEL_VISIBILITY] Pipe 'llm_dummy_coadmin1' NOT accessible - not in {'llm_fuse_ms15138'}[0m - {}
+[32m2026-01-08 13:35:21.138 EST[0m | [1mINFO    [0m | [36mopen_webui.functions[0m:[36mget_function_models[0m:[36m234[0m - [1m[MODEL_VISIBILITY] Accessible pipes for user user_jan7@gmail.com: ['llm_fuse_ms15138'][0m - {}
+[32m2026-01-08 13:35:21.427 EST[0m | [1mINFO    [0m | [36mopen_webui.utils.plugin[0m:[36mload_function_module_by_id[0m:[36m147[0m - [1mLoaded module: function_llm_fuse_ms15138[0m - {}
+[32m2026-01-08 13:35:21.434 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/tools/ HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.114 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/models HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.263 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/channels/ HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.328 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /assets/fonts/Archivo-Variable.ttf HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.367 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /ollama/api/version HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.445 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/chats/all/tags HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.457 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/users/user/settings HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.459 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /static/favicon-white.png HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.460 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /user.png HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.461 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /static/user_temp.png HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.517 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /static/flower-violet.png HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.543 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/chats/pinned HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.624 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/folders/ HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.640 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/chats/?page=1 HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:24.825 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /api/v1/chats/?page=2 HTTP/1.1" 200[0m - {}
+[32m2026-01-08 13:35:26.762 EST[0m | [1mINFO    [0m | [36muvicorn.protocols.http.httptools_impl[0m:[36msend[0m:[36m468[0m - [1m10.27.82.129:0 - "GET /static/flower-violet.png HTTP/1.1" 304[0m - {}

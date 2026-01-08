@@ -376,3 +376,4 @@ TEST_FINAL_SUMMARY.md
 TEST_RESULTS.md
 TEST_SUMMARY.md
 llm_portkey.py
+.test_otel_generators/
