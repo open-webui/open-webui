@@ -108,14 +108,6 @@ async def delete_all_feedbacks(
     return success
 
 
-@router.get("/feedbacks/all/export", response_model=list[FeedbackModel])
-async def export_all_feedbacks(
-    user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
-    feedbacks = Feedbacks.get_all_feedbacks(db=db)
-    return feedbacks
-
-
 @router.get("/feedbacks/user", response_model=list[FeedbackUserResponse])
 async def get_feedbacks(
     user=Depends(get_verified_user), db: Session = Depends(get_session)

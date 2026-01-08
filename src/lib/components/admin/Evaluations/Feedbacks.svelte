@@ -10,7 +10,7 @@
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { deleteFeedbackById, exportAllFeedbacks, getFeedbackItems } from '$lib/apis/evaluations';
+	import { deleteFeedbackById, getFeedbackItems, getAllFeedbacks } from '$lib/apis/evaluations';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
@@ -128,7 +128,7 @@
 	};
 
 	const exportHandler = async () => {
-		const _feedbacks = await exportAllFeedbacks(localStorage.token).catch((err) => {
+		const _feedbacks = await getAllFeedbacks(localStorage.token).catch((err) => {
 			toast.error(err);
 			return null;
 		});
