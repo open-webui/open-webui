@@ -26,6 +26,7 @@ from open_webui.models.users import (
 )
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.config import load_oauth_providers
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -994,6 +995,26 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_MEMORIES": request.app.state.config.ENABLE_MEMORIES,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        # OAuth settings
+        "ENABLE_OAUTH_SIGNUP": request.app.state.config.ENABLE_OAUTH_SIGNUP,
+        "OAUTH_MERGE_ACCOUNTS_BY_EMAIL": request.app.state.config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+        "ENABLE_OAUTH_ROLE_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT,
+        "ENABLE_OAUTH_GROUP_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT,
+        "ENABLE_OAUTH_GROUP_CREATION": request.app.state.config.ENABLE_OAUTH_GROUP_CREATION,
+        "OAUTH_ROLES_CLAIM": request.app.state.config.OAUTH_ROLES_CLAIM,
+        "OAUTH_GROUPS_CLAIM": request.app.state.config.OAUTH_GROUPS_CLAIM,
+        "OAUTH_EMAIL_CLAIM": request.app.state.config.OAUTH_EMAIL_CLAIM,
+        "OAUTH_PICTURE_CLAIM": request.app.state.config.OAUTH_PICTURE_CLAIM,
+        "OAUTH_USERNAME_CLAIM": request.app.state.config.OAUTH_USERNAME_CLAIM,
+        "OAUTH_ALLOWED_ROLES": request.app.state.config.OAUTH_ALLOWED_ROLES,
+        "OAUTH_ADMIN_ROLES": request.app.state.config.OAUTH_ADMIN_ROLES,
+        "OAUTH_ALLOWED_DOMAINS": request.app.state.config.OAUTH_ALLOWED_DOMAINS,
+        "OAUTH_CLIENT_ID": request.app.state.config.OAUTH_CLIENT_ID,
+        "OAUTH_CLIENT_SECRET": request.app.state.config.OAUTH_CLIENT_SECRET,
+        "OAUTH_CODE_CHALLENGE_METHOD": request.app.state.config.OAUTH_CODE_CHALLENGE_METHOD,
+        "OAUTH_PROVIDER_NAME": request.app.state.config.OAUTH_PROVIDER_NAME,
+        "OPENID_PROVIDER_URL": request.app.state.config.OPENID_PROVIDER_URL,
+        "OPENID_REDIRECT_URI": request.app.state.config.OPENID_REDIRECT_URI,
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
@@ -1019,6 +1040,25 @@ class AdminConfig(BaseModel):
     ENABLE_MEMORIES: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
+    ENABLE_OAUTH_SIGNUP: bool
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL: bool
+    ENABLE_OAUTH_ROLE_MANAGEMENT: bool
+    ENABLE_OAUTH_GROUP_MANAGEMENT: bool
+    ENABLE_OAUTH_GROUP_CREATION: Optional[bool] = None
+    OAUTH_ROLES_CLAIM: Optional[str] = ""
+    OAUTH_GROUPS_CLAIM: Optional[str] = ""
+    OAUTH_EMAIL_CLAIM: Optional[str] = ""
+    OAUTH_PICTURE_CLAIM: Optional[str] = ""
+    OAUTH_USERNAME_CLAIM: Optional[str] = ""
+    OAUTH_ALLOWED_ROLES: Optional[str] = ""
+    OAUTH_ADMIN_ROLES: Optional[str] = ""
+    OAUTH_ALLOWED_DOMAINS: Optional[list[str]] = ["*"]
+    OAUTH_CLIENT_ID: Optional[str] = ""
+    OAUTH_CLIENT_SECRET: Optional[str] = ""
+    OAUTH_CODE_CHALLENGE_METHOD: Optional[str] = None
+    OAUTH_PROVIDER_NAME: Optional[str] = "SSO"
+    OPENID_PROVIDER_URL: Optional[str] = ""
+    OPENID_REDIRECT_URI: Optional[str] = ""
     PENDING_USER_OVERLAY_TITLE: Optional[str] = None
     PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
     RESPONSE_WATERMARK: Optional[str] = None
@@ -1057,8 +1097,6 @@ async def update_admin_config(
     request.app.state.config.DEFAULT_GROUP_ID = form_data.DEFAULT_GROUP_ID
 
     pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
-
-    # Check if the input string matches the pattern
     if re.match(pattern, form_data.JWT_EXPIRES_IN):
         request.app.state.config.JWT_EXPIRES_IN = form_data.JWT_EXPIRES_IN
 
@@ -1066,8 +1104,40 @@ async def update_admin_config(
         form_data.ENABLE_COMMUNITY_SHARING
     )
     request.app.state.config.ENABLE_MESSAGE_RATING = form_data.ENABLE_MESSAGE_RATING
-
+    request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
+    request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
     request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
+
+    # OAuth settings
+    request.app.state.config.ENABLE_OAUTH_SIGNUP = form_data.ENABLE_OAUTH_SIGNUP
+    request.app.state.config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = (
+        form_data.OAUTH_MERGE_ACCOUNTS_BY_EMAIL
+    )
+    request.app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = (
+        form_data.ENABLE_OAUTH_ROLE_MANAGEMENT
+    )
+    request.app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT = (
+        form_data.ENABLE_OAUTH_GROUP_MANAGEMENT
+    )
+    request.app.state.config.ENABLE_OAUTH_GROUP_CREATION = (
+        form_data.ENABLE_OAUTH_GROUP_CREATION
+    )
+    request.app.state.config.OAUTH_ROLES_CLAIM = form_data.OAUTH_ROLES_CLAIM
+    request.app.state.config.OAUTH_GROUPS_CLAIM = form_data.OAUTH_GROUPS_CLAIM
+    request.app.state.config.OAUTH_EMAIL_CLAIM = form_data.OAUTH_EMAIL_CLAIM
+    request.app.state.config.OAUTH_PICTURE_CLAIM = form_data.OAUTH_PICTURE_CLAIM
+    request.app.state.config.OAUTH_USERNAME_CLAIM = form_data.OAUTH_USERNAME_CLAIM
+    request.app.state.config.OAUTH_ALLOWED_ROLES = form_data.OAUTH_ALLOWED_ROLES
+    request.app.state.config.OAUTH_ADMIN_ROLES = form_data.OAUTH_ADMIN_ROLES
+    request.app.state.config.OAUTH_ALLOWED_DOMAINS = form_data.OAUTH_ALLOWED_DOMAINS
+    request.app.state.config.OAUTH_CLIENT_ID = form_data.OAUTH_CLIENT_ID
+    request.app.state.config.OAUTH_CLIENT_SECRET = form_data.OAUTH_CLIENT_SECRET
+    request.app.state.config.OAUTH_CODE_CHALLENGE_METHOD = (
+        form_data.OAUTH_CODE_CHALLENGE_METHOD
+    )
+    request.app.state.config.OAUTH_PROVIDER_NAME = form_data.OAUTH_PROVIDER_NAME
+    request.app.state.config.OPENID_PROVIDER_URL = form_data.OPENID_PROVIDER_URL
+    request.app.state.config.OPENID_REDIRECT_URI = form_data.OPENID_REDIRECT_URI
 
     request.app.state.config.PENDING_USER_OVERLAY_TITLE = (
         form_data.PENDING_USER_OVERLAY_TITLE
@@ -1075,8 +1145,14 @@ async def update_admin_config(
     request.app.state.config.PENDING_USER_OVERLAY_CONTENT = (
         form_data.PENDING_USER_OVERLAY_CONTENT
     )
-
     request.app.state.config.RESPONSE_WATERMARK = form_data.RESPONSE_WATERMARK
+
+    # Reload OAuth providers to reflect any changes
+    load_oauth_providers()
+
+    # Reload the OAuth manager with the new providers
+    if hasattr(request.app.state, "oauth_manager"):
+        request.app.state.oauth_manager.reload_providers()
 
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
@@ -1097,6 +1173,25 @@ async def update_admin_config(
         "ENABLE_MEMORIES": request.app.state.config.ENABLE_MEMORIES,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "ENABLE_OAUTH_SIGNUP": request.app.state.config.ENABLE_OAUTH_SIGNUP,
+        "OAUTH_MERGE_ACCOUNTS_BY_EMAIL": request.app.state.config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+        "ENABLE_OAUTH_ROLE_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT,
+        "ENABLE_OAUTH_GROUP_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT,
+        "ENABLE_OAUTH_GROUP_CREATION": request.app.state.config.ENABLE_OAUTH_GROUP_CREATION,
+        "OAUTH_ROLES_CLAIM": request.app.state.config.OAUTH_ROLES_CLAIM,
+        "OAUTH_GROUPS_CLAIM": request.app.state.config.OAUTH_GROUPS_CLAIM,
+        "OAUTH_EMAIL_CLAIM": request.app.state.config.OAUTH_EMAIL_CLAIM,
+        "OAUTH_PICTURE_CLAIM": request.app.state.config.OAUTH_PICTURE_CLAIM,
+        "OAUTH_USERNAME_CLAIM": request.app.state.config.OAUTH_USERNAME_CLAIM,
+        "OAUTH_ALLOWED_ROLES": request.app.state.config.OAUTH_ALLOWED_ROLES,
+        "OAUTH_ADMIN_ROLES": request.app.state.config.OAUTH_ADMIN_ROLES,
+        "OAUTH_ALLOWED_DOMAINS": request.app.state.config.OAUTH_ALLOWED_DOMAINS,
+        "OAUTH_CLIENT_ID": request.app.state.config.OAUTH_CLIENT_ID,
+        "OAUTH_CLIENT_SECRET": request.app.state.config.OAUTH_CLIENT_SECRET,
+        "OAUTH_CODE_CHALLENGE_METHOD": request.app.state.config.OAUTH_CODE_CHALLENGE_METHOD,
+        "OAUTH_PROVIDER_NAME": request.app.state.config.OAUTH_PROVIDER_NAME,
+        "OPENID_PROVIDER_URL": request.app.state.config.OPENID_PROVIDER_URL,
+        "OPENID_REDIRECT_URI": request.app.state.config.OPENID_REDIRECT_URI,
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,

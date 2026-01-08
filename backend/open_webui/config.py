@@ -128,14 +128,39 @@ CONFIG_DATA = get_config()
 
 
 def get_config_value(config_path: str):
-    path_parts = config_path.split(".")
-    cur_config = CONFIG_DATA
-    for key in path_parts:
-        if key in cur_config:
-            cur_config = cur_config[key]
-        else:
+    # Map of new paths to their old fallback paths
+    fallback_map = {
+        "oauth.client_id": "oauth.oidc.client_id",
+        "oauth.client_secret": "oauth.oidc.client_secret",
+        "oauth.provider_url": "oauth.oidc.provider_url",
+        "oauth.provider_name": "oauth.oidc.provider_name",
+        "oauth.groups_claim": "oauth.oidc.groups_claim",
+        "oauth.timeout": "oauth.oidc.oauth_timeout",
+        "oauth.token_endpoint_auth_method": "oauth.oidc.token_endpoint_auth_method",
+        "oauth.sub_claim": "oauth.oidc.sub_claim",
+    }
+
+    def _traverse_path(path_str: str, config_data: dict):
+        try:
+            value = config_data
+            for key in path_str.split("."):
+                value = value[key]
+            return value
+        except (KeyError, TypeError):  # Handles missing keys or non-dict intermediates
             return None
-    return cur_config
+
+    # Attempt to get value from the primary path
+    value = _traverse_path(config_path, CONFIG_DATA)
+
+    # If primary path fails and a fallback exists, try the fallback path
+    if value is None and config_path in fallback_map:
+        fallback_path = fallback_map[config_path]
+        value = _traverse_path(fallback_path, CONFIG_DATA)
+        # Optional: Log fallback usage if needed
+        # if value is not None:
+        #     log.warning(f"Using fallback config path '{fallback_path}' for '{config_path}'")
+
+    return value
 
 
 PERSISTENT_CONFIG_REGISTRY = []
@@ -254,6 +279,13 @@ class AppConfig:
         if isinstance(value, PersistentConfig):
             self._state[key] = value
         else:
+            # Raise error if attempting to set a non-existent config key directly
+            if key not in self._state:
+                raise AttributeError(
+                    f"Configuration key '{key}' does not exist. Cannot set value implicitly."
+                )
+
+            # If key exists, update its value and save
             self._state[key].value = value
             self._state[key].save()
 
@@ -337,6 +369,24 @@ ENABLE_OAUTH_SIGNUP = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
 )
 
+# Initialize OAuth client config
+OAUTH_CLIENT_ID = PersistentConfig(
+    "OAUTH_CLIENT_ID",
+    "oauth.client_id",
+    os.environ.get("OAUTH_CLIENT_ID", ""),
+)
+
+OAUTH_CLIENT_SECRET = PersistentConfig(
+    "OAUTH_CLIENT_SECRET",
+    "oauth.client_secret",
+    os.environ.get("OAUTH_CLIENT_SECRET", ""),
+)
+
+OPENID_PROVIDER_URL = PersistentConfig(
+    "OPENID_PROVIDER_URL",
+    "oauth.provider_url",
+    os.environ.get("OPENID_PROVIDER_URL", ""),
+)
 
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
     "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
@@ -443,89 +493,71 @@ GITHUB_CLIENT_REDIRECT_URI = PersistentConfig(
     os.environ.get("GITHUB_CLIENT_REDIRECT_URI", ""),
 )
 
-OAUTH_CLIENT_ID = PersistentConfig(
-    "OAUTH_CLIENT_ID",
-    "oauth.oidc.client_id",
-    os.environ.get("OAUTH_CLIENT_ID", ""),
-)
-
-OAUTH_CLIENT_SECRET = PersistentConfig(
-    "OAUTH_CLIENT_SECRET",
-    "oauth.oidc.client_secret",
-    os.environ.get("OAUTH_CLIENT_SECRET", ""),
-)
-
-OPENID_PROVIDER_URL = PersistentConfig(
-    "OPENID_PROVIDER_URL",
-    "oauth.oidc.provider_url",
-    os.environ.get("OPENID_PROVIDER_URL", ""),
-)
-
 OPENID_REDIRECT_URI = PersistentConfig(
     "OPENID_REDIRECT_URI",
-    "oauth.oidc.redirect_uri",
+    "oauth.redirect_uri",
     os.environ.get("OPENID_REDIRECT_URI", ""),
 )
 
 OAUTH_SCOPES = PersistentConfig(
     "OAUTH_SCOPES",
-    "oauth.oidc.scopes",
+    "oauth.scopes",
     os.environ.get("OAUTH_SCOPES", "openid email profile"),
 )
 
 OAUTH_TIMEOUT = PersistentConfig(
     "OAUTH_TIMEOUT",
-    "oauth.oidc.oauth_timeout",
+    "oauth.timeout",
     os.environ.get("OAUTH_TIMEOUT", ""),
 )
 
 OAUTH_TOKEN_ENDPOINT_AUTH_METHOD = PersistentConfig(
     "OAUTH_TOKEN_ENDPOINT_AUTH_METHOD",
-    "oauth.oidc.token_endpoint_auth_method",
+    "oauth.token_endpoint_auth_method",
     os.environ.get("OAUTH_TOKEN_ENDPOINT_AUTH_METHOD", None),
 )
 
 OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
     "OAUTH_CODE_CHALLENGE_METHOD",
-    "oauth.oidc.code_challenge_method",
+    "oauth.code_challenge_method",
     os.environ.get("OAUTH_CODE_CHALLENGE_METHOD", None),
 )
 
 OAUTH_PROVIDER_NAME = PersistentConfig(
     "OAUTH_PROVIDER_NAME",
-    "oauth.oidc.provider_name",
+    "oauth.provider_name",
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
 )
 
 OAUTH_SUB_CLAIM = PersistentConfig(
     "OAUTH_SUB_CLAIM",
-    "oauth.oidc.sub_claim",
+    "oauth.sub_claim",
     os.environ.get("OAUTH_SUB_CLAIM", None),
 )
 
 OAUTH_USERNAME_CLAIM = PersistentConfig(
     "OAUTH_USERNAME_CLAIM",
-    "oauth.oidc.username_claim",
+    "oauth.username_claim",
     os.environ.get("OAUTH_USERNAME_CLAIM", "name"),
 )
 
 
 OAUTH_PICTURE_CLAIM = PersistentConfig(
     "OAUTH_PICTURE_CLAIM",
-    "oauth.oidc.avatar_claim",
+    "oauth.picture_claim",
     os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
 )
 
 OAUTH_EMAIL_CLAIM = PersistentConfig(
     "OAUTH_EMAIL_CLAIM",
-    "oauth.oidc.email_claim",
+    "oauth.email_claim",
     os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
 )
 
 OAUTH_GROUPS_CLAIM = PersistentConfig(
     "OAUTH_GROUPS_CLAIM",
-    "oauth.oidc.group_claim",
-    os.environ.get("OAUTH_GROUPS_CLAIM", os.environ.get("OAUTH_GROUP_CLAIM", "groups")),
+    "oauth.groups_claim",
+    os.environ.get("OAUTH_GROUPS_CLAIM", "groups"),
 )
 
 FEISHU_CLIENT_ID = PersistentConfig(
@@ -554,13 +586,13 @@ FEISHU_REDIRECT_URI = PersistentConfig(
 
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_ROLE_MANAGEMENT",
-    "oauth.enable_role_mapping",
+    "oauth.enable_role_management",
     os.environ.get("ENABLE_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true",
 )
 
 ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_GROUP_MANAGEMENT",
-    "oauth.enable_group_mapping",
+    "oauth.enable_group_management",
     os.environ.get("ENABLE_OAUTH_GROUP_MANAGEMENT", "False").lower() == "true",
 )
 
@@ -582,7 +614,7 @@ OAUTH_GROUPS_SEPARATOR = os.environ.get("OAUTH_GROUPS_SEPARATOR", ";")
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
-    os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
+    os.environ.get("OAUTH_ROLES_CLAIM", ""),
 )
 
 OAUTH_ROLES_SEPARATOR = os.environ.get("OAUTH_ROLES_SEPARATOR", ",")
@@ -1889,7 +1921,7 @@ Analyze the chat history to determine the necessity of generating search queries
 - Always prioritize providing actionable and broad queries that maximize informational coverage.
 
 ### Output:
-Strictly return in JSON format: 
+Strictly return in JSON format:
 {
   "queries": ["query1", "query2"]
 }
@@ -1920,44 +1952,44 @@ AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 
 
 DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = """### Task:
-You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.  
+You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.
 
 ### **Instructions**:
-1. Analyze `<text>` for context and meaning.  
-2. Use `<type>` to guide your output:  
-   - **General**: Provide a natural, concise continuation.  
-   - **Search Query**: Complete as if generating a realistic search query.  
-3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.  
+1. Analyze `<text>` for context and meaning.
+2. Use `<type>` to guide your output:
+   - **General**: Provide a natural, concise continuation.
+   - **Search Query**: Complete as if generating a realistic search query.
+3. Start as if you are directly continuing `<text>`. Do **not** repeat, paraphrase, or respond as a model. Simply complete the text.
 4. Ensure the continuation:
-   - Flows naturally from `<text>`.  
-   - Avoids repetition, overexplaining, or unrelated ideas.  
-5. If unsure, return: `{ "text": "" }`.  
+   - Flows naturally from `<text>`.
+   - Avoids repetition, overexplaining, or unrelated ideas.
+5. If unsure, return: `{ "text": "" }`.
 
 ### **Output Rules**:
 - Respond only in JSON format: `{ "text": "<your_completion>" }`.
 
 ### **Examples**:
-#### Example 1:  
-Input:  
-<type>General</type>  
-<text>The sun was setting over the horizon, painting the sky</text>  
-Output:  
+#### Example 1:
+Input:
+<type>General</type>
+<text>The sun was setting over the horizon, painting the sky</text>
+Output:
 { "text": "with vibrant shades of orange and pink." }
 
-#### Example 2:  
-Input:  
-<type>Search Query</type>  
-<text>Top-rated restaurants in</text>  
-Output:  
-{ "text": "New York City for Italian cuisine." }  
+#### Example 2:
+Input:
+<type>Search Query</type>
+<text>Top-rated restaurants in</text>
+Output:
+{ "text": "New York City for Italian cuisine." }
 
 ---
 ### Context:
 <chat_history>
 {{MESSAGES:END:6}}
 </chat_history>
-<type>{{TYPE}}</type>  
-<text>{{PROMPT}}</text>  
+<type>{{TYPE}}</type>
+<text>{{PROMPT}}</text>
 #### Output:
 """
 
@@ -2006,7 +2038,7 @@ Your task is to choose and return the correct tool(s) from the list of available
 
 - Return only the JSON object, without any additional text or explanation.
 
-- If no tools match the query, return an empty array: 
+- If no tools match the query, return an empty array:
    {
      "tool_calls": []
    }
@@ -2165,11 +2197,11 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
 1. **Code Interpreter**: `<code_interpreter type="code" lang="python"></code_interpreter>`
    - You have access to a Python shell that runs directly in the user's browser, enabling fast execution of code for analysis, calculations, or problem-solving.  Use it in this response.
    - The Python code you write can incorporate a wide array of libraries, handle data manipulation or visualization, perform API calls for web-related tasks, or tackle virtually any computational challenge. Use this flexibility to **think outside the box, craft elegant solutions, and harness Python's full potential**.
-   - To use it, **you must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute. 
+   - To use it, **you must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute.
    - When writing code in the code_interpreter XML tag, Do NOT use the triple backticks code block for markdown formatting, example: ```py # python code ``` will cause an error because it is markdown formatting, it is not python code.
-   - When coding, **always aim to print meaningful outputs** (e.g., results, tables, summaries, or visuals) to better interpret and verify the findings. Avoid relying on implicit outputs; prioritize explicit and clear print statements so the results are effectively communicated to the user.  
-   - After obtaining the printed output, **always provide a concise analysis, interpretation, or next steps to help the user understand the findings or refine the outcome further.**  
-   - If the results are unclear, unexpected, or require validation, refine the code and execute it again as needed. Always aim to deliver meaningful insights from the results, iterating if necessary.  
+   - When coding, **always aim to print meaningful outputs** (e.g., results, tables, summaries, or visuals) to better interpret and verify the findings. Avoid relying on implicit outputs; prioritize explicit and clear print statements so the results are effectively communicated to the user.
+   - After obtaining the printed output, **always provide a concise analysis, interpretation, or next steps to help the user understand the findings or refine the outcome further.**
+   - If the results are unclear, unexpected, or require validation, refine the code and execute it again as needed. Always aim to deliver meaningful insights from the results, iterating if necessary.
    - **If a link to an image, audio, or any file is provided in markdown format in the output, ALWAYS regurgitate word for word, explicitly display it as part of the response to ensure the user can access it easily, do NOT change the link.**
    - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
 
