@@ -947,6 +947,22 @@ async def generate_chat_completion(
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
+        # Check if response is an error first (even for SSE responses)
+        # Some upstream APIs return error status codes with non-SSE content types
+        if r.status >= 400:
+            try:
+                response = await r.json()
+            except Exception as e:
+                log.error(f"Error parsing error response: {e}")
+                response = await r.text()
+            
+            await cleanup_response(r, session)
+            
+            if isinstance(response, (dict, list)):
+                return JSONResponse(status_code=r.status, content=response)
+            else:
+                return PlainTextResponse(status_code=r.status, content=response)
+
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
