@@ -511,6 +511,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
+        "FOLDER_MAX_FILE_COUNT": request.app.state.config.FOLDER_MAX_FILE_COUNT,
         "FILE_IMAGE_COMPRESSION_WIDTH": request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH,
         "FILE_IMAGE_COMPRESSION_HEIGHT": request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT,
         "ALLOWED_FILE_EXTENSIONS": request.app.state.config.ALLOWED_FILE_EXTENSIONS,
@@ -709,6 +710,7 @@ class ConfigForm(BaseModel):
     # File upload settings
     FILE_MAX_SIZE: Optional[int] = None
     FILE_MAX_COUNT: Optional[int] = None
+    FOLDER_MAX_FILE_COUNT: Optional[int] = None
     FILE_IMAGE_COMPRESSION_WIDTH: Optional[int] = None
     FILE_IMAGE_COMPRESSION_HEIGHT: Optional[int] = None
     ALLOWED_FILE_EXTENSIONS: Optional[List[str]] = None
@@ -1025,6 +1027,7 @@ async def update_rag_config(
     # File upload settings
     request.app.state.config.FILE_MAX_SIZE = form_data.FILE_MAX_SIZE
     request.app.state.config.FILE_MAX_COUNT = form_data.FILE_MAX_COUNT
+    request.app.state.config.FOLDER_MAX_FILE_COUNT = form_data.FOLDER_MAX_FILE_COUNT
     request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = (
         form_data.FILE_IMAGE_COMPRESSION_WIDTH
     )

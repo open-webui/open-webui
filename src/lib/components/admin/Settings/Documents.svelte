@@ -221,6 +221,9 @@
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
+			FILE_MAX_COUNT: RAGConfig.FILE_MAX_COUNT === '' ? null : RAGConfig.FILE_MAX_COUNT,
+			FOLDER_MAX_FILE_COUNT:
+				RAGConfig.FOLDER_MAX_FILE_COUNT === '' ? null : RAGConfig.FOLDER_MAX_FILE_COUNT,
 			DOCLING_PARAMS:
 				typeof RAGConfig.DOCLING_PARAMS === 'string' && RAGConfig.DOCLING_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.DOCLING_PARAMS)
@@ -1340,6 +1343,27 @@
 									type="number"
 									placeholder={$i18n.t('Leave empty for unlimited')}
 									bind:value={RAGConfig.FILE_MAX_COUNT}
+									autocomplete="off"
+									min="0"
+								/>
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Max Folder Upload Count')}</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'The maximum number of files that can be uploaded at once when uploading a folder. Leave empty for unlimited.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Leave empty for unlimited')}
+									bind:value={RAGConfig.FOLDER_MAX_FILE_COUNT}
 									autocomplete="off"
 									min="0"
 								/>
