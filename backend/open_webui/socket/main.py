@@ -16,6 +16,12 @@ from open_webui.env import (
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock
 
+# Import for MCP SharePoint OAuth token extraction (only used during websocket connect)
+try:
+    from mcp_backend.routers.crew_mcp import extract_graph_access_token
+except ImportError:
+    extract_graph_access_token = None
+
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
@@ -243,39 +249,10 @@ async def crew_mcp_query(sid, data):
         # Initialize CrewMCPManager
         crew_mcp_manager = CrewMCPManager()
 
-        # Extract Graph access token from environ (only for MCP SharePoint)
-        # Create a minimal request object for extract_graph_access_token
-        class MinimalRequest:
-            def __init__(self, headers):
-                self.headers = headers
+        # Get the Graph access token from session (stored during websocket connect)
+        user_access_token = user_session.get("graph_access_token")
 
-        # Get the environ from the session's socket connection
-        # Note: environ is only available during connection, so we need to extract it from the active socket
-        from engineio.async_drivers import asgi as engineio_asgi
-
-        user_access_token = None
-        try:
-            # Get socket from session
-            socket = await sio.get_session(sid)
-            if socket and hasattr(socket, "environ"):
-                environ = socket.environ
-                # Convert WSGI environ to headers dict
-                headers = {}
-                for key, value in environ.items():
-                    if key.startswith("HTTP_"):
-                        # Convert HTTP_X_FORWARDED_ACCESS_TOKEN -> x-forwarded-access-token
-                        header_name = key[5:].replace("_", "-").lower()
-                        headers[header_name] = value
-
-                request_obj = MinimalRequest(headers)
-                user_access_token = await extract_graph_access_token(request_obj)
-                log.info(
-                    f"Extracted Graph access token from environ (length: {len(user_access_token) if user_access_token else 0})"
-                )
-        except Exception as e:
-            log.warning(f"Could not extract Graph access token from environ: {e}")
-
-        log.info(f"User access token available: {bool(user_access_token)}")
+        log.info(f"User access token available from session: {bool(user_access_token)}")
 
         use_delegated_access = os.getenv(
             "SHP_USE_DELEGATED_ACCESS", "false"
@@ -356,7 +333,36 @@ async def connect(sid, environ, auth):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-            SESSION_POOL[sid] = user.model_dump()
+            session_data = user.model_dump()
+
+            # Extract OAuth access token for MCP SharePoint (environ only available here during connect)
+            if extract_graph_access_token:
+                try:
+
+                    class MinimalRequest:
+                        def __init__(self, headers):
+                            self.headers = headers
+
+                    # Convert WSGI environ to headers dict
+                    headers = {}
+                    for key, value in environ.items():
+                        if key.startswith("HTTP_"):
+                            # Convert HTTP_X_FORWARDED_ACCESS_TOKEN -> x-forwarded-access-token
+                            header_name = key[5:].replace("_", "-").lower()
+                            headers[header_name] = value
+
+                    request_obj = MinimalRequest(headers)
+                    graph_access_token = await extract_graph_access_token(request_obj)
+
+                    if graph_access_token:
+                        session_data["graph_access_token"] = graph_access_token
+                        log.info(
+                            f"Stored Graph access token for user {user.id} (length: {len(graph_access_token)})"
+                        )
+                except Exception as e:
+                    log.warning(f"Could not extract Graph access token: {e}")
+
+            SESSION_POOL[sid] = session_data
             if user.id in USER_POOL:
                 USER_POOL[user.id] = USER_POOL[user.id] + [sid]
             else:
