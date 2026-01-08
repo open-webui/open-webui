@@ -178,10 +178,19 @@ async def get_function_models(request, user: UserModel = None):
             if not pipe_creator:
                 continue  # Skip if creator not found
             
-            # Check if pipe creator has any models assigned to user's groups
+            # Check if pipe creator has any models CREATED BY THEM assigned to user's groups
+            # IMPORTANT: Only check models CREATED BY the pipe creator, not models they have access to
             has_access = False
-            creator_models = Models.get_all_models(pipe_creator.id, pipe_creator.email)
-            for model in creator_models:
+            # Directly query database for models created by the pipe creator
+            from open_webui.internal.db import get_db
+            from open_webui.models.models import Model
+            with get_db() as db:
+                creator_created_models = db.query(Model).filter(
+                    Model.created_by == pipe_creator.email
+                ).all()
+            
+            for model in creator_created_models:
+                # Only check models with explicit access_control (group assignments)
                 if model.access_control:
                     read_groups = model.access_control.get("read", {}).get("group_ids", [])
                     if any(gid in user_group_ids for gid in read_groups):

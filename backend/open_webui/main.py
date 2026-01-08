@@ -1196,11 +1196,53 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                 if has_access(user.id, type="read", access_control=model_info.access_control):
                     filtered_models.append(model)
             else:
-                # Model not in database (e.g., Portkey/external models)
-                # If model exists in models dict, it's available from external source (Portkey)
-                # Include it since external models are dynamically fetched and don't need database entry
-                # The fact that it's in the models dict means it's available to the user
-                filtered_models.append(model)
+                # Model not in database (e.g., Portkey/external models or pipe models)
+                # Pipe models come from get_function_models() which already filters based on access
+                # For pipe models, verify they have created_by attribute (pipe creator)
+                if model.get("pipe") and model.get("created_by"):
+                    # Pipe model - verify pipe creator has models assigned to user's groups
+                    # This is a defensive check; get_function_models() should have already filtered correctly
+                    from open_webui.models.groups import Groups
+                    from open_webui.models.users import Users
+                    from open_webui.internal.db import get_db
+                    from open_webui.models.models import Model as ModelTable
+                    
+                    pipe_creator_email = model.get("created_by")
+                    pipe_creator = Users.get_user_by_email(pipe_creator_email)
+                    
+                    if pipe_creator:
+                        # Get user's groups
+                        user_groups = Groups.get_groups_by_member_id(user.id)
+                        user_group_ids = [g.id for g in user_groups]
+                        
+                        # Check if pipe creator has models CREATED BY THEM assigned to user's groups
+                        with get_db() as db:
+                            creator_created_models = db.query(ModelTable).filter(
+                                ModelTable.created_by == pipe_creator_email
+                            ).all()
+                        
+                        has_access = False
+                        for creator_model in creator_created_models:
+                            if creator_model.access_control:
+                                read_groups = creator_model.access_control.get("read", {}).get("group_ids", [])
+                                if any(gid in user_group_ids for gid in read_groups):
+                                    has_access = True
+                                    break
+                        
+                        if has_access:
+                            # User has access via group assignments - include this pipe model
+                            filtered_models.append(model)
+                        else:
+                            # Skip this pipe model - user doesn't have access
+                            continue
+                    else:
+                        # Pipe model but creator not found - skip for safety
+                        continue
+                else:
+                    # Model not in database and not a pipe model
+                    # Since we only use Portkey/Pipe models, skip any non-pipe models not in database
+                    # This ensures only pipe models (which are already filtered) are included
+                    continue  # Skip non-pipe models not in database
 
         return filtered_models
 

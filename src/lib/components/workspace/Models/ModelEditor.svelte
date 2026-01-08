@@ -194,9 +194,9 @@
 			try {
 				isSuperAdmin = await checkIfSuperAdmin(localStorage.token, $user.email);
 				
-				// If super admin, fetch all users for the filter
+				// If super admin, fetch all users for the filter (pass high limit to get all users)
 				if (isSuperAdmin) {
-					allUsers = await getUsers(localStorage.token);
+					allUsers = await getUsers(localStorage.token, 1000);
 				}
 			} catch (error) {
 				console.error('Error checking super admin status:', error);
