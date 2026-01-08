@@ -3410,6 +3410,7 @@ async def process_chat_response(
                             request,
                             new_form_data,
                             user,
+                            bypass_system_prompt=True,
                         )
 
                         if isinstance(res, StreamingResponse):
@@ -3589,6 +3590,7 @@ async def process_chat_response(
                                 request,
                                 new_form_data,
                                 user,
+                                bypass_system_prompt=True,
                             )
 
                             if isinstance(res, StreamingResponse):
