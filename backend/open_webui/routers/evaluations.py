@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from open_webui.models.users import Users, UserModel
 from open_webui.models.feedbacks import (
+    Feedback,
     FeedbackIdResponse,
     FeedbackModel,
     FeedbackResponse,
@@ -65,7 +66,20 @@ async def update_config(
 async def get_all_feedbacks(
     user=Depends(get_admin_user), db: Session = Depends(get_session)
 ):
-    feedbacks = Feedbacks.get_all_feedbacks(db=db)
+    feedbacks = Feedbacks.get_all_feedbacks(
+        db=db,
+        columns=[
+            Feedback.id,
+            Feedback.user_id,
+            Feedback.version,
+            Feedback.type,
+            Feedback.data,
+            Feedback.meta,
+            Feedback.created_at,
+            Feedback.updated_at,
+        ],
+        response_model=FeedbackResponse
+    )
     return feedbacks
 
 
@@ -73,7 +87,16 @@ async def get_all_feedbacks(
 async def get_all_feedback_ids(
     user=Depends(get_admin_user), db: Session = Depends(get_session)
 ):
-    feedbacks = Feedbacks.get_all_feedbacks(db=db)
+    feedbacks = Feedbacks.get_all_feedbacks(
+        db=db,
+        columns=[
+            Feedback.id,
+            Feedback.user_id,
+            Feedback.created_at,
+            Feedback.updated_at,
+        ],
+        response_model=FeedbackIdResponse
+    )
     return feedbacks
 
 

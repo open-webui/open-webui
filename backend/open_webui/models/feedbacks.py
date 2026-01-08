@@ -3,7 +3,7 @@ import time
 import uuid
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import User
 
@@ -241,13 +241,22 @@ class FeedbackTable:
 
             return FeedbackListResponse(items=feedbacks, total=total)
 
-    def get_all_feedbacks(self, db: Optional[Session] = None) -> list[FeedbackModel]:
+    def get_all_feedbacks(
+        self,
+        db: Optional[Session] = None,
+        columns: Optional[list] = None,
+        response_model: type[BaseModel] = FeedbackModel,
+    ) -> list[BaseModel]:
+        """Fetch all feedbacks with optional column projection and response model."""
         with get_db_context(db) as db:
+            query = db.query(Feedback)
+            if columns:
+                query = query.options(load_only(*columns))
+
+            feedbacks = query.order_by(Feedback.updated_at.desc()).all()
             return [
-                FeedbackModel.model_validate(feedback)
-                for feedback in db.query(Feedback)
-                .order_by(Feedback.updated_at.desc())
-                .all()
+                response_model.model_validate(feedback)
+                for feedback in feedbacks
             ]
 
     def get_feedbacks_by_type(
