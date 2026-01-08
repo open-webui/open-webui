@@ -1202,10 +1202,8 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                 if model.get("pipe"):
                     # Pipe model - already filtered by get_function_models()
                     # Include it since it passed the access check there
-                filtered_models.append(model)
-                else:
-                    # Non-pipe model not in database - skip for safety
-                    continue
+                    filtered_models.append(model)
+                # else: Non-pipe model not in database - skip implicitly by not adding
 
         return filtered_models
 
