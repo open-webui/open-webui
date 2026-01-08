@@ -416,20 +416,23 @@ async def user_join(sid, data):
     if not user:
         return
 
-    # PRESERVE the graph_access_token from the initial connect event
+    # CRITICAL FIX: Build complete session object BEFORE writing to Redis
+    # This ensures atomic update and prevents race conditions
     existing_session = SESSION_POOL.get(sid, {})
     graph_access_token = existing_session.get("graph_access_token")
 
-    # Update session with user data
-    SESSION_POOL[sid] = user.model_dump()
-
-    # Restore the graph_access_token if it existed
+    # Build the new session with user data AND preserved token
+    new_session = user.model_dump()
     if graph_access_token:
-        SESSION_POOL[sid]["graph_access_token"] = graph_access_token
+        new_session["graph_access_token"] = graph_access_token
         log.info(
-            f"✅ Preserved Graph access token for user {user. id} during user-join (length: {len(graph_access_token)})"
+            f"✅ Preserving Graph access token for user {user.id} during user-join (length: {len(graph_access_token)})"
         )
 
+    # Single atomic update to Redis
+    SESSION_POOL[sid] = new_session
+
+    # Rest of the function remains the same
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
@@ -439,7 +442,7 @@ async def user_join(sid, data):
     channels = Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
-        await sio.enter_room(sid, f"channel:{channel. id}")
+        await sio.enter_room(sid, f"channel:{channel.id}")
 
     await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
     return {"id": user.id, "name": user.name}
