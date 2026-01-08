@@ -243,16 +243,59 @@ async def crew_mcp_query(sid, data):
         # Initialize CrewMCPManager
         crew_mcp_manager = CrewMCPManager()
 
-        # Handle user token for SharePoint access (if needed)
-        use_delegated_access = (
-            os.getenv("SHP_USE_DELEGATED_ACCESS", "false").lower() == "true"
-        )
+        # Extract Graph access token from environ (only for MCP SharePoint)
+        # Create a minimal request object for extract_graph_access_token
+        class MinimalRequest:
+            def __init__(self, headers):
+                self.headers = headers
+
+        # Get the environ from the session's socket connection
+        # Note: environ is only available during connection, so we need to extract it from the active socket
+        from engineio.async_drivers import asgi as engineio_asgi
+
+        user_access_token = None
+        try:
+            # Get socket from session
+            socket = await sio.get_session(sid)
+            if socket and hasattr(socket, "environ"):
+                environ = socket.environ
+                # Convert WSGI environ to headers dict
+                headers = {}
+                for key, value in environ.items():
+                    if key.startswith("HTTP_"):
+                        # Convert HTTP_X_FORWARDED_ACCESS_TOKEN -> x-forwarded-access-token
+                        header_name = key[5:].replace("_", "-").lower()
+                        headers[header_name] = value
+
+                request_obj = MinimalRequest(headers)
+                user_access_token = await extract_graph_access_token(request_obj)
+                log.info(
+                    f"Extracted Graph access token from environ (length: {len(user_access_token) if user_access_token else 0})"
+                )
+        except Exception as e:
+            log.warning(f"Could not extract Graph access token from environ: {e}")
+
+        log.info(f"User access token available: {bool(user_access_token)}")
+
+        use_delegated_access = os.getenv(
+            "SHP_USE_DELEGATED_ACCESS", "false"
+        ).lower() in ("true", "1", "yes")
+
         if use_delegated_access:
-            # For WebSocket, we'd need to pass the token in the data or extract from environ
-            # For now, we'll set it to None and let it use app credentials
+            # Delegated access (OBO flow) - use user token
+            if user_access_token:
+                crew_mcp_manager.set_user_token(user_access_token)
+                log.info("Using SharePoint delegated access (OBO flow) with user token")
+            else:
+                crew_mcp_manager.set_user_token(None)
+                log.warning(
+                    "SHP_USE_DELEGATED_ACCESS=true but no user token available - SharePoint access may fail"
+                )
+        else:
+            # Application access (client credentials flow) - no user token needed
             crew_mcp_manager.set_user_token(None)
             log.info(
-                "WebSocket CrewMCP: Using application access (no user token available in WebSocket)"
+                "Using SharePoint application access (client credentials flow) - SHP_USE_DELEGATED_ACCESS=false"
             )
 
         # Get available tools

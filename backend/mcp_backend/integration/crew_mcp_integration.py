@@ -406,7 +406,16 @@ Use analyze_all_documents_for_content with the user's search terms. This tool:
 - Typical performance: 20-60 seconds for large collections
 - Returns documents sorted by relevance with content matches
 
-RESPONSE STRATEGY:
+CRITICAL AUTHENTICATION RULE:
+If ANY tool returns an error with "authentication_failed": true or "DELEGATED ACCESS MODE" in the message:
+- STOP IMMEDIATELY - Do NOT proceed with the task
+- Do NOT attempt to retry with made-up tokens
+- Do NOT make up or hallucinate answers
+- REPORT the authentication failure to the user clearly
+- Inform the user that valid authentication credentials are required to access SharePoint
+- Do NOT use any information from your training data to answer the question
+
+RESPONSE STRATEGY (only if authentication succeeds):
 1. Call analyze_all_documents_for_content with the user's search terms
 2. Extract the KEY ANSWER from the most relevant document(s)
 3. Provide a CONCISE, DIRECT response to the user's question
@@ -416,7 +425,12 @@ RESPONSE STRATEGY:
                 """,
                 expected_output="""Provide a CONCISE, INTELLIGENT answer to the user's specific question based on SharePoint search results.
 
-RESPONSE RULES:
+CRITICAL: If authentication fails, respond ONLY with:
+"Unable to access SharePoint documents due to authentication failure. Valid user credentials are required to access SharePoint with delegated permissions. Please ensure you are properly authenticated, or contact your administrator to configure application access mode by setting SHP_USE_DELEGATED_ACCESS=false."
+
+Do NOT make up answers. Do NOT use information from your training data. Do NOT proceed if authentication fails.
+
+RESPONSE RULES (only if authentication succeeds):
 - Extract the key answer from the most relevant document
 - Provide a direct response to what the user asked for
 - Include document name and source for credibility
@@ -424,10 +438,10 @@ RESPONSE RULES:
 - DON'T copy-paste entire document contents
 - Focus on the specific information requested
 
-EXAMPLE GOOD RESPONSE:
+EXAMPLE GOOD RESPONSE (when authentication succeeds):
 "Based on the document 'MPO - Transformative strategies.pdf' from the Major Projects Office, Canada's first high-speed railway is projected to span approximately 1,000 km from Toronto to Québec City, reaching speeds of up to 300 km/hour."
 
-AVOID: Dumping entire document contents or being overly verbose.""",
+AVOID: Dumping entire document contents, being overly verbose, or making up information when authentication fails.""",
                 agent=sharepoint_agent,
             )
 
