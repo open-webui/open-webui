@@ -55,7 +55,7 @@ except ImportError:
             _log = logging.getLogger(__name__)
             try:
                 _log.debug(f"[trace_span_async] Generator entering (OTEL unavailable, no-op) for span '{span_name}'")
-            yield None
+                yield None
                 _log.debug(f"[trace_span_async] Generator exiting normally (OTEL unavailable, no-op) for span '{span_name}'")
             except GeneratorExit as ge:
                 _log.debug(f"[trace_span_async] GeneratorExit caught (OTEL unavailable, no-op) for span '{span_name}': {ge}")

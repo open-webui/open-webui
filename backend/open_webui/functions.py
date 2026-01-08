@@ -58,7 +58,7 @@ except ImportError:
             _log = logging.getLogger(__name__)
             try:
                 _log.debug(f"[trace_span_async] Generator entering (OTEL unavailable, no-op) for span '{span_name}'")
-            yield None
+                yield None
                 _log.debug(f"[trace_span_async] Generator exiting normally (OTEL unavailable, no-op) for span '{span_name}'")
             except GeneratorExit as ge:
                 _log.debug(f"[trace_span_async] GeneratorExit caught (OTEL unavailable, no-op) for span '{span_name}': {ge}")
@@ -539,9 +539,9 @@ async def generate_function_chat_completion(
                             return
 
                         # Process different response types
-                    if isinstance(res, str):
-                        message = openai_chat_chunk_message_template(form_data["model"], res)
-                        yield f"data: {json.dumps(message)}\n\n"
+                        if isinstance(res, str):
+                            message = openai_chat_chunk_message_template(form_data["model"], res)
+                            yield f"data: {json.dumps(message)}\n\n"
                             # Send finish message for string responses
                             finish_message = openai_chat_chunk_message_template(
                                 form_data["model"], ""
@@ -551,9 +551,9 @@ async def generate_function_chat_completion(
                             yield "data: [DONE]"
                             return
 
-                    if isinstance(res, Iterator):
-                        for line in res:
-                            yield process_line(form_data, line)
+                        if isinstance(res, Iterator):
+                            for line in res:
+                                yield process_line(form_data, line)
                             # Send finish message for Iterator responses
                             finish_message = openai_chat_chunk_message_template(
                                 form_data["model"], ""
@@ -563,9 +563,9 @@ async def generate_function_chat_completion(
                             yield "data: [DONE]"
                             return
 
-                    if isinstance(res, AsyncGenerator):
-                        async for line in res:
-                            yield process_line(form_data, line)
+                        if isinstance(res, AsyncGenerator):
+                            async for line in res:
+                                yield process_line(form_data, line)
                             # Send finish message for AsyncGenerator responses
                             finish_message = openai_chat_chunk_message_template(
                                 form_data["model"], ""
@@ -579,12 +579,12 @@ async def generate_function_chat_completion(
                             for line in res:
                                 yield process_line(form_data, line)
                             # Send finish message for Generator responses
-                        finish_message = openai_chat_chunk_message_template(
-                            form_data["model"], ""
-                        )
-                        finish_message["choices"][0]["finish_reason"] = "stop"
-                        yield f"data: {json.dumps(finish_message)}\n\n"
-                        yield "data: [DONE]"
+                            finish_message = openai_chat_chunk_message_template(
+                                form_data["model"], ""
+                            )
+                            finish_message["choices"][0]["finish_reason"] = "stop"
+                            yield f"data: {json.dumps(finish_message)}\n\n"
+                            yield "data: [DONE]"
                             return
 
                     except Exception as e:

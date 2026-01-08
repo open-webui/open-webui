@@ -77,7 +77,7 @@ def trace_span(
     """
     # Get tracer - wrap in try/except to handle tracer creation failures
     try:
-    tracer = _get_tracer()
+        tracer = _get_tracer()
     except Exception as tracer_error:
         # If tracer creation fails, fall back to no-op mode
         log.warning(f"[trace_span] Failed to get tracer: {type(tracer_error).__name__}: {tracer_error}")
@@ -98,7 +98,7 @@ def trace_span(
         log.debug(f"[trace_span] OTEL not initialized, using no-op for span '{name}'")
         try:
             log.debug(f"[trace_span] Generator entering (no-op mode) for span '{name}'")
-        yield None
+            yield None
             log.debug(f"[trace_span] Generator exiting normally (no-op mode) for span '{name}'")
         except GeneratorExit as ge:
             log.debug(f"[trace_span] GeneratorExit caught (no-op mode) for span '{name}': {ge}")
@@ -126,9 +126,9 @@ def trace_span(
             log.warning(f"[trace_span] Exception thrown into generator (fallback mode - import failed) for span '{name}': {type(gen_exc).__name__}: {gen_exc}", exc_info=True)
             raise
         return
-        
-        # Determine span kind
-        span_kind = kind if kind is not None else SpanKind.INTERNAL
+    
+    # Determine span kind
+    span_kind = kind if kind is not None else SpanKind.INTERNAL
         
     # Start span as current span (automatically links to parent from context)
     # CRITICAL: We wrap only the span creation in try/except, not the entire span context
@@ -152,16 +152,16 @@ def trace_span(
     
     # Now enter the span context - exceptions from here should propagate naturally
     with span_context as span:
-            # Set attributes if provided (filter None values first for performance)
-            if attributes:
-                filtered_attrs = {k: v for k, v in attributes.items() if v is not None}
-                for key, value in filtered_attrs.items():
-                    try:
-                        span.set_attribute(key, value)
-                    except Exception as e:
-                        log.debug(f"Failed to set span attribute {key}: {e}")
-            
-            try:
+        # Set attributes if provided (filter None values first for performance)
+        if attributes:
+            filtered_attrs = {k: v for k, v in attributes.items() if v is not None}
+            for key, value in filtered_attrs.items():
+                try:
+                    span.set_attribute(key, value)
+                except Exception as e:
+                    log.debug(f"Failed to set span attribute {key}: {e}")
+        
+        try:
             # Get span_id from SpanContext (not a dict, so access attributes directly)
             try:
                 span_context = span.get_span_context()
@@ -169,9 +169,9 @@ def trace_span(
             except (AttributeError, Exception):
                 span_id = 'unknown'
             log.debug(f"[trace_span] Generator entering (OTEL active) for span '{name}', span_id={span_id}")
-                yield span
-                # Set status to OK if no exception
-                span.set_status(Status(StatusCode.OK))
+            yield span
+            # Set status to OK if no exception
+            span.set_status(Status(StatusCode.OK))
             log.debug(f"[trace_span] Generator exiting normally (OTEL active) for span '{name}'")
         except GeneratorExit as ge:
             log.debug(f"[trace_span] GeneratorExit caught (OTEL active) for span '{name}': {ge}")
@@ -182,8 +182,8 @@ def trace_span(
                 pass
             # Re-raise GeneratorExit - let finally block handle span.end()
             raise
-            except Exception as e:
-                # Set status to ERROR on exception
+        except Exception as e:
+            # Set status to ERROR on exception
             log.warning(f"[trace_span] Exception in span context (OTEL active) for span '{name}': {type(e).__name__}: {e}", exc_info=True)
             try:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -193,11 +193,11 @@ def trace_span(
                 log.debug(f"[trace_span] Failed to set span error status for '{name}': {span_error}")
             # Re-raise exception - let finally block handle span.end()
             # This ensures generator exits properly and contextlib can handle the exception
-                raise
-            finally:
+            raise
+        finally:
             # ALWAYS end span here, even on exception
             # This ensures cleanup happens and generator exits properly
-                # Note: end_on_exit=False means we must call end() manually
+            # Note: end_on_exit=False means we must call end() manually
             try:
                 span.end()
                 log.debug(f"[trace_span] Span ended (OTEL active) for span '{name}'")
@@ -231,7 +231,7 @@ async def trace_span_async(
     """
     # Get tracer - wrap in try/except to handle tracer creation failures
     try:
-    tracer = _get_tracer()
+        tracer = _get_tracer()
     except Exception as tracer_error:
         # If tracer creation fails, fall back to no-op mode
         log.warning(f"[trace_span_async] Failed to get tracer: {type(tracer_error).__name__}: {tracer_error}")
@@ -252,7 +252,7 @@ async def trace_span_async(
         log.debug(f"[trace_span_async] OTEL not initialized, using no-op for span '{name}'")
         try:
             log.debug(f"[trace_span_async] Generator entering (no-op mode) for span '{name}'")
-        yield None
+            yield None
             log.debug(f"[trace_span_async] Generator exiting normally (no-op mode) for span '{name}'")
         except GeneratorExit as ge:
             # Properly handle generator exit
@@ -282,9 +282,9 @@ async def trace_span_async(
             log.warning(f"[trace_span_async] Exception thrown into generator (fallback mode - import failed) for span '{name}': {type(gen_exc).__name__}: {gen_exc}", exc_info=True)
             raise
         return
-        
-        # Determine span kind
-        span_kind = kind if kind is not None else SpanKind.INTERNAL
+    
+    # Determine span kind
+    span_kind = kind if kind is not None else SpanKind.INTERNAL
         
     # Start span as current span (automatically links to parent from context)
     # CRITICAL: We wrap only the span creation in try/except, not the entire span context
@@ -308,16 +308,16 @@ async def trace_span_async(
     
     # Now enter the span context - exceptions from here should propagate naturally
     with span_context as span:
-            # Set attributes if provided (filter None values first for performance)
-            if attributes:
-                filtered_attrs = {k: v for k, v in attributes.items() if v is not None}
-                for key, value in filtered_attrs.items():
-                    try:
-                        span.set_attribute(key, value)
-                    except Exception as e:
-                        log.debug(f"Failed to set span attribute {key}: {e}")
-            
-            try:
+        # Set attributes if provided (filter None values first for performance)
+        if attributes:
+            filtered_attrs = {k: v for k, v in attributes.items() if v is not None}
+            for key, value in filtered_attrs.items():
+                try:
+                    span.set_attribute(key, value)
+                except Exception as e:
+                    log.debug(f"Failed to set span attribute {key}: {e}")
+        
+        try:
             # Get span_id from SpanContext (not a dict, so access attributes directly)
             try:
                 span_context = span.get_span_context()
@@ -325,9 +325,9 @@ async def trace_span_async(
             except (AttributeError, Exception):
                 span_id = 'unknown'
             log.debug(f"[trace_span_async] Generator entering (OTEL active) for span '{name}', span_id={span_id}")
-                yield span
-                # Set status to OK if no exception
-                span.set_status(Status(StatusCode.OK))
+            yield span
+            # Set status to OK if no exception
+            span.set_status(Status(StatusCode.OK))
             log.debug(f"[trace_span_async] Generator exiting normally (OTEL active) for span '{name}'")
         except GeneratorExit as ge:
             log.debug(f"[trace_span_async] GeneratorExit caught (OTEL active) for span '{name}': {ge}")
@@ -338,8 +338,8 @@ async def trace_span_async(
                 pass
             # Re-raise GeneratorExit - let finally block handle span.end()
             raise
-            except Exception as e:
-                # Set status to ERROR on exception
+        except Exception as e:
+            # Set status to ERROR on exception
             log.warning(f"[trace_span_async] Exception in span context (OTEL active) for span '{name}': {type(e).__name__}: {e}", exc_info=True)
             try:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -349,11 +349,11 @@ async def trace_span_async(
                 log.debug(f"[trace_span_async] Failed to set span error status for '{name}': {span_error}")
             # Re-raise exception - let finally block handle span.end()
             # This ensures generator exits properly and contextlib can handle the exception
-                raise
-            finally:
+            raise
+        finally:
             # ALWAYS end span here, even on exception
             # This ensures cleanup happens and generator exits properly
-                # Note: end_on_exit=False means we must call end() manually
+            # Note: end_on_exit=False means we must call end() manually
             try:
                 span.end()
                 log.debug(f"[trace_span_async] Span ended (OTEL active) for span '{name}'")
@@ -418,24 +418,24 @@ def trace_function(
                 
                 # Create span - use try/except to ensure OTEL failures don't break the function
                 try:
-                async with trace_span_async(name, attributes=attributes) as span:
-                    try:
-                        result = await func(*args, **kwargs)
-                        
-                        if capture_result and span:
-                            # Add result as event (not attribute, to avoid large payloads)
-                            try:
-                                result_str = str(result)
-                                if len(result_str) > 200:
-                                    result_str = result_str[:200] + "..."
-                                span.add_event("function.result", {"result": result_str})
-                            except Exception:
-                                pass
-                        
-                        return result
-                    except Exception as e:
-                        # Error handling is done in trace_span_async
-                        raise
+                    async with trace_span_async(name, attributes=attributes) as span:
+                        try:
+                            result = await func(*args, **kwargs)
+                            
+                            if capture_result and span:
+                                # Add result as event (not attribute, to avoid large payloads)
+                                try:
+                                    result_str = str(result)
+                                    if len(result_str) > 200:
+                                        result_str = result_str[:200] + "..."
+                                    span.add_event("function.result", {"result": result_str})
+                                except Exception:
+                                    pass
+                            
+                            return result
+                        except Exception as e:
+                            # Error handling is done in trace_span_async
+                            raise
                 except Exception as otel_error:
                     # If OTEL fails, log but don't break the function
                     log.debug(f"OTEL span creation failed in decorator (non-critical): {otel_error}")
@@ -464,23 +464,23 @@ def trace_function(
                 
                 # Create span - use try/except to ensure OTEL failures don't break the function
                 try:
-                with trace_span(name, attributes=attributes) as span:
-                    try:
-                        result = func(*args, **kwargs)
-                        
-                        if capture_result and span:
-                            try:
-                                result_str = str(result)
-                                if len(result_str) > 200:
-                                    result_str = result_str[:200] + "..."
-                                span.add_event("function.result", {"result": result_str})
-                            except Exception:
-                                pass
-                        
-                        return result
-                    except Exception as e:
-                        # Error handling is done in trace_span
-                        raise
+                    with trace_span(name, attributes=attributes) as span:
+                        try:
+                            result = func(*args, **kwargs)
+                            
+                            if capture_result and span:
+                                try:
+                                    result_str = str(result)
+                                    if len(result_str) > 200:
+                                        result_str = result_str[:200] + "..."
+                                    span.add_event("function.result", {"result": result_str})
+                                except Exception:
+                                    pass
+                            
+                            return result
+                        except Exception as e:
+                            # Error handling is done in trace_span
+                            raise
                 except Exception as otel_error:
                     # If OTEL fails, log but don't break the function
                     log.debug(f"OTEL span creation failed in decorator (non-critical): {otel_error}")

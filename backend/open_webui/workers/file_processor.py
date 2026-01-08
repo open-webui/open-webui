@@ -753,12 +753,12 @@ def process_file_job(
                                             loader = Loader(engine=extraction_engine_val, PDF_EXTRACT_IMAGES=pdf_extract_images_val)
                                             try:
                                                 docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
-                                            total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
+                                                total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
                                                 non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
                                                 log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
                                                 safe_add_span_event("job.file.extracted", {"content_length": total_chars, "document.count": len(docs)})
                                                 docs = [Document(page_content=doc.page_content, metadata={**doc.metadata, "name": file.filename, "created_by": file.user_id, "file_id": file.id, "source": file.filename}) for doc in docs]
-                                            text_content = " ".join([doc.page_content for doc in docs])
+                                                text_content = " ".join([doc.page_content for doc in docs])
                                             except Exception as load_error:
                                                 log.error(f"[EXTRACT] FAILED | file_id={file.id} | error={type(load_error).__name__}: {load_error}", exc_info=True)
                                                 docs = []
