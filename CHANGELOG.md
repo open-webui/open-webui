@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7] - 2026-01-07
+## [0.7] - 2026-01-08
 
 ### Added
 
@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💨 Administrators experience dramatically faster user list loading through optimized database queries that eliminate N+1 query patterns, reducing query count from 1+N to just 2 total queries regardless of user count. [#20427](https://github.com/open-webui/open-webui/pull/20427)
 - 📋 Notes now load faster through optimized database queries that batch user lookups instead of fetching each note's author individually. [Commit](https://github.com/open-webui/open-webui/commit/084f0ef6a5491e186bf6b71c6386973ba18ef2fa)
 - 💬 Channel messages, pinned messages, and thread replies now load faster through batched user lookups instead of individual queries per message. [#20458](https://github.com/open-webui/open-webui/pull/20458), [#20459](https://github.com/open-webui/open-webui/pull/20459), [#20460](https://github.com/open-webui/open-webui/pull/20460)
+- 📂 File search is now dramatically faster through SQL-based filtering and pagination instead of loading all files into memory. [Commit](https://github.com/open-webui/open-webui/commit/a9a979fb3db1743553ca0705f571c0b9c252841f)
 - 📊 Users can now sync their chat statistics to create public profile pages on the Open WebUI Community website or download them as JSON files, with incremental synchronization by default and an administrator option to disable the feature. [Commit](https://github.com/open-webui/open-webui/commit/4be99174be505b187812e0b48b9f9f7bf6897c52), [Commit](https://github.com/open-webui/open-webui/commit/df106099a159f8cf7910a89c50338ec045a78e61), [Commit](https://github.com/open-webui/open-webui/commit/9c61e95ecba071f5a99d93d1b1c5d17b80159329), [Commit](https://github.com/open-webui/open-webui/commit/85bbed3ec539dc958d306117f97d6be977b7253b), [Commit](https://github.com/open-webui/open-webui/commit/459cfde1f80e76618fb7fb75318d8daf2ccf1590), [Commit](https://github.com/open-webui/open-webui/commit/37b15604de0eaa5bfde378f12ac2d94c7aab60b9), [Commit](https://github.com/open-webui/open-webui/commit/71ca25c8ac4ad97b5a52016a5b2f385b333bd480)
 - 🔗 Users can now click citation content links to jump directly to the relevant portion of source documents with automatic text highlighting, making it easier to verify AI responses against their original sources. [#20116](https://github.com/open-webui/open-webui/pull/20116), [Commit](https://github.com/open-webui/open-webui/commit/40c45ffe1f9b45538d32c8ecba8cac62c6eca503)
 - 📌 Users can now pin or hide models directly from the Workspace Models page and Admin Settings Models page, making it easier to manage which models appear in the sidebar without switching to the chat interface. [#20176](https://github.com/open-webui/open-webui/pull/20176)
@@ -57,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 🔒 Users are now protected from stored XSS vulnerabilities in iFrame embeds for citations and response messages through configurable same-origin sandbox settings instead of hardcoded values. [#20209](https://github.com/open-webui/open-webui/pull/20209), [#20210](https://github.com/open-webui/open-webui/pull/20210)
+- 🔑 Image Generation, Web Search, and Audio (TTS/STT) API endpoints now enforce permission checks on the backend, closing a security gap where disabled features could previously be accessed via direct API calls. [#20471](https://github.com/open-webui/open-webui/pull/20471)
+- 🛠️ Tools and Tool Servers (MCP and OpenAPI) now enforce access control checks on the backend, ensuring users can only access tools they have permission to use even via direct API calls. [#20443](https://github.com/open-webui/open-webui/issues/20443), [Commit](https://github.com/open-webui/open-webui/commit/9b06fdc8fe1c933071610336be05f11e77e6c8eb)
 - 💬 Users can now export chats, use the Ask/Explain popup, and view chat lists correctly again after these features were broken by recent refactoring changes that caused 500 and 400 server errors. [#20146](https://github.com/open-webui/open-webui/issues/20146), [#20205](https://github.com/open-webui/open-webui/issues/20205), [#20206](https://github.com/open-webui/open-webui/issues/20206), [#20212](https://github.com/open-webui/open-webui/pull/20212)
 - 💭 Users no longer experience data corruption when switching between chats during background operations like image generation, where messages from one chat would appear in another chat's history. [#20266](https://github.com/open-webui/open-webui/pull/20266)
 - 🛡️ Users no longer encounter critical chat stability errors, including duplicate key errors from circular message dependencies, null message access during chat loading, and errors in the chat overview visualization. [#20268](https://github.com/open-webui/open-webui/pull/20268)
@@ -105,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 👥 Administrators now have three granular group sharing permission options instead of a simple on/off toggle, allowing them to choose between "No one", "Members", or "Anyone" for who can share content to each group, with the default changed from member-only to "Anyone", meaning users can now share to groups set to "Anyone" regardless of their membership in those groups. [Commit](https://github.com/open-webui/open-webui/commit/ca514cd3eda2524b8da472ef17c0ccb216bac2e8)
 - 🖼️ Users no longer see the "Generate Image" action button in chat message interfaces. [Commit](https://github.com/open-webui/open-webui/commit/f0829ba6e6fd200702fb76efc43dd785cf87fec9)
 - 🔗 Administrators will find the Admin Evaluations page at the new URL "/admin/evaluations/feedback" instead of "/admin/evaluations/feedbacks" to use the correct uncountable form of the word. [#20296](https://github.com/open-webui/open-webui/pull/20296)
+- 🔐 Scripts or integrations that directly called Image Generation, Web Search, or Audio APIs while those features were disabled in the Admin UI will now receive 403 Forbidden errors, as backend permission enforcement has been added to match frontend restrictions. [#20471](https://github.com/open-webui/open-webui/pull/20471)
 
 ## [0.6.43] - 2025-12-22
 
