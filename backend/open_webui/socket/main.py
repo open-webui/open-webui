@@ -425,7 +425,20 @@ async def user_join(sid, data):
     if not user:
         return
 
+    # PRESERVE the graph_access_token from the initial connect event
+    existing_session = SESSION_POOL.get(sid, {})
+    graph_access_token = existing_session.get("graph_access_token")
+
+    # Update session with user data
     SESSION_POOL[sid] = user.model_dump()
+
+    # Restore the graph_access_token if it existed
+    if graph_access_token:
+        SESSION_POOL[sid]["graph_access_token"] = graph_access_token
+        log.info(
+            f"Preserved Graph access token for user {user.id} during user-join (length: {len(graph_access_token)})"
+        )
+
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
