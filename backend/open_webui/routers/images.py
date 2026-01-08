@@ -21,6 +21,7 @@ from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS
 from open_webui.models.chats import Chats
 from open_webui.routers.files import upload_file_handler, get_file_content_by_id
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
@@ -538,6 +539,20 @@ def upload_image(request, image_data, content_type, metadata, user, db=None):
 async def generate_images(
     request: Request, form_data: CreateImageForm, user=Depends(get_verified_user)
 ):
+    if not request.app.state.config.ENABLE_IMAGE_GENERATION:
+        raise HTTPException(
+            status_code=403,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if user.role != "admin" and not has_permission(
+        user.id, "features.image_generation", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     return await image_generations(request, form_data, user=user)
 
 

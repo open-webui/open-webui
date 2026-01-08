@@ -1,8 +1,11 @@
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi.responses import StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 import logging
+import io
+import zipfile
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import get_session
@@ -25,7 +28,7 @@ from open_webui.routers.retrieval import (
 from open_webui.storage.provider import Storage
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.utils.access_control import has_access, has_permission
 
 
@@ -836,4 +839,52 @@ async def add_files_to_knowledge_batch(
     return KnowledgeFilesResponse(
         **knowledge.model_dump(),
         files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+    )
+
+
+############################
+# ExportKnowledgeById
+############################
+
+
+@router.get("/{id}/export")
+async def export_knowledge_by_id(
+    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
+):
+    """
+    Export a knowledge base as a zip file containing .txt files.
+    Admin only.
+    """
+
+    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    files = Knowledges.get_files_by_id(id, db=db)
+
+    # Create zip file in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file in files:
+            content = file.data.get("content", "") if file.data else ""
+            if content:
+                # Use original filename with .txt extension
+                filename = file.filename
+                if not filename.endswith(".txt"):
+                    filename = f"{filename}.txt"
+                zf.writestr(filename, content)
+
+    zip_buffer.seek(0)
+
+    # Sanitize knowledge name for filename
+    safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in knowledge.name)
+    zip_filename = f"{safe_name}.zip"
+
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={zip_filename}"},
     )

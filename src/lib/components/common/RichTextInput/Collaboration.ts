@@ -138,7 +138,10 @@ export class SocketIOCollaborationProvider {
 										// The Yjs plugin will automatically sync the content
 									} else {
 										// JSON content - use the existing approach
-										const editorYdoc = prosemirrorJSONToYDoc(this.editor.schema, this.initialContent);
+										const editorYdoc = prosemirrorJSONToYDoc(
+											this.editor.schema,
+											this.initialContent
+										);
 										if (editorYdoc) {
 											Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
 										}

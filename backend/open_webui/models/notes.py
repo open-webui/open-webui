@@ -260,8 +260,16 @@ class NoteTable:
                     normalized_query = query_key.replace("-", "").replace(" ", "")
                     query = query.filter(
                         or_(
-                            func.replace(func.replace(Note.title, "-", ""), " ", "").ilike(f"%{normalized_query}%"),
-                            func.replace(func.replace(cast(Note.data["content"]["md"], Text), "-", ""), " ", "").ilike(f"%{normalized_query}%"),
+                            func.replace(
+                                func.replace(Note.title, "-", ""), " ", ""
+                            ).ilike(f"%{normalized_query}%"),
+                            func.replace(
+                                func.replace(
+                                    cast(Note.data["content"]["md"], Text), "-", ""
+                                ),
+                                " ",
+                                "",
+                            ).ilike(f"%{normalized_query}%"),
                         )
                     )
 

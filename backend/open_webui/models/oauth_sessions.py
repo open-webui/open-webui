@@ -143,7 +143,9 @@ class OAuthSessionTable:
             log.error(f"Error creating OAuth session: {e}")
             return None
 
-    def get_session_by_id(self, session_id: str, db: Optional[Session] = None) -> Optional[OAuthSessionModel]:
+    def get_session_by_id(
+        self, session_id: str, db: Optional[Session] = None
+    ) -> Optional[OAuthSessionModel]:
         """Get OAuth session by ID"""
         try:
             with get_db_context(db) as db:
@@ -197,7 +199,9 @@ class OAuthSessionTable:
             log.error(f"Error getting OAuth session by provider and user ID: {e}")
             return None
 
-    def get_sessions_by_user_id(self, user_id: str, db: Optional[Session] = None) -> List[OAuthSessionModel]:
+    def get_sessions_by_user_id(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> List[OAuthSessionModel]:
         """Get all OAuth sessions for a user"""
         try:
             with get_db_context(db) as db:
@@ -241,7 +245,9 @@ class OAuthSessionTable:
             log.error(f"Error updating OAuth session tokens: {e}")
             return None
 
-    def delete_session_by_id(self, session_id: str, db: Optional[Session] = None) -> bool:
+    def delete_session_by_id(
+        self, session_id: str, db: Optional[Session] = None
+    ) -> bool:
         """Delete an OAuth session"""
         try:
             with get_db_context(db) as db:
@@ -252,7 +258,9 @@ class OAuthSessionTable:
             log.error(f"Error deleting OAuth session: {e}")
             return False
 
-    def delete_sessions_by_user_id(self, user_id: str, db: Optional[Session] = None) -> bool:
+    def delete_sessions_by_user_id(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> bool:
         """Delete all OAuth sessions for a user"""
         try:
             with get_db_context(db) as db:
@@ -263,7 +271,9 @@ class OAuthSessionTable:
             log.error(f"Error deleting OAuth sessions by user ID: {e}")
             return False
 
-    def delete_sessions_by_provider(self, provider: str, db: Optional[Session] = None) -> bool:
+    def delete_sessions_by_provider(
+        self, provider: str, db: Optional[Session] = None
+    ) -> bool:
         """Delete all OAuth sessions for a provider"""
         try:
             with get_db_context(db) as db:

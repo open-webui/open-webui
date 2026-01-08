@@ -70,21 +70,23 @@ async def get_notes(
         limit = 60
         skip = (page - 1) * limit
 
-    notes = []
-    for note in Notes.get_notes_by_user_id(
-        user.id, "read", skip=skip, limit=limit, db=db
-    ):
-        note_user = Users.get_user_by_id(note.user_id, db=db)
-        if note_user:
-            notes.append(
-                NoteUserResponse(
-                    **{
-                        **note.model_dump(),
-                        "user": UserResponse(**note_user.model_dump()),
-                    }
-                )
-            )
-    return notes
+    notes = Notes.get_notes_by_user_id(user.id, "read", skip=skip, limit=limit, db=db)
+    if not notes:
+        return []
+
+    user_ids = list(set(note.user_id for note in notes))
+    users = {user.id: user for user in Users.get_users_by_user_ids(user_ids, db=db)}
+
+    return [
+        NoteUserResponse(
+            **{
+                **note.model_dump(),
+                "user": UserResponse(**users[note.user_id].model_dump()),
+            }
+        )
+        for note in notes
+        if note.user_id in users
+    ]
 
 
 @router.get("/search", response_model=NoteListResponse)

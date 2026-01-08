@@ -31,7 +31,7 @@ export function citationExtension() {
 			while ((m = groupRegex.exec(raw))) {
 				// m[1] is the content inside brackets, e.g. "1, 2#foo"
 				const parts = m[1].split(',').map((p) => p.trim());
-				
+
 				parts.forEach((part) => {
 					// Check if it starts with digit
 					const match = /^(\d+)(?:#(.+))?$/.exec(part);
@@ -45,7 +45,7 @@ export function citationExtension() {
 					}
 				});
 			}
-			
+
 			if (ids.length === 0) return;
 
 			return {

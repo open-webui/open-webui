@@ -6,6 +6,7 @@ import aiohttp
 from pathlib import Path
 from typing import Optional
 
+from open_webui.env import AIOHTTP_CLIENT_TIMEOUT
 from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
@@ -39,12 +40,16 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[FunctionResponse])
-async def get_functions(user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_functions(
+    user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     return Functions.get_functions(db=db)
 
 
 @router.get("/list", response_model=list[FunctionUserResponse])
-async def get_function_list(user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def get_function_list(
+    user=Depends(get_admin_user), db: Session = Depends(get_session)
+):
     return Functions.get_function_list(db=db)
 
 
@@ -54,7 +59,11 @@ async def get_function_list(user=Depends(get_admin_user), db: Session = Depends(
 
 
 @router.get("/export", response_model=list[FunctionModel | FunctionWithValvesModel])
-async def get_functions(include_valves: bool = False, user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def get_functions(
+    include_valves: bool = False,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
     return Functions.get_functions(include_valves=include_valves, db=db)
 
 
@@ -112,7 +121,9 @@ async def load_function_from_url(
     )
 
     try:
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        ) as session:
             async with session.get(
                 url, headers={"Content-Type": "application/json"}
             ) as resp:
@@ -144,7 +155,10 @@ class SyncFunctionsForm(BaseModel):
 
 @router.post("/sync", response_model=list[FunctionWithValvesModel])
 async def sync_functions(
-    request: Request, form_data: SyncFunctionsForm, user=Depends(get_admin_user), db: Session = Depends(get_session)
+    request: Request,
+    form_data: SyncFunctionsForm,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
 ):
     try:
         for function in form_data.functions:
@@ -182,7 +196,10 @@ async def sync_functions(
 
 @router.post("/create", response_model=Optional[FunctionResponse])
 async def create_new_function(
-    request: Request, form_data: FunctionForm, user=Depends(get_admin_user), db: Session = Depends(get_session)
+    request: Request,
+    form_data: FunctionForm,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
 ):
     if not form_data.id.isidentifier():
         raise HTTPException(
@@ -205,13 +222,17 @@ async def create_new_function(
             FUNCTIONS = request.app.state.FUNCTIONS
             FUNCTIONS[form_data.id] = function_module
 
-            function = Functions.insert_new_function(user.id, function_type, form_data, db=db)
+            function = Functions.insert_new_function(
+                user.id, function_type, form_data, db=db
+            )
 
             function_cache_dir = CACHE_DIR / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
 
             if function_type == "filter" and getattr(function_module, "toggle", None):
-                Functions.update_function_metadata_by_id(form_data.id, {"toggle": True}, db=db)
+                Functions.update_function_metadata_by_id(
+                    form_data.id, {"toggle": True}, db=db
+                )
 
             if function:
                 return function
@@ -239,7 +260,9 @@ async def create_new_function(
 
 
 @router.get("/id/{id}", response_model=Optional[FunctionModel])
-async def get_function_by_id(id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def get_function_by_id(
+    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
+):
     function = Functions.get_function_by_id(id, db=db)
 
     if function:
@@ -257,7 +280,9 @@ async def get_function_by_id(id: str, user=Depends(get_admin_user), db: Session 
 
 
 @router.post("/id/{id}/toggle", response_model=Optional[FunctionModel])
-async def toggle_function_by_id(id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def toggle_function_by_id(
+    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
+):
     function = Functions.get_function_by_id(id, db=db)
     if function:
         function = Functions.update_function_by_id(
@@ -284,7 +309,9 @@ async def toggle_function_by_id(id: str, user=Depends(get_admin_user), db: Sessi
 
 
 @router.post("/id/{id}/toggle/global", response_model=Optional[FunctionModel])
-async def toggle_global_by_id(id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def toggle_global_by_id(
+    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
+):
     function = Functions.get_function_by_id(id, db=db)
     if function:
         function = Functions.update_function_by_id(
@@ -312,7 +339,11 @@ async def toggle_global_by_id(id: str, user=Depends(get_admin_user), db: Session
 
 @router.post("/id/{id}/update", response_model=Optional[FunctionModel])
 async def update_function_by_id(
-    request: Request, id: str, form_data: FunctionForm, user=Depends(get_admin_user), db: Session = Depends(get_session)
+    request: Request,
+    id: str,
+    form_data: FunctionForm,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
 ):
     try:
         form_data.content = replace_imports(form_data.content)
@@ -354,7 +385,10 @@ async def update_function_by_id(
 
 @router.delete("/id/{id}/delete", response_model=bool)
 async def delete_function_by_id(
-    request: Request, id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
+    request: Request,
+    id: str,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
 ):
     result = Functions.delete_function_by_id(id, db=db)
 
@@ -372,7 +406,9 @@ async def delete_function_by_id(
 
 
 @router.get("/id/{id}/valves", response_model=Optional[dict])
-async def get_function_valves_by_id(id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)):
+async def get_function_valves_by_id(
+    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
+):
     function = Functions.get_function_by_id(id, db=db)
     if function:
         try:
@@ -397,7 +433,10 @@ async def get_function_valves_by_id(id: str, user=Depends(get_admin_user), db: S
 
 @router.get("/id/{id}/valves/spec", response_model=Optional[dict])
 async def get_function_valves_spec_by_id(
-    request: Request, id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
+    request: Request,
+    id: str,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
 ):
     function = Functions.get_function_by_id(id, db=db)
     if function:
@@ -423,7 +462,11 @@ async def get_function_valves_spec_by_id(
 
 @router.post("/id/{id}/valves/update", response_model=Optional[dict])
 async def update_function_valves_by_id(
-    request: Request, id: str, form_data: dict, user=Depends(get_admin_user), db: Session = Depends(get_session)
+    request: Request,
+    id: str,
+    form_data: dict,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
 ):
     function = Functions.get_function_by_id(id, db=db)
     if function:
@@ -466,11 +509,15 @@ async def update_function_valves_by_id(
 
 
 @router.get("/id/{id}/valves/user", response_model=Optional[dict])
-async def get_function_user_valves_by_id(id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)):
+async def get_function_user_valves_by_id(
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
     function = Functions.get_function_by_id(id, db=db)
     if function:
         try:
-            user_valves = Functions.get_user_valves_by_id_and_user_id(id, user.id, db=db)
+            user_valves = Functions.get_user_valves_by_id_and_user_id(
+                id, user.id, db=db
+            )
             return user_valves
         except Exception as e:
             raise HTTPException(
@@ -486,7 +533,10 @@ async def get_function_user_valves_by_id(id: str, user=Depends(get_verified_user
 
 @router.get("/id/{id}/valves/user/spec", response_model=Optional[dict])
 async def get_function_user_valves_spec_by_id(
-    request: Request, id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     function = Functions.get_function_by_id(id, db=db)
     if function:
@@ -507,7 +557,11 @@ async def get_function_user_valves_spec_by_id(
 
 @router.post("/id/{id}/valves/user/update", response_model=Optional[dict])
 async def update_function_user_valves_by_id(
-    request: Request, id: str, form_data: dict, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    request: Request,
+    id: str,
+    form_data: dict,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     function = Functions.get_function_by_id(id, db=db)
 

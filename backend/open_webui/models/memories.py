@@ -94,7 +94,9 @@ class MemoriesTable:
             except Exception:
                 return None
 
-    def get_memories_by_user_id(self, user_id: str, db: Optional[Session] = None) -> list[MemoryModel]:
+    def get_memories_by_user_id(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> list[MemoryModel]:
         with get_db_context(db) as db:
             try:
                 memories = db.query(Memory).filter_by(user_id=user_id).all()
@@ -102,7 +104,9 @@ class MemoriesTable:
             except Exception:
                 return None
 
-    def get_memory_by_id(self, id: str, db: Optional[Session] = None) -> Optional[MemoryModel]:
+    def get_memory_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[MemoryModel]:
         with get_db_context(db) as db:
             try:
                 memory = db.get(Memory, id)
@@ -121,7 +125,9 @@ class MemoriesTable:
             except Exception:
                 return False
 
-    def delete_memories_by_user_id(self, user_id: str, db: Optional[Session] = None) -> bool:
+    def delete_memories_by_user_id(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> bool:
         with get_db_context(db) as db:
             try:
                 db.query(Memory).filter_by(user_id=user_id).delete()
@@ -131,7 +137,9 @@ class MemoriesTable:
             except Exception:
                 return False
 
-    def delete_memory_by_id_and_user_id(self, id: str, user_id: str, db: Optional[Session] = None) -> bool:
+    def delete_memory_by_id_and_user_id(
+        self, id: str, user_id: str, db: Optional[Session] = None
+    ) -> bool:
         with get_db_context(db) as db:
             try:
                 memory = db.get(Memory, id)

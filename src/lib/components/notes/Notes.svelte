@@ -221,7 +221,7 @@
 		// Build the grouped object while tracking order
 		const grouped: Record<string, any[]> = {};
 		const orderedKeys: string[] = [];
-		
+
 		for (const note of res) {
 			const timeRange = getTimeRange(note.updated_at / 1000000000);
 			if (!grouped[timeRange]) {
@@ -233,9 +233,9 @@
 				timeRange
 			});
 		}
-		
+
 		// Return as array of [timeRange, notes] to preserve insertion order
-		return orderedKeys.map(key => [key, grouped[key]] as [string, any[]]);
+		return orderedKeys.map((key) => [key, grouped[key]] as [string, any[]]);
 	};
 
 	let dragged = false;
@@ -455,9 +455,7 @@
 
 								{#if displayOption === null}
 									<div
-										class="{groupedNotes.length - 1 !== idx
-											? 'mb-3'
-											: ''} gap-1.5 flex flex-col"
+										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-1.5 flex flex-col"
 									>
 										{#each notesList as note, idx (note.id)}
 											<div

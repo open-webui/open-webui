@@ -92,7 +92,10 @@
 	const loadExcelContent = async () => {
 		try {
 			excelError = '';
-			const [arrayBuffer, { read }] = await Promise.all([getFileContentById(item.id), import('xlsx')]);
+			const [arrayBuffer, { read }] = await Promise.all([
+				getFileContentById(item.id),
+				import('xlsx')
+			]);
 			excelWorkbook = read(arrayBuffer, { type: 'array' });
 			excelSheetNames = excelWorkbook.SheetNames;
 

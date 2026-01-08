@@ -233,6 +233,68 @@ class FilesTable:
                 for file in db.query(File).filter_by(user_id=user_id).all()
             ]
 
+    @staticmethod
+    def _glob_to_like_pattern(glob: str) -> str:
+        """
+        Convert a glob/fnmatch pattern to a SQL LIKE pattern.
+
+        Escapes SQL special characters and converts glob wildcards:
+        - `*` becomes `%` (match any sequence of characters)
+        - `?` becomes `_` (match exactly one character)
+
+        Args:
+            glob: A glob pattern (e.g., "*.txt", "file?.doc")
+
+        Returns:
+            A SQL LIKE compatible pattern with proper escaping.
+        """
+        # Escape SQL special characters first, then convert glob wildcards
+        pattern = glob.replace("\\", "\\\\")
+        pattern = pattern.replace("%", "\\%")
+        pattern = pattern.replace("_", "\\_")
+        pattern = pattern.replace("*", "%")
+        pattern = pattern.replace("?", "_")
+        return pattern
+
+    def search_files(
+        self,
+        user_id: Optional[str] = None,
+        filename: str = "*",
+        skip: int = 0,
+        limit: int = 100,
+        db: Optional[Session] = None,
+    ) -> list[FileModel]:
+        """
+        Search files with glob pattern matching, optional user filter, and pagination.
+
+        Args:
+            user_id: Filter by user ID. If None, returns files for all users.
+            filename: Glob pattern to match filenames (e.g., "*.txt"). Default "*" matches all.
+            skip: Number of results to skip for pagination.
+            limit: Maximum number of results to return.
+            db: Optional database session.
+
+        Returns:
+            List of matching FileModel objects, ordered by updated_at descending.
+        """
+        with get_db_context(db) as db:
+            query = db.query(File)
+
+            if user_id:
+                query = query.filter_by(user_id=user_id)
+
+            pattern = self._glob_to_like_pattern(filename)
+            if pattern != "%":
+                query = query.filter(File.filename.ilike(pattern, escape="\\"))
+
+            return [
+                FileModel.model_validate(file)
+                for file in query.order_by(File.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            ]
+
     def update_file_by_id(
         self, id: str, form_data: FileUpdateForm, db: Optional[Session] = None
     ) -> Optional[FileModel]:
