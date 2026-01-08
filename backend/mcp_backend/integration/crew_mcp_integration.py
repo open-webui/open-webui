@@ -89,8 +89,10 @@ class CrewMCPManager:
         # Set as environment variable for SharePoint MCP servers to use
         if token:
             os.environ["USER_JWT_TOKEN"] = token
+            logger.info(f"✅ Set USER_JWT_TOKEN in environment (length: {len(token)})")
         elif "USER_JWT_TOKEN" in os.environ:
             del os.environ["USER_JWT_TOKEN"]
+            logger.info("🗑️ Cleared USER_JWT_TOKEN from environment")
 
     def initialize_mcp_adapters(self):
         """Initialize all MCP server adapters once at startup"""
@@ -346,29 +348,39 @@ class CrewMCPManager:
         Run a CrewAI crew with MCP SharePoint server tools (MPO SharePoint only)
 
         Args:
-            query: The SharePoint-related query to process
+            query:  The SharePoint-related query to process
 
         Returns:
             The crew's response
         """
-        global _mpo_sharepoint_server_adapter
-
         if not self.mpo_sharepoint_server_path.exists():
             raise FileNotFoundError(
                 f"MPO SharePoint server not found at {self.mpo_sharepoint_server_path}"
             )
 
-        if _mpo_sharepoint_server_adapter is None:
-            raise RuntimeError(
-                "MPO SharePoint server adapter not initialized. Call initialize_mcp_adapters() first."
-            )
-
         logger.info(f"Starting CrewAI MCP SharePoint integration for query: {query}")
-        logger.info(f"Using MPO SharePoint server: {self.mpo_sharepoint_server_path}")
+        logger.info(f"Using MPO SharePoint server:  {self.mpo_sharepoint_server_path}")
+
+        # **CRITICAL FIX: Initialize adapter with current environment containing USER_JWT_TOKEN**
+        logger.info(
+            "🔄 Initializing fresh SharePoint adapter with user token from environment"
+        )
 
         try:
-            # Use the pre-initialized MPO SharePoint server adapter (already contains tools from __enter__())
-            mcp_tools = _mpo_sharepoint_server_adapter
+            # Create adapter with current environment (includes USER_JWT_TOKEN set by set_user_token())
+            mpo_sharepoint_params = StdioServerParameters(
+                command="python",
+                args=[str(self.mpo_sharepoint_server_path)],
+                env=dict(os.environ),  # Fresh environment snapshot with USER_JWT_TOKEN
+            )
+
+            # Use context manager for automatic cleanup
+            adapter = MCPServerAdapter(mpo_sharepoint_params)
+            mcp_tools = adapter.__enter__()  # Get the tools from adapter
+
+            logger.info(
+                f"✅ SharePoint adapter initialized with {len(list(mcp_tools))} tools"
+            )
             logger.info(
                 f"Available MCP SharePoint tools: {[tool.name for tool in mcp_tools]}"
             )
@@ -380,68 +392,63 @@ class CrewMCPManager:
             sharepoint_agent = Agent(
                 role="SharePoint Document Specialist",
                 goal="Find and retrieve relevant information from SharePoint by analyzing all documents comprehensively using parallel processing for optimal speed and accuracy",
-                backstory="I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the analyze_all_documents_for_content tool which traverses every folder, downloads all documents, and analyzes their content concurrently using up to 8 parallel threads. This approach bypasses unreliable search APIs and ensures I find all relevant documents quickly - typically in 20-60 seconds even for large collections. I provide focused, intelligent answers based on the most relevant documents I discover.",
-                tools=mcp_tools,  # Pass MCP tools to agent
+                backstory="""I am a SharePoint document specialist who uses advanced parallel processing to analyze entire SharePoint collections efficiently. I use the analyze_all_documents_for_content tool which automatically handles authentication and searches all documents in parallel. 
+
+    CRITICAL AUTHENTICATION RULE: 
+    If ANY tool returns an error with "authentication_failed":  true or "DELEGATED ACCESS MODE" in the message: 
+    - STOP IMMEDIATELY - Do NOT proceed with the task
+    - Do NOT attempt to retry with made-up tokens
+    - Do NOT make up or hallucinate answers
+    - REPORT the authentication failure to the user clearly
+    - Inform the user that valid authentication credentials are required to access SharePoint
+    - Do NOT use any information from your training data to answer the question""",
+                tools=mcp_tools,
                 llm=llm,
                 verbose=CREW_VERBOSE,
-                max_iter=5,  # Limit iterations to prevent excessive thinking in high-latency environments
+                max_iter=5,
             )
 
             # Create task for SharePoint query
             sharepoint_task = Task(
                 description=f"""Process this SharePoint-related query: {query}
-                
-Available tools:
-- analyze_all_documents_for_content: PRIMARY TOOL - Analyzes all documents using parallel processing
-- get_all_documents_comprehensive: Get all documents by traversing every folder (used internally by analyze tool)
-- get_sharepoint_document_content: Retrieve individual document content (used internally)
-- check_sharepoint_permissions: Test connection and permissions (for debugging only)
-                
-PRIMARY STRATEGY:
-Use analyze_all_documents_for_content with the user's search terms. This tool:
-- Traverses every SharePoint folder to find all documents
-- Analyzes each document's content using parallel processing (8 concurrent threads)
-- Uses smart caching to avoid re-downloading documents
-- Terminates early when enough high-quality results are found
-- Typical performance: 20-60 seconds for large collections
-- Returns documents sorted by relevance with content matches
 
-CRITICAL AUTHENTICATION RULE:
-If ANY tool returns an error with "authentication_failed": true or "DELEGATED ACCESS MODE" in the message:
-- STOP IMMEDIATELY - Do NOT proceed with the task
-- Do NOT attempt to retry with made-up tokens
-- Do NOT make up or hallucinate answers
-- REPORT the authentication failure to the user clearly
-- Inform the user that valid authentication credentials are required to access SharePoint
-- Do NOT use any information from your training data to answer the question
+    Available tools:
+    - analyze_all_documents_for_content:  PRIMARY TOOL - Analyzes all documents using parallel processing
+    - get_all_documents_comprehensive:  Get all documents by traversing every folder (used internally by analyze tool)
+    - get_sharepoint_document_content: Retrieve individual document content (used internally)
+    - check_sharepoint_permissions: Test connection and permissions (for debugging only)
 
-RESPONSE STRATEGY (only if authentication succeeds):
-1. Call analyze_all_documents_for_content with the user's search terms
-2. Extract the KEY ANSWER from the most relevant document(s)
-3. Provide a CONCISE, DIRECT response to the user's question
-4. Include document name and source for credibility
-5. Focus on the specific information requested
-6. DON'T dump entire document contents in your response
+    PRIMARY STRATEGY:
+    Use analyze_all_documents_for_content with the user's search terms.  This tool: 
+    - Traverses every SharePoint folder to find all documents
+    - Analyzes each document's content using parallel processing (8 concurrent threads)
+    - Uses smart caching to avoid re-downloading documents
+    - Terminates early when enough high-quality results are found
+    - Typical performance: 20-60 seconds for large collections
+    - Returns documents sorted by relevance with content matches
+
+    RESPONSE STRATEGY:
+    1. Call analyze_all_documents_for_content with the user's search terms
+    2. Extract the KEY ANSWER from the most relevant document(s)
+    3. Provide a CONCISE, DIRECT response to the user's question
+    4. Include document name and source for credibility
+    5. Focus on the specific information requested
+    6. DON'T dump entire document contents in your response
                 """,
-                expected_output="""Provide a CONCISE, INTELLIGENT answer to the user's specific question based on SharePoint search results.
+                expected_output="""Provide a CONCISE, INTELLIGENT answer to the user's specific question based on SharePoint search results. 
 
-CRITICAL: If authentication fails, respond ONLY with:
-"Unable to access SharePoint documents due to authentication failure. Valid user credentials are required to access SharePoint with delegated permissions. Please ensure you are properly authenticated, or contact your administrator to configure application access mode by setting SHP_USE_DELEGATED_ACCESS=false."
+    RESPONSE RULES:
+    - Extract the key answer from the most relevant document
+    - Provide a direct response to what the user asked for
+    - Include document name and source for credibility
+    - Keep your answer focused and concise
+    - DON'T copy-paste entire document contents
+    - Focus on the specific information requested
 
-Do NOT make up answers. Do NOT use information from your training data. Do NOT proceed if authentication fails.
+    EXAMPLE GOOD RESPONSE:
+    "Based on the document 'MPO - Transformative strategies. pdf' from the Major Projects Office, Canada's first high-speed railway is projected to span approximately 1,000 km from Toronto to Québec City."
 
-RESPONSE RULES (only if authentication succeeds):
-- Extract the key answer from the most relevant document
-- Provide a direct response to what the user asked for
-- Include document name and source for credibility
-- Keep your answer focused and concise
-- DON'T copy-paste entire document contents
-- Focus on the specific information requested
-
-EXAMPLE GOOD RESPONSE (when authentication succeeds):
-"Based on the document 'MPO - Transformative strategies.pdf' from the Major Projects Office, Canada's first high-speed railway is projected to span approximately 1,000 km from Toronto to Québec City, reaching speeds of up to 300 km/hour."
-
-AVOID: Dumping entire document contents, being overly verbose, or making up information when authentication fails.""",
+    AVOID:  Dumping entire document contents or being overly verbose.""",
                 agent=sharepoint_agent,
             )
 
@@ -456,6 +463,14 @@ AVOID: Dumping entire document contents, being overly verbose, or making up info
             # Execute the crew
             logger.info("Executing CrewAI SharePoint crew...")
             result = sharepoint_crew.kickoff()
+
+            # Cleanup adapter
+            try:
+                adapter.__exit__(None, None, None)
+                logger.info("✅ Cleaned up SharePoint adapter")
+            except Exception as e:
+                logger.warning(f"Failed to cleanup adapter: {e}")
+
             return str(result)
 
         except Exception as e:
@@ -476,12 +491,9 @@ AVOID: Dumping entire document contents, being overly verbose, or making up info
                     + "For local development, SharePoint integration requires deployment to environments with proper OAuth2 configuration (dev/staging/production)."
                 )
             elif "No documents found" in error_msg or "no results" in error_msg:
-                return "I searched the available SharePoint documents but could not find information related to your query. The documents may not contain this information, or it might be located in a different SharePoint site or folder that I don't have access to."
+                return "I searched the available SharePoint documents but could not find information related to your query. The documents may not contain this information, or it might be located in a different location."
             else:
                 return f"I encountered an issue while searching SharePoint documents: {error_msg}. Please try rephrasing your query or contact support if the problem persists."
-
-            # Don't re-raise in production to avoid exposing internal errors
-            # raise
 
     def run_multi_server_crew(self, query: str) -> str:
         """
