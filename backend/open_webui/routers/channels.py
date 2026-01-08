@@ -1908,6 +1908,7 @@ async def get_webhook_profile_image(
     # Return default favicon if no profile image
     return FileResponse(f"{STATIC_DIR}/favicon.png")
 
+
 @router.get("/{id}/webhooks", response_model=list[ChannelWebhookModel])
 async def get_channel_webhooks(
     request: Request,

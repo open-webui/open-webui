@@ -93,7 +93,11 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
 )
-from open_webui.utils.tools import get_tools, get_updated_tool_function, has_tool_server_access
+from open_webui.utils.tools import (
+    get_tools,
+    get_updated_tool_function,
+    has_tool_server_access,
+)
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -1665,7 +1669,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                     # Check access control for MCP server
                     if not has_tool_server_access(user, mcp_server_connection):
-                        log.warning(f"Access denied to MCP server {server_id} for user {user.id}")
+                        log.warning(
+                            f"Access denied to MCP server {server_id} for user {user.id}"
+                        )
                         continue
 
                     auth_type = mcp_server_connection.get("auth_type", "")
