@@ -135,3 +135,142 @@ export const extractMetricValue = (content: string): string => {
 	const metricPattern = /^[-+]?[\d,.]+(?:e[-+]?\d+)?(?:\s*[%a-zA-Z\u00b0/]+)?$/;
 	return metricPattern.test(normalized) ? normalized : '';
 };
+
+export const extractTimeframe = (content: string): string => {
+	if (!content) {
+		return '';
+	}
+
+	const normalized = content.replace(/\s+/g, ' ').trim().toLowerCase();
+	if (!normalized) {
+		return '';
+	}
+
+	if (/\btoday\b/.test(normalized)) {
+		return 'Today';
+	}
+	if (/\byesterday\b/.test(normalized)) {
+		return 'Yesterday';
+	}
+
+	const simplePeriod = normalized.match(/\b(this|last|past)\s+(week|month|year|quarter)\b/);
+	if (simplePeriod) {
+		const descriptor = simplePeriod[1];
+		const period = simplePeriod[2];
+		return `${descriptor.charAt(0).toUpperCase()}${descriptor.slice(1)} ${period}`;
+	}
+
+	const relativeMatch = normalized.match(
+		/\b(?:in\s+the\s+)?(past|last|previous)\s+(\d+)\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|wks?|wk|w|months?|mons?|mo|years?|yrs?|yr|y)\b/
+	);
+	if (relativeMatch) {
+		const amount = parseInt(relativeMatch[2], 10);
+		const unitRaw = relativeMatch[3];
+		const unitMap: Record<string, string> = {
+			s: 'sec',
+			sec: 'sec',
+			secs: 'secs',
+			second: 'second',
+			seconds: 'seconds',
+			m: 'min',
+			min: 'min',
+			mins: 'mins',
+			minute: 'minute',
+			minutes: 'minutes',
+			h: 'hr',
+			hr: 'hr',
+			hrs: 'hrs',
+			hour: 'hour',
+			hours: 'hours',
+			d: 'day',
+			day: 'day',
+			days: 'days',
+			w: 'week',
+			wk: 'week',
+			wks: 'weeks',
+			week: 'week',
+			weeks: 'weeks',
+			mo: 'month',
+			mon: 'month',
+			mons: 'months',
+			month: 'month',
+			months: 'months',
+			y: 'year',
+			yr: 'year',
+			yrs: 'years',
+			year: 'year',
+			years: 'years'
+		};
+
+		let unit = unitMap[unitRaw] || unitRaw;
+		if (amount === 1) {
+			if (unit === 'secs') unit = 'sec';
+			if (unit === 'mins') unit = 'min';
+			if (unit === 'hrs') unit = 'hr';
+			if (unit === 'days') unit = 'day';
+			if (unit === 'weeks') unit = 'week';
+			if (unit === 'months') unit = 'month';
+			if (unit === 'years') unit = 'year';
+		}
+
+		return `Past ${amount} ${unit}`;
+	}
+
+	const agoMatch = normalized.match(
+		/\b(\d+)\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|wks?|wk|w|months?|mons?|mo|years?|yrs?|yr|y)\s+ago\b/
+	);
+	if (agoMatch) {
+		const amount = parseInt(agoMatch[1], 10);
+		const unitRaw = agoMatch[2];
+		const unitMap: Record<string, string> = {
+			s: 'sec',
+			sec: 'sec',
+			secs: 'secs',
+			second: 'second',
+			seconds: 'seconds',
+			m: 'min',
+			min: 'min',
+			mins: 'mins',
+			minute: 'minute',
+			minutes: 'minutes',
+			h: 'hr',
+			hr: 'hr',
+			hrs: 'hrs',
+			hour: 'hour',
+			hours: 'hours',
+			d: 'day',
+			day: 'day',
+			days: 'days',
+			w: 'week',
+			wk: 'week',
+			wks: 'weeks',
+			week: 'week',
+			weeks: 'weeks',
+			mo: 'month',
+			mon: 'month',
+			mons: 'months',
+			month: 'month',
+			months: 'months',
+			y: 'year',
+			yr: 'year',
+			yrs: 'years',
+			year: 'year',
+			years: 'years'
+		};
+
+		let unit = unitMap[unitRaw] || unitRaw;
+		if (amount === 1) {
+			if (unit === 'secs') unit = 'sec';
+			if (unit === 'mins') unit = 'min';
+			if (unit === 'hrs') unit = 'hr';
+			if (unit === 'days') unit = 'day';
+			if (unit === 'weeks') unit = 'week';
+			if (unit === 'months') unit = 'month';
+			if (unit === 'years') unit = 'year';
+		}
+
+		return `${amount} ${unit} ago`;
+	}
+
+	return '';
+};
