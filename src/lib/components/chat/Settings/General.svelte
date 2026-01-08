@@ -78,7 +78,7 @@
 				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
 				temperature: params.temperature !== null ? params.temperature : undefined,
-				reasoning_effort: params.reasoning_effort !== null ? params.reasoning_effort : undefined,
+				reasoning_effort: params.reasoning_effort ? params.reasoning_effort : undefined,
 				logit_bias: params.logit_bias !== null ? params.logit_bias : undefined,
 				frequency_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
 				presence_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,

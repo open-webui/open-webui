@@ -420,7 +420,6 @@
 						class="text-sm w-full bg-transparent outline-none"
 						bind:value={params.reasoning_effort}
 					>
-						<option value="">{$i18n.t('Auto (Default)')}</option>
 						<option value="none">{$i18n.t('Off')} (none)</option>
 						<option value="minimal">{$i18n.t('Minimal')} (minimal)</option>
 						<option value="low">{$i18n.t('Low')} (low)</option>
