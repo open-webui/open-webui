@@ -912,9 +912,11 @@ class ChatTable:
         max_age_days: Optional[int] = None,
         preserve_pinned: bool = True,
         preserve_archived: bool = False,
+        batch_size: int = 100,
     ) -> list[ChatModel]:
         """
         Get chats for cleanup, optionally filtered by age.
+        Uses pagination to handle large datasets efficiently.
 
         Args:
             max_age_days: Age threshold in days. If None, gets all chats regardless of age.
@@ -947,33 +949,49 @@ class ChatTable:
                 # Exclude shared chats (user_id starting with "shared-")
                 query = query.filter(~Chat.user_id.like("shared-%"))
 
-                chats = query.all()
+                # Order by created_at to ensure consistent pagination
+                query = query.order_by(Chat.created_at.asc())
 
-                # Convert SQLAlchemy objects to ChatModel objects
+                offset = 0
                 result_chats = []
-                for chat in chats:
-                    try:
-                        chat_model = ChatModel(
-                            id=chat.id,
-                            user_id=chat.user_id,
-                            title=chat.title,
-                            chat=chat.chat or {},
-                            created_at=chat.created_at,
-                            updated_at=chat.updated_at,
-                            share_id=chat.share_id,
-                            archived=chat.archived or False,
-                            pinned=chat.pinned or False,
-                            meta=chat.meta or {},
-                            folder_id=chat.folder_id,
-                        )
-                        result_chats.append(chat_model)
-                        log.debug(
-                            f"Successfully created ChatModel for chat {chat.id} for cleanup"
-                        )
-                    except Exception as e:
-                        log.error(f"Error converting chat {chat.id} to ChatModel: {e}")
-                        continue
 
+                log.info("Starting paginated chat cleanup query...")
+
+                while True:
+                    # Get batch of chats
+                    batch = query.offset(offset).limit(batch_size).all()
+
+                    if not batch:
+                        break  # No more chats to process
+
+                    log.debug(
+                        f"Processing batch of {len(batch)} chats (offset {offset})"
+                    )
+
+                    # Convert batch to ChatModel objects
+                    for chat in batch:
+                        try:
+                            chat_model = ChatModel.model_validate(chat)
+                            result_chats.append(chat_model)
+                        except Exception as e:
+                            log.error(
+                                f"Error converting chat {chat.id} to ChatModel: {e}"
+                            )
+                            continue
+
+                    # Clear batch from memory
+                    del batch
+                    offset += batch_size
+
+                    # Log progress every 1000 records
+                    if offset % 1000 == 0:
+                        log.info(
+                            f"Processed {offset} chats so far, found {len(result_chats)} for cleanup"
+                        )
+
+                log.info(
+                    f"Completed paginated chat cleanup query. Total chats for cleanup: {len(result_chats)}"
+                )
                 return result_chats
 
         except Exception as e:
@@ -1004,9 +1022,10 @@ class ChatTable:
         """
         return self.get_chats_for_cleanup(None, preserve_pinned, preserve_archived)
 
-    def delete_chat_list(self, chat_ids: list[str]) -> dict:
+    def delete_chat_list(self, chat_ids: list[str], batch_size: int = 100) -> dict:
         """
         Delete multiple chats by their IDs and return deletion summary.
+        Uses batching for large datasets to prevent memory issues.
 
         Args:
             chat_ids: List of chat IDs to delete
@@ -1022,23 +1041,59 @@ class ChatTable:
                 "errors": [],
             }
 
+            if not chat_ids:
+                return result
+
             with get_db() as db:
-                for chat_id in chat_ids:
+                for i in range(0, len(chat_ids), batch_size):
+                    batch_ids = chat_ids[i : i + batch_size]
+                    log.info(
+                        f"Deleting chat batch {i//batch_size + 1}: {len(batch_ids)} chats"
+                    )
+
                     try:
-                        deleted = db.query(Chat).filter_by(id=chat_id).delete()
-                        if deleted > 0:
-                            result["deleted_count"] += 1
-                        else:
-                            result["failed_count"] += 1
-                            result["errors"].append(f"Chat {chat_id} not found")
-                    except Exception as e:
-                        result["failed_count"] += 1
-                        result["errors"].append(
-                            f"Error deleting chat {chat_id}: {str(e)}"
+                        # Use bulk delete for better performance
+                        deleted_count = (
+                            db.query(Chat)
+                            .filter(Chat.id.in_(batch_ids))
+                            .delete(synchronize_session=False)
                         )
 
-                db.commit()
+                        result["deleted_count"] += deleted_count
 
+                        # Check if any in this batch weren't found
+                        not_found_count = len(batch_ids) - deleted_count
+                        if not_found_count > 0:
+                            result["failed_count"] += not_found_count
+                            result["errors"].append(
+                                f"Batch {i//batch_size + 1}: {not_found_count} chats not found"
+                            )
+
+                        # Commit this batch
+                        db.commit()
+
+                        log.debug(
+                            f"Successfully deleted {deleted_count} chats in batch {i//batch_size + 1}"
+                        )
+
+                    except Exception as e:
+                        # Handle batch failure
+                        result["failed_count"] += len(batch_ids)
+                        error_msg = (
+                            f"Error deleting chat batch {i//batch_size + 1}: {str(e)}"
+                        )
+                        result["errors"].append(error_msg)
+                        log.error(error_msg)
+
+                        # Try to rollback this batch and continue
+                        try:
+                            db.rollback()
+                        except Exception:
+                            pass
+
+            log.info(
+                f"Chat deletion completed. Deleted: {result['deleted_count']}, Failed: {result['failed_count']}"
+            )
             return result
 
         except Exception as e:

@@ -216,26 +216,31 @@
 						<div class="flex w-full justify-between">
 							<div class="self-center text-xs font-medium">{$i18n.t('Chat Lifetime (Days)')}</div>
 							<div class="self-center text-xs text-gray-400">
-								{$i18n.t('{{COUNT}} days', { COUNT: config.days })}
+								{#if config.days === 0}
+									{$i18n.t('Immediate deletion')}
+								{:else}
+									{$i18n.t('{{COUNT}} days', { COUNT: config.days })}
+								{/if}
 							</div>
 						</div>
 					</div>
 
 					<div class="flex w-full">
-						<div class="flex w-full">
+						<div class="flex w-full relative">
 							<input
-								class="w-full rounded-lg py-1.5 px-4 text-sm bg-transparent border dark:border-gray-600"
+								class="w-full h-2 rounded-lg appearance-none cursor-pointer slider"
 								type="range"
 								bind:value={config.days}
-								min="1"
+								min="0"
 								max="365"
 								step="1"
+								style="--value: {(config.days / 365) * 100}%;"
 							/>
 						</div>
 					</div>
 					<div class="text-xs text-gray-400">
 						{$i18n.t(
-							'Chats older than this number of days will be eligible for deletion. Default is 30 days.'
+							'Chats older than this number of days will be eligible for deletion. Set to 0 to delete all chats. Default is 30 days.'
 						)}
 					</div>
 				</div>
@@ -378,3 +383,71 @@
 		</button>
 	</div>
 </div>
+
+<style>
+	.slider {
+		background: linear-gradient(
+			to right,
+			#3b82f6 0%,
+			#3b82f6 var(--value),
+			#e5e7eb var(--value),
+			#e5e7eb 100%
+		);
+	}
+
+	:global(.dark) .slider {
+		background: linear-gradient(
+			to right,
+			#3b82f6 0%,
+			#3b82f6 var(--value),
+			#374151 var(--value),
+			#374151 100%
+		);
+	}
+
+	.slider::-webkit-slider-thumb {
+		appearance: none;
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: #3b82f6;
+		cursor: pointer;
+		border: 2px solid white;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	}
+
+	:global(.dark) .slider::-webkit-slider-thumb {
+		border-color: #1f2937;
+	}
+
+	.slider::-moz-range-thumb {
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: #3b82f6;
+		cursor: pointer;
+		border: 2px solid white;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	}
+
+	:global(.dark) .slider::-moz-range-thumb {
+		border-color: #1f2937;
+	}
+
+	.slider::-webkit-slider-track {
+		width: 100%;
+		height: 8px;
+		cursor: pointer;
+		background: transparent;
+		border-radius: 4px;
+	}
+
+	.slider::-moz-range-track {
+		width: 100%;
+		height: 8px;
+		cursor: pointer;
+		background: transparent;
+		border-radius: 4px;
+		border: none;
+	}
+</style>

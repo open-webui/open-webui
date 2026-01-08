@@ -2600,29 +2600,84 @@ def extract_file_ids_from_chat_data(chat):
         return set()
 
 
-def get_all_file_references_from_chats():
+def get_all_file_references_from_chats(exclude_chat_ids=None):
     """
     Extract all file IDs referenced across all chats in the system.
+    Uses pagination to handle large datasets efficiently.
+
+    Args:
+        exclude_chat_ids: List of chat IDs to exclude from scanning (e.g., chats being deleted)
 
     Returns:
         set: Set of all file IDs that are still referenced by existing chats
     """
     try:
         log.info("Scanning all chats for file references...")
+        if exclude_chat_ids:
+            log.info(
+                f"Excluding {len(exclude_chat_ids)} chats from file reference scan"
+            )
+
         all_file_ids = set()
 
-        # Get all chats in the system
-        all_chats = Chats.get_chats()
+        # Get chats in batches to avoid memory issues
+        from open_webui.models.chats import get_db, Chat
 
-        for chat in all_chats:
-            try:
-                file_ids = extract_file_ids_from_chat_data(chat)
-                all_file_ids.update(file_ids)
-            except Exception as e:
-                log.error(f"Error extracting file IDs from chat {chat.id}: {e}")
+        batch_size = 100
+        offset = 0
+        total_chats_scanned = 0
+
+        with get_db() as db:
+            while True:
+                # Get batch of chats with only required columns for file extraction
+                query = db.query(Chat.id, Chat.chat)  # Only select id and chat columns
+
+                # Exclude chats that are being deleted
+                if exclude_chat_ids:
+                    query = query.filter(~Chat.id.in_(exclude_chat_ids))
+
+                chat_batch = query.offset(offset).limit(batch_size).all()
+
+                if not chat_batch:
+                    break  # No more chats to process
+
+                log.debug(
+                    f"Scanning file references in batch of {len(chat_batch)} chats (offset {offset})"
+                )
+
+                for chat_data in chat_batch:
+                    try:
+                        # Create a minimal object for file ID extraction
+                        class TempChatForFileExtraction:
+                            def __init__(self, chat_id, chat_content):
+                                self.id = chat_id
+                                self.chat = chat_content or {}
+
+                        temp_chat = TempChatForFileExtraction(
+                            chat_data.id, chat_data.chat
+                        )
+                        file_ids = extract_file_ids_from_chat_data(temp_chat)
+                        all_file_ids.update(file_ids)
+
+                    except Exception as e:
+                        log.error(
+                            f"Error extracting file IDs from chat {chat_data.id}: {e}"
+                        )
+
+                total_chats_scanned += len(chat_batch)
+                offset += batch_size
+
+                # Log progress every 1000 records
+                if offset % 1000 == 0:
+                    log.info(
+                        f"Scanned {offset} chats for file references, found {len(all_file_ids)} unique file IDs so far"
+                    )
+
+                # Clear batch from memory
+                del chat_batch
 
         log.info(
-            f"Found {len(all_file_ids)} total file references across {len(all_chats)} chats"
+            f"Completed file reference scan. Found {len(all_file_ids)} total file references across {total_chats_scanned} chats"
         )
         return all_file_ids
 
@@ -3203,100 +3258,166 @@ async def cleanup_expired_chats(
         chat_ids_to_delete = []
         file_ids_to_cleanup = set()
 
-        for chat in expired_chats:
-            try:
-                log.debug(f"Processing chat: type={type(chat)}, chat={chat}")
+        # Process chats in smaller batches to manage memory usage
+        batch_size = 50  # Process 50 chats at a time
+        total_processed = 0
 
-                # Defensive access to chat properties
-                if hasattr(chat, "chat") and hasattr(chat, "id"):
-                    # Extract file IDs from chat for cleanup
-                    file_ids = extract_file_ids_from_chat_data(chat)
-                    file_ids_to_cleanup.update(file_ids)
+        for i in range(0, len(expired_chats), batch_size):
+            batch = expired_chats[i : i + batch_size]
+            log.info(f"Processing chat batch {i//batch_size + 1}: {len(batch)} chats")
 
-                    # Add chat ID for deletion
-                    chat_ids_to_delete.append(chat.id)
-
-                    log.debug(
-                        f"Marked chat {chat.id} for deletion (created: {chat.created_at})"
-                    )
-                elif isinstance(chat, dict):
-                    # Handle dict case - create a temporary object-like structure
-                    class TempChat:
-                        def __init__(self, data):
-                            self.chat = data.get("chat", {})
-                            self.id = data.get("id")
-
-                    temp_chat = TempChat(chat)
-                    file_ids = extract_file_ids_from_chat_data(temp_chat)
-                    file_ids_to_cleanup.update(file_ids)
-
-                    chat_ids_to_delete.append(chat["id"])
-
-                    log.debug(
-                        f"Marked chat {chat['id']} for deletion (created: {chat.get('created_at')})"
-                    )
-                else:
-                    log.error(f"Unexpected chat object type: {type(chat)}, {chat}")
-
-            except Exception as e:
-                # Try to get some debugging info even if chat.id fails
+            for chat in batch:
                 try:
-                    if hasattr(chat, "id"):
-                        chat_info = f"id={chat.id}, type={type(chat)}"
-                    elif isinstance(chat, dict) and "id" in chat:
-                        chat_info = f"id={chat['id']}, type={type(chat)}"
-                    else:
-                        chat_info = f"type={type(chat)}, repr={repr(chat)[:100]}"
-                except:
-                    chat_info = f"type={type(chat)}, repr={repr(chat)[:100]}"
+                    log.debug(f"Processing chat: type={type(chat)}, chat={chat}")
 
-                error_msg = f"Error processing chat {chat_info}: {e}"
-                log.error(error_msg)
-                cleanup_summary["errors"].append(error_msg)
+                    # Defensive access to chat properties
+                    if hasattr(chat, "chat") and hasattr(chat, "id"):
+                        # Extract file IDs from chat for cleanup
+                        file_ids = extract_file_ids_from_chat_data(chat)
+                        file_ids_to_cleanup.update(file_ids)
+
+                        # Add chat ID for deletion
+                        chat_ids_to_delete.append(chat.id)
+
+                        log.debug(
+                            f"Marked chat {chat.id} for deletion (created: {chat.created_at})"
+                        )
+                    elif isinstance(chat, dict):
+                        # Handle dict case - create a temporary object-like structure
+                        class TempChat:
+                            def __init__(self, data):
+                                self.chat = data.get("chat", {})
+                                self.id = data.get("id")
+
+                        temp_chat = TempChat(chat)
+                        file_ids = extract_file_ids_from_chat_data(temp_chat)
+                        file_ids_to_cleanup.update(file_ids)
+
+                        chat_ids_to_delete.append(chat["id"])
+
+                        log.debug(
+                            f"Marked chat {chat['id']} for deletion (created: {chat.get('created_at')})"
+                        )
+                    else:
+                        log.error(f"Unexpected chat object type: {type(chat)}, {chat}")
+
+                except Exception as e:
+                    # Try to get some debugging info even if chat.id fails
+                    try:
+                        if hasattr(chat, "id"):
+                            chat_info = f"id={chat.id}, type={type(chat)}"
+                        elif isinstance(chat, dict) and "id" in chat:
+                            chat_info = f"id={chat['id']}, type={type(chat)}"
+                        else:
+                            chat_info = f"type={type(chat)}, repr={repr(chat)[:100]}"
+                    except:
+                        chat_info = f"type={type(chat)}, repr={repr(chat)[:100]}"
+
+                    error_msg = f"Error processing chat {chat_info}: {e}"
+                    log.error(error_msg)
+                    cleanup_summary["errors"].append(error_msg)
+
+            total_processed += len(batch)
+            log.info(
+                f"Processed {total_processed}/{len(expired_chats)} chats. Marked {len(chat_ids_to_delete)} for deletion so far."
+            )
+
+            # Clear processed batch from memory
+            del batch
+
+        # Clear the expired_chats list from memory as we don't need it anymore
+        del expired_chats
+        log.info(
+            f"Chat processing completed. Total marked for deletion: {len(chat_ids_to_delete)}, Files to cleanup: {len(file_ids_to_cleanup)}"
+        )
 
         # Clean up associated files and vector collections
         log.info(f"Cleaning up {len(file_ids_to_cleanup)} associated files...")
 
         # Get all file references once before the loop to avoid repeated scanning
-        all_file_refs = get_all_file_references_from_chats()
+        # Exclude the chats we're about to delete from the reference scan
+        all_file_refs = get_all_file_references_from_chats(
+            exclude_chat_ids=chat_ids_to_delete
+        )
 
-        for file_id in file_ids_to_cleanup:
-            try:
-                # Only delete if this file is not referenced by any remaining chats
-                if file_id not in all_file_refs:
-                    # Get file info
-                    file = Files.get_file_by_id(file_id)
-                    if file:
-                        # Clean up vector collection
-                        collection_name = f"file-{file_id}"
-                        if await VECTOR_DB_CLIENT.has_collection(collection_name):
-                            await VECTOR_DB_CLIENT.delete_collection(collection_name)
-                            cleanup_summary["collections_cleaned"] += 1
-                            log.debug(f"Deleted vector collection: {collection_name}")
+        # Get knowledge base files that should be preserved
+        kb_referenced_files = set()
+        try:
+            existing_knowledge_bases = Knowledges.get_knowledge_bases()
+            for kb in existing_knowledge_bases:
+                if kb.data and isinstance(kb.data, dict):
+                    file_ids = kb.data.get("file_ids", [])
+                    if isinstance(file_ids, list):
+                        kb_referenced_files.update(file_ids)
+            log.info(
+                f"Found {len(kb_referenced_files)} files in knowledge bases to preserve"
+            )
+        except Exception as e:
+            log.error(f"Error getting knowledge base files: {e}")
+            kb_referenced_files = set()
 
-                        # Delete physical file
-                        if file.path:
-                            try:
-                                Storage.delete_file(file.path)
-                                log.debug(f"Deleted physical file: {file.path}")
-                            except Exception as e:
-                                log.warning(
-                                    f"Could not delete physical file {file.path}: {e}"
+        # Process files in batches to manage memory
+        file_ids_list = list(file_ids_to_cleanup)
+        file_batch_size = 20  # Process 20 files at a time
+        files_processed = 0
+
+        for i in range(0, len(file_ids_list), file_batch_size):
+            file_batch = file_ids_list[i : i + file_batch_size]
+            log.info(
+                f"Processing file cleanup batch {i//file_batch_size + 1}: {len(file_batch)} files"
+            )
+
+            for file_id in file_batch:
+                try:
+                    # Skip knowledge base files - NEVER delete them
+                    if file_id in kb_referenced_files:
+                        log.debug(f"Preserving knowledge base file: {file_id}")
+                        continue
+
+                    # Only delete if this file is not referenced by any remaining chats
+                    if file_id not in all_file_refs:
+                        # Get file info
+                        file = Files.get_file_by_id(file_id)
+                        if file:
+                            # Clean up vector collection
+                            collection_name = f"file-{file_id}"
+                            if await VECTOR_DB_CLIENT.has_collection(collection_name):
+                                await VECTOR_DB_CLIENT.delete_collection(
+                                    collection_name
+                                )
+                                cleanup_summary["collections_cleaned"] += 1
+                                log.debug(
+                                    f"Deleted vector collection: {collection_name}"
                                 )
 
-                        # Delete from database
-                        Files.delete_file_by_id(file_id)
-                        cleanup_summary["files_cleaned"] += 1
-                        log.debug(f"Deleted file record: {file_id}")
-                else:
-                    log.debug(
-                        f"File {file_id} still referenced by other chats, preserving"
-                    )
+                            # Delete physical file
+                            if file.path:
+                                try:
+                                    Storage.delete_file(file.path)
+                                    log.debug(f"Deleted physical file: {file.path}")
+                                except Exception as e:
+                                    log.warning(
+                                        f"Could not delete physical file {file.path}: {e}"
+                                    )
 
-            except Exception as e:
-                error_msg = f"Error cleaning up file {file_id}: {e}"
-                log.error(error_msg)
-                cleanup_summary["errors"].append(error_msg)
+                            # Delete from database
+                            Files.delete_file_by_id(file_id)
+                            cleanup_summary["files_cleaned"] += 1
+                            log.debug(f"Deleted file record: {file_id}")
+                    else:
+                        log.debug(
+                            f"File {file_id} still referenced by other chats, preserving"
+                        )
+
+                except Exception as e:
+                    error_msg = f"Error cleaning up file {file_id}: {e}"
+                    log.error(error_msg)
+                    cleanup_summary["errors"].append(error_msg)
+
+            files_processed += len(file_batch)
+            log.info(
+                f"Processed {files_processed}/{len(file_ids_list)} files for cleanup"
+            )
 
         # Delete chats in batch
         if chat_ids_to_delete:
@@ -3306,6 +3427,29 @@ async def cleanup_expired_chats(
 
             if deletion_result["errors"]:
                 cleanup_summary["errors"].extend(deletion_result["errors"])
+
+            # Emit WebSocket notification for chat deletions to update UI reactively
+            if deletion_result["deleted_count"] > 0:
+                try:
+                    from open_webui.socket.main import sio
+
+                    await sio.emit(
+                        "chat-deleted",
+                        {
+                            "type": "chat:cleanup",
+                            "deleted_chat_ids": chat_ids_to_delete[
+                                : deletion_result["deleted_count"]
+                            ],
+                            "deleted_count": deletion_result["deleted_count"],
+                            "timestamp": int(time.time()),
+                        },
+                    )
+                    log.info(
+                        f"Emitted chat deletion notification for {deletion_result['deleted_count']} chats"
+                    )
+                except Exception as e:
+                    log.warning(f"Failed to emit chat deletion notification: {e}")
+                    # Don't fail the cleanup if WebSocket emission fails
 
         log.info(f"Expired chat cleanup completed: {cleanup_summary}")
         return cleanup_summary

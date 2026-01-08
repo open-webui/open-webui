@@ -41,6 +41,9 @@
 	export let scrollEnd = true;
 	export let scrollToBottom: Function = () => {};
 
+	// Check if any files are currently uploading
+	$: hasUploadingFiles = files.some((file) => file.status === 'uploading');
+
 	const screenCaptureHandler = async () => {
 		try {
 			// Request screen media
@@ -226,6 +229,12 @@
 
 	const submitHandler = async () => {
 		if (content === '' && files.length === 0) {
+			return;
+		}
+
+		// Don't submit if files are still uploading
+		if (hasUploadingFiles) {
+			toast.info($i18n.t('Please wait for files to finish uploading before sending'));
 			return;
 		}
 
@@ -554,11 +563,11 @@
 										<Tooltip content={$i18n.t('Send message')}>
 											<button
 												id="send-message-button"
-												class="{content !== '' || files.length !== 0
+												class="{content !== '' || (files.length !== 0 && !hasUploadingFiles)
 													? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 													: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 												type="submit"
-												disabled={content === '' && files.length === 0}
+												disabled={content === '' || hasUploadingFiles}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"

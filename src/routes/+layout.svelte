@@ -108,6 +108,35 @@
 		_socket.on('usage', (data) => {
 			USAGE_POOL.set(data['models']);
 		});
+
+		_socket.on('chat-deleted', async (data) => {
+			console.log('Received chat deletion notification:', data);
+
+			// Refresh chat list to reflect deleted chats
+			if (data.deleted_count > 0) {
+				try {
+					// Update main chat list
+					const updatedChats = await getChatList(localStorage.token, $currentChatPage);
+					chats.set(updatedChats);
+
+					// Check if current chat was deleted and redirect if necessary
+					if (data.deleted_chat_ids && data.deleted_chat_ids.includes($chatId)) {
+						await chatId.set('');
+						await goto('/');
+						toast.info($i18n.t('Current chat was automatically cleaned up'));
+					}
+
+					// Show notification about cleanup
+					const message =
+						data.deleted_count === 1
+							? $i18n.t('One chat was automatically cleaned up')
+							: `${data.deleted_count} ${$i18n.t('chats were automatically cleaned up')}`;
+					toast.info(message);
+				} catch (error) {
+					console.error('Error refreshing chats after deletion:', error);
+				}
+			}
+		});
 	};
 
 	const chatEventHandler = async (event) => {

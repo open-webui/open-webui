@@ -109,6 +109,9 @@
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
 	);
 
+	// Check if any files are currently uploading
+	$: hasUploadingFiles = files.some((file) => file.status === 'uploading');
+
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
 		element.scrollTo({
@@ -604,8 +607,10 @@
 						<form
 							class="w-full flex gap-1.5"
 							on:submit|preventDefault={() => {
-								// check if selectedModels support image input
-								dispatch('submit', prompt);
+								// check if selectedModels support image input and no files are uploading
+								if (!hasUploadingFiles) {
+									dispatch('submit', prompt);
+								}
 							}}
 						>
 							<div
@@ -967,7 +972,12 @@
 													}
 
 													// Submit the prompt when Enter key is pressed
-													if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
+													if (
+														prompt !== '' &&
+														!hasUploadingFiles &&
+														e.key === 'Enter' &&
+														!e.shiftKey
+													) {
 														dispatch('submit', prompt);
 													}
 												}
@@ -1244,11 +1254,11 @@
 														<button
 															id="send-message-button"
 															aria-label={$i18n.t('Send message')}
-															class="{prompt !== ''
+															class="{prompt !== '' && !hasUploadingFiles
 																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
 															type="submit"
-															disabled={prompt === ''}
+															disabled={prompt === '' || hasUploadingFiles}
 														>
 															<svg
 																xmlns="http://www.w3.org/2000/svg"
