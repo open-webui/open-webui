@@ -812,6 +812,7 @@
 										aria-label={$i18n.t('Open User Profile Menu')}
 									/>
 
+									{#if $config?.features?.enable_user_status}
 									<div class="absolute -bottom-0.5 -right-0.5">
 										<span class="relative flex size-2.5">
 											<span
@@ -824,6 +825,7 @@
 											></span>
 										</span>
 									</div>
+									{/if}
 								</div>
 							</div>
 						</UserMenu>
@@ -1379,6 +1381,7 @@
 										aria-label={$i18n.t('Open User Profile Menu')}
 									/>
 
+									{#if $config?.features?.enable_user_status}
 									<div class="absolute -bottom-0.5 -right-0.5">
 										<span class="relative flex size-2.5">
 											<span
@@ -1391,6 +1394,7 @@
 											></span>
 										</span>
 									</div>
+									{/if}
 								</div>
 								<div class=" self-center font-medium">{$user?.name}</div>
 							</div>
