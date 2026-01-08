@@ -164,7 +164,7 @@ async def get_function_models(request, user: UserModel = None):
     # This avoids N database queries in the loop
     
     # For users: pre-fetch user's groups and all models with group assignments
-    user_group_ids = []
+    user_group_ids = set()  # Initialize as set for consistency
     creator_to_accessible_groups = {}  # Map: creator_email -> set of group_ids they assigned models to
     
     if user.role == "user":
@@ -234,14 +234,33 @@ async def get_function_models(request, user: UserModel = None):
                             loop = asyncio.get_running_loop()
                             sub_pipes = await loop.run_in_executor(None, function_module.pipes)
                     else:
+                        # pipes is not callable - treat as list/iterable
                         sub_pipes = function_module.pipes
+                    
+                    # Ensure sub_pipes is iterable and convert to list if needed
+                    if sub_pipes is None:
+                        sub_pipes = []
+                    elif not isinstance(sub_pipes, (list, tuple)):
+                        # Try to convert to list, but if it fails, use empty list
+                        try:
+                            sub_pipes = list(sub_pipes) if hasattr(sub_pipes, '__iter__') else []
+                        except Exception:
+                            sub_pipes = []
                 except Exception as e:
                     log.exception(f"Error fetching sub-pipes for {pipe.id}: {e}")
                     sub_pipes = []
                 
                 log.debug(f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}")
                 
+                # Iterate over sub_pipes and validate each entry
                 for p in sub_pipes:
+                    # Defensive check: ensure p is a dict with required keys
+                    if not isinstance(p, dict):
+                        log.warning(f"Invalid sub-pipe entry for {pipe.id}: expected dict, got {type(p)}")
+                        continue
+                    if "id" not in p or "name" not in p:
+                        log.warning(f"Invalid sub-pipe entry for {pipe.id}: missing 'id' or 'name' key: {p}")
+                        continue
                     sub_pipe_id = f'{pipe.id}.{p["id"]}'
                     sub_pipe_name = p["name"]
                     
