@@ -17,6 +17,7 @@
 	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
 
 	import Message from './Messages/Message.svelte';
+	import MetricCard from './Messages/ResponseMessage/MetricCard.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
 
@@ -423,35 +424,52 @@
 						</Loader>
 					{/if}
 					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
-						{#each messages as message, messageIdx (message.id)}
-							<Message
-								{chatId}
-								bind:history
-								{selectedModels}
-								messageId={message.id}
-								idx={messageIdx}
-								{user}
-								{setInputText}
-								{gotoMessage}
-								{showPreviousMessage}
-								{showNextMessage}
-								{updateChat}
-								{editMessage}
-								{deleteMessage}
-								{rateMessage}
-								{actionMessage}
-								{saveMessage}
-								{submitMessage}
-								{regenerateResponse}
-								{continueResponse}
-								{mergeResponses}
-								{addMessages}
-								{triggerScroll}
-								{readOnly}
-								{editCodeBlock}
-								{topPadding}
-							/>
-						{/each}
+					{#each messages as message, messageIdx (message.id)}
+						<div
+							class="relative w-full {($settings?.widescreenMode ?? null)
+							? 'max-w-full'
+							: 'max-w-5xl'} mx-auto"
+						>
+							<div class="flex items-start">
+								<!-- Message column (flexible) -->
+								<div class="flex-1 min-w-0">
+									<Message
+										{chatId}
+										bind:history
+										{selectedModels}
+										messageId={message.id}
+										idx={messageIdx}
+										{user}
+										{setInputText}
+										{gotoMessage}
+										{showPreviousMessage}
+										{showNextMessage}
+										{updateChat}
+										{editMessage}
+										{deleteMessage}
+										{rateMessage}
+										{actionMessage}
+										{saveMessage}
+										{submitMessage}
+										{regenerateResponse}
+										{continueResponse}
+										{mergeResponses}
+										{addMessages}
+										{triggerScroll}
+										{readOnly}
+										{editCodeBlock}
+										{topPadding}
+									/>
+								</div>
+
+								{#if message.role !== 'user'}
+									<div class="hidden md:block flex-shrink-0">
+										<MetricCard {message} />
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/each}
 					</ul>
 				</section>
 				<div class="pb-18" />
