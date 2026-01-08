@@ -20,6 +20,7 @@
 	import MetricCard from './Messages/ResponseMessage/MetricCard.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { extractMetricValue } from '$lib/utils/metric';
 
 	import ChatPlaceholder from './ChatPlaceholder.svelte';
 
@@ -463,9 +464,12 @@
 								</div>
 
 								{#if message.role !== 'user'}
-									<div class="hidden md:block flex-shrink-0">
-										<MetricCard {message} />
-									</div>
+									{@const metricValue = extractMetricValue(message?.content ?? '')}
+									{#if message?.done && metricValue}
+										<div class="hidden md:block flex-shrink-0">
+											<MetricCard {message} />
+										</div>
+									{/if}
 								{/if}
 							</div>
 						</div>
