@@ -39,8 +39,6 @@
 				// Remove all other filters temporarily
 			};
 
-			// console.log('📤 Minimal filter request:', filterData);
-
 			const response = await fetch('/api/v1/chats/filter/meta', {
 				method: 'POST',
 				headers: {
@@ -55,8 +53,6 @@
 			}
 
 			const rawChatData = await response.json();
-			console.log(`✅✅✅ Received META data from ${rawChatData.length} groups:`, rawChatData);
-			// console.log(rawChatData[0].meta);
 
 			return rawChatData;
 		} catch (error) {
@@ -109,12 +105,9 @@
 				email: `user${chat.user_id}@example.com`
 			};
 
-			// console.log('Transforming chat:', chat);
-
 			// Extract questions properly from meta
 			const questionsArray = chat.meta?.questions_asked || [];
 			const questionsCount = Array.isArray(questionsArray) ? questionsArray.length : 0;
-			// console.log('Extracted questions:', questionsArray);
 			return {
 				id: chat.id,
 				user_id: chat.user_id, // ← ADDED THIS LINE
@@ -130,16 +123,6 @@
 				timeTaken: formatTimeTaken(chat.meta?.total_time_taken)
 			};
 		});
-	};
-
-	const debugClick = (event) => {
-		console.log('🖱️ Click event:', event);
-		console.log('🖱️ Target element:', event.target);
-		console.log('🖱️ Target classes:', event.target.className);
-		console.log(
-			'🖱️ Elements at click point:',
-			document.elementsFromPoint(event.clientX, event.clientY)
-		);
 	};
 
 	// Helper function to format time taken
@@ -229,13 +212,9 @@
 			return;
 		}
 
-		console.log('🚀 Group object:', group);
-		// console.log('🚀 Group ID:', group.id);
-
 		loading = true;
 		try {
 			// Test 1: Try your current approach
-			// console.log('Testing current filter approach...');
 			let rawChatData = await fetchGroupChatData(group.id);
 
 			if (rawChatData.length === 0) {
@@ -257,19 +236,18 @@
 
 				if (testResponse.ok) {
 					const allChats = await testResponse.json();
-					console.log('📊 Total chats in system:', allChats.length);
 					console.log('📊 Sample chat data:', allChats[0] || 'No chats exist');
 				}
 			}
 
 			memberStats = transformChatData(rawChatData);
-			// console.log('Transformed member stats:', memberStats);
-
-			if (memberStats.length === 0) {
-				toast.warning('No conversation data found.');
-			} else {
-				toast.success(`Successfully loaded ${memberStats.length} conversations`);
-			}
+			
+			// Remove toast messages for data load
+			// if (memberStats.length === 0) {
+			// 	toast.warning('No conversation data found.');
+			// } else {
+			// 	toast.success(`Successfully loaded ${memberStats.length} conversations`);
+			// }
 		} catch (error) {
 			console.error('Failed to fetch chat data:', error);
 			toast.error('Failed to fetch conversation data.');
@@ -503,7 +481,6 @@
 
 			toast.success(`Successfully exported ${selectedMembers.size} conversations`);
 		} catch (error) {
-			console.error('PDF export failed:', error);
 			toast.error(`Failed to export PDF: ${error.message}`);
 		}
 	};
@@ -542,7 +519,6 @@
 
 			// Get the CSV content and filename
 			const csvContent = await response.text();
-			console.log('✅ Received CSV data:', csvContent);
 			const contentDisposition = response.headers.get('Content-Disposition');
 			const filename = contentDisposition
 				? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
@@ -609,17 +585,13 @@
 
 	// Click outside handler
 	const handleClickOutside = (event) => {
-		// console.log('🖱️ Click outside detected:', event.target);
-
 		// Close action dropdown if clicked outside
 		if (actionDropdownRef && !actionDropdownRef.contains(event.target)) {
-			console.log('🖱️ Closing action dropdown');
 			actionDropdownOpen = false;
 		}
 
 		// Close model dropdown if clicked outside
 		if (modelDropdownRef && !modelDropdownRef.contains(event.target)) {
-			console.log('🖱️ Closing model dropdown');
 			modelDropdownOpen = false;
 		}
 	};
@@ -644,8 +616,6 @@
 
 	// Show questions modal
 	const showQuestions = (group) => {
-		console.log('Showing questions for group:', group);
-
 		// Add safety check for group structure
 		if (!group.chats || !Array.isArray(group.chats)) {
 			console.error('Invalid group.chats:', group);
@@ -665,7 +635,6 @@
 			totalMessageCount: group.messageCount
 		};
 
-		console.log('Combined member for questions modal:', combinedMember);
 		selectedMemberForQuestions = combinedMember;
 		showQuestionsModal = true;
 	};
@@ -1049,10 +1018,6 @@
 												<button
 													class="model-dropdown-button text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
 													on:click|stopPropagation={(e) => {
-														console.log('🖱️ ChevronDown clicked!', e);
-														console.log('🖱️ Before - modelDropdownOpen:', modelDropdownOpen);
-														console.log('🖱️ Before - actionDropdownOpen:', actionDropdownOpen);
-
 														e.preventDefault();
 														e.stopPropagation();
 														modelDropdownOpen = !modelDropdownOpen;
