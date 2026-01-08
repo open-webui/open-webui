@@ -173,6 +173,9 @@ async def get_function_models(request, user: UserModel = None):
         user_groups = Groups.get_groups_by_member_id(user.id)
         user_group_ids = set(g.id for g in user_groups)
         
+        log.info(f"[MODEL_VISIBILITY] User {user.email} (id={user.id}) belongs to {len(user_groups)} groups")
+        log.info(f"[MODEL_VISIBILITY] User group IDs: {user_group_ids}")
+        
         # Fetch ALL models with access_control in ONE query
         # Build sets of accessible model IDs and pipe IDs
         with get_db() as db:
@@ -180,11 +183,15 @@ async def get_function_models(request, user: UserModel = None):
                 Model.access_control.isnot(None)
             ).all()
         
+        log.info(f"[MODEL_VISIBILITY] Found {len(all_models_with_access)} models with access_control set")
+        
         for model in all_models_with_access:
             if model.access_control:
                 read_groups = set(model.access_control.get("read", {}).get("group_ids", []))
+                log.info(f"[MODEL_VISIBILITY] Model '{model.id}' has read groups: {read_groups}")
                 # Check if any of user's groups have read access to this model
                 if read_groups & user_group_ids:
+                    log.info(f"[MODEL_VISIBILITY] MATCH! User has access to model '{model.id}'")
                     accessible_model_ids.add(model.id)
                     # Extract pipe ID from model ID (e.g., "llm_portkey.gpt-4" -> "llm_portkey")
                     if "." in model.id:
@@ -194,12 +201,14 @@ async def get_function_models(request, user: UserModel = None):
                         # Model ID without dot is the pipe ID itself
                         accessible_pipe_ids.add(model.id)
         
-        log.debug(f"User {user.email} has access to {len(accessible_model_ids)} models via groups: {accessible_model_ids}")
-        log.debug(f"User {user.email} has access to pipes: {accessible_pipe_ids}")
+        log.info(f"[MODEL_VISIBILITY] User {user.email} has access to {len(accessible_model_ids)} models: {accessible_model_ids}")
+        log.info(f"[MODEL_VISIBILITY] User {user.email} has access to pipes: {accessible_pipe_ids}")
     
     # STEP 1: Filter pipes based on access (fast, no module loading)
     accessible_pipes = []
+    log.info(f"[MODEL_VISIBILITY] Total active pipes: {len(pipes)}")
     for pipe in pipes:
+        log.info(f"[MODEL_VISIBILITY] Checking pipe '{pipe.id}' (created_by={pipe.created_by})")
         # For super admins: show all pipes
         if is_super_admin(user):
             accessible_pipes.append(pipe)
@@ -211,10 +220,15 @@ async def get_function_models(request, user: UserModel = None):
         elif user.role == "user":
             # Check if this pipe has any models assigned to user's groups
             if pipe.id in accessible_pipe_ids:
+                log.info(f"[MODEL_VISIBILITY] Pipe '{pipe.id}' is accessible to user")
                 accessible_pipes.append(pipe)
+            else:
+                log.info(f"[MODEL_VISIBILITY] Pipe '{pipe.id}' NOT accessible - not in {accessible_pipe_ids}")
         # Unknown role - skip for safety
         else:
             log.warning(f"Unknown user role '{user.role}' for user {user.email} - skipping pipe {pipe.id}")
+    
+    log.info(f"[MODEL_VISIBILITY] Accessible pipes for user {user.email}: {[p.id for p in accessible_pipes]}")
     
     # STEP 2: Load modules and fetch models only for accessible pipes
     # OPTIMIZATION: Process pipes in parallel to avoid sequential HTTP calls
