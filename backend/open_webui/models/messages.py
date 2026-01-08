@@ -199,11 +199,32 @@ class MessageTable:
             if include_thread_replies:
                 thread_replies = self.get_thread_replies_by_message_id(id, db=db)
 
-            user = Users.get_user_by_id(message.user_id, db=db)
+            # Check if message was sent by webhook (webhook info in meta takes precedence)
+            webhook_info = message.meta.get("webhook") if message.meta else None
+            if webhook_info and webhook_info.get("id"):
+                # Look up webhook by ID to get current name
+                webhook = Channels.get_webhook_by_id(webhook_info.get("id"), db=db)
+                if webhook:
+                    user_info = {
+                        "id": webhook.id,
+                        "name": webhook.name,
+                        "role": "webhook",
+                    }
+                else:
+                    # Webhook was deleted, use placeholder
+                    user_info = {
+                        "id": webhook_info.get("id"),
+                        "name": "Deleted Webhook",
+                        "role": "webhook",
+                    }
+            else:
+                user = Users.get_user_by_id(message.user_id, db=db)
+                user_info = user.model_dump() if user else None
+
             return MessageResponse.model_validate(
                 {
                     **MessageModel.model_validate(message).model_dump(),
-                    "user": user.model_dump() if user else None,
+                    "user": user_info,
                     "reply_to_message": (
                         reply_to_message.model_dump() if reply_to_message else None
                     ),
@@ -235,10 +256,29 @@ class MessageTable:
                     if message.reply_to_id
                     else None
                 )
+
+                webhook_info = message.meta.get("webhook") if message.meta else None
+                user_info = None
+                if webhook_info and webhook_info.get("id"):
+                    webhook = Channels.get_webhook_by_id(webhook_info.get("id"), db=db)
+                    if webhook:
+                        user_info = {
+                            "id": webhook.id,
+                            "name": webhook.name,
+                            "role": "webhook",
+                        }
+                    else:
+                        user_info = {
+                            "id": webhook_info.get("id"),
+                            "name": "Deleted Webhook",
+                            "role": "webhook",
+                        }
+
                 messages.append(
                     MessageReplyToResponse.model_validate(
                         {
                             **MessageModel.model_validate(message).model_dump(),
+                            "user": user_info,
                             "reply_to_message": (
                                 reply_to_message.model_dump()
                                 if reply_to_message
@@ -284,10 +324,29 @@ class MessageTable:
                     if message.reply_to_id
                     else None
                 )
+
+                webhook_info = message.meta.get("webhook") if message.meta else None
+                user_info = None
+                if webhook_info and webhook_info.get("id"):
+                    webhook = Channels.get_webhook_by_id(webhook_info.get("id"), db=db)
+                    if webhook:
+                        user_info = {
+                            "id": webhook.id,
+                            "name": webhook.name,
+                            "role": "webhook",
+                        }
+                    else:
+                        user_info = {
+                            "id": webhook_info.get("id"),
+                            "name": "Deleted Webhook",
+                            "role": "webhook",
+                        }
+
                 messages.append(
                     MessageReplyToResponse.model_validate(
                         {
                             **MessageModel.model_validate(message).model_dump(),
+                            "user": user_info,
                             "reply_to_message": (
                                 reply_to_message.model_dump()
                                 if reply_to_message
@@ -334,10 +393,29 @@ class MessageTable:
                     if message.reply_to_id
                     else None
                 )
+
+                webhook_info = message.meta.get("webhook") if message.meta else None
+                user_info = None
+                if webhook_info and webhook_info.get("id"):
+                    webhook = Channels.get_webhook_by_id(webhook_info.get("id"), db=db)
+                    if webhook:
+                        user_info = {
+                            "id": webhook.id,
+                            "name": webhook.name,
+                            "role": "webhook",
+                        }
+                    else:
+                        user_info = {
+                            "id": webhook_info.get("id"),
+                            "name": "Deleted Webhook",
+                            "role": "webhook",
+                        }
+
                 messages.append(
                     MessageReplyToResponse.model_validate(
                         {
                             **MessageModel.model_validate(message).model_dump(),
+                            "user": user_info,
                             "reply_to_message": (
                                 reply_to_message.model_dump()
                                 if reply_to_message

@@ -245,7 +245,7 @@
 						/>
 					{:else}
 						<img
-							src={`${WEBUI_API_BASE_URL}/users/${message.reply_to_message.user?.id}/profile/image`}
+							src={message.reply_to_message.user?.role === 'webhook' ? `${WEBUI_API_BASE_URL}/channels/webhooks/${message.reply_to_message.user?.id}/profile/image` : `${WEBUI_API_BASE_URL}/users/${message.reply_to_message.user?.id}/profile/image`}
 							alt={message.reply_to_message.user?.name ?? $i18n.t('Unknown User')}
 							class="size-4 ml-0.5 rounded-full object-cover"
 						/>
@@ -277,10 +277,10 @@
 							alt={message.meta.model_name ?? message.meta.model_id}
 							class="size-8 translate-y-1 ml-0.5 object-cover rounded-full"
 						/>
-					{:else}
+				{:else}
 						<ProfilePreview user={message.user}>
 							<ProfileImage
-								src={`${WEBUI_API_BASE_URL}/users/${message.user.id}/profile/image`}
+								src={message.user?.role === 'webhook' ? `${WEBUI_API_BASE_URL}/channels/webhooks/${message.user?.id}/profile/image` : `${WEBUI_API_BASE_URL}/users/${message.user?.id}/profile/image`}
 								className={'size-8 ml-0.5'}
 							/>
 						</ProfilePreview>

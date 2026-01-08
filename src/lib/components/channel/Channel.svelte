@@ -119,8 +119,8 @@
 
 			if (type === 'message') {
 				if ((data?.parent_id ?? null) === null) {
-					const tempId = data?.temp_id ?? null;
-					messages = [{ ...data, temp_id: null }, ...messages.filter((m) => m?.temp_id !== tempId)];
+				const tempId = data?.temp_id ?? null;
+					messages = [{ ...data, temp_id: null }, ...messages.filter((m) => !tempId || m?.temp_id !== tempId)];
 
 					if (typingUsers.find((user) => user.id === event.user.id)) {
 						typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
