@@ -34,7 +34,8 @@
 		temporaryChatEnabled,
 		toolServers,
 		showSearch,
-		showSidebar
+		showSidebar,
+		hiddenElements
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -139,6 +140,19 @@
 	const setTools = async () => {
 		const toolsData = await getTools(localStorage.token);
 		tools.set(toolsData);
+	};
+
+	const parseHideParameter = () => {
+		const hideParam = $page.url.searchParams.get('hide');
+		if (hideParam) {
+			const elements = hideParam
+				.split(',')
+				.map((el) => el.trim())
+				.filter((el) => el.length > 0);
+			hiddenElements.set(elements);
+		} else {
+			hiddenElements.set([]);
+		}
 	};
 
 	onMount(async () => {
@@ -272,6 +286,9 @@
 			}
 		}
 
+		// Parse hide URL parameter
+		parseHideParameter();
+
 		// Check for version updates
 		if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
 			// Check if the user has dismissed the update toast in the last 24 hours
@@ -290,6 +307,11 @@
 
 		loaded = true;
 	});
+
+	// Reactively update hidden elements when URL changes
+	$: if ($page.url.searchParams) {
+		parseHideParameter();
+	}
 
 	const checkForVersionUpdates = async () => {
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
@@ -379,7 +401,9 @@
 					</div>
 				{/if}
 
-				<Sidebar />
+				{#if !$hiddenElements.includes('sidebar')}
+					<Sidebar />
+				{/if}
 
 				{#if loaded}
 					<slot />
