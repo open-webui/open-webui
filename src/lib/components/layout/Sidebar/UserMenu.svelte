@@ -91,7 +91,7 @@
 			align="end"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
-			{#if profile && $config?.features?.enable_user_status}
+			{#if profile}
 				<div class=" flex gap-3.5 w-full p-2.5 items-center">
 					<div class=" items-center flex shrink-0">
 						<img
