@@ -193,10 +193,13 @@ async def get_function_models(request, user: UserModel = None):
                 if read_groups & user_group_ids:
                     log.info(f"[MODEL_VISIBILITY] MATCH! User has access to model '{model.id}'")
                     accessible_model_ids.add(model.id)
-                    # Extract pipe ID from model ID (e.g., "llm_portkey.gpt-4" -> "llm_portkey")
+                    # Extract pipe ID from model ID (e.g., "llm_portkey.@gpt-4o/gpt-4o" -> "llm_portkey")
+                    # Use split(".", 1) to get the FIRST part before the first dot
+                    # because sub-model IDs can contain dots (e.g., "gemini-2.5-flash-lite")
                     if "." in model.id:
-                        pipe_id = model.id.rsplit(".", 1)[0]
+                        pipe_id = model.id.split(".", 1)[0]
                         accessible_pipe_ids.add(pipe_id)
+                        log.info(f"[MODEL_VISIBILITY] Extracted pipe_id '{pipe_id}' from model '{model.id}'")
                     else:
                         # Model ID without dot is the pipe ID itself
                         accessible_pipe_ids.add(model.id)
