@@ -815,6 +815,37 @@ class ChatTable:
                             ]
                         )
                     )
+            elif dialect_name in {"mysql", "mariadb"}:
+                mysql_content_clause = text(
+                    "JSON_SEARCH(chat.chat, 'one', :content_key, NULL, '$.messages[*].content') IS NOT NULL"
+                )
+                query = query.filter(
+                    or_(
+                        Chat.title.ilike(bindparam("title_key")),
+                        mysql_content_clause,
+                    ).params(title_key=f"%{search_text}%", content_key=f"%{search_text}%")
+                )
+
+                if "none" in tag_ids:
+                    query = query.filter(
+                        text(
+                            "JSON_EXTRACT(chat.meta, '$.tags') IS NULL "
+                            "OR JSON_LENGTH(JSON_EXTRACT(chat.meta, '$.tags')) = 0"
+                        )
+                    )
+                elif tag_ids:
+                    query = query.filter(
+                        and_(
+                            *[
+                                text(
+                                    "JSON_CONTAINS(chat.meta, :tag_id_{tag_idx}, '$.tags')"
+                                ).params(
+                                    **{f"tag_id_{tag_idx}": json.dumps(tag_id)}
+                                )
+                                for tag_idx, tag_id in enumerate(tag_ids)
+                            ]
+                        )
+                    )
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
@@ -904,6 +935,10 @@ class ChatTable:
                         "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
+            elif db.bind.dialect.name in {"mysql", "mariadb"}:
+                query = query.filter(
+                    text("JSON_CONTAINS(chat.meta, :tag_id, '$.tags')")
+                ).params(tag_id=json.dumps(tag_id))
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
@@ -958,6 +993,11 @@ class ChatTable:
                         "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
+
+            elif db.bind.dialect.name in {"mysql", "mariadb"}:
+                query = query.filter(
+                    text("JSON_CONTAINS(chat.meta, :tag_id, '$.tags')")
+                ).params(tag_id=json.dumps(tag_id))
 
             else:
                 raise NotImplementedError(
