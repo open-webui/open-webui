@@ -111,7 +111,6 @@ $: {
 		reader.onload = (e) => {
 			const text = e.target.result;
 			const lines = text.split(/\r?\n/).slice(0, 3);
-			console.log('First 3 lines of CSV:', lines);
 		};
 		reader.readAsText(file);
 	}
@@ -224,8 +223,6 @@ $: {
 	}
 
 	const init = () => {
-		console.log('✅ Received META data from group', group);
-		// console.log('properties in the group:', group ? Object.keys(group) : 'No group');
 		if (group) {
 			name = group.name;
 			description = group.description;
