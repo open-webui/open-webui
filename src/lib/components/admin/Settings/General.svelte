@@ -714,7 +714,7 @@
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									type="number"
 									min="0"
-									placeholder={$i18n.t('Enter max file count per folder')}
+									placeholder={$i18n.t('Leave empty for unlimited')}
 									bind:value={adminConfig.FOLDER_MAX_FILE_COUNT}
 								/>
 							</div>
