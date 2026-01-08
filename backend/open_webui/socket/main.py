@@ -226,8 +226,8 @@ async def crew_mcp_query(sid, data):
 
         # Import crew_mcp_manager
         try:
-            from mcp_backend.integration.crew_mcp_integration import CrewMCPManager
-            from mcp_backend.routers.crew_mcp import extract_graph_access_token
+            # from mcp_backend.integration.crew_mcp_integration import CrewMCPManager
+            from mcp_backend.routers.crew_mcp import crew_mcp_manager
             import os
             import asyncio
             import concurrent.futures
@@ -241,12 +241,23 @@ async def crew_mcp_query(sid, data):
             return
 
         # Initialize CrewMCPManager
-        crew_mcp_manager = CrewMCPManager()
+        # crew_mcp_manager = CrewMCPManager()
+
+        # Check if manager is initialized
+        if not crew_mcp_manager:
+            await sio.emit(
+                "crew-mcp-error",
+                {"error": "CrewMCP manager not initialized", "code": 503},
+                room=sid,
+            )
+            return
 
         # Get the Graph access token from session (stored during websocket connect)
         user_access_token = user_session.get("graph_access_token")
 
         log.info(f"User access token available from session: {bool(user_access_token)}")
+        if user_access_token:
+            log.info(f"Token length: {len(user_access_token)}")
 
         use_delegated_access = os.getenv(
             "SHP_USE_DELEGATED_ACCESS", "false"
