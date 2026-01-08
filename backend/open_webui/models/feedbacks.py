@@ -250,6 +250,27 @@ class FeedbackTable:
                 .all()
             ]
 
+    def get_all_feedback_ids(
+        self, db: Optional[Session] = None
+    ) -> list[FeedbackIdResponse]:
+        with get_db_context(db) as db:
+            return [
+                FeedbackIdResponse(
+                    id=row.id,
+                    user_id=row.user_id,
+                    created_at=row.created_at,
+                    updated_at=row.updated_at,
+                )
+                for row in db.query(
+                    Feedback.id,
+                    Feedback.user_id,
+                    Feedback.created_at,
+                    Feedback.updated_at,
+                )
+                .order_by(Feedback.updated_at.desc())
+                .all()
+            ]
+
     def get_feedbacks_by_type(
         self, type: str, db: Optional[Session] = None
     ) -> list[FeedbackModel]:
