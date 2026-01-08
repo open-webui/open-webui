@@ -60,6 +60,15 @@ except ImportError as e:
     raise
 
 
+# Authentication error message for delegated access mode
+DELEGATED_ACCESS_AUTH_ERROR = (
+    "DELEGATED ACCESS MODE: User authentication token is required but not provided. "
+    "SharePoint access with user permissions requires a valid OAuth2 access token. "
+    "This request cannot proceed without proper authentication. "
+    "Either provide a valid user token or set SHP_USE_DELEGATED_ACCESS=false to use application access."
+)
+
+
 def clean_env_var(value: str) -> str:
     """Clean environment variable by removing quotes and inline comments"""
     if not value:
@@ -226,6 +235,20 @@ async def get_sharepoint_document_content(
         # For local development, don't try OBO if no valid token available
         if user_token == "user_token_placeholder" or not user_token:
             user_token = None
+
+        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
+        if config.use_delegated_access:
+            if not user_token or not user_token.strip():
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "folder": folder_name,
+                    "file": file_name,
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
         # No verbose logging during parallel processing
 
         # Silent document content retrieval
@@ -401,6 +424,22 @@ async def get_all_documents_comprehensive(
         # Get authentication token - check environment variable if not provided
         effective_token = user_token or os.getenv("USER_JWT_TOKEN")
 
+        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
+        if config.use_delegated_access:
+            if (
+                not effective_token
+                or effective_token == "user_token_placeholder"
+                or not effective_token.strip()
+            ):
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
+
         if config.use_delegated_access:
             access_token = await oauth_client.get_access_token(effective_token)
         else:
@@ -552,6 +591,22 @@ async def analyze_all_documents_for_content(
 
         # Get user token from parameter or environment variable
         effective_token = user_token or os.getenv("USER_JWT_TOKEN")
+
+        # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
+        if config.use_delegated_access:
+            if (
+                not effective_token
+                or effective_token == "user_token_placeholder"
+                or not effective_token.strip()
+            ):
+                return {
+                    "status": "error",
+                    "error": "Authentication required",
+                    "message": DELEGATED_ACCESS_AUTH_ERROR,
+                    "organization": config.org_name,
+                    "delegated_access_enabled": True,
+                    "authentication_failed": True,
+                }
 
         # Get all documents using comprehensive traversal (no verbose logging)
         all_docs_result = await get_all_documents_comprehensive(effective_token)
