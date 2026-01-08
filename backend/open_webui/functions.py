@@ -193,16 +193,29 @@ async def get_function_models(request, user: UserModel = None):
                 if read_groups & user_group_ids:
                     log.debug(f"[MODEL_VISIBILITY] MATCH! User has access to model '{model.id}'")
                     accessible_model_ids.add(model.id)
-                    # Extract pipe ID from model ID (e.g., "llm_portkey.@gpt-4o/gpt-4o" -> "llm_portkey")
-                    # Use split(".", 1) to get the FIRST part before the first dot
-                    # because sub-model IDs can contain dots (e.g., "gemini-2.5-flash-lite")
-                    if "." in model.id:
-                        pipe_id = model.id.split(".", 1)[0]
+                    
+                    # Determine which ID to use for pipe extraction:
+                    # - Preset models have base_model_id pointing to the actual pipe model
+                    # - Pipe models have the pipe ID as prefix of model.id
+                    model_id_for_pipe = model.id
+                    if model.base_model_id:
+                        # This is a preset model - use base_model_id to find the pipe
+                        model_id_for_pipe = model.base_model_id
+                        # IMPORTANT: Also add base_model_id to accessible_model_ids
+                        # so that when filtering sub-pipes, the underlying model is accessible
+                        accessible_model_ids.add(model.base_model_id)
+                        log.debug(f"[MODEL_VISIBILITY] Model '{model.id}' is a preset, using base_model_id '{model.base_model_id}' for pipe extraction")
+                        log.debug(f"[MODEL_VISIBILITY] Added base_model_id '{model.base_model_id}' to accessible_model_ids")
+                    
+                    # Extract pipe ID from the appropriate model ID
+                    # e.g., "llm_portkey.@gpt-4o/gpt-4o" -> "llm_portkey"
+                    if "." in model_id_for_pipe:
+                        pipe_id = model_id_for_pipe.split(".", 1)[0]
                         accessible_pipe_ids.add(pipe_id)
-                        log.debug(f"[MODEL_VISIBILITY] Extracted pipe_id '{pipe_id}' from model '{model.id}'")
+                        log.debug(f"[MODEL_VISIBILITY] Extracted pipe_id '{pipe_id}' from '{model_id_for_pipe}'")
                     else:
-                        # Model ID without dot is the pipe ID itself
-                        accessible_pipe_ids.add(model.id)
+                        # Model ID without dot - might be a standalone pipe ID
+                        accessible_pipe_ids.add(model_id_for_pipe)
         
         log.debug(f"[MODEL_VISIBILITY] User {user.email} has access to {len(accessible_model_ids)} models: {accessible_model_ids}")
         log.debug(f"[MODEL_VISIBILITY] User {user.email} has access to pipes: {accessible_pipe_ids}")

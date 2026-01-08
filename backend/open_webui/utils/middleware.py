@@ -831,7 +831,9 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             sources.extend(flags.get("sources", []))
             s1 = f"{model}"
             log.info(f"Working within inbuilt RAG: {s1}")
-            log.info(f"Models: {models[task_model_id]}")
+            # Debug log for task model (may be None if user doesn't have access to Gemini Flash Lite)
+            if task_model_id and task_model_id in models:
+                log.debug(f"Task model: {models[task_model_id]}")
         except Exception as e:
             log.exception(e)
     else:

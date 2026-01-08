@@ -411,6 +411,34 @@ async def generate_chat_completion(
                     response = await generate_function_chat_completion(
                         request, form_data, user=user, models=models
                     )
+                elif model.get("preset"):
+                    # Preset model - check if base model is a pipe model
+                    base_model_id = model.get("info", {}).get("base_model_id")
+                    if base_model_id:
+                        # Look up base model - might be a pipe model
+                        base_model = models.get(base_model_id)
+                        if base_model and base_model.get("pipe"):
+                            # Base model is a pipe - route to function completion with base model
+                            form_data["model"] = base_model_id
+                            response = await generate_function_chat_completion(
+                                request, form_data, user=user, models=models
+                            )
+                        else:
+                            # Base model is OpenAI or not found - let OpenAI handler resolve it
+                            response = await generate_openai_chat_completion(
+                                request=request,
+                                form_data=form_data,
+                                user=user,
+                                bypass_filter=bypass_filter,
+                            )
+                    else:
+                        # No base model - shouldn't happen for preset models, fallback to OpenAI
+                        response = await generate_openai_chat_completion(
+                            request=request,
+                            form_data=form_data,
+                            user=user,
+                            bypass_filter=bypass_filter,
+                        )
                 elif model.get("owned_by") == "ollama":
                     # Using /ollama/api/chat endpoint
                     form_data = convert_payload_openai_to_ollama(form_data)
