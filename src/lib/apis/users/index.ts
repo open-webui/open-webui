@@ -174,12 +174,12 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 export const getUsers = async (token: string, limit?: number) => {
 	let error = null;
 
-	const url = new URL(`${WEBUI_API_BASE_URL}/users/`);
+	let url = `${WEBUI_API_BASE_URL}/users/`;
 	if (limit) {
-		url.searchParams.append('limit', limit.toString());
+		url = `${url}?limit=${limit}`;
 	}
 
-	const res = await fetch(url.toString(), {
+	const res = await fetch(url, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
