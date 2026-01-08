@@ -163,9 +163,10 @@ async def get_function_models(request, user: UserModel = None):
     # OPTIMIZATION: Pre-fetch data needed for filtering ONCE, not per-pipe
     # This avoids N database queries in the loop
     
-    # For users: pre-fetch user's groups and all models with group assignments
+    # For users: pre-fetch user's groups and all models assigned to those groups
     user_group_ids = set()  # Initialize as set for consistency
-    creator_to_accessible_groups = {}  # Map: creator_email -> set of group_ids they assigned models to
+    accessible_model_ids = set()  # Model IDs assigned to user's groups
+    accessible_pipe_ids = set()  # Pipe IDs that have models assigned to user's groups
     
     if user.role == "user":
         # Fetch user's groups ONCE
@@ -173,20 +174,28 @@ async def get_function_models(request, user: UserModel = None):
         user_group_ids = set(g.id for g in user_groups)
         
         # Fetch ALL models with access_control in ONE query
-        # Then build a map of which creators have models assigned to which groups
+        # Build sets of accessible model IDs and pipe IDs
         with get_db() as db:
             all_models_with_access = db.query(Model).filter(
-                Model.access_control.isnot(None),
-                Model.created_by.isnot(None)
+                Model.access_control.isnot(None)
             ).all()
         
         for model in all_models_with_access:
             if model.access_control:
-                read_groups = model.access_control.get("read", {}).get("group_ids", [])
-                if read_groups:
-                    if model.created_by not in creator_to_accessible_groups:
-                        creator_to_accessible_groups[model.created_by] = set()
-                    creator_to_accessible_groups[model.created_by].update(read_groups)
+                read_groups = set(model.access_control.get("read", {}).get("group_ids", []))
+                # Check if any of user's groups have read access to this model
+                if read_groups & user_group_ids:
+                    accessible_model_ids.add(model.id)
+                    # Extract pipe ID from model ID (e.g., "llm_portkey.gpt-4" -> "llm_portkey")
+                    if "." in model.id:
+                        pipe_id = model.id.rsplit(".", 1)[0]
+                        accessible_pipe_ids.add(pipe_id)
+                    else:
+                        # Model ID without dot is the pipe ID itself
+                        accessible_pipe_ids.add(model.id)
+        
+        log.debug(f"User {user.email} has access to {len(accessible_model_ids)} models via groups: {accessible_model_ids}")
+        log.debug(f"User {user.email} has access to pipes: {accessible_pipe_ids}")
     
     # STEP 1: Filter pipes based on access (fast, no module loading)
     accessible_pipes = []
@@ -198,14 +207,10 @@ async def get_function_models(request, user: UserModel = None):
         elif user.role == "admin":
             if pipe.created_by == user.email:
                 accessible_pipes.append(pipe)
-        # For users: only show pipes where creator has models assigned to user's groups
+        # For users: only show pipes that have models assigned to user's groups
         elif user.role == "user":
-            creator_email = pipe.created_by
-            if not creator_email:
-                continue  # Skip pipes without a creator
-            # Check if this creator has any models assigned to user's groups
-            creator_groups = creator_to_accessible_groups.get(creator_email, set())
-            if creator_groups & user_group_ids:  # Set intersection - O(min(len(a), len(b)))
+            # Check if this pipe has any models assigned to user's groups
+            if pipe.id in accessible_pipe_ids:
                 accessible_pipes.append(pipe)
         # Unknown role - skip for safety
         else:
@@ -264,6 +269,12 @@ async def get_function_models(request, user: UserModel = None):
                     sub_pipe_id = f'{pipe.id}.{p["id"]}'
                     sub_pipe_name = p["name"]
                     
+                    # For users: only include models that are explicitly assigned to their groups
+                    if user.role == "user":
+                        if sub_pipe_id not in accessible_model_ids:
+                            log.debug(f"Skipping model {sub_pipe_id} - not assigned to user's groups")
+                            continue
+                    
                     if hasattr(function_module, "name"):
                         sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
                     
@@ -280,6 +291,12 @@ async def get_function_models(request, user: UserModel = None):
                     })
             else:
                 pipe_flag = {"type": "pipe"}
+                
+                # For users: only include models that are explicitly assigned to their groups
+                if user.role == "user":
+                    if pipe.id not in accessible_model_ids:
+                        log.debug(f"Skipping model {pipe.id} - not assigned to user's groups")
+                        return models  # Return empty list
                 
                 log.debug(f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}")
                 
