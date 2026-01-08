@@ -37,6 +37,7 @@
 	export let atSelectedModel;
 
 	let messages = [];
+	let dismissedMetricCardIds = new Set<string>();
 
 	export let setInputText: Function = () => {};
 
@@ -75,6 +76,39 @@
 		messagesLoading = false;
 	};
 
+	const dismissedMetricCardKey = (id: string) => `dismissedMetricCardIds:${id || 'default'}`;
+
+	const loadDismissedMetricCards = () => {
+		if (typeof localStorage === 'undefined') {
+			return;
+		}
+		try {
+			const raw = localStorage.getItem(dismissedMetricCardKey(chatId));
+			const parsed = raw ? JSON.parse(raw) : [];
+			dismissedMetricCardIds = new Set(Array.isArray(parsed) ? parsed : []);
+		} catch (error) {
+			dismissedMetricCardIds = new Set();
+		}
+	};
+
+	const dismissMetricCard = (messageId: string) => {
+		if (!messageId) {
+			return;
+		}
+		dismissedMetricCardIds = new Set([...dismissedMetricCardIds, messageId]);
+		if (typeof localStorage === 'undefined') {
+			return;
+		}
+		try {
+			localStorage.setItem(
+				dismissedMetricCardKey(chatId),
+				JSON.stringify(Array.from(dismissedMetricCardIds))
+			);
+		} catch (error) {
+			// Ignore persistence errors
+		}
+	};
+
 	$: if (history.currentId) {
 		let _messages = [];
 
@@ -88,6 +122,14 @@
 	} else {
 		messages = [];
 	}
+
+	$: if (chatId) {
+		loadDismissedMetricCards();
+	}
+
+	onMount(() => {
+		loadDismissedMetricCards();
+	});
 
 	$: if (autoScroll && bottomPadding) {
 		(async () => {
@@ -470,12 +512,13 @@
 										: ''}
 									{@const timeframeValue = extractTimeframe(parentContent)}
 									{@const titleValue = extractMetricTitle(message?.content ?? '')}
-									{#if message?.done && metricValue}
+									{#if message?.done && metricValue && !dismissedMetricCardIds.has(message.id)}
 										<div class="hidden md:block flex-shrink-0">
 											<MetricCard
 												metricValue={metricValue || undefined}
 												title={titleValue || undefined}
 												timeframe={timeframeValue || undefined}
+												on:close={() => dismissMetricCard(message.id)}
 											/>
 										</div>
 									{/if}
