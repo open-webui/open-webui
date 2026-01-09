@@ -107,6 +107,7 @@
 
 	let actionIds = [];
 	let accessControl = {};
+	let tts = { voice: '' };
 
 	const submitHandler = async () => {
 		loading = true;
@@ -194,6 +195,18 @@
 			}
 		}
 
+		if (tts.voice !== '') {
+			if (!info.meta.tts) info.meta.tts = {};
+			info.meta.tts.voice = tts.voice;
+		} else {
+			if (info.meta.tts?.voice) {
+				delete info.meta.tts.voice;
+				if (Object.keys(info.meta.tts).length === 0) {
+					delete info.meta.tts;
+				}
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
@@ -275,6 +288,7 @@
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
+			tts = { voice: model?.meta?.tts?.voice ?? '' };
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;
@@ -765,6 +779,20 @@
 							</div>
 						{/if}
 					{/if}
+
+					<div class="my-2">
+						<div class="flex w-full justify-between mb-1">
+							<div class="self-center text-xs font-medium text-gray-500">
+								{$i18n.t('TTS Voice')}
+							</div>
+						</div>
+						<input
+							class="w-full text-sm bg-transparent outline-hidden"
+							type="text"
+							bind:value={tts.voice}
+							placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
+						/>
+					</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
