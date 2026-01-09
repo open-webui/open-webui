@@ -8,10 +8,10 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
-	import { getModels, updateModelById as updateModel } from '$lib/apis/models';
-	import { updateGroupById, getGroupById } from '$lib/apis/groups';
-	import { updateModelById, toggleModelById } from '$lib/apis/models';
+import { getModels, getModelById, updateModelById as updateModel, updateModelById, toggleModelById } from '$lib/apis/models';
+import { updateGroupById, getGroupById } from '$lib/apis/groups';
 
 	export let show = false;
 	export let group = null;
@@ -30,6 +30,9 @@
 	// Model editor state
 	let showModelEditor = false;
 	let editingModel = null;
+
+	// Edit spinner state
+	let editingLoading = false;
 
 	// Selected items for each category - store complete objects
 	let selectedModels = [];
@@ -277,7 +280,9 @@
 					{#if !initialized || !resourcesLoaded}
 						<!-- Show loading state -->
 						<div class="text-center py-16">
-							<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
+							<div class="flex justify-center">
+								<Spinner />
+							</div>
 							<div class="mt-2 text-sm text-gray-500">
 								{!resourcesLoaded ? $i18n.t('Loading resources...') : $i18n.t('Loading workspace...')}
 							</div>
@@ -378,9 +383,21 @@
 															<button
 																class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																type="button"
-																on:click|stopPropagation={() => {
-																	editingModel = item;
-																	showModelEditor = true;
+																on:click|stopPropagation={async () => {
+																	editingLoading = true;
+
+																	try {
+																		// Fetch full model details BEFORE opening modal
+																		const fullModel = await getModelById(localStorage.token, item.id);
+
+																		editingModel = fullModel;
+																		showModelEditor = true;
+																	} catch (error) {
+																		console.error('Failed to load model details:', error);
+																		toast.error($i18n.t('Failed to load model details'));
+																	} finally {
+																		editingLoading = false;
+																	}
 																}}
 															>
 																<svg
@@ -511,9 +528,21 @@
 																<button
 																	class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																	type="button"
-																	on:click|stopPropagation={() => {
-																		editingModel = item;
-																		showModelEditor = true;
+																	on:click|stopPropagation={async () => {
+																		editingLoading = true;
+
+																		try {
+																			// Fetch full model details BEFORE opening modal
+																			const fullModel = await getModelById(localStorage.token, item.id);
+
+																			editingModel = fullModel;
+																			showModelEditor = true;
+																		} catch (error) {
+																			console.error('Failed to load model details:', error);
+																			toast.error($i18n.t('Failed to load model details'));
+																		} finally {
+																			editingLoading = false;
+																		}
 																	}}
 																>
 																	<svg
@@ -640,29 +669,9 @@
 
 								{#if loading}
 									<div class="ml-2 self-center">
-										<svg
-											class="w-4 h-4"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											xmlns="http://www.w3.org/2000/svg"
-											><style>
-												.spinner_ajPY {
-													transform-origin: center;
-													animation: spinner_AtaB 0.75s infinite linear;
-												}
-												@keyframes spinner_AtaB {
-													100% {
-														transform: rotate(360deg);
-													}
-												}
-											</style><path
-												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-												opacity=".25"
-											/><path
-												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-												class="spinner_ajPY"
-											/></svg
-										>
+										<div class="m-auto">
+											<Spinner />
+										</div>
 									</div>
 								{/if}
 							</button>
@@ -675,6 +684,13 @@
 			</div>
 		</div>
 	</div>
+{#if editingLoading}
+	<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
+		<div class="flex flex-col items-center gap-3 bg-white dark:bg-gray-900 px-6 py-5 rounded-xl">
+			<Spinner />
+		</div>
+	</div>
+{/if}
 </Modal>
 
 <!-- Model Editor Modal -->
