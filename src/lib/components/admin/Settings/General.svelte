@@ -678,6 +678,14 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Enable Individual User Sharing')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_INDIVIDUAL_USER_SHARING} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Folders')}
 						</div>
 

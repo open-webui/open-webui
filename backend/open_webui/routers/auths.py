@@ -943,6 +943,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "ENABLE_INDIVIDUAL_USER_SHARING": request.app.state.config.ENABLE_INDIVIDUAL_USER_SHARING,
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
@@ -965,6 +966,7 @@ class AdminConfig(BaseModel):
     ENABLE_CHANNELS: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
+    ENABLE_INDIVIDUAL_USER_SHARING: bool
     PENDING_USER_OVERLAY_TITLE: Optional[str] = None
     PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
     RESPONSE_WATERMARK: Optional[str] = None
@@ -1007,6 +1009,9 @@ async def update_admin_config(
     request.app.state.config.ENABLE_MESSAGE_RATING = form_data.ENABLE_MESSAGE_RATING
 
     request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
+    request.app.state.config.ENABLE_INDIVIDUAL_USER_SHARING = (
+        form_data.ENABLE_INDIVIDUAL_USER_SHARING
+    )
 
     request.app.state.config.PENDING_USER_OVERLAY_TITLE = (
         form_data.PENDING_USER_OVERLAY_TITLE
@@ -1033,6 +1038,7 @@ async def update_admin_config(
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "ENABLE_INDIVIDUAL_USER_SHARING": request.app.state.config.ENABLE_INDIVIDUAL_USER_SHARING,
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,

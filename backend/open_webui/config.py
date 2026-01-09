@@ -1614,6 +1614,12 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
     os.environ.get("ENABLE_USER_WEBHOOKS", "True").lower() == "true",
 )
 
+ENABLE_INDIVIDUAL_USER_SHARING = PersistentConfig(
+    "ENABLE_INDIVIDUAL_USER_SHARING",
+    "ui.enable_individual_user_sharing",
+    os.environ.get("ENABLE_INDIVIDUAL_USER_SHARING", "True").lower() == "true",
+)
+
 # FastAPI / AnyIO settings
 THREAD_POOL_SIZE = os.getenv("THREAD_POOL_SIZE", None)
 
