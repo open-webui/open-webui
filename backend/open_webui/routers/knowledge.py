@@ -46,6 +46,54 @@ router = APIRouter()
 
 PAGE_ITEM_COUNT = 30
 
+############################
+# Knowledge Base Embedding
+############################
+
+KNOWLEDGE_BASES_COLLECTION = "knowledge-bases"
+
+
+async def embed_knowledge_base_metadata(
+    request: Request,
+    knowledge_base_id: str,
+    name: str,
+    description: str,
+) -> bool:
+    """Generate and store embedding for knowledge base."""
+    try:
+        content = f"{name}\n\n{description}" if description else name
+        embedding = await request.app.state.EMBEDDING_FUNCTION(content)
+        VECTOR_DB_CLIENT.upsert(
+            collection_name=KNOWLEDGE_BASES_COLLECTION,
+            items=[
+                {
+                    "id": knowledge_base_id,
+                    "text": content,
+                    "vector": embedding,
+                    "metadata": {
+                        "knowledge_base_id": knowledge_base_id,
+                    },
+                }
+            ],
+        )
+        return True
+    except Exception as e:
+        log.error(f"Failed to embed knowledge base {knowledge_base_id}: {e}")
+        return False
+
+
+def remove_knowledge_base_metadata_embedding(knowledge_base_id: str) -> bool:
+    """Remove knowledge base embedding."""
+    try:
+        VECTOR_DB_CLIENT.delete(
+            collection_name=KNOWLEDGE_BASES_COLLECTION,
+            ids=[knowledge_base_id],
+        )
+        return True
+    except Exception as e:
+        log.debug(f"Failed to remove embedding for {knowledge_base_id}: {e}")
+        return False
+
 
 class KnowledgeAccessResponse(KnowledgeUserResponse):
     write_access: Optional[bool] = False
@@ -205,6 +253,13 @@ async def create_new_knowledge(
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data, db=db)
 
     if knowledge:
+        # Embed knowledge base for semantic search
+        await embed_knowledge_base_metadata(
+            request,
+            knowledge.id,
+            knowledge.name,
+            knowledge.description,
+        )
         return knowledge
     else:
         raise HTTPException(
@@ -279,6 +334,30 @@ async def reindex_knowledge_files(
 
     log.info(f"Reindexing completed.")
     return True
+
+
+############################
+# ReindexKnowledgeBases
+############################
+
+
+@router.post("/metadata/reindex", response_model=dict)
+async def reindex_knowledge_base_metadata_embeddings(
+    request: Request,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    """Batch embed all existing knowledge bases. Admin only."""
+    knowledge_bases = Knowledges.get_knowledge_bases(db=db)
+    log.info(f"Reindexing embeddings for {len(knowledge_bases)} knowledge bases")
+
+    success_count = 0
+    for kb in knowledge_bases:
+        if await embed_knowledge_base_metadata(request, kb.id, kb.name, kb.description):
+            success_count += 1
+
+    log.info(f"Embedding reindex complete: {success_count}/{len(knowledge_bases)}")
+    return {"total": len(knowledge_bases), "success": success_count}
 
 
 ############################
@@ -369,6 +448,13 @@ async def update_knowledge_by_id(
 
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data, db=db)
     if knowledge:
+        # Re-embed knowledge base for semantic search
+        await embed_knowledge_base_metadata(
+            request,
+            knowledge.id,
+            knowledge.name,
+            knowledge.description,
+        )
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
@@ -718,6 +804,10 @@ async def delete_knowledge_by_id(
     except Exception as e:
         log.debug(e)
         pass
+
+    # Remove knowledge base embedding
+    remove_knowledge_base_metadata_embedding(id)
+
     result = Knowledges.delete_knowledge_by_id(id=id, db=db)
     return result
 

@@ -157,7 +157,7 @@ class MilvusClient(VectorDBBase):
         collection.insert(entities)
 
     def search(
-        self, collection_name: str, vectors: List[List[float]], limit: int
+        self, collection_name: str, vectors: List[List[float]], filter: Optional[Dict] = None, limit: int = 10
     ) -> Optional[SearchResult]:
         if not vectors:
             return None

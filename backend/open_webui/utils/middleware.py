@@ -157,7 +157,7 @@ def get_citation_source_from_tool_result(
     - document: list of document contents
     - metadata: list of metadata objects with source, file_id, name fields
 
-    Returns a list of sources (usually one, but query_knowledge_bases may return multiple).
+    Returns a list of sources (usually one, but query_knowledge_files may return multiple).
     """
     try:
         if tool_name == "search_web":
@@ -217,7 +217,7 @@ def get_citation_source_from_tool_result(
                 }
             ]
 
-        elif tool_name == "query_knowledge_bases":
+        elif tool_name == "query_knowledge_files":
             chunks = json.loads(tool_result)
 
             # Group chunks by source for better citation display
@@ -3343,7 +3343,7 @@ async def process_chat_response(
                             in [
                                 "search_web",
                                 "view_knowledge_file",
-                                "query_knowledge_bases",
+                                "query_knowledge_files",
                             ]
                             and tool_result
                         ):

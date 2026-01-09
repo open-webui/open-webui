@@ -39,6 +39,8 @@ from open_webui.models.groups import Groups
 
 log = logging.getLogger(__name__)
 
+MAX_KNOWLEDGE_BASE_SEARCH_ITEMS = 10_000
+
 # =============================================================================
 # TIME UTILITIES
 # =============================================================================
@@ -1413,7 +1415,7 @@ async def view_knowledge_file(
         return json.dumps({"error": str(e)})
 
 
-async def query_knowledge_bases(
+async def query_knowledge_files(
     query: str,
     knowledge_ids: Optional[list[str]] = None,
     count: int = 5,
@@ -1422,7 +1424,7 @@ async def query_knowledge_bases(
     __model_knowledge__: list[dict] = None,
 ) -> str:
     """
-    Search internal knowledge bases using semantic/vector search. This should be your first
+    Search knowledge base files using semantic/vector search. This should be your first
     choice for finding information before searching the web. Searches across collections (KBs),
     individual files, and notes that the user has access to.
 
@@ -1559,5 +1561,104 @@ async def query_knowledge_bases(
 
         return json.dumps(chunks, ensure_ascii=False)
     except Exception as e:
+        log.exception(f"query_knowledge_files error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+async def query_knowledge_bases(
+    query: str,
+    count: int = 5,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Search knowledge bases by semantic similarity to query.
+    Finds KBs whose name/description match the meaning of your query.
+    Use this to discover relevant knowledge bases before querying their files.
+
+    :param query: Natural language query describing what you're looking for
+    :param count: Maximum results (default: 5)
+    :return: JSON with matching KBs (id, name, description, similarity)
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if not __user__:
+        return json.dumps({"error": "User context not available"})
+
+    try:
+        import heapq
+        from open_webui.models.knowledge import Knowledges
+        from open_webui.routers.knowledge import KNOWLEDGE_BASES_COLLECTION
+        from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
+        user_id = __user__.get("id")
+        user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+        query_embedding = await __request__.app.state.EMBEDDING_FUNCTION(query)
+
+        # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
+        top_results_heap = []
+        seen_ids = set()
+        page_offset = 0
+        page_size = 100
+
+        while True:
+            accessible_knowledge_bases = Knowledges.search_knowledge_bases(
+                user_id,
+                filter={"user_id": user_id, "group_ids": user_group_ids},
+                skip=page_offset,
+                limit=page_size,
+            )
+
+            if not accessible_knowledge_bases.items:
+                break
+
+            accessible_ids = [kb.id for kb in accessible_knowledge_bases.items]
+
+            search_results = VECTOR_DB_CLIENT.search(
+                collection_name=KNOWLEDGE_BASES_COLLECTION,
+                vectors=[query_embedding],
+                filter={"knowledge_base_id": {"$in": accessible_ids}},
+                limit=count,
+            )
+
+            if search_results and search_results.ids and search_results.ids[0]:
+                result_ids = search_results.ids[0]
+                result_distances = search_results.distances[0] if search_results.distances else [0] * len(result_ids)
+
+                for knowledge_base_id, distance in zip(result_ids, result_distances):
+                    if knowledge_base_id in seen_ids:
+                        continue
+                    seen_ids.add(knowledge_base_id)
+
+                    if len(top_results_heap) < count:
+                        heapq.heappush(top_results_heap, (distance, knowledge_base_id))
+                    elif distance > top_results_heap[0][0]:
+                        heapq.heapreplace(top_results_heap, (distance, knowledge_base_id))
+
+            page_offset += page_size
+            if len(accessible_knowledge_bases.items) < page_size:
+                break
+            if page_offset >= MAX_KNOWLEDGE_BASE_SEARCH_ITEMS:
+                break
+
+        # Sort by distance descending (best first) and fetch KB details
+        sorted_results = sorted(top_results_heap, key=lambda x: x[0], reverse=True)
+
+        matching_knowledge_bases = []
+        for distance, knowledge_base_id in sorted_results:
+            knowledge_base = Knowledges.get_knowledge_by_id(knowledge_base_id)
+            if knowledge_base:
+                matching_knowledge_bases.append({
+                    "id": knowledge_base.id,
+                    "name": knowledge_base.name,
+                    "description": knowledge_base.description or "",
+                    "similarity": round(distance, 4),
+                })
+
+        return json.dumps(matching_knowledge_bases, ensure_ascii=False)
+
+    except Exception as e:
         log.exception(f"query_knowledge_bases error: {e}")
         return json.dumps({"error": str(e)})
+

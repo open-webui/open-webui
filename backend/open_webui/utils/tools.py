@@ -68,9 +68,10 @@ from open_webui.tools.builtin import (
     write_note,
     list_knowledge_bases,
     search_knowledge_bases,
-    search_knowledge_files,
-    view_knowledge_file,
     query_knowledge_bases,
+    search_knowledge_files,
+    query_knowledge_files,
+    view_knowledge_file,
 )
 
 import copy
@@ -406,21 +407,22 @@ def get_builtin_tools(
     builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
     # Knowledge base tools - conditional injection based on model knowledge
-    # If model has attached knowledge (any type), only provide query_knowledge_bases
+    # If model has attached knowledge (any type), only provide query_knowledge_files
     # Otherwise, provide all KB browsing tools
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
     if model_knowledge:
         # Model has attached knowledge - only allow semantic search within it
-        builtin_functions.append(query_knowledge_bases)
+        builtin_functions.append(query_knowledge_files)
     else:
         # No model knowledge - allow full KB browsing
         builtin_functions.extend(
             [
                 list_knowledge_bases,
                 search_knowledge_bases,
-                search_knowledge_files,
-                view_knowledge_file,
                 query_knowledge_bases,
+                search_knowledge_files,
+                query_knowledge_files,
+                view_knowledge_file,
             ]
         )
 
