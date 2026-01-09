@@ -345,3 +345,37 @@ export const deleteAllModels = async (token: string) => {
 
 	return res;
 };
+
+export const bulkUpdateModelOptions = async (token: string, options: object) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/bulk/options`, {
+		method: 'PATCH',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(options)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+

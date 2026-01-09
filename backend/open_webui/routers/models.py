@@ -296,6 +296,101 @@ async def sync_models(
     return Models.sync_models(user.id, form_data.models, db=db)
 
 
+############################
+# BulkUpdateModelOptions
+############################
+
+
+class BulkModelOptionsForm(BaseModel):
+    capabilities: Optional[dict] = None
+    toolIds: Optional[list[str]] = None
+    filterIds: Optional[list[str]] = None
+    defaultFilterIds: Optional[list[str]] = None
+    actionIds: Optional[list[str]] = None
+    defaultFeatureIds: Optional[list[str]] = None
+
+
+@router.patch("/bulk/options", response_model=dict)
+async def bulk_update_model_options(
+    form_data: BulkModelOptionsForm,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Update options for all models (admin only).
+    
+    This endpoint updates meta fields for all models in the database.
+    Only provided fields (non-None) will be updated.
+    Individual model options can still be customized after this bulk update.
+    """
+    try:
+        all_models = Models.get_all_models(db=db)
+        updated_count = 0
+        
+        for model in all_models:
+            # Get current meta
+            updated_meta = model.meta.model_dump() if model.meta else {}
+            modified = False
+            
+            # Update capabilities if provided
+            if form_data.capabilities is not None:
+                updated_meta["capabilities"] = form_data.capabilities
+                modified = True
+            
+            # Update toolIds if provided
+            if form_data.toolIds is not None:
+                updated_meta["toolIds"] = form_data.toolIds
+                modified = True
+            
+            # Update filterIds if provided
+            if form_data.filterIds is not None:
+                updated_meta["filterIds"] = form_data.filterIds
+                modified = True
+            
+            # Update defaultFilterIds if provided
+            if form_data.defaultFilterIds is not None:
+                updated_meta["defaultFilterIds"] = form_data.defaultFilterIds
+                modified = True
+            
+            # Update actionIds if provided
+            if form_data.actionIds is not None:
+                updated_meta["actionIds"] = form_data.actionIds
+                modified = True
+            
+            # Update defaultFeatureIds if provided
+            if form_data.defaultFeatureIds is not None:
+                updated_meta["defaultFeatureIds"] = form_data.defaultFeatureIds
+                modified = True
+            
+            # Only update if something changed
+            if modified:
+                # Create updated model form
+                updated_model = ModelForm(
+                    id=model.id,
+                    base_model_id=model.base_model_id,
+                    name=model.name,
+                    meta=updated_meta,
+                    params=model.params.model_dump() if model.params else {},
+                    access_control=model.access_control,
+                    is_active=model.is_active,
+                )
+                
+                # Update in database
+                result = Models.update_model_by_id(model.id, updated_model, db=db)
+                if result:
+                    updated_count += 1
+        
+        return {"updated": updated_count, "total": len(all_models)}
+    
+    except Exception as e:
+        log.exception(f"Error bulk updating model options: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+
 ###########################
 # GetModelById
 ###########################

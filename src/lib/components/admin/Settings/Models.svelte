@@ -34,6 +34,7 @@
 	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
+	import BulkCapabilitiesModal from './Models/BulkCapabilitiesModal.svelte';
 	import ModelMenu from '$lib/components/admin/Settings/Models/ModelMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
@@ -57,6 +58,7 @@
 
 	let showConfigModal = false;
 	let showManageModal = false;
+	let showBulkCapabilitiesModal = false;
 
 	$: if (models) {
 		filteredModels = models
@@ -270,6 +272,7 @@
 
 <ConfigureModelsModal bind:show={showConfigModal} initHandler={init} />
 <ManageModelsModal bind:show={showManageModal} />
+<BulkCapabilitiesModal bind:show={showBulkCapabilitiesModal} onUpdate={init} />
 
 {#if models !== null}
 	{#if selectedModelId === null}
@@ -292,6 +295,27 @@
 							}}
 						>
 							<Download />
+						</button>
+					</Tooltip>
+
+					<Tooltip content={$i18n.t('Bulk Model Options')}>
+						<button
+							class=" p-1 rounded-full flex gap-1 items-center"
+							type="button"
+							on:click={() => {
+								showBulkCapabilitiesModal = true;
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-4"
+							>
+								<path
+									d="M11.983 1.907a.75.75 0 00-1.292-.657l-8.5 9.5A.75.75 0 002.75 12h6.572l-1.305 6.093a.75.75 0 001.292.657l8.5-9.5A.75.75 0 0017.25 8h-6.572l1.305-6.093z"
+								/>
+							</svg>
 						</button>
 					</Tooltip>
 

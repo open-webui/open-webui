@@ -60,12 +60,15 @@
 		status_updates?: boolean;
 		builtin_tools?: boolean;
 	} = {};
+	export let showTitle = true;
 </script>
 
 <div>
-	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Capabilities')}</div>
-	</div>
+	{#if showTitle}
+		<div class="flex w-full justify-between mb-1">
+			<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Capabilities')}</div>
+		</div>
+	{/if}
 	<div class="flex items-center mt-2 flex-wrap">
 		{#each Object.keys(capabilityLabels) as capability}
 			<div class=" flex items-center gap-2 mr-3">

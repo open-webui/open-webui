@@ -23,12 +23,15 @@
 
 	export let availableFeatures = ['web_search', 'image_generation', 'code_interpreter'];
 	export let featureIds = [];
+	export let showTitle = true;
 </script>
 
 <div>
-	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Default Features')}</div>
-	</div>
+	{#if showTitle}
+		<div class="flex w-full justify-between mb-1">
+			<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Default Features')}</div>
+		</div>
+	{/if}
 	<div class="flex items-center mt-2 flex-wrap">
 		{#each availableFeatures as feature}
 			<div class=" flex items-center gap-2 mr-3">
