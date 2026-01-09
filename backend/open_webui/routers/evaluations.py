@@ -49,7 +49,9 @@ router = APIRouter()
 #    4. Feedbacks about unrelated topics (e.g., "cooking") contribute less
 #    This gives topic-specific leaderboards without needing separate data.
 
-EMBEDDING_MODEL_NAME = "TaylorAI/bge-micro-v2"
+import os
+
+EMBEDDING_MODEL_NAME = os.environ.get("AUXILIARY_EMBEDDING_MODEL", "TaylorAI/bge-micro-v2")
 _embedding_model = None
 
 
