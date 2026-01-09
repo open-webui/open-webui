@@ -1624,7 +1624,11 @@ async def query_knowledge_bases(
 
             if search_results and search_results.ids and search_results.ids[0]:
                 result_ids = search_results.ids[0]
-                result_distances = search_results.distances[0] if search_results.distances else [0] * len(result_ids)
+                result_distances = (
+                    search_results.distances[0]
+                    if search_results.distances
+                    else [0] * len(result_ids)
+                )
 
                 for knowledge_base_id, distance in zip(result_ids, result_distances):
                     if knowledge_base_id in seen_ids:
@@ -1634,7 +1638,9 @@ async def query_knowledge_bases(
                     if len(top_results_heap) < count:
                         heapq.heappush(top_results_heap, (distance, knowledge_base_id))
                     elif distance > top_results_heap[0][0]:
-                        heapq.heapreplace(top_results_heap, (distance, knowledge_base_id))
+                        heapq.heapreplace(
+                            top_results_heap, (distance, knowledge_base_id)
+                        )
 
             page_offset += page_size
             if len(accessible_knowledge_bases.items) < page_size:
@@ -1649,16 +1655,17 @@ async def query_knowledge_bases(
         for distance, knowledge_base_id in sorted_results:
             knowledge_base = Knowledges.get_knowledge_by_id(knowledge_base_id)
             if knowledge_base:
-                matching_knowledge_bases.append({
-                    "id": knowledge_base.id,
-                    "name": knowledge_base.name,
-                    "description": knowledge_base.description or "",
-                    "similarity": round(distance, 4),
-                })
+                matching_knowledge_bases.append(
+                    {
+                        "id": knowledge_base.id,
+                        "name": knowledge_base.name,
+                        "description": knowledge_base.description or "",
+                        "similarity": round(distance, 4),
+                    }
+                )
 
         return json.dumps(matching_knowledge_bases, ensure_ascii=False)
 
     except Exception as e:
         log.exception(f"query_knowledge_bases error: {e}")
         return json.dumps({"error": str(e)})
-

@@ -477,7 +477,7 @@ class PgvectorClient(VectorDBBase):
 
             # Build the lateral subquery for each query vector
             where_clauses = [DocumentChunk.collection_name == collection_name]
-            
+
             # Apply metadata filter if provided
             if filter:
                 for key, value in filter.items():
@@ -487,20 +487,27 @@ class PgvectorClient(VectorDBBase):
                         if PGVECTOR_PGCRYPTO:
                             where_clauses.append(
                                 pgcrypto_decrypt(
-                                    DocumentChunk.vmetadata, PGVECTOR_PGCRYPTO_KEY, JSONB
+                                    DocumentChunk.vmetadata,
+                                    PGVECTOR_PGCRYPTO_KEY,
+                                    JSONB,
                                 )[key].astext.in_([str(v) for v in in_values])
                             )
                         else:
                             where_clauses.append(
-                                DocumentChunk.vmetadata[key].astext.in_([str(v) for v in in_values])
+                                DocumentChunk.vmetadata[key].astext.in_(
+                                    [str(v) for v in in_values]
+                                )
                             )
                     else:
                         # Handle simple equality: {"field": "value"}
                         if PGVECTOR_PGCRYPTO:
                             where_clauses.append(
                                 pgcrypto_decrypt(
-                                    DocumentChunk.vmetadata, PGVECTOR_PGCRYPTO_KEY, JSONB
-                                )[key].astext == str(value)
+                                    DocumentChunk.vmetadata,
+                                    PGVECTOR_PGCRYPTO_KEY,
+                                    JSONB,
+                                )[key].astext
+                                == str(value)
                             )
                         else:
                             where_clauses.append(
