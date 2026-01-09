@@ -38,7 +38,7 @@
 		<div class="m-auto pb-10 flex flex-col justify-center">
 			<div class="max-w-2xl w-[92vw]">
 				<div class="text-center dark:text-white text-2xl font-medium z-50">
-					{$i18n.t('Pilot GenAI Terms & Conditions')}
+					{$i18n.t('NYU Pilot GenAI Terms & Conditions')}
 				</div>
 
 				<div class="mt-4 text-sm dark:text-gray-200 w-full">
