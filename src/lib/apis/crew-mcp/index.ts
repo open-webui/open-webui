@@ -70,7 +70,7 @@ export const queryCrewMCP = async (
 	// Create an AbortController with extended timeout for long-running MCP operations
 	// SharePoint document analysis can take 120-180 seconds in production
 	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), 240000); // 4 minutes timeout
+	const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes timeout
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/crew-mcp/query`, {
 		method: 'POST',
