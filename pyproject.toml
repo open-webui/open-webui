@@ -21,7 +21,7 @@ dependencies = [
     "authlib==1.6.6",
 
     "requests==2.32.5",
-    "aiohttp==3.13.2",
+    "aiohttp==3.13.3",
     "async-timeout",
     "aiocache",
     "aiofiles",
@@ -70,7 +70,7 @@ dependencies = [
 
     "ftfy==6.3.1",
     "chardet==5.2.0",
-    "pypdf==6.5.0",
+    "pypdf==6.6.0",
     "fpdf2==2.8.5",
     "pymdown-extensions==10.20",
     "docx2txt==0.9",
