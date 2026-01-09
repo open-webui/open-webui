@@ -246,7 +246,13 @@ def get_user_ids_from_room(room):
     active_session_ids = get_session_ids_from_room(room)
 
     active_user_ids = list(
-        set([SESSION_POOL.get(session_id)["id"] for session_id in active_session_ids])
+        set(
+            [
+                SESSION_POOL.get(session_id)["id"]
+                for session_id in active_session_ids
+                if SESSION_POOL.get(session_id) is not None
+            ]
+        )
     )
     return active_user_ids
 

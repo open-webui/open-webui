@@ -1,9 +1,12 @@
 import json
 import logging
+import base64
+import io
 from typing import Optional
 
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
+from fastapi.responses import Response, StreamingResponse, FileResponse
 from pydantic import BaseModel
 from pydantic import field_validator
 
@@ -29,6 +32,8 @@ from open_webui.models.channels import (
     ChannelForm,
     ChannelResponse,
     CreateChannelForm,
+    ChannelWebhookModel,
+    ChannelWebhookForm,
 )
 from open_webui.models.messages import (
     Messages,
@@ -43,6 +48,7 @@ from open_webui.utils.files import get_image_base64_from_file_id
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import STATIC_DIR
 
 
 from open_webui.utils.models import (
@@ -61,6 +67,8 @@ from open_webui.utils.access_control import (
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.channels import extract_mentions, replace_mentions
+from open_webui.internal.db import get_session
+from sqlalchemy.orm import Session
 
 log = logging.getLogger(__name__)
 
@@ -98,26 +106,29 @@ class ChannelListItemResponse(ChannelModel):
 async def get_channels(
     request: Request,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
     if user.role != "admin" and not has_permission(
-        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    channels = Channels.get_channels_by_user_id(user.id)
+    channels = Channels.get_channels_by_user_id(user.id, db=db)
     channel_list = []
     for channel in channels:
-        last_message = Messages.get_last_message_by_channel_id(channel.id)
+        last_message = Messages.get_last_message_by_channel_id(channel.id, db=db)
         last_message_at = last_message.created_at if last_message else None
 
-        channel_member = Channels.get_member_by_channel_and_user_id(channel.id, user.id)
+        channel_member = Channels.get_member_by_channel_and_user_id(
+            channel.id, user.id, db=db
+        )
         unread_count = (
             Messages.get_unread_message_count(
-                channel.id, user.id, channel_member.last_read_at
+                channel.id, user.id, channel_member.last_read_at, db=db
             )
             if channel_member
             else 0
@@ -128,13 +139,16 @@ async def get_channels(
         if channel.type == "dm":
             user_ids = [
                 member.user_id
-                for member in Channels.get_members_by_channel_id(channel.id)
+                for member in Channels.get_members_by_channel_id(channel.id, db=db)
             ]
             users = [
                 UserIdNameStatusResponse(
-                    **{**user.model_dump(), "is_active": Users.is_user_active(user.id)}
+                    **{
+                        **user.model_dump(),
+                        "is_active": Users.is_user_active(user.id, db=db),
+                    }
                 )
-                for user in Users.get_users_by_user_ids(user_ids)
+                for user in Users.get_users_by_user_ids(user_ids, db=db)
             ]
 
         channel_list.append(
@@ -154,11 +168,12 @@ async def get_channels(
 async def get_all_channels(
     request: Request,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
     if user.role == "admin":
-        return Channels.get_channels()
-    return Channels.get_channels_by_user_id(user.id)
+        return Channels.get_channels(db=db)
+    return Channels.get_channels_by_user_id(user.id, db=db)
 
 
 ############################
@@ -171,10 +186,11 @@ async def get_dm_channel_by_user_id(
     request: Request,
     user_id: str,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
     if user.role != "admin" and not has_permission(
-        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -182,11 +198,15 @@ async def get_dm_channel_by_user_id(
         )
 
     try:
-        existing_channel = Channels.get_dm_channel_by_user_ids([user.id, user_id])
+        existing_channel = Channels.get_dm_channel_by_user_ids(
+            [user.id, user_id], db=db
+        )
         if existing_channel:
             participant_ids = [
                 member.user_id
-                for member in Channels.get_members_by_channel_id(existing_channel.id)
+                for member in Channels.get_members_by_channel_id(
+                    existing_channel.id, db=db
+                )
             ]
 
             await emit_to_users(
@@ -198,7 +218,9 @@ async def get_dm_channel_by_user_id(
                 f"channel:{existing_channel.id}", participant_ids
             )
 
-            Channels.update_member_active_status(existing_channel.id, user.id, True)
+            Channels.update_member_active_status(
+                existing_channel.id, user.id, True, db=db
+            )
             return ChannelModel(**existing_channel.model_dump())
 
         channel = Channels.insert_new_channel(
@@ -208,12 +230,13 @@ async def get_dm_channel_by_user_id(
                 user_ids=[user_id],
             ),
             user.id,
+            db=db,
         )
 
         if channel:
             participant_ids = [
                 member.user_id
-                for member in Channels.get_members_by_channel_id(channel.id)
+                for member in Channels.get_members_by_channel_id(channel.id, db=db)
             ]
 
             await emit_to_users(
@@ -243,10 +266,11 @@ async def create_new_channel(
     request: Request,
     form_data: CreateChannelForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
     if user.role != "admin" and not has_permission(
-        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -263,13 +287,13 @@ async def create_new_channel(
     try:
         if form_data.type == "dm":
             existing_channel = Channels.get_dm_channel_by_user_ids(
-                [user.id, *form_data.user_ids]
+                [user.id, *form_data.user_ids], db=db
             )
             if existing_channel:
                 participant_ids = [
                     member.user_id
                     for member in Channels.get_members_by_channel_id(
-                        existing_channel.id
+                        existing_channel.id, db=db
                     )
                 ]
                 await emit_to_users(
@@ -281,15 +305,17 @@ async def create_new_channel(
                     f"channel:{existing_channel.id}", participant_ids
                 )
 
-                Channels.update_member_active_status(existing_channel.id, user.id, True)
+                Channels.update_member_active_status(
+                    existing_channel.id, user.id, True, db=db
+                )
                 return ChannelModel(**existing_channel.model_dump())
 
-        channel = Channels.insert_new_channel(form_data, user.id)
+        channel = Channels.insert_new_channel(form_data, user.id, db=db)
 
         if channel:
             participant_ids = [
                 member.user_id
-                for member in Channels.get_members_by_channel_id(channel.id)
+                for member in Channels.get_members_by_channel_id(channel.id, db=db)
             ]
 
             await emit_to_users(
@@ -327,9 +353,10 @@ async def get_channel_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -339,23 +366,29 @@ async def get_channel_by_id(
     users = None
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
         user_ids = [
-            member.user_id for member in Channels.get_members_by_channel_id(channel.id)
+            member.user_id
+            for member in Channels.get_members_by_channel_id(channel.id, db=db)
         ]
 
         users = [
             UserIdNameStatusResponse(
-                **{**user.model_dump(), "is_active": Users.is_user_active(user.id)}
+                **{
+                    **user.model_dump(),
+                    "is_active": Users.is_user_active(user.id, db=db),
+                }
             )
-            for user in Users.get_users_by_user_ids(user_ids)
+            for user in Users.get_users_by_user_ids(user_ids, db=db)
         ]
 
-        channel_member = Channels.get_member_by_channel_and_user_id(channel.id, user.id)
+        channel_member = Channels.get_member_by_channel_and_user_id(
+            channel.id, user.id, db=db
+        )
         unread_count = Messages.get_unread_message_count(
             channel.id, user.id, channel_member.last_read_at if channel_member else None
         )
@@ -365,7 +398,9 @@ async def get_channel_by_id(
                 **channel.model_dump(),
                 "user_ids": user_ids,
                 "users": users,
-                "is_manager": Channels.is_user_channel_manager(channel.id, user.id),
+                "is_manager": Channels.is_user_channel_manager(
+                    channel.id, user.id, db=db
+                ),
                 "write_access": True,
                 "user_count": len(user_ids),
                 "last_read_at": channel_member.last_read_at if channel_member else None,
@@ -374,19 +409,25 @@ async def get_channel_by_id(
         )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
         write_access = has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False
+            user.id,
+            type="write",
+            access_control=channel.access_control,
+            strict=False,
+            db=db,
         )
 
         user_count = len(get_users_with_access("read", channel.access_control))
 
-        channel_member = Channels.get_member_by_channel_and_user_id(channel.id, user.id)
+        channel_member = Channels.get_member_by_channel_and_user_id(
+            channel.id, user.id, db=db
+        )
         unread_count = Messages.get_unread_message_count(
             channel.id, user.id, channel_member.last_read_at if channel_member else None
         )
@@ -396,7 +437,9 @@ async def get_channel_by_id(
                 **channel.model_dump(),
                 "user_ids": user_ids,
                 "users": users,
-                "is_manager": Channels.is_user_channel_manager(channel.id, user.id),
+                "is_manager": Channels.is_user_channel_manager(
+                    channel.id, user.id, db=db
+                ),
                 "write_access": write_access or user.role == "admin",
                 "user_count": user_count,
                 "last_read_at": channel_member.last_read_at if channel_member else None,
@@ -422,10 +465,11 @@ async def get_channel_members_by_id(
     direction: Optional[str] = None,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
 
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -437,22 +481,23 @@ async def get_channel_members_by_id(
     skip = (page - 1) * limit
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
     if channel.type == "dm":
         user_ids = [
-            member.user_id for member in Channels.get_members_by_channel_id(channel.id)
+            member.user_id
+            for member in Channels.get_members_by_channel_id(channel.id, db=db)
         ]
-        users = Users.get_users_by_user_ids(user_ids)
+        users = Users.get_users_by_user_ids(user_ids, db=db)
         total = len(users)
 
         return {
             "users": [
                 UserModelResponse(
-                    **user.model_dump(), is_active=Users.is_user_active(user.id)
+                    **user.model_dump(), is_active=Users.is_user_active(user.id, db=db)
                 )
                 for user in users
             ],
@@ -479,7 +524,7 @@ async def get_channel_members_by_id(
                 filter["user_ids"] = permitted_ids.get("user_ids")
                 filter["group_ids"] = permitted_ids.get("group_ids")
 
-        result = Users.get_users(filter=filter, skip=skip, limit=limit)
+        result = Users.get_users(filter=filter, skip=skip, limit=limit, db=db)
 
         users = result["users"]
         total = result["total"]
@@ -487,7 +532,7 @@ async def get_channel_members_by_id(
         return {
             "users": [
                 UserModelResponse(
-                    **user.model_dump(), is_active=Users.is_user_active(user.id)
+                    **user.model_dump(), is_active=Users.is_user_active(user.id, db=db)
                 )
                 for user in users
             ],
@@ -510,20 +555,23 @@ async def update_is_active_member_by_id_and_user_id(
     id: str,
     form_data: UpdateActiveMemberForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if not Channels.is_user_channel_member(channel.id, user.id):
+    if not Channels.is_user_channel_member(channel.id, user.id, db=db):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    Channels.update_member_active_status(channel.id, user.id, form_data.is_active)
+    Channels.update_member_active_status(
+        channel.id, user.id, form_data.is_active, db=db
+    )
     return True
 
 
@@ -543,17 +591,18 @@ async def add_members_by_id(
     id: str,
     form_data: UpdateMembersForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
     if user.role != "admin" and not has_permission(
-        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -566,7 +615,7 @@ async def add_members_by_id(
 
     try:
         memberships = Channels.add_members_to_channel(
-            channel.id, user.id, form_data.user_ids, form_data.group_ids
+            channel.id, user.id, form_data.user_ids, form_data.group_ids, db=db
         )
 
         return memberships
@@ -592,17 +641,18 @@ async def remove_members_by_id(
     id: str,
     form_data: RemoveMembersForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
     if user.role != "admin" and not has_permission(
-        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -614,7 +664,9 @@ async def remove_members_by_id(
         )
 
     try:
-        deleted = Channels.remove_members_from_channel(channel.id, form_data.user_ids)
+        deleted = Channels.remove_members_from_channel(
+            channel.id, form_data.user_ids, db=db
+        )
 
         return deleted
     except Exception as e:
@@ -635,17 +687,18 @@ async def update_channel_by_id(
     id: str,
     form_data: ChannelForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
     if user.role != "admin" and not has_permission(
-        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -657,7 +710,7 @@ async def update_channel_by_id(
         )
 
     try:
-        channel = Channels.update_channel_by_id(id, form_data)
+        channel = Channels.update_channel_by_id(id, form_data, db=db)
         return ChannelModel(**channel.model_dump())
     except Exception as e:
         log.exception(e)
@@ -676,17 +729,18 @@ async def delete_channel_by_id(
     request: Request,
     id: str,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
     if user.role != "admin" and not has_permission(
-        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -698,7 +752,7 @@ async def delete_channel_by_id(
         )
 
     try:
-        Channels.delete_channel_by_id(id)
+        Channels.delete_channel_by_id(id, db=db)
         return True
     except Exception as e:
         log.exception(e)
@@ -732,44 +786,52 @@ async def get_channel_messages(
     skip: int = 0,
     limit: int = 50,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
         channel_member = Channels.join_channel(
-            id, user.id
+            id, user.id, db=db
         )  # Ensure user is a member of the channel
 
-    message_list = Messages.get_messages_by_channel_id(id, skip, limit)
-    users = {}
+    message_list = Messages.get_messages_by_channel_id(id, skip, limit, db=db)
+
+    if not message_list:
+        return []
+
+    # Batch fetch all users in a single query (fixes N+1 problem)
+    user_ids = list(set(m.user_id for m in message_list))
+    users = {u.id: u for u in Users.get_users_by_user_ids(user_ids, db=db)}
 
     messages = []
     for message in message_list:
-        if message.user_id not in users:
-            user = Users.get_user_by_id(message.user_id)
-            users[message.user_id] = user
-
-        thread_replies = Messages.get_thread_replies_by_message_id(message.id)
+        thread_replies = Messages.get_thread_replies_by_message_id(message.id, db=db)
         latest_thread_reply_at = (
             thread_replies[0].created_at if thread_replies else None
         )
+
+        # Use message.user if present (for webhooks), otherwise look up by user_id
+        user_info = message.user
+        if user_info is None and message.user_id in users:
+            user_info = UserNameResponse(**users[message.user_id].model_dump())
 
         messages.append(
             MessageUserResponse(
@@ -777,8 +839,10 @@ async def get_channel_messages(
                     **message.model_dump(),
                     "reply_count": len(thread_replies),
                     "latest_reply_at": latest_thread_reply_at,
-                    "reactions": Messages.get_reactions_by_message_id(message.id),
-                    "user": UserNameResponse(**users[message.user_id].model_dump()),
+                    "reactions": Messages.get_reactions_by_message_id(
+                        message.id, db=db
+                    ),
+                    "user": user_info,
                 }
             )
         )
@@ -799,22 +863,23 @@ async def get_pinned_channel_messages(
     id: str,
     page: int = 1,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -824,21 +889,38 @@ async def get_pinned_channel_messages(
     skip = (page - 1) * PAGE_ITEM_COUNT_PINNED
     limit = PAGE_ITEM_COUNT_PINNED
 
-    message_list = Messages.get_pinned_messages_by_channel_id(id, skip, limit)
-    users = {}
+    message_list = Messages.get_pinned_messages_by_channel_id(id, skip, limit, db=db)
+
+    if not message_list:
+        return []
+
+    # Batch fetch all users in a single query (fixes N+1 problem)
+    user_ids = list(set(m.user_id for m in message_list))
+    users = {u.id: u for u in Users.get_users_by_user_ids(user_ids, db=db)}
 
     messages = []
     for message in message_list:
-        if message.user_id not in users:
-            user = Users.get_user_by_id(message.user_id)
-            users[message.user_id] = user
+        # Check for webhook identity in meta
+        webhook_info = message.meta.get("webhook") if message.meta else None
+        if webhook_info:
+            user_info = UserNameResponse(
+                id=webhook_info.get("id"),
+                name=webhook_info.get("name"),
+                role="webhook",
+            )
+        elif message.user_id in users:
+            user_info = UserNameResponse(**users[message.user_id].model_dump())
+        else:
+            user_info = None
 
         messages.append(
             MessageWithReactionsResponse(
                 **{
                     **message.model_dump(),
-                    "reactions": Messages.get_reactions_by_message_id(message.id),
-                    "user": UserNameResponse(**users[message.user_id].model_dump()),
+                    "reactions": Messages.get_reactions_by_message_id(
+                        message.id, db=db
+                    ),
+                    "user": user_info,
                 }
             )
         )
@@ -851,12 +933,14 @@ async def get_pinned_channel_messages(
 ############################
 
 
-async def send_notification(name, webui_url, channel, message, active_user_ids):
+async def send_notification(
+    name, webui_url, channel, message, active_user_ids, db=None
+):
     users = get_users_with_access("read", channel.access_control)
 
     for user in users:
         if (user.id not in active_user_ids) and Channels.is_user_channel_member(
-            channel.id, user.id
+            channel.id, user.id, db=db
         ):
             if user.settings:
                 webhook_url = user.settings.ui.get("notifications", {}).get(
@@ -878,7 +962,7 @@ async def send_notification(name, webui_url, channel, message, active_user_ids):
     return True
 
 
-async def model_response_handler(request, channel, message, user):
+async def model_response_handler(request, channel, message, user, db=None):
     MODELS = {
         model["id"]: model
         for model in get_filtered_models(await get_all_models(request, user=user), user)
@@ -916,6 +1000,7 @@ async def model_response_handler(request, channel, message, user):
                 thread_messages = Messages.get_messages_by_parent_id(
                     channel.id,
                     message.parent_id if message.parent_id else message.id,
+                    db=db,
                 )[::-1]
 
                 response_message, channel = await new_message_handler(
@@ -935,6 +1020,7 @@ async def model_response_handler(request, channel, message, user):
                         }
                     ),
                     user,
+                    db,
                 )
 
                 thread_history = []
@@ -944,7 +1030,9 @@ async def model_response_handler(request, channel, message, user):
                 for thread_message in thread_messages:
                     message_user = None
                     if thread_message.user_id not in message_users:
-                        message_user = Users.get_user_by_id(thread_message.user_id)
+                        message_user = Users.get_user_by_id(
+                            thread_message.user_id, db=db
+                        )
                         message_users[thread_message.user_id] = message_user
                     else:
                         message_user = message_users[thread_message.user_id]
@@ -1023,6 +1111,7 @@ async def model_response_handler(request, channel, message, user):
                 if res:
                     if res.get("choices", []) and len(res["choices"]) > 0:
                         await update_message_by_id(
+                            request,
                             channel.id,
                             response_message.id,
                             MessageForm(
@@ -1034,9 +1123,11 @@ async def model_response_handler(request, channel, message, user):
                                 }
                             ),
                             user,
+                            db,
                         )
                     elif res.get("error", None):
                         await update_message_by_id(
+                            request,
                             channel.id,
                             response_message.id,
                             MessageForm(
@@ -1048,6 +1139,7 @@ async def model_response_handler(request, channel, message, user):
                                 }
                             ),
                             user,
+                            db,
                         )
             except Exception as e:
                 log.info(e)
@@ -1057,39 +1149,43 @@ async def model_response_handler(request, channel, message, user):
 
 
 async def new_message_handler(
-    request: Request, id: str, form_data: MessageForm, user=Depends(get_verified_user)
+    request: Request, id: str, form_data: MessageForm, user, db
 ):
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False
+            user.id,
+            type="write",
+            access_control=channel.access_control,
+            strict=False,
+            db=db,
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
     try:
-        message = Messages.insert_new_message(form_data, channel.id, user.id)
+        message = Messages.insert_new_message(form_data, channel.id, user.id, db=db)
         if message:
             if channel.type in ["group", "dm"]:
-                members = Channels.get_members_by_channel_id(channel.id)
+                members = Channels.get_members_by_channel_id(channel.id, db=db)
                 for member in members:
                     if not member.is_active:
                         Channels.update_member_active_status(
-                            channel.id, member.user_id, True
+                            channel.id, member.user_id, True, db=db
                         )
 
-            message = Messages.get_message_by_id(message.id)
+            message = Messages.get_message_by_id(message.id, db=db)
             event_data = {
                 "channel_id": channel.id,
                 "message_id": message.id,
@@ -1109,7 +1205,7 @@ async def new_message_handler(
 
             if message.parent_id:
                 # If this message is a reply, emit to the parent message as well
-                parent_message = Messages.get_message_by_id(message.parent_id)
+                parent_message = Messages.get_message_by_id(message.parent_id, db=db)
 
                 if parent_message:
                     await sio.emit(
@@ -1143,16 +1239,17 @@ async def post_new_message(
     form_data: MessageForm,
     background_tasks: BackgroundTasks,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
 
     try:
-        message, channel = await new_message_handler(request, id, form_data, user)
+        message, channel = await new_message_handler(request, id, form_data, user, db)
         try:
             if files := message.data.get("files", []):
                 for file in files:
                     Channels.set_file_message_id_in_channel_by_id(
-                        channel.id, file.get("id", ""), message.id
+                        channel.id, file.get("id", ""), message.id, db=db
                     )
         except Exception as e:
             log.debug(e)
@@ -1160,13 +1257,14 @@ async def post_new_message(
         active_user_ids = get_user_ids_from_room(f"channel:{channel.id}")
 
         async def background_handler():
-            await model_response_handler(request, channel, message, user)
+            await model_response_handler(request, channel, message, user, db)
             await send_notification(
                 request.app.state.WEBUI_NAME,
                 request.app.state.config.WEBUI_URL,
                 channel,
                 message,
                 active_user_ids,
+                db=db,
             )
 
         background_tasks.add_task(background_handler)
@@ -1193,28 +1291,29 @@ async def get_channel_message(
     id: str,
     message_id: str,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
-    message = Messages.get_message_by_id(message_id)
+    message = Messages.get_message_by_id(message_id, db=db)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -1229,7 +1328,7 @@ async def get_channel_message(
         **{
             **message.model_dump(),
             "user": UserNameResponse(
-                **Users.get_user_by_id(message.user_id).model_dump()
+                **Users.get_user_by_id(message.user_id, db=db).model_dump()
             ),
         }
     )
@@ -1246,28 +1345,29 @@ async def get_channel_message_data(
     id: str,
     message_id: str,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
-    message = Messages.get_message_by_id(message_id)
+    message = Messages.get_message_by_id(message_id, db=db)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -1299,28 +1399,29 @@ async def pin_channel_message(
     message_id: str,
     form_data: PinMessageForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
-    message = Messages.get_message_by_id(message_id)
+    message = Messages.get_message_by_id(message_id, db=db)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -1332,13 +1433,13 @@ async def pin_channel_message(
         )
 
     try:
-        Messages.update_is_pinned_by_id(message_id, form_data.is_pinned, user.id)
-        message = Messages.get_message_by_id(message_id)
+        Messages.update_is_pinned_by_id(message_id, form_data.is_pinned, user.id, db=db)
+        message = Messages.get_message_by_id(message_id, db=db)
         return MessageUserResponse(
             **{
                 **message.model_dump(),
                 "user": UserNameResponse(
-                    **Users.get_user_by_id(message.user_id).model_dump()
+                    **Users.get_user_by_id(message.user_id, db=db).model_dump()
                 ),
             }
         )
@@ -1364,35 +1465,45 @@ async def get_channel_thread_messages(
     skip: int = 0,
     limit: int = 50,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control
+            user.id, type="read", access_control=channel.access_control, db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
-    message_list = Messages.get_messages_by_parent_id(id, message_id, skip, limit)
-    users = {}
+    message_list = Messages.get_messages_by_parent_id(
+        id, message_id, skip, limit, db=db
+    )
+
+    if not message_list:
+        return []
+
+    # Batch fetch all users in a single query (fixes N+1 problem)
+    user_ids = list(set(m.user_id for m in message_list))
+    users = {u.id: u for u in Users.get_users_by_user_ids(user_ids, db=db)}
 
     messages = []
     for message in message_list:
-        if message.user_id not in users:
-            user = Users.get_user_by_id(message.user_id)
-            users[message.user_id] = user
+        # Use message.user if present (for webhooks), otherwise look up by user_id
+        user_info = message.user
+        if user_info is None and message.user_id in users:
+            user_info = UserNameResponse(**users[message.user_id].model_dump())
 
         messages.append(
             MessageUserResponse(
@@ -1400,8 +1511,10 @@ async def get_channel_thread_messages(
                     **message.model_dump(),
                     "reply_count": 0,
                     "latest_reply_at": None,
-                    "reactions": Messages.get_reactions_by_message_id(message.id),
-                    "user": UserNameResponse(**users[message.user_id].model_dump()),
+                    "reactions": Messages.get_reactions_by_message_id(
+                        message.id, db=db
+                    ),
+                    "user": user_info,
                 }
             )
         )
@@ -1423,15 +1536,16 @@ async def update_message_by_id(
     message_id: str,
     form_data: MessageForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    message = Messages.get_message_by_id(message_id)
+    message = Messages.get_message_by_id(message_id, db=db)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -1443,7 +1557,7 @@ async def update_message_by_id(
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
@@ -1452,7 +1566,7 @@ async def update_message_by_id(
             user.role != "admin"
             and message.user_id != user.id
             and not has_access(
-                user.id, type="read", access_control=channel.access_control
+                user.id, type="read", access_control=channel.access_control, db=db
             )
         ):
             raise HTTPException(
@@ -1460,8 +1574,8 @@ async def update_message_by_id(
             )
 
     try:
-        message = Messages.update_message_by_id(message_id, form_data)
-        message = Messages.get_message_by_id(message_id)
+        message = Messages.update_message_by_id(message_id, form_data, db=db)
+        message = Messages.get_message_by_id(message_id, db=db)
 
         if message:
             await sio.emit(
@@ -1503,28 +1617,33 @@ async def add_reaction_to_message(
     message_id: str,
     form_data: ReactionForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False
+            user.id,
+            type="write",
+            access_control=channel.access_control,
+            strict=False,
+            db=db,
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
-    message = Messages.get_message_by_id(message_id)
+    message = Messages.get_message_by_id(message_id, db=db)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -1536,8 +1655,8 @@ async def add_reaction_to_message(
         )
 
     try:
-        Messages.add_reaction_to_message(message_id, user.id, form_data.name)
-        message = Messages.get_message_by_id(message_id)
+        Messages.add_reaction_to_message(message_id, user.id, form_data.name, db=db)
+        message = Messages.get_message_by_id(message_id, db=db)
 
         await sio.emit(
             "events:channel",
@@ -1577,28 +1696,33 @@ async def remove_reaction_by_id_and_user_id_and_name(
     message_id: str,
     form_data: ReactionForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
         if user.role != "admin" and not has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False
+            user.id,
+            type="write",
+            access_control=channel.access_control,
+            strict=False,
+            db=db,
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
-    message = Messages.get_message_by_id(message_id)
+    message = Messages.get_message_by_id(message_id, db=db)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -1611,10 +1735,10 @@ async def remove_reaction_by_id_and_user_id_and_name(
 
     try:
         Messages.remove_reaction_by_id_and_user_id_and_name(
-            message_id, user.id, form_data.name
+            message_id, user.id, form_data.name, db=db
         )
 
-        message = Messages.get_message_by_id(message_id)
+        message = Messages.get_message_by_id(message_id, db=db)
 
         await sio.emit(
             "events:channel",
@@ -1653,15 +1777,16 @@ async def delete_message_by_id(
     id: str,
     message_id: str,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     check_channels_access(request)
-    channel = Channels.get_channel_by_id(id)
+    channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    message = Messages.get_message_by_id(message_id)
+    message = Messages.get_message_by_id(message_id, db=db)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -1673,7 +1798,7 @@ async def delete_message_by_id(
         )
 
     if channel.type in ["group", "dm"]:
-        if not Channels.is_user_channel_member(channel.id, user.id):
+        if not Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
@@ -1686,6 +1811,7 @@ async def delete_message_by_id(
                 type="write",
                 access_control=channel.access_control,
                 strict=False,
+                db=db,
             )
         ):
             raise HTTPException(
@@ -1693,7 +1819,7 @@ async def delete_message_by_id(
             )
 
     try:
-        Messages.delete_message_by_id(message_id)
+        Messages.delete_message_by_id(message_id, db=db)
         await sio.emit(
             "events:channel",
             {
@@ -1714,7 +1840,7 @@ async def delete_message_by_id(
 
         if message.parent_id:
             # If this message is a reply, emit to the parent message as well
-            parent_message = Messages.get_message_by_id(message.parent_id)
+            parent_message = Messages.get_message_by_id(message.parent_id, db=db)
 
             if parent_message:
                 await sio.emit(
@@ -1738,3 +1864,263 @@ async def delete_message_by_id(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
+
+
+############################
+# Webhooks
+############################
+
+
+@router.get("/webhooks/{webhook_id}/profile/image")
+async def get_webhook_profile_image(
+    webhook_id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """Get webhook profile image by webhook ID."""
+    webhook = Channels.get_webhook_by_id(webhook_id, db=db)
+    if not webhook:
+        # Return default favicon if webhook not found
+        return FileResponse(f"{STATIC_DIR}/favicon.png")
+
+    if webhook.profile_image_url:
+        # Check if it's url or base64
+        if webhook.profile_image_url.startswith("http"):
+            return Response(
+                status_code=status.HTTP_302_FOUND,
+                headers={"Location": webhook.profile_image_url},
+            )
+        elif webhook.profile_image_url.startswith("data:image"):
+            try:
+                header, base64_data = webhook.profile_image_url.split(",", 1)
+                image_data = base64.b64decode(base64_data)
+                image_buffer = io.BytesIO(image_data)
+                media_type = header.split(";")[0].lstrip("data:")
+
+                return StreamingResponse(
+                    image_buffer,
+                    media_type=media_type,
+                    headers={"Content-Disposition": "inline"},
+                )
+            except Exception as e:
+                pass
+
+    # Return default favicon if no profile image
+    return FileResponse(f"{STATIC_DIR}/favicon.png")
+
+
+@router.get("/{id}/webhooks", response_model=list[ChannelWebhookModel])
+async def get_channel_webhooks(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    check_channels_access(request)
+    channel = Channels.get_channel_by_id(id, db=db)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    # Only channel managers can view webhooks
+    if (
+        not Channels.is_user_channel_manager(channel.id, user.id, db=db)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.UNAUTHORIZED
+        )
+
+    return Channels.get_webhooks_by_channel_id(id, db=db)
+
+
+@router.post("/{id}/webhooks/create", response_model=ChannelWebhookModel)
+async def create_channel_webhook(
+    request: Request,
+    id: str,
+    form_data: ChannelWebhookForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    check_channels_access(request)
+    channel = Channels.get_channel_by_id(id, db=db)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    # Only channel managers can create webhooks
+    if (
+        not Channels.is_user_channel_manager(channel.id, user.id, db=db)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.UNAUTHORIZED
+        )
+
+    webhook = Channels.insert_webhook(id, user.id, form_data, db=db)
+    if not webhook:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    return webhook
+
+
+@router.post("/{id}/webhooks/{webhook_id}/update", response_model=ChannelWebhookModel)
+async def update_channel_webhook(
+    request: Request,
+    id: str,
+    webhook_id: str,
+    form_data: ChannelWebhookForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    check_channels_access(request)
+    channel = Channels.get_channel_by_id(id, db=db)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    # Only channel managers can update webhooks
+    if (
+        not Channels.is_user_channel_manager(channel.id, user.id, db=db)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.UNAUTHORIZED
+        )
+
+    webhook = Channels.get_webhook_by_id(webhook_id, db=db)
+    if not webhook or webhook.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    updated = Channels.update_webhook_by_id(webhook_id, form_data, db=db)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    return updated
+
+
+@router.delete("/{id}/webhooks/{webhook_id}/delete", response_model=bool)
+async def delete_channel_webhook(
+    request: Request,
+    id: str,
+    webhook_id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    check_channels_access(request)
+    channel = Channels.get_channel_by_id(id, db=db)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    # Only channel managers can delete webhooks
+    if (
+        not Channels.is_user_channel_manager(channel.id, user.id, db=db)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.UNAUTHORIZED
+        )
+
+    webhook = Channels.get_webhook_by_id(webhook_id, db=db)
+    if not webhook or webhook.channel_id != id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    return Channels.delete_webhook_by_id(webhook_id, db=db)
+
+
+############################
+# Public Webhook Endpoint
+############################
+
+
+class WebhookMessageForm(BaseModel):
+    content: str
+
+
+@router.post("/webhooks/{webhook_id}/{token}")
+async def post_webhook_message(
+    request: Request,
+    webhook_id: str,
+    token: str,
+    form_data: WebhookMessageForm,
+    db: Session = Depends(get_session),
+):
+    """Public endpoint to post messages via webhook. No authentication required."""
+    check_channels_access(request)
+
+    # Validate webhook
+    webhook = Channels.get_webhook_by_id_and_token(webhook_id, token, db=db)
+    if not webhook:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid webhook URL",
+        )
+
+    channel = Channels.get_channel_by_id(webhook.channel_id, db=db)
+    if not channel:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    # Create message with webhook identity stored in meta
+    message = Messages.insert_new_message(
+        MessageForm(content=form_data.content, meta={"webhook": {"id": webhook.id}}),
+        webhook.channel_id,
+        webhook.user_id,  # Required for DB but webhook info in meta takes precedence
+        db=db,
+    )
+
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create message",
+        )
+
+    # Update last_used_at
+    Channels.update_webhook_last_used_at(webhook_id, db=db)
+
+    # Get full message and emit event
+    message = Messages.get_message_by_id(message.id, db=db)
+
+    event_data = {
+        "channel_id": channel.id,
+        "message_id": message.id,
+        "data": {
+            "type": "message",
+            "data": {
+                **message.model_dump(),
+                "user": {
+                    "id": webhook.id,
+                    "name": webhook.name,
+                    "role": "webhook",
+                },
+            },
+        },
+        "user": {
+            "id": webhook.id,
+            "name": webhook.name,
+            "role": "webhook",
+        },
+        "channel": channel.model_dump(),
+    }
+
+    await sio.emit(
+        "events:channel",
+        event_data,
+        to=f"channel:{channel.id}",
+    )
+
+    return {"success": True, "message_id": message.id}
