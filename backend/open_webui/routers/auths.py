@@ -190,6 +190,32 @@ async def update_profile(
 
 
 ############################
+# Update Timezone
+############################
+
+
+class UpdateTimezoneForm(BaseModel):
+    timezone: str
+
+
+@router.post("/update/timezone")
+async def update_timezone(
+    form_data: UpdateTimezoneForm,
+    session_user=Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    if session_user:
+        Users.update_user_by_id(
+            session_user.id,
+            {"timezone": form_data.timezone},
+            db=db,
+        )
+        return {"status": True}
+    else:
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+
+############################
 # Update Password
 ############################
 
