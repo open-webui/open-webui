@@ -9,7 +9,14 @@
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
+	import {
+		ldapUserSignIn,
+		getSessionUser,
+		userSignIn,
+		userSignUp,
+		verifyEmailTwoFactor,
+		resendEmailTwoFactor
+	} from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
@@ -35,9 +42,33 @@
 	let confirmPassword = '';
 
 	let ldapUsername = '';
+	let twoFactorRequired = false;
+	let twoFactorChallengeId = '';
+	let twoFactorCode = '';
+	let twoFactorMaskedEmail = '';
+	let twoFactorExpiresAt: number | null = null;
+	let twoFactorLoading = false;
+	let twoFactorResending = false;
+
+	const resetTwoFactorState = () => {
+		twoFactorRequired = false;
+		twoFactorChallengeId = '';
+		twoFactorCode = '';
+		twoFactorMaskedEmail = '';
+		twoFactorExpiresAt = null;
+	};
+
+	const applyTwoFactorChallenge = (payload) => {
+		twoFactorRequired = true;
+		twoFactorChallengeId = payload?.challenge_id ?? '';
+		twoFactorMaskedEmail = payload?.masked_email ?? '';
+		twoFactorExpiresAt = payload?.expires_at ?? null;
+		twoFactorCode = '';
+	};
 
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
+			resetTwoFactorState();
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
 			if (sessionUser.token) {
@@ -57,10 +88,16 @@
 	};
 
 	const signInHandler = async () => {
+		resetTwoFactorState();
 		const sessionUser = await userSignIn(email, password).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
+
+		if (sessionUser?.requires_2fa) {
+			applyTwoFactorChallenge(sessionUser);
+			return;
+		}
 
 		await setSessionUser(sessionUser);
 	};
@@ -84,10 +121,17 @@
 	};
 
 	const ldapSignInHandler = async () => {
+		resetTwoFactorState();
 		const sessionUser = await ldapUserSignIn(ldapUsername, password).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
+
+		if (sessionUser?.requires_2fa) {
+			applyTwoFactorChallenge(sessionUser);
+			return;
+		}
+
 		await setSessionUser(sessionUser);
 	};
 
@@ -98,6 +142,45 @@
 			await signInHandler();
 		} else {
 			await signUpHandler();
+		}
+	};
+
+	const verifyTwoFactorHandler = async () => {
+		if (!twoFactorChallengeId || !twoFactorCode) {
+			toast.error($i18n.t('Please enter your verification code.'));
+			return;
+		}
+
+		twoFactorLoading = true;
+		const sessionUser = await verifyEmailTwoFactor(twoFactorChallengeId, twoFactorCode).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+		twoFactorLoading = false;
+
+		if (sessionUser) {
+			await setSessionUser(sessionUser);
+		}
+	};
+
+	const resendTwoFactorHandler = async () => {
+		if (!twoFactorChallengeId) {
+			toast.error($i18n.t('Please sign in again.'));
+			return;
+		}
+
+		twoFactorResending = true;
+		const challenge = await resendEmailTwoFactor(twoFactorChallengeId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		twoFactorResending = false;
+
+		if (challenge?.challenge_id) {
+			applyTwoFactorChallenge(challenge);
+			toast.success($i18n.t('Verification code sent.'));
 		}
 	};
 
@@ -239,7 +322,11 @@
 								class=" flex flex-col justify-center"
 								on:submit={(e) => {
 									e.preventDefault();
-									submitHandler();
+									if (twoFactorRequired) {
+										verifyTwoFactorHandler();
+									} else {
+										submitHandler();
+									}
 								}}
 							>
 								<div class="mb-1">
@@ -267,97 +354,142 @@
 
 								{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 									<div class="flex flex-col mt-4">
-										{#if mode === 'signup'}
-											<div class="mb-2">
-												<label for="name" class="text-sm font-medium text-left mb-1 block"
-													>{$i18n.t('Name')}</label
-												>
-												<input
-													bind:value={name}
-													type="text"
-													id="name"
-													class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
-													autocomplete="name"
-													placeholder={$i18n.t('Enter Your Full Name')}
-													required
-												/>
+										{#if twoFactorRequired}
+											<div class="mb-2 text-sm text-gray-600 dark:text-gray-400 text-left">
+												{$i18n.t('Enter the verification code sent to')}
+												<strong>{twoFactorMaskedEmail || $i18n.t('your email')}</strong>
 											</div>
-										{/if}
-
-										{#if mode === 'ldap'}
 											<div class="mb-2">
-												<label for="username" class="text-sm font-medium text-left mb-1 block"
-													>{$i18n.t('Username')}</label
+												<label
+													for="two-factor-code"
+													class="text-sm font-medium text-left mb-1 block"
+													>{$i18n.t('Verification Code')}</label
 												>
 												<input
-													bind:value={ldapUsername}
+													bind:value={twoFactorCode}
 													type="text"
+													id="two-factor-code"
+													inputmode="numeric"
+													pattern="[0-9]*"
+													maxlength="6"
 													class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
-													autocomplete="username"
-													name="username"
-													id="username"
-													placeholder={$i18n.t('Enter Your Username')}
+													placeholder={$i18n.t('Enter your 6-digit code')}
 													required
 												/>
 											</div>
 										{:else}
-											<div class="mb-2">
-												<label for="email" class="text-sm font-medium text-left mb-1 block"
-													>{$i18n.t('Email')}</label
-												>
-												<input
-													bind:value={email}
-													type="email"
-													id="email"
-													class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
-													autocomplete="email"
-													name="email"
-													placeholder={$i18n.t('Enter Your Email')}
-													required
-												/>
-											</div>
-										{/if}
+											{#if mode === 'signup'}
+												<div class="mb-2">
+													<label for="name" class="text-sm font-medium text-left mb-1 block"
+														>{$i18n.t('Name')}</label
+													>
+													<input
+														bind:value={name}
+														type="text"
+														id="name"
+														class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+														autocomplete="name"
+														placeholder={$i18n.t('Enter Your Full Name')}
+														required
+													/>
+												</div>
+											{/if}
 
-										<div>
-											<label for="password" class="text-sm font-medium text-left mb-1 block"
-												>{$i18n.t('Password')}</label
-											>
-											<SensitiveInput
-												bind:value={password}
-												type="password"
-												id="password"
-												class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
-												placeholder={$i18n.t('Enter Your Password')}
-												autocomplete={mode === 'signup' ? 'new-password' : 'current-password'}
-												name="password"
-												required
-											/>
-										</div>
+											{#if mode === 'ldap'}
+												<div class="mb-2">
+													<label for="username" class="text-sm font-medium text-left mb-1 block"
+														>{$i18n.t('Username')}</label
+													>
+													<input
+														bind:value={ldapUsername}
+														type="text"
+														class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+														autocomplete="username"
+														name="username"
+														id="username"
+														placeholder={$i18n.t('Enter Your Username')}
+														required
+													/>
+												</div>
+											{:else}
+												<div class="mb-2">
+													<label for="email" class="text-sm font-medium text-left mb-1 block"
+														>{$i18n.t('Email')}</label
+													>
+													<input
+														bind:value={email}
+														type="email"
+														id="email"
+														class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+														autocomplete="email"
+														name="email"
+														placeholder={$i18n.t('Enter Your Email')}
+														required
+													/>
+												</div>
+											{/if}
 
-										{#if mode === 'signup' && $config?.features?.enable_signup_password_confirmation}
-											<div class="mt-2">
-												<label
-													for="confirm-password"
-													class="text-sm font-medium text-left mb-1 block"
-													>{$i18n.t('Confirm Password')}</label
+											<div>
+												<label for="password" class="text-sm font-medium text-left mb-1 block"
+													>{$i18n.t('Password')}</label
 												>
 												<SensitiveInput
-													bind:value={confirmPassword}
+													bind:value={password}
 													type="password"
-													id="confirm-password"
-													class="my-0.5 w-full text-sm outline-hidden bg-transparent"
-													placeholder={$i18n.t('Confirm Your Password')}
-													autocomplete="new-password"
-													name="confirm-password"
+													id="password"
+													class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+													placeholder={$i18n.t('Enter Your Password')}
+													autocomplete={mode === 'signup' ? 'new-password' : 'current-password'}
+													name="password"
 													required
 												/>
 											</div>
+
+											{#if mode === 'signup' && $config?.features?.enable_signup_password_confirmation}
+												<div class="mt-2">
+													<label
+														for="confirm-password"
+														class="text-sm font-medium text-left mb-1 block"
+														>{$i18n.t('Confirm Password')}</label
+													>
+													<SensitiveInput
+														bind:value={confirmPassword}
+														type="password"
+														id="confirm-password"
+														class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+														placeholder={$i18n.t('Confirm Your Password')}
+														autocomplete="new-password"
+														name="confirm-password"
+														required
+													/>
+												</div>
+											{/if}
 										{/if}
 									</div>
 								{/if}
 								<div class="mt-5">
 									{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
-										{#if mode === 'ldap'}
+										{#if twoFactorRequired}
+											<button
+												class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+												type="submit"
+												disabled={twoFactorLoading}
+											>
+												{twoFactorLoading
+													? $i18n.t('Verifying...')
+													: $i18n.t('Verify code')}
+											</button>
+											<button
+												class="mt-2 text-sm underline text-gray-600 dark:text-gray-400"
+												type="button"
+												disabled={twoFactorResending}
+												on:click={() => resendTwoFactorHandler()}
+											>
+												{twoFactorResending
+													? $i18n.t('Sending...')
+													: $i18n.t('Resend code')}
+											</button>
+										{:else if mode === 'ldap'}
 											<button
 												class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 												type="submit"
@@ -386,6 +518,7 @@
 														class=" font-medium underline"
 														type="button"
 														on:click={() => {
+															resetTwoFactorState();
 															if (mode === 'signin') {
 																mode = 'signup';
 															} else {
