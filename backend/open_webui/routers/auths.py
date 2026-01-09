@@ -36,6 +36,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+    WEBUI_AUTH_SSO_LOGOUT_URL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -775,6 +776,27 @@ async def signout(request: Request, response: Response):
     oauth_session_id = request.cookies.get("oauth_session_id")
     if oauth_session_id:
         response.delete_cookie("oauth_session_id")
+
+        # If a custom SSO logout URL is configured (e.g., for AWS Cognito),
+        # use it directly instead of attempting standard OpenID logout
+        if WEBUI_AUTH_SSO_LOGOUT_URL:
+            # Validate the URL to prevent open redirect vulnerabilities
+            parsed_url = urllib.parse.urlparse(WEBUI_AUTH_SSO_LOGOUT_URL)
+            if parsed_url.scheme not in ["https", "http"]:
+                log.warning(
+                    f"Invalid SSO logout URL scheme: {parsed_url.scheme}. Must be http or https."
+                )
+            elif not parsed_url.netloc:
+                log.warning("Invalid SSO logout URL: missing hostname.")
+            else:
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "status": True,
+                        "redirect_url": WEBUI_AUTH_SSO_LOGOUT_URL,
+                    },
+                    headers=response.headers,
+                )
 
         session = OAuthSessions.get_session_by_id(oauth_session_id)
         oauth_server_metadata_url = (

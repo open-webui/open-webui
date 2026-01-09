@@ -443,6 +443,11 @@ WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get(
     "WEBUI_AUTH_SIGNOUT_REDIRECT_URL", None
 )
 
+# Custom SSO logout URL for IdPs that don't support standard OpenID logout
+# (e.g., AWS Cognito). When set, this URL is used directly for SSO logout
+# instead of constructing from the OpenID provider's end_session_endpoint.
+WEBUI_AUTH_SSO_LOGOUT_URL = os.environ.get("WEBUI_AUTH_SSO_LOGOUT_URL", None)
+
 ####################################
 # WEBUI_SECRET_KEY
 ####################################
