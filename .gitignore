@@ -64,6 +64,14 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Playwright
+playwright/.auth
+playwright-report/
+test-results/
+/tests/e2e/test
+/tests/e2e/releases-backlog
+.ignore
+
 # Translations
 *.mo
 *.pot
@@ -140,6 +148,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env.*
 
 # Spyder project settings
 .spyderproject
@@ -307,3 +316,4 @@ dist
 
 # Qdrant
 /qdrant_storage
+test/e2e/playwright.config.ts.bak

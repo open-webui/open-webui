@@ -1,5 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import istanbul from 'vite-plugin-istanbul';
 
 // /** @type {import('vite').Plugin} */
 // const viteServerConfig = {
@@ -16,7 +17,16 @@ import { defineConfig } from 'vite';
 // };
 
 export default defineConfig({
-	plugins: [sveltekit()],
+	plugins: [
+		sveltekit(),
+		istanbul({
+			include: 'src/**/*', //all files at all levels
+			exclude: [], //folder or files to be excluded
+			extension: ['.js', '.ts', '.svelte'], //extension files to test
+			requireEnv: true,
+			forceBuildInstrument: true
+		})
+	],
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
 		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')

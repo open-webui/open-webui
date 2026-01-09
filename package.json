@@ -3,6 +3,22 @@
 	"version": "0.5.7-ccv2-1.11.2",
 	"private": true,
 	"scripts": {
+		"start": "npm run backend:check && bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) backend/start.sh'",
+		"start:build": "npm run build && npm run start",
+		"backend:setup": "npm run backend:check && pip install -r backend/requirements.txt",
+		"backend:check": "python --version | grep -q 'Python 3.11' || (echo 'Error: Python 3.11 required' && exit 1)",
+		"test": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test'",
+		"test:en": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --project=chromium-en --project=firefox-en'",
+		"test:fr": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --project=chromium-fr --project=firefox-fr'",
+		"test:debug": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --project=chromium-en'",
+		"test:headed": "bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) npx playwright test --headed'",
+		"test:report": "npx playwright show-report",
+		"test:setup": "npx playwright install --with-deps --force",
+		"test:setup:headless": "npx playwright install --with-deps --only-shell --force",
+		"coverage:build": "export NODE_OPTIONS='--max-old-space-size=8192' && VITE_COVERAGE=true npm run build",
+		"coverage:test": "npm run coverage:clean && npm run test && npx nyc report",
+		"coverage:clean": "rm -rf .nyc_output coverage",
+		"setup": "npm run test:setup && npm run backend:setup && npm run build",
 		"dev": "npm run pyodide:fetch && vite dev --host",
 		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
 		"build": "npm run pyodide:fetch && vite build",
@@ -20,6 +36,8 @@
 		"pyodide:fetch": "node scripts/prepare-pyodide.js"
 	},
 	"devDependencies": {
+		"@istanbuljs/nyc-config-typescript": "^1.0.2",
+		"@playwright/test": "^1.56.1",
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
 		"@sveltejs/kit": "^2.49.0",
@@ -32,9 +50,11 @@
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-svelte": "^2.43.0",
 		"i18next-parser": "^9.0.1",
+		"nyc": "^17.1.0",
 		"postcss": "^8.4.31",
 		"prettier": "^3.3.3",
 		"prettier-plugin-svelte": "^3.2.6",
+		"require": "^2.4.20",
 		"sass-embedded": "^1.81.0",
 		"svelte": "^4.2.18",
 		"svelte-check": "^3.8.5",
@@ -42,7 +62,8 @@
 		"tailwindcss": "^3.3.3",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
-		"vite": "5.4.21",
+		"vite": "^5.4.21",
+		"vite-plugin-istanbul": "^7.2.1",
 		"vitest": "^4.0.15"
 	},
 	"type": "module",
@@ -84,8 +105,10 @@
 		"katex": "^0.16.21",
 		"marked": "^9.1.0",
 		"mermaid": "^10.9.3",
+		"openai": "^6.9.1",
 		"paneforge": "^0.0.6",
 		"panzoom": "^9.4.3",
+		"playwright": "^1.56.1",
 		"prosemirror-commands": "^1.6.0",
 		"prosemirror-example-setup": "^1.2.3",
 		"prosemirror-history": "^1.4.1",
@@ -107,6 +130,7 @@
 	},
 	"engines": {
 		"node": ">=18.13.0 <=22.x.x",
-		"npm": ">=6.0.0"
+		"npm": ">=6.0.0",
+		"python": "3.11.x"
 	}
 }

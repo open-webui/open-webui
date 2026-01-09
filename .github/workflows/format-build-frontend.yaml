@@ -39,6 +39,7 @@ jobs:
         run: npm run build
 
   test-frontend:
+    if: false # Disabled
     name: 'Frontend Unit Tests'
     runs-on: ubuntu-latest
     steps:

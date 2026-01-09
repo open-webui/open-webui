@@ -24,6 +24,7 @@ FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 # for local docker test runs, enable alpine below
 # FROM node:22-alpine3.20 AS build
 ARG BUILD_HASH
+ARG BUILD_MODE=build
 
 WORKDIR /app
 
@@ -32,7 +33,7 @@ RUN npm ci && npm cache clean --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build && \
+RUN npm run ${BUILD_MODE} && \
     # Cleanup node_modules and other build artifacts to reduce layer size
     rm -rf node_modules .svelte-kit src static/pyodide package-lock.json
 

@@ -1,0 +1,153 @@
+name: Testing - Playwright
+ 
+on:
+  workflow_dispatch:
+    inputs:
+      ref_name:
+        description: 'Override branch name'
+        type: string
+        required: false
+        default: ''
+  workflow_run:
+    workflows: ["Create and publish Docker images with specific build args"]
+    branches:
+        - dev
+        - main
+    types:
+      - completed
+ 
+env:
+  REGISTRY: ghcr.io
+ 
+jobs:
+  tests:
+    name: 'Playwright E2E Tests'
+    runs-on: arc-ssc-dsai
+    permissions:
+      contents: read
+      packages: read
+      attestations: read
+      id-token: write
+ 
+    timeout-minutes: 60
+    services:
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+          - 6334:6334
+        options: >-
+          --add-host host.docker.internal:host-gateway
+ 
+    steps:      
+      - name: Checkout CANChat-V2
+        uses: actions/checkout@v4
+ 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+ 
+      - name: Log in to the GitHub Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+ 
+      - name: Force local Docker image update
+        run: |
+          docker images --format '{{.Repository}}:{{.Tag}}' | xargs -I {} bash -c 'docker inspect --format="{{index .RepoDigests 0}}" {} && docker pull {};';
+          docker rmi $(docker images -f "dangling=true" -q)
+        continue-on-error: true
+ 
+      - name: Override ref_name
+        id: ref_name
+        run: |
+          if [ -n "${{ github.event.inputs.ref_name }}" ]; then
+            echo "ref_name=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.workflow_run.head_branch }}" ]; then
+            echo "ref_name=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+          else
+            echo "ref_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+ 
+      - name:  Start CANChat Environment
+        run: |
+            docker run -d -p 8080:8080 \
+            --add-host=host.docker.internal:host-gateway \
+            -d \
+            --name canchat \
+            --rm ${{ env.REGISTRY }}/${{ github.repository_owner }}/canchat-v2:${{ steps.ref_name.outputs.ref_name }} \
+            /bin/bash -c 'echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > ../.env && \
+              echo "0DK/YlAjXSrYKdoH" > ../.webui_secret_key && \
+              unset OPENAI_API_KEY && \
+              unset OPENAI_API_BASE_URL && \
+              unset WEBUI_SECRET_KEY && \
+              unset USE_RERANKING_MODEL_DOCKER && \
+              unset RAG_RERANKING_MODEL && \
+              bash start.sh'
+   
+      - name:  Copy env variables
+        run: echo "${{ secrets.E2E_ENV_FILE }}" | base64 --decode > .env
+ 
+      - name:  Set up Node dependencies & build
+        run:  |
+          npm ci
+          npm run test:setup:headless
+ 
+ 
+      - name: Wait for CANChat to be ready
+        run: |
+          for i in {1..300}; do
+            if [ -z $(docker ps --filter "name=canchat" --filter "health=healthy" --format '{{.Names}}') ]; then
+              echo "Waiting for CANChat..."
+              sleep 5
+            else
+              echo "CANChat is ready."
+              exit 0
+            fi
+ 
+          done
+          echo "CANChat failed to start in time" >&2
+          exit 1
+ 
+      - name:  Start Playwright Tests
+        env:
+          REUSE_EXISTING_SERVER: true
+        run: |
+          npm run test
+          exit 0
+ 
+      - name: Get timestamp
+        id: timestamps
+        shell: bash
+        run: |
+          echo "timestamp=$(/bin/date -u "+%Y%m%d_%H%M%S")" >> $GITHUB_OUTPUT
+ 
+      - name: Upload Report
+        id: upload_report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ steps.timestamps.outputs.timestamp }}
+          path: ./playwright-report/
+          retention-days: 30
+ 
+      - name: Create results summary
+        uses: daun/playwright-report-summary@v3
+        if: ${{ !cancelled() }}
+        id: playwright_summary
+        with:
+          report-file: ./playwright-report/results.json
+          create-comment: false
+ 
+      - name: Output test summary to action
+        if: ${{ !cancelled() }}
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Playwright Report" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.playwright_summary.outputs.summary }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[Download Playwright Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload_report.outputs.artifact-id }})"  >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,67 @@
+services:
+  canchat:
+    container_name: canchat
+    image: canchat:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    build:
+      context: .
+      dockerfile: ./test/e2e/environment/canchat.dockerfile
+    working_dir: /app
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+    ports:
+      - 5173:5173
+      - 8080:8080
+    environment:
+      - NODE_ENV=development
+      - PYTHONUNBUFFERED=1
+    entrypoint: [ "bash", "-c" ]
+    command: >
+      'bash -c /app/test/e2e/environment/e2e-entrypoint.sh'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ollama_stub:
+    container_name: ollama_stub
+    image: ollama_stub:latest
+    build:
+      context: ./test/ollama_stub
+    ports:
+      - "11404:11404"
+    restart: unless-stopped
+
+  playwright:
+    container_name: playwright
+    image: playwright:${PLAYWRIGHT_DATE:-latest}
+    network_mode: host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - CANCHAT_URL="http://localhost:5173"
+    build:
+      context: ./test/e2e
+      dockerfile: ./environment/playwright.dockerfile
+    volumes:
+      - type: bind
+        source: ./test/e2e
+        target: /app
+      - type: bind
+        source: /$HOME/.cache/huggingface
+        target: /root/.cache/huggingface
+    entrypoint: [ "bash", "-c" ]
+    command: >
+      '
+      if [ ! -d node_modules ]; then
+        npm install -D @playwright/test@latest;
+      fi &&
+      while true; do sleep 5; done
+      '
+    restart: unless-stopped
+    tty: true

@@ -18,6 +18,7 @@ uploads
 **/*.db
 _test
 backend/data/*
+/tests
 
 # Dockerfiles
 Dockerfile

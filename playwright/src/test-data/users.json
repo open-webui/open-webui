@@ -1,0 +1,39 @@
+{
+	"users": [
+		{
+			"username": "admin",
+			"role": "admin",
+			"name": "admin",
+			"email": "admin@canchat.ca",
+			"password": "admin"
+		},
+		{
+			"username": "pending",
+			"role": "pending",
+			"name": "pending",
+			"email": "pending@canchat.ca",
+			"password": "pending"
+		},
+		{
+			"username": "user",
+			"role": "user",
+			"name": "user",
+			"email": "user@canchat.ca",
+			"password": "user"
+		},
+		{
+			"username": "analyst",
+			"role": "analyst",
+			"name": "analyst",
+			"email": "analyst@canchat.ca",
+			"password": "analyst"
+		},
+		{
+			"username": "globalanalyst",
+			"role": "global analyst",
+			"name": "global analyst",
+			"email": "globalanalyst@canchat.ca",
+			"password": "globalanalyst"
+		}
+	]
+}
