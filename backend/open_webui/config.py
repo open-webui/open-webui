@@ -317,6 +317,80 @@ if JWT_EXPIRES_IN.value == "-1":
     )
 
 ####################################
+# Email (SMTP)
+####################################
+
+EMAIL_DELIVERY_MODE = PersistentConfig(
+    "EMAIL_DELIVERY_MODE",
+    "email.delivery_mode",
+    os.environ.get("EMAIL_DELIVERY_MODE", "log"),
+)
+
+EMAIL_HOST = PersistentConfig(
+    "EMAIL_HOST",
+    "email.smtp.host",
+    os.environ.get("EMAIL_HOST", ""),
+)
+
+EMAIL_PORT = PersistentConfig(
+    "EMAIL_PORT",
+    "email.smtp.port",
+    int(os.environ.get("EMAIL_PORT", "587")),
+)
+
+EMAIL_USER = PersistentConfig(
+    "EMAIL_USER",
+    "email.smtp.user",
+    os.environ.get("EMAIL_USER", ""),
+)
+
+EMAIL_PASSWORD = PersistentConfig(
+    "EMAIL_PASSWORD",
+    "email.smtp.password",
+    os.environ.get("EMAIL_PASSWORD", ""),
+)
+
+EMAIL_FROM = PersistentConfig(
+    "EMAIL_FROM",
+    "email.from",
+    os.environ.get("EMAIL_FROM", ""),
+)
+
+EMAIL_USE_TLS = PersistentConfig(
+    "EMAIL_USE_TLS",
+    "email.smtp.use_tls",
+    os.environ.get("EMAIL_USE_TLS", "True").lower() == "true",
+)
+
+EMAIL_USE_SSL = PersistentConfig(
+    "EMAIL_USE_SSL",
+    "email.smtp.use_ssl",
+    os.environ.get("EMAIL_USE_SSL", "False").lower() == "true",
+)
+
+####################################
+# Email 2FA
+####################################
+
+ENABLE_EMAIL_2FA = PersistentConfig(
+    "ENABLE_EMAIL_2FA",
+    "auth.email_2fa.enabled",
+    os.environ.get("ENABLE_EMAIL_2FA", "False").lower() == "true",
+)
+
+EMAIL_2FA_CODE_TTL_SECONDS = PersistentConfig(
+    "EMAIL_2FA_CODE_TTL_SECONDS",
+    "auth.email_2fa.code_ttl_seconds",
+    int(os.environ.get("EMAIL_2FA_CODE_TTL_SECONDS", "600")),
+)
+
+EMAIL_2FA_MAX_ATTEMPTS = PersistentConfig(
+    "EMAIL_2FA_MAX_ATTEMPTS",
+    "auth.email_2fa.max_attempts",
+    int(os.environ.get("EMAIL_2FA_MAX_ATTEMPTS", "5")),
+)
+
+####################################
 # OAuth config
 ####################################
 
