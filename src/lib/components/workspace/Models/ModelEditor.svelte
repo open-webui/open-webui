@@ -92,6 +92,7 @@
 	let defaultFilterIds = [];
 
 	let capabilities = {
+		file_context: true,
 		vision: true,
 		file_upload: true,
 		web_search: true,
