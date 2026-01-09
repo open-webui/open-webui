@@ -47,6 +47,7 @@ fake-useragent==1.5.1
 qdrant-client~=1.12.0
 
 # txtai-wikipedia Wiki Grounding dependencies
+faiss-cpu==1.12.0
 pyarrow>=15.0.0
 datasets>=3.0.0
 transformers>=4.45.0,<4.50.0  # crewai 1.7.2 requires tokenizers<0.21, transformers>=4.50 needs tokenizers>=0.21
