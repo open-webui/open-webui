@@ -53,24 +53,30 @@
 
 	// function to override the label if the user is truly "admin" + super admin
 	async function getRoleLabel(user) {
-		if (user.role === 'admin') {
-			// Check cache first
-			if (superAdminCache[user.email] === undefined) {
-				try {
-					const isSuperAdmin = await checkIfSuperAdmin(localStorage.token, user.email);
-					superAdminCache[user.email] = isSuperAdmin;
-				} catch (error) {
-					console.error('Error checking super admin status:', error);
-					superAdminCache[user.email] = false;
-				}
-			}
-
-			if (superAdminCache[user.email]) {
-				return 'super admin';
-			} else if (user.info?.is_co_admin) {
-				return 'co-admin';
+		// Check cache first for super admin status (check ALL users, not just admins)
+		if (superAdminCache[user.email] === undefined) {
+			try {
+				const isSuperAdmin = await checkIfSuperAdmin(localStorage.token, user.email);
+				superAdminCache[user.email] = isSuperAdmin;
+			} catch (error) {
+				console.error('Error checking super admin status:', error);
+				superAdminCache[user.email] = false;
 			}
 		}
+
+		// If user is super admin, always return 'super admin' regardless of role
+		if (superAdminCache[user.email]) {
+			return 'super admin';
+		}
+
+		// For non-super-admins, check role and co-admin status
+		if (user.role === 'admin') {
+			if (user.info?.is_co_admin) {
+				return 'co-admin';
+			}
+			return 'admin';
+		}
+
 		return user.role;
 	}
 
@@ -522,7 +528,7 @@
 								</button>
 							</Tooltip>
 
-							{#if user.role !== 'admin'}
+							{#if user.role !== 'admin' && !superAdminCache[user.email]}
 								<Tooltip content={$i18n.t('Delete User')}>
 									<button
 										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
