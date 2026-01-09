@@ -68,6 +68,13 @@ class FeedbackIdResponse(BaseModel):
     updated_at: int
 
 
+class LeaderboardFeedbackData(BaseModel):
+    """Minimal feedback data for leaderboard computation (excludes snapshot/meta)."""
+
+    id: str
+    data: Optional[dict] = None
+
+
 class RatingData(BaseModel):
     rating: Optional[str | int] = None
     model_id: Optional[str] = None
@@ -269,6 +276,16 @@ class FeedbackTable:
                 )
                 .order_by(Feedback.updated_at.desc())
                 .all()
+            ]
+
+    def get_feedbacks_for_leaderboard(
+        self, db: Optional[Session] = None
+    ) -> list[LeaderboardFeedbackData]:
+        """Fetch only id and data for leaderboard computation (excludes snapshot/meta)."""
+        with get_db_context(db) as db:
+            return [
+                LeaderboardFeedbackData(id=row.id, data=row.data)
+                for row in db.query(Feedback.id, Feedback.data).all()
             ]
 
     def get_feedbacks_by_type(

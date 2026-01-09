@@ -3,7 +3,6 @@
 	import { getContext } from 'svelte';
 	export let show = false;
 	export let model = null;
-	export let feedbacks = [];
 	export let onClose: () => void = () => {};
 	const i18n = getContext('i18n');
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -13,22 +12,8 @@
 		onClose();
 	};
 
-	$: topTags = model ? getTopTagsForModel(model.id, feedbacks) : [];
-
-	const getTopTagsForModel = (modelId: string, feedbacks: any[], topN = 5) => {
-		const tagCounts = new Map();
-		feedbacks
-			.filter((fb) => fb.data.model_id === modelId)
-			.forEach((fb) => {
-				(fb.data.tags || []).forEach((tag) => {
-					tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-				});
-			});
-		return Array.from(tagCounts.entries())
-			.sort((a, b) => b[1] - a[1])
-			.slice(0, topN)
-			.map(([tag, count]) => ({ tag, count }));
-	};
+	// Use top_tags from backend response (already computed)
+	$: topTags = model?.top_tags ?? [];
 </script>
 
 <Modal size="sm" bind:show>

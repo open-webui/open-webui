@@ -1,5 +1,7 @@
 from typing import Optional
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from open_webui.models.users import Users, UserModel
@@ -10,6 +12,7 @@ from open_webui.models.feedbacks import (
     FeedbackForm,
     FeedbackUserResponse,
     FeedbackListResponse,
+    LeaderboardFeedbackData,
     Feedbacks,
 )
 
@@ -18,7 +21,237 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
 
+log = logging.getLogger(__name__)
+
+
 router = APIRouter()
+
+
+# Leaderboard Elo Rating Computation
+#
+# How it works:
+# 1. Each model starts with a rating of 1000
+# 2. When a user picks a winner between two models, ratings are adjusted:
+#    - Winner gains points, loser loses points
+#    - The amount depends on expected outcome (upset = bigger change)
+# 3. The Elo formula: new_rating = old_rating + K * (actual - expected)
+#    - K=32 controls how much ratings can change per match
+#    - expected = probability of winning based on current ratings
+#
+# Query-based re-ranking (optional):
+#    When a user searches for a topic (e.g., "coding"), we want to show
+#    which models perform best FOR THAT TOPIC. We do this by:
+#    1. Computing semantic similarity between the query and each feedback's tags
+#    2. Using that similarity as a weight in the Elo calculation
+#    3. Feedbacks about "coding" contribute more to the final ranking
+#    4. Feedbacks about unrelated topics (e.g., "cooking") contribute less
+#    This gives topic-specific leaderboards without needing separate data.
+
+EMBEDDING_MODEL_NAME = "TaylorAI/bge-micro-v2"
+_embedding_model = None
+
+
+def _get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+
+            _embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+        except Exception as e:
+            log.error(f"Embedding model load failed: {e}")
+    return _embedding_model
+
+
+def _calculate_elo(
+    feedbacks: list[LeaderboardFeedbackData], similarities: dict = None
+) -> dict:
+    """
+    Calculate Elo ratings for models based on user feedback.
+
+    Each feedback represents a comparison where a user rated one model
+    against its opponents (sibling_model_ids). Rating=1 means the model won,
+    rating=-1 means it lost.
+
+    The Elo system adjusts ratings based on:
+    - Current rating difference (upsets cause bigger swings)
+    - Optional similarity weights (for query-based filtering)
+
+    Returns: {model_id: {"rating": float, "won": int, "lost": int}}
+    """
+    K_FACTOR = 32  # Standard Elo K-factor for rating volatility
+    model_stats = {}
+
+    def get_or_create_stats(model_id):
+        if model_id not in model_stats:
+            model_stats[model_id] = {"rating": 1000.0, "won": 0, "lost": 0}
+        return model_stats[model_id]
+
+    for feedback in feedbacks:
+        data = feedback.data or {}
+        winner_id = data.get("model_id")
+        rating_value = str(data.get("rating", ""))
+        if not winner_id or rating_value not in ("1", "-1"):
+            continue
+
+        won = rating_value == "1"
+        weight = similarities.get(feedback.id, 1.0) if similarities else 1.0
+
+        for opponent_id in data.get("sibling_model_ids") or []:
+            winner = get_or_create_stats(winner_id)
+            opponent = get_or_create_stats(opponent_id)
+            expected = 1 / (1 + 10 ** ((opponent["rating"] - winner["rating"]) / 400))
+
+            winner["rating"] += K_FACTOR * ((1 if won else 0) - expected) * weight
+            opponent["rating"] += (
+                K_FACTOR * ((0 if won else 1) - (1 - expected)) * weight
+            )
+
+            if won:
+                winner["won"] += 1
+                opponent["lost"] += 1
+            else:
+                winner["lost"] += 1
+                opponent["won"] += 1
+
+    return model_stats
+
+
+def _get_top_tags(feedbacks: list[LeaderboardFeedbackData], limit: int = 5) -> dict:
+    """
+    Count tag occurrences per model and return the most frequent ones.
+
+    Each feedback can have tags describing the conversation topic.
+    This aggregates those tags per model to show what topics each model
+    is commonly used for.
+
+    Returns: {model_id: [{"tag": str, "count": int}, ...]}
+    """
+    from collections import defaultdict
+
+    tag_counts = defaultdict(lambda: defaultdict(int))
+
+    for feedback in feedbacks:
+        data = feedback.data or {}
+        model_id = data.get("model_id")
+        if model_id:
+            for tag in data.get("tags", []):
+                tag_counts[model_id][tag] += 1
+
+    return {
+        model_id: [
+            {"tag": tag, "count": count}
+            for tag, count in sorted(tags.items(), key=lambda x: -x[1])[:limit]
+        ]
+        for model_id, tags in tag_counts.items()
+    }
+
+
+def _compute_similarities(feedbacks: list[LeaderboardFeedbackData], query: str) -> dict:
+    """
+    Compute how relevant each feedback is to a search query.
+
+    Uses embeddings to find semantic similarity between the query and
+    each feedback's tags. Higher similarity means the feedback is more
+    relevant to what the user searched for.
+
+    This is used to weight Elo calculations - feedbacks matching the
+    query have more influence on the final rankings.
+
+    Returns: {feedback_id: similarity_score (0-1)}
+    """
+    import numpy as np
+
+    embedding_model = _get_embedding_model()
+    if not embedding_model:
+        return {}
+
+    all_tags = list(
+        {
+            tag
+            for feedback in feedbacks
+            if feedback.data
+            for tag in feedback.data.get("tags", [])
+        }
+    )
+    if not all_tags:
+        return {}
+
+    try:
+        tag_embeddings = embedding_model.encode(all_tags)
+        query_embedding = embedding_model.encode([query])[0]
+    except Exception as e:
+        log.error(f"Embedding error: {e}")
+        return {}
+
+    # Vectorized cosine similarity
+    tag_norms = np.linalg.norm(tag_embeddings, axis=1)
+    query_norm = np.linalg.norm(query_embedding)
+    similarities = np.dot(tag_embeddings, query_embedding) / (
+        tag_norms * query_norm + 1e-9
+    )
+    tag_similarity_map = dict(zip(all_tags, similarities.tolist()))
+
+    return {
+        feedback.id: max(
+            (
+                tag_similarity_map.get(tag, 0)
+                for tag in (feedback.data or {}).get("tags", [])
+            ),
+            default=0,
+        )
+        for feedback in feedbacks
+    }
+
+
+class LeaderboardEntry(BaseModel):
+    model_id: str
+    rating: int
+    won: int
+    lost: int
+    count: int
+    top_tags: list[dict]
+
+
+class LeaderboardResponse(BaseModel):
+    entries: list[LeaderboardEntry]
+
+
+@router.get("/leaderboard", response_model=LeaderboardResponse)
+async def get_leaderboard(
+    query: Optional[str] = None,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    """Get model leaderboard with Elo ratings. Query filters by tag similarity."""
+    feedbacks = Feedbacks.get_feedbacks_for_leaderboard(db=db)
+
+    similarities = None
+    if query and query.strip():
+        similarities = await run_in_threadpool(
+            _compute_similarities, feedbacks, query.strip()
+        )
+
+    elo_stats = _calculate_elo(feedbacks, similarities)
+    tags_by_model = _get_top_tags(feedbacks)
+
+    entries = sorted(
+        [
+            LeaderboardEntry(
+                model_id=mid,
+                rating=round(s["rating"]),
+                won=s["won"],
+                lost=s["lost"],
+                count=s["won"] + s["lost"],
+                top_tags=tags_by_model.get(mid, []),
+            )
+            for mid, s in elo_stats.items()
+        ],
+        key=lambda e: e.rating,
+        reverse=True,
+    )
+
+    return LeaderboardResponse(entries=entries)
 
 
 ############################
