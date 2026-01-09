@@ -714,7 +714,7 @@
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									type="number"
 									min="0"
-									placeholder={$i18n.t('Enter max file count per folder')}
+									placeholder={$i18n.t('Leave empty for unlimited')}
 									bind:value={adminConfig.FOLDER_MAX_FILE_COUNT}
 								/>
 							</div>
@@ -755,6 +755,14 @@
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('User Status')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_USER_STATUS} />
 					</div>
 
 					<div class="mb-2.5">

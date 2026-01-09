@@ -166,6 +166,7 @@ async def generate_chat_completion(
     form_data: dict,
     user: Any,
     bypass_filter: bool = False,
+    bypass_system_prompt: bool = False,
 ):
     log.debug(f"generate_chat_completion: {form_data}")
     if BYPASS_MODEL_ACCESS_CONTROL:
@@ -237,7 +238,11 @@ async def generate_chat_completion(
                         yield chunk
 
                 response = await generate_chat_completion(
-                    request, form_data, user, bypass_filter=True
+                    request,
+                    form_data,
+                    user,
+                    bypass_filter=True,
+                    bypass_system_prompt=bypass_system_prompt,
                 )
                 return StreamingResponse(
                     stream_wrapper(response.body_iterator),
@@ -248,7 +253,11 @@ async def generate_chat_completion(
                 return {
                     **(
                         await generate_chat_completion(
-                            request, form_data, user, bypass_filter=True
+                            request,
+                            form_data,
+                            user,
+                            bypass_filter=True,
+                            bypass_system_prompt=bypass_system_prompt,
                         )
                     ),
                     "selected_model_id": selected_model_id,
@@ -267,6 +276,7 @@ async def generate_chat_completion(
                 form_data=form_data,
                 user=user,
                 bypass_filter=bypass_filter,
+                bypass_system_prompt=bypass_system_prompt,
             )
             if form_data.get("stream"):
                 response.headers["content-type"] = "text/event-stream"
@@ -283,6 +293,7 @@ async def generate_chat_completion(
                 form_data=form_data,
                 user=user,
                 bypass_filter=bypass_filter,
+                bypass_system_prompt=bypass_system_prompt,
             )
 
 

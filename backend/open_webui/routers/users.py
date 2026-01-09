@@ -333,8 +333,15 @@ async def update_user_settings_by_session_user(
 
 @router.get("/user/status")
 async def get_user_status_by_session_user(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
+    if not request.app.state.config.ENABLE_USER_STATUS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
     user = Users.get_user_by_id(user.id, db=db)
     if user:
         return user
@@ -352,10 +359,16 @@ async def get_user_status_by_session_user(
 
 @router.post("/user/status/update")
 async def update_user_status_by_session_user(
+    request: Request,
     form_data: UserStatus,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
+    if not request.app.state.config.ENABLE_USER_STATUS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
     user = Users.get_user_by_id(user.id, db=db)
     if user:
         user = Users.update_user_status_by_id(user.id, form_data, db=db)

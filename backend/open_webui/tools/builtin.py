@@ -346,6 +346,7 @@ async def edit_image(
 
 async def search_memories(
     query: str,
+    count: int = 5,
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -353,6 +354,7 @@ async def search_memories(
     Search the user's stored memories for relevant information.
 
     :param query: The search query to find relevant memories
+    :param count: Number of memories to return (default 5)
     :return: JSON with matching memories and their dates
     """
     if __request__ is None:
@@ -363,7 +365,7 @@ async def search_memories(
 
         results = await query_memory(
             __request__,
-            QueryMemoryForm(content=query, k=5),
+            QueryMemoryForm(content=query, k=count),
             user,
         )
 

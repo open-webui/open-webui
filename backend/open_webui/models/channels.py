@@ -1,4 +1,5 @@
 import json
+import secrets
 import time
 import uuid
 from typing import Optional
@@ -243,6 +244,11 @@ class ChannelForm(BaseModel):
 
 class CreateChannelForm(ChannelForm):
     type: Optional[str] = None
+
+
+class ChannelWebhookForm(BaseModel):
+    name: str
+    profile_image_url: Optional[str] = None
 
 
 class ChannelTable:
@@ -944,6 +950,110 @@ class ChannelTable:
             db.query(Channel).filter(Channel.id == id).delete()
             db.commit()
             return True
+
+    ####################
+    # Webhook Methods
+    ####################
+
+    def insert_webhook(
+        self,
+        channel_id: str,
+        user_id: str,
+        form_data: ChannelWebhookForm,
+        db: Optional[Session] = None,
+    ) -> Optional[ChannelWebhookModel]:
+        with get_db_context(db) as db:
+            webhook = ChannelWebhookModel(
+                id=str(uuid.uuid4()),
+                channel_id=channel_id,
+                user_id=user_id,
+                name=form_data.name,
+                profile_image_url=form_data.profile_image_url,
+                token=secrets.token_urlsafe(32),
+                last_used_at=None,
+                created_at=int(time.time_ns()),
+                updated_at=int(time.time_ns()),
+            )
+            db.add(ChannelWebhook(**webhook.model_dump()))
+            db.commit()
+            return webhook
+
+    def get_webhooks_by_channel_id(
+        self, channel_id: str, db: Optional[Session] = None
+    ) -> list[ChannelWebhookModel]:
+        with get_db_context(db) as db:
+            webhooks = (
+                db.query(ChannelWebhook)
+                .filter(ChannelWebhook.channel_id == channel_id)
+                .all()
+            )
+            return [ChannelWebhookModel.model_validate(w) for w in webhooks]
+
+    def get_webhook_by_id(
+        self, webhook_id: str, db: Optional[Session] = None
+    ) -> Optional[ChannelWebhookModel]:
+        with get_db_context(db) as db:
+            webhook = (
+                db.query(ChannelWebhook).filter(ChannelWebhook.id == webhook_id).first()
+            )
+            return ChannelWebhookModel.model_validate(webhook) if webhook else None
+
+    def get_webhook_by_id_and_token(
+        self, webhook_id: str, token: str, db: Optional[Session] = None
+    ) -> Optional[ChannelWebhookModel]:
+        with get_db_context(db) as db:
+            webhook = (
+                db.query(ChannelWebhook)
+                .filter(
+                    ChannelWebhook.id == webhook_id,
+                    ChannelWebhook.token == token,
+                )
+                .first()
+            )
+            return ChannelWebhookModel.model_validate(webhook) if webhook else None
+
+    def update_webhook_by_id(
+        self,
+        webhook_id: str,
+        form_data: ChannelWebhookForm,
+        db: Optional[Session] = None,
+    ) -> Optional[ChannelWebhookModel]:
+        with get_db_context(db) as db:
+            webhook = (
+                db.query(ChannelWebhook).filter(ChannelWebhook.id == webhook_id).first()
+            )
+            if not webhook:
+                return None
+            webhook.name = form_data.name
+            webhook.profile_image_url = form_data.profile_image_url
+            webhook.updated_at = int(time.time_ns())
+            db.commit()
+            return ChannelWebhookModel.model_validate(webhook)
+
+    def update_webhook_last_used_at(
+        self, webhook_id: str, db: Optional[Session] = None
+    ) -> bool:
+        with get_db_context(db) as db:
+            webhook = (
+                db.query(ChannelWebhook).filter(ChannelWebhook.id == webhook_id).first()
+            )
+            if not webhook:
+                return False
+            webhook.last_used_at = int(time.time_ns())
+            db.commit()
+            return True
+
+    def delete_webhook_by_id(
+        self, webhook_id: str, db: Optional[Session] = None
+    ) -> bool:
+        with get_db_context(db) as db:
+            result = (
+                db.query(ChannelWebhook)
+                .filter(ChannelWebhook.id == webhook_id)
+                .delete()
+            )
+            db.commit()
+            return result > 0
 
 
 Channels = ChannelTable()

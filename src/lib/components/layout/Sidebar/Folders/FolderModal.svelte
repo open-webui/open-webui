@@ -43,8 +43,8 @@
 		}
 
 		// Check folder max file count limit
-		const maxFileCount = $config?.features?.folder_max_file_count ?? null;
-		if (maxFileCount !== null && (data?.files ?? []).length > maxFileCount) {
+		const maxFileCount = $config?.features?.folder_max_file_count ?? '';
+		if (maxFileCount && (data?.files ?? []).length > maxFileCount) {
 			toast.error(
 				$i18n.t('Maximum number of files per folder is {{max}}.', { max: maxFileCount ?? 0 })
 			);

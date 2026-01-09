@@ -1574,6 +1574,12 @@ ENABLE_NOTES = PersistentConfig(
     os.environ.get("ENABLE_NOTES", "True").lower() == "true",
 )
 
+ENABLE_USER_STATUS = PersistentConfig(
+    "ENABLE_USER_STATUS",
+    "users.enable_status",
+    os.environ.get("ENABLE_USER_STATUS", "True").lower() == "true",
+)
+
 ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
     "ENABLE_EVALUATION_ARENA_MODELS",
     "evaluation.arena.enable",
