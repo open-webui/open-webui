@@ -51,7 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧠 Administrators can now globally enable or disable the Memories feature and control access through per-user or per-group permissions, with the Personalization tab automatically hidden when the feature is disabled. [#20462](https://github.com/open-webui/open-webui/pull/20462)
 - 🟢 Administrators can now globally enable or disable user status visibility through the "ENABLE_USER_STATUS" setting in Admin Settings. [#20488](https://github.com/open-webui/open-webui/pull/20488)
 - 🪝 Channel managers can now create webhooks to allow external services to post messages to channels without authentication. [Commit](https://github.com/open-webui/open-webui/commit/cd296fcf0d79cecd1a6a3ee4e492c6b5246ca7ae)
-- 📄 In the model editor users can now disable the "File Context" capability to skip automatic file content extraction and injection, forwarding raw messages with file attachment metadata instead for use with custom tools or future built-in file access tools. [Commit](https://github.com/open-webui/open-webui/commit/daccf0713e3ecd6d24f003a87b5f8b3c61852958)
+- 📄 In the model editor users can now disable the "File Context" capability to skip automatic file content extraction and injection, forwarding raw messages with file attachment metadata instead for use with custom tools or future built-in file access tools. [Commit](https://github.com/open-webui/open-webui/commit/daccf0713e3ecd6d24f003a87b5f8b3c61852958), [Docs:Commit](https://github.com/open-webui/docs/commit/18ec6eaefc071a278ec57d4d1b8d66d686af0870)
+- 🔊 In the model editor users can now configure a specific TTS voice for each model, overriding user preferences and global defaults to give different AI personas distinct voices. [#3097](https://github.com/open-webui/open-webui/issues/3097), [Commit](https://github.com/open-webui/open-webui/commit/bb6188abf04302f79d80b0d6cc42c232624b5757)
+- 🕐 User timezones are now automatically detected and stored on login, enabling accurate timestamp handling for time-sensitive features. [Commit](https://github.com/open-webui/open-webui/commit/401c1949a04dfd1bcc3c8b9a4f77b73beb78b818)
 - 👥 Administrators now have three granular group sharing permission options instead of a simple on/off toggle, allowing them to choose between "No one", "Members", or "Anyone" for who can share content to each group. [Commit](https://github.com/open-webui/open-webui/commit/ca514cd3eda2524b8da472ef17c0ccb216bac2e8)
 - 📦 Administrators can now export knowledge bases as zip files containing text files for backup and archival purposes. [#20120](https://github.com/open-webui/open-webui/issues/20120), [Commit](https://github.com/open-webui/open-webui/commit/c1147578c073a8c7fa7e7f836149e1cdfec8f18d)
 - 🚀 Administrators can now create an admin account automatically at startup via "WEBUI_ADMIN_EMAIL", "WEBUI_ADMIN_PASSWORD", and "WEBUI_ADMIN_NAME" environment variables, enabling headless and automated deployments without exposing the signup page. [#17654](https://github.com/open-webui/open-webui/issues/17654), [Commit](https://github.com/open-webui/open-webui/commit/1138929f4d083931305f1f925899971b190562ae)
@@ -64,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🔊 Text-to-speech now correctly splits on newlines in addition to punctuation, so markdown bullet points and lists are spoken as separate sentences instead of being merged together. [#5924](https://github.com/open-webui/open-webui/issues/5924), [Commit](https://github.com/open-webui/open-webui/commit/869108a3e1ce2b8110084113c1b392072e98fd5f)
 - 🔒 Users are now protected from stored XSS vulnerabilities in iFrame embeds for citations and response messages through configurable same-origin sandbox settings instead of hardcoded values. [#20209](https://github.com/open-webui/open-webui/pull/20209), [#20210](https://github.com/open-webui/open-webui/pull/20210)
 - 🔑 Image Generation, Web Search, and Audio (TTS/STT) API endpoints now enforce permission checks on the backend, closing a security gap where disabled features could previously be accessed via direct API calls. [#20471](https://github.com/open-webui/open-webui/pull/20471)
 - 🛠️ Tools and Tool Servers (MCP and OpenAPI) now enforce access control checks on the backend, ensuring users can only access tools they have permission to use even via direct API calls. [#20443](https://github.com/open-webui/open-webui/issues/20443), [Commit](https://github.com/open-webui/open-webui/commit/9b06fdc8fe1c933071610336be05f11e77e6c8eb)
@@ -120,15 +123,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔗 Administrators will find the Admin Evaluations page at the new URL "/admin/evaluations/feedback" instead of "/admin/evaluations/feedbacks" to use the correct uncountable form of the word. [#20296](https://github.com/open-webui/open-webui/pull/20296)
 - 🔐 Scripts or integrations that directly called Image Generation, Web Search, or Audio APIs while those features were disabled in the Admin UI will now receive 403 Forbidden errors, as backend permission enforcement has been added to match frontend restrictions. [#20471](https://github.com/open-webui/open-webui/pull/20471)
 - 👥 The default group sharing permission changed from "Members" to "Anyone", meaning users can now share content to any group configured with "Anyone" permission regardless of their membership in that group. [Commit](https://github.com/open-webui/open-webui/commit/ca514cd3eda2524b8da472ef17c0ccb216bac2e8)
-
-## [0.6.43] - 2025-12-22
-
-### Fixed
-
-- 🐍 **Python dependency installation issues** were resolved by correcting pip dependency handling, preventing installation failures in certain environments and improving setup reliability. [Commit](https://github.com/open-webui/open-webui/commit/5c5f87a)
-- 🎙️ **Speech-to-Text default content type handling** was fixed and refactored to ensure correct MIME type usage, improving compatibility across STT providers and preventing transcription errors caused by incorrect defaults. [Commit](https://github.com/open-webui/open-webui/commit/4ab917c)
-- 🖼️ **Temporary chat image handling** was fixed and refactored, ensuring images generated or edited in temporary chats are correctly processed, stored, and displayed without inconsistencies or missing references. [Commit](https://github.com/open-webui/open-webui/commit/423983f)
-- 🎨 **Image action button fixed**, restoring the ability to trigger image generation, editing, and related image actions from the chat UI. [Commit](https://github.com/open-webui/open-webui/commit/def8a00)
 
 ## [0.6.42] - 2025-12-21
 
