@@ -63,16 +63,61 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 # GetSessionUser
 ############################
 
+def _enforce_terms_version(request: Request, user):
+    """
+    If terms were previously accepted on an older version, require re-acceptance.
+    Policy:
+    - Only affects users with Pilot GenAI terms tracking in user.info
+    - Only gates 'user' role accounts (admins are not demoted)
+    """
+    try:
+        current_version = getattr(request.app.state.config, "PILOT_GENAI_TERMS_VERSION", 1)
+        if not current_version:
+            return user
+
+        info = user.info or {}
+        if not isinstance(info, dict):
+            return user
+        pilot = info.get("pilot_genai", {})
+        if not isinstance(pilot, dict):
+            return user
+        terms = pilot.get("terms", {})
+        if not isinstance(terms, dict):
+            return user
+
+        accepted = bool(terms.get("accepted", False))
+        accepted_version = int(terms.get("version") or 0)
+
+        if accepted and accepted_version < int(current_version) and user.role == "user":
+            # Re-require acceptance
+            terms["required"] = True
+            terms["accepted"] = False
+            # keep accepted_at as historical, but user must accept again
+            pilot["terms"] = terms
+            pilot["pending_role_target"] = "user"
+            info["pilot_genai"] = pilot
+            Users.update_user_by_id(user.id, {"role": "pending", "info": info})
+            return Users.get_user_by_id(user.id) or user
+
+        return user
+    except Exception:
+        return user
+
 
 class SessionUserResponse(Token, UserResponse):
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
+    info: Optional[dict] = None
 
 
 @router.get("/", response_model=SessionUserResponse)
 async def get_session_user(
     request: Request, response: Response, user=Depends(get_current_user)
 ):
+    # Always use fresh user record and enforce T&C versioning
+    user = Users.get_user_by_id(user.id) or user
+    user = _enforce_terms_version(request, user)
+
     expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
     expires_at = None
     if expires_delta:
@@ -113,6 +158,7 @@ async def get_session_user(
         "role": user.role,
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
+        "info": user.info,
     }
 
 
@@ -303,6 +349,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     "role": user.role,
                     "profile_image_url": user.profile_image_url,
                     "permissions": user_permissions,
+                    "info": user.info,
                 }
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -403,6 +450,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "role": user.role,
             "profile_image_url": user.profile_image_url,
             "permissions": user_permissions,
+            "info": user.info,
         }
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -560,7 +608,11 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         request.app.state.config.ENABLE_SIGNUP = False
 
     try:
-        hashed = get_password_hash(form_data.password)
+        # If password is omitted/blank, generate a random one.
+        raw_password = (form_data.password or "").strip()
+        if not raw_password:
+            raw_password = str(uuid.uuid4())
+        hashed = get_password_hash(raw_password)
 
         # Insert both Auth and User in the DB
         user = Auths.insert_new_auth(
@@ -628,6 +680,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
                 "permissions": user_permissions,
+                "info": user.info,
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
@@ -685,15 +738,39 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
 
     try:
         hashed = get_password_hash(form_data.password)
+
+        requested_role = (form_data.role or "pending").lower()
+        requested_group_name = (form_data.group_name or "").strip()
+        create_role = "pending" if requested_role in ["user", "pending"] else requested_role
+
         user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
             form_data.name,
             form_data.profile_image_url,
-            form_data.role,
+            create_role,
         )
 
         if user:
+            # Persist T&C requirement metadata for CSV/admin-created "user" accounts
+            # so they remain pending until they explicitly accept.
+            if requested_role in ["user", "pending"]:
+                existing = Users.get_user_by_id(user.id)
+                info = (existing.info or {}) if existing else {}
+                pilot = info.get("pilot_genai", {}) if isinstance(info, dict) else {}
+                pilot["terms"] = {
+                    "required": True,
+                    "accepted": False,
+                    "accepted_at": None,
+                    "version": 1,
+                }
+                pilot["pending_role_target"] = "user"
+                if requested_group_name:
+                    pilot["pending_group_name"] = requested_group_name
+                info = info if isinstance(info, dict) else {}
+                info["pilot_genai"] = pilot
+                Users.update_user_by_id(user.id, {"info": info})
+
             token = create_token(data={"id": user.id})
             return {
                 "token": token,

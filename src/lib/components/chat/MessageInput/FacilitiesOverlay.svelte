@@ -2,7 +2,7 @@
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
 	import { showFacilitiesOverlay, showControls, models, chatId, chats, currentChatPage } from '$lib/stores';
 	import { slide } from 'svelte/transition';
-	import { generateFacilitiesResponse, downloadFacilitiesDocument } from '$lib/apis/facilities';
+	import { generateFacilitiesResponse, downloadFacilitiesDocument, extractFormDataFromFiles } from '$lib/apis/facilities';
 	import { updateChatById, getChatList } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	
@@ -352,6 +352,76 @@
 		// Save after sponsor change (only if chatId exists)
 		if ($chatId) {
 			saveToLocalStorage();
+		}
+	}
+
+	async function generateFormInputFromFiles() {
+		if (!files || files.length === 0) {
+			toast.error('Please upload files first');
+			return;
+		}
+
+		if (!selectedSponsor) {
+			toast.error('Please select a sponsor (NSF or NIH) first');
+			return;
+		}
+
+		generating = true;
+
+		try {
+			// Get token from localStorage
+			const token = localStorage.getItem('token');
+			if (!token) {
+				toast.error('Authentication required');
+				generating = false;
+				return;
+			}
+
+			console.log('Extracting form data from files:', {
+				sponsor: selectedSponsor,
+				model: modelId,
+				files: files.map(f => ({ name: f.name, type: f.type, id: f.id }))
+			});
+
+			// Call the extract form data API
+			const response = await extractFormDataFromFiles(token, {
+				sponsor: selectedSponsor,
+				model: modelId,
+				files: files
+			});
+
+			console.log('Extract form data API response:', response);
+
+			if (response && response.success) {
+				// Populate form fields with extracted data
+				let fieldsPopulated = 0;
+				for (const [key, value] of Object.entries(response.form_data)) {
+					if (value && value.trim() !== '') {
+						formData[key] = value.trim();
+						fieldsPopulated++;
+					}
+				}
+
+				if (fieldsPopulated > 0) {
+					toast.success(`Successfully extracted and populated ${fieldsPopulated} form field${fieldsPopulated === 1 ? '' : 's'} from uploaded files`);
+					
+					// Save to localStorage
+					if ($chatId) {
+						saveToLocalStorage();
+					}
+				} else {
+					toast.warning('No relevant information found in the uploaded files for the form sections');
+				}
+			} else {
+				console.error('Extract form data API failed:', response?.error);
+				toast.error(response?.error || 'Failed to extract form data from files');
+			}
+
+		} catch (error: any) {
+			console.error('Error extracting form data from files:', error);
+			toast.error(error?.detail || error?.message || 'Failed to extract form data from files');
+		} finally {
+			generating = false;
 		}
 	}
 
@@ -778,6 +848,26 @@
 				</select>
 			</div>
 
+			<!-- Generate form input using uploaded files button -->
+			{#if files && files.length > 0}
+				<button
+					type="button"
+					class="w-full mt-6 px-4 py-3 bg-[#57068C] hover:bg-[#8900E1] text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium text-sm transition-colors"
+					on:click={generateFormInputFromFiles}
+					disabled={generating || !selectedSponsor}
+					aria-describedby="generate-files-help"
+				>
+					{#if generating}
+						<svg class="animate-spin h-4 w-4 inline mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle>
+							<path fill="currentColor" class="opacity-75" d="m12 2 A10 10 0 0 1 22 12"></path>
+						</svg>
+						Extracting...
+					{:else}
+						{('Generate form input using uploaded files')}
+					{/if}
+				</button>
+			{/if}
 
 			<!-- Form Inputs -->
 			{#if selectedSponsor && currentSections.length > 0}

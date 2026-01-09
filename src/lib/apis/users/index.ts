@@ -83,6 +83,37 @@ export const getUserGroups = async (token: string) => {
 	return res;
 };
 
+export const acceptTerms = async (token: string, version: number = 1) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/terms/accept`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			accepted: true,
+			version
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail ?? err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getUserDefaultPermissions = async (token: string) => {
 	let error = null;
 

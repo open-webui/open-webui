@@ -353,8 +353,9 @@ export const addUser = async (
 	token: string,
 	name: string,
 	email: string,
-	password: string,
-	role: string = 'pending'
+	password: string = '',
+	role: string = 'pending',
+	groupName?: string
 ) => {
 	let error = null;
 
@@ -368,7 +369,8 @@ export const addUser = async (
 			name: name,
 			email: email,
 			password: password,
-			role: role
+			role: role,
+			...(groupName ? { group_name: groupName } : {})
 		})
 	})
 		.then(async (res) => {

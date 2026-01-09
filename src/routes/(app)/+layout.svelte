@@ -45,6 +45,7 @@
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
+	import TermsAndConditions from '$lib/components/layout/Overlay/TermsAndConditions.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 
 	const i18n = getContext('i18n');
@@ -324,7 +325,11 @@
 	>
 		{#if loaded}
 			{#if !['user', 'admin'].includes($user.role)}
+				{#if $user?.info?.pilot_genai?.terms?.required}
+					<TermsAndConditions />
+				{:else}
 				<AccountPending />
+				{/if}
 			{:else if localDBChats.length > 0}
 				<div class="fixed w-full h-full flex z-50">
 					<div

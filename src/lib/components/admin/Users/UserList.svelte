@@ -31,6 +31,20 @@
 
 	const i18n = getContext('i18n');
 
+	function getTermsStatus(u) {
+		const terms = u?.info?.pilot_genai?.terms;
+		if (!terms) return '';
+		if (terms?.accepted) {
+			const v = terms?.version ?? '';
+			const at = terms?.accepted_at ? dayjs(terms.accepted_at * 1000).format('LLL') : '';
+			return `T&C v${v} accepted at ${at}`;
+		}
+		if (terms?.required) {
+			return 'T&C required';
+		}
+		return '';
+	}
+
 	// Cache for super admin status - stores { email: boolean }
 	let superAdminCache = {};
 	
@@ -368,24 +382,13 @@
 				<th
 					scope="col"
 					class="px-3 py-1.5 cursor-pointer select-none"
-					on:click={() => setSortKey('oauth_sub')}
 				>
 					<div class="flex gap-1.5 items-center">
-						{$i18n.t('OAuth ID')}
+						{$i18n.t('Terms & Conditions')}
 
-						{#if sortKey === 'oauth_sub'}
-							<span class="font-normal"
-								>{#if sortOrder === 'asc'}
-									<ChevronUp className="size-2" />
-								{:else}
-									<ChevronDown className="size-2" />
-								{/if}
-							</span>
-						{:else}
-							<span class="invisible">
-								<ChevronUp className="size-2" />
-							</span>
-						{/if}
+						<span class="invisible">
+							<ChevronUp className="size-2" />
+						</span>
 					</div>
 				</th>
 
@@ -476,7 +479,7 @@
 						{dayjs(user.created_at * 1000).format('LL')}
 					</td>
 
-					<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
+					<td class=" px-3 py-1"> {getTermsStatus(user)} </td>
 
 					<td class="px-3 py-1 text-right">
 						<div class="flex justify-end w-full">
