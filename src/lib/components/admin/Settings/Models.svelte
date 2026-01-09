@@ -7,6 +7,7 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { getTranslatedLabel } from '$lib/i18n';
 	import {
 		createNewModel,
 		deleteAllModels,
@@ -72,6 +73,8 @@
 	}
 
 	let searchValue = '';
+
+	$: langCode = $i18n.language?.split('-')[0] || 'de';
 
 	const downloadModels = async (models) => {
 		let blob = new Blob([JSON.stringify(models)], {
@@ -207,7 +210,7 @@
 			...model,
 			base_model_id: model.id,
 			id: `${model.id}-clone`,
-			name: `${model.name} (Clone)`
+			name: `${getTranslatedLabel(model.name, langCode)} (Clone)`
 		});
 		goto('/workspace/models/create');
 	};
@@ -378,7 +381,7 @@
 									className=" w-fit"
 									placement="top-start"
 								>
-									<div class="  font-semibold line-clamp-1">{model.name}</div>
+									<div class="  font-semibold line-clamp-1">{getTranslatedLabel(model.name, langCode)}</div>
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 									<span class=" line-clamp-1">

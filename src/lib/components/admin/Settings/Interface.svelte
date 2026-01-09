@@ -23,6 +23,8 @@
 	import Banners from './Interface/Banners.svelte';
 	import PromptSuggestions from '$lib/components/workspace/Models/PromptSuggestions.svelte';
 
+	import LangPicker from './LangPicker.svelte';
+
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -43,6 +45,7 @@
 		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
 		QUERY_GENERATION_PROMPT_TEMPLATE: '',
 		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: '',
+		TRANSLATION_LANGUAGES: [],
 		VOICE_MODE_PROMPT_TEMPLATE: ''
 	};
 
@@ -50,6 +53,12 @@
 	let banners: Banner[] = [];
 
 	const updateInterfaceHandler = async () => {
+		// Trim any spaces from translation languages before saving
+		if (taskConfig.TRANSLATION_LANGUAGES && Array.isArray(taskConfig.TRANSLATION_LANGUAGES)) {
+			taskConfig.TRANSLATION_LANGUAGES = taskConfig.TRANSLATION_LANGUAGES
+				.map((lang: string) => lang.trim())
+				.filter((lang: string) => lang !== '');
+		}
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
 		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
@@ -442,7 +451,7 @@
 											id: uuidv4(),
 											type: '',
 											title: '',
-											content: '',
+											content: JSON.stringify({ de: '', en: '', fr: '', it: '' }),
 											dismissible: true,
 											timestamp: Math.floor(Date.now() / 1000)
 										}
@@ -467,15 +476,23 @@
 				</div>
 
 				{#if $user?.role === 'admin'}
-					<PromptSuggestions bind:promptSuggestions />
-
-					{#if promptSuggestions.length > 0}
-						<div class="text-xs text-left w-full mt-2">
-							{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
+					<div class="flex w-full justify-between">
+						<div class=" self-center text-xs">
+							{$i18n.t('Select languages for translations')}
 						</div>
-					{/if}
+							<LangPicker bind:selected={taskConfig.TRANSLATION_LANGUAGES} />
+					</div>
+					<div class=" space-y-3">
+
+						<PromptSuggestions bind:promptSuggestions />
+
+						{#if promptSuggestions.length > 0}
+							<div class="text-xs text-left w-full mt-2">
+								{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
+							</div>
+						{/if}
+					</div>
 				{/if}
-			</div>
 		</div>
 
 		<div class="flex justify-end text-sm font-medium">

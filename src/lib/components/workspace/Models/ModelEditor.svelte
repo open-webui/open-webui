@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, user } from '$lib/stores';
+	import { models, tools, functions, user, config } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
@@ -19,6 +19,7 @@
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
@@ -54,11 +55,27 @@
 	let id = '';
 	let name = '';
 
+	// Translation support
+	let showTitleModal = false;
+	let titleTranslations = {};
+	let showPromptModal = false;
+	let currentPromptIdx = -1;
+	let currentPromptTranslations = {};
+
+	$: langCode = $i18n.language?.split('-')[0] || 'de';
+	$: LANGS = Array.isArray($config.features.translation_languages)
+		? [...new Set([...$config.features.translation_languages, langCode])]
+		: [langCode, 'de'];
+
+	// Keep name synchronized with the current language translation
+	$: name = titleTranslations[langCode] || '';
+
 	let enableDescription = true;
 
 	$: if (!edit) {
-		if (name) {
-			id = name
+		const currentName = titleTranslations[langCode] || '';
+		if (currentName) {
+			id = currentName
 				.replace(/\s+/g, '-')
 				.replace(/[^a-zA-Z0-9-]/g, '')
 				.toLowerCase();
@@ -108,11 +125,80 @@
 	let actionIds = [];
 	let accessControl = {};
 
+	const addUsage = (base_model_id) => {
+		const baseModel = $models.find((m) => m.id === base_model_id);
+
+		if (baseModel) {
+			if (baseModel.owned_by === 'openai') {
+				capabilities.usage = baseModel?.meta?.capabilities?.usage ?? false;
+			} else {
+				delete capabilities.usage;
+			}
+			capabilities = capabilities;
+		}
+	};
+
+	// Translation helper functions
+	function createEmptyTranslations() {
+		const translations = {};
+		LANGS.forEach(lang => {
+			translations[lang] = '';
+		});
+		return translations;
+	}
+
+	function parseContentToObj(content) {
+		let parsed = {};
+		try {
+			parsed = typeof content === 'string' ? JSON.parse(content) : { ...content };
+		} catch {
+			parsed = { [LANGS[0] || 'de']: content || '' };
+		}
+
+		// ensure all languages from config exist
+		for (const lang of LANGS) {
+			if (parsed[lang] == null) parsed[lang] = '';
+		}
+		return parsed;
+	}
+
+	function initializeTitleTranslations(existingName) {
+		if (existingName) {
+			titleTranslations = parseContentToObj(existingName);
+		} else {
+			titleTranslations = createEmptyTranslations();
+		}
+	}
+
+	function getPromptTranslation(promptContent) {
+		const parsed = parseContentToObj(promptContent);
+		return parsed[langCode] || parsed[LANGS[0]] || '';
+	}
+
+	function openPromptTranslationModal(idx) {
+		currentPromptIdx = idx;
+		const promptContent = info.meta.suggestion_prompts[idx].content;
+		currentPromptTranslations = parseContentToObj(promptContent);
+		showPromptModal = true;
+	}
+
+	function savePromptTranslation() {
+		if (currentPromptIdx >= 0 && info.meta.suggestion_prompts[currentPromptIdx]) {
+			info.meta.suggestion_prompts[currentPromptIdx].content = JSON.stringify(currentPromptTranslations);
+			info.meta.suggestion_prompts = info.meta.suggestion_prompts;
+		}
+		showPromptModal = false;
+		currentPromptIdx = -1;
+	}
+
+	// Update name to store the full translation object
+	$: info.name = JSON.stringify(titleTranslations);
+
 	const submitHandler = async () => {
 		loading = true;
 
 		info.id = id;
-		info.name = name;
+		// info.name is set by reactive statement from titleTranslations
 
 		if (id === '') {
 			toast.error($i18n.t('Model ID is required.'));
@@ -121,7 +207,7 @@
 			return;
 		}
 
-		if (name === '') {
+		if (!titleTranslations[langCode] || titleTranslations[langCode].trim() === '') {
 			toast.error($i18n.t('Model Name is required.'));
 			loading = false;
 
@@ -219,7 +305,8 @@
 		}
 
 		if (model) {
-			name = model.name;
+			// Initialize translations from model name
+			initializeTitleTranslations(model.name);
 			await tick();
 
 			id = model.id;
@@ -300,6 +387,9 @@
 			};
 
 			console.log(model);
+		} else {
+			// Initialize empty translations for new model
+			titleTranslations = createEmptyTranslations();
 		}
 
 		loaded = true;
@@ -307,6 +397,78 @@
 </script>
 
 {#if loaded}
+	<!-- Translation Modal -->
+	{#if showTitleModal}
+		<div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+			<div class="bg-white dark:bg-gray-800 p-4 rounded-md shadow-md w-[90%] max-w-md">
+				<div class="flex justify-between dark:text-gray-300 pt-4 pb-1">
+					<h2 class="text-sm font-bold mb-2">{$i18n.t('Edit Title Translations')}</h2>
+					<button class="text-xs px-2 py-1" on:click={() => (showTitleModal = false)}>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+							<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+						</svg>
+					</button>
+				</div>
+
+				{#each LANGS as lang}
+					<div class="mb-2">
+						<label class="text-xs font-semibold block mb-1">{lang.toUpperCase()}</label>
+						<input
+							class="w-full text-sm p-1 border border-gray-300 dark:border-gray-700 rounded"
+							bind:value={titleTranslations[lang]}
+							placeholder={`Enter ${lang.toUpperCase()} title`}
+						/>
+					</div>
+				{/each}
+
+				<div class="flex justify-end space-x-2 mt-3">
+					<button
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						on:click={() => (showTitleModal = false)}
+					>
+						Save
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Prompt Translation Modal -->
+	{#if showPromptModal}
+		<div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+			<div class="bg-white dark:bg-gray-800 p-4 rounded-md shadow-md w-[90%] max-w-md">
+				<div class="flex justify-between dark:text-gray-300 pt-4 pb-1">
+					<h2 class="text-sm font-bold mb-2">{$i18n.t('Edit Prompt Translations')}</h2>
+					<button class="text-xs px-2 py-1" on:click={() => (showPromptModal = false)}>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+							<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+						</svg>
+					</button>
+				</div>
+
+				{#each LANGS as lang}
+					<div class="mb-2">
+						<label class="text-xs font-semibold block mb-1">{lang.toUpperCase()}</label>
+						<input
+							class="w-full text-sm p-1 border border-gray-300 dark:border-gray-700 rounded"
+							bind:value={currentPromptTranslations[lang]}
+							placeholder={`Enter ${lang.toUpperCase()} prompt`}
+						/>
+					</div>
+				{/each}
+
+				<div class="flex justify-end space-x-2 mt-3">
+					<button
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						on:click={savePromptTranslation}
+					>
+						Save
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
 	<AccessControlModal
 		bind:show={showAccessControlModal}
 		bind:accessControl
@@ -497,12 +659,20 @@
 							<div class="flex justify-between items-start my-2">
 								<div class=" flex flex-col w-full">
 									<div class="flex-1 w-full">
-										<input
-											class="text-4xl font-medium w-full bg-transparent outline-hidden"
-											placeholder={$i18n.t('Model Name')}
-											bind:value={name}
-											required
-										/>
+										<div class="flex items-center gap-2">
+											<input
+												class="text-4xl font-medium w-full bg-transparent outline-hidden"
+												placeholder={$i18n.t('Model Name')}
+												bind:value={titleTranslations[langCode]}
+												required
+											/>
+
+											{#if titleTranslations[langCode]}
+												<button class="shrink-0" type="button" on:click={() => (showTitleModal = true)}>
+													<PencilSolid />
+												</button>
+											{/if}
+										</div>
 									</div>
 
 									<div class="flex-1 w-full">
@@ -546,6 +716,9 @@
 											class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
 											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 											bind:value={info.base_model_id}
+											on:change={(e) => {
+												addUsage(e.target.value);
+											}}
 											required
 										>
 											<option value={null} class=" text-gray-900"
@@ -617,9 +790,7 @@
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium text-gray-500">
-								{$i18n.t('Model Params')}
-							</div>
+							<div class=" self-center text-sm font-medium">{$i18n.t('Model Params')}</div>
 						</div>
 
 						<div class="mt-2">
@@ -665,12 +836,12 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-xs font-medium text-gray-500">
+								<div class=" self-center text-sm font-medium">
 									{$i18n.t('Prompts')}
 								</div>
 
@@ -679,7 +850,7 @@
 									type="button"
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: '', title: ['', ''] }];
+											info.meta.suggestion_prompts = [{ content: JSON.stringify(createEmptyTranslations()), title: ['', ''] }];
 										} else {
 											info.meta.suggestion_prompts = null;
 										}
@@ -692,10 +863,81 @@
 									{/if}
 								</button>
 							</div>
+
+							{#if (info?.meta?.suggestion_prompts ?? null) !== null}
+								<button
+									class="p-1 px-2 text-xs flex rounded-sm transition"
+									type="button"
+									aria-label={$i18n.t('Add prompt suggestion')}
+									on:click={() => {
+										if (
+											info.meta.suggestion_prompts.length === 0 ||
+											getPromptTranslation(info.meta.suggestion_prompts.at(-1).content) !== ''
+										) {
+											info.meta.suggestion_prompts = [
+												...info.meta.suggestion_prompts,
+												{ content: JSON.stringify(createEmptyTranslations()), title: ['', ''] }
+											];
+										}
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+										/>
+									</svg>
+								</button>
+							{/if}
 						</div>
 
 						{#if info?.meta?.suggestion_prompts}
-							<PromptSuggestions bind:promptSuggestions={info.meta.suggestion_prompts} />
+							<div class="flex flex-col space-y-1 mt-1 mb-3">
+								{#if info.meta.suggestion_prompts.length > 0}
+									{#each info.meta.suggestion_prompts as prompt, promptIdx}
+										<div class=" flex rounded-lg items-center">
+											<input
+												class=" text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
+												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
+												value={getPromptTranslation(prompt.content)}
+												on:input={(e) => {
+													const translations = parseContentToObj(prompt.content);
+													translations[langCode] = e.target.value;
+													prompt.content = JSON.stringify(translations);
+													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
+												}}
+											/>
+
+											{#if getPromptTranslation(prompt.content)}
+												<button
+													class="px-2"
+													type="button"
+													on:click={() => openPromptTranslationModal(promptIdx)}
+												>
+													<PencilSolid />
+												</button>
+											{/if}
+
+											<button
+												class="px-2"
+												type="button"
+												on:click={() => {
+													info.meta.suggestion_prompts.splice(promptIdx, 1);
+													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
+												}}
+											>
+												<XMark className={'size-4'} />
+											</button>
+										</div>
+									{/each}
+								{:else}
+									<div class="text-xs text-center">{$i18n.t('No suggestion prompts')}</div>
+								{/if}
+							</div>
 						{/if}
 					</div>
 
@@ -745,7 +987,12 @@
 						{/if}
 					{/if}
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<div class="my-2">
+						<ActionsSelector
+							bind:selectedActionIds={actionIds}
+							actions={$functions.filter((func) => func.type === 'action')}
+						/>
+					</div>
 
 					<div class="my-2">
 						<Capabilities bind:capabilities />
@@ -766,33 +1013,7 @@
 						{/if}
 					{/if}
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-					<div class="my-2 flex justify-end">
-						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
-							type="submit"
-							disabled={loading}
-						>
-							<div class=" self-center font-medium">
-								{#if edit}
-									{$i18n.t('Save & Update')}
-								{:else}
-									{$i18n.t('Save & Create')}
-								{/if}
-							</div>
-
-							{#if loading}
-								<div class="ml-1.5 self-center">
-									<Spinner />
-								</div>
-							{/if}
-						</button>
-					</div>
-
-					<div class="my-2 text-gray-300 dark:text-gray-700 pb-20">
+					<div class="my-2 text-gray-300 dark:text-gray-700">
 						<div class="flex w-full justify-between mb-2">
 							<div class=" self-center text-sm font-medium">{$i18n.t('JSON Preview')}</div>
 
@@ -822,6 +1043,30 @@
 								/>
 							</div>
 						{/if}
+					</div>
+
+					<div class="my-2 flex justify-end pb-20">
+						<button
+							class=" text-sm px-3 py-2 transition rounded-lg {loading
+								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
+								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+							type="submit"
+							disabled={loading}
+						>
+							<div class=" self-center font-medium">
+								{#if edit}
+									{$i18n.t('Save & Update')}
+								{:else}
+									{$i18n.t('Save & Create')}
+								{/if}
+							</div>
+
+							{#if loading}
+								<div class="ml-1.5 self-center">
+									<Spinner />
+								</div>
+							{/if}
+						</button>
 					</div>
 				</div>
 			</form>

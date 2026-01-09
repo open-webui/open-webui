@@ -1912,6 +1912,12 @@ ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "False").lower() == "true",
 )
 
+TRANSLATION_LANGUAGES = PersistentConfig(
+    "TRANSLATION_LANGUAGES",
+    "translation_languages",
+    os.getenv("TRANSLATION_LANGUAGES", "en").split(","), 
+)
+
 AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(
     "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH",
     "task.autocomplete.input_max_length",

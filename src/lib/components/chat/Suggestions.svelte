@@ -15,7 +15,7 @@
 	let sortedPrompts = [];
 
 	const fuseOptions = {
-		keys: ['content', 'title'],
+		keys: ['translatedContent', 'title'],
 		threshold: 0.5
 	};
 
@@ -30,11 +30,11 @@
 	$: getFilteredPrompts(inputValue);
 
 	// Helper function to check if arrays are the same
-	// (based on unique IDs oder content)
+	// (based on unique IDs or content)
 	function arraysEqual(a, b) {
 		if (a.length !== b.length) return false;
 		for (let i = 0; i < a.length; i++) {
-			if ((a[i].id ?? a[i].content) !== (b[i].id ?? b[i].content)) {
+			if ((a[i].id ?? a[i].translatedContent ?? a[i].content) !== (b[i].id ?? b[i].translatedContent ?? b[i].content)) {
 				return false;
 			}
 		}
@@ -58,10 +58,37 @@
 		}
 	};
 
+	// Helper function to parse prompt content
+	function parsePromptContent(content) {
+		if (typeof content === 'string') {
+			try {
+				return JSON.parse(content);
+			} catch {
+				// If it's not valid JSON, treat it as a plain string
+				return { de: content };
+			}
+		}
+		return content || {};
+	}
+
+	// Helper function to get translated content
+	function getTranslatedContent(prompt, lang) {
+		const parsed = parsePromptContent(prompt.content);
+		return parsed[lang] || parsed['de'] || parsed[Object.keys(parsed)[0]] || '';
+	}
+
 	$: if (suggestionPrompts) {
-		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
+		// Parse all prompts and add translated content for filtering
+		sortedPrompts = [...(suggestionPrompts ?? [])]
+			.map(prompt => ({
+				...prompt,
+				translatedContent: getTranslatedContent(prompt, langCode)
+			}))
+			.sort(() => Math.random() - 0.5);
 		getFilteredPrompts(inputValue);
 	}
+
+	$: langCode = $i18n.language?.split('-')[0] || 'de';
 </script>
 
 <div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400">
@@ -92,7 +119,8 @@
 				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
 				       dark:hover:bg-white/5 transition group"
 					style="animation-delay: {idx * 60}ms"
-					on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
+					on:click={() =>
+						onSelect({ type: 'prompt', data: prompt.translatedContent })}
 				>
 					<div class="flex flex-col text-left">
 						{#if prompt.title && prompt.title[0] !== ''}
@@ -108,7 +136,7 @@
 							<div
 								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 							>
-								{prompt.content}
+								{prompt.translatedContent}
 							</div>
 							<div class="text-xs text-gray-600 dark:text-gray-400 font-normal line-clamp-1">
 								{$i18n.t('Prompt')}

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 import logging
 import re
 
@@ -67,6 +67,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        "TRANSLATION_LANGUAGES": request.app.state.config.TRANSLATION_LANGUAGES,
         "VOICE_MODE_PROMPT_TEMPLATE": request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE,
     }
 
@@ -87,6 +88,7 @@ class TaskConfigForm(BaseModel):
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
     QUERY_GENERATION_PROMPT_TEMPLATE: str
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
+    TRANSLATION_LANGUAGES: Optional[List[str]] = []
     VOICE_MODE_PROMPT_TEMPLATE: Optional[str]
 
 
@@ -136,6 +138,10 @@ async def update_task_config(
     request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
         form_data.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     )
+    
+    request.app.state.config.TRANSLATION_LANGUAGES = (
+        form_data.TRANSLATION_LANGUAGES
+    )
 
     request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE = (
         form_data.VOICE_MODE_PROMPT_TEMPLATE
@@ -157,6 +163,7 @@ async def update_task_config(
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
+        "TRANSLATION_LANGUAGES": request.app.state.config.TRANSLATION_LANGUAGES,
         "VOICE_MODE_PROMPT_TEMPLATE": request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE,
     }
 

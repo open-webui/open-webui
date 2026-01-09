@@ -2,7 +2,7 @@ import time
 import logging
 import asyncio
 import sys
-
+import json
 from aiocache import cached
 from fastapi import Request
 
@@ -35,6 +35,33 @@ from open_webui.models.users import UserModel
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
+
+
+
+def translate_model_title(model_name, accept_language: str) -> str:
+    """
+    model_name: either a dict like {"de":"test DE","en":"test EN","fr":"test","it":"test IT"}
+                or a JSON string representation of such a dict
+    accept_language: string from header, e.g., "en-US", "de-CH", "fr"
+    """
+    # if model_name is a string, try to parse as JSON
+    if isinstance(model_name, str):
+        try:
+            model_name = json.loads(model_name)
+        except (json.JSONDecodeError, TypeError):
+            # if it's not valid JSON (plain string), return the string as is
+            return model_name
+    
+    
+    # Handle None or empty accept_language
+    if not accept_language:
+        accept_language = 'en'  # default to English if not provided
+    
+    # normalize language code to primary subtag
+    lang = accept_language.split('-')[0]  # "en-US" -> "en"
+    
+    # return the translation if available, else fallback to 'de' or any available
+    return model_name.get(lang) or model_name.get('de') or next(iter(model_name.values()))
 
 async def fetch_ollama_models(request: Request, user: UserModel = None):
     raw_ollama_models = await ollama.get_all_models(request, user=user)
@@ -159,6 +186,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         0
                     ]  # Ollama may return model ids in different formats (e.g., 'llama3' vs. 'llama3:7b')
                 ):
+                    # This is what is answered in the info part
+                    custom_model.name = translate_model_title(custom_model.name, request.headers.get("X-Language")),
                     if custom_model.is_active:
                         model["name"] = custom_model.name
                         model["info"] = custom_model.model_dump()
@@ -236,6 +265,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 if "filterIds" in meta:
                     filter_ids.extend(meta["filterIds"])
 
+            # Apply translation to the model name
+            model["name"] = translate_model_title(custom_model.name, request.headers.get("X-Language"))
+            model["current_language"] = model["name"]
+            
             model["action_ids"] = action_ids
             model["filter_ids"] = filter_ids
 

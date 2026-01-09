@@ -277,6 +277,7 @@ type Config = {
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_version_update_check: boolean;
+		translation_languages: string[];
 		folder_max_file_count?: number;
 	};
 	oauth: {
