@@ -13,6 +13,8 @@ from open_webui.models.feedbacks import (
     FeedbackUserResponse,
     FeedbackListResponse,
     LeaderboardFeedbackData,
+    ModelHistoryEntry,
+    ModelHistoryResponse,
     Feedbacks,
 )
 
@@ -252,6 +254,22 @@ async def get_leaderboard(
     )
 
     return LeaderboardResponse(entries=entries)
+
+
+
+
+@router.get("/leaderboard/{model_id}/history", response_model=ModelHistoryResponse)
+async def get_model_history(
+    model_id: str,
+    days: int = 30,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    """Get daily win/loss history for a specific model."""
+    history = Feedbacks.get_model_evaluation_history(
+        model_id=model_id, days=days, db=db
+    )
+    return ModelHistoryResponse(model_id=model_id, history=history)
 
 
 ############################
