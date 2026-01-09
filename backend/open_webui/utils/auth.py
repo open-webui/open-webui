@@ -24,6 +24,8 @@ from opentelemetry import trace
 
 from open_webui.utils.access_control import has_permission
 from open_webui.models.users import Users
+from open_webui.models.auths import Auths
+
 
 from open_webui.constants import ERROR_MESSAGES
 
@@ -420,3 +422,37 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def create_admin_user(email: str, password: str, name: str = "Admin"):
+    """
+    Create an admin user from environment variables.
+    Used for headless/automated deployments.
+    Returns the created user or None if creation failed.
+    """
+
+    if not email or not password:
+        return None
+
+    if Users.has_users():
+        log.debug("Users already exist, skipping admin creation")
+        return None
+
+    log.info(f"Creating admin account from environment variables: {email}")
+    try:
+        hashed = get_password_hash(password)
+        user = Auths.insert_new_auth(
+            email=email.lower(),
+            password=hashed,
+            name=name,
+            role="admin",
+        )
+        if user:
+            log.info(f"Admin account created successfully: {email}")
+            return user
+        else:
+            log.error("Failed to create admin account from environment variables")
+            return None
+    except Exception as e:
+        log.error(f"Error creating admin account: {e}")
+        return None

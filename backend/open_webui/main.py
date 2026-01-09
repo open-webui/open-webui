@@ -486,6 +486,10 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
     ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
+    # Admin Account Runtime Creation
+    WEBUI_ADMIN_EMAIL,
+    WEBUI_ADMIN_PASSWORD,
+    WEBUI_ADMIN_NAME,
 )
 
 
@@ -510,6 +514,7 @@ from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
     get_verified_user,
+    create_admin_user,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import (
@@ -587,6 +592,12 @@ async def lifespan(app: FastAPI):
 
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
+
+    # Create admin account from env vars if specified and no users exist
+    if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
+        if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
+            # Disable signup since we now have an admin
+            app.state.config.ENABLE_SIGNUP = False
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
