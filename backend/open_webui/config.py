@@ -3744,11 +3744,9 @@ WHISPER_MODEL_AUTO_UPDATE = (
     and os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
 
-WHISPER_VAD_FILTER = PersistentConfig(
-    "WHISPER_VAD_FILTER",
-    "audio.stt.whisper_vad_filter",
-    os.getenv("WHISPER_VAD_FILTER", "False").lower() == "true",
-)
+WHISPER_VAD_FILTER = os.getenv("WHISPER_VAD_FILTER", "False").lower() == "true"
+
+WHISPER_MULTILINGUAL = os.getenv("WHISPER_MULTILINGUAL", "False").lower() == "true"
 
 WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "").lower() or None
 

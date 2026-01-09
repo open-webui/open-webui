@@ -41,8 +41,10 @@ from open_webui.config import (
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_COMPUTE_TYPE,
     WHISPER_MODEL_DIR,
+    WHISPER_VAD_FILTER,
     CACHE_DIR,
     WHISPER_LANGUAGE,
+    WHISPER_MULTILINGUAL,
     ELEVENLABS_API_BASE_URL,
 )
 
@@ -601,8 +603,9 @@ def transcription_handler(request, file_path, metadata, user=None):
         segments, info = model.transcribe(
             file_path,
             beam_size=5,
-            vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
+            vad_filter=WHISPER_VAD_FILTER,
             language=languages[0],
+            multilingual=WHISPER_MULTILINGUAL,
         )
         log.info(
             "Detected language '%s' with probability %f"
