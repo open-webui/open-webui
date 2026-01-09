@@ -228,10 +228,7 @@
 					clearInterval(getVoicesLoop);
 
 					const voiceId = getVoiceId();
-					const voice =
-						voices
-							?.filter((v) => v.voiceURI === voiceId)
-							?.at(0) ?? undefined;
+					const voice = voices?.filter((v) => v.voiceURI === voiceId)?.at(0) ?? undefined;
 
 					console.log(voice);
 
@@ -312,17 +309,15 @@
 				}
 			} else {
 				for (const [idx, sentence] of messageContentParts.entries()) {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						voiceId,
-						sentence
-					).catch((error) => {
-						console.error(error);
-						toast.error(`${error}`);
+					const res = await synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch(
+						(error) => {
+							console.error(error);
+							toast.error(`${error}`);
 
-						speaking = false;
-						loadingSpeech = false;
-					});
+							speaking = false;
+							loadingSpeech = false;
+						}
+					);
 
 					if (res && speaking) {
 						const blob = await res.blob();
@@ -335,7 +330,6 @@
 			}
 		}
 	};
-
 
 	let preprocessedDetailsCache = [];
 

@@ -6,7 +6,6 @@
 	import Leaderboard from './Evaluations/Leaderboard.svelte';
 	import Feedbacks from './Evaluations/Feedbacks.svelte';
 
-	
 	const i18n = getContext('i18n');
 
 	let selectedTab;

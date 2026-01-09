@@ -9,7 +9,13 @@
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp, updateUserTimezone } from '$lib/apis/auths';
+	import {
+		ldapUserSignIn,
+		getSessionUser,
+		userSignIn,
+		userSignUp,
+		updateUserTimezone
+	} from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';

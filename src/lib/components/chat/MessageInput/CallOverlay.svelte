@@ -386,10 +386,7 @@
 						clearInterval(getVoicesLoop);
 
 						const voiceId = getVoiceId();
-						const voice =
-							voices
-								?.filter((v) => v.voiceURI === voiceId)
-								?.at(0) ?? undefined;
+						const voice = voices?.filter((v) => v.voiceURI === voiceId)?.at(0) ?? undefined;
 
 						currentUtterance = new SpeechSynthesisUtterance(content);
 						currentUtterance.rate = $settings.audio?.tts?.playbackRate ?? 1;
@@ -494,14 +491,12 @@
 						audioCache.set(content, new Audio(url));
 					}
 				} else if ($config.audio.tts.engine !== '') {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						getVoiceId(),
-						content
-					).catch((error) => {
-						console.error(error);
-						return null;
-					});
+					const res = await synthesizeOpenAISpeech(localStorage.token, getVoiceId(), content).catch(
+						(error) => {
+							console.error(error);
+							return null;
+						}
+					);
 
 					if (res) {
 						const blob = await res.blob();

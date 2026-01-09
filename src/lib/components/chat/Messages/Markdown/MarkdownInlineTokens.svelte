@@ -55,11 +55,23 @@
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'link'}
 		{#if token.tokens}
-			<a href={token.href} target="_blank" rel="nofollow" title={token.title} on:click={(e) => handleLinkClick(e, token.href)}>
+			<a
+				href={token.href}
+				target="_blank"
+				rel="nofollow"
+				title={token.title}
+				on:click={(e) => handleLinkClick(e, token.href)}
+			>
 				<svelte:self id={`${id}-a`} tokens={token.tokens} {onSourceClick} {done} />
 			</a>
 		{:else}
-			<a href={token.href} target="_blank" rel="nofollow" title={token.title} on:click={(e) => handleLinkClick(e, token.href)}>{token.text}</a>
+			<a
+				href={token.href}
+				target="_blank"
+				rel="nofollow"
+				title={token.title}
+				on:click={(e) => handleLinkClick(e, token.href)}>{token.text}</a
+			>
 		{/if}
 	{:else if token.type === 'image'}
 		<Image src={token.href} alt={token.text} />

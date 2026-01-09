@@ -45,9 +45,7 @@
 		loading = true;
 		try {
 			const result = await getLeaderboard(localStorage.token, searchQuery);
-			const statsMap = new Map(
-				(result?.entries ?? []).map((e) => [e.model_id, e])
-			);
+			const statsMap = new Map((result?.entries ?? []).map((e) => [e.model_id, e]));
 
 			rankedModels = $models
 				.filter((m) => m?.owned_by !== 'arena' && !m?.info?.meta?.hidden)
@@ -106,7 +104,9 @@
 
 <ModelModal bind:show={showModal} model={selectedModel} onClose={closeModal} />
 
-<div class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900">
+<div
+	class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
+>
 	<div class="flex items-center text-xl font-medium px-0.5 gap-2 shrink-0">
 		{$i18n.t('Leaderboard')}
 		<span class="text-lg text-gray-500">{rankedModels.length}</span>
@@ -123,9 +123,13 @@
 	</Tooltip>
 </div>
 
-<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm min-h-[100px]">
+<div
+	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm min-h-[100px]"
+>
 	{#if loading}
-		<div class="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-gray-900/50">
+		<div
+			class="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-gray-900/50"
+		>
 			<Spinner className="size-5" />
 		</div>
 	{/if}
@@ -133,25 +137,27 @@
 	{#if !rankedModels.length && !loading}
 		<div class="text-center text-xs text-gray-500 py-1">{$i18n.t('No models found')}</div>
 	{:else if rankedModels.length}
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 {loading ? 'opacity-20' : ''}">
+		<table
+			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 {loading
+				? 'opacity-20'
+				: ''}"
+		>
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
 				<tr class="border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
-					{#each [
-						{ key: 'rating', label: 'RK', class: 'w-3' },
-						{ key: 'name', label: 'Model', class: '' },
-						{ key: 'rating', label: 'Rating', class: 'text-right w-fit' },
-						{ key: 'won', label: 'Won', class: 'text-right w-5' },
-						{ key: 'lost', label: 'Lost', class: 'text-right w-5' }
-					] as col}
+					{#each [{ key: 'rating', label: 'RK', class: 'w-3' }, { key: 'name', label: 'Model', class: '' }, { key: 'rating', label: 'Rating', class: 'text-right w-fit' }, { key: 'won', label: 'Won', class: 'text-right w-5' }, { key: 'lost', label: 'Lost', class: 'text-right w-5' }] as col}
 						<th
 							scope="col"
 							class="px-2.5 py-2 cursor-pointer select-none {col.class}"
 							on:click={() => toggleSort(col.key)}
 						>
-							<div class="flex gap-1.5 items-center {col.class.includes('right') ? 'justify-end' : ''}">
+							<div
+								class="flex gap-1.5 items-center {col.class.includes('right') ? 'justify-end' : ''}"
+							>
 								{$i18n.t(col.label)}
 								{#if orderBy === col.key}
-									{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown className="size-2" />{/if}
+									{#if direction === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown
+											className="size-2"
+										/>{/if}
 								{:else}
 									<span class="invisible"><ChevronUp className="size-2" /></span>
 								{/if}
@@ -184,13 +190,17 @@
 						</td>
 						<td class="px-3 py-1.5 text-right font-medium text-green-500 w-10">
 							{#if model.stats.won === '-'}-{:else}
-								<span class="hidden group-hover:inline">{((Number(model.stats.won) / model.stats.count) * 100).toFixed(1)}%</span>
+								<span class="hidden group-hover:inline"
+									>{((Number(model.stats.won) / model.stats.count) * 100).toFixed(1)}%</span
+								>
 								<span class="group-hover:hidden">{model.stats.won}</span>
 							{/if}
 						</td>
 						<td class="px-3 py-1.5 text-right font-medium text-red-500 w-10">
 							{#if model.stats.lost === '-'}-{:else}
-								<span class="hidden group-hover:inline">{((Number(model.stats.lost) / model.stats.count) * 100).toFixed(1)}%</span>
+								<span class="hidden group-hover:inline"
+									>{((Number(model.stats.lost) / model.stats.count) * 100).toFixed(1)}%</span
+								>
 								<span class="group-hover:hidden">{model.stats.lost}</span>
 							{/if}
 						</td>
@@ -204,8 +214,12 @@
 <div class="text-gray-500 text-xs mt-1.5 w-full flex justify-end">
 	<div class="text-right">
 		<div class="line-clamp-1">
-			ⓘ {$i18n.t('The evaluation leaderboard is based on the Elo rating system and is updated in real-time.')}
+			ⓘ {$i18n.t(
+				'The evaluation leaderboard is based on the Elo rating system and is updated in real-time.'
+			)}
 		</div>
-		{$i18n.t('The leaderboard is currently in beta, and we may adjust the rating calculations as we refine the algorithm.')}
+		{$i18n.t(
+			'The leaderboard is currently in beta, and we may adjust the rating calculations as we refine the algorithm.'
+		)}
 	</div>
 </div>
