@@ -115,7 +115,7 @@ def has_access_to_file(
 ############################
 
 
-def process_uploaded_file(
+async def process_uploaded_file(
     request,
     file,
     file_path,
@@ -124,7 +124,7 @@ def process_uploaded_file(
     user,
     db: Optional[Session] = None,
 ):
-    def _process_handler(db_session):
+    async def _process_handler(db_session):
         try:
             if file.content_type:
                 stt_supported_content_types = getattr(
@@ -139,7 +139,7 @@ def process_uploaded_file(
                         request, file_path_processed, file_metadata, user
                     )
 
-                    process_file(
+                    await process_file(
                         request,
                         ProcessFileForm(
                             file_id=file_item.id, content=result.get("text", "")
@@ -150,7 +150,7 @@ def process_uploaded_file(
                 elif (not file.content_type.startswith(("image/", "video/"))) or (
                     request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
                 ):
-                    process_file(
+                    await process_file(
                         request,
                         ProcessFileForm(file_id=file_item.id),
                         user=user,
@@ -164,7 +164,7 @@ def process_uploaded_file(
                 log.info(
                     f"File type {file.content_type} is not provided, but trying to process anyway"
                 )
-                process_file(
+                await process_file(
                     request,
                     ProcessFileForm(file_id=file_item.id),
                     user=user,
@@ -183,14 +183,14 @@ def process_uploaded_file(
             )
 
     if db:
-        _process_handler(db)
+        await _process_handler(db)
     else:
         with SessionLocal() as db_session:
-            _process_handler(db_session)
+            await _process_handler(db_session)
 
 
 @router.post("/", response_model=FileModelResponse)
-def upload_file(
+async def upload_file(
     request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
@@ -200,7 +200,7 @@ def upload_file(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    return upload_file_handler(
+    return await upload_file_handler(
         request,
         file=file,
         metadata=metadata,
@@ -212,7 +212,7 @@ def upload_file(
     )
 
 
-def upload_file_handler(
+async def upload_file_handler(
     request: Request,
     file: UploadFile = File(...),
     metadata: Optional[dict | str] = Form(None),
@@ -313,7 +313,7 @@ def upload_file_handler(
                 )
                 return {"status": True, **file_item.model_dump()}
             else:
-                process_uploaded_file(
+                await process_uploaded_file(
                     request,
                     file,
                     file_path,
@@ -593,7 +593,7 @@ async def update_file_data_content_by_id(
         or has_access_to_file(id, "write", user, db=db)
     ):
         try:
-            process_file(
+            await process_file(
                 request,
                 ProcessFileForm(file_id=id, content=form_data.content),
                 user=user,
