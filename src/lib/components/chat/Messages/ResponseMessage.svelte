@@ -160,6 +160,9 @@
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
 
+	let renderedContent = '';
+	let sourceNotice = '';
+
 	let edit = false;
 	let editedContent = '';
 	let editTextAreaElement: HTMLTextAreaElement;
@@ -173,6 +176,33 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+
+	function extractSourceFooter(content: string) {
+		const marker = 'fuente:';
+		const lower = content.toLowerCase();
+		const idx = lower.lastIndexOf(marker);
+		if (idx === -1) {
+			return { body: content, source: '' };
+		}
+
+		let body = content.slice(0, idx).trimEnd();
+		let source = content.slice(idx + marker.length).trim();
+
+		// Cleanup markdown wrappers like "**Fuente:**" or "> **Fuente:**".
+		body = body.replace(/\*\*\s*$/g, '').trimEnd();
+		source = source.replace(/^[_*\s>]+/, '').replace(/[_*\s]+$/g, '').trim();
+
+		if (!source) {
+			return { body: content, source: '' };
+		}
+		return { body, source };
+	}
+
+	$: {
+		const { body, source } = extractSourceFooter(message?.content ?? '');
+		renderedContent = body;
+		sourceNotice = source;
+	}
 
 	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
@@ -206,7 +236,7 @@
 		}
 
 		speaking = true;
-		const content = removeAllDetails(message.content);
+		const content = removeAllDetails(renderedContent);
 
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
@@ -783,7 +813,7 @@
 									messageId={message.id}
 									{history}
 									{selectedModels}
-									content={message.content}
+									content={renderedContent}
 									sources={message.sources}
 									floatingButtons={message?.done &&
 										!readOnly &&
@@ -983,7 +1013,7 @@
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
-											copyToClipboard(message.content);
+											copyToClipboard(renderedContent);
 										}}
 									>
 										<svg
@@ -1495,6 +1525,11 @@
 									{/each}
 								{/if}
 							{/if}
+						{/if}
+						{#if sourceNotice}
+							<div class="ml-auto flex items-center source-footer">
+								Fuente: {sourceNotice}
+							</div>
 						{/if}
 					</div>
 

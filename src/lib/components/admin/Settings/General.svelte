@@ -78,11 +78,51 @@
 		}
 	};
 
+	let previousPerformanceProfile = 'saver';
+
+	const applyResourceMode = async (mode) => {
+		try {
+			// Call RAG API to apply resource mode changes
+			const ragApiUrl = window.location.origin.replace(':5555', ':8000');
+			const response = await fetch(`${ragApiUrl}/api/system/resource-mode`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ mode })
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.detail || 'Failed to apply resource mode');
+			}
+
+			const result = await response.json();
+			toast.success(`${$i18n.t('Resource mode changed to')} ${mode}. ${$i18n.t('Affected containers restarted.')}`);
+			return true;
+		} catch (error) {
+			console.error('Error applying resource mode:', error);
+			toast.error(`${$i18n.t('Failed to apply resource mode')}: ${error.message}`);
+			return false;
+		}
+	};
+
 	const updateHandler = async () => {
 		webhookUrl = await updateWebhookUrl(localStorage.token, webhookUrl);
 		const res = await updateAdminConfig(localStorage.token, adminConfig);
 		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
 		await updateLdapServerHandler();
+
+		// Check if RAG_PERFORMANCE_PROFILE changed
+		if (adminConfig.RAG_PERFORMANCE_PROFILE !== previousPerformanceProfile) {
+			const applySuccess = await applyResourceMode(adminConfig.RAG_PERFORMANCE_PROFILE);
+			if (applySuccess) {
+				previousPerformanceProfile = adminConfig.RAG_PERFORMANCE_PROFILE;
+			} else {
+				// Revert to previous profile on failure
+				adminConfig.RAG_PERFORMANCE_PROFILE = previousPerformanceProfile;
+			}
+		}
 
 		if (res) {
 			saveHandler();
@@ -119,6 +159,9 @@
 			adminConfig.RAG_AUTO_SUSPEND = adminConfig.RAG_AUTO_SUSPEND ?? true;
 			adminConfig.RAG_AUTO_SUSPEND_IDLE_SECONDS =
 				adminConfig.RAG_AUTO_SUSPEND_IDLE_SECONDS ?? 300;
+
+			// Store initial performance profile to detect changes
+			previousPerformanceProfile = adminConfig.RAG_PERFORMANCE_PROFILE;
 		}
 	});
 </script>
