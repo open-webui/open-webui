@@ -224,11 +224,9 @@ class UsersTable:
             if skip:
                 query = query.offset(skip)
             
-            # Default pagination: limit to 50 if not specified
+            # Only apply limit if explicitly specified (frontend handles pagination)
             if limit:
                 query = query.limit(limit)
-            else:
-                query = query.limit(50)
 
             users = query.all()
 
