@@ -362,7 +362,9 @@ class FeedbackTable:
             d = start_date + timedelta(days=i)
             date_str = d.strftime("%Y-%m-%d")
             counts = daily_counts.get(date_str, {"won": 0, "lost": 0})
-            result.append(ModelHistoryEntry(date=date_str, won=counts["won"], lost=counts["lost"]))
+            result.append(
+                ModelHistoryEntry(date=date_str, won=counts["won"], lost=counts["lost"])
+            )
 
         return result
 

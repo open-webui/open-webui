@@ -51,7 +51,9 @@ router = APIRouter()
 
 import os
 
-EMBEDDING_MODEL_NAME = os.environ.get("AUXILIARY_EMBEDDING_MODEL", "TaylorAI/bge-micro-v2")
+EMBEDDING_MODEL_NAME = os.environ.get(
+    "AUXILIARY_EMBEDDING_MODEL", "TaylorAI/bge-micro-v2"
+)
 _embedding_model = None
 
 
@@ -256,8 +258,6 @@ async def get_leaderboard(
     )
 
     return LeaderboardResponse(entries=entries)
-
-
 
 
 @router.get("/leaderboard/{model_id}/history", response_model=ModelHistoryResponse)

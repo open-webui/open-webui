@@ -127,11 +127,7 @@ export const getLeaderboard = async (token: string = '', query: string = '') => 
 	return res;
 };
 
-export const getModelHistory = async (
-	token: string = '',
-	modelId: string,
-	days: number = 30
-) => {
+export const getModelHistory = async (token: string = '', modelId: string, days: number = 30) => {
 	let error = null;
 
 	const searchParams = new URLSearchParams();
