@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7] - 2026-01-08
+## [0.7] - 2026-01-09
 
 ### Added
 
@@ -49,14 +49,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛡️ Administrators can now restrict non-admin user access to Interface Settings through per-user or per-group permissions. [#20424](https://github.com/open-webui/open-webui/pull/20424)
 - 🧠 Administrators can now globally enable or disable the Memories feature and control access through per-user or per-group permissions, with the Personalization tab automatically hidden when the feature is disabled. [#20462](https://github.com/open-webui/open-webui/pull/20462)
 - 🟢 Administrators can now globally enable or disable user status visibility through the "ENABLE_USER_STATUS" setting in Admin Settings. [#20488](https://github.com/open-webui/open-webui/pull/20488)
+- 🪝 Channel managers can now create webhooks to allow external services to post messages to channels without authentication. [Commit](https://github.com/open-webui/open-webui/commit/cd296fcf0d79cecd1a6a3ee4e492c6b5246ca7ae)
 - 👥 Administrators now have three granular group sharing permission options instead of a simple on/off toggle, allowing them to choose between "No one", "Members", or "Anyone" for who can share content to each group. [Commit](https://github.com/open-webui/open-webui/commit/ca514cd3eda2524b8da472ef17c0ccb216bac2e8)
 - 📦 Administrators can now export knowledge bases as zip files containing text files for backup and archival purposes. [#20120](https://github.com/open-webui/open-webui/issues/20120), [Commit](https://github.com/open-webui/open-webui/commit/c1147578c073a8c7fa7e7f836149e1cdfec8f18d)
+- 🚀 Administrators can now create an admin account automatically at startup via "WEBUI_ADMIN_EMAIL", "WEBUI_ADMIN_PASSWORD", and "WEBUI_ADMIN_NAME" environment variables, enabling headless and automated deployments without exposing the signup page. [#17654](https://github.com/open-webui/open-webui/issues/17654), [Commit](https://github.com/open-webui/open-webui/commit/1138929f4d083931305f1f925899971b190562ae)
 - 🦆 Administrators can now select a specific search backend for DDGS instead of random selection, with options including Bing, Brave, DuckDuckGo, Google, Wikipedia, Yahoo, and others. [#20330](https://github.com/open-webui/open-webui/issues/20330), [#20366](https://github.com/open-webui/open-webui/pull/20366)
 - 🧭 Administrators can now configure custom Jina Search API endpoints using the "JINA_API_BASE_URL" environment variable, enabling region-specific deployments such as EU data processing. [#19718](https://github.com/open-webui/open-webui/pull/19718), [Commit](https://github.com/open-webui/open-webui/commit/f7f8a263b92289df8d4f8dbc3bae09bd009a5699)
 - 🔥 Administrators can now configure Firecrawl timeout values using the "FIRECRAWL_TIMEOUT" environment variable to control web scraping wait times. [#19973](https://github.com/open-webui/open-webui/pull/19973), [Commit](https://github.com/open-webui/open-webui/commit/89ad1c68d1aadf849960b5e202aa4651096b05f5)
 - 💾 Administrators can now use openGauss as the vector database backend for knowledge base document storage and retrieval. [#20179](https://github.com/open-webui/open-webui/pull/20179)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for German, Spanish, Simplified Chinese, Traditional Chinese, and Polish were enhanced and expanded.
+- 🌐 Translations for German, Portuguese (Brazil), Spanish, Simplified Chinese, Traditional Chinese, and Polish were enhanced and expanded.
 
 ### Fixed
 
@@ -65,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛠️ Tools and Tool Servers (MCP and OpenAPI) now enforce access control checks on the backend, ensuring users can only access tools they have permission to use even via direct API calls. [#20443](https://github.com/open-webui/open-webui/issues/20443), [Commit](https://github.com/open-webui/open-webui/commit/9b06fdc8fe1c933071610336be05f11e77e6c8eb)
 - 🔁 System prompts are no longer duplicated when using native function calling, fixing an issue where the prompt would be applied twice during tool-calling workflows. [Commit](https://github.com/open-webui/open-webui/commit/9223efaff0db6e56bfa157ef214d9590005156d2)
 - 🗂️ Knowledge base uploads to folders no longer fail when "FOLDER_MAX_FILE_COUNT" is unset, fixing an issue where the default null value caused all uploads to error. [Commit](https://github.com/open-webui/open-webui/commit/ef9cd0e0ad6e45b8a3efec6f3858b3d69d42f619)
+- 📝 The "Create Note" button in the chat input now correctly hides for users without Notes permissions instead of showing and returning a 401 error when clicked. [#20486](https://github.com/open-webui/open-webui/issues/20486), [Commit](https://github.com/open-webui/open-webui/commit/9e9616b670c1c4389193b18500a7d80d86d7e280)
 - 💬 Users can now export chats, use the Ask/Explain popup, and view chat lists correctly again after these features were broken by recent refactoring changes that caused 500 and 400 server errors. [#20146](https://github.com/open-webui/open-webui/issues/20146), [#20205](https://github.com/open-webui/open-webui/issues/20205), [#20206](https://github.com/open-webui/open-webui/issues/20206), [#20212](https://github.com/open-webui/open-webui/pull/20212)
 - 💭 Users no longer experience data corruption when switching between chats during background operations like image generation, where messages from one chat would appear in another chat's history. [#20266](https://github.com/open-webui/open-webui/pull/20266)
 - 🛡️ Users no longer encounter critical chat stability errors, including duplicate key errors from circular message dependencies, null message access during chat loading, and errors in the chat overview visualization. [#20268](https://github.com/open-webui/open-webui/pull/20268)
