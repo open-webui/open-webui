@@ -359,6 +359,17 @@ from open_webui.config import (
     JWT_EXPIRES_IN,
     ENABLE_SIGNUP,
     ENABLE_LOGIN_FORM,
+    ENABLE_EMAIL_2FA,
+    EMAIL_2FA_CODE_TTL_SECONDS,
+    EMAIL_2FA_MAX_ATTEMPTS,
+    EMAIL_DELIVERY_MODE,
+    EMAIL_HOST,
+    EMAIL_PORT,
+    EMAIL_USER,
+    EMAIL_PASSWORD,
+    EMAIL_FROM,
+    EMAIL_USE_TLS,
+    EMAIL_USE_SSL,
     ENABLE_API_KEY,
     ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
     API_KEY_ALLOWED_ENDPOINTS,
@@ -752,6 +763,17 @@ app.state.BASE_MODELS = []
 app.state.config.WEBUI_URL = WEBUI_URL
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.ENABLE_LOGIN_FORM = ENABLE_LOGIN_FORM
+app.state.config.ENABLE_EMAIL_2FA = ENABLE_EMAIL_2FA
+app.state.config.EMAIL_2FA_CODE_TTL_SECONDS = EMAIL_2FA_CODE_TTL_SECONDS
+app.state.config.EMAIL_2FA_MAX_ATTEMPTS = EMAIL_2FA_MAX_ATTEMPTS
+app.state.config.EMAIL_DELIVERY_MODE = EMAIL_DELIVERY_MODE
+app.state.config.EMAIL_HOST = EMAIL_HOST
+app.state.config.EMAIL_PORT = EMAIL_PORT
+app.state.config.EMAIL_USER = EMAIL_USER
+app.state.config.EMAIL_PASSWORD = EMAIL_PASSWORD
+app.state.config.EMAIL_FROM = EMAIL_FROM
+app.state.config.EMAIL_USE_TLS = EMAIL_USE_TLS
+app.state.config.EMAIL_USE_SSL = EMAIL_USE_SSL
 
 app.state.config.ENABLE_API_KEY = ENABLE_API_KEY
 app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS = (
@@ -1936,6 +1958,7 @@ async def get_app_config(request: Request):
             "enable_api_key": app.state.config.ENABLE_API_KEY,
             "enable_signup": app.state.config.ENABLE_SIGNUP,
             "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
+            "enable_email_2fa": app.state.config.ENABLE_EMAIL_2FA,
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
             **(
