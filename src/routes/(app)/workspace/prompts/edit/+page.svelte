@@ -12,7 +12,7 @@
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
 	let prompt = null;
-	let disabled = true;
+	let disabled = false;
 
 	const onSubmit = async (_prompt) => {
 		console.log(_prompt);
