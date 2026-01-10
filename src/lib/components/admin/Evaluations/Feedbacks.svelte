@@ -33,6 +33,7 @@
 
 	let orderBy: string = 'updated_at';
 	let direction: 'asc' | 'desc' = 'desc';
+	let feedbacksLoaded = false;
 
 	const setSortKey = (key) => {
 		if (orderBy === key) {
@@ -63,6 +64,11 @@
 	//////////////////////
 
 	const getFeedbacks = async () => {
+		// Skip if already loaded (prevents duplicate requests on initial render)
+		if (feedbacksLoaded) {
+			return;
+		}
+
 		try {
 			const res = await getFeedbackItems(localStorage.token, orderBy, direction, page).catch(
 				(error) => {
@@ -74,17 +80,22 @@
 			if (res) {
 				items = res.items;
 				total = res.total;
+				feedbacksLoaded = true;
 			}
 		} catch (err) {
 			console.error(err);
 		}
 	};
 
-	$: if (page) {
+	onMount(() => {
+		getFeedbacks();
+	});
+
+	$: if (page && feedbacksLoaded) {
 		getFeedbacks();
 	}
 
-	$: if (orderBy && direction) {
+	$: if (orderBy && direction && feedbacksLoaded) {
 		getFeedbacks();
 	}
 

@@ -14,13 +14,14 @@
 
 	let rankedModels = [];
 	let query = '';
-	let loading = true;
+	let loading = false;
 	let debounceTimer: ReturnType<typeof setTimeout>;
 	let orderBy = 'rating';
 	let direction: 'asc' | 'desc' = 'desc';
 
 	let showModal = false;
 	let selectedModel = null;
+	let leaderboardLoaded = false;
 
 	const toggleSort = (key: string) => {
 		if (orderBy === key) {
@@ -42,9 +43,19 @@
 	};
 
 	const loadLeaderboard = async (searchQuery = '') => {
+		// Skip if already loading or already loaded (prevents duplicate requests)
+		if (loading || (leaderboardLoaded && !searchQuery)) {
+			return;
+		}
+
 		loading = true;
 		try {
 			const result = await getLeaderboard(localStorage.token, searchQuery);
+
+			// Mark as loaded after successful initial load
+			if (!searchQuery) {
+				leaderboardLoaded = true;
+			}
 			const statsMap = new Map((result?.entries ?? []).map((e) => [e.model_id, e]));
 
 			rankedModels = $models
@@ -74,14 +85,15 @@
 	};
 
 	const debouncedLoad = () => {
-		loading = true;
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(() => loadLeaderboard(query), 500);
 	};
 
 	$: query, debouncedLoad();
 
-	onMount(() => loadLeaderboard());
+	onMount(() => {
+		loadLeaderboard();
+	});
 
 	$: sortedModels = [...rankedModels].sort((a, b) => {
 		const getValue = (m, key) => {

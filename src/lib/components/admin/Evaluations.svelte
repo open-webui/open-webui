@@ -15,8 +15,9 @@
 		selectedTab = ['leaderboard', 'feedback'].includes(tabFromPath) ? tabFromPath : 'leaderboard';
 	}
 
-	$: if (selectedTab) {
-		// scroll to selectedTab
+	// scroll to selectedTab - only run after component is mounted to avoid premature calls
+	let mounted = false;
+	$: if (mounted && selectedTab) {
 		scrollToTab(selectedTab);
 	}
 
@@ -31,6 +32,7 @@
 
 	onMount(async () => {
 		loaded = true;
+		mounted = true;
 
 		const containerElement = document.getElementById('users-tabs-container');
 
