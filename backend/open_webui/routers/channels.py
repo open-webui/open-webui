@@ -1256,15 +1256,17 @@ async def post_new_message(
 
         active_user_ids = get_user_ids_from_room(f"channel:{channel.id}")
 
+        # NOTE: We intentionally do NOT pass db to background_handler.
+        # Background tasks should manage their own short-lived sessions to avoid
+        # holding database connections during slow operations (e.g., LLM calls).
         async def background_handler():
-            await model_response_handler(request, channel, message, user, db)
+            await model_response_handler(request, channel, message, user)
             await send_notification(
                 request.app.state.WEBUI_NAME,
                 request.app.state.config.WEBUI_URL,
                 channel,
                 message,
                 active_user_ids,
-                db=db,
             )
 
         background_tasks.add_task(background_handler)
