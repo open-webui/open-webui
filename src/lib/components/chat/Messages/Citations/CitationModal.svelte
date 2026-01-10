@@ -93,7 +93,7 @@
 <Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4.5 pt-3 pb-2">
-			<div class=" text-lg font-medium self-center flex items-center">
+			<div class=" text-lg font-medium self-center flex items-center gap-2">
 				{#if citation?.source?.name}
 					{@const document = mergedDocuments?.[0]}
 					{#if document?.metadata?.file_id || document.source?.url?.includes('http')}
@@ -123,6 +123,9 @@
 				{:else}
 					{$i18n.t('Citation')}
 				{/if}
+				<span class="text-xs font-normal px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+					{mergedDocuments.length} {mergedDocuments.length === 1 ? $i18n.t('snippet') : $i18n.t('snippets')}
+				</span>
 			</div>
 			<button
 				class="self-center"
