@@ -1969,5 +1969,7 @@
 	"Output Tokens": "输出 Tokens",
 	"Reasoning Tokens": "思考 Tokens",
 	"Total Tokens": "总消耗 Tokens",
-	"Total Cost": "总花费"
+	"Total Cost": "总花费",
+	"Custom Input": "自定义输入",
+	"Enter custom value": "输入自定义值"
 }

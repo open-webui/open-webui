@@ -414,11 +414,20 @@
 		</Tooltip>
 
 		{#if (params?.reasoning_effort ?? null) !== null}
+			{@const presetValues = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']}
+			{@const isCustomValue = !presetValues.includes(params.reasoning_effort)}
 			<div class="flex mt-0.5 space-x-2">
 				<div class="flex-1">
 					<select
 						class="text-sm w-full bg-transparent outline-none"
-						bind:value={params.reasoning_effort}
+						value={isCustomValue ? '__custom__' : params.reasoning_effort}
+						on:change={(e) => {
+							if (e.target.value === '__custom__') {
+								params.reasoning_effort = '';
+							} else {
+								params.reasoning_effort = e.target.value;
+							}
+						}}
 					>
 						<option value="none">{$i18n.t('Off')} (none)</option>
 						<option value="minimal">{$i18n.t('Minimal')} (minimal)</option>
@@ -427,17 +436,20 @@
 						<option value="high">{$i18n.t('High')} (high)</option>
 						<option value="xhigh">{$i18n.t('XHigh')} (xhigh)</option>
 						<option value="max">{$i18n.t('Max')} (max)</option>
+						<option value="__custom__">{$i18n.t('Custom Input')}...</option>
 					</select>
 				</div>
-				<div class="flex-shrink-0">
-					<input
-						class="text-sm w-20 bg-transparent outline-hidden outline-none text-center"
-						type="text"
-						placeholder={$i18n.t('Custom')}
-						bind:value={params.reasoning_effort}
-						autocomplete="off"
-					/>
-				</div>
+				{#if isCustomValue || params.reasoning_effort === ''}
+					<div class="flex-1">
+						<input
+							class="text-sm w-full bg-transparent outline-hidden outline-none border-b border-gray-300 dark:border-gray-600"
+							type="text"
+							placeholder={$i18n.t('Enter custom value')}
+							bind:value={params.reasoning_effort}
+							autocomplete="off"
+						/>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>
