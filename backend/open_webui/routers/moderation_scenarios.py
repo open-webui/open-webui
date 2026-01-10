@@ -2,6 +2,7 @@ import logging
 import random
 import time
 import hashlib
+import uuid
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -28,6 +29,8 @@ from open_webui.models.scenarios import (
     AssignmentStatus,
     AttentionCheckScenarios,
     AttentionCheckScenarioForm,
+    Scenario,
+    AttentionCheckScenario,
 )
 from open_webui.internal.db import get_db
 
@@ -524,9 +527,10 @@ async def upload_scenarios_admin(
     file: UploadFile = File(...),
     set_name: str = Form("pilot"),
     source: str = Form("admin_upload"),
+    deactivate_previous: bool = Form(False),
     user: UserModel = Depends(get_admin_user),
 ):
-    """Admin endpoint to upload scenarios from a JSON file"""
+    """Admin endpoint to upload scenarios from a JSON file. Always creates new scenarios with UUID-based IDs."""
     import json
     
     try:
@@ -539,56 +543,66 @@ async def upload_scenarios_admin(
         if not isinstance(scenarios_data, list):
             raise HTTPException(status_code=400, detail="JSON must contain a list of scenarios")
         
+        # Deactivate previous scenarios if requested
+        deactivated_count = 0
+        if deactivate_previous:
+            deactivated_count = Scenarios.deactivate_by_set_name(set_name)
+            log.info(f"Deactivated {deactivated_count} previous scenarios with set_name='{set_name}'")
+        
         loaded_count = 0
-        updated_count = 0
         error_count = 0
         errors = []
+        ts = int(time.time() * 1000)
         
-        for idx, scenario_data in enumerate(scenarios_data, 1):
-            try:
-                prompt_text = scenario_data.get("child_prompt", "")
-                response_text = scenario_data.get("model_response", "")
-                
-                if not prompt_text or not response_text:
-                    error_count += 1
-                    errors.append(f"Scenario {idx}: Missing prompt or response")
-                    continue
-                
-                form = ScenarioForm(
-                    prompt_text=prompt_text,
-                    response_text=response_text,
-                    set_name=set_name,
-                    trait=scenario_data.get("trait"),
-                    polarity=scenario_data.get("polarity"),
-                    prompt_style=scenario_data.get("prompt_style"),
-                    domain=scenario_data.get("domain"),
-                    source=source,
-                    model_name=scenario_data.get("model_name"),
-                    is_active=True,
-                )
-                
-                # Generate scenario_id the same way upsert does to check if it exists
-                content_hash = hashlib.sha256(
-                    f"{form.prompt_text}|{form.response_text}".encode('utf-8')
-                ).hexdigest()[:16]
-                scenario_id = f"scenario_{content_hash}"
-                existing = Scenarios.get_by_id(scenario_id)
-                
-                result = Scenarios.upsert(form)
-                
-                if existing:
-                    updated_count += 1
-                else:
+        with get_db() as db:
+            for idx, scenario_data in enumerate(scenarios_data, 1):
+                try:
+                    # Accept multiple field name formats for flexibility
+                    prompt_text = scenario_data.get("child_prompt") or scenario_data.get("prompt_text") or scenario_data.get("prompt", "")
+                    response_text = scenario_data.get("model_response") or scenario_data.get("response_text") or scenario_data.get("response", "")
+                    
+                    if not prompt_text or not response_text:
+                        error_count += 1
+                        errors.append(f"Scenario {idx}: Missing prompt or response")
+                        continue
+                    
+                    # Generate new UUID-based scenario_id for each upload
+                    scenario_id = f"scenario_{uuid.uuid4()}"
+                    
+                    # Create new scenario directly (always new, never update)
+                    obj = Scenario(
+                        scenario_id=scenario_id,
+                        prompt_text=prompt_text,
+                        response_text=response_text,
+                        set_name=set_name,
+                        trait=scenario_data.get("trait"),
+                        polarity=scenario_data.get("polarity"),
+                        prompt_style=scenario_data.get("prompt_style"),
+                        domain=scenario_data.get("domain"),
+                        source=source,
+                        model_name=scenario_data.get("model_name"),
+                        is_active=True,
+                        n_assigned=0,
+                        n_completed=0,
+                        n_skipped=0,
+                        n_abandoned=0,
+                        created_at=ts,
+                        updated_at=ts,
+                    )
+                    db.add(obj)
                     loaded_count += 1
                     
-            except Exception as e:
-                error_count += 1
-                errors.append(f"Scenario {idx}: {str(e)}")
+                except Exception as e:
+                    error_count += 1
+                    errors.append(f"Scenario {idx}: {str(e)}")
+            
+            db.commit()
         
         return {
             "status": "success",
             "loaded": loaded_count,
-            "updated": updated_count,
+            "updated": 0,  # Always 0 since we always create new
+            "deactivated_count": deactivated_count,
             "errors": error_count,
             "total": len(scenarios_data),
             "error_details": errors[:10] if errors else []
@@ -711,9 +725,10 @@ async def upload_attention_checks_admin(
     file: UploadFile = File(...),
     set_name: str = Form("default"),
     source: str = Form("admin_upload"),
+    deactivate_previous: bool = Form(False),
     user: UserModel = Depends(get_admin_user),
 ):
-    """Admin endpoint to upload attention check scenarios from JSON file"""
+    """Admin endpoint to upload attention check scenarios from JSON file. Always creates new attention checks with UUID-based IDs."""
     import json
     
     try:
@@ -731,56 +746,62 @@ async def upload_attention_checks_admin(
         else:
             raise HTTPException(status_code=400, detail="JSON must contain a list of scenarios or object with 'scenarios' array")
         
+        # Deactivate previous attention checks if requested
+        deactivated_count = 0
+        if deactivate_previous:
+            deactivated_count = AttentionCheckScenarios.deactivate_by_set_name(set_name)
+            log.info(f"Deactivated {deactivated_count} previous attention checks with set_name='{set_name}'")
+        
         loaded_count = 0
-        updated_count = 0
         error_count = 0
         errors = []
+        ts = int(time.time() * 1000)
         
-        for idx, scenario_data in enumerate(scenarios_data, 1):
-            try:
-                prompt_text = scenario_data.get("prompt", scenario_data.get("prompt_text", ""))
-                response_text = scenario_data.get("response", scenario_data.get("response_text", ""))
-                
-                if not prompt_text or not response_text:
-                    error_count += 1
-                    errors.append(f"Attention check {idx}: Missing prompt or response")
-                    continue
-                
-                form = AttentionCheckScenarioForm(
-                    prompt_text=prompt_text,
-                    response_text=response_text,
-                    trait_theme=scenario_data.get("trait_theme"),
-                    trait_phrase=scenario_data.get("trait_phrase"),
-                    sentiment=scenario_data.get("sentiment"),
-                    trait_index=scenario_data.get("trait_index"),
-                    prompt_index=scenario_data.get("prompt_index"),
-                    set_name=set_name,
-                    is_active=True,
-                    source=source,
-                )
-                
-                # Generate scenario_id the same way upsert does to check if it exists
-                content_hash = hashlib.sha256(
-                    f"{form.prompt_text}|{form.response_text}".encode('utf-8')
-                ).hexdigest()[:16]
-                scenario_id = f"ac_{content_hash}"
-                existing = AttentionCheckScenarios.get_by_id(scenario_id)
-                
-                result = AttentionCheckScenarios.upsert(form)
-                
-                if existing:
-                    updated_count += 1
-                else:
+        with get_db() as db:
+            for idx, scenario_data in enumerate(scenarios_data, 1):
+                try:
+                    # Accept multiple field name formats for flexibility (same as scenario upload)
+                    prompt_text = scenario_data.get("child_prompt") or scenario_data.get("prompt_text") or scenario_data.get("prompt", "")
+                    response_text = scenario_data.get("model_response") or scenario_data.get("response_text") or scenario_data.get("response", "")
+                    
+                    if not prompt_text or not response_text:
+                        error_count += 1
+                        errors.append(f"Attention check {idx}: Missing prompt or response")
+                        continue
+                    
+                    # Generate new UUID-based scenario_id for each upload
+                    scenario_id = f"ac_{uuid.uuid4()}"
+                    
+                    # Create new attention check directly (always new, never update)
+                    obj = AttentionCheckScenario(
+                        scenario_id=scenario_id,
+                        prompt_text=prompt_text,
+                        response_text=response_text,
+                        trait_theme=scenario_data.get("trait_theme"),
+                        trait_phrase=scenario_data.get("trait_phrase"),
+                        sentiment=scenario_data.get("sentiment"),
+                        trait_index=scenario_data.get("trait_index"),
+                        prompt_index=scenario_data.get("prompt_index"),
+                        set_name=set_name,
+                        is_active=True,
+                        source=source,
+                        created_at=ts,
+                        updated_at=ts,
+                    )
+                    db.add(obj)
                     loaded_count += 1
                     
-            except Exception as e:
-                error_count += 1
-                errors.append(f"Attention check {idx}: {str(e)}")
+                except Exception as e:
+                    error_count += 1
+                    errors.append(f"Attention check {idx}: {str(e)}")
+            
+            db.commit()
         
         return {
             "status": "success",
             "loaded": loaded_count,
-            "updated": updated_count,
+            "updated": 0,  # Always 0 since we always create new
+            "deactivated_count": deactivated_count,
             "errors": error_count,
             "total": len(scenarios_data),
             "error_details": errors[:10] if errors else []
@@ -857,6 +878,70 @@ async def update_attention_check_admin(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@router.get("/admin/scenarios/set-names")
+async def get_scenario_set_names(user: UserModel = Depends(get_admin_user)):
+    """Get all distinct set_name values for scenarios"""
+    try:
+        set_names = Scenarios.get_distinct_set_names()
+        return {"set_names": set_names}
+    except Exception as e:
+        log.error(f"Error getting scenario set names: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/admin/attention-checks/set-names")
+async def get_attention_check_set_names(user: UserModel = Depends(get_admin_user)):
+    """Get all distinct set_name values for attention checks"""
+    try:
+        set_names = AttentionCheckScenarios.get_distinct_set_names()
+        return {"set_names": set_names}
+    except Exception as e:
+        log.error(f"Error getting attention check set names: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+class SetActiveSetRequest(BaseModel):
+    set_name: Optional[str] = None
+
+
+@router.post("/admin/scenarios/set-active-set")
+async def set_active_scenario_set(
+    request: SetActiveSetRequest,
+    user: UserModel = Depends(get_admin_user),
+):
+    """Set which set_name should be active. Activates all scenarios with that set_name and deactivates all others."""
+    try:
+        result = Scenarios.set_active_set(request.set_name)
+        return {
+            "status": "success",
+            "activated": result["activated"],
+            "deactivated": result["deactivated"],
+            "set_name": request.set_name,
+        }
+    except Exception as e:
+        log.error(f"Error setting active scenario set: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/admin/attention-checks/set-active-set")
+async def set_active_attention_check_set(
+    request: SetActiveSetRequest,
+    user: UserModel = Depends(get_admin_user),
+):
+    """Set which set_name should be active. Activates all attention checks with that set_name and deactivates all others."""
+    try:
+        result = AttentionCheckScenarios.set_active_set(request.set_name)
+        return {
+            "status": "success",
+            "activated": result["activated"],
+            "deactivated": result["deactivated"],
+            "set_name": request.set_name,
+        }
+    except Exception as e:
+        log.error(f"Error setting active attention check set: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 class SessionActivityPayload(BaseModel):
     user_id: str
     child_id: str
@@ -886,292 +971,6 @@ async def post_session_activity(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# New scenario assignment endpoints
-
-class ScenarioAssignRequest(BaseModel):
-    participant_id: str
-    child_profile_id: Optional[str] = None
-    assignment_position: Optional[int] = None
-    alpha: Optional[float] = 1.0  # Weighted sampling alpha parameter
-
-
-class ScenarioAssignResponse(BaseModel):
-    assignment_id: str
-    scenario_id: str
-    prompt_text: str
-    response_text: str
-    assignment_position: Optional[int] = None
-    sampling_audit: Optional[dict] = None
-
-
-@router.post("/moderation/scenarios/assign", response_model=ScenarioAssignResponse)
-async def assign_scenario(
-    request: ScenarioAssignRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """
-    Assign a scenario to a participant using weighted sampling.
-    Atomically creates assignment and increments n_assigned counter.
-    """
-    try:
-        if user.id != request.participant_id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Perform weighted sampling
-        result = Scenarios.weighted_sample(
-            participant_id=request.participant_id,
-            alpha=request.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if not result:
-            raise HTTPException(status_code=404, detail="No eligible scenarios available")
-        
-        selected_scenario, sampling_audit = result
-        
-        # Create assignment atomically (in a transaction)
-        with get_db() as db:
-            # Create assignment
-            form = ScenarioAssignmentForm(
-                participant_id=request.participant_id,
-                child_profile_id=request.child_profile_id,
-                assignment_position=request.assignment_position,
-                alpha=request.alpha,
-            )
-            assignment = ScenarioAssignments.create(form, selected_scenario.scenario_id, sampling_audit)
-            
-            # Increment n_assigned counter
-            Scenarios.increment_counter(selected_scenario.scenario_id, "n_assigned")
-            
-            db.commit()
-        
-        return ScenarioAssignResponse(
-            assignment_id=assignment.assignment_id,
-            scenario_id=selected_scenario.scenario_id,
-            prompt_text=selected_scenario.prompt_text,
-            response_text=selected_scenario.response_text,
-            assignment_position=assignment.assignment_position,
-            sampling_audit=sampling_audit,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error assigning scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-class ScenarioStatusUpdateRequest(BaseModel):
-    assignment_id: str
-    skip_stage: Optional[str] = None
-    skip_reason: Optional[str] = None
-    skip_reason_text: Optional[str] = None
-
-
-@router.post("/moderation/scenarios/start")
-async def start_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as started"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        updated = ScenarioAssignments.update_status(
-            request.assignment_id,
-            AssignmentStatus.STARTED,
-            started_at=ts,
-        )
-        
-        if not updated:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        return {"status": "started", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error starting scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/complete")
-async def complete_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as completed and calculate issue_any"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Calculate issue_any from highlights count
-        from open_webui.models.selections import Selections
-        highlights = Selections.get_selections_by_assignment(request.assignment_id)
-        issue_any = 1 if len(highlights) > 0 else 0
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.COMPLETED,
-                ended_at=ts,
-                issue_any=issue_any,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_completed counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_completed")
-            db.commit()
-        
-        return {
-            "status": "completed",
-            "assignment_id": request.assignment_id,
-            "issue_any": issue_any,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error completing scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/skip")
-async def skip_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as skipped"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.SKIPPED,
-                ended_at=ts,
-                issue_any=None,
-                skip_stage=request.skip_stage,
-                skip_reason=request.skip_reason,
-                skip_reason_text=request.skip_reason_text,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_skipped counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_skipped")
-            db.commit()
-        
-        return {"status": "skipped", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error skipping scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/abandon")
-async def abandon_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as abandoned and trigger reassignment"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.ABANDONED,
-                ended_at=ts,
-                issue_any=None,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_abandoned counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_abandoned")
-            db.commit()
-        
-        # Trigger reassignment (create new assignment in same session slot)
-        reassign_form = ScenarioAssignmentForm(
-            participant_id=assignment.participant_id,
-            child_profile_id=assignment.child_profile_id,
-            assignment_position=assignment.assignment_position,
-            alpha=assignment.alpha or 1.0,
-        )
-        
-        # Perform weighted sampling for reassignment
-        result = Scenarios.weighted_sample(
-            participant_id=assignment.participant_id,
-            alpha=assignment.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if result:
-            new_scenario, sampling_audit = result
-            with get_db() as db:
-                new_assignment = ScenarioAssignments.create(
-                    reassign_form,
-                    new_scenario.scenario_id,
-                    sampling_audit,
-                )
-                Scenarios.increment_counter(new_scenario.scenario_id, "n_assigned")
-                db.commit()
-            
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": True,
-                "new_assignment_id": new_assignment.assignment_id,
-                "new_scenario_id": new_scenario.scenario_id,
-                "new_prompt_text": new_scenario.prompt_text,
-                "new_response_text": new_scenario.response_text,
-            }
-        else:
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": False,
-                "message": "No eligible scenarios available for reassignment",
-            }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error abandoning scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
 @router.get("/moderation/sessions", response_model=List[ModerationSessionModel])
 async def list_sessions(
     child_id: Optional[str] = None,
@@ -1183,292 +982,6 @@ async def list_sessions(
         return sessions
     except Exception as e:
         log.error(f"Error listing moderation sessions: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-# New scenario assignment endpoints
-
-class ScenarioAssignRequest(BaseModel):
-    participant_id: str
-    child_profile_id: Optional[str] = None
-    assignment_position: Optional[int] = None
-    alpha: Optional[float] = 1.0  # Weighted sampling alpha parameter
-
-
-class ScenarioAssignResponse(BaseModel):
-    assignment_id: str
-    scenario_id: str
-    prompt_text: str
-    response_text: str
-    assignment_position: Optional[int] = None
-    sampling_audit: Optional[dict] = None
-
-
-@router.post("/moderation/scenarios/assign", response_model=ScenarioAssignResponse)
-async def assign_scenario(
-    request: ScenarioAssignRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """
-    Assign a scenario to a participant using weighted sampling.
-    Atomically creates assignment and increments n_assigned counter.
-    """
-    try:
-        if user.id != request.participant_id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Perform weighted sampling
-        result = Scenarios.weighted_sample(
-            participant_id=request.participant_id,
-            alpha=request.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if not result:
-            raise HTTPException(status_code=404, detail="No eligible scenarios available")
-        
-        selected_scenario, sampling_audit = result
-        
-        # Create assignment atomically (in a transaction)
-        with get_db() as db:
-            # Create assignment
-            form = ScenarioAssignmentForm(
-                participant_id=request.participant_id,
-                child_profile_id=request.child_profile_id,
-                assignment_position=request.assignment_position,
-                alpha=request.alpha,
-            )
-            assignment = ScenarioAssignments.create(form, selected_scenario.scenario_id, sampling_audit)
-            
-            # Increment n_assigned counter
-            Scenarios.increment_counter(selected_scenario.scenario_id, "n_assigned")
-            
-            db.commit()
-        
-        return ScenarioAssignResponse(
-            assignment_id=assignment.assignment_id,
-            scenario_id=selected_scenario.scenario_id,
-            prompt_text=selected_scenario.prompt_text,
-            response_text=selected_scenario.response_text,
-            assignment_position=assignment.assignment_position,
-            sampling_audit=sampling_audit,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error assigning scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-class ScenarioStatusUpdateRequest(BaseModel):
-    assignment_id: str
-    skip_stage: Optional[str] = None
-    skip_reason: Optional[str] = None
-    skip_reason_text: Optional[str] = None
-
-
-@router.post("/moderation/scenarios/start")
-async def start_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as started"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        updated = ScenarioAssignments.update_status(
-            request.assignment_id,
-            AssignmentStatus.STARTED,
-            started_at=ts,
-        )
-        
-        if not updated:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        return {"status": "started", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error starting scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/complete")
-async def complete_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as completed and calculate issue_any"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Calculate issue_any from highlights count
-        from open_webui.models.selections import Selections
-        highlights = Selections.get_selections_by_assignment(request.assignment_id)
-        issue_any = 1 if len(highlights) > 0 else 0
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.COMPLETED,
-                ended_at=ts,
-                issue_any=issue_any,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_completed counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_completed")
-            db.commit()
-        
-        return {
-            "status": "completed",
-            "assignment_id": request.assignment_id,
-            "issue_any": issue_any,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error completing scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/skip")
-async def skip_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as skipped"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.SKIPPED,
-                ended_at=ts,
-                issue_any=None,
-                skip_stage=request.skip_stage,
-                skip_reason=request.skip_reason,
-                skip_reason_text=request.skip_reason_text,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_skipped counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_skipped")
-            db.commit()
-        
-        return {"status": "skipped", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error skipping scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/abandon")
-async def abandon_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as abandoned and trigger reassignment"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.ABANDONED,
-                ended_at=ts,
-                issue_any=None,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_abandoned counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_abandoned")
-            db.commit()
-        
-        # Trigger reassignment (create new assignment in same session slot)
-        reassign_form = ScenarioAssignmentForm(
-            participant_id=assignment.participant_id,
-            child_profile_id=assignment.child_profile_id,
-            assignment_position=assignment.assignment_position,
-            alpha=assignment.alpha or 1.0,
-        )
-        
-        # Perform weighted sampling for reassignment
-        result = Scenarios.weighted_sample(
-            participant_id=assignment.participant_id,
-            alpha=assignment.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if result:
-            new_scenario, sampling_audit = result
-            with get_db() as db:
-                new_assignment = ScenarioAssignments.create(
-                    reassign_form,
-                    new_scenario.scenario_id,
-                    sampling_audit,
-                )
-                Scenarios.increment_counter(new_scenario.scenario_id, "n_assigned")
-                db.commit()
-            
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": True,
-                "new_assignment_id": new_assignment.assignment_id,
-                "new_scenario_id": new_scenario.scenario_id,
-                "new_prompt_text": new_scenario.prompt_text,
-                "new_response_text": new_scenario.response_text,
-            }
-        else:
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": False,
-                "message": "No eligible scenarios available for reassignment",
-            }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error abandoning scenario: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -1490,292 +1003,6 @@ async def get_session(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# New scenario assignment endpoints
-
-class ScenarioAssignRequest(BaseModel):
-    participant_id: str
-    child_profile_id: Optional[str] = None
-    assignment_position: Optional[int] = None
-    alpha: Optional[float] = 1.0  # Weighted sampling alpha parameter
-
-
-class ScenarioAssignResponse(BaseModel):
-    assignment_id: str
-    scenario_id: str
-    prompt_text: str
-    response_text: str
-    assignment_position: Optional[int] = None
-    sampling_audit: Optional[dict] = None
-
-
-@router.post("/moderation/scenarios/assign", response_model=ScenarioAssignResponse)
-async def assign_scenario(
-    request: ScenarioAssignRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """
-    Assign a scenario to a participant using weighted sampling.
-    Atomically creates assignment and increments n_assigned counter.
-    """
-    try:
-        if user.id != request.participant_id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Perform weighted sampling
-        result = Scenarios.weighted_sample(
-            participant_id=request.participant_id,
-            alpha=request.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if not result:
-            raise HTTPException(status_code=404, detail="No eligible scenarios available")
-        
-        selected_scenario, sampling_audit = result
-        
-        # Create assignment atomically (in a transaction)
-        with get_db() as db:
-            # Create assignment
-            form = ScenarioAssignmentForm(
-                participant_id=request.participant_id,
-                child_profile_id=request.child_profile_id,
-                assignment_position=request.assignment_position,
-                alpha=request.alpha,
-            )
-            assignment = ScenarioAssignments.create(form, selected_scenario.scenario_id, sampling_audit)
-            
-            # Increment n_assigned counter
-            Scenarios.increment_counter(selected_scenario.scenario_id, "n_assigned")
-            
-            db.commit()
-        
-        return ScenarioAssignResponse(
-            assignment_id=assignment.assignment_id,
-            scenario_id=selected_scenario.scenario_id,
-            prompt_text=selected_scenario.prompt_text,
-            response_text=selected_scenario.response_text,
-            assignment_position=assignment.assignment_position,
-            sampling_audit=sampling_audit,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error assigning scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-class ScenarioStatusUpdateRequest(BaseModel):
-    assignment_id: str
-    skip_stage: Optional[str] = None
-    skip_reason: Optional[str] = None
-    skip_reason_text: Optional[str] = None
-
-
-@router.post("/moderation/scenarios/start")
-async def start_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as started"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        updated = ScenarioAssignments.update_status(
-            request.assignment_id,
-            AssignmentStatus.STARTED,
-            started_at=ts,
-        )
-        
-        if not updated:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        return {"status": "started", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error starting scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/complete")
-async def complete_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as completed and calculate issue_any"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Calculate issue_any from highlights count
-        from open_webui.models.selections import Selections
-        highlights = Selections.get_selections_by_assignment(request.assignment_id)
-        issue_any = 1 if len(highlights) > 0 else 0
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.COMPLETED,
-                ended_at=ts,
-                issue_any=issue_any,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_completed counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_completed")
-            db.commit()
-        
-        return {
-            "status": "completed",
-            "assignment_id": request.assignment_id,
-            "issue_any": issue_any,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error completing scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/skip")
-async def skip_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as skipped"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.SKIPPED,
-                ended_at=ts,
-                issue_any=None,
-                skip_stage=request.skip_stage,
-                skip_reason=request.skip_reason,
-                skip_reason_text=request.skip_reason_text,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_skipped counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_skipped")
-            db.commit()
-        
-        return {"status": "skipped", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error skipping scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/abandon")
-async def abandon_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as abandoned and trigger reassignment"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.ABANDONED,
-                ended_at=ts,
-                issue_any=None,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_abandoned counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_abandoned")
-            db.commit()
-        
-        # Trigger reassignment (create new assignment in same session slot)
-        reassign_form = ScenarioAssignmentForm(
-            participant_id=assignment.participant_id,
-            child_profile_id=assignment.child_profile_id,
-            assignment_position=assignment.assignment_position,
-            alpha=assignment.alpha or 1.0,
-        )
-        
-        # Perform weighted sampling for reassignment
-        result = Scenarios.weighted_sample(
-            participant_id=assignment.participant_id,
-            alpha=assignment.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if result:
-            new_scenario, sampling_audit = result
-            with get_db() as db:
-                new_assignment = ScenarioAssignments.create(
-                    reassign_form,
-                    new_scenario.scenario_id,
-                    sampling_audit,
-                )
-                Scenarios.increment_counter(new_scenario.scenario_id, "n_assigned")
-                db.commit()
-            
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": True,
-                "new_assignment_id": new_assignment.assignment_id,
-                "new_scenario_id": new_scenario.scenario_id,
-                "new_prompt_text": new_scenario.prompt_text,
-                "new_response_text": new_scenario.response_text,
-            }
-        else:
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": False,
-                "message": "No eligible scenarios available for reassignment",
-            }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error abandoning scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
 @router.delete("/moderation/sessions/{session_id}")
 async def delete_session(
     session_id: str,
@@ -1791,292 +1018,6 @@ async def delete_session(
         raise
     except Exception as e:
         log.error(f"Error deleting moderation session: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-# New scenario assignment endpoints
-
-class ScenarioAssignRequest(BaseModel):
-    participant_id: str
-    child_profile_id: Optional[str] = None
-    assignment_position: Optional[int] = None
-    alpha: Optional[float] = 1.0  # Weighted sampling alpha parameter
-
-
-class ScenarioAssignResponse(BaseModel):
-    assignment_id: str
-    scenario_id: str
-    prompt_text: str
-    response_text: str
-    assignment_position: Optional[int] = None
-    sampling_audit: Optional[dict] = None
-
-
-@router.post("/moderation/scenarios/assign", response_model=ScenarioAssignResponse)
-async def assign_scenario(
-    request: ScenarioAssignRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """
-    Assign a scenario to a participant using weighted sampling.
-    Atomically creates assignment and increments n_assigned counter.
-    """
-    try:
-        if user.id != request.participant_id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Perform weighted sampling
-        result = Scenarios.weighted_sample(
-            participant_id=request.participant_id,
-            alpha=request.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if not result:
-            raise HTTPException(status_code=404, detail="No eligible scenarios available")
-        
-        selected_scenario, sampling_audit = result
-        
-        # Create assignment atomically (in a transaction)
-        with get_db() as db:
-            # Create assignment
-            form = ScenarioAssignmentForm(
-                participant_id=request.participant_id,
-                child_profile_id=request.child_profile_id,
-                assignment_position=request.assignment_position,
-                alpha=request.alpha,
-            )
-            assignment = ScenarioAssignments.create(form, selected_scenario.scenario_id, sampling_audit)
-            
-            # Increment n_assigned counter
-            Scenarios.increment_counter(selected_scenario.scenario_id, "n_assigned")
-            
-            db.commit()
-        
-        return ScenarioAssignResponse(
-            assignment_id=assignment.assignment_id,
-            scenario_id=selected_scenario.scenario_id,
-            prompt_text=selected_scenario.prompt_text,
-            response_text=selected_scenario.response_text,
-            assignment_position=assignment.assignment_position,
-            sampling_audit=sampling_audit,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error assigning scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-class ScenarioStatusUpdateRequest(BaseModel):
-    assignment_id: str
-    skip_stage: Optional[str] = None
-    skip_reason: Optional[str] = None
-    skip_reason_text: Optional[str] = None
-
-
-@router.post("/moderation/scenarios/start")
-async def start_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as started"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        updated = ScenarioAssignments.update_status(
-            request.assignment_id,
-            AssignmentStatus.STARTED,
-            started_at=ts,
-        )
-        
-        if not updated:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        return {"status": "started", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error starting scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/complete")
-async def complete_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as completed and calculate issue_any"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Calculate issue_any from highlights count
-        from open_webui.models.selections import Selections
-        highlights = Selections.get_selections_by_assignment(request.assignment_id)
-        issue_any = 1 if len(highlights) > 0 else 0
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.COMPLETED,
-                ended_at=ts,
-                issue_any=issue_any,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_completed counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_completed")
-            db.commit()
-        
-        return {
-            "status": "completed",
-            "assignment_id": request.assignment_id,
-            "issue_any": issue_any,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error completing scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/skip")
-async def skip_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as skipped"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.SKIPPED,
-                ended_at=ts,
-                issue_any=None,
-                skip_stage=request.skip_stage,
-                skip_reason=request.skip_reason,
-                skip_reason_text=request.skip_reason_text,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_skipped counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_skipped")
-            db.commit()
-        
-        return {"status": "skipped", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error skipping scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/abandon")
-async def abandon_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as abandoned and trigger reassignment"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.ABANDONED,
-                ended_at=ts,
-                issue_any=None,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_abandoned counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_abandoned")
-            db.commit()
-        
-        # Trigger reassignment (create new assignment in same session slot)
-        reassign_form = ScenarioAssignmentForm(
-            participant_id=assignment.participant_id,
-            child_profile_id=assignment.child_profile_id,
-            assignment_position=assignment.assignment_position,
-            alpha=assignment.alpha or 1.0,
-        )
-        
-        # Perform weighted sampling for reassignment
-        result = Scenarios.weighted_sample(
-            participant_id=assignment.participant_id,
-            alpha=assignment.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if result:
-            new_scenario, sampling_audit = result
-            with get_db() as db:
-                new_assignment = ScenarioAssignments.create(
-                    reassign_form,
-                    new_scenario.scenario_id,
-                    sampling_audit,
-                )
-                Scenarios.increment_counter(new_scenario.scenario_id, "n_assigned")
-                db.commit()
-            
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": True,
-                "new_assignment_id": new_assignment.assignment_id,
-                "new_scenario_id": new_scenario.scenario_id,
-                "new_prompt_text": new_scenario.prompt_text,
-                "new_response_text": new_scenario.response_text,
-            }
-        else:
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": False,
-                "message": "No eligible scenarios available for reassignment",
-            }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error abandoning scenario: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -2132,290 +1073,4 @@ async def get_available_scenarios(
         raise
     except Exception as e:
         log.error(f"Error getting available scenarios: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-# New scenario assignment endpoints
-
-class ScenarioAssignRequest(BaseModel):
-    participant_id: str
-    child_profile_id: Optional[str] = None
-    assignment_position: Optional[int] = None
-    alpha: Optional[float] = 1.0  # Weighted sampling alpha parameter
-
-
-class ScenarioAssignResponse(BaseModel):
-    assignment_id: str
-    scenario_id: str
-    prompt_text: str
-    response_text: str
-    assignment_position: Optional[int] = None
-    sampling_audit: Optional[dict] = None
-
-
-@router.post("/moderation/scenarios/assign", response_model=ScenarioAssignResponse)
-async def assign_scenario(
-    request: ScenarioAssignRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """
-    Assign a scenario to a participant using weighted sampling.
-    Atomically creates assignment and increments n_assigned counter.
-    """
-    try:
-        if user.id != request.participant_id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Perform weighted sampling
-        result = Scenarios.weighted_sample(
-            participant_id=request.participant_id,
-            alpha=request.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if not result:
-            raise HTTPException(status_code=404, detail="No eligible scenarios available")
-        
-        selected_scenario, sampling_audit = result
-        
-        # Create assignment atomically (in a transaction)
-        with get_db() as db:
-            # Create assignment
-            form = ScenarioAssignmentForm(
-                participant_id=request.participant_id,
-                child_profile_id=request.child_profile_id,
-                assignment_position=request.assignment_position,
-                alpha=request.alpha,
-            )
-            assignment = ScenarioAssignments.create(form, selected_scenario.scenario_id, sampling_audit)
-            
-            # Increment n_assigned counter
-            Scenarios.increment_counter(selected_scenario.scenario_id, "n_assigned")
-            
-            db.commit()
-        
-        return ScenarioAssignResponse(
-            assignment_id=assignment.assignment_id,
-            scenario_id=selected_scenario.scenario_id,
-            prompt_text=selected_scenario.prompt_text,
-            response_text=selected_scenario.response_text,
-            assignment_position=assignment.assignment_position,
-            sampling_audit=sampling_audit,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error assigning scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-class ScenarioStatusUpdateRequest(BaseModel):
-    assignment_id: str
-    skip_stage: Optional[str] = None
-    skip_reason: Optional[str] = None
-    skip_reason_text: Optional[str] = None
-
-
-@router.post("/moderation/scenarios/start")
-async def start_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as started"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        updated = ScenarioAssignments.update_status(
-            request.assignment_id,
-            AssignmentStatus.STARTED,
-            started_at=ts,
-        )
-        
-        if not updated:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        return {"status": "started", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error starting scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/complete")
-async def complete_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as completed and calculate issue_any"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        # Calculate issue_any from highlights count
-        from open_webui.models.selections import Selections
-        highlights = Selections.get_selections_by_assignment(request.assignment_id)
-        issue_any = 1 if len(highlights) > 0 else 0
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.COMPLETED,
-                ended_at=ts,
-                issue_any=issue_any,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_completed counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_completed")
-            db.commit()
-        
-        return {
-            "status": "completed",
-            "assignment_id": request.assignment_id,
-            "issue_any": issue_any,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error completing scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/skip")
-async def skip_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as skipped"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.SKIPPED,
-                ended_at=ts,
-                issue_any=None,
-                skip_stage=request.skip_stage,
-                skip_reason=request.skip_reason,
-                skip_reason_text=request.skip_reason_text,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_skipped counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_skipped")
-            db.commit()
-        
-        return {"status": "skipped", "assignment_id": request.assignment_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error skipping scenario: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@router.post("/moderation/scenarios/abandon")
-async def abandon_scenario(
-    request: ScenarioStatusUpdateRequest,
-    user: UserModel = Depends(get_verified_user),
-):
-    """Mark a scenario assignment as abandoned and trigger reassignment"""
-    try:
-        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Assignment not found")
-        
-        if assignment.participant_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        ts = int(time.time() * 1000)
-        
-        # Update assignment and increment counter atomically
-        with get_db() as db:
-            updated = ScenarioAssignments.update_status(
-                request.assignment_id,
-                AssignmentStatus.ABANDONED,
-                ended_at=ts,
-                issue_any=None,
-            )
-            
-            if not updated:
-                raise HTTPException(status_code=404, detail="Assignment not found")
-            
-            # Increment n_abandoned counter
-            Scenarios.increment_counter(assignment.scenario_id, "n_abandoned")
-            db.commit()
-        
-        # Trigger reassignment (create new assignment in same session slot)
-        reassign_form = ScenarioAssignmentForm(
-            participant_id=assignment.participant_id,
-            child_profile_id=assignment.child_profile_id,
-            assignment_position=assignment.assignment_position,
-            alpha=assignment.alpha or 1.0,
-        )
-        
-        # Perform weighted sampling for reassignment
-        result = Scenarios.weighted_sample(
-            participant_id=assignment.participant_id,
-            alpha=assignment.alpha or 1.0,
-            is_active=True,
-        )
-        
-        if result:
-            new_scenario, sampling_audit = result
-            with get_db() as db:
-                new_assignment = ScenarioAssignments.create(
-                    reassign_form,
-                    new_scenario.scenario_id,
-                    sampling_audit,
-                )
-                Scenarios.increment_counter(new_scenario.scenario_id, "n_assigned")
-                db.commit()
-            
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": True,
-                "new_assignment_id": new_assignment.assignment_id,
-                "new_scenario_id": new_scenario.scenario_id,
-                "new_prompt_text": new_scenario.prompt_text,
-                "new_response_text": new_scenario.response_text,
-            }
-        else:
-            return {
-                "status": "abandoned",
-                "assignment_id": request.assignment_id,
-                "reassigned": False,
-                "message": "No eligible scenarios available for reassignment",
-            }
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"Error abandoning scenario: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

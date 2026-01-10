@@ -10,6 +10,10 @@
 		uploadAttentionChecksAdmin,
 		listAttentionChecksAdmin,
 		updateAttentionCheckAdmin,
+		getScenarioSetNames,
+		getAttentionCheckSetNames,
+		setActiveScenarioSet,
+		setActiveAttentionCheckSet,
 		type ScenarioModel,
 		type ScenarioStatsResponse,
 		type AttentionCheckAdminModel
@@ -53,11 +57,25 @@
 	// Upload state
 	let uploadingScenarios = false;
 	let uploadingAttentionChecks = false;
+	let deactivatePreviousScenarios = false;
+	let deactivatePreviousAttentionChecks = false;
+	let scenarioSetName = 'pilot';
+	let attentionCheckSetName = 'default';
+
+	// Active set management
+	let scenarioSetNames: (string | null)[] = [];
+	let attentionCheckSetNames: (string | null)[] = [];
+	let activeScenarioSet: string | null = null;
+	let activeAttentionCheckSet: string | null = null;
+	let settingActiveSet = false;
 
 	onMount(async () => {
 		await loadStats();
+		await loadSetNames();
 		await loadScenarios();
 		await loadAttentionChecks();
+		// determineActiveSets() is called automatically in loadScenarios() and loadAttentionChecks()
+		// with appropriate flags to update only the relevant active set
 	});
 
 	async function loadStats() {
@@ -76,6 +94,7 @@
 			scenarioTotal = response.total;
 			scenarioActiveCount = response.active_count;
 			scenarioInactiveCount = response.inactive_count;
+			await determineActiveSets(true, false); // Update only scenario active set
 		} catch (error: any) {
 			toast.error(`Failed to load scenarios: ${error.message || error}`);
 		} finally {
@@ -90,6 +109,7 @@
 			attentionCheckTotal = response.total;
 			attentionCheckActiveCount = response.active_count;
 			attentionCheckInactiveCount = response.inactive_count;
+			await determineActiveSets(false, true); // Update only attention check active set
 		} catch (error: any) {
 			toast.error(`Failed to load attention checks: ${error.message || error}`);
 		}
@@ -102,10 +122,18 @@
 
 		uploadingScenarios = true;
 		try {
-			const result = await uploadScenariosAdmin(localStorage.token, file, 'pilot', 'admin_upload');
-			toast.success(
-				`Uploaded ${result.loaded} new scenarios, updated ${result.updated} existing. ${result.errors} errors.`
+			const result = await uploadScenariosAdmin(
+				localStorage.token,
+				file,
+				scenarioSetName,
+				'admin_upload',
+				deactivatePreviousScenarios
 			);
+			let message = `Uploaded ${result.loaded} new scenarios. ${result.errors} errors.`;
+			if (result.deactivated_count && result.deactivated_count > 0) {
+				message += ` Deactivated ${result.deactivated_count} previous scenarios.`;
+			}
+			toast.success(message);
 			if (result.error_details && result.error_details.length > 0) {
 				console.warn('Upload errors:', result.error_details);
 			}
@@ -126,10 +154,18 @@
 
 		uploadingAttentionChecks = true;
 		try {
-			const result = await uploadAttentionChecksAdmin(localStorage.token, file, 'default', 'admin_upload');
-			toast.success(
-				`Uploaded ${result.loaded} new attention checks, updated ${result.updated} existing. ${result.errors} errors.`
+			const result = await uploadAttentionChecksAdmin(
+				localStorage.token,
+				file,
+				attentionCheckSetName,
+				'admin_upload',
+				deactivatePreviousAttentionChecks
 			);
+			let message = `Uploaded ${result.loaded} new attention checks. ${result.errors} errors.`;
+			if (result.deactivated_count && result.deactivated_count > 0) {
+				message += ` Deactivated ${result.deactivated_count} previous attention checks.`;
+			}
+			toast.success(message);
 			if (result.error_details && result.error_details.length > 0) {
 				console.warn('Upload errors:', result.error_details);
 			}
@@ -171,6 +207,99 @@
 	function getUniqueValues(items: any[], field: string): string[] {
 		const values = items.map((item) => item[field]).filter((v) => v);
 		return [...new Set(values)].sort();
+	}
+
+	async function loadSetNames() {
+		try {
+			const [scenarioResponse, attentionCheckResponse] = await Promise.all([
+				getScenarioSetNames(localStorage.token),
+				getAttentionCheckSetNames(localStorage.token)
+			]);
+			scenarioSetNames = scenarioResponse.set_names;
+			attentionCheckSetNames = attentionCheckResponse.set_names;
+		} catch (error: any) {
+			toast.error(`Failed to load set names: ${error.message || error}`);
+		}
+	}
+
+	async function determineActiveSets(updateScenarios = true, updateAttentionChecks = true) {
+		// Determine active set by checking which set_name has the most active scenarios
+		try {
+			if (updateScenarios) {
+				const activeScenarios_ = scenarios.filter((s) => s.is_active);
+				if (activeScenarios_.length > 0) {
+					const setCounts = new Map<string | null, number>();
+					activeScenarios_.forEach((s) => {
+						const setName = s.set_name || null;
+						setCounts.set(setName, (setCounts.get(setName) || 0) + 1);
+					});
+					let maxCount = 0;
+					let maxSet: string | null = null;
+					setCounts.forEach((count, setName) => {
+						if (count > maxCount) {
+							maxCount = count;
+							maxSet = setName;
+						}
+					});
+					activeScenarioSet = maxSet;
+				}
+			}
+
+			if (updateAttentionChecks) {
+				const activeAttentionChecks_ = attentionChecks.filter((ac) => ac.is_active);
+				if (activeAttentionChecks_.length > 0) {
+					const setCounts = new Map<string | null, number>();
+					activeAttentionChecks_.forEach((ac) => {
+						const setName = ac.set_name || null;
+						setCounts.set(setName, (setCounts.get(setName) || 0) + 1);
+					});
+					let maxCount = 0;
+					let maxSet: string | null = null;
+					setCounts.forEach((count, setName) => {
+						if (count > maxCount) {
+							maxCount = count;
+							maxSet = setName;
+						}
+					});
+					activeAttentionCheckSet = maxSet;
+				}
+			}
+		} catch (error: any) {
+			console.error('Error determining active sets:', error);
+		}
+	}
+
+	async function handleSetActiveScenarioSet() {
+		settingActiveSet = true;
+		try {
+			const result = await setActiveScenarioSet(localStorage.token, activeScenarioSet);
+			toast.success(
+				`Activated ${result.activated} scenarios, deactivated ${result.deactivated} scenarios.`
+			);
+			await loadStats();
+			await loadScenarios();
+			await loadSetNames();
+		} catch (error: any) {
+			toast.error(`Failed to set active scenario set: ${error.message || error}`);
+		} finally {
+			settingActiveSet = false;
+		}
+	}
+
+	async function handleSetActiveAttentionCheckSet() {
+		settingActiveSet = true;
+		try {
+			const result = await setActiveAttentionCheckSet(localStorage.token, activeAttentionCheckSet);
+			toast.success(
+				`Activated ${result.activated} attention checks, deactivated ${result.deactivated} attention checks.`
+			);
+			await loadAttentionChecks();
+			await loadSetNames();
+		} catch (error: any) {
+			toast.error(`Failed to set active attention check set: ${error.message || error}`);
+		} finally {
+			settingActiveSet = false;
+		}
 	}
 </script>
 
@@ -230,9 +359,54 @@
 					</div>
 				{/if}
 
+				<!-- Active Set Management -->
+				<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+					<div class="mb-2 text-sm font-medium">Active Scenario Set</div>
+					<div class="mb-2">
+						<label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Select Active Set</label>
+						<select
+							bind:value={activeScenarioSet}
+							class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+							disabled={settingActiveSet}
+						>
+							<option value={null}>All sets active</option>
+							{#each scenarioSetNames as setName}
+								{#if setName !== null}
+									<option value={setName}>{setName}</option>
+								{/if}
+							{/each}
+						</select>
+					</div>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+						Selecting a set will activate all scenarios with that set name and deactivate all others.
+					</p>
+					<button
+						type="button"
+						class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+						on:click={handleSetActiveScenarioSet}
+						disabled={settingActiveSet}
+					>
+						{settingActiveSet ? 'Updating...' : 'Apply Active Set'}
+					</button>
+				</div>
+
 				<!-- Upload Section -->
 				<div>
 					<div class="mb-2 text-sm font-medium">Upload Scenarios</div>
+					<div class="mb-2">
+						<label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Set Name</label>
+						<input
+							type="text"
+							bind:value={scenarioSetName}
+							placeholder="e.g., pilot, scaled, v1"
+							class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+							disabled={uploadingScenarios}
+						/>
+					</div>
+					<label class="flex items-center space-x-2 mb-2">
+						<input type="checkbox" bind:checked={deactivatePreviousScenarios} />
+						<span class="text-xs">Deactivate previous scenarios with same set name</span>
+					</label>
 					<input
 						id="scenarios-upload-input"
 						type="file"
@@ -426,9 +600,54 @@
 		{:else}
 			<!-- Attention Checks Tab -->
 			<div class="space-y-4">
+				<!-- Active Set Management -->
+				<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+					<div class="mb-2 text-sm font-medium">Active Attention Check Set</div>
+					<div class="mb-2">
+						<label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Select Active Set</label>
+						<select
+							bind:value={activeAttentionCheckSet}
+							class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+							disabled={settingActiveSet}
+						>
+							<option value={null}>All sets active</option>
+							{#each attentionCheckSetNames as setName}
+								{#if setName !== null}
+									<option value={setName}>{setName}</option>
+								{/if}
+							{/each}
+						</select>
+					</div>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+						Selecting a set will activate all attention checks with that set name and deactivate all others.
+					</p>
+					<button
+						type="button"
+						class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+						on:click={handleSetActiveAttentionCheckSet}
+						disabled={settingActiveSet}
+					>
+						{settingActiveSet ? 'Updating...' : 'Apply Active Set'}
+					</button>
+				</div>
+
 				<!-- Upload Section -->
 				<div>
 					<div class="mb-2 text-sm font-medium">Upload Attention Check Scenarios</div>
+					<div class="mb-2">
+						<label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Set Name</label>
+						<input
+							type="text"
+							bind:value={attentionCheckSetName}
+							placeholder="e.g., default, v1"
+							class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+							disabled={uploadingAttentionChecks}
+						/>
+					</div>
+					<label class="flex items-center space-x-2 mb-2">
+						<input type="checkbox" bind:checked={deactivatePreviousAttentionChecks} />
+						<span class="text-xs">Deactivate previous attention checks with same set name</span>
+					</label>
 					<input
 						id="attention-checks-upload-input"
 						type="file"

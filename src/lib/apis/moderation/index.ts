@@ -181,7 +181,8 @@ export const applyModeration = async (
 		body: JSON.stringify({
 			moderation_types: moderationTypes,
 			child_prompt: childPrompt,
-			model: 'gpt-5.2-pro-2025-12-11',
+			// model: 'gpt-5.2-pro-2025-12-11',  // Commented out: using chat-latest instead
+			model: 'gpt-5.2-chat-latest',
 			max_chars: 600,
 			custom_instructions: customInstructions || [],  // Send custom instructions array
 			original_response: originalResponse || null,  // Optional: for refactoring mode
@@ -508,6 +509,7 @@ export interface ScenarioUploadResponse {
 	status: string;
 	loaded: number;
 	updated: number;
+	deactivated_count?: number;
 	errors: number;
 	total: number;
 	error_details?: string[];
@@ -540,12 +542,16 @@ export const uploadScenariosAdmin = async (
 	token: string,
 	file: File,
 	setName: string = 'pilot',
-	source: string = 'admin_upload'
+	source: string = 'admin_upload',
+	deactivatePrevious: boolean = false
 ): Promise<ScenarioUploadResponse> => {
 	const formData = new FormData();
 	formData.append('file', file);
 	formData.append('set_name', setName);
 	formData.append('source', source);
+	if (deactivatePrevious) {
+		formData.append('deactivate_previous', 'true');
+	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/scenarios/upload`, {
 		method: 'POST',
@@ -621,12 +627,16 @@ export const uploadAttentionChecksAdmin = async (
 	token: string,
 	file: File,
 	setName: string = 'default',
-	source: string = 'admin_upload'
+	source: string = 'admin_upload',
+	deactivatePrevious: boolean = false
 ): Promise<ScenarioUploadResponse> => {
 	const formData = new FormData();
 	formData.append('file', file);
 	formData.append('set_name', setName);
 	formData.append('source', source);
+	if (deactivatePrevious) {
+		formData.append('deactivate_previous', 'true');
+	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks/upload`, {
 		method: 'POST',
@@ -671,6 +681,79 @@ export const updateAttentionCheckAdmin = async (
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({ is_active })
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+// Set name management APIs
+
+export interface SetNamesResponse {
+	set_names: (string | null)[];
+}
+
+export const getScenarioSetNames = async (token: string): Promise<SetNamesResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/scenarios/set-names`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const getAttentionCheckSetNames = async (token: string): Promise<SetNamesResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks/set-names`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export interface SetActiveSetRequest {
+	set_name: string | null;
+}
+
+export interface SetActiveSetResponse {
+	status: string;
+	activated: number;
+	deactivated: number;
+	set_name: string | null;
+}
+
+export const setActiveScenarioSet = async (
+	token: string,
+	setName: string | null
+): Promise<SetActiveSetResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/scenarios/set-active-set`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ set_name: setName })
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const setActiveAttentionCheckSet = async (
+	token: string,
+	setName: string | null
+): Promise<SetActiveSetResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks/set-active-set`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ set_name: setName })
 	});
 	if (!res.ok) throw await res.json();
 	return res.json();

@@ -289,7 +289,7 @@ After choosing to moderate, users can:
      { "refactored_response": string, "system_prompt_rule": string }
      Constraints: warm, child-friendly, concise; combined length ≤ 600 chars.
      ```
-   - Calls OpenAI API with model `gpt-5.2-chat-latest`
+   - Calls OpenAI API with model `gpt-5.2-chat-latest` (using Chat Completions endpoint)
    - Parses JSON response
    - Returns `refactored_response` and `system_prompt_rule`
 
@@ -595,27 +595,28 @@ The displayed response is determined by:
 
 ## Default Model Configuration
 
-The default model is set to **`"gpt-5.2-pro-2025-12-11"`** in the following locations:
+The default model is set to **`"gpt-5.2-chat-latest"`** in the following locations:
 
 1. **`backend/open_webui/routers/moderation.py`** (line 18):
-   - `ModerationRequest` class: `model: Optional[str] = "gpt-5.2-pro-2025-12-11"`
+   - `ModerationRequest` class: `model: Optional[str] = "gpt-5.2-chat-latest"`
 
 2. **`backend/open_webui/routers/moderation.py`** (line 29):
-   - `FollowUpPromptRequest` class: `model: Optional[str] = "gpt-5.2-pro-2025-12-11"`
+   - `FollowUpPromptRequest` class: `model: Optional[str] = "gpt-5.2-chat-latest"`
 
-3. **`backend/open_webui/utils/moderation.py`** (line 37):
-   - `multi_moderations_openai()` function: `model: str = "gpt-5.2-pro-2025-12-11"`
+3. **`backend/open_webui/utils/moderation.py`** (line 38):
+   - `multi_moderations_openai()` function: `model: str = "gpt-5.2-chat-latest"`
 
-4. **`backend/open_webui/utils/moderation.py`** (line 188):
-   - `generate_second_pass_prompt()` function: `model: str = "gpt-5.2-pro-2025-12-11"`
+4. **`backend/open_webui/utils/moderation.py`** (line 244):
+   - `generate_second_pass_prompt()` function: `model: str = "gpt-5.2-chat-latest"`
 
 5. **`src/lib/apis/moderation/index.ts`** (line 184):
-   - `applyModeration()` function: `model: 'gpt-5.2-pro-2025-12-11'` (in request body)
+   - `applyModeration()` function: `model: 'gpt-5.2-chat-latest'` (in request body)
 
-**Note**: The model `gpt-5.2-pro-2025-12-11` requires the `/v1/responses` endpoint (Responses API). The API calls in `backend/open_webui/utils/moderation.py` use `client.responses.create()` with:
-- `input` parameter (string) for user content
-- `instructions` parameter (string) for system instructions
-- Response parsing extracts text from `resp.output[0].content[0].text` for output_text type items
+**Note**: The model `gpt-5.2-chat-latest` uses the standard Chat Completions API endpoint. The API calls in `backend/open_webui/utils/moderation.py` use `client.chat.completions.create()` with:
+- `messages` parameter (array) containing system and user messages
+- Response parsing extracts text from `resp.choices[0].message.content`
+
+**Previous Implementation**: The code previously used `gpt-5.2-pro-2025-12-11` with the Responses API (`client.responses.create()`), which has been commented out but preserved in the codebase.
 
 ## Files Reference
 

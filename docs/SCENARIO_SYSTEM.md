@@ -12,10 +12,10 @@ The scenario system manages the assignment and tracking of review scenarios for 
 Canonical record for each scenario with metadata and counters.
 
 **Columns:**
-- `scenario_id` (PK): Generated from content hash (`scenario_{hash}`)
+- `scenario_id` (PK): Unique identifier. For uploaded scenarios, uses UUID format (`scenario_{uuid}`). For scenarios loaded via script, uses content hash (`scenario_{hash}`).
 - `prompt_text`: The child's question/prompt
 - `response_text`: The AI model's response
-- `set_name`: Optional set identifier (e.g., 'pilot', 'scaled')
+- `set_name`: Optional set identifier (e.g., 'pilot', 'scaled'). Used for batch management and active set control. Does NOT affect scenario selection logic (which uses `is_active`).
 - `trait`: Personality trait (e.g., 'Agreeableness', 'Conscientiousness')
 - `polarity`: 'positive', 'negative', or 'neutral'
 - `prompt_style`: Prompt style (e.g., 'Journalistic', 'Should I')
@@ -60,7 +60,7 @@ One row per exposure to a scenario, tracking the assignment lifecycle.
 Attention check scenarios used for quality control.
 
 **Columns:**
-- `scenario_id` (PK): Generated from content hash (`ac_{hash}`)
+- `scenario_id` (PK): Unique identifier. For uploaded attention checks, uses UUID format (`ac_{uuid}`). When created via upsert, uses content hash (`ac_{hash}`).
 - `prompt_text`: Attention check question
 - `response_text`: Attention check response
 - `trait_theme`: Optional trait theme (e.g., 'attention_check')
@@ -285,24 +285,28 @@ Get all highlights for an assignment.
 ### Admin Endpoints
 
 #### `POST /api/v1/admin/scenarios/upload`
-Upload scenarios from JSON file.
+Upload scenarios from JSON file. Always creates new scenarios with UUID-based IDs (never updates existing).
 
 **Request:** Multipart form data
 - `file`: JSON file
 - `set_name`: Set name (default: "pilot")
 - `source`: Source identifier (default: "admin_upload")
+- `deactivate_previous`: Boolean (default: false) - If true, deactivates all existing active scenarios with the same `set_name` before uploading
 
 **Response:**
 ```json
 {
   "status": "success",
   "loaded": 45,
-  "updated": 5,
+  "updated": 0,
+  "deactivated_count": 12,
   "errors": 0,
-  "total": 50,
+  "total": 45,
   "error_details": []
 }
 ```
+
+**Note:** Uploaded scenarios always get new UUID-based identifiers (`scenario_{uuid}`), so each upload creates entirely new records even if content is identical. Use `deactivate_previous=true` to automatically deactivate previous scenarios with the same set name.
 
 #### `GET /api/v1/admin/scenarios`
 List scenarios with filtering and pagination.
@@ -341,14 +345,95 @@ Update a scenario (e.g., toggle is_active).
 }
 ```
 
+#### `GET /api/v1/admin/scenarios/set-names`
+Get all distinct set_name values for scenarios.
+
+**Response:**
+```json
+{
+  "set_names": ["pilot", "scaled", "v1", null]
+}
+```
+
+#### `POST /api/v1/admin/scenarios/set-active-set`
+Set which set_name should be active. Activates all scenarios with that set_name and deactivates all others.
+
+**Request:**
+```json
+{
+  "set_name": "pilot"  // or null to activate all scenarios
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "activated": 45,
+  "deactivated": 12,
+  "set_name": "pilot"
+}
+```
+
 #### `POST /api/v1/admin/attention-checks/upload`
-Upload attention check scenarios from JSON file.
+Upload attention check scenarios from JSON file. Always creates new attention checks with UUID-based IDs (never updates existing).
+
+**Request:** Multipart form data
+- `file`: JSON file
+- `set_name`: Set name (default: "default")
+- `source`: Source identifier (default: "admin_upload")
+- `deactivate_previous`: Boolean (default: false) - If true, deactivates all existing active attention checks with the same `set_name` before uploading
+
+**Response:**
+```json
+{
+  "status": "success",
+  "loaded": 10,
+  "updated": 0,
+  "deactivated_count": 3,
+  "errors": 0,
+  "total": 10,
+  "error_details": []
+}
+```
+
+**Note:** Uploaded attention checks always get new UUID-based identifiers (`ac_{uuid}`), so each upload creates entirely new records even if content is identical. Use `deactivate_previous=true` to automatically deactivate previous attention checks with the same set name.
 
 #### `GET /api/v1/admin/attention-checks`
 List attention check scenarios.
 
 #### `PATCH /api/v1/admin/attention-checks/{scenario_id}`
 Update an attention check scenario.
+
+#### `GET /api/v1/admin/attention-checks/set-names`
+Get all distinct set_name values for attention checks.
+
+**Response:**
+```json
+{
+  "set_names": ["default", "v1", null]
+}
+```
+
+#### `POST /api/v1/admin/attention-checks/set-active-set`
+Set which set_name should be active. Activates all attention checks with that set_name and deactivates all others.
+
+**Request:**
+```json
+{
+  "set_name": "default"  // or null to activate all attention checks
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "activated": 10,
+  "deactivated": 3,
+  "set_name": "default"
+}
+```
 
 ## Admin Panel Usage
 
@@ -357,10 +442,33 @@ Update an attention check scenario.
 1. Navigate to Admin → Settings → Scenarios tab
 2. Use the tabs to switch between "Scenarios" and "Attention Checks"
 
+### Managing Active Sets
+
+The admin panel allows you to control which set of scenarios or attention checks should be active at any given time.
+
+**For Scenarios:**
+1. In the "Scenarios" tab, find the "Active Scenario Set" section
+2. Select a set name from the dropdown (or "All sets active" to activate everything)
+3. Click "Apply Active Set" to activate all scenarios with that set name and deactivate all others
+
+**For Attention Checks:**
+1. In the "Attention Checks" tab, find the "Active Attention Check Set" section
+2. Select a set name from the dropdown (or "All sets active" to activate everything)
+3. Click "Apply Active Set" to activate all attention checks with that set name and deactivate all others
+
+**Note:** The active set selector only controls which scenarios/attention checks are active (`is_active` flag). It does NOT affect scenario selection logic, which already uses `is_active` for filtering. The `set_name` field is only used for:
+- Grouping scenarios/attention checks for batch deactivation
+- Admin panel filtering and management
+- Determining which set should be active
+
 ### Uploading Scenarios
 
-1. Click "Upload Scenarios JSON" button
-2. Select a JSON file matching the format:
+1. Enter a **Set Name** (e.g., "pilot", "scaled", "v1") - this groups scenarios together for batch management
+2. (Optional) Check "Deactivate previous scenarios with same set name" if you want to deactivate existing scenarios with the same set name before uploading new ones
+3. Click "Upload Scenarios JSON" button
+4. Select a JSON file matching the format:
+
+**Note:** Uploaded scenarios always get new UUID-based identifiers, so each upload creates entirely new records. If you want to replace old scenarios, use the deactivate checkbox.
    ```json
    [
      {
@@ -373,8 +481,8 @@ Update an attention check scenario.
      }
    ]
    ```
-3. File is processed and scenarios are upserted (created or updated based on content hash)
-4. Success message shows counts of loaded/updated/errors
+4. File is processed and scenarios are created with new UUID-based IDs (uploaded scenarios always create new records)
+5. Success message shows counts of loaded/deactivated/errors
 
 ### Viewing Scenarios
 
@@ -391,7 +499,10 @@ Update an attention check scenario.
 ### Attention Check Management
 
 Similar interface for managing attention check scenarios:
-- Upload JSON files with attention check data
+- Upload JSON files with attention check data (always creates new records with UUID-based IDs)
+- Enter a **Set Name** when uploading (e.g., "default", "v1")
+- Option to deactivate previous attention checks with same set name before uploading
+- Use "Active Attention Check Set" selector to manage which set is active
 - View and filter attention checks
 - Toggle active status
 

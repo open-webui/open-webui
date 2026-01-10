@@ -11,6 +11,9 @@ from sqlalchemy import BigInteger, Column, Text, Index, Boolean, Integer, String
 from sqlalchemy.orm import relationship
 
 from open_webui.internal.db import Base, get_db
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class AssignmentStatus(str, Enum):
@@ -308,6 +311,59 @@ class ScenarioTable:
             db.commit()
             return True
     
+    def deactivate_by_set_name(self, set_name: str) -> int:
+        """Deactivate all active scenarios with the given set_name. Returns count deactivated."""
+        with get_db() as db:
+            updated = db.query(Scenario).filter(
+                Scenario.set_name == set_name,
+                Scenario.is_active == True
+            ).update({"is_active": False, "updated_at": int(time.time() * 1000)})
+            db.commit()
+            return updated
+    
+    def get_distinct_set_names(self) -> List[Optional[str]]:
+        """Get all distinct set_name values from scenarios table (including None/null)"""
+        try:
+            with get_db() as db:
+                # Query returns tuples, extract first element and handle None
+                set_names_raw = db.query(Scenario.set_name).distinct().all()
+                # Extract scalar values from tuples (each row is a 1-tuple)
+                set_names = [row[0] for row in set_names_raw]
+                return set_names
+        except Exception as e:
+            log.error(f"Error getting distinct set names from scenarios: {e}")
+            return []
+    
+    def set_active_set(self, set_name: Optional[str]) -> dict:
+        """
+        Activate scenarios with set_name, deactivate all others.
+        If set_name is None, activate all scenarios.
+        Returns counts of activated and deactivated scenarios.
+        """
+        with get_db() as db:
+            ts = int(time.time() * 1000)
+            if set_name is None:
+                # Activate all scenarios
+                activated = db.query(Scenario).filter(Scenario.is_active == False).update(
+                    {"is_active": True, "updated_at": ts}
+                )
+                deactivated = 0
+            else:
+                # Activate scenarios with this set_name
+                activated = db.query(Scenario).filter(
+                    Scenario.set_name == set_name,
+                    Scenario.is_active == False
+                ).update({"is_active": True, "updated_at": ts})
+                
+                # Deactivate all other scenarios
+                deactivated = db.query(Scenario).filter(
+                    Scenario.set_name != set_name,
+                    Scenario.is_active == True
+                ).update({"is_active": False, "updated_at": ts})
+            
+            db.commit()
+            return {"activated": activated, "deactivated": deactivated}
+    
     def get_eligible_scenarios(
         self, 
         participant_id: str, 
@@ -316,13 +372,13 @@ class ScenarioTable:
     ) -> List[Tuple[ScenarioModel, float]]:
         """
         Get eligible scenarios for weighted sampling.
-        Excludes scenarios that participant has completed or skipped.
-        Allows scenarios that were abandoned.
+        Excludes scenarios that participant has completed, skipped, assigned, or started.
+        Allows scenarios that were abandoned (can be reassigned).
         
         Returns list of (scenario, weight) tuples.
         """
         with get_db() as db:
-            # Get scenario IDs that participant has completed or skipped
+            # Get scenario IDs that participant has completed, skipped, assigned, or started
             excluded_scenario_ids = ScenarioAssignments.get_completed_or_skipped_scenario_ids(participant_id)
             
             # Build query for eligible scenarios
@@ -497,11 +553,20 @@ class ScenarioAssignmentTable:
             return [ScenarioAssignmentModel.model_validate(row) for row in rows]
     
     def get_completed_or_skipped_scenario_ids(self, participant_id: str) -> List[str]:
-        """Get list of scenario_ids that participant has completed or skipped (for eligibility filtering)"""
+        """
+        Get list of scenario_ids that participant has completed, skipped, assigned, or started.
+        This ensures uniqueness when assigning multiple scenarios in a session.
+        Allows scenarios that were abandoned to be reassigned.
+        """
         with get_db() as db:
             rows = db.query(ScenarioAssignment.scenario_id).filter(
                 ScenarioAssignment.participant_id == participant_id,
-                ScenarioAssignment.status.in_([AssignmentStatus.COMPLETED.value, AssignmentStatus.SKIPPED.value])
+                ScenarioAssignment.status.in_([
+                    AssignmentStatus.COMPLETED.value, 
+                    AssignmentStatus.SKIPPED.value,
+                    AssignmentStatus.ASSIGNED.value,  # Exclude already assigned
+                    AssignmentStatus.STARTED.value    # Exclude already started
+                ])
             ).distinct().all()
             return [row[0] for row in rows]
     
@@ -631,6 +696,59 @@ class AttentionCheckScenarioTable:
                 return None
             selected = random.choice(rows)
             return AttentionCheckScenarioModel.model_validate(selected)
+    
+    def deactivate_by_set_name(self, set_name: str) -> int:
+        """Deactivate all active attention check scenarios with the given set_name. Returns count deactivated."""
+        with get_db() as db:
+            updated = db.query(AttentionCheckScenario).filter(
+                AttentionCheckScenario.set_name == set_name,
+                AttentionCheckScenario.is_active == True
+            ).update({"is_active": False, "updated_at": int(time.time() * 1000)})
+            db.commit()
+            return updated
+    
+    def get_distinct_set_names(self) -> List[Optional[str]]:
+        """Get all distinct set_name values from attention_check_scenarios table (including None/null)"""
+        try:
+            with get_db() as db:
+                # Query returns tuples, extract first element and handle None
+                set_names_raw = db.query(AttentionCheckScenario.set_name).distinct().all()
+                # Extract scalar values from tuples (each row is a 1-tuple)
+                set_names = [row[0] for row in set_names_raw]
+                return set_names
+        except Exception as e:
+            log.error(f"Error getting distinct set names from attention checks: {e}")
+            return []
+    
+    def set_active_set(self, set_name: Optional[str]) -> dict:
+        """
+        Activate attention check scenarios with set_name, deactivate all others.
+        If set_name is None, activate all attention check scenarios.
+        Returns counts of activated and deactivated scenarios.
+        """
+        with get_db() as db:
+            ts = int(time.time() * 1000)
+            if set_name is None:
+                # Activate all attention check scenarios
+                activated = db.query(AttentionCheckScenario).filter(AttentionCheckScenario.is_active == False).update(
+                    {"is_active": True, "updated_at": ts}
+                )
+                deactivated = 0
+            else:
+                # Activate attention check scenarios with this set_name
+                activated = db.query(AttentionCheckScenario).filter(
+                    AttentionCheckScenario.set_name == set_name,
+                    AttentionCheckScenario.is_active == False
+                ).update({"is_active": True, "updated_at": ts})
+                
+                # Deactivate all other attention check scenarios
+                deactivated = db.query(AttentionCheckScenario).filter(
+                    AttentionCheckScenario.set_name != set_name,
+                    AttentionCheckScenario.is_active == True
+                ).update({"is_active": False, "updated_at": ts})
+            
+            db.commit()
+            return {"activated": activated, "deactivated": deactivated}
 
 
 # Global instances
