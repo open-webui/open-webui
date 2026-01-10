@@ -1617,7 +1617,7 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
 ENABLE_INDIVIDUAL_USER_SHARING = PersistentConfig(
     "ENABLE_INDIVIDUAL_USER_SHARING",
     "ui.enable_individual_user_sharing",
-    os.environ.get("ENABLE_INDIVIDUAL_USER_SHARING", "True").lower() == "true",
+    os.environ.get("ENABLE_INDIVIDUAL_USER_SHARING", "False").lower() == "true",
 )
 
 # FastAPI / AnyIO settings
