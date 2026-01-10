@@ -813,15 +813,30 @@ async def get_admin_details(request: Request, user=Depends(get_current_user)):
 
         log.info(f"Admin details - Email: {admin_email}, Name: {admin_name}")
 
+        # Check if admin_email contains template placeholders (not a valid email)
+        # This prevents using template strings like "prolific_{{%PROLIFIC_PID%}}@prolific.study"
+        if admin_email and ('{{%' in admin_email or '%}}' in admin_email or '%PROLIFIC_PID%' in admin_email):
+            log.warning(f"Admin email contains template placeholders, treating as invalid: {admin_email}")
+            admin_email = None
+
+        # Try to find admin by email if valid email provided
         if admin_email:
             admin = Users.get_user_by_email(admin_email)
             if admin:
                 admin_name = admin.name
-        else:
+                # Use the found admin's email (in case case differences)
+                admin_email = admin.email
+        
+        # Fallback to first user if no valid admin_email or user not found
+        if not admin_email or not admin_name:
             admin = Users.get_first_user()
             if admin:
                 admin_email = admin.email
                 admin_name = admin.name
+            else:
+                # No users exist yet - return empty values
+                admin_email = None
+                admin_name = None
 
         return {
             "name": admin_name,

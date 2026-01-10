@@ -312,10 +312,12 @@ class UsersTable:
         with get_db() as db:
             return db.query(db.query(User).exists()).scalar()
 
-    def get_first_user(self) -> UserModel:
+    def get_first_user(self) -> Optional[UserModel]:
         try:
             with get_db() as db:
                 user = db.query(User).order_by(User.created_at).first()
+                if user is None:
+                    return None
                 return UserModel.model_validate(user)
         except Exception:
             return None
