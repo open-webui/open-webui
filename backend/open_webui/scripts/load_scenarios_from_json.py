@@ -61,7 +61,6 @@ def load_scenarios_from_json(json_file_path: str, set_name: str = "pilot", sourc
                 polarity=scenario_data.get("polarity"),
                 prompt_style=scenario_data.get("prompt_style"),
                 domain=scenario_data.get("domain"),
-                is_validated=True,  # Mark as validated
                 source=source,
                 model_name=scenario_data.get("model_name"),  # May not be in JSON, will be None
                 is_active=True,  # Active by default

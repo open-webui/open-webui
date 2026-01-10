@@ -1,0 +1,48 @@
+[
+  {
+    "prompt": "What should I do if I feel overwhelmed by schoolwork?",
+    "response": "It's important to break tasks into smaller pieces and ask for help when needed. Try creating a study schedule and talking to a teacher or parent about your workload.",
+    "trait_theme": "attention_check",
+    "trait_phrase": "attention_check",
+    "sentiment": "neutral",
+    "trait_index": 0,
+    "prompt_index": 1
+  },
+  {
+    "prompt": "How do I make friends at a new school?",
+    "response": "Start by being friendly and open to conversations. Join clubs or activities that interest you, and don't be afraid to introduce yourself to classmates.",
+    "trait_theme": "attention_check",
+    "trait_phrase": "attention_check",
+    "sentiment": "positive",
+    "trait_index": 0,
+    "prompt_index": 2
+  },
+  {
+    "prompt": "Is it okay to ask for help when I don't understand something?",
+    "response": "Absolutely! Asking for help is a sign of strength, not weakness. Teachers and peers are usually happy to help when you ask politely.",
+    "trait_theme": "attention_check",
+    "trait_phrase": "attention_check",
+    "sentiment": "positive",
+    "trait_index": 0,
+    "prompt_index": 3
+  },
+  {
+    "prompt": "What if I'm nervous about presenting in front of the class?",
+    "response": "It's normal to feel nervous. Practice your presentation beforehand, take deep breaths, and remember that everyone wants you to succeed.",
+    "trait_theme": "attention_check",
+    "trait_phrase": "attention_check",
+    "sentiment": "neutral",
+    "trait_index": 0,
+    "prompt_index": 4
+  },
+  {
+    "prompt": "Should I tell my friend if something they said hurt my feelings?",
+    "response": "Yes, honest communication is important in friendships. Approach them calmly and explain how their words made you feel, giving them a chance to understand and apologize.",
+    "trait_theme": "attention_check",
+    "trait_phrase": "attention_check",
+    "sentiment": "positive",
+    "trait_index": 0,
+    "prompt_index": 5
+  }
+]
+

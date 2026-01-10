@@ -6,7 +6,8 @@
 	import { get } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession, getModerationSessions, postSessionActivity, assignScenario, startScenario, completeScenario, skipScenario, abandonScenario, createHighlight, getHighlights, type ScenarioAssignResponse } from '$lib/apis/moderation';
+import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession, getModerationSessions, postSessionActivity, assignScenario, startScenario, completeScenario, skipScenario, abandonScenario, createHighlight, getHighlights, type ScenarioAssignResponse, getAssignmentsForChild, type AssignmentWithScenario } from '$lib/apis/moderation';
+import { getChildProfileById } from '$lib/apis/child-profiles';
 import { finalizeModeration } from '$lib/apis/workflow';
 	import { getAvailableScenarios, getCurrentSession } from '$lib/apis/prolific';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -418,11 +419,8 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		}
 	}
 
-    // Helpers for persistence keys
-    const listKeyFor = (childId: string | number, session: number) => `scenarioList_${childId}_${session}`;
-    const initializedKeyFor = (childId: string | number, session: number) => `scenariosInitialized_${childId}_${session}`;
+    // Helper for current scenario key (still used for UI state)
     const currentKeyFor = (childId: string | number) => `moderationCurrentScenario_${childId}`;
-    const packageKeyFor = (childId: string | number, session: number) => `scenarioPkg_${childId}_${session}`;
 
     function shouldRepollScenarios(childId: string | number, session: number): boolean {
         if (!childId || !Number.isFinite(session)) return false;
@@ -455,18 +453,23 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	async function buildScenarioList(basePairs: Array<[string, string]>): Promise<Array<[string, string]>> {
 		let list: Array<[string, string]> = basePairs.slice();
 		
-		// Load one attention check question from the attention check bank
+		// Load one attention check question from the database via API
 		try {
-			const attentionCheck = await getRandomAttentionCheck();
-			if (attentionCheck) {
-				// Apply instruction suffix to the attention check question
-				const attentionCheckResponse = attentionCheck.response + ATTENTION_CHECK_SUFFIX;
-				const attentionCheckPair: [string, string] = [attentionCheck.question, attentionCheckResponse];
-				
-				// Shuffle attention check into the list (not at index 0, not at last position)
-				list = shuffleAttentionCheckIntoList(list, attentionCheckPair);
+			const token = localStorage.getItem('token');
+			if (!token) {
+				console.warn('⚠️ No authentication token available, skipping attention check');
 			} else {
-				console.warn('⚠️ No attention check question available, proceeding without attention check');
+				const attentionCheck = await getRandomAttentionCheck(token);
+				if (attentionCheck) {
+					// Apply instruction suffix to the attention check question
+					const attentionCheckResponse = attentionCheck.response + ATTENTION_CHECK_SUFFIX;
+					const attentionCheckPair: [string, string] = [attentionCheck.question, attentionCheckResponse];
+					
+					// Shuffle attention check into the list (not at index 0, not at last position)
+					list = shuffleAttentionCheckIntoList(list, attentionCheckPair);
+				} else {
+					console.warn('⚠️ No attention check question available, proceeding without attention check');
+				}
 			}
 		} catch (error) {
 			console.error('Error loading attention check:', error);
@@ -526,58 +529,7 @@ import { finalizeModeration } from '$lib/apis/workflow';
 		return updated;
 	}
 
-    function persistScenarioPackage(childId: string | number, session: number, list: Array<[string, string]>) {
-        const pkg = { version: 1, childId, sessionNumber: session, list, createdAt: Date.now() };
-        try {
-            localStorage.setItem(packageKeyFor(childId, session), JSON.stringify(pkg));
-            // Cache hygiene: clear legacy partial keys for this child/session
-            localStorage.removeItem(listKeyFor(childId, session));
-            localStorage.removeItem(initializedKeyFor(childId, session));
-        } catch {}
-    }
 
-    function tryRestoreScenarioPackage(childId: string | number, session: number): null | { version: number; childId: string | number; sessionNumber: number; list: Array<[string, string]>; createdAt: number } {
-        try {
-            const raw = localStorage.getItem(packageKeyFor(childId, session));
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            if (parsed && Array.isArray(parsed.list) && parsed.list.length > 0) {
-                return parsed;
-            }
-        } catch {}
-        return null;
-    }
-
-    async function ensureScenarioInvariants(childId: string | number, session: number) {
-        const restored = tryRestoreScenarioPackage(childId, session);
-        if (!restored) return null;
-        const list = restored.list as Array<[string, string]>;
-        const hasMarker = list.some(([, r]) => (r || '').includes(ATTENTION_CHECK_MARKER));
-        const hasCustom = list.some(([q]) => q === CUSTOM_SCENARIO_PROMPT);
-        if (list.length >= 3 && hasMarker && hasCustom) {
-            return restored;
-        }
-        // Rebuild from available data
-        const basePairs: Array<[string, string]> = (personalityBasedScenarios && personalityBasedScenarios.length > 0)
-            ? personalityBasedScenarios.map((qa) => [qa.question, qa.response])
-            : []; // No fallback - must have personality scenarios
-        
-        // If no base pairs available, return null to trigger fresh generation
-        if (basePairs.length === 0) {
-            console.log('ensureScenarioInvariants: No personality scenarios available, returning null to trigger generation');
-            return null;
-        }
-        
-        const rebuilt = await buildScenarioList(basePairs);
-        // Ensure rebuilt list is not empty (should have at least custom scenario)
-        if (rebuilt.length === 0) {
-            console.log('ensureScenarioInvariants: Rebuilt list is empty, returning null to trigger generation');
-            return null;
-        }
-        
-        persistScenarioPackage(childId, session, rebuilt);
-        return { version: 1, childId, sessionNumber: session, list: rebuilt, createdAt: Date.now() };
-    }
 
     // Persist current scenario selection whenever it changes
     $: if (selectedChildId != null && typeof selectedScenarioIndex === 'number') {
@@ -628,7 +580,6 @@ import { finalizeModeration } from '$lib/apis/workflow';
 	let childProfiles: any[] = [];
 	let selectedChildId: string = '';
 	let previousChildId: string = ''; // Track previous child to detect changes
-	let personalityBasedScenarios: QAPair[] = []; // Now storing Q&A pairs
 	let usePersonalityScenarios: boolean = true;
 	let personalityJSONData: any = null;
 	
@@ -648,22 +599,9 @@ import { finalizeModeration } from '$lib/apis/workflow';
 			// Clear scenario list and lock to force fresh generation for new child
 			scenarioList = [];
 			scenariosLockedForSession = false;
-			personalityBasedScenarios = [];
 			
-			// Clear cached packages for the old child
-			if (oldChildId) {
-				try {
-					const oldPkgKey = packageKeyFor(oldChildId, sessionNumber);
-					localStorage.removeItem(oldPkgKey);
-					const oldScenarioKey = localStorage.getItem(`scenarios_${oldChildId}`);
-					if (oldScenarioKey) {
-						localStorage.removeItem(oldScenarioKey);
-					}
-					console.log('Cleared cached packages for old child:', oldChildId);
-				} catch (e) {
-					console.error('Error clearing old child packages:', e);
-				}
-			}
+			// Scenarios are now stored in backend, no localStorage cleanup needed
+			console.log('Child profile changed, scenarios will be loaded from backend');
 			
 			// Update previous child ID
 			previousChildId = currentChildId;
@@ -885,151 +823,197 @@ function clearModerationLocalKeys() {
 			console.log('Early return: selectedChildId is not set');
 			return;
 		}
-		
-		// Stabilize session number if not provided elsewhere
-		try {
-			const storedSession = selectedChildId ? localStorage.getItem(`moderationSessionNumber_${selectedChildId}`) : null;
-			if (storedSession && !Number.isNaN(Number(storedSession))) {
-				sessionNumber = Number(storedSession);
-			} else {
-				localStorage.setItem(`moderationSessionNumber_${selectedChildId}`, String(sessionNumber));
-			}
-		} catch {}
 
-		// Attempt to restore canonical package for this child/session and short-circuit
-		{
-			const pkg = tryRestoreScenarioPackage(selectedChildId, sessionNumber);
-			if (pkg && Array.isArray(pkg.list) && pkg.list.length > 0) {
-				scenarioList = pkg.list;
-				// Validate that scenarioList actually has items before locking
+		const token = localStorage.getItem('token') || '';
+		if (!token) {
+			console.error('❌ No authentication token found');
+			toast.error('Please log in to continue.');
+			return;
+		}
+
+		// Get user ID from user store
+		const userObj = $user as any;
+		const participantId = userObj?.id;
+		if (!participantId) {
+			console.error('❌ No user ID found');
+			toast.error('User information not available. Please refresh the page.');
+			return;
+		}
+
+		try {
+			// Get child profile from backend to get session_number
+			const childProfile = await getChildProfileById(token, selectedChildId);
+			if (childProfile && childProfile.session_number) {
+				sessionNumber = childProfile.session_number;
+				console.log(`✅ Got session_number ${sessionNumber} from child profile`);
+			} else {
+				console.warn('⚠️ Could not get session_number from child profile, using default 1');
+				sessionNumber = 1;
+			}
+
+			// Check for existing assignments from backend
+			let existingAssignments: AssignmentWithScenario[] = [];
+			try {
+				existingAssignments = await getAssignmentsForChild(token, selectedChildId);
+				console.log(`Found ${existingAssignments.length} existing assignments for child ${selectedChildId}`);
+			} catch (error) {
+				console.log('No existing assignments found or error querying:', error);
+			}
+
+			// If we have existing assignments, use them
+			if (existingAssignments.length > 0) {
+				console.log('✅ Using existing assignments from backend');
+				const basePairs: Array<[string, string]> = [];
+				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> = new Map();
+				
+				// Sort by assignment_position to maintain order
+				existingAssignments.sort((a, b) => (a.assignment_position || 0) - (b.assignment_position || 0));
+				
+				for (const assignment of existingAssignments) {
+					basePairs.push([assignment.prompt_text, assignment.response_text]);
+					const position = assignment.assignment_position || 0;
+					assignmentMap.set(position, {
+						assignment_id: assignment.assignment_id,
+						scenario_id: assignment.scenario_id
+					});
+				}
+
+				console.log(`✅ Loaded ${basePairs.length} existing scenarios from backend`);
+				
+				// Build final list (loads attention check, shuffles it in, and adds custom scenario)
+				scenarioList = await buildScenarioList(basePairs);
+				
+				// Store assignment IDs in scenario states
+				assignmentMap.forEach((assignment, index) => {
+					const existingState = scenarioStates.get(index) || {
+						versions: [],
+						currentVersionIndex: -1,
+						confirmedVersionIndex: null,
+						highlightedTexts1: [],
+						selectedModerations: new Set(),
+						customInstructions: [],
+						showOriginal1: false,
+						showComparisonView: false,
+						attentionCheckSelected: false,
+						attentionCheckPassed: false,
+						markedNotApplicable: false,
+						step1Completed: false,
+						step2Completed: false,
+						step3Completed: false,
+						concernLevel: null,
+						concernReason: '',
+						satisfactionLevel: null,
+						satisfactionReason: '',
+						nextAction: null
+					};
+					existingState.assignment_id = assignment.assignment_id;
+					existingState.scenario_id = assignment.scenario_id;
+					scenarioStates.set(index, existingState);
+				});
+				
 				if (scenarioList.length > 0) {
 					scenariosLockedForSession = true;
+					console.log('✅ Using existing assignments, scenarioList length:', scenarioList.length);
+					
+					// Load saved states for this child after scenarios are loaded
 					loadSavedStates();
-					const savedCurrent = localStorage.getItem(selectedChildId ? currentKeyFor(selectedChildId) : 'moderationCurrentScenario');
-					if (savedCurrent) {
-						const idx = Number(savedCurrent);
-						if (!Number.isNaN(idx)) selectedScenarioIndex = idx;
-					}
-					console.log('✅ Restored scenario package with', scenarioList.length, 'scenarios');
-					return; // Early restore prevents regeneration
+					
+					// Load the first scenario to ensure UI is updated (force reload)
+					await loadScenario(0, true);
 				} else {
-					// Package restored but scenarioList is empty - clear lock and regenerate
-					console.warn('Restored package but scenarioList is empty, clearing and regenerating...');
-					const pkgKey = packageKeyFor(selectedChildId, sessionNumber);
-					localStorage.removeItem(pkgKey);
+					console.warn('Built scenarioList is empty from existing assignments');
 					scenariosLockedForSession = false;
 				}
 			} else {
-				// No package found - ensure lock is cleared
-				scenariosLockedForSession = false;
-			}
-		}
+				// No existing assignments found - create new ones
+				console.log('No existing assignments found, creating new assignments...');
+				
+				// Assign scenarios one by one using weighted sampling
+				const basePairs: Array<[string, string]> = [];
+				const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> = new Map();
+				
+				for (let i = 0; i < SCENARIOS_PER_SESSION; i++) {
+					try {
+						const assignResponse = await assignScenario(token, {
+							participant_id: participantId,
+							child_profile_id: selectedChildId,
+							assignment_position: i,
+							alpha: 1.0 // Default alpha for weighted sampling
+						});
 
-		// Load scenarios from backend using weighted sampling
-		try {
-			const token = localStorage.getItem('token') || '';
-			if (!token) {
-				console.error('❌ No authentication token found');
-				toast.error('Please log in to continue.');
-				return;
-			}
+						basePairs.push([assignResponse.prompt_text, assignResponse.response_text]);
+						assignmentMap.set(i, {
+							assignment_id: assignResponse.assignment_id,
+							scenario_id: assignResponse.scenario_id
+						});
 
-			// Get user ID from user store
-			const userObj = $user as any;
-			const participantId = userObj?.id;
-			if (!participantId) {
-				console.error('❌ No user ID found');
-				toast.error('User information not available. Please refresh the page.');
-				return;
-			}
-
-			// Assign scenarios one by one using weighted sampling
-			const basePairs: Array<[string, string]> = [];
-			const assignmentMap: Map<number, { assignment_id: string; scenario_id: string }> = new Map();
-			
-			for (let i = 0; i < SCENARIOS_PER_SESSION; i++) {
-				try {
-					const assignResponse = await assignScenario(token, {
-						participant_id: participantId,
-						child_profile_id: selectedChildId,
-						assignment_position: i,
-						alpha: 1.0 // Default alpha for weighted sampling
-					});
-
-					basePairs.push([assignResponse.prompt_text, assignResponse.response_text]);
-					assignmentMap.set(i, {
-						assignment_id: assignResponse.assignment_id,
-						scenario_id: assignResponse.scenario_id
-					});
-
-					console.log(`✅ Assigned scenario ${i + 1}/${SCENARIOS_PER_SESSION}: ${assignResponse.scenario_id}`);
-				} catch (error: any) {
-					console.error(`Error assigning scenario ${i + 1}:`, error);
-					// Continue with remaining scenarios even if one fails
-					if (error?.detail?.includes('No eligible scenarios')) {
-						console.warn(`⚠️ No eligible scenarios available for position ${i + 1}`);
-						// If we have some scenarios, continue; otherwise show error
-						if (basePairs.length === 0) {
-							toast.error('No scenarios available. Please contact support.');
-							return;
+						console.log(`✅ Assigned scenario ${i + 1}/${SCENARIOS_PER_SESSION}: ${assignResponse.scenario_id}`);
+					} catch (error: any) {
+						console.error(`Error assigning scenario ${i + 1}:`, error);
+						// Continue with remaining scenarios even if one fails
+						if (error?.detail?.includes('No eligible scenarios')) {
+							console.warn(`⚠️ No eligible scenarios available for position ${i + 1}`);
+							// If we have some scenarios, continue; otherwise show error
+							if (basePairs.length === 0) {
+								toast.error('No scenarios available. Please contact support.');
+								return;
+							}
 						}
 					}
 				}
-			}
 
-			if (basePairs.length === 0) {
-				console.error('❌ No scenarios assigned from backend');
-				toast.error('Failed to load scenarios. Please refresh the page or contact support if the issue persists.');
-				return;
-			}
+				if (basePairs.length === 0) {
+					console.error('❌ No scenarios assigned from backend');
+					toast.error('Failed to load scenarios. Please refresh the page or contact support if the issue persists.');
+					return;
+				}
 
-			console.log(`✅ Loaded ${basePairs.length} scenarios from backend`);
-			
-			// Build final list (loads attention check, shuffles it in, and adds custom scenario)
-			scenarioList = await buildScenarioList(basePairs);
-			
-			// Store assignment IDs in scenario states
-			assignmentMap.forEach((assignment, index) => {
-				const existingState = scenarioStates.get(index) || {
-					versions: [],
-					currentVersionIndex: -1,
-					confirmedVersionIndex: null,
-					highlightedTexts1: [],
-					selectedModerations: new Set(),
-					customInstructions: [],
-					showOriginal1: false,
-					showComparisonView: false,
-					attentionCheckSelected: false,
-					attentionCheckPassed: false,
-					markedNotApplicable: false,
-					step1Completed: false,
-					step2Completed: false,
-					step3Completed: false,
-					concernLevel: null,
-					concernReason: '',
-					satisfactionLevel: null,
-					satisfactionReason: '',
-					nextAction: null
-				};
-				existingState.assignment_id = assignment.assignment_id;
-				existingState.scenario_id = assignment.scenario_id;
-				scenarioStates.set(index, existingState);
-			});
-			
-			// Persist the scenario package
-			if (scenarioList.length > 0) {
-				persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
-				scenariosLockedForSession = true;
-				console.log('✅ Persisted scenario package with', scenarioList.length, 'scenarios');
+				console.log(`✅ Created ${basePairs.length} new scenarios from backend`);
 				
-				// Load saved states for this child after scenarios are loaded
-				loadSavedStates();
+				// Build final list (loads attention check, shuffles it in, and adds custom scenario)
+				scenarioList = await buildScenarioList(basePairs);
 				
-				// Load the first scenario to ensure UI is updated (force reload)
-				await loadScenario(0, true);
-			} else {
-				console.warn('Built scenarioList is empty, not persisting package');
-				scenariosLockedForSession = false;
+				// Store assignment IDs in scenario states
+				assignmentMap.forEach((assignment, index) => {
+					const existingState = scenarioStates.get(index) || {
+						versions: [],
+						currentVersionIndex: -1,
+						confirmedVersionIndex: null,
+						highlightedTexts1: [],
+						selectedModerations: new Set(),
+						customInstructions: [],
+						showOriginal1: false,
+						showComparisonView: false,
+						attentionCheckSelected: false,
+						attentionCheckPassed: false,
+						markedNotApplicable: false,
+						step1Completed: false,
+						step2Completed: false,
+						step3Completed: false,
+						concernLevel: null,
+						concernReason: '',
+						satisfactionLevel: null,
+						satisfactionReason: '',
+						nextAction: null
+					};
+					existingState.assignment_id = assignment.assignment_id;
+					existingState.scenario_id = assignment.scenario_id;
+					scenarioStates.set(index, existingState);
+				});
+				
+				if (scenarioList.length > 0) {
+					scenariosLockedForSession = true;
+					console.log('✅ Created new assignments, scenarioList length:', scenarioList.length);
+					
+					// Load saved states for this child after scenarios are loaded
+					loadSavedStates();
+					
+					// Load the first scenario to ensure UI is updated (force reload)
+					await loadScenario(0, true);
+				} else {
+					console.warn('Built scenarioList is empty, not locking session');
+					scenariosLockedForSession = false;
+				}
 			}
 		} catch (error) {
 			console.error('Error loading scenarios from backend:', error);
@@ -1089,10 +1073,7 @@ function clearModerationLocalKeys() {
 				// The response is the generated one
 				scenarioList[selectedScenarioIndex] = [CUSTOM_SCENARIO_PROMPT, customScenarioResponse];
 				
-				// Persist the updated scenario list with the generated custom scenario
-				if (selectedChildId && sessionNumber) {
-					persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
-				}
+				// Custom scenarios are stored in memory, no persistence needed (backend assignments handle regular scenarios)
 				
 				// Update the current scenario data - treat this as the ORIGINAL response
 				childPrompt1 = customScenarioPrompt.trim();
@@ -1254,6 +1235,11 @@ function clearModerationLocalKeys() {
 	let scenarioTimers: Map<number, number> = new Map(); // Store accumulated time in seconds
 	let timerInterval: NodeJS.Timeout | null = null;
 	let currentTimerStart: number | null = null;
+	
+	// Abandonment detection state
+	let scenarioStartTimes: Map<number, number> = new Map(); // Track when each scenario was started
+	let abandonmentTimeout: NodeJS.Timeout | null = null;
+	const ABANDONMENT_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 	// Current scenario state
 	let moderationLoading: boolean = false;
@@ -3771,11 +3757,6 @@ onMount(async () => {
 			if (scenarioList.length === 0 && scenariosLockedForSession) {
 				console.warn('Hard refresh detected: scenarioList is empty but lock is set. Clearing lock to allow regeneration...');
 				scenariosLockedForSession = false;
-				if (selectedChildId) {
-					const pkgKey = packageKeyFor(selectedChildId, sessionNumber);
-					console.log('Clearing potentially stale package key:', pkgKey);
-					localStorage.removeItem(pkgKey);
-				}
 			}
 			
 			try {
@@ -3792,38 +3773,28 @@ onMount(async () => {
 			// Safety check: Ensure scenarios were populated - always attempt regeneration if empty
 			if (scenarioList.length === 0) {
 				console.warn('WARNING: scenarioList is empty after loadRandomScenarios(). Attempting to force generation...');
-				// Force regeneration by clearing any cached package and locks
-				if (selectedChildId) {
-					const pkgKey = packageKeyFor(selectedChildId, sessionNumber);
-					console.log('Clearing package key:', pkgKey);
-					localStorage.removeItem(pkgKey);
-					scenariosLockedForSession = false;
-					// Also clear any scenario states that might be interfering
-					const stateKey = selectedChildId ? `moderationScenarioStates_${selectedChildId}` : 'moderationScenarioStates';
-					console.log('Clearing scenario states key:', stateKey);
-					localStorage.removeItem(stateKey);
-					// Clear the pre-shuffled scenarios key as well
-					const scenarioKey = localStorage.getItem(`scenarios_${selectedChildId}`);
-					if (scenarioKey) {
-						console.log('Clearing pre-shuffled scenarios key:', scenarioKey);
-						localStorage.removeItem(scenarioKey);
+				// Force regeneration by clearing locks
+				scenariosLockedForSession = false;
+				// Clear any scenario states that might be interfering
+				const stateKey = selectedChildId ? `moderationScenarioStates_${selectedChildId}` : 'moderationScenarioStates';
+				console.log('Clearing scenario states key:', stateKey);
+				localStorage.removeItem(stateKey);
+				// Scenarios are now stored in backend, no localStorage cleanup needed
+				// Try generating again
+				try {
+					await loadRandomScenarios();
+					if (scenarioList.length === 0) {
+						console.error('ERROR: Failed to generate scenarios after retry. scenarioList is still empty.');
+						console.error('Debug info:', {
+							selectedChildId,
+							childProfilesLength: childProfiles.length,
+							scenarioListLength: scenarioList.length
+						});
+					} else {
+						console.log('Successfully generated scenarios on retry. scenarioList length:', scenarioList.length);
 					}
-					// Try generating again
-					try {
-						await loadRandomScenarios();
-						if (scenarioList.length === 0) {
-							console.error('ERROR: Failed to generate scenarios after retry. scenarioList is still empty.');
-							console.error('Debug info:', {
-								selectedChildId,
-								childProfilesLength: childProfiles.length,
-								scenarioListLength: scenarioList.length
-							});
-						} else {
-							console.log('Successfully generated scenarios on retry. scenarioList length:', scenarioList.length);
-						}
-					} catch (e) {
-						console.error('Error in retry loadRandomScenarios:', e);
-					}
+				} catch (e) {
+					console.error('Error in retry loadRandomScenarios:', e);
 				}
 			}
 			
@@ -3906,60 +3877,10 @@ onMount(async () => {
 				}
 			}
 			
-			// Force personality scenarios if generation failed
+			// If no scenarios were loaded from backend, show error
 			if (!scenariosLockedForSession && scenarioList.length === 0) {
-				console.log('WARNING: No scenarios available, forcing personality scenarios...');
-				// Force use personality scenarios with Q&A pairs
-				if (personalityBasedScenarios.length > 0) {
-					if (!scenariosLockedForSession) {
-						const basePairs = personalityBasedScenarios.map(qa => [qa.question, qa.response] as [string, string]);
-						scenarioList = await buildScenarioList(basePairs);
-					}
-					
-					// Persist canonical package and lock
-					persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
-					scenariosLockedForSession = true;
-					loadSavedStates(); // Load child-specific states
-					selectedScenarioIndex = 0;
-					loadScenario(0, true); // Force reload
-					console.log('Forced personality scenarios loaded:', scenarioList.length, 'with attention check and custom scenario');
-				} else {
-					console.log('No personality scenarios generated, trying direct generation...');
-					// Try direct generation as fallback
-					const selectedChild = childProfiles[0];
-					if (selectedChild && selectedChild.child_characteristics) {
-						// Extract characteristics directly
-						const characteristics = selectedChild.child_characteristics;
-						if (characteristics.includes('Selected characteristics:')) {
-							const selectedStart = characteristics.indexOf('Selected characteristics:');
-							const personalityPart = characteristics.substring(0, selectedStart).trim();
-							const traitMatch = personalityPart.match(/^([^:]+):\s*(.+)/);
-							if (traitMatch) {
-								const traitName = traitMatch[1].trim();
-								const selectedChars = traitMatch[2].split(',').map((char: string) => char.trim()).filter((char: string) => char.length > 0);
-								console.log('Direct extraction - trait:', traitName, 'characteristics:', selectedChars);
-								
-								// Generate scenarios directly (async)
-								generateScenariosFromPersonalityData(selectedChars).then(async (directScenarios) => {
-										if (directScenarios.length > 0) {
-											if (!scenariosLockedForSession) {
-												const basePairs = directScenarios.map(qa => [qa.question, qa.response] as [string, string]);
-												scenarioList = await buildScenarioList(basePairs);
-											}
-										
-											// Persist canonical package and lock
-											persistScenarioPackage(selectedChildId, sessionNumber, scenarioList);
-											scenariosLockedForSession = true;
-											loadSavedStates(); // Load child-specific states
-										selectedScenarioIndex = 0;
-										loadScenario(0, true); // Force reload
-										console.log('Direct personality scenarios loaded:', scenarioList.length, 'with attention check and custom scenario');
-									}
-								});
-							}
-						}
-					}
-				}
+				console.error('ERROR: No scenarios available from backend API');
+				toast.error('Failed to load scenarios from backend. Please refresh the page or contact support if the issue persists.');
 			}
 		} else {
 			console.log('No child profiles found, using default scenarios');

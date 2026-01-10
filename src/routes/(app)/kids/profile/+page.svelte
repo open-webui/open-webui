@@ -7,9 +7,10 @@
 	import { page } from '$app/stores';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import type { ChildProfile } from '$lib/apis/child-profiles';
+	import { getChildProfiles } from '$lib/apis/child-profiles';
+	import { assignScenariosForChild } from '$lib/services/scenarioAssignment';
 	import { toast } from 'svelte-sonner';
 	import { personalityTraits, type PersonalityTrait, type SubCharacteristic } from '$lib/data/personalityTraits';
-	import { generateScenariosFromPersonalityData } from '$lib/data/personalityQuestions';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
 
@@ -61,22 +62,29 @@ let parentLLMMonitoringOther: string = '';
 	// Video modal state
 	let showHelpVideo: boolean = false;
 
-	// Function to generate and store shuffled scenarios for a child
-	async function generateAndStoreScenarios(selectedCharacteristics: string[]) {
-		console.log('Generating scenarios for characteristics:', selectedCharacteristics);
-		
-		// Generate scenarios based on selected characteristics (returns Q&A pairs)
-		const scenarios = await generateScenariosFromPersonalityData(selectedCharacteristics);
-		
-		console.log('Generated scenarios:', scenarios);
-		
-		// Store the shuffled scenarios in localStorage with a unique key for this child
-		const scenarioKey = `personality_scenarios_${Date.now()}`;
-		localStorage.setItem(scenarioKey, JSON.stringify(scenarios));
-		
-		// Also store the key in the child's characteristics for later retrieval
-		return scenarioKey;
+	// Function to determine session number for new child profile
+	async function determineSessionNumberForUser(userId: string, token: string): Promise<number> {
+		try {
+			// Get existing child profiles for this user
+			const profiles = await getChildProfiles(token);
+			
+			if (Array.isArray(profiles) && profiles.length > 0) {
+				// Find max session_number from all profiles
+				const maxSession = Math.max(...profiles.map((p: ChildProfile) => p.session_number || 1));
+				const nextSession = maxSession + 1;
+				console.log(`Determined session number: ${nextSession} (max existing: ${maxSession})`);
+				return nextSession;
+			} else {
+				// No profiles exist, start with session 1
+				console.log('No existing profiles, using session number: 1');
+				return 1;
+			}
+		} catch (error) {
+			console.error('Error determining session number, defaulting to 1:', error);
+			return 1; // Default to session 1 on error
+		}
 	}
+
 
 	function getChildGridTemplate(): string {
 		const cols = Math.max(1, Math.min((childProfiles?.length || 0) + 1, 5));
@@ -444,29 +452,48 @@ let parentLLMMonitoringOther: string = '';
 				: personalityDesc)
 			: childCharacteristics;
 		
-		// Generate and store shuffled scenarios for this child
-		const scenarioKey = await generateAndStoreScenarios(getSelectedSubCharacteristicNames());
-			
-			const newChild = await childProfileSync.createChildProfile({
-				name: childName,
-				child_age: childAge,
-				child_gender: childGender === 'Other' ? 'Other' : childGender,
-				child_characteristics: combinedCharacteristics,
-				is_only_child: isOnlyChild === 'yes',
-				child_has_ai_use: childHasAIUse as any,
-				child_ai_use_contexts: childAIUseContexts,
-				parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
-				child_gender_other: childGenderOther || undefined,
-				child_ai_use_contexts_other: childAIUseContextsOther || undefined,
-				parent_llm_monitoring_other: parentLLMMonitoringOther || undefined
-			} as any);
-			
-			// Store the scenario key in localStorage with the child's ID
-			localStorage.setItem(`scenarios_${newChild.id}`, scenarioKey);
+		// Determine session number before creating child profile
+		const userId = ($user as any)?.id;
+		const token = localStorage.getItem('token') || '';
+		let sessionNumber = 1;
+		
+		if (userId && token) {
+			sessionNumber = await determineSessionNumberForUser(userId, token);
+		}
+		
+		const newChild = await childProfileSync.createChildProfile({
+			name: childName,
+			child_age: childAge,
+			child_gender: childGender === 'Other' ? 'Other' : childGender,
+			child_characteristics: combinedCharacteristics,
+			is_only_child: isOnlyChild === 'yes',
+			child_has_ai_use: childHasAIUse as any,
+			child_ai_use_contexts: childAIUseContexts,
+			parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
+			child_gender_other: childGenderOther || undefined,
+			child_ai_use_contexts_other: childAIUseContextsOther || undefined,
+			parent_llm_monitoring_other: parentLLMMonitoringOther || undefined,
+			session_number: sessionNumber
+		} as any);
 			
 			childProfiles = [...childProfiles, newChild];
 			selectedChildIndex = childProfiles.length - 1;
 			showForm = true;
+			
+			// Trigger async scenario assignment (don't await - runs in background)
+			if (userId && token) {
+				assignScenariosForChild(newChild.id, userId, sessionNumber, token, 6)
+					.then(result => {
+						console.log(`✅ Assigned ${result.assignmentCount} scenarios for child ${newChild.id}`);
+						if (result.assignmentCount < 6) {
+							console.warn(`⚠️ Only ${result.assignmentCount}/6 scenarios assigned`);
+						}
+					})
+					.catch(error => {
+						console.error('❌ Failed to assign scenarios:', error);
+						// Assignment will happen on page load as fallback
+					});
+			}
 			
 		// Automatically select the newly created child for questions
 		const newChildId = newChild.id;
@@ -695,25 +722,10 @@ let parentLLMMonitoringOther: string = '';
 							: personalityDesc)
 						: childCharacteristics;
 					
-					// Clear old scenarios and moderation state for this child
-					const oldScenarioKey = localStorage.getItem(`scenarios_${selectedChild.id}`);
-					if (oldScenarioKey) {
-						// Remove old scenario data
-						localStorage.removeItem(oldScenarioKey);
-					}
-					// Remove the scenario key reference
-					localStorage.removeItem(`scenarios_${selectedChild.id}`);
-					
-					// Clear moderation state for this child
+					// Clear moderation state for this child (scenarios are now stored in backend)
 					localStorage.removeItem(`moderationScenarioStates_${selectedChild.id}`);
 					localStorage.removeItem(`moderationScenarioTimers_${selectedChild.id}`);
 					localStorage.removeItem(`moderationCurrentScenario_${selectedChild.id}`);
-					
-					// Generate new scenarios based on updated characteristics
-					const newScenarioKey = await generateAndStoreScenarios(getSelectedSubCharacteristicNames());
-					
-					// Store the new scenario key
-					localStorage.setItem(`scenarios_${selectedChild.id}`, newScenarioKey);
 					
 					// Update the child profile via API
 					await childProfileSync.updateChildProfile(selectedChild.id, {

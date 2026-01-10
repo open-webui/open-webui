@@ -164,7 +164,7 @@ export const deleteModerationSession = async (token: string, session_id: string)
 export const applyModeration = async (
 	token: string,
 	moderationTypes: string[],  // Standard moderation types
-	childPrompt?: string,
+	childPrompt: string,  // Required: child's prompt/question
 	customInstructions?: string[],  // Optional custom instruction texts
 	originalResponse?: string,  // For refactoring mode
 	highlightedTexts?: string[],  // Phrases parent flagged
@@ -180,7 +180,7 @@ export const applyModeration = async (
 		},
 		body: JSON.stringify({
 			moderation_types: moderationTypes,
-			child_prompt: childPrompt || 'Who is Trump? Is he a good guy?',
+			child_prompt: childPrompt,
 			model: 'gpt-5.2-pro-2025-12-11',
 			max_chars: 600,
 			custom_instructions: customInstructions || [],  // Send custom instructions array
@@ -272,6 +272,8 @@ export interface ScenarioStatusResponse {
 	reassigned?: boolean;  // For abandoned status
 	new_assignment_id?: string;  // For abandoned status with reassignment
 	new_scenario_id?: string;  // For abandoned status with reassignment
+	new_prompt_text?: string;  // For abandoned status with reassignment
+	new_response_text?: string;  // For abandoned status with reassignment
 	message?: string;  // For abandoned status without reassignment
 }
 
@@ -376,6 +378,34 @@ export const abandonScenario = async (
 	return res.json();
 };
 
+export interface AttentionCheckResponse {
+	scenario_id: string;
+	prompt_text: string;
+	response_text: string;
+	trait_theme?: string;
+	trait_phrase?: string;
+	sentiment?: string;
+}
+
+export const getRandomAttentionCheck = async (
+	token: string
+): Promise<AttentionCheckResponse | null> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/attention-checks/random`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) {
+		if (res.status === 404) {
+			return null; // No attention checks available
+		}
+		throw await res.json();
+	}
+	return res.json();
+};
+
 // Highlights API functions
 
 export const createHighlight = async (
@@ -404,6 +434,243 @@ export const getHighlights = async (
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export interface AssignmentWithScenario {
+	assignment_id: string;
+	scenario_id: string;
+	prompt_text: string;
+	response_text: string;
+	assignment_position: number;
+	status: string;
+	assigned_at: number;
+	started_at?: number;
+}
+
+export const getAssignmentsForChild = async (
+	token: string,
+	childId: string
+): Promise<AssignmentWithScenario[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/assignments/${childId}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+// ========== ADMIN API FUNCTIONS ==========
+
+export interface ScenarioAdminListResponse {
+	scenarios: ScenarioModel[];
+	total: number;
+	active_count: number;
+	inactive_count: number;
+}
+
+export interface ScenarioModel {
+	scenario_id: string;
+	prompt_text: string;
+	response_text: string;
+	set_name?: string;
+	trait?: string;
+	polarity?: string;
+	prompt_style?: string;
+	domain?: string;
+	source?: string;
+	model_name?: string;
+	is_active: boolean;
+	n_assigned: number;
+	n_completed: number;
+	n_skipped: number;
+	n_abandoned: number;
+	created_at: number;
+	updated_at: number;
+}
+
+export interface ScenarioStatsResponse {
+	total_scenarios: number;
+	active_scenarios: number;
+	inactive_scenarios: number;
+	total_assignments: number;
+	total_completed: number;
+	total_skipped: number;
+	total_abandoned: number;
+}
+
+export interface ScenarioUploadResponse {
+	status: string;
+	loaded: number;
+	updated: number;
+	errors: number;
+	total: number;
+	error_details?: string[];
+}
+
+export interface AttentionCheckAdminListResponse {
+	attention_checks: AttentionCheckAdminModel[];
+	total: number;
+	active_count: number;
+	inactive_count: number;
+}
+
+export interface AttentionCheckAdminModel {
+	scenario_id: string;
+	prompt_text: string;
+	response_text: string;
+	trait_theme?: string;
+	trait_phrase?: string;
+	sentiment?: string;
+	trait_index?: number;
+	prompt_index?: number;
+	set_name?: string;
+	is_active: boolean;
+	source?: string;
+	created_at: number;
+	updated_at: number;
+}
+
+export const uploadScenariosAdmin = async (
+	token: string,
+	file: File,
+	setName: string = 'pilot',
+	source: string = 'admin_upload'
+): Promise<ScenarioUploadResponse> => {
+	const formData = new FormData();
+	formData.append('file', file);
+	formData.append('set_name', setName);
+	formData.append('source', source);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/scenarios/upload`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`
+		},
+		body: formData
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const listScenariosAdmin = async (
+	token: string,
+	options: {
+		is_active?: boolean;
+		trait?: string;
+		polarity?: string;
+		domain?: string;
+		page?: number;
+		page_size?: number;
+	} = {}
+): Promise<ScenarioAdminListResponse> => {
+	const params = new URLSearchParams();
+	if (options.is_active !== undefined) params.append('is_active', String(options.is_active));
+	if (options.trait) params.append('trait', options.trait);
+	if (options.polarity) params.append('polarity', options.polarity);
+	if (options.domain) params.append('domain', options.domain);
+	if (options.page) params.append('page', String(options.page));
+	if (options.page_size) params.append('page_size', String(options.page_size));
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/scenarios?${params.toString()}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const getScenarioStatsAdmin = async (token: string): Promise<ScenarioStatsResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/scenarios/stats`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const updateScenarioAdmin = async (
+	token: string,
+	scenarioId: string,
+	is_active?: boolean
+): Promise<{ status: string; scenario: ScenarioModel }> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/scenarios/${scenarioId}`, {
+		method: 'PATCH',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ is_active })
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const uploadAttentionChecksAdmin = async (
+	token: string,
+	file: File,
+	setName: string = 'default',
+	source: string = 'admin_upload'
+): Promise<ScenarioUploadResponse> => {
+	const formData = new FormData();
+	formData.append('file', file);
+	formData.append('set_name', setName);
+	formData.append('source', source);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks/upload`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`
+		},
+		body: formData
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const listAttentionChecksAdmin = async (
+	token: string,
+	options: { is_active?: boolean; page?: number; page_size?: number } = {}
+): Promise<AttentionCheckAdminListResponse> => {
+	const params = new URLSearchParams();
+	if (options.is_active !== undefined) params.append('is_active', String(options.is_active));
+	if (options.page) params.append('page', String(options.page));
+	if (options.page_size) params.append('page_size', String(options.page_size));
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks?${params.toString()}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const updateAttentionCheckAdmin = async (
+	token: string,
+	scenarioId: string,
+	is_active?: boolean
+): Promise<{ status: string; attention_check: AttentionCheckAdminModel }> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/admin/attention-checks/${scenarioId}`, {
+		method: 'PATCH',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ is_active })
 	});
 	if (!res.ok) throw await res.json();
 	return res.json();

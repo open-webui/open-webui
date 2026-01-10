@@ -23,6 +23,7 @@
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
+	import Scenarios from './Settings/Scenarios.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -45,7 +46,8 @@
 			'audio',
 			'images',
 			'pipelines',
-			'db'
+			'db',
+			'scenarios'
 		].includes(tabFromPath)
 			? tabFromPath
 			: 'general';
@@ -431,6 +433,34 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Database')}</div>
 		</button>
+
+		<button
+			id="scenarios"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'scenarios'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300'}"
+			on:click={() => {
+				goto('/admin/settings/scenarios');
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 16 16"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						d="M2.5 3A1.5 1.5 0 0 0 1 4.5v.793c.026.009.051.02.076.032L7.674 8.51c.206.1.446.1.652 0l6.598-3.185A.755.755 0 0 1 15 5.293V4.5A1.5 1.5 0 0 0 13.5 3h-11Z"
+					/>
+					<path
+						d="M15 6.954 8.978 9.86a2.25 2.25 0 0 1-1.956 0L1 6.954V11.5A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5V6.954Z"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center">Scenarios</div>
+		</button>
 	</div>
 
 	<div
@@ -512,6 +542,12 @@
 			<Pipelines
 				saveHandler={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'scenarios'}
+			<Scenarios
+				saveHandler={() => {
+					// Scenarios component manages its own state
 				}}
 			/>
 		{/if}

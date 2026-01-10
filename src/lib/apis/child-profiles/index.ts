@@ -19,6 +19,8 @@ export interface ChildProfile {
 	parent_llm_monitoring_other?: string;
 	// Current attempt flag - only children with is_current: true are selectable
 	is_current?: boolean;
+	session_number?: number;
+	attempt_number?: number;
 	created_at: number;
 	updated_at: number;
 }
@@ -37,6 +39,7 @@ export interface ChildProfileForm {
 	child_gender_other?: string;
 	child_ai_use_contexts_other?: string;
 	parent_llm_monitoring_other?: string;
+	session_number?: number;  // Optional, backend will determine if not provided
 }
 
 export const getChildProfiles = async (token: string = '') => {

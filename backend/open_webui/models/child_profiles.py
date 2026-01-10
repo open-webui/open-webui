@@ -93,6 +93,7 @@ class ChildProfileForm(BaseModel):
     child_gender_other: Optional[str] = None
     child_ai_use_contexts_other: Optional[str] = None
     parent_llm_monitoring_other: Optional[str] = None
+    session_number: Optional[int] = None  # If None, defaults to 1 in insert function
 
 class ChildProfileTable:
     def insert_new_child_profile(

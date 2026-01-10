@@ -34,7 +34,6 @@ class Scenario(Base):
     polarity = Column(String, nullable=True)  # 'positive', 'negative', 'neutral'
     prompt_style = Column(String, nullable=True)  # 'Journalistic', 'Should I', etc.
     domain = Column(String, nullable=True)  # 'Internet Interaction', 'Self', etc.
-    is_validated = Column(Boolean, nullable=False, default=False)
     
     # Source tracking fields
     source = Column(String, nullable=True)  # 'json_file', 'api_generated', 'manual'
@@ -56,12 +55,41 @@ class Scenario(Base):
     
     __table_args__ = (
         Index("idx_scenarios_set_name", "set_name"),
-        Index("idx_scenarios_is_validated", "is_validated"),
         Index("idx_scenarios_trait", "trait"),
         Index("idx_scenarios_polarity", "polarity"),
         Index("idx_scenarios_is_active", "is_active"),
         Index("idx_scenarios_source", "source"),
         Index("idx_scenarios_n_assigned", "n_assigned"),
+    )
+
+
+class AttentionCheckScenario(Base):
+    __tablename__ = "attention_check_scenarios"
+
+    scenario_id = Column(String, primary_key=True)
+    prompt_text = Column(Text, nullable=False)
+    response_text = Column(Text, nullable=False)
+    
+    # Metadata fields (matching CSV structure)
+    trait_theme = Column(String, nullable=True)  # 'attention_check'
+    trait_phrase = Column(String, nullable=True)  # 'attention_check'
+    sentiment = Column(String, nullable=True)  # 'neutral', etc.
+    trait_index = Column(Integer, nullable=True)
+    prompt_index = Column(Integer, nullable=True)
+    
+    # Management fields
+    set_name = Column(String, nullable=True)  # Optional set identifier
+    is_active = Column(Boolean, nullable=False, default=True)
+    source = Column(String, nullable=True)  # 'csv_file', 'api_generated', 'manual'
+    
+    # Timestamps
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+    
+    __table_args__ = (
+        Index("idx_ac_scenarios_is_active", "is_active"),
+        Index("idx_ac_scenarios_set_name", "set_name"),
+        Index("idx_ac_scenarios_trait_theme", "trait_theme"),
     )
 
 
@@ -121,7 +149,6 @@ class ScenarioModel(BaseModel):
     polarity: Optional[str] = None
     prompt_style: Optional[str] = None
     domain: Optional[str] = None
-    is_validated: bool
     source: Optional[str] = None
     model_name: Optional[str] = None
     is_active: bool
@@ -142,7 +169,6 @@ class ScenarioForm(BaseModel):
     polarity: Optional[str] = None
     prompt_style: Optional[str] = None
     domain: Optional[str] = None
-    is_validated: Optional[bool] = False
     source: Optional[str] = None
     model_name: Optional[str] = None
     is_active: Optional[bool] = True
@@ -211,8 +237,6 @@ class ScenarioTable:
                     obj.prompt_style = form.prompt_style
                 if form.domain is not None:
                     obj.domain = form.domain
-                if form.is_validated is not None:
-                    obj.is_validated = form.is_validated
                 if form.source is not None:
                     obj.source = form.source
                 if form.model_name is not None:
@@ -231,7 +255,6 @@ class ScenarioTable:
                     polarity=form.polarity,
                     prompt_style=form.prompt_style,
                     domain=form.domain,
-                    is_validated=form.is_validated or False,
                     source=form.source,
                     model_name=form.model_name,
                     is_active=form.is_active if form.is_active is not None else True,
@@ -254,14 +277,12 @@ class ScenarioTable:
             obj = db.query(Scenario).filter(Scenario.scenario_id == scenario_id).first()
             return ScenarioModel.model_validate(obj) if obj else None
     
-    def get_all(self, is_active: Optional[bool] = None, is_validated: Optional[bool] = None) -> List[ScenarioModel]:
-        """Get all scenarios, optionally filtered by is_active and is_validated"""
+    def get_all(self, is_active: Optional[bool] = None) -> List[ScenarioModel]:
+        """Get all scenarios, optionally filtered by is_active"""
         with get_db() as db:
             query = db.query(Scenario)
             if is_active is not None:
                 query = query.filter(Scenario.is_active == is_active)
-            if is_validated is not None:
-                query = query.filter(Scenario.is_validated == is_validated)
             rows = query.all()
             return [ScenarioModel.model_validate(row) for row in rows]
     
@@ -291,7 +312,6 @@ class ScenarioTable:
         self, 
         participant_id: str, 
         is_active: bool = True, 
-        is_validated: bool = True,
         set_name: Optional[str] = None
     ) -> List[Tuple[ScenarioModel, float]]:
         """
@@ -308,7 +328,6 @@ class ScenarioTable:
             # Build query for eligible scenarios
             query = db.query(Scenario)
             query = query.filter(Scenario.is_active == is_active)
-            query = query.filter(Scenario.is_validated == is_validated)
             
             if set_name:
                 query = query.filter(Scenario.set_name == set_name)
@@ -331,7 +350,6 @@ class ScenarioTable:
         participant_id: str,
         alpha: float = 1.0,
         is_active: bool = True,
-        is_validated: bool = True,
         set_name: Optional[str] = None
     ) -> Optional[Tuple[ScenarioModel, Dict]]:
         """
@@ -342,7 +360,7 @@ class ScenarioTable:
         Returns:
             Tuple of (ScenarioModel, sampling_audit_dict) or None if no eligible scenarios
         """
-        eligible = self.get_eligible_scenarios(participant_id, is_active, is_validated, set_name)
+        eligible = self.get_eligible_scenarios(participant_id, is_active, set_name)
         
         if not eligible:
             return None
@@ -362,15 +380,31 @@ class ScenarioTable:
             return None
         
         # Sample using weighted random selection
+        # Use a more robust approach to handle floating point precision
         rand_val = random.random() * total_weight
         cumulative = 0.0
-        selected_idx = 0
+        selected_idx = None
         
         for i, weight in enumerate(weights):
+            # Check if rand_val falls within this weight's range [cumulative, cumulative + weight)
+            # For the last item, use <= to handle edge case where rand_val equals total_weight
+            # (shouldn't happen with random.random() but could due to floating point precision)
+            if i == len(weights) - 1:
+                # Last item: use <= to ensure we always select something
+                if rand_val <= cumulative + weight:
+                    selected_idx = i
+                    break
+            else:
+                # Not last item: use < for half-open interval
+                if rand_val < cumulative + weight:
+                    selected_idx = i
+                    break
             cumulative += weight
-            if rand_val <= cumulative:
-                selected_idx = i
-                break
+        
+        # Safety check: ensure we selected a valid index
+        # This should never trigger, but provides a fallback if floating point errors occur
+        if selected_idx is None or selected_idx >= len(eligible):
+            selected_idx = len(eligible) - 1
         
         selected_scenario, n_assigned_before = eligible[selected_idx]
         selected_weight = weights[selected_idx]
@@ -470,9 +504,137 @@ class ScenarioAssignmentTable:
                 ScenarioAssignment.status.in_([AssignmentStatus.COMPLETED.value, AssignmentStatus.SKIPPED.value])
             ).distinct().all()
             return [row[0] for row in rows]
+    
+    def get_assignments_by_child(self, child_profile_id: str, status_filter: Optional[List[str]] = None) -> List[ScenarioAssignmentModel]:
+        """Get all assignments for a child profile, optionally filtered by status"""
+        with get_db() as db:
+            query = db.query(ScenarioAssignment).filter(
+                ScenarioAssignment.child_profile_id == child_profile_id
+            )
+            if status_filter:
+                query = query.filter(ScenarioAssignment.status.in_(status_filter))
+            # Order by assignment_position to maintain order
+            rows = query.order_by(ScenarioAssignment.assignment_position.asc()).all()
+            return [ScenarioAssignmentModel.model_validate(row) for row in rows]
+
+
+class AttentionCheckScenarioModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    scenario_id: str
+    prompt_text: str
+    response_text: str
+    trait_theme: Optional[str] = None
+    trait_phrase: Optional[str] = None
+    sentiment: Optional[str] = None
+    trait_index: Optional[int] = None
+    prompt_index: Optional[int] = None
+    set_name: Optional[str] = None
+    is_active: bool
+    source: Optional[str] = None
+    created_at: int
+    updated_at: int
+
+
+class AttentionCheckScenarioForm(BaseModel):
+    prompt_text: str
+    response_text: str
+    trait_theme: Optional[str] = None
+    trait_phrase: Optional[str] = None
+    sentiment: Optional[str] = None
+    trait_index: Optional[int] = None
+    prompt_index: Optional[int] = None
+    set_name: Optional[str] = None
+    is_active: bool = True
+    source: Optional[str] = None
+
+
+class AttentionCheckScenarioTable:
+    def _generate_scenario_id(self, prompt_text: str, response_text: str) -> str:
+        """Generate stable scenario_id from prompt and response hash"""
+        content = f"{prompt_text}|{response_text}".encode('utf-8')
+        hash_obj = hashlib.sha256(content)
+        return f"ac_{hash_obj.hexdigest()[:16]}"
+    
+    def upsert(self, form: AttentionCheckScenarioForm) -> AttentionCheckScenarioModel:
+        """Insert or update an attention check scenario"""
+        scenario_id = self._generate_scenario_id(form.prompt_text, form.response_text)
+        now = int(time.time() * 1000)
+        
+        with get_db() as db:
+            obj = db.query(AttentionCheckScenario).filter(
+                AttentionCheckScenario.scenario_id == scenario_id
+            ).first()
+            
+            if obj:
+                # Update existing
+                obj.prompt_text = form.prompt_text
+                obj.response_text = form.response_text
+                obj.trait_theme = form.trait_theme
+                obj.trait_phrase = form.trait_phrase
+                obj.sentiment = form.sentiment
+                obj.trait_index = form.trait_index
+                obj.prompt_index = form.prompt_index
+                obj.set_name = form.set_name
+                obj.is_active = form.is_active
+                obj.source = form.source
+                obj.updated_at = now
+            else:
+                # Create new
+                obj = AttentionCheckScenario(
+                    scenario_id=scenario_id,
+                    prompt_text=form.prompt_text,
+                    response_text=form.response_text,
+                    trait_theme=form.trait_theme,
+                    trait_phrase=form.trait_phrase,
+                    sentiment=form.sentiment,
+                    trait_index=form.trait_index,
+                    prompt_index=form.prompt_index,
+                    set_name=form.set_name,
+                    is_active=form.is_active,
+                    source=form.source,
+                    created_at=now,
+                    updated_at=now,
+                )
+                db.add(obj)
+            
+            db.commit()
+            db.refresh(obj)
+            return AttentionCheckScenarioModel.model_validate(obj)
+    
+    def get_by_id(self, scenario_id: str) -> Optional[AttentionCheckScenarioModel]:
+        """Get an attention check scenario by ID"""
+        with get_db() as db:
+            obj = db.query(AttentionCheckScenario).filter(
+                AttentionCheckScenario.scenario_id == scenario_id
+            ).first()
+            return AttentionCheckScenarioModel.model_validate(obj) if obj else None
+    
+    def get_all(self, is_active: Optional[bool] = None, set_name: Optional[str] = None) -> List[AttentionCheckScenarioModel]:
+        """Get all attention check scenarios, optionally filtered"""
+        with get_db() as db:
+            query = db.query(AttentionCheckScenario)
+            if is_active is not None:
+                query = query.filter(AttentionCheckScenario.is_active == is_active)
+            if set_name:
+                query = query.filter(AttentionCheckScenario.set_name == set_name)
+            rows = query.order_by(AttentionCheckScenario.created_at.asc()).all()
+            return [AttentionCheckScenarioModel.model_validate(row) for row in rows]
+    
+    def get_random(self, is_active: bool = True) -> Optional[AttentionCheckScenarioModel]:
+        """Get a random active attention check scenario"""
+        with get_db() as db:
+            rows = db.query(AttentionCheckScenario).filter(
+                AttentionCheckScenario.is_active == is_active
+            ).all()
+            if not rows:
+                return None
+            selected = random.choice(rows)
+            return AttentionCheckScenarioModel.model_validate(selected)
 
 
 # Global instances
 Scenarios = ScenarioTable()
 ScenarioAssignments = ScenarioAssignmentTable()
+AttentionCheckScenarios = AttentionCheckScenarioTable()
 

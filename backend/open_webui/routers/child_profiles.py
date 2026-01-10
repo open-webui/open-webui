@@ -35,6 +35,9 @@ class ChildProfileResponse(BaseModel):
     child_gender_other: Optional[str] = None
     child_ai_use_contexts_other: Optional[str] = None
     parent_llm_monitoring_other: Optional[str] = None
+    session_number: Optional[int] = None
+    attempt_number: Optional[int] = None
+    is_current: Optional[bool] = None
     created_at: int
     updated_at: int
 
@@ -49,7 +52,20 @@ async def create_child_profile(
 ):
     """Create a new child profile"""
     try:
-        child_profile = ChildProfiles.insert_new_child_profile(form_data, current_user.id)
+        # Determine session_number if not provided
+        if form_data.session_number is None:
+            existing_profiles = ChildProfiles.get_child_profiles_by_user(current_user.id)
+            if existing_profiles:
+                max_session = max((p.session_number for p in existing_profiles), default=0)
+                session_number = max_session + 1
+            else:
+                session_number = 1
+        else:
+            session_number = form_data.session_number
+        
+        child_profile = ChildProfiles.insert_new_child_profile(
+            form_data, current_user.id, session_number=session_number
+        )
         if not child_profile:
             raise HTTPException(status_code=500, detail="Failed to create child profile")
         

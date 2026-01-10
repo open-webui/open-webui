@@ -1,12 +1,13 @@
 import logging
 import random
 import time
+import hashlib
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.models.users import UserModel
 from open_webui.models.moderation import (
     ModerationSessions,
@@ -22,7 +23,11 @@ from open_webui.models.scenarios import (
     ScenarioAssignments,
     ScenarioAssignmentForm,
     ScenarioAssignmentModel,
+    ScenarioModel,
+    ScenarioForm,
     AssignmentStatus,
+    AttentionCheckScenarios,
+    AttentionCheckScenarioForm,
 )
 from open_webui.internal.db import get_db
 
@@ -147,7 +152,6 @@ async def assign_scenario(
             participant_id=request.participant_id,
             alpha=request.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if not result:
@@ -362,7 +366,6 @@ async def abandon_scenario(
             participant_id=assignment.participant_id,
             alpha=assignment.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if result:
@@ -382,6 +385,8 @@ async def abandon_scenario(
                 "reassigned": True,
                 "new_assignment_id": new_assignment.assignment_id,
                 "new_scenario_id": new_scenario.scenario_id,
+                "new_prompt_text": new_scenario.prompt_text,
+                "new_response_text": new_scenario.response_text,
             }
         else:
             return {
@@ -394,6 +399,461 @@ async def abandon_scenario(
         raise
     except Exception as e:
         log.error(f"Error abandoning scenario: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+class AttentionCheckResponse(BaseModel):
+    scenario_id: str
+    prompt_text: str
+    response_text: str
+    trait_theme: Optional[str] = None
+    trait_phrase: Optional[str] = None
+    sentiment: Optional[str] = None
+
+
+@router.get("/moderation/attention-checks/random", response_model=AttentionCheckResponse)
+async def get_random_attention_check(
+    user: UserModel = Depends(get_verified_user),
+):
+    """
+    Get a random active attention check scenario.
+    Uses simple random sampling (not weighted, since attention checks don't need balancing).
+    """
+    try:
+        attention_check = AttentionCheckScenarios.get_random(is_active=True)
+        
+        if not attention_check:
+            raise HTTPException(status_code=404, detail="No active attention check scenarios available")
+        
+        return AttentionCheckResponse(
+            scenario_id=attention_check.scenario_id,
+            prompt_text=attention_check.prompt_text,
+            response_text=attention_check.response_text,
+            trait_theme=attention_check.trait_theme,
+            trait_phrase=attention_check.trait_phrase,
+            sentiment=attention_check.sentiment,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error getting random attention check: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+class AssignmentWithScenario(BaseModel):
+    assignment_id: str
+    scenario_id: str
+    prompt_text: str
+    response_text: str
+    assignment_position: int
+    status: str
+    assigned_at: int
+    started_at: Optional[int] = None
+
+
+@router.get("/moderation/scenarios/assignments/{child_id}", response_model=List[AssignmentWithScenario])
+async def get_assignments_for_child(
+    child_id: str,
+    user: UserModel = Depends(get_verified_user),
+):
+    """
+    Get existing scenario assignments for a child profile.
+    Returns assignments with status 'assigned' or 'started', ordered by assignment_position.
+    """
+    try:
+        # Verify the child profile belongs to the user
+        child_profile = ChildProfiles.get_child_profile_by_id(child_id, user.id)
+        if not child_profile:
+            raise HTTPException(status_code=404, detail="Child profile not found")
+        
+        # Get assignments for this child, filtered to assigned/started status
+        assignments = ScenarioAssignments.get_assignments_by_child(
+            child_id,
+            status_filter=[AssignmentStatus.ASSIGNED.value, AssignmentStatus.STARTED.value]
+        )
+        
+        # Join with scenarios table to get prompt_text and response_text
+        result = []
+        for assignment in assignments:
+            scenario = Scenarios.get_by_id(assignment.scenario_id)
+            if scenario:
+                result.append(AssignmentWithScenario(
+                    assignment_id=assignment.assignment_id,
+                    scenario_id=assignment.scenario_id,
+                    prompt_text=scenario.prompt_text,
+                    response_text=scenario.response_text,
+                    assignment_position=assignment.assignment_position or 0,
+                    status=assignment.status,
+                    assigned_at=assignment.assigned_at,
+                    started_at=assignment.started_at
+                ))
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error getting assignments for child {child_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ========== ADMIN ENDPOINTS ==========
+
+class ScenarioUpdateRequest(BaseModel):
+    is_active: Optional[bool] = None
+
+
+class ScenarioListResponse(BaseModel):
+    scenarios: List[ScenarioModel]
+    total: int
+    active_count: int
+    inactive_count: int
+
+
+class ScenarioStatsResponse(BaseModel):
+    total_scenarios: int
+    active_scenarios: int
+    inactive_scenarios: int
+    total_assignments: int
+    total_completed: int
+    total_skipped: int
+    total_abandoned: int
+
+
+@router.post("/admin/scenarios/upload")
+async def upload_scenarios_admin(
+    file: UploadFile = File(...),
+    set_name: str = Form("pilot"),
+    source: str = Form("admin_upload"),
+    user: UserModel = Depends(get_admin_user),
+):
+    """Admin endpoint to upload scenarios from a JSON file"""
+    import json
+    
+    try:
+        if not file.filename.endswith('.json'):
+            raise HTTPException(status_code=400, detail="File must be a JSON file")
+        
+        contents = await file.read()
+        scenarios_data = json.loads(contents.decode('utf-8'))
+        
+        if not isinstance(scenarios_data, list):
+            raise HTTPException(status_code=400, detail="JSON must contain a list of scenarios")
+        
+        loaded_count = 0
+        updated_count = 0
+        error_count = 0
+        errors = []
+        
+        for idx, scenario_data in enumerate(scenarios_data, 1):
+            try:
+                prompt_text = scenario_data.get("child_prompt", "")
+                response_text = scenario_data.get("model_response", "")
+                
+                if not prompt_text or not response_text:
+                    error_count += 1
+                    errors.append(f"Scenario {idx}: Missing prompt or response")
+                    continue
+                
+                form = ScenarioForm(
+                    prompt_text=prompt_text,
+                    response_text=response_text,
+                    set_name=set_name,
+                    trait=scenario_data.get("trait"),
+                    polarity=scenario_data.get("polarity"),
+                    prompt_style=scenario_data.get("prompt_style"),
+                    domain=scenario_data.get("domain"),
+                    source=source,
+                    model_name=scenario_data.get("model_name"),
+                    is_active=True,
+                )
+                
+                # Generate scenario_id the same way upsert does to check if it exists
+                content_hash = hashlib.sha256(
+                    f"{form.prompt_text}|{form.response_text}".encode('utf-8')
+                ).hexdigest()[:16]
+                scenario_id = f"scenario_{content_hash}"
+                existing = Scenarios.get_by_id(scenario_id)
+                
+                result = Scenarios.upsert(form)
+                
+                if existing:
+                    updated_count += 1
+                else:
+                    loaded_count += 1
+                    
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Scenario {idx}: {str(e)}")
+        
+        return {
+            "status": "success",
+            "loaded": loaded_count,
+            "updated": updated_count,
+            "errors": error_count,
+            "total": len(scenarios_data),
+            "error_details": errors[:10] if errors else []
+        }
+        
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON format")
+    except Exception as e:
+        log.error(f"Error uploading scenarios: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading scenarios: {str(e)}")
+
+
+@router.get("/admin/scenarios", response_model=ScenarioListResponse)
+async def list_scenarios_admin(
+    is_active: Optional[bool] = None,
+    trait: Optional[str] = None,
+    polarity: Optional[str] = None,
+    domain: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 50,
+    user: UserModel = Depends(get_admin_user),
+):
+    """Admin endpoint to list all scenarios with filtering and pagination"""
+    try:
+        all_scenarios = Scenarios.get_all(is_active=is_active)
+        
+        # Apply filters
+        filtered = all_scenarios
+        if trait:
+            filtered = [s for s in filtered if s.trait == trait]
+        if polarity:
+            filtered = [s for s in filtered if s.polarity == polarity]
+        if domain:
+            filtered = [s for s in filtered if s.domain == domain]
+        
+        # Calculate stats
+        active_count = sum(1 for s in filtered if s.is_active)
+        inactive_count = len(filtered) - active_count
+        
+        # Paginate
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated = filtered[start_idx:end_idx]
+        
+        return ScenarioListResponse(
+            scenarios=paginated,
+            total=len(filtered),
+            active_count=active_count,
+            inactive_count=inactive_count,
+        )
+    except Exception as e:
+        log.error(f"Error listing scenarios: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/admin/scenarios/stats", response_model=ScenarioStatsResponse)
+async def get_scenario_stats_admin(
+    user: UserModel = Depends(get_admin_user),
+):
+    """Admin endpoint to get aggregate statistics about scenarios"""
+    try:
+        all_scenarios = Scenarios.get_all()
+        active_scenarios = [s for s in all_scenarios if s.is_active]
+        
+        total_assignments = sum(s.n_assigned for s in all_scenarios)
+        total_completed = sum(s.n_completed for s in all_scenarios)
+        total_skipped = sum(s.n_skipped for s in all_scenarios)
+        total_abandoned = sum(s.n_abandoned for s in all_scenarios)
+        
+        return ScenarioStatsResponse(
+            total_scenarios=len(all_scenarios),
+            active_scenarios=len(active_scenarios),
+            inactive_scenarios=len(all_scenarios) - len(active_scenarios),
+            total_assignments=total_assignments,
+            total_completed=total_completed,
+            total_skipped=total_skipped,
+            total_abandoned=total_abandoned,
+        )
+    except Exception as e:
+        log.error(f"Error getting scenario stats: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.patch("/admin/scenarios/{scenario_id}")
+async def update_scenario_admin(
+    scenario_id: str,
+    request: ScenarioUpdateRequest,
+    user: UserModel = Depends(get_admin_user),
+):
+    """Admin endpoint to update a scenario (e.g., toggle is_active)"""
+    try:
+        scenario = Scenarios.get_by_id(scenario_id)
+        if not scenario:
+            raise HTTPException(status_code=404, detail="Scenario not found")
+        
+        form = ScenarioForm(
+            prompt_text=scenario.prompt_text,
+            response_text=scenario.response_text,
+            set_name=scenario.set_name,
+            trait=scenario.trait,
+            polarity=scenario.polarity,
+            prompt_style=scenario.prompt_style,
+            domain=scenario.domain,
+            source=scenario.source,
+            model_name=scenario.model_name,
+            is_active=request.is_active if request.is_active is not None else scenario.is_active,
+        )
+        
+        updated = Scenarios.upsert(form)
+        return {"status": "success", "scenario": updated}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error updating scenario: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/admin/attention-checks/upload")
+async def upload_attention_checks_admin(
+    file: UploadFile = File(...),
+    set_name: str = Form("default"),
+    source: str = Form("admin_upload"),
+    user: UserModel = Depends(get_admin_user),
+):
+    """Admin endpoint to upload attention check scenarios from JSON file"""
+    import json
+    
+    try:
+        if not file.filename.endswith('.json'):
+            raise HTTPException(status_code=400, detail="File must be a JSON file")
+        
+        contents = await file.read()
+        data = json.loads(contents.decode('utf-8'))
+        
+        # Support both array format and object with scenarios array
+        if isinstance(data, dict) and 'scenarios' in data:
+            scenarios_data = data['scenarios']
+        elif isinstance(data, list):
+            scenarios_data = data
+        else:
+            raise HTTPException(status_code=400, detail="JSON must contain a list of scenarios or object with 'scenarios' array")
+        
+        loaded_count = 0
+        updated_count = 0
+        error_count = 0
+        errors = []
+        
+        for idx, scenario_data in enumerate(scenarios_data, 1):
+            try:
+                prompt_text = scenario_data.get("prompt", scenario_data.get("prompt_text", ""))
+                response_text = scenario_data.get("response", scenario_data.get("response_text", ""))
+                
+                if not prompt_text or not response_text:
+                    error_count += 1
+                    errors.append(f"Attention check {idx}: Missing prompt or response")
+                    continue
+                
+                form = AttentionCheckScenarioForm(
+                    prompt_text=prompt_text,
+                    response_text=response_text,
+                    trait_theme=scenario_data.get("trait_theme"),
+                    trait_phrase=scenario_data.get("trait_phrase"),
+                    sentiment=scenario_data.get("sentiment"),
+                    trait_index=scenario_data.get("trait_index"),
+                    prompt_index=scenario_data.get("prompt_index"),
+                    set_name=set_name,
+                    is_active=True,
+                    source=source,
+                )
+                
+                # Generate scenario_id the same way upsert does to check if it exists
+                content_hash = hashlib.sha256(
+                    f"{form.prompt_text}|{form.response_text}".encode('utf-8')
+                ).hexdigest()[:16]
+                scenario_id = f"ac_{content_hash}"
+                existing = AttentionCheckScenarios.get_by_id(scenario_id)
+                
+                result = AttentionCheckScenarios.upsert(form)
+                
+                if existing:
+                    updated_count += 1
+                else:
+                    loaded_count += 1
+                    
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Attention check {idx}: {str(e)}")
+        
+        return {
+            "status": "success",
+            "loaded": loaded_count,
+            "updated": updated_count,
+            "errors": error_count,
+            "total": len(scenarios_data),
+            "error_details": errors[:10] if errors else []
+        }
+        
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON format")
+    except Exception as e:
+        log.error(f"Error uploading attention checks: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading attention checks: {str(e)}")
+
+
+@router.get("/admin/attention-checks")
+async def list_attention_checks_admin(
+    is_active: Optional[bool] = None,
+    page: int = 1,
+    page_size: int = 50,
+    user: UserModel = Depends(get_admin_user),
+):
+    """Admin endpoint to list all attention check scenarios"""
+    try:
+        all_checks = AttentionCheckScenarios.get_all(is_active=is_active)
+        
+        active_count = sum(1 for ac in all_checks if ac.is_active)
+        inactive_count = len(all_checks) - active_count
+        
+        # Paginate
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        paginated = all_checks[start_idx:end_idx]
+        
+        return {
+            "attention_checks": paginated,
+            "total": len(all_checks),
+            "active_count": active_count,
+            "inactive_count": inactive_count,
+        }
+    except Exception as e:
+        log.error(f"Error listing attention checks: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.patch("/admin/attention-checks/{scenario_id}")
+async def update_attention_check_admin(
+    scenario_id: str,
+    is_active: Optional[bool] = None,
+    user: UserModel = Depends(get_admin_user),
+):
+    """Admin endpoint to update an attention check scenario"""
+    try:
+        ac = AttentionCheckScenarios.get_by_id(scenario_id)
+        if not ac:
+            raise HTTPException(status_code=404, detail="Attention check scenario not found")
+        
+        form = AttentionCheckScenarioForm(
+            prompt_text=ac.prompt_text,
+            response_text=ac.response_text,
+            trait_theme=ac.trait_theme,
+            trait_phrase=ac.trait_phrase,
+            sentiment=ac.sentiment,
+            trait_index=ac.trait_index,
+            prompt_index=ac.prompt_index,
+            set_name=ac.set_name,
+            is_active=is_active if is_active is not None else ac.is_active,
+            source=ac.source,
+        )
+        
+        updated = AttentionCheckScenarios.upsert(form)
+        return {"status": "success", "attention_check": updated}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error updating attention check: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -462,7 +922,6 @@ async def assign_scenario(
             participant_id=request.participant_id,
             alpha=request.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if not result:
@@ -677,7 +1136,6 @@ async def abandon_scenario(
             participant_id=assignment.participant_id,
             alpha=assignment.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if result:
@@ -697,6 +1155,8 @@ async def abandon_scenario(
                 "reassigned": True,
                 "new_assignment_id": new_assignment.assignment_id,
                 "new_scenario_id": new_scenario.scenario_id,
+                "new_prompt_text": new_scenario.prompt_text,
+                "new_response_text": new_scenario.response_text,
             }
         else:
             return {
@@ -762,7 +1222,6 @@ async def assign_scenario(
             participant_id=request.participant_id,
             alpha=request.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if not result:
@@ -977,7 +1436,6 @@ async def abandon_scenario(
             participant_id=assignment.participant_id,
             alpha=assignment.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if result:
@@ -997,6 +1455,8 @@ async def abandon_scenario(
                 "reassigned": True,
                 "new_assignment_id": new_assignment.assignment_id,
                 "new_scenario_id": new_scenario.scenario_id,
+                "new_prompt_text": new_scenario.prompt_text,
+                "new_response_text": new_scenario.response_text,
             }
         else:
             return {
@@ -1066,7 +1526,6 @@ async def assign_scenario(
             participant_id=request.participant_id,
             alpha=request.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if not result:
@@ -1281,7 +1740,6 @@ async def abandon_scenario(
             participant_id=assignment.participant_id,
             alpha=assignment.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if result:
@@ -1301,6 +1759,8 @@ async def abandon_scenario(
                 "reassigned": True,
                 "new_assignment_id": new_assignment.assignment_id,
                 "new_scenario_id": new_scenario.scenario_id,
+                "new_prompt_text": new_scenario.prompt_text,
+                "new_response_text": new_scenario.response_text,
             }
         else:
             return {
@@ -1370,7 +1830,6 @@ async def assign_scenario(
             participant_id=request.participant_id,
             alpha=request.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if not result:
@@ -1585,7 +2044,6 @@ async def abandon_scenario(
             participant_id=assignment.participant_id,
             alpha=assignment.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if result:
@@ -1605,6 +2063,8 @@ async def abandon_scenario(
                 "reassigned": True,
                 "new_assignment_id": new_assignment.assignment_id,
                 "new_scenario_id": new_scenario.scenario_id,
+                "new_prompt_text": new_scenario.prompt_text,
+                "new_response_text": new_scenario.response_text,
             }
         else:
             return {
@@ -1711,7 +2171,6 @@ async def assign_scenario(
             participant_id=request.participant_id,
             alpha=request.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if not result:
@@ -1926,7 +2385,6 @@ async def abandon_scenario(
             participant_id=assignment.participant_id,
             alpha=assignment.alpha or 1.0,
             is_active=True,
-            is_validated=True,
         )
         
         if result:
@@ -1946,6 +2404,8 @@ async def abandon_scenario(
                 "reassigned": True,
                 "new_assignment_id": new_assignment.assignment_id,
                 "new_scenario_id": new_scenario.scenario_id,
+                "new_prompt_text": new_scenario.prompt_text,
+                "new_response_text": new_scenario.response_text,
             }
         else:
             return {
