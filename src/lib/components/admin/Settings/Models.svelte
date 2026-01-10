@@ -170,6 +170,20 @@
 		);
 	};
 
+	const toggleAllModelsHandler = async (enableAll: boolean) => {
+		for (const model of filteredModels) {
+			const currentState = model.is_active ?? true;
+			if (currentState !== enableAll) {
+				// Update local state immediately for visual feedback
+				model.is_active = enableAll;
+				models = models;
+				await tick();
+				// Then persist to backend
+				await toggleModelHandler(model);
+			}
+		}
+	};
+
 	const hideModelHandler = async (model) => {
 		model.meta = {
 			...model.meta,
@@ -333,6 +347,16 @@
 					{/if}
 				</div>
 			</div>
+		</div>
+
+		<div class="flex items-center justify-end gap-2 my-2 px-3">
+			<span class="text-sm font-medium text-gray-500 dark:text-gray-400">{$i18n.t('Toggle All')}</span>
+			<Switch
+				state={filteredModels.every((m) => m.is_active ?? true)}
+				on:change={async (e) => {
+					toggleAllModelsHandler(e.detail);
+				}}
+			/>
 		</div>
 
 		<div class=" my-2 mb-5" id="model-list">
