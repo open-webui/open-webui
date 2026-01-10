@@ -15,7 +15,7 @@
 	export let edit = false;
 	export let prompt = null;
 	export let clone = false;
-	export let disabled = true;
+	export let disabled = false;
 
 	const i18n = getContext('i18n');
 

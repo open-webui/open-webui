@@ -334,8 +334,8 @@ def load_speech_pipeline(request):
 async def speech(request: Request, user=Depends(get_verified_user)):
     if request.app.state.config.TTS_ENGINE == "":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
     if user.role != "admin" and not has_permission(
@@ -1169,12 +1169,6 @@ def transcription(
     language: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
-    if request.app.state.config.STT_ENGINE == "":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
     if user.role != "admin" and not has_permission(
         user.id, "chat.stt", request.app.state.config.USER_PERMISSIONS
     ):

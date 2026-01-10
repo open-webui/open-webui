@@ -79,9 +79,9 @@
 		debounceTimer = setTimeout(() => loadLeaderboard(query), 500);
 	};
 
-	$: query, debouncedLoad();
-
-	onMount(() => loadLeaderboard());
+	$: if (query !== null) {
+		debouncedLoad();
+	}
 
 	$: sortedModels = [...rankedModels].sort((a, b) => {
 		const getValue = (m, key) => {

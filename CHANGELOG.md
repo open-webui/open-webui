@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-01-10
+
+### Fixed
+
+- ⚡ Users no longer experience database connection timeouts under high concurrency due to connections being held during LLM calls, telemetry collection, and file status streaming. [#20545](https://github.com/open-webui/open-webui/pull/20545), [#20542](https://github.com/open-webui/open-webui/pull/20542), [#20547](https://github.com/open-webui/open-webui/pull/20547)
+- 📝 Users can now create and save prompts in the workspace prompts editor without encountering errors. [Commit](https://github.com/open-webui/open-webui/commit/ab99d3b1129cffbc13cf7de5aa897692e3f8662e)
+- 🎙️ Users can now use local Whisper for speech-to-text when STT_ENGINE is left empty (the default for local mode). [#20534](https://github.com/open-webui/open-webui/pull/20534)
+- 📊 The Evaluations page now loads faster by eliminating duplicate API calls to the leaderboard and feedbacks endpoints. [Commit](https://github.com/open-webui/open-webui/commit/2dd09223f2aac301a4d5c17fb667d974c34f3ff1)
+- 🌐 Fixed missing Settings tab i18n label keys. [#20526](https://github.com/open-webui/open-webui/pull/20526)
+
 ## [0.7.1] - 2026-01-09
 
 ### Fixed

@@ -307,6 +307,19 @@
 			/>
 		</div>
 
+		<!-- {$i18n.t('General')} -->
+		<!-- {$i18n.t('Connections')} -->
+		<!-- {$i18n.t('Models')} -->
+		<!-- {$i18n.t('Evaluations')} -->
+		<!-- {$i18n.t('External Tools')} -->
+		<!-- {$i18n.t('Documents')} -->
+		<!-- {$i18n.t('Web Search')} -->
+		<!-- {$i18n.t('Code Execution')} -->
+		<!-- {$i18n.t('Interface')} -->
+		<!-- {$i18n.t('Audio')} -->
+		<!-- {$i18n.t('Images')} -->
+		<!-- {$i18n.t('Pipelines')} -->
+		<!-- {$i18n.t('Database')} -->
 		{#each filteredSettings as tab (tab.id)}
 			<button
 				id={tab.id}
