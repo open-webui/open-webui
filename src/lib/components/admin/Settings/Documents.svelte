@@ -763,6 +763,22 @@
 						</div>
 
 						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								<Tooltip
+									content={$i18n.t(
+										'Render document content as markdown in citations and file previews. When disabled, content is displayed as plain text.'
+									)}
+									placement="top-start"
+								>
+									{$i18n.t('Enable Markdown Rendering')}
+								</Tooltip>
+							</div>
+							<div class="flex items-center relative">
+								<Switch bind:state={RAGConfig.ENABLE_MARKDOWN_RENDERING} />
+							</div>
+						</div>
+
+						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" flex gap-1.5 w-full">
 								<div class="  w-full justify-between">
 									<div class="self-center text-xs font-medium min-w-fit mb-1">

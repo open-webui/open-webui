@@ -517,6 +517,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Integration settings
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+        # UI/Display settings
+        "ENABLE_MARKDOWN_RENDERING": request.app.state.config.ENABLE_MARKDOWN_RENDERING,
         # Web search settings
         "web": {
             "ENABLE_WEB_SEARCH": request.app.state.config.ENABLE_WEB_SEARCH,
@@ -716,6 +718,9 @@ class ConfigForm(BaseModel):
     # Integration settings
     ENABLE_GOOGLE_DRIVE_INTEGRATION: Optional[bool] = None
     ENABLE_ONEDRIVE_INTEGRATION: Optional[bool] = None
+
+    # UI/Display settings
+    ENABLE_MARKDOWN_RENDERING: Optional[bool] = None
 
     # Web search settings
     web: Optional[WebConfig] = None
@@ -1047,6 +1052,13 @@ async def update_rag_config(
         form_data.ENABLE_ONEDRIVE_INTEGRATION
         if form_data.ENABLE_ONEDRIVE_INTEGRATION is not None
         else request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION
+    )
+
+    # UI/Display settings
+    request.app.state.config.ENABLE_MARKDOWN_RENDERING = (
+        form_data.ENABLE_MARKDOWN_RENDERING
+        if form_data.ENABLE_MARKDOWN_RENDERING is not None
+        else request.app.state.config.ENABLE_MARKDOWN_RENDERING
     )
 
     if form_data.web is not None:

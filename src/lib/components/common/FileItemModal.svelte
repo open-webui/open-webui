@@ -7,6 +7,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
 	import { getFileById, getFileContentById } from '$lib/apis/files';
+	import { config } from '$lib/stores';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
@@ -340,13 +341,29 @@
 
 				{#if selectedTab === ''}
 					{#if item?.file?.data}
-						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-							{(item?.file?.data?.content ?? '').trim() || 'No content'}
-						</div>
+						{#if $config?.features?.enable_markdown_rendering}
+							<div class="max-h-96 overflow-scroll scrollbar-hidden p-3 rounded-lg bg-gray-50 dark:bg-gray-850 border border-gray-100 dark:border-gray-800">
+								<div class="prose prose-sm dark:prose-invert max-w-full prose-headings:text-base prose-h1:text-lg prose-h2:text-base prose-h3:text-sm prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-p:leading-relaxed prose-pre:text-xs prose-li:my-1">
+									<Markdown content={(item?.file?.data?.content ?? '').trim() || 'No content'} id="file-content-markdown" />
+								</div>
+							</div>
+						{:else}
+							<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+								{(item?.file?.data?.content ?? '').trim() || 'No content'}
+							</div>
+						{/if}
 					{:else if item?.content}
-						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-							{(item?.content ?? '').trim() || 'No content'}
-						</div>
+						{#if $config?.features?.enable_markdown_rendering}
+							<div class="max-h-96 overflow-scroll scrollbar-hidden p-3 rounded-lg bg-gray-50 dark:bg-gray-850 border border-gray-100 dark:border-gray-800">
+								<div class="prose prose-sm dark:prose-invert max-w-full prose-headings:text-base prose-h1:text-lg prose-h2:text-base prose-h3:text-sm prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-p:leading-relaxed prose-pre:text-xs prose-li:my-1">
+									<Markdown content={(item?.content ?? '').trim() || 'No content'} id="file-content-markdown-2" />
+								</div>
+							</div>
+						{:else}
+							<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+								{(item?.content ?? '').trim() || 'No content'}
+							</div>
+						{/if}
 					{/if}
 				{:else if selectedTab === 'preview'}
 					{#if isAudio}

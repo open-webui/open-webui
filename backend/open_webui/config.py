@@ -2487,6 +2487,12 @@ ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
     os.getenv("ENABLE_ONEDRIVE_INTEGRATION", "False").lower() == "true",
 )
 
+ENABLE_MARKDOWN_RENDERING = PersistentConfig(
+    "ENABLE_MARKDOWN_RENDERING",
+    "ui.enable_markdown_rendering",
+    os.getenv("ENABLE_MARKDOWN_RENDERING", "False").lower() == "true",
+)
+
 
 ENABLE_ONEDRIVE_PERSONAL = (
     os.environ.get("ENABLE_ONEDRIVE_PERSONAL", "True").lower() == "true"
