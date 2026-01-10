@@ -2,7 +2,6 @@
 	import { getContext } from 'svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Switch from '$lib/components/common/Switch.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -73,21 +72,30 @@
 	<div>
 		<div class=" flex w-full justify-between">
 			<div class=" self-center text-xs">
-				{$i18n.t('Allow Group Sharing')}
+				{$i18n.t('Who can share to this group')}
 			</div>
 
 			<div class="flex items-center gap-2 p-1">
-				<Switch
-					tooltip={true}
-					state={data?.config?.share ?? true}
+				<select
+					class="text-sm bg-transparent dark:bg-gray-900 outline-hidden rounded-lg px-2"
+					value={data?.config?.share ?? true}
 					on:change={(e) => {
-						if (data?.config?.share) {
-							data.config.share = e.detail;
+						const value = e.target.value;
+						let shareValue;
+						if (value === 'false') {
+							shareValue = false;
+						} else if (value === 'true') {
+							shareValue = true;
 						} else {
-							data.config = { ...(data?.config ?? {}), share: e.detail };
+							shareValue = value;
 						}
+						data.config = { ...(data?.config ?? {}), share: shareValue };
 					}}
-				/>
+				>
+					<option value={false}>{$i18n.t('No one')}</option>
+					<option value="members">{$i18n.t('Members')}</option>
+					<option value={true}>{$i18n.t('Anyone')}</option>
+				</select>
 			</div>
 		</div>
 	</div>

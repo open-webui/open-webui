@@ -252,7 +252,7 @@ export const getFileContentById = async (id: string) => {
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return await res.blob();
+			return await res.arrayBuffer();
 		})
 		.catch((err) => {
 			error = err.detail;

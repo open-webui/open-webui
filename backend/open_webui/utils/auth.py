@@ -24,6 +24,8 @@ from opentelemetry import trace
 
 from open_webui.utils.access_control import has_permission
 from open_webui.models.users import Users
+from open_webui.models.auths import Auths
+
 
 from open_webui.constants import ERROR_MESSAGES
 
@@ -42,6 +44,8 @@ from open_webui.env import (
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+from open_webui.internal.db import get_session
 
 
 log = logging.getLogger(__name__)
@@ -228,6 +232,10 @@ async def is_valid_token(request, decoded) -> bool:
 async def invalidate_token(request, token):
     decoded = decode_token(token)
 
+    # If token is invalid/expired, nothing to revoke
+    if not decoded:
+        return
+
     # Require Redis to store revoked tokens
     if request.app.state.redis:
         jti = decoded.get("jti")
@@ -271,6 +279,7 @@ async def get_current_user(
     response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+    db: Session = Depends(get_session),
 ):
     token = None
 
@@ -285,7 +294,7 @@ async def get_current_user(
 
     # auth by api key
     if token.startswith("sk-"):
-        user = get_current_user_by_api_key(request, token)
+        user = get_current_user_by_api_key(request, token, db=db)
 
         # Add user info to current span
         current_span = trace.get_current_span()
@@ -314,7 +323,7 @@ async def get_current_user(
                     detail="Invalid token",
                 )
 
-            user = Users.get_user_by_id(data["id"])
+            user = Users.get_user_by_id(data["id"], db=db)
             if user is None:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -364,8 +373,8 @@ async def get_current_user(
         raise e
 
 
-def get_current_user_by_api_key(request, api_key: str):
-    user = Users.get_user_by_api_key(api_key)
+def get_current_user_by_api_key(request, api_key: str, db: Session = None):
+    user = Users.get_user_by_api_key(api_key, db=db)
 
     if user is None:
         raise HTTPException(
@@ -393,7 +402,7 @@ def get_current_user_by_api_key(request, api_key: str):
         current_span.set_attribute("client.user.role", user.role)
         current_span.set_attribute("client.auth.type", "api_key")
 
-    Users.update_last_active_by_id(user.id)
+    Users.update_last_active_by_id(user.id, db=db)
     return user
 
 
@@ -413,3 +422,37 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def create_admin_user(email: str, password: str, name: str = "Admin"):
+    """
+    Create an admin user from environment variables.
+    Used for headless/automated deployments.
+    Returns the created user or None if creation failed.
+    """
+
+    if not email or not password:
+        return None
+
+    if Users.has_users():
+        log.debug("Users already exist, skipping admin creation")
+        return None
+
+    log.info(f"Creating admin account from environment variables: {email}")
+    try:
+        hashed = get_password_hash(password)
+        user = Auths.insert_new_auth(
+            email=email.lower(),
+            password=hashed,
+            name=name,
+            role="admin",
+        )
+        if user:
+            log.info(f"Admin account created successfully: {email}")
+            return user
+        else:
+            log.error("Failed to create admin account from environment variables")
+            return None
+    except Exception as e:
+        log.error(f"Error creating admin account: {e}")
+        return None

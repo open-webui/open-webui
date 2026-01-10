@@ -215,22 +215,27 @@
 
 	const groupNotes = (res) => {
 		if (!Array.isArray(res)) {
-			return {}; // or throw new Error("Notes response is not an array")
+			return []; // Return empty array for invalid input
 		}
 
-		// Build the grouped object
+		// Build the grouped object while tracking order
 		const grouped: Record<string, any[]> = {};
+		const orderedKeys: string[] = [];
+
 		for (const note of res) {
 			const timeRange = getTimeRange(note.updated_at / 1000000000);
 			if (!grouped[timeRange]) {
 				grouped[timeRange] = [];
+				orderedKeys.push(timeRange);
 			}
 			grouped[timeRange].push({
 				...note,
 				timeRange
 			});
 		}
-		return grouped;
+
+		// Return as array of [timeRange, notes] to preserve insertion order
+		return orderedKeys.map((key) => [key, grouped[key]] as [string, any[]]);
 	};
 
 	let dragged = false;
@@ -437,11 +442,11 @@
 
 			{#if items !== null && total !== null}
 				{#if (items ?? []).length > 0}
-					{@const notes = groupNotes(items)}
+					{@const groupedNotes = groupNotes(items)}
 
 					<div class="@container h-full py-2.5 px-2.5">
 						<div class="">
-							{#each Object.keys(notes) as timeRange, idx}
+							{#each groupedNotes as [timeRange, notesList], idx}
 								<div
 									class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium px-2.5 pb-2.5"
 								>
@@ -450,11 +455,9 @@
 
 								{#if displayOption === null}
 									<div
-										class="{Object.keys(notes).length - 1 !== idx
-											? 'mb-3'
-											: ''} gap-1.5 flex flex-col"
+										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-1.5 flex flex-col"
 									>
-										{#each notes[timeRange] as note, idx (note.id)}
+										{#each notesList as note, idx (note.id)}
 											<div
 												class=" flex cursor-pointer w-full px-3.5 py-1.5 border border-gray-50 dark:border-gray-850/30 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
 											>
@@ -536,11 +539,11 @@
 									</div>
 								{:else if displayOption === 'grid'}
 									<div
-										class="{Object.keys(notes).length - 1 !== idx
+										class="{groupedNotes.length - 1 !== idx
 											? 'mb-5'
 											: ''} gap-2.5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
 									>
-										{#each notes[timeRange] as note, idx (note.id)}
+										{#each notesList as note, idx (note.id)}
 											<div
 												class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 border border-gray-50 dark:border-gray-850/30 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
 											>

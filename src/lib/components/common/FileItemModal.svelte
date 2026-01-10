@@ -1,12 +1,12 @@
 <script lang="ts">
-	import * as XLSX from 'xlsx';
+	import type { WorkBook } from 'xlsx';
 
 	import { getContext, onMount, tick } from 'svelte';
 
 	import { formatFileSize, getLineCount } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
-	import { getFileById } from '$lib/apis/files';
+	import { getFileById, getFileContentById } from '$lib/apis/files';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
@@ -15,7 +15,6 @@
 
 	import Modal from './Modal.svelte';
 	import XMark from '../icons/XMark.svelte';
-	import Info from '../icons/Info.svelte';
 	import Switch from './Switch.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import dayjs from 'dayjs';
@@ -33,7 +32,7 @@
 	let isExcel = false;
 
 	let selectedTab = '';
-	let excelWorkbook: XLSX.WorkBook | null = null;
+	let excelWorkbook: WorkBook | null = null;
 	let excelSheetNames: string[] = [];
 	let selectedSheet = '';
 	let excelHtml = '';
@@ -93,35 +92,29 @@
 	const loadExcelContent = async () => {
 		try {
 			excelError = '';
-			const response = await fetch(`${WEBUI_API_BASE_URL}/files/${item.id}/content`, {
-				headers: {
-					Authorization: `Bearer ${localStorage.token}`
-				}
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to fetch Excel file');
-			}
-
-			const arrayBuffer = await response.arrayBuffer();
-			excelWorkbook = XLSX.read(arrayBuffer, { type: 'array' });
+			const [arrayBuffer, { read }] = await Promise.all([
+				getFileContentById(item.id),
+				import('xlsx')
+			]);
+			excelWorkbook = read(arrayBuffer, { type: 'array' });
 			excelSheetNames = excelWorkbook.SheetNames;
 
 			if (excelSheetNames.length > 0) {
 				selectedSheet = excelSheetNames[0];
-				renderExcelSheet();
+				await renderExcelSheet();
 			}
 		} catch (error) {
 			console.error('Error loading Excel/CSV file:', error);
-			excelError = 'Failed to load Excel/CSV file. Please try downloading it instead.';
+			excelError = $i18n.t('Failed to load Excel/CSV file. Please try downloading it instead.');
 		}
 	};
 
-	const renderExcelSheet = () => {
+	const renderExcelSheet = async () => {
 		if (!excelWorkbook || !selectedSheet) return;
 
 		const worksheet = excelWorkbook.Sheets[selectedSheet];
 		// Calculate row count
+		const XLSX = await import('xlsx');
 		const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
 		rowCount = range.e.r - range.s.r + 1;
 

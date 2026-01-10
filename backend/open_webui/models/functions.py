@@ -2,7 +2,8 @@ import logging
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, JSONField, get_db
+from sqlalchemy.orm import Session
+from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import Users, UserModel
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, Index
@@ -103,7 +104,11 @@ class FunctionValves(BaseModel):
 
 class FunctionsTable:
     def insert_new_function(
-        self, user_id: str, type: str, form_data: FunctionForm
+        self,
+        user_id: str,
+        type: str,
+        form_data: FunctionForm,
+        db: Optional[Session] = None,
     ) -> Optional[FunctionModel]:
         function = FunctionModel(
             **{
@@ -116,7 +121,7 @@ class FunctionsTable:
         )
 
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 result = Function(**function.model_dump())
                 db.add(result)
                 db.commit()
@@ -130,11 +135,14 @@ class FunctionsTable:
             return None
 
     def sync_functions(
-        self, user_id: str, functions: list[FunctionWithValvesModel]
+        self,
+        user_id: str,
+        functions: list[FunctionWithValvesModel],
+        db: Optional[Session] = None,
     ) -> list[FunctionWithValvesModel]:
         # Synchronize functions for a user by updating existing ones, inserting new ones, and removing those that are no longer present.
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 # Get existing functions
                 existing_functions = db.query(Function).all()
                 existing_ids = {func.id for func in existing_functions}
@@ -177,18 +185,20 @@ class FunctionsTable:
             log.exception(f"Error syncing functions for user {user_id}: {e}")
             return []
 
-    def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
+    def get_function_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[FunctionModel]:
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 function = db.get(Function, id)
                 return FunctionModel.model_validate(function)
         except Exception:
             return None
 
     def get_functions(
-        self, active_only=False, include_valves=False
+        self, active_only=False, include_valves=False, db: Optional[Session] = None
     ) -> list[FunctionModel | FunctionWithValvesModel]:
-        with get_db() as db:
+        with get_db_context(db) as db:
             if active_only:
                 functions = db.query(Function).filter_by(is_active=True).all()
 
@@ -205,12 +215,14 @@ class FunctionsTable:
                     FunctionModel.model_validate(function) for function in functions
                 ]
 
-    def get_function_list(self) -> list[FunctionUserResponse]:
-        with get_db() as db:
+    def get_function_list(
+        self, db: Optional[Session] = None
+    ) -> list[FunctionUserResponse]:
+        with get_db_context(db) as db:
             functions = db.query(Function).order_by(Function.updated_at.desc()).all()
             user_ids = list(set(func.user_id for func in functions))
 
-            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
 
             return [
@@ -228,9 +240,9 @@ class FunctionsTable:
             ]
 
     def get_functions_by_type(
-        self, type: str, active_only=False
+        self, type: str, active_only=False, db: Optional[Session] = None
     ) -> list[FunctionModel]:
-        with get_db() as db:
+        with get_db_context(db) as db:
             if active_only:
                 return [
                     FunctionModel.model_validate(function)
@@ -244,8 +256,10 @@ class FunctionsTable:
                     for function in db.query(Function).filter_by(type=type).all()
                 ]
 
-    def get_global_filter_functions(self) -> list[FunctionModel]:
-        with get_db() as db:
+    def get_global_filter_functions(
+        self, db: Optional[Session] = None
+    ) -> list[FunctionModel]:
+        with get_db_context(db) as db:
             return [
                 FunctionModel.model_validate(function)
                 for function in db.query(Function)
@@ -253,8 +267,10 @@ class FunctionsTable:
                 .all()
             ]
 
-    def get_global_action_functions(self) -> list[FunctionModel]:
-        with get_db() as db:
+    def get_global_action_functions(
+        self, db: Optional[Session] = None
+    ) -> list[FunctionModel]:
+        with get_db_context(db) as db:
             return [
                 FunctionModel.model_validate(function)
                 for function in db.query(Function)
@@ -262,8 +278,10 @@ class FunctionsTable:
                 .all()
             ]
 
-    def get_function_valves_by_id(self, id: str) -> Optional[dict]:
-        with get_db() as db:
+    def get_function_valves_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[dict]:
+        with get_db_context(db) as db:
             try:
                 function = db.get(Function, id)
                 return function.valves if function.valves else {}
@@ -272,23 +290,23 @@ class FunctionsTable:
                 return None
 
     def update_function_valves_by_id(
-        self, id: str, valves: dict
+        self, id: str, valves: dict, db: Optional[Session] = None
     ) -> Optional[FunctionValves]:
-        with get_db() as db:
+        with get_db_context(db) as db:
             try:
                 function = db.get(Function, id)
                 function.valves = valves
                 function.updated_at = int(time.time())
                 db.commit()
                 db.refresh(function)
-                return self.get_function_by_id(id)
+                return self.get_function_by_id(id, db=db)
             except Exception:
                 return None
 
     def update_function_metadata_by_id(
-        self, id: str, metadata: dict
+        self, id: str, metadata: dict, db: Optional[Session] = None
     ) -> Optional[FunctionModel]:
-        with get_db() as db:
+        with get_db_context(db) as db:
             try:
                 function = db.get(Function, id)
 
@@ -301,7 +319,7 @@ class FunctionsTable:
                     function.updated_at = int(time.time())
                     db.commit()
                     db.refresh(function)
-                    return self.get_function_by_id(id)
+                    return self.get_function_by_id(id, db=db)
                 else:
                     return None
             except Exception as e:
@@ -309,10 +327,10 @@ class FunctionsTable:
                 return None
 
     def get_user_valves_by_id_and_user_id(
-        self, id: str, user_id: str
+        self, id: str, user_id: str, db: Optional[Session] = None
     ) -> Optional[dict]:
         try:
-            user = Users.get_user_by_id(user_id)
+            user = Users.get_user_by_id(user_id, db=db)
             user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "functions" and "valves" settings
@@ -327,10 +345,10 @@ class FunctionsTable:
             return None
 
     def update_user_valves_by_id_and_user_id(
-        self, id: str, user_id: str, valves: dict
+        self, id: str, user_id: str, valves: dict, db: Optional[Session] = None
     ) -> Optional[dict]:
         try:
-            user = Users.get_user_by_id(user_id)
+            user = Users.get_user_by_id(user_id, db=db)
             user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "functions" and "valves" settings
@@ -342,7 +360,7 @@ class FunctionsTable:
             user_settings["functions"]["valves"][id] = valves
 
             # Update the user settings in the database
-            Users.update_user_by_id(user_id, {"settings": user_settings})
+            Users.update_user_by_id(user_id, {"settings": user_settings}, db=db)
 
             return user_settings["functions"]["valves"][id]
         except Exception as e:
@@ -351,8 +369,10 @@ class FunctionsTable:
             )
             return None
 
-    def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
-        with get_db() as db:
+    def update_function_by_id(
+        self, id: str, updated: dict, db: Optional[Session] = None
+    ) -> Optional[FunctionModel]:
+        with get_db_context(db) as db:
             try:
                 db.query(Function).filter_by(id=id).update(
                     {
@@ -361,12 +381,12 @@ class FunctionsTable:
                     }
                 )
                 db.commit()
-                return self.get_function_by_id(id)
+                return self.get_function_by_id(id, db=db)
             except Exception:
                 return None
 
-    def deactivate_all_functions(self) -> Optional[bool]:
-        with get_db() as db:
+    def deactivate_all_functions(self, db: Optional[Session] = None) -> Optional[bool]:
+        with get_db_context(db) as db:
             try:
                 db.query(Function).update(
                     {
@@ -379,8 +399,8 @@ class FunctionsTable:
             except Exception:
                 return None
 
-    def delete_function_by_id(self, id: str) -> bool:
-        with get_db() as db:
+    def delete_function_by_id(self, id: str, db: Optional[Session] = None) -> bool:
+        with get_db_context(db) as db:
             try:
                 db.query(Function).filter_by(id=id).delete()
                 db.commit()

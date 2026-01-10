@@ -43,29 +43,48 @@
 
 	const submitHandler = async () => {
 		// Convert domain filter string to array before sending
-		if (webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST) {
+		if (
+			typeof webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST === 'string' &&
+			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST
+		) {
 			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.split(',')
 				.map((domain) => domain.trim())
 				.filter((domain) => domain.length > 0);
-		} else {
+		} else if (!Array.isArray(webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST)) {
 			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = [];
 		}
 
 		// Convert Youtube loader language string to array before sending
-		if (webConfig.YOUTUBE_LOADER_LANGUAGE) {
+		if (
+			typeof webConfig.YOUTUBE_LOADER_LANGUAGE === 'string' &&
+			webConfig.YOUTUBE_LOADER_LANGUAGE
+		) {
 			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.split(',')
 				.map((lang) => lang.trim())
 				.filter((lang) => lang.length > 0);
-		} else {
+		} else if (!Array.isArray(webConfig.YOUTUBE_LOADER_LANGUAGE)) {
 			webConfig.YOUTUBE_LOADER_LANGUAGE = [];
+		}
+
+		// Convert numeric timeout values to strings (backend expects strings)
+		if (typeof webConfig.FIRECRAWL_TIMEOUT === 'number') {
+			webConfig.FIRECRAWL_TIMEOUT = webConfig.FIRECRAWL_TIMEOUT.toString();
+		}
+		if (typeof webConfig.PLAYWRIGHT_TIMEOUT === 'number') {
+			webConfig.PLAYWRIGHT_TIMEOUT = webConfig.PLAYWRIGHT_TIMEOUT.toString();
 		}
 
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig
 		});
 
-		webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
-		webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
+		// Convert arrays back to strings for display
+		if (Array.isArray(webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST)) {
+			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
+		}
+		if (Array.isArray(webConfig.YOUTUBE_LOADER_LANGUAGE)) {
+			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
+		}
 	};
 
 	onMount(async () => {
@@ -75,11 +94,31 @@
 			webConfig = res.web;
 
 			// Convert array back to comma-separated string for display
-			if (webConfig?.WEB_SEARCH_DOMAIN_FILTER_LIST) {
+			if (Array.isArray(webConfig?.WEB_SEARCH_DOMAIN_FILTER_LIST)) {
 				webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
+			} else if (!webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST) {
+				webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = '';
 			}
 
-			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
+			if (Array.isArray(webConfig?.YOUTUBE_LOADER_LANGUAGE)) {
+				webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
+			} else if (!webConfig.YOUTUBE_LOADER_LANGUAGE) {
+				webConfig.YOUTUBE_LOADER_LANGUAGE = '';
+			}
+
+			// Convert timeout strings to numbers for number input fields
+			if (webConfig.FIRECRAWL_TIMEOUT && typeof webConfig.FIRECRAWL_TIMEOUT === 'string') {
+				const parsed = parseInt(webConfig.FIRECRAWL_TIMEOUT);
+				if (!isNaN(parsed)) {
+					webConfig.FIRECRAWL_TIMEOUT = parsed;
+				}
+			}
+			if (webConfig.PLAYWRIGHT_TIMEOUT && typeof webConfig.PLAYWRIGHT_TIMEOUT === 'string') {
+				const parsed = parseInt(webConfig.PLAYWRIGHT_TIMEOUT);
+				if (!isNaN(parsed)) {
+					webConfig.PLAYWRIGHT_TIMEOUT = parsed;
+				}
+			}
 		}
 	});
 </script>
@@ -470,6 +509,24 @@
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
 									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Jina API Base URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Jina API Base URL')}
+												bind:value={webConfig.JINA_API_BASE_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
 										{$i18n.t('Jina API Key')}
 									</div>
 
@@ -628,6 +685,24 @@
 										bind:value={webConfig.FIRECRAWL_API_KEY}
 									/>
 								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl Timeout (s)')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="number"
+												placeholder={$i18n.t('Enter Firecrawl Timeout')}
+												bind:value={webConfig.FIRECRAWL_TIMEOUT}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'external'}
 							<div class="mb-2.5 flex w-full flex-col">
@@ -658,6 +733,36 @@
 										placeholder={$i18n.t('Enter External Web Search API Key')}
 										bind:value={webConfig.EXTERNAL_WEB_SEARCH_API_KEY}
 									/>
+								</div>
+							</div>
+						{/if}
+
+						{#if webConfig.WEB_SEARCH_ENGINE === 'duckduckgo'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('DDGS Backend')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<select
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												bind:value={webConfig.DDGS_BACKEND}
+											>
+												<option value="auto">{$i18n.t('Auto (Random)')}</option>
+												<option value="bing">{$i18n.t('Bing')}</option>
+												<option value="brave">{$i18n.t('Brave')}</option>
+												<option value="duckduckgo">{$i18n.t('DuckDuckGo')}</option>
+												<option value="google">{$i18n.t('Google')}</option>
+												<option value="grokipedia">{$i18n.t('Grokipedia')}</option>
+												<option value="mojeek">{$i18n.t('Mojeek')}</option>
+												<option value="wikipedia">{$i18n.t('Wikipedia')}</option>
+												<option value="yahoo">{$i18n.t('Yahoo')}</option>
+												<option value="yandex">{$i18n.t('Yandex')}</option>
+											</select>
+										</div>
+									</div>
 								</div>
 							</div>
 						{/if}
