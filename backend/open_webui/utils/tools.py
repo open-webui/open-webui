@@ -453,7 +453,7 @@ def get_builtin_tools(
     # Add code interpreter tool if enabled globally AND model has code_interpreter capability
     # Supports both pyodide (via frontend event call) and jupyter engines
     if (
-        getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", False)
+        getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", True)
         and get_model_capability("code_interpreter")
     ):
         builtin_functions.append(execute_code)
