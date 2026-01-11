@@ -1245,6 +1245,12 @@ RESPONSE_WATERMARK = PersistentConfig(
     os.environ.get("RESPONSE_WATERMARK", ""),
 )
 
+DEFAULT_STREAM_RESPONSE = PersistentConfig(
+    "DEFAULT_STREAM_RESPONSE",
+    "ui.default_stream_response",
+    os.environ.get("DEFAULT_STREAM_RESPONSE", "True").lower() == "true",
+)
+
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()
