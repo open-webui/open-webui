@@ -39,7 +39,7 @@ from langchain_core.documents import Document
 from open_webui.models.files import FileModel, FileUpdateForm, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
-from open_webui.internal.db import get_session
+from open_webui.internal.db import get_session, get_db
 from sqlalchemy.orm import Session
 
 
@@ -1586,6 +1586,12 @@ def process_file(
 ):
     """
     Process a file and save its content to the vector database.
+
+    NOTE: This function uses granular session management to prevent holding
+    database connections during slow embedding operations. The session is
+    committed before calling save_docs_to_vector_db() (which makes external
+    API calls for embeddings), and final DB updates use a fresh session.
+    This prevents connection pool exhaustion under concurrent load.
     """
     if user.role == "admin":
         file = Files.get_file_by_id(form_data.file_id, db=db)
@@ -1593,12 +1599,19 @@ def process_file(
         file = Files.get_file_by_id_and_user_id(form_data.file_id, user.id, db=db)
 
     if file:
-        try:
+        # Extract primitive values we'll need after committing the session
+        file_id = file.id
+        file_filename = file.filename
+        file_meta = file.meta
+        file_user_id = file.user_id
+        file_path = file.path
+        file_data = file.data
 
+        try:
             collection_name = form_data.collection_name
 
             if collection_name is None:
-                collection_name = f"file-{file.id}"
+                collection_name = f"file-{file_id}"
 
             if form_data.content:
                 # Update the content in the file
@@ -1607,7 +1620,7 @@ def process_file(
                 try:
                     # /files/{file_id}/data/content/update
                     VECTOR_DB_CLIENT.delete_collection(
-                        collection_name=f"file-{file.id}"
+                        collection_name=f"file-{file_id}"
                     )
                 except:
                     # Audio file upload pipeline
@@ -1617,11 +1630,11 @@ def process_file(
                     Document(
                         page_content=form_data.content.replace("<br/>", "\n"),
                         metadata={
-                            **file.meta,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
+                            **file_meta,
+                            "name": file_filename,
+                            "created_by": file_user_id,
+                            "file_id": file_id,
+                            "source": file_filename,
                         },
                     )
                 ]
@@ -1632,7 +1645,7 @@ def process_file(
                 # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
                 result = VECTOR_DB_CLIENT.query(
-                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                    collection_name=f"file-{file_id}", filter={"file_id": file_id}
                 )
 
                 if result is not None and len(result.ids[0]) > 0:
@@ -1646,24 +1659,23 @@ def process_file(
                 else:
                     docs = [
                         Document(
-                            page_content=file.data.get("content", ""),
+                            page_content=file_data.get("content", ""),
                             metadata={
-                                **file.meta,
-                                "name": file.filename,
-                                "created_by": file.user_id,
-                                "file_id": file.id,
-                                "source": file.filename,
+                                **file_meta,
+                                "name": file_filename,
+                                "created_by": file_user_id,
+                                "file_id": file_id,
+                                "source": file_filename,
                             },
                         )
                     ]
 
-                text_content = file.data.get("content", "")
+                text_content = file_data.get("content", "")
             else:
                 # Process the file and save the content
                 # Usage: /files/
-                file_path = file.path
                 if file_path:
-                    file_path = Storage.get_file(file_path)
+                    resolved_file_path = Storage.get_file(file_path)
                     loader = Loader(
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                         user=user,
@@ -1697,7 +1709,7 @@ def process_file(
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
                     docs = loader.load(
-                        file.filename, file.meta.get("content_type"), file_path
+                        file_filename, file_meta.get("content_type"), resolved_file_path
                     )
 
                     docs = [
@@ -1705,10 +1717,10 @@ def process_file(
                             page_content=doc.page_content,
                             metadata={
                                 **filter_metadata(doc.metadata),
-                                "name": file.filename,
-                                "created_by": file.user_id,
-                                "file_id": file.id,
-                                "source": file.filename,
+                                "name": file_filename,
+                                "created_by": file_user_id,
+                                "file_id": file_id,
+                                "source": file_filename,
                             },
                         )
                         for doc in docs
@@ -1716,87 +1728,100 @@ def process_file(
                 else:
                     docs = [
                         Document(
-                            page_content=file.data.get("content", ""),
+                            page_content=file_data.get("content", ""),
                             metadata={
-                                **file.meta,
-                                "name": file.filename,
-                                "created_by": file.user_id,
-                                "file_id": file.id,
-                                "source": file.filename,
+                                **file_meta,
+                                "name": file_filename,
+                                "created_by": file_user_id,
+                                "file_id": file_id,
+                                "source": file_filename,
                             },
                         )
                     ]
                 text_content = " ".join([doc.page_content for doc in docs])
 
             log.debug(f"text_content: {text_content}")
+            hash = calculate_sha256_string(text_content)
+
+            # Save content to database before slow embedding operation
             Files.update_file_data_by_id(
-                file.id,
+                file_id,
                 {"content": text_content},
                 db=db,
             )
-            hash = calculate_sha256_string(text_content)
 
             if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
-                Files.update_file_data_by_id(file.id, {"status": "completed"}, db=db)
-                Files.update_file_hash_by_id(file.id, hash, db=db)
+                Files.update_file_data_by_id(file_id, {"status": "completed"}, db=db)
+                Files.update_file_hash_by_id(file_id, hash, db=db)
                 return {
                     "status": True,
                     "collection_name": None,
-                    "filename": file.filename,
+                    "filename": file_filename,
                     "content": text_content,
                 }
-            else:
-                try:
-                    result = save_docs_to_vector_db(
-                        request,
-                        docs=docs,
-                        collection_name=collection_name,
-                        metadata={
-                            "file_id": file.id,
-                            "name": file.filename,
-                            "hash": hash,
-                        },
-                        add=(True if form_data.collection_name else False),
-                        user=user,
-                    )
-                    log.info(f"added {len(docs)} items to collection {collection_name}")
 
-                    if result:
+            # Commit and release the database connection before slow embedding operations.
+            # This prevents holding a connection during external API calls (5-60+ seconds),
+            # which would exhaust the connection pool under concurrent load.
+            db.commit()
+
+            try:
+                # SLOW OPERATION: External embedding API calls happen here.
+                # No database session is held during this time.
+                result = save_docs_to_vector_db(
+                    request,
+                    docs=docs,
+                    collection_name=collection_name,
+                    metadata={
+                        "file_id": file_id,
+                        "name": file_filename,
+                        "hash": hash,
+                    },
+                    add=(True if form_data.collection_name else False),
+                    user=user,
+                )
+                log.info(f"added {len(docs)} items to collection {collection_name}")
+
+                if result:
+                    # Use a fresh short-lived session for final status updates
+                    with get_db() as final_db:
                         Files.update_file_metadata_by_id(
-                            file.id,
+                            file_id,
                             {
                                 "collection_name": collection_name,
                             },
-                            db=db,
+                            db=final_db,
                         )
 
                         Files.update_file_data_by_id(
-                            file.id,
+                            file_id,
                             {"status": "completed"},
-                            db=db,
+                            db=final_db,
                         )
-                        Files.update_file_hash_by_id(file.id, hash, db=db)
+                        Files.update_file_hash_by_id(file_id, hash, db=final_db)
 
-                        return {
-                            "status": True,
-                            "collection_name": collection_name,
-                            "filename": file.filename,
-                            "content": text_content,
-                        }
-                    else:
-                        raise Exception("Error saving document to vector database")
-                except Exception as e:
-                    raise e
+                    return {
+                        "status": True,
+                        "collection_name": collection_name,
+                        "filename": file_filename,
+                        "content": text_content,
+                    }
+                else:
+                    raise Exception("Error saving document to vector database")
+            except Exception as e:
+                raise e
 
         except Exception as e:
             log.exception(e)
-            Files.update_file_data_by_id(
-                file.id,
-                {"status": "failed"},
-                db=db,
-            )
-            # Clear the hash so the file can be re-uploaded after fixing the issue
-            Files.update_file_hash_by_id(file.id, None, db=db)
+            # Use a fresh session for error status update
+            with get_db() as error_db:
+                Files.update_file_data_by_id(
+                    file_id,
+                    {"status": "failed"},
+                    db=error_db,
+                )
+                # Clear the hash so the file can be re-uploaded after fixing the issue
+                Files.update_file_hash_by_id(file_id, None, db=error_db)
 
             if "No pandoc was found" in str(e):
                 raise HTTPException(
