@@ -1529,9 +1529,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Process the form_data through the pipeline
     try:
+        # [DIAGNOSTIC] Start timing Pipeline Inlet
+        pipeline_start = time.time()
         form_data = await process_pipeline_inlet_filter(
             request, form_data, user, models
         )
+        # [DIAGNOSTIC] Log Pipeline duration
+        log.info(f"[LATENCY_DEBUG] Pipeline Inlet (Gemini/etc) took: {time.time() - pipeline_start:.4f}s")
     except Exception as e:
         raise e
 
@@ -1543,6 +1547,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
         ]
 
+        # [DIAGNOSTIC] Start timing Local Filters
+        filters_start = time.time()
         form_data, flags = await process_filter_functions(
             request=request,
             filter_functions=filter_functions,
@@ -1550,6 +1556,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data=form_data,
             extra_params=extra_params,
         )
+        # [DIAGNOSTIC] Log Local Filters duration
+        log.info(f"[LATENCY_DEBUG] Local Filter Functions (Preprocessing) took: {time.time() - filters_start:.4f}s")
     except Exception as e:
         raise Exception(f"{e}")
 
