@@ -19,126 +19,179 @@ log = logging.getLogger(__name__)
 # Directory where brand logos are stored
 LOGOS_DIR = Path(__file__).parent.parent / "static" / "model_logos"
 
+# =============================================================================
 # Brand keyword mappings: keywords -> logo filename (without extension)
-# The first matching keyword wins, so order matters for ambiguous cases
-BRAND_KEYWORDS = {
-    # OpenAI
-    "openai": "openai",
-    "gpt-": "openai",
-    "gpt4": "openai",
-    "o1-": "openai",
-    "o3-": "openai",
-    "chatgpt": "openai",
-    "text-davinci": "openai",
-    "text-embedding": "openai",
-    "dall-e": "openai",
-    "whisper": "openai",
-    "tts-": "openai",
+# ORDER MATTERS! More specific patterns should come BEFORE generic ones.
+# =============================================================================
+
+# Ordered list of (keyword, logo_name) tuples for precise matching
+# Use tuples instead of dict to maintain order in older Python versions
+BRAND_KEYWORDS_ORDERED = [
+    # =========================================================================
+    # OpenAI GPT Models - Individual logos (MOST SPECIFIC FIRST)
+    # =========================================================================
+    # GPT-5 series
+    ("gpt-5-codex", "gpt-5-codex"),
+    ("gpt-5-chat-latest", "gpt-5-chat-latest"),
+    ("gpt-5-mini", "gpt-5-mini"),
+    ("gpt-5-nano", "gpt-5-nano"),
+    ("gpt-5.1", "gpt-5.1"),
+    ("gpt-5.2", "gpt-5.2"),
+    ("gpt-5", "gpt-5"),
     
+    # GPT-4.1 series
+    ("gpt-4.1-mini", "gpt-4.1-mini"),
+    ("gpt-4.1-nano", "gpt-4.1-nano"),
+    ("gpt-4.1", "gpt-4.1"),
+    
+    # GPT-4o series
+    ("gpt-4o-mini", "gpt-4o-mini"),
+    ("gpt-4o", "gpt-4o"),
+    
+    # GPT-4 Turbo and base
+    ("gpt-4-turbo", "gpt-4-turbo"),
+    ("gpt-4", "gpt-4"),
+    
+    # GPT-3.5
+    ("gpt-3.5", "gpt-3.5"),
+    
+    # GPT special models
+    ("gpt-oss-20b", "gpt-oss-20b"),
+    
+    # O-series models (OpenAI reasoning models)
+    ("o3-mini", "o3-mini"),
+    ("o3", "o3"),
+    ("o1-mini", "o1-mini"),
+    ("o1-preview", "o1-preview"),
+    ("o1", "o1"),
+    
+    # OpenAI other services
+    ("chatgpt", "chatgpt"),
+    ("text-davinci", "openai"),
+    ("text-embedding", "openai"),
+    ("dall-e", "dall-e"),
+    ("whisper", "whisper"),
+    ("tts-", "openai"),
+    
+    # OpenAI fallback - ONLY when explicitly contains "openai"
+    ("openai", "openai"),
+    
+    # =========================================================================
+    # Google / Gemini Models
+    # =========================================================================
+    # Nana Banana - Gemini image generation models (handled specially below)
+    # Note: "gemini" + "image" combination is handled in get_brand_for_model()
+    
+    ("gemma", "gemma"),
+    ("gemini", "google"),
+    ("google", "google"),
+    ("palm", "google"),
+    ("bard", "google"),
+    
+    # =========================================================================
     # Anthropic Claude
-    "anthropic": "anthropic",
-    "claude": "anthropic",
+    # =========================================================================
+    ("claude", "anthropic"),
+    ("anthropic", "anthropic"),
     
-    # Google
-    "google": "google",
-    "gemini": "google",
-    "gemma": "google",
-    "palm": "google",
-    "bard": "google",
-    
+    # =========================================================================
     # Meta Llama
-    "meta": "meta",
-    "llama": "meta",
-    "codellama": "meta",
+    # =========================================================================
+    ("codellama", "codellama"),
+    ("llama", "meta"),
+    ("meta", "meta"),
     
+    # =========================================================================
     # Mistral
-    "mistral": "mistral",
-    "mixtral": "mistral",
-    "codestral": "mistral",
-    "pixtral": "mistral",
+    # =========================================================================
+    ("codestral", "codestral"),
+    ("pixtral", "pixtral"),
+    ("mixtral", "mixtral"),
+    ("mistral", "mistral"),
     
+    # =========================================================================
     # DeepSeek
-    "deepseek": "deepseek",
+    # =========================================================================
+    ("deepseek", "deepseek"),
     
+    # =========================================================================
+    # Chinese LLM Providers
+    # =========================================================================
     # Alibaba Qwen
-    "qwen": "qwen",
-    "tongyi": "qwen",
-    "alibaba": "qwen",
+    ("qwen", "qwen"),
+    ("tongyi", "qwen"),
+    ("alibaba", "qwen"),
     
     # Zhipu AI (GLM)
-    "zhipu": "zhipu",
-    "glm": "zhipu",
-    "chatglm": "zhipu",
+    ("chatglm", "zhipu"),
+    ("glm-", "zhipu"),
+    ("glm4", "zhipu"),
+    ("zhipu", "zhipu"),
     
     # ByteDance Doubao
-    "doubao": "doubao",
-    "bytedance": "doubao",
+    ("doubao", "doubao"),
+    ("bytedance", "doubao"),
     
     # Moonshot Kimi
-    "kimi": "kimi",
-    "moonshot": "kimi",
+    ("kimi", "kimi"),
+    ("moonshot", "kimi"),
     
     # Minimax
-    "minimax": "minimax",
-    "abab": "minimax",
-    
-    # xAI Grok
-    "grok": "xai",
-    "xai": "xai",
-    
-    # Cohere
-    "cohere": "cohere",
-    "command": "cohere",
+    ("minimax", "minimax"),
+    ("abab", "minimax"),
     
     # 01.AI Yi
-    "01.ai": "yi",
-    "yi-": "yi",
+    ("yi-", "yi"),
+    ("01.ai", "yi"),
     
     # Baichuan
-    "baichuan": "baichuan",
+    ("baichuan", "baichuan"),
     
-    # Hugging Face
-    "huggingface": "huggingface",
-    "hf.co": "huggingface",
+    # =========================================================================
+    # Other Providers
+    # =========================================================================
+    # xAI Grok
+    ("grok", "xai"),
+    ("xai", "xai"),
+    
+    # Cohere
+    ("command-r", "cohere"),
+    ("command", "cohere"),
+    ("cohere", "cohere"),
     
     # Microsoft
-    "microsoft": "microsoft",
-    "phi-": "microsoft",
-    "bing": "microsoft",
+    ("phi-", "microsoft"),
+    ("bing", "microsoft"),
+    ("microsoft", "microsoft"),
     
     # Amazon
-    "amazon": "amazon",
-    "titan": "amazon",
-    "bedrock": "amazon",
+    ("titan", "amazon"),
+    ("bedrock", "amazon"),
+    ("amazon", "amazon"),
     
     # Stability AI
-    "stability": "stability",
-    "stable-diffusion": "stability",
-    "sdxl": "stability",
+    ("stable-diffusion", "stability"),
+    ("sdxl", "stability"),
+    ("stability", "stability"),
     
-    # Ollama (local)
-    "ollama": "ollama",
+    # Hugging Face
+    ("huggingface", "huggingface"),
+    ("hf.co", "huggingface"),
     
     # Perplexity
-    "perplexity": "perplexity",
-    "pplx": "perplexity",
+    ("pplx", "perplexity"),
+    ("perplexity", "perplexity"),
     
-    # Together AI
-    "together": "together",
-    
-    # Groq
-    "groq": "groq",
-    
-    # Fireworks
-    "fireworks": "fireworks",
-    
-    # Replicate
-    "replicate": "replicate",
+    # Infrastructure providers
+    ("groq", "groq"),
+    ("together", "together"),
+    ("fireworks", "fireworks"),
+    ("replicate", "replicate"),
+    ("ollama", "ollama"),
     
     # Inflection
-    "inflection": "inflection",
-    "pi": "inflection",
-}
+    ("inflection", "inflection"),
+]
 
 # Supported image extensions (in priority order)
 SUPPORTED_EXTENSIONS = [".png", ".svg", ".webp", ".jpg", ".jpeg"]
@@ -159,7 +212,12 @@ def get_brand_for_model(model_id: str) -> Optional[str]:
     """
     model_id_lower = model_id.lower()
     
-    for keyword, brand in BRAND_KEYWORDS.items():
+    # Special case: Gemini image models -> nana-banana
+    if "gemini" in model_id_lower and "image" in model_id_lower:
+        return "nana-banana"
+    
+    # Iterate through ordered keywords (specific patterns first)
+    for keyword, brand in BRAND_KEYWORDS_ORDERED:
         if keyword in model_id_lower:
             return brand
     
