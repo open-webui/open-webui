@@ -227,10 +227,13 @@ async def create_new_knowledge(
     request: Request,
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations (has_permission, insert_new_knowledge) manage their own sessions.
+    # This prevents holding a connection during embed_knowledge_base_metadata()
+    # which makes external embedding API calls (1-5+ seconds).
     if user.role != "admin" and not has_permission(
-        user.id, "workspace.knowledge", request.app.state.config.USER_PERMISSIONS, db=db
+        user.id, "workspace.knowledge", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -245,12 +248,11 @@ async def create_new_knowledge(
             user.id,
             "sharing.public_knowledge",
             request.app.state.config.USER_PERMISSIONS,
-            db=db,
         )
     ):
         form_data.access_control = {}
 
-    knowledge = Knowledges.insert_new_knowledge(user.id, form_data, db=db)
+    knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
         # Embed knowledge base for semantic search
