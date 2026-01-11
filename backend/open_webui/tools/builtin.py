@@ -360,6 +360,7 @@ async def execute_code(
     Execute Python code in a sandboxed environment and return the output.
     Use this to perform calculations, data analysis, generate visualizations,
     or run any Python code that would help answer the user's question.
+    If you print base64 strings to stdout or result, they will be automatically uploaded and displayed in the chat.
 
     :param code: The Python code to execute
     :return: JSON with stdout, stderr, and result from execution
@@ -513,7 +514,7 @@ builtins.__import__ = restricted_import
         }
 
         if image_files:
-            response["message"] = "Code executed successfully. Any generated images are already visible to the user in the chat."
+            response["message"] = "Code executed successfully. Any generated images as well as printed base64 strings have been uploaded and are already visible to the user in the chat."
 
         return json.dumps(response, ensure_ascii=False)
     except Exception as e:
