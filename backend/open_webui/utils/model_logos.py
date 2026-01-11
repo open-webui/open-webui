@@ -137,25 +137,52 @@ def _scan_available_logos() -> list[tuple[list[str], Path]]:
     return logos
 
 
-def _match_logo_for_model(model_id: str) -> Optional[Path]:
+def _extract_model_info(model_id: str) -> dict:
     """
-    Find a matching logo for a model ID using smart fuzzy matching.
+    Extract structured information from a model ID.
     
-    This uses multiple matching strategies for maximum compatibility:
-    1. Any keyword from logo filename is contained in model_id
-    2. Any part of model_id is contained in any logo keyword
+    Handles various formats:
+    - "openai/gpt-5.2" -> provider="openai", model="gpt-5.2"
+    - "OpenRouter.openai/gpt-5.2" -> service="openrouter", provider="openai", model="gpt-5.2"
+    - "OpenRouter.qwen/qwen3-235b-a22b:free" -> service="openrouter", provider="qwen", model="qwen3-235b-a22b"
+    - "gpt-4o-mini" -> model="gpt-4o-mini"
     """
     model_id_lower = model_id.lower()
-    # Remove common prefixes like provider names
-    model_clean = re.sub(r'^[a-z]+\.', '', model_id_lower)  # Remove "provider." prefix
-    model_no_delimiters = re.sub(r'[-_\.:/\s]+', '', model_id_lower)
+    info = {"original": model_id, "model": model_id_lower, "provider": None, "service": None}
     
-    # Extract keywords from model ID
-    model_keywords = set()
-    model_parts = re.split(r'[-_\.:/\s]+', model_id_lower)
-    for part in model_parts:
-        if part and len(part) >= 2 and not part.isdigit():
-            model_keywords.add(part)
+    # Check for service.provider/model pattern (e.g., OpenRouter.openai/gpt-5.2)
+    service_match = re.match(r'^([a-z]+)\.([a-z]+)/(.+)$', model_id_lower)
+    if service_match:
+        info["service"] = service_match.group(1)
+        info["provider"] = service_match.group(2)
+        info["model"] = service_match.group(3)
+    else:
+        # Check for provider/model pattern (e.g., openai/gpt-5.2)
+        provider_match = re.match(r'^([a-z]+)/(.+)$', model_id_lower)
+        if provider_match:
+            info["provider"] = provider_match.group(1)
+            info["model"] = provider_match.group(2)
+    
+    # Clean up model name - remove suffixes like :free, :latest
+    info["model_clean"] = re.sub(r':[a-z]+$', '', info["model"])
+    
+    return info
+
+
+def _match_logo_for_model(model_id: str) -> Optional[Path]:
+    """
+    Find a matching logo for a model ID using smart prioritized matching.
+    
+    Matching priority:
+    1. Exact model name match (e.g., "gpt-5.2" -> "gpt-5.2.png")
+    2. Model name with version variations (e.g., "gpt-5.2" matches "gpt-5.2-pro.png")
+    3. Provider-based match (e.g., "openai" -> "openai.png") 
+    4. Fuzzy keyword match
+    """
+    info = _extract_model_info(model_id)
+    model_name = info["model_clean"]
+    provider = info["provider"]
+    model_id_lower = model_id.lower()
     
     # Special case: Gemini image models -> nana-banana
     if "gemini" in model_id_lower and "image" in model_id_lower:
@@ -166,23 +193,78 @@ def _match_logo_for_model(model_id: str) -> Optional[Path]:
                 return logo_path
     
     logos = _scan_available_logos()
+    candidates = []  # List of (score, logo_path)
     
-    # Strategy 1: Check if any logo keyword is in model_id (or model_clean)
     for logo_keywords, logo_path in logos:
-        for kw in logo_keywords:
-            if len(kw) >= 3:  # Only meaningful keywords
-                if kw in model_id_lower or kw in model_clean or kw in model_no_delimiters:
-                    return logo_path
+        logo_stem = logo_path.stem.lower()
+        logo_stem_normalized = _normalize_name(logo_stem)
+        score = 0
+        
+        # === EXACT MATCH (Highest Priority) ===
+        # Check if logo filename exactly matches model name
+        if logo_stem_normalized == model_name or logo_stem == model_name:
+            score = 1000
+        # Check if logo filename starts with model name (e.g., gpt-5.2 matches gpt-5.2-pro)
+        elif logo_stem_normalized.startswith(model_name) or logo_stem.startswith(model_name):
+            score = 900
+        # Check if model name starts with logo filename (e.g., gpt-5.2-xyz matches gpt-5.2)
+        elif model_name.startswith(logo_stem_normalized) or model_name.startswith(logo_stem):
+            # Length bonus - longer matches are better
+            score = 800 + len(logo_stem_normalized) * 10
+        
+        # === PROVIDER MATCH ===
+        # If provider matches (e.g., "openai" matches "openai.png" or "openai_(3).jpg")
+        if provider and score == 0:
+            if provider in logo_keywords or provider == logo_stem_normalized:
+                score = 500
+            # Check if provider is in logo filename
+            elif provider in logo_stem:
+                score = 400
+        
+        # === BRAND KEYWORD MATCH ===
+        # Check for important brand keywords in model name
+        brand_keywords = ["qwen", "claude", "gemini", "deepseek", "grok", "llama", "mistral", 
+                         "meta", "google", "anthropic", "kimi", "moonshot", "doubao", "zhipu",
+                         "glm", "hunyuan", "minimax", "copilot", "gemma", "baai", "bytedance"]
+        
+        if score == 0:
+            for brand in brand_keywords:
+                if brand in model_name or brand in model_id_lower:
+                    if brand in logo_keywords or brand in logo_stem_normalized:
+                        score = 700 + len(brand) * 5
+                        break
+        
+        # === FUZZY MATCH (Low Priority) ===
+        if score == 0:
+            model_keywords = set(re.split(r'[-_\.:/\s]+', model_name))
+            for logo_kw in logo_keywords:
+                if len(logo_kw) >= 4:  # Only meaningful keywords
+                    for model_kw in model_keywords:
+                        if len(model_kw) >= 4:
+                            if model_kw == logo_kw:
+                                score = 300 + len(model_kw) * 5
+                                break
+                            elif model_kw in logo_kw or logo_kw in model_kw:
+                                score = 200 + min(len(model_kw), len(logo_kw)) * 3
+                                break
+                    if score > 0:
+                        break
+        
+        # Avoid matching generic service names like "openrouter" unless nothing else matches
+        if score > 0 and score < 500:
+            generic_names = ["openrouter", "newapi", "one", "api"]
+            if any(g in logo_stem_normalized for g in generic_names):
+                score = max(0, score - 300)  # Heavily penalize generic matches
+        
+        if score > 0:
+            candidates.append((score, logo_path))
     
-    # Strategy 2: Check if any model keyword matches any logo keyword
-    for logo_keywords, logo_path in logos:
-        for model_kw in model_keywords:
-            if len(model_kw) >= 3:
-                for logo_kw in logo_keywords:
-                    if len(logo_kw) >= 3:
-                        # Exact match or one contains the other
-                        if model_kw == logo_kw or model_kw in logo_kw or logo_kw in model_kw:
-                            return logo_path
+    if candidates:
+        # Return the highest scoring match
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        best_score, best_path = candidates[0]
+        log.debug(f"Logo match scores for '{model_id}': top={best_score}, path={best_path.name}")
+        return best_path
     
     return None
 
