@@ -453,39 +453,42 @@ builtins.__import__ = restricted_import
         # Handle image outputs (base64 encoded) - check both stdout and result
         image_files = []
 
-        # Extract images from stdout
+        # Extract and upload images from stdout
         if stdout:
+            from open_webui.utils.files import get_image_url_from_base64
             stdout_lines = stdout.split("\n")
-            clean_stdout_lines = []
-            for line in stdout_lines:
+            for idx, line in enumerate(stdout_lines):
                 if "data:image/" in line and ";base64," in line:
-                    image_files.append({"type": "image", "url": line.strip()})
-                else:
-                    clean_stdout_lines.append(line)
-            stdout = "\n".join(clean_stdout_lines)
+                    image_url = get_image_url_from_base64(
+                        __request__,
+                        line.strip(),
+                        __metadata__ or {},
+                        __user__ or {},
+                    )
+                    if image_url:
+                        stdout_lines[idx] = f"![Output Image]({image_url})"
+                        image_files.append({"type": "image", "url": image_url})
+            stdout = "\n".join(stdout_lines)
 
-        # Extract images from result
+        # Extract and upload images from result
         if result:
+            from open_webui.utils.files import get_image_url_from_base64
             result_lines = result.split("\n")
-            clean_result_lines = []
-            for line in result_lines:
+            for idx, line in enumerate(result_lines):
                 if "data:image/" in line and ";base64," in line:
-                    image_files.append({"type": "image", "url": line.strip()})
-                else:
-                    clean_result_lines.append(line)
-            result = "\n".join(clean_result_lines)
+                    image_url = get_image_url_from_base64(
+                        __request__,
+                        line.strip(),
+                        __metadata__ or {},
+                        __user__ or {},
+                    )
+                    if image_url:
+                        result_lines[idx] = f"![Output Image]({image_url})"
+                        image_files.append({"type": "image", "url": image_url})
+            result = "\n".join(result_lines)
 
-        # Persist and emit images if present
+        # Emit images if present
         if image_files:
-            log.debug(f"execute_code found {len(image_files)} images to emit")
-
-            if __chat_id__ and __message_id__:
-                image_files = Chats.add_message_files_by_id_and_message_id(
-                    __chat_id__,
-                    __message_id__,
-                    image_files,
-                )
-
             if __event_emitter__:
                 await __event_emitter__(
                     {
