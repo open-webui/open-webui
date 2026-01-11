@@ -2626,10 +2626,14 @@ async def process_files_batch(
     request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ) -> BatchProcessFilesResponse:
     """
     Process a batch of files and save them to the vector database.
+
+    NOTE: We intentionally do NOT use Depends(get_session) here.
+    The save_docs_to_vector_db() call makes external embedding API calls which
+    can take 5-60+ seconds for batch operations. Database operations after
+    embedding (Files.update_file_by_id) manage their own short-lived sessions.
     """
 
     collection_name = form_data.collection_name
@@ -2690,7 +2694,7 @@ async def process_files_batch(
             # Update all files with collection name
             for file_update, file_result in zip(file_updates, file_results):
                 Files.update_file_by_id(
-                    id=file_result.file_id, form_data=file_update, db=db
+                    id=file_result.file_id, form_data=file_update
                 )
                 file_result.status = "completed"
 
