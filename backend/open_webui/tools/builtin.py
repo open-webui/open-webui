@@ -445,44 +445,43 @@ builtins.__import__ = restricted_import
         image_files = []
 
         # Get actual user object for image upload (upload_image requires user.id attribute)
-        user = None
         if __user__ and __user__.get("id"):
             from open_webui.models.users import Users
+            from open_webui.utils.files import get_image_url_from_base64
+
             user = Users.get_user_by_id(__user__["id"])
 
-        # Extract and upload images from stdout
-        if stdout and user:
-            from open_webui.utils.files import get_image_url_from_base64
-            stdout_lines = stdout.split("\n")
-            for idx, line in enumerate(stdout_lines):
-                if "data:image/" in line and ";base64," in line:
-                    image_url = get_image_url_from_base64(
-                        __request__,
-                        line.strip(),
-                        __metadata__ or {},
-                        user,
-                    )
-                    if image_url:
-                        stdout_lines[idx] = f"![Output Image]({image_url})"
-                        image_files.append({"type": "image", "url": image_url})
-            stdout = "\n".join(stdout_lines)
+            # Extract and upload images from stdout
+            if stdout:
+                stdout_lines = stdout.split("\n")
+                for idx, line in enumerate(stdout_lines):
+                    if "data:image/" in line and ";base64," in line:
+                        image_url = get_image_url_from_base64(
+                            __request__,
+                            line.strip(),
+                            __metadata__ or {},
+                            user,
+                        )
+                        if image_url:
+                            stdout_lines[idx] = f"![Output Image]({image_url})"
+                            image_files.append({"type": "image", "url": image_url})
+                stdout = "\n".join(stdout_lines)
 
-        # Extract and upload images from result
-        if result and user:
-            from open_webui.utils.files import get_image_url_from_base64
-            result_lines = result.split("\n")
-            for idx, line in enumerate(result_lines):
-                if "data:image/" in line and ";base64," in line:
-                    image_url = get_image_url_from_base64(
-                        __request__,
-                        line.strip(),
-                        __metadata__ or {},
-                        user,
-                    )
-                    if image_url:
-                        result_lines[idx] = f"![Output Image]({image_url})"
-                        image_files.append({"type": "image", "url": image_url})
-            result = "\n".join(result_lines)
+            # Extract and upload images from result
+            if result:
+                result_lines = result.split("\n")
+                for idx, line in enumerate(result_lines):
+                    if "data:image/" in line and ";base64," in line:
+                        image_url = get_image_url_from_base64(
+                            __request__,
+                            line.strip(),
+                            __metadata__ or {},
+                            user,
+                        )
+                        if image_url:
+                            result_lines[idx] = f"![Output Image]({image_url})"
+                            image_files.append({"type": "image", "url": image_url})
+                result = "\n".join(result_lines)
 
         # Emit images if present
         if image_files:
