@@ -371,8 +371,6 @@ async def execute_code(
         return json.dumps({"error": "Request context not available"})
 
     try:
-        engine = getattr(__request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
-
         # Get blocked modules from config - applies to both engines
         blocked_modules = getattr(__request__.app.state.config, "CODE_INTERPRETER_BLOCKED_MODULES", [])
 
@@ -390,6 +388,7 @@ builtins.__import__ = restricted_import
 """
             code = blocking_code + "\n" + code
 
+        engine = getattr(__request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
         if engine == "pyodide":
             # Execute via frontend pyodide using bidirectional event call
             if __event_call__ is None:
