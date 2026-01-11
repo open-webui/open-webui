@@ -252,8 +252,11 @@ async def update_memory_by_id(
     request: Request,
     form_data: MemoryUpdateModel,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations (update_memory_by_id_and_user_id) manage their own
+    # short-lived sessions. This prevents holding a connection during
+    # EMBEDDING_FUNCTION() which makes external API calls (1-5+ seconds).
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -269,7 +272,7 @@ async def update_memory_by_id(
         )
 
     memory = Memories.update_memory_by_id_and_user_id(
-        memory_id, user.id, form_data.content, db=db
+        memory_id, user.id, form_data.content
     )
     if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
