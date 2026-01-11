@@ -371,21 +371,31 @@ async def execute_code(
         return json.dumps({"error": "Request context not available"})
 
     try:
-        # Get blocked modules from config - applies to both engines
-        blocked_modules = getattr(__request__.app.state.config, "CODE_INTERPRETER_BLOCKED_MODULES", [])
+        # Import blocked modules from config (same as middleware)
+        from open_webui.config import CODE_INTERPRETER_BLOCKED_MODULES
 
         # Add import blocking code if there are blocked modules
-        if blocked_modules:
-            blocking_code = f"""
-import builtins
-_original_import = builtins.__import__
-_blocked = {blocked_modules!r}
-def restricted_import(name, *args, **kwargs):
-    if name in _blocked or any(name.startswith(m + '.') for m in _blocked):
-        raise ImportError(f"Module '{{name}}' is not available")
-    return _original_import(name, *args, **kwargs)
-builtins.__import__ = restricted_import
-"""
+        if CODE_INTERPRETER_BLOCKED_MODULES:
+            import textwrap
+            blocking_code = textwrap.dedent(
+                f"""
+                import builtins
+
+                BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
+
+                _real_import = builtins.__import__
+                def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
+                    if name.split('.')[0] in BLOCKED_MODULES:
+                        importer_name = globals.get('__name__') if globals else None
+                        if importer_name == '__main__':
+                            raise ImportError(
+                                f"Direct import of module {{name}} is restricted."
+                            )
+                    return _real_import(name, globals, locals, fromlist, level)
+
+                builtins.__import__ = restricted_import
+                """
+            )
             code = blocking_code + "\n" + code
 
         engine = getattr(__request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
