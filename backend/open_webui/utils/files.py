@@ -18,6 +18,7 @@ from open_webui.storage.provider import Storage
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
 from open_webui.routers.files import upload_file_handler
+from open_webui.utils.misc import sanitize_metadata
 
 import mimetypes
 import base64
@@ -118,10 +119,12 @@ def upload_audio(request, audio_data, content_type, metadata, user):
             "content-type": content_type,
         },
     )
+    # Sanitize metadata to remove non-JSON-serializable values (e.g., tool callables)
+    safe_metadata = sanitize_metadata(metadata)
     file_item = upload_file_handler(
         request,
         file=file,
-        metadata=metadata,
+        metadata=safe_metadata,
         process=False,
         user=user,
     )

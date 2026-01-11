@@ -401,6 +401,43 @@ def sanitize_data_for_db(obj):
     return obj
 
 
+def sanitize_metadata(metadata):
+    """
+    Sanitize metadata dict to ensure all values are JSON-serializable.
+    This removes callable functions, objects, and other non-serializable types
+    that may be present in the metadata (e.g., tool callables from middleware).
+    """
+    if metadata is None:
+        return {}
+
+    sanitized = {}
+    for key, value in metadata.items():
+        # Skip callables (functions, methods)
+        if callable(value):
+            continue
+        # Skip known non-serializable keys that contain tool data
+        if key in ("tools", "mcp_clients"):
+            continue
+        # Try to include the value if it's a basic type or dict/list
+        if isinstance(value, (str, int, float, bool, type(None))):
+            sanitized[key] = value
+        elif isinstance(value, dict):
+            # Recursively sanitize nested dicts
+            sanitized[key] = sanitize_metadata(value)
+        elif isinstance(value, (list, tuple)):
+            # Sanitize list items
+            sanitized_list = []
+            for item in value:
+                if isinstance(item, (str, int, float, bool, type(None))):
+                    sanitized_list.append(item)
+                elif isinstance(item, dict):
+                    sanitized_list.append(sanitize_metadata(item))
+                # Skip non-serializable items in lists
+            sanitized[key] = sanitized_list
+        # Skip any other types that might not be JSON-serializable
+    return sanitized
+
+
 def extract_folders_after_data_docs(path):
     # Convert the path to a Path object if it's not already
     path = Path(path)

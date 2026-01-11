@@ -23,6 +23,7 @@ from open_webui.routers.files import upload_file_handler, get_file_content_by_id
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.misc import sanitize_metadata
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
 from open_webui.utils.images.comfyui import (
@@ -500,6 +501,7 @@ def get_image_data(data: str, headers=None):
         return None, None
 
 
+
 def upload_image(request, image_data, content_type, metadata, user, db=None):
     image_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
@@ -509,10 +511,12 @@ def upload_image(request, image_data, content_type, metadata, user, db=None):
             "content-type": content_type,
         },
     )
+    # Sanitize metadata to remove non-JSON-serializable values (e.g., tool callables)
+    safe_metadata = sanitize_metadata(metadata)
     file_item = upload_file_handler(
         request,
         file=file,
-        metadata=metadata,
+        metadata=safe_metadata,
         process=False,
         user=user,
     )
