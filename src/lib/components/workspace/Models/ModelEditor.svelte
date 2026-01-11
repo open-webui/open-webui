@@ -3,7 +3,7 @@
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, user } from '$lib/stores';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
@@ -346,6 +346,7 @@
 	});
 </script>
 
+```
 {#if loaded}
 	<AccessControlModal
 		bind:show={showAccessControlModal}
@@ -479,15 +480,16 @@
 										filesInputElement.click();
 									}}
 								>
-									{#if info.meta.profile_image_url}
+									{#if info.meta.profile_image_url && !info.meta.profile_image_url.includes('/static/favicon')}
 										<img
 											src={info.meta.profile_image_url}
 											alt="model profile"
 											class="rounded-xl size-60 object-cover shrink-0"
 										/>
 									{:else}
+										<!-- Custom: Use API to get auto-matched brand logo -->
 										<img
-											src="{WEBUI_BASE_URL}/static/favicon.png"
+											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${encodeURIComponent(info.id || id)}`}
 											alt="model profile"
 											class=" rounded-xl size-60 object-cover shrink-0"
 										/>
