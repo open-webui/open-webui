@@ -119,8 +119,11 @@ async def query_memory(
     request: Request,
     form_data: QueryMemoryForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations (get_memories_by_user_id) manage their own short-lived sessions.
+    # This prevents holding a connection during EMBEDDING_FUNCTION()
+    # which makes external embedding API calls (1-5+ seconds).
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -135,7 +138,7 @@ async def query_memory(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    memories = Memories.get_memories_by_user_id(user.id, db=db)
+    memories = Memories.get_memories_by_user_id(user.id)
     if not memories:
         raise HTTPException(status_code=404, detail="No memories found for user")
 
