@@ -494,17 +494,6 @@ def get_builtin_tools(
         pydantic_model = convert_function_to_pydantic_model(func)
         spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
 
-        # Add pyodide limitation note to execute_code description when using pyodide engine
-        if func.__name__ == "execute_code":
-            engine = getattr(request.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
-            if engine == "pyodide":
-                blocked_modules = getattr(request.app.state.config, "CODE_INTERPRETER_BLOCKED_MODULES", [])
-                pyodide_note = " Note: Code runs in a browser-based Python environment (Pyodide) with limited packages. Standard library and numpy, pandas, matplotlib, scipy, scikit-learn are available. Network requests and file system access are restricted."
-                if blocked_modules:
-                    pyodide_note += f" The following modules are blocked: {', '.join(blocked_modules)}."
-                spec["description"] = spec.get("description", "") + pyodide_note
-                log.debug(f"execute_code tool description updated for pyodide: {spec['description']}")
-
         tools_dict[func.__name__] = {
             "tool_id": f"builtin:{func.__name__}",
             "callable": callable,
