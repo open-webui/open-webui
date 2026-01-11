@@ -7,8 +7,8 @@ against model IDs using smart fuzzy matching.
 
 HOW IT WORKS:
 1. Scans all logo files in static/model_logos/ directory
-2. Cleans filenames (removes -color, spaces, (1), etc.)
-3. Uses bidirectional "contains" matching for flexibility
+2. Extracts keywords from filenames (removing suffixes like -color, -icon)
+3. Uses multiple matching strategies for maximum flexibility
 4. No need to rename files perfectly - just drop them in!
 
 This is a custom enhancement that minimizes merge conflicts with upstream
@@ -32,77 +32,85 @@ SUPPORTED_EXTENSIONS = [".png", ".svg", ".webp", ".jpg", ".jpeg"]
 # Caches for performance optimization
 # =============================================================================
 _logo_cache: dict[str, Optional[str]] = {}
-_available_logos_cache: Optional[list[tuple[str, str, Path]]] = None
+_available_logos_cache: Optional[list[tuple[list[str], Path]]] = None
 
 
 def _normalize_name(name: str) -> str:
     """
-    Normalize a name for matching by removing common suffixes and cleaning up.
-    
-    Examples:
-        "claude-color" -> "claude"
-        "deepseek-color (1)" -> "deepseek"
-        "nana banana" -> "nana-banana" or "nanabanana"
-        "qwen-color (1)" -> "qwen"
+    Normalize a name by removing common suffixes and cleaning up.
     """
     name = name.lower().strip()
-    
-    # Replace spaces with hyphens for matching
     name = name.replace(" ", "-")
     
-    # Remove common suffixes like -color, -icon, -logo
-    name = re.sub(r'[-_]?(color|icon|logo|brand|official)$', '', name)
+    # Remove common suffixes like -color, -icon, -logo (can appear anywhere)
+    name = re.sub(r'[-_]?(color|icon|logo|brand|official)', '', name)
     
     # Remove version numbers like (1), (2), _v2, -v1
-    name = re.sub(r'[-_\s]?\(\d+\)$', '', name)
+    name = re.sub(r'[-_\s]?\(\d+\)', '', name)
     name = re.sub(r'[-_]?v\d+$', '', name)
     
-    # Remove trailing hyphens/underscores
-    name = name.rstrip('-_')
+    # Remove trailing/leading hyphens/underscores
+    name = name.strip('-_')
     
     return name
 
 
-def _extract_keywords(name: str) -> list[str]:
+def _extract_all_keywords(name: str) -> list[str]:
     """
-    Extract multiple keyword variants from a name for flexible matching.
+    Extract ALL possible keywords from a filename for maximum matching flexibility.
     
     Examples:
-        "claude-color" -> ["claude-color", "claude", "claudecolor"]
+        "Google-gemini-icon" -> ["google-gemini", "google", "gemini", "googlegemini"]
+        "deepseek-color (1)" -> ["deepseek", "deepseekcolor"]
+        "qwen-color (1)" -> ["qwen", "qwencolor"]
         "nana banana" -> ["nana-banana", "nana", "banana", "nanabanana"]
     """
-    keywords = []
+    keywords = set()
     
-    # Original name (lowercase)
     original = name.lower().strip()
-    keywords.append(original)
     
-    # Normalized version
+    # Normalized version (removes -color, -icon, etc.)
     normalized = _normalize_name(original)
-    if normalized and normalized != original:
-        keywords.append(normalized)
+    if normalized and len(normalized) >= 2:
+        keywords.add(normalized)
     
-    # Version without hyphens (for matching)
-    no_hyphens = original.replace("-", "").replace("_", "").replace(" ", "")
-    if no_hyphens and no_hyphens not in keywords:
-        keywords.append(no_hyphens)
+    # Version without any delimiters
+    no_delimiters = re.sub(r'[-_\s\(\)\d]+', '', original)
+    if no_delimiters and len(no_delimiters) >= 2:
+        keywords.add(no_delimiters)
     
-    # Split by common delimiters and add parts
-    parts = re.split(r'[-_\s]+', original)
+    # Split by delimiters and add each meaningful part
+    parts = re.split(r'[-_\s\(\)]+', original)
     for part in parts:
-        if len(part) >= 3 and part not in keywords:  # Only meaningful parts
-            keywords.append(part)
+        # Skip common suffixes and very short parts
+        if part and len(part) >= 2 and part not in ('color', 'icon', 'logo', 'brand', 'official', 'svg', 'png', 'jpg'):
+            # Skip numeric-only parts
+            if not part.isdigit():
+                keywords.add(part)
     
-    return keywords
+    # Also add normalized parts
+    normalized_parts = re.split(r'[-_\s]+', normalized)
+    for part in normalized_parts:
+        if part and len(part) >= 2:
+            keywords.add(part)
+    
+    # Special handling: remove leading/trailing numbers from keywords
+    cleaned_keywords = set()
+    for kw in keywords:
+        cleaned = re.sub(r'^\d+|\d+$', '', kw).strip('-_')
+        if cleaned and len(cleaned) >= 2:
+            cleaned_keywords.add(cleaned)
+    
+    return list(cleaned_keywords | keywords)
 
 
-def _scan_available_logos() -> list[tuple[str, str, Path]]:
+def _scan_available_logos() -> list[tuple[list[str], Path]]:
     """
-    Scan the logos directory and return all available logo files.
+    Scan the logos directory and return all available logo files with their keywords.
     
     Returns:
-        List of (original_name, normalized_name, logo_path) tuples,
-        sorted by normalized name length (longest first) for more specific matching.
+        List of (keywords_list, logo_path) tuples,
+        sorted by longest keyword length (for more specific matching).
     """
     global _available_logos_cache
     
@@ -113,16 +121,16 @@ def _scan_available_logos() -> list[tuple[str, str, Path]]:
     if LOGOS_DIR.exists():
         for ext in SUPPORTED_EXTENSIONS:
             for logo_file in LOGOS_DIR.glob(f"*{ext}"):
-                original_name = logo_file.stem.lower()
+                filename = logo_file.stem
                 # Skip README and other non-logo files
-                if original_name in ("readme", "license", "changelog"):
+                if filename.lower() in ("readme", "license", "changelog", "pixpin_2025-11-12_01-43-20"):
                     continue
-                normalized_name = _normalize_name(original_name)
-                logos.append((original_name, normalized_name, logo_file))
+                keywords = _extract_all_keywords(filename)
+                if keywords:
+                    logos.append((keywords, logo_file))
     
-    # Sort by normalized name length (descending) for more specific matching first
-    # e.g., "gpt-5-mini" should match before "gpt-5"
-    logos.sort(key=lambda x: len(x[1]), reverse=True)
+    # Sort by longest keyword length (descending) for more specific matching first
+    logos.sort(key=lambda x: max(len(k) for k in x[0]) if x[0] else 0, reverse=True)
     
     _available_logos_cache = logos
     log.info(f"Scanned {len(logos)} logo files from {LOGOS_DIR}")
@@ -133,59 +141,48 @@ def _match_logo_for_model(model_id: str) -> Optional[Path]:
     """
     Find a matching logo for a model ID using smart fuzzy matching.
     
-    Matching strategies (in order):
-    1. Exact match: logo filename == model_id
-    2. Logo in model: logo filename is contained in model_id
-    3. Model in logo: model_id keyword is contained in logo filename
-    4. Normalized matching: compare cleaned versions
-    
-    Args:
-        model_id: The model identifier (e.g., "gpt-4o-mini", "claude-3-opus")
-    
-    Returns:
-        Path to the matching logo file, or None if no match
+    This uses multiple matching strategies for maximum compatibility:
+    1. Any keyword from logo filename is contained in model_id
+    2. Any part of model_id is contained in any logo keyword
     """
     model_id_lower = model_id.lower()
-    model_normalized = _normalize_name(model_id_lower)
-    model_no_delimiters = model_id_lower.replace("-", "").replace("_", "").replace(".", "")
+    # Remove common prefixes like provider names
+    model_clean = re.sub(r'^[a-z]+\.', '', model_id_lower)  # Remove "provider." prefix
+    model_no_delimiters = re.sub(r'[-_\.:/\s]+', '', model_id_lower)
+    
+    # Extract keywords from model ID
+    model_keywords = set()
+    model_parts = re.split(r'[-_\.:/\s]+', model_id_lower)
+    for part in model_parts:
+        if part and len(part) >= 2 and not part.isdigit():
+            model_keywords.add(part)
     
     # Special case: Gemini image models -> nana-banana
     if "gemini" in model_id_lower and "image" in model_id_lower:
-        for orig, norm, logo_path in _scan_available_logos():
-            # Match "nana banana", "nana-banana", or "nanabanana"
-            if "nana" in norm and "banana" in norm:
+        for logo_keywords, logo_path in _scan_available_logos():
+            if any("nana" in k and "banana" in k for k in logo_keywords):
                 return logo_path
-            if "nana" in orig and "banana" in orig:
+            if "nana" in logo_keywords and "banana" in logo_keywords:
                 return logo_path
     
     logos = _scan_available_logos()
     
-    # Strategy 1 & 2: Check if logo name (original or normalized) is in model_id
-    for orig, norm, logo_path in logos:
-        # Exact or contains match with normalized name
-        if norm in model_id_lower or norm in model_normalized:
-            return logo_path
-        # Also check original name
-        if orig in model_id_lower:
-            return logo_path
-    
-    # Strategy 3: Check if model keywords are in logo name (reverse matching)
-    # This helps match "FreeDuck.claude-3-5-haiku" with "claude-color.svg"
-    model_keywords = _extract_keywords(model_id_lower)
-    for orig, norm, logo_path in logos:
-        for keyword in model_keywords:
-            if len(keyword) >= 4:  # Only check meaningful keywords
-                if keyword in norm or keyword in orig:
+    # Strategy 1: Check if any logo keyword is in model_id (or model_clean)
+    for logo_keywords, logo_path in logos:
+        for kw in logo_keywords:
+            if len(kw) >= 3:  # Only meaningful keywords
+                if kw in model_id_lower or kw in model_clean or kw in model_no_delimiters:
                     return logo_path
     
-    # Strategy 4: Check without delimiters
-    for orig, norm, logo_path in logos:
-        logo_no_delimiters = norm.replace("-", "").replace("_", "")
-        if logo_no_delimiters in model_no_delimiters:
-            return logo_path
-        if model_no_delimiters and logo_no_delimiters and \
-           (model_no_delimiters in logo_no_delimiters or logo_no_delimiters in model_no_delimiters):
-            return logo_path
+    # Strategy 2: Check if any model keyword matches any logo keyword
+    for logo_keywords, logo_path in logos:
+        for model_kw in model_keywords:
+            if len(model_kw) >= 3:
+                for logo_kw in logo_keywords:
+                    if len(logo_kw) >= 3:
+                        # Exact match or one contains the other
+                        if model_kw == logo_kw or model_kw in logo_kw or logo_kw in model_kw:
+                            return logo_path
     
     return None
 
@@ -196,15 +193,10 @@ def get_logo_path(model_id: str) -> Optional[Path]:
     
     This function uses SMART FUZZY MATCHING:
     - "FreeDuck.claude-3-5-haiku" matches "claude-color.svg" ✓
+    - "gemini-3-pro-preview" matches "Google-gemini-icon.svg" ✓
+    - "qwen/qwen-image(free)" matches "qwen-color (1).png" ✓
+    - "deepseek-r1:8b" matches "deepseek-color (1).png" ✓
     - "gemini-3-pro-image-preview" matches "nana banana.jpg" ✓
-    - "776-gpt-5-mini-abc" matches "gpt-5-mini.png" ✓
-    - "deepseek-chat-v2" matches "deepseek-color (1).png" ✓
-    
-    Args:
-        model_id: The model identifier
-    
-    Returns:
-        Path to the logo file, or None if no matching logo exists
     """
     # Check cache first
     if model_id in _logo_cache:
@@ -254,8 +246,8 @@ def clear_cache():
 
 
 def list_available_logos() -> list[str]:
-    """List all available logo names."""
-    return [norm for _, norm, _ in _scan_available_logos()]
+    """List all available logo files."""
+    return [str(path.name) for _, path in _scan_available_logos()]
 
 
 def get_brand_for_model(model_id: str) -> Optional[str]:
