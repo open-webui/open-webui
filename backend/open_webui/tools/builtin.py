@@ -418,29 +418,20 @@ builtins.__import__ = restricted_import
         elif engine == "jupyter":
             from open_webui.utils.code_interpreter import execute_code_jupyter
 
-            # Get Jupyter configuration from app state
-            jupyter_url = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_URL", "")
-            if not jupyter_url:
-                return json.dumps({"error": "Code interpreter is not configured. Jupyter URL is not set."})
-
-            jupyter_auth = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_AUTH", "")
-            jupyter_token = ""
-            jupyter_password = ""
-
-            if jupyter_auth == "token":
-                jupyter_token = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN", "")
-            elif jupyter_auth == "password":
-                jupyter_password = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD", "")
-
-            jupyter_timeout = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_TIMEOUT", 60)
-
-            # Execute the code
             output = await execute_code_jupyter(
-                base_url=jupyter_url,
-                code=code,
-                token=jupyter_token,
-                password=jupyter_password,
-                timeout=jupyter_timeout,
+                __request__.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
+                code,
+                (
+                    __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == "token"
+                    else None
+                ),
+                (
+                    __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == "password"
+                    else None
+                ),
+                __request__.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
             )
 
             stdout = output.get("stdout", "")
