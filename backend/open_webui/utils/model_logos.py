@@ -29,14 +29,17 @@ LOGOS_DIR = Path(__file__).parent.parent / "static" / "model_logos"
 BRAND_KEYWORDS_ORDERED = [
     # =========================================================================
     # OpenAI GPT Models - Individual logos (MOST SPECIFIC FIRST)
+    # Matching uses "contains" logic, so "abc-gpt-5-mini-xyz" will match "gpt-5-mini"
     # =========================================================================
-    # GPT-5 series
+    # GPT-5 series (most specific first)
     ("gpt-5-codex", "gpt-5-codex"),
     ("gpt-5-chat-latest", "gpt-5-chat-latest"),
     ("gpt-5-mini", "gpt-5-mini"),
     ("gpt-5-nano", "gpt-5-nano"),
-    ("gpt-5.1", "gpt-5.1"),
+    ("gpt-5.2-pro", "gpt-5.2-pro"),
     ("gpt-5.2", "gpt-5.2"),
+    ("gpt-5.1", "gpt-5.1"),
+    ("gpt-5-pro", "gpt-5-pro"),
     ("gpt-5", "gpt-5"),
     
     # GPT-4.1 series
@@ -55,7 +58,8 @@ BRAND_KEYWORDS_ORDERED = [
     # GPT-3.5
     ("gpt-3.5", "gpt-3.5"),
     
-    # GPT special models
+    # GPT-OSS special models (larger models first)
+    ("gpt-oss-120b", "gpt-oss-120b"),
     ("gpt-oss-20b", "gpt-oss-20b"),
     
     # O-series models (OpenAI reasoning models)
