@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-01-12
+
+### Added
+
+- 🐍 Users can now ask models to perform calculations, analyze data, and generate visualizations through autonomous Python code execution—for example, "create a bar chart showing quarterly sales" or "analyze this dataset for trends and outliers." Requires Native function calling mode and the code_interpreter capability enabled. [#20592](https://github.com/open-webui/open-webui/pull/20592), [Docs:#998](https://github.com/open-webui/docs/pull/998)
+- 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 Translations for Catalan, German, Polish, and Spanish were enhanced and expanded.
+
+### Fixed
+
+- ⚡ Database connection pool exhaustion and timeout errors during concurrent usage have been resolved by releasing connections before chat completion requests and embedding operations for memory and knowledge base processing. [#20569](https://github.com/open-webui/open-webui/pull/20569), [#20570](https://github.com/open-webui/open-webui/pull/20570), [#20571](https://github.com/open-webui/open-webui/pull/20571), [#20572](https://github.com/open-webui/open-webui/pull/20572), [#20575](https://github.com/open-webui/open-webui/pull/20575), [#20576](https://github.com/open-webui/open-webui/pull/20576), [#20577](https://github.com/open-webui/open-webui/pull/20577), [#20578](https://github.com/open-webui/open-webui/pull/20578), [#20579](https://github.com/open-webui/open-webui/pull/20579), [#20580](https://github.com/open-webui/open-webui/pull/20580), [#20581](https://github.com/open-webui/open-webui/pull/20581)
+
 ## [0.7.2] - 2026-01-10
 
 ### Fixed
