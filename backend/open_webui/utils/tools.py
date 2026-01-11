@@ -51,6 +51,7 @@ from open_webui.tools.builtin import (
     fetch_url,
     generate_image,
     edit_image,
+    execute_code,
     search_memories,
     add_memory,
     replace_memory_content,
@@ -449,6 +450,14 @@ def get_builtin_tools(
     ) and get_model_capability("image_generation"):
         builtin_functions.append(edit_image)
 
+    # Add code interpreter tool if enabled globally AND model has code_interpreter capability
+    # Supports both pyodide (via frontend event call) and jupyter engines
+    if (
+        getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", False)
+        and get_model_capability("code_interpreter")
+    ):
+        builtin_functions.append(execute_code)
+
     # Notes tools - search, view, create, and update user's notes (if notes enabled globally)
     if getattr(request.app.state.config, "ENABLE_NOTES", False):
         builtin_functions.extend(
@@ -473,6 +482,8 @@ def get_builtin_tools(
                 "__request__": request,
                 "__user__": extra_params.get("__user__", {}),
                 "__event_emitter__": extra_params.get("__event_emitter__"),
+                "__event_call__": extra_params.get("__event_call__"),
+                "__metadata__": extra_params.get("__metadata__"),
                 "__chat_id__": extra_params.get("__chat_id__"),
                 "__message_id__": extra_params.get("__message_id__"),
                 "__model_knowledge__": model_knowledge,
@@ -482,6 +493,17 @@ def get_builtin_tools(
         # Generate spec from function
         pydantic_model = convert_function_to_pydantic_model(func)
         spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
+
+        # Add pyodide limitation note to execute_code description when using pyodide engine
+        if func.__name__ == "execute_code":
+            engine = getattr(request.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
+            if engine == "pyodide":
+                blocked_modules = getattr(request.app.state.config, "CODE_INTERPRETER_BLOCKED_MODULES", [])
+                pyodide_note = " Note: Code runs in a browser-based Python environment (Pyodide) with limited packages. Standard library and numpy, pandas, matplotlib, scipy, scikit-learn are available. Network requests and file system access are restricted."
+                if blocked_modules:
+                    pyodide_note += f" The following modules are blocked: {', '.join(blocked_modules)}."
+                spec["description"] = spec.get("description", "") + pyodide_note
+                log.debug(f"execute_code tool description updated for pyodide: {spec['description']}")
 
         tools_dict[func.__name__] = {
             "tool_id": f"builtin:{func.__name__}",

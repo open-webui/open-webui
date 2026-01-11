@@ -342,6 +342,180 @@ async def edit_image(
 
 
 # =============================================================================
+# CODE INTERPRETER TOOLS
+# =============================================================================
+
+
+async def execute_code(
+    code: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __event_emitter__: callable = None,
+    __event_call__: callable = None,
+    __chat_id__: str = None,
+    __message_id__: str = None,
+    __metadata__: dict = None,
+) -> str:
+    """
+    Execute Python code in a sandboxed environment and return the output.
+    Use this to perform calculations, data analysis, generate visualizations,
+    or run any Python code that would help answer the user's question.
+
+    :param code: The Python code to execute
+    :return: JSON with stdout, stderr, and result from execution
+    """
+    from uuid import uuid4
+
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    try:
+        engine = getattr(__request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
+
+        if engine == "pyodide":
+            # Execute via frontend pyodide using bidirectional event call
+            if __event_call__ is None:
+                return json.dumps({"error": "Event call not available. WebSocket connection required for pyodide execution."})
+
+            # Get blocked modules from config
+            blocked_modules = getattr(__request__.app.state.config, "CODE_INTERPRETER_BLOCKED_MODULES", [])
+
+            # Add import blocking code if there are blocked modules
+            if blocked_modules:
+                blocking_code = f"""
+import builtins
+_original_import = builtins.__import__
+_blocked = {blocked_modules!r}
+def restricted_import(name, *args, **kwargs):
+    if name in _blocked or any(name.startswith(m + '.') for m in _blocked):
+        raise ImportError(f"Module '{{name}}' is not available")
+    return _original_import(name, *args, **kwargs)
+builtins.__import__ = restricted_import
+"""
+                code = blocking_code + "\n" + code
+
+            session_id = __metadata__.get("session_id") if __metadata__ else None
+
+            output = await __event_call__(
+                {
+                    "type": "execute:python",
+                    "data": {
+                        "id": str(uuid4()),
+                        "code": code,
+                        "session_id": session_id,
+                    },
+                }
+            )
+
+            # Parse the output - pyodide returns dict with stdout, stderr, result
+            if isinstance(output, dict):
+                stdout = output.get("stdout", "")
+                stderr = output.get("stderr", "")
+                result = output.get("result", "")
+            else:
+                stdout = ""
+                stderr = ""
+                result = str(output) if output else ""
+
+        elif engine == "jupyter":
+            from open_webui.utils.code_interpreter import execute_code_jupyter
+
+            # Get Jupyter configuration from app state
+            jupyter_url = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_URL", "")
+            if not jupyter_url:
+                return json.dumps({"error": "Code interpreter is not configured. Jupyter URL is not set."})
+
+            jupyter_auth = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_AUTH", "")
+            jupyter_token = ""
+            jupyter_password = ""
+
+            if jupyter_auth == "token":
+                jupyter_token = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN", "")
+            elif jupyter_auth == "password":
+                jupyter_password = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD", "")
+
+            jupyter_timeout = getattr(__request__.app.state.config, "CODE_INTERPRETER_JUPYTER_TIMEOUT", 60)
+
+            # Execute the code
+            output = await execute_code_jupyter(
+                base_url=jupyter_url,
+                code=code,
+                token=jupyter_token,
+                password=jupyter_password,
+                timeout=jupyter_timeout,
+            )
+
+            stdout = output.get("stdout", "")
+            stderr = output.get("stderr", "")
+            result = output.get("result", "")
+
+        else:
+            return json.dumps({"error": f"Unknown code interpreter engine: {engine}"})
+
+        # Handle image outputs (base64 encoded) - check both stdout and result
+        image_files = []
+
+        # Extract images from stdout
+        if stdout:
+            stdout_lines = stdout.split("\n")
+            clean_stdout_lines = []
+            for line in stdout_lines:
+                if "data:image/" in line and ";base64," in line:
+                    image_files.append({"type": "image", "url": line.strip()})
+                else:
+                    clean_stdout_lines.append(line)
+            stdout = "\n".join(clean_stdout_lines)
+
+        # Extract images from result
+        if result:
+            result_lines = result.split("\n")
+            clean_result_lines = []
+            for line in result_lines:
+                if "data:image/" in line and ";base64," in line:
+                    image_files.append({"type": "image", "url": line.strip()})
+                else:
+                    clean_result_lines.append(line)
+            result = "\n".join(clean_result_lines)
+
+        # Persist and emit images if present
+        if image_files:
+            log.debug(f"execute_code found {len(image_files)} images to emit")
+
+            if __chat_id__ and __message_id__:
+                image_files = Chats.add_message_files_by_id_and_message_id(
+                    __chat_id__,
+                    __message_id__,
+                    image_files,
+                )
+
+            if __event_emitter__:
+                await __event_emitter__(
+                    {
+                        "type": "chat:message:files",
+                        "data": {
+                            "files": image_files,
+                        },
+                    }
+                )
+
+        response = {
+            "status": "success",
+            "stdout": stdout,
+            "stderr": stderr,
+            "result": result,
+        }
+
+        if image_files:
+            response["message"] = "Code executed successfully. Any generated images are already visible to the user in the chat. No need to output the base64 string manually or other image data."
+            response["images_generated"] = len(image_files)
+
+        return json.dumps(response, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f"execute_code error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+# =============================================================================
 # MEMORY TOOLS
 # =============================================================================
 
