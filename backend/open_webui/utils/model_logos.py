@@ -1,15 +1,20 @@
 """
 Model Logo Auto-Loading Utility
 
-This module provides automatic logo matching for LLM models based on their
-model ID or name. It maps model identifiers to brand logos stored in the
-static/model_logos directory.
+This module provides DYNAMIC automatic logo matching for LLM models.
+It scans the static/model_logos directory and matches logo filenames
+against model IDs using "contains" logic.
+
+HOW IT WORKS:
+1. Scans all logo files in static/model_logos/ directory
+2. Sorts filenames by length (longest first for specificity)
+3. If a model ID contains a logo filename, that logo is used
+4. No need to modify code when adding new logos - just drop the file!
 
 This is a custom enhancement that minimizes merge conflicts with upstream
 by isolating all logic in this new file.
 """
 
-import os
 import logging
 from pathlib import Path
 from typing import Optional
@@ -19,211 +24,74 @@ log = logging.getLogger(__name__)
 # Directory where brand logos are stored
 LOGOS_DIR = Path(__file__).parent.parent / "static" / "model_logos"
 
-# =============================================================================
-# Brand keyword mappings: keywords -> logo filename (without extension)
-# ORDER MATTERS! More specific patterns should come BEFORE generic ones.
-# =============================================================================
-
-# Ordered list of (keyword, logo_name) tuples for precise matching
-# Use tuples instead of dict to maintain order in older Python versions
-BRAND_KEYWORDS_ORDERED = [
-    # =========================================================================
-    # OpenAI GPT Models - Individual logos (MOST SPECIFIC FIRST)
-    # Matching uses "contains" logic, so "abc-gpt-5-mini-xyz" will match "gpt-5-mini"
-    # =========================================================================
-    # GPT-5 series (most specific first)
-    ("gpt-5-codex", "gpt-5-codex"),
-    ("gpt-5-chat-latest", "gpt-5-chat-latest"),
-    ("gpt-5-mini", "gpt-5-mini"),
-    ("gpt-5-nano", "gpt-5-nano"),
-    ("gpt-5.2-pro", "gpt-5.2-pro"),
-    ("gpt-5.2", "gpt-5.2"),
-    ("gpt-5.1", "gpt-5.1"),
-    ("gpt-5-pro", "gpt-5-pro"),
-    ("gpt-5", "gpt-5"),
-    
-    # GPT-4.1 series
-    ("gpt-4.1-mini", "gpt-4.1-mini"),
-    ("gpt-4.1-nano", "gpt-4.1-nano"),
-    ("gpt-4.1", "gpt-4.1"),
-    
-    # GPT-4o series
-    ("gpt-4o-mini", "gpt-4o-mini"),
-    ("gpt-4o", "gpt-4o"),
-    
-    # GPT-4 Turbo and base
-    ("gpt-4-turbo", "gpt-4-turbo"),
-    ("gpt-4", "gpt-4"),
-    
-    # GPT-3.5
-    ("gpt-3.5", "gpt-3.5"),
-    
-    # GPT-OSS special models (larger models first)
-    ("gpt-oss-120b", "gpt-oss-120b"),
-    ("gpt-oss-20b", "gpt-oss-20b"),
-    
-    # O-series models (OpenAI reasoning models)
-    ("o3-mini", "o3-mini"),
-    ("o3", "o3"),
-    ("o1-mini", "o1-mini"),
-    ("o1-preview", "o1-preview"),
-    ("o1", "o1"),
-    
-    # OpenAI other services
-    ("chatgpt", "chatgpt"),
-    ("text-davinci", "openai"),
-    ("text-embedding", "openai"),
-    ("dall-e", "dall-e"),
-    ("whisper", "whisper"),
-    ("tts-", "openai"),
-    
-    # OpenAI fallback - ONLY when explicitly contains "openai"
-    ("openai", "openai"),
-    
-    # =========================================================================
-    # Google / Gemini Models
-    # =========================================================================
-    # Nana Banana - Gemini image generation models (handled specially below)
-    # Note: "gemini" + "image" combination is handled in get_brand_for_model()
-    
-    ("gemma", "gemma"),
-    ("gemini", "google"),
-    ("google", "google"),
-    ("palm", "google"),
-    ("bard", "google"),
-    
-    # =========================================================================
-    # Anthropic Claude
-    # =========================================================================
-    ("claude", "anthropic"),
-    ("anthropic", "anthropic"),
-    
-    # =========================================================================
-    # Meta Llama
-    # =========================================================================
-    ("codellama", "codellama"),
-    ("llama", "meta"),
-    ("meta", "meta"),
-    
-    # =========================================================================
-    # Mistral
-    # =========================================================================
-    ("codestral", "codestral"),
-    ("pixtral", "pixtral"),
-    ("mixtral", "mixtral"),
-    ("mistral", "mistral"),
-    
-    # =========================================================================
-    # DeepSeek
-    # =========================================================================
-    ("deepseek", "deepseek"),
-    
-    # =========================================================================
-    # Chinese LLM Providers
-    # =========================================================================
-    # Alibaba Qwen
-    ("qwen", "qwen"),
-    ("tongyi", "qwen"),
-    ("alibaba", "qwen"),
-    
-    # Zhipu AI (GLM)
-    ("chatglm", "zhipu"),
-    ("glm-", "zhipu"),
-    ("glm4", "zhipu"),
-    ("zhipu", "zhipu"),
-    
-    # ByteDance Doubao
-    ("doubao", "doubao"),
-    ("bytedance", "doubao"),
-    
-    # Moonshot Kimi
-    ("kimi", "kimi"),
-    ("moonshot", "kimi"),
-    
-    # Minimax
-    ("minimax", "minimax"),
-    ("abab", "minimax"),
-    
-    # 01.AI Yi
-    ("yi-", "yi"),
-    ("01.ai", "yi"),
-    
-    # Baichuan
-    ("baichuan", "baichuan"),
-    
-    # =========================================================================
-    # Other Providers
-    # =========================================================================
-    # xAI Grok
-    ("grok", "xai"),
-    ("xai", "xai"),
-    
-    # Cohere
-    ("command-r", "cohere"),
-    ("command", "cohere"),
-    ("cohere", "cohere"),
-    
-    # Microsoft
-    ("phi-", "microsoft"),
-    ("bing", "microsoft"),
-    ("microsoft", "microsoft"),
-    
-    # Amazon
-    ("titan", "amazon"),
-    ("bedrock", "amazon"),
-    ("amazon", "amazon"),
-    
-    # Stability AI
-    ("stable-diffusion", "stability"),
-    ("sdxl", "stability"),
-    ("stability", "stability"),
-    
-    # Hugging Face
-    ("huggingface", "huggingface"),
-    ("hf.co", "huggingface"),
-    
-    # Perplexity
-    ("pplx", "perplexity"),
-    ("perplexity", "perplexity"),
-    
-    # Infrastructure providers
-    ("groq", "groq"),
-    ("together", "together"),
-    ("fireworks", "fireworks"),
-    ("replicate", "replicate"),
-    ("ollama", "ollama"),
-    
-    # Inflection
-    ("inflection", "inflection"),
-]
-
 # Supported image extensions (in priority order)
 SUPPORTED_EXTENSIONS = [".png", ".svg", ".webp", ".jpg", ".jpeg"]
 
-# Cache for resolved logo paths (performance optimization)
+# =============================================================================
+# Caches for performance optimization
+# =============================================================================
 _logo_cache: dict[str, Optional[str]] = {}
+_available_logos_cache: Optional[list[tuple[str, Path]]] = None
 
 
-def get_brand_for_model(model_id: str) -> Optional[str]:
+def _scan_available_logos() -> list[tuple[str, Path]]:
     """
-    Determine the brand name for a given model ID.
+    Scan the logos directory and return all available logo files.
+    
+    Returns:
+        List of (logo_name, logo_path) tuples, sorted by name length (longest first)
+        for more specific matching.
+    """
+    global _available_logos_cache
+    
+    if _available_logos_cache is not None:
+        return _available_logos_cache
+    
+    logos = []
+    if LOGOS_DIR.exists():
+        for ext in SUPPORTED_EXTENSIONS:
+            for logo_file in LOGOS_DIR.glob(f"*{ext}"):
+                logo_name = logo_file.stem.lower()  # filename without extension
+                # Skip README and other non-logo files
+                if logo_name in ("readme", "license", "changelog"):
+                    continue
+                logos.append((logo_name, logo_file))
+    
+    # Sort by name length (descending) for more specific matching first
+    # e.g., "gpt-5-mini" should match before "gpt-5"
+    logos.sort(key=lambda x: len(x[0]), reverse=True)
+    
+    _available_logos_cache = logos
+    log.info(f"Scanned {len(logos)} logo files from {LOGOS_DIR}")
+    return logos
+
+
+def _match_logo_for_model(model_id: str) -> Optional[Path]:
+    """
+    Find a matching logo for a model ID by scanning available logos.
+    
+    The matching uses "contains" logic - if the model ID contains the logo
+    filename anywhere, it's a match. Longer filenames are checked first
+    for more specific matching.
     
     Args:
         model_id: The model identifier (e.g., "gpt-4o-mini", "claude-3-opus")
     
     Returns:
-        Brand name (logo filename without extension) or None if no match
+        Path to the matching logo file, or None if no match
     """
     model_id_lower = model_id.lower()
     
     # Special case: Gemini image models -> nana-banana
     if "gemini" in model_id_lower and "image" in model_id_lower:
-        return "nana-banana"
+        for logo_name, logo_path in _scan_available_logos():
+            if logo_name == "nana-banana":
+                return logo_path
     
-    # Iterate through ordered keywords (specific patterns first)
-    for keyword, brand in BRAND_KEYWORDS_ORDERED:
-        if keyword in model_id_lower:
-            return brand
+    # Scan all available logos (sorted by length for specificity)
+    for logo_name, logo_path in _scan_available_logos():
+        if logo_name in model_id_lower:
+            return logo_path
     
     return None
 
@@ -231,6 +99,21 @@ def get_brand_for_model(model_id: str) -> Optional[str]:
 def get_logo_path(model_id: str) -> Optional[Path]:
     """
     Get the filesystem path to the logo for a given model ID.
+    
+    This function uses DYNAMIC directory scanning - just add logo files
+    to the static/model_logos directory and they'll be automatically matched.
+    
+    Matching rules:
+    1. Model ID is converted to lowercase
+    2. Logo filename (without extension) is matched using "contains"
+    3. Longer filenames match first (e.g., "gpt-5-mini" before "gpt-5")
+    4. Special: gemini + image -> nana-banana
+    
+    Examples:
+        "gpt-4o-mini" -> matches "gpt-4o-mini.png" (exact)
+        "776-gpt-5-mini-abc" -> matches "gpt-5-mini.png" (contains)
+        "my-custom-deepseek-v2" -> matches "deepseek.png" (contains)
+        "gemini-2.0-flash-image-gen" -> matches "nana-banana.png" (special)
     
     Args:
         model_id: The model identifier
@@ -243,18 +126,13 @@ def get_logo_path(model_id: str) -> Optional[Path]:
         cached = _logo_cache[model_id]
         return Path(cached) if cached else None
     
-    brand = get_brand_for_model(model_id)
-    if not brand:
-        _logo_cache[model_id] = None
-        return None
+    # Find matching logo
+    logo_path = _match_logo_for_model(model_id)
     
-    # Look for logo file with supported extensions
-    for ext in SUPPORTED_EXTENSIONS:
-        logo_path = LOGOS_DIR / f"{brand}{ext}"
-        if logo_path.exists():
-            _logo_cache[model_id] = str(logo_path)
-            log.debug(f"Logo matched for model '{model_id}': {logo_path}")
-            return logo_path
+    if logo_path:
+        _logo_cache[model_id] = str(logo_path)
+        log.debug(f"Logo matched: '{model_id}' -> {logo_path.name}")
+        return logo_path
     
     _logo_cache[model_id] = None
     return None
@@ -295,16 +173,36 @@ def get_logo_bytes(model_id: str) -> Optional[tuple[bytes, str]]:
 
 
 def clear_cache():
-    """Clear the logo path cache. Useful after adding new logo files."""
-    global _logo_cache
+    """
+    Clear all caches. Call this after adding new logo files to the directory.
+    The cache will be automatically refreshed on next logo lookup.
+    """
+    global _logo_cache, _available_logos_cache
     _logo_cache = {}
+    _available_logos_cache = None
+    log.info("Logo cache cleared")
 
 
-def list_available_brands() -> list[str]:
-    """List all brands that have logo files available."""
-    brands = set()
-    if LOGOS_DIR.exists():
-        for ext in SUPPORTED_EXTENSIONS:
-            for logo_file in LOGOS_DIR.glob(f"*{ext}"):
-                brands.add(logo_file.stem)
-    return sorted(brands)
+def list_available_logos() -> list[str]:
+    """
+    List all available logo names (filenames without extensions).
+    Useful for debugging and admin interfaces.
+    """
+    return [name for name, _ in _scan_available_logos()]
+
+
+def get_brand_for_model(model_id: str) -> Optional[str]:
+    """
+    Get the brand/logo name for a model ID.
+    This is a convenience function that returns just the logo name.
+    
+    Args:
+        model_id: The model identifier
+    
+    Returns:
+        Logo name (filename without extension) or None if no match
+    """
+    logo_path = get_logo_path(model_id)
+    if logo_path:
+        return logo_path.stem
+    return None
