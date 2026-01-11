@@ -394,15 +394,13 @@ builtins.__import__ = restricted_import
             if __event_call__ is None:
                 return json.dumps({"error": "Event call not available. WebSocket connection required for pyodide execution."})
 
-            session_id = __metadata__.get("session_id") if __metadata__ else None
-
             output = await __event_call__(
                 {
                     "type": "execute:python",
                     "data": {
                         "id": str(uuid4()),
                         "code": code,
-                        "session_id": session_id,
+                        "session_id": __metadata__.get("session_id") if __metadata__ else None,
                     },
                 }
             )
