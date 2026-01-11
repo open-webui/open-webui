@@ -346,7 +346,6 @@
 	});
 </script>
 
-```
 {#if loaded}
 	<AccessControlModal
 		bind:show={showAccessControlModal}
