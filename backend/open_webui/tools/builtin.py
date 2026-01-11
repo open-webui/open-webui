@@ -451,9 +451,7 @@ async def execute_code(
         else:
             return json.dumps({"error": f"Unknown code interpreter engine: {engine}"})
 
-        # Handle image outputs (base64 encoded) - check both stdout and result
-        image_files = []
-
+        # Handle image outputs (base64 encoded) - replace with uploaded URLs
         # Get actual user object for image upload (upload_image requires user.id attribute)
         if __user__ and __user__.get("id"):
             from open_webui.models.users import Users
@@ -462,48 +460,34 @@ async def execute_code(
             user = Users.get_user_by_id(__user__["id"])
 
             # Extract and upload images from stdout
-            if stdout:
+            if stdout and isinstance(stdout, str):
                 stdout_lines = stdout.split("\n")
                 for idx, line in enumerate(stdout_lines):
-                    if "data:image/" in line and ";base64," in line:
+                    if "data:image/png;base64" in line:
                         image_url = get_image_url_from_base64(
                             __request__,
-                            line.strip(),
+                            line,
                             __metadata__ or {},
                             user,
                         )
                         if image_url:
                             stdout_lines[idx] = f"![Output Image]({image_url})"
-                            image_files.append({"type": "image", "url": image_url})
                 stdout = "\n".join(stdout_lines)
 
             # Extract and upload images from result
-            if result:
+            if result and isinstance(result, str):
                 result_lines = result.split("\n")
                 for idx, line in enumerate(result_lines):
-                    if "data:image/" in line and ";base64," in line:
+                    if "data:image/png;base64" in line:
                         image_url = get_image_url_from_base64(
                             __request__,
-                            line.strip(),
+                            line,
                             __metadata__ or {},
                             user,
                         )
                         if image_url:
                             result_lines[idx] = f"![Output Image]({image_url})"
-                            image_files.append({"type": "image", "url": image_url})
                 result = "\n".join(result_lines)
-
-        # Emit images if present
-        if image_files:
-            if __event_emitter__:
-                await __event_emitter__(
-                    {
-                        "type": "chat:message:files",
-                        "data": {
-                            "files": image_files,
-                        },
-                    }
-                )
 
         response = {
             "status": "success",
@@ -511,9 +495,6 @@ async def execute_code(
             "stderr": stderr,
             "result": result,
         }
-
-        if image_files:
-            response["message"] = "Code executed successfully. Any generated images as well as printed base64 strings have been uploaded and are already visible to the user in the chat."
 
         return json.dumps(response, ensure_ascii=False)
     except Exception as e:
