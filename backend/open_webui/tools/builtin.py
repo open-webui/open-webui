@@ -453,8 +453,14 @@ builtins.__import__ = restricted_import
         # Handle image outputs (base64 encoded) - check both stdout and result
         image_files = []
 
+        # Get actual user object for image upload (upload_image requires user.id attribute)
+        user = None
+        if __user__ and __user__.get("id"):
+            from open_webui.models.users import Users
+            user = Users.get_user_by_id(__user__["id"])
+
         # Extract and upload images from stdout
-        if stdout:
+        if stdout and user:
             from open_webui.utils.files import get_image_url_from_base64
             stdout_lines = stdout.split("\n")
             for idx, line in enumerate(stdout_lines):
@@ -463,7 +469,7 @@ builtins.__import__ = restricted_import
                         __request__,
                         line.strip(),
                         __metadata__ or {},
-                        __user__ or {},
+                        user,
                     )
                     if image_url:
                         stdout_lines[idx] = f"![Output Image]({image_url})"
@@ -471,7 +477,7 @@ builtins.__import__ = restricted_import
             stdout = "\n".join(stdout_lines)
 
         # Extract and upload images from result
-        if result:
+        if result and user:
             from open_webui.utils.files import get_image_url_from_base64
             result_lines = result.split("\n")
             for idx, line in enumerate(result_lines):
@@ -480,7 +486,7 @@ builtins.__import__ = restricted_import
                         __request__,
                         line.strip(),
                         __metadata__ or {},
-                        __user__ or {},
+                        user,
                     )
                     if image_url:
                         result_lines[idx] = f"![Output Image]({image_url})"
