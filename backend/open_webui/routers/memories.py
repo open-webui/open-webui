@@ -69,8 +69,11 @@ async def add_memory(
     request: Request,
     form_data: AddMemoryForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations (insert_new_memory) manage their own short-lived sessions.
+    # This prevents holding a connection during EMBEDDING_FUNCTION()
+    # which makes external embedding API calls (1-5+ seconds).
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -85,7 +88,7 @@ async def add_memory(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    memory = Memories.insert_new_memory(user.id, form_data.content, db=db)
+    memory = Memories.insert_new_memory(user.id, form_data.content)
 
     vector = await request.app.state.EMBEDDING_FUNCTION(memory.content, user=user)
 
