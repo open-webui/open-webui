@@ -70,9 +70,9 @@
 <img src="https://img.shields.io/badge/UX%20%26%20Perf-Turbo-orange?style=flat-square" alt="UX"/>
 
 专注于流畅度与便捷性的深度打磨。
+- ✅ **品牌图标**: 20+ LLM 品牌 Logo 自动匹配 (GPT/Claude/Gemini/Qwen...)
 - ✅ **秒级加载**: 模型设置页启用智能缓存，**告别 3秒+ 等待**
 - ✅ **快捷入口**: 模型选择器添加「模型设置」直达按钮 (管理员)
-- ✅ **图标加速**: 优化模型头像/Logo 的加载与缓存机制
 - ✅ **推理增强**: 推理强度 (Reasoning Effort) 支持下拉与自定义输入
 
 </td>

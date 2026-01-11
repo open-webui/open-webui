@@ -31,6 +31,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.model_logos import get_logo_path  # Custom: Auto-load brand logos
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STATIC_DIR
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
@@ -378,9 +379,12 @@ def get_model_profile_image(
                 except Exception as e:
                     pass
 
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
-    else:
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+    # Custom: Try to match brand logo based on model ID before falling back to default
+    logo_path = get_logo_path(id)
+    if logo_path:
+        return FileResponse(str(logo_path), headers=cache_headers)
+
+    return FileResponse(f"{STATIC_DIR}/favicon.png")
 
 
 ############################
