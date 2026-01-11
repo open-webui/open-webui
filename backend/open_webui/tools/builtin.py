@@ -372,17 +372,12 @@ async def execute_code(
     try:
         engine = getattr(__request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
 
-        if engine == "pyodide":
-            # Execute via frontend pyodide using bidirectional event call
-            if __event_call__ is None:
-                return json.dumps({"error": "Event call not available. WebSocket connection required for pyodide execution."})
+        # Get blocked modules from config - applies to both engines
+        blocked_modules = getattr(__request__.app.state.config, "CODE_INTERPRETER_BLOCKED_MODULES", [])
 
-            # Get blocked modules from config
-            blocked_modules = getattr(__request__.app.state.config, "CODE_INTERPRETER_BLOCKED_MODULES", [])
-
-            # Add import blocking code if there are blocked modules
-            if blocked_modules:
-                blocking_code = f"""
+        # Add import blocking code if there are blocked modules
+        if blocked_modules:
+            blocking_code = f"""
 import builtins
 _original_import = builtins.__import__
 _blocked = {blocked_modules!r}
@@ -392,7 +387,12 @@ def restricted_import(name, *args, **kwargs):
     return _original_import(name, *args, **kwargs)
 builtins.__import__ = restricted_import
 """
-                code = blocking_code + "\n" + code
+            code = blocking_code + "\n" + code
+
+        if engine == "pyodide":
+            # Execute via frontend pyodide using bidirectional event call
+            if __event_call__ is None:
+                return json.dumps({"error": "Event call not available. WebSocket connection required for pyodide execution."})
 
             session_id = __metadata__.get("session_id") if __metadata__ else None
 
