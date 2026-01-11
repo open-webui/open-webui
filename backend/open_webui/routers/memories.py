@@ -157,8 +157,15 @@ async def query_memory(
 async def reset_memory_from_vector_db(
     request: Request,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
+    """Reset user's memory vector embeddings.
+    
+    CRITICAL: We intentionally do NOT use Depends(get_session) here.
+    This endpoint generates embeddings for ALL user memories in parallel using
+    asyncio.gather(). A user with 100 memories would trigger 100 embedding API
+    calls simultaneously. With a session held, this could block a connection
+    for MINUTES, completely exhausting the connection pool.
+    """
     if not request.app.state.config.ENABLE_MEMORIES:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -175,7 +182,7 @@ async def reset_memory_from_vector_db(
 
     VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
 
-    memories = Memories.get_memories_by_user_id(user.id, db=db)
+    memories = Memories.get_memories_by_user_id(user.id)
 
     # Generate vectors in parallel
     vectors = await asyncio.gather(
