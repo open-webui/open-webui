@@ -507,8 +507,7 @@ builtins.__import__ = restricted_import
         }
 
         if image_files:
-            response["message"] = "Code executed successfully. Any generated images are already visible to the user in the chat. No need to output the base64 string manually or other image data."
-            response["images_generated"] = len(image_files)
+            response["message"] = "Code executed successfully. Any generated images are already visible to the user in the chat."
 
         return json.dumps(response, ensure_ascii=False)
     except Exception as e:
