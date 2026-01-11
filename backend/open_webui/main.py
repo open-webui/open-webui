@@ -1541,7 +1541,15 @@ async def get_models(
 
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
-    models = await get_all_base_models(request, user=user)
+    # Use cached BASE_MODELS if available to avoid slow remote API calls
+    if (
+        request.app.state.BASE_MODELS
+        and request.app.state.config.ENABLE_BASE_MODELS_CACHE
+    ):
+        models = request.app.state.BASE_MODELS
+    else:
+        models = await get_all_base_models(request, user=user)
+        request.app.state.BASE_MODELS = models
     return {"data": models}
 
 
