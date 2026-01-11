@@ -863,7 +863,8 @@ export const generateQueries = async (
 	model: string,
 	messages: object[],
 	prompt: string,
-	type: string = 'web_search'
+	type: string = 'web_search',
+	chat_id?: string
 ) => {
 	let error = null;
 
@@ -878,7 +879,8 @@ export const generateQueries = async (
 			model: model,
 			messages: messages,
 			prompt: prompt,
-			type: type
+			type: type,
+			...(chat_id && { chat_id: chat_id })
 		})
 	})
 		.then(async (res) => {
@@ -932,7 +934,8 @@ export const generateAutoCompletion = async (
 	model: string,
 	prompt: string,
 	messages?: object[],
-	type: string = 'search query'
+	type: string = 'search query',
+	chat_id?: string
 ) => {
 	const controller = new AbortController();
 	let error = null;
@@ -950,7 +953,8 @@ export const generateAutoCompletion = async (
 			prompt: prompt,
 			...(messages && { messages: messages }),
 			type: type,
-			stream: false
+			stream: false,
+			...(chat_id && { chat_id: chat_id })
 		})
 	})
 		.then(async (res) => {
@@ -1674,7 +1678,7 @@ export interface ModelMeta {
 	profile_image_url?: string;
 }
 
-export interface ModelParams {}
+export interface ModelParams { }
 
 export type GlobalModelConfig = ModelConfig[];
 

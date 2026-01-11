@@ -775,6 +775,7 @@ async def chat_web_search_handler(
                 "messages": messages,
                 "prompt": user_message,
                 "type": "web_search",
+                "chat_id": extra_params.get("__chat_id__"),
             },
             user,
         )
@@ -1103,6 +1104,7 @@ async def chat_image_generation_handler(
                     {
                         "model": form_data["model"],
                         "messages": form_data["messages"],
+                        "chat_id": metadata.get("chat_id"),
                     },
                     user,
                 )
@@ -1209,6 +1211,7 @@ async def chat_completion_files_handler(
                         "model": body["model"],
                         "messages": body["messages"],
                         "type": "retrieval",
+                        "chat_id": body.get("metadata", {}).get("chat_id"),
                     },
                     user,
                 )
