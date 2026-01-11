@@ -345,10 +345,15 @@ async def reindex_knowledge_files(
 async def reindex_knowledge_base_metadata_embeddings(
     request: Request,
     user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
 ):
-    """Batch embed all existing knowledge bases. Admin only."""
-    knowledge_bases = Knowledges.get_knowledge_bases(db=db)
+    """Batch embed all existing knowledge bases. Admin only.
+    
+    NOTE: We intentionally do NOT use Depends(get_session) here.
+    This endpoint loops through ALL knowledge bases and calls embed_knowledge_base_metadata()
+    for each one, making N external embedding API calls. Holding a session during
+    this entire operation would exhaust the connection pool.
+    """
+    knowledge_bases = Knowledges.get_knowledge_bases()
     log.info(f"Reindexing embeddings for {len(knowledge_bases)} knowledge bases")
 
     success_count = 0
