@@ -495,32 +495,35 @@ async def get_file_process_status(
         if stream:
             MAX_FILE_PROCESSING_DURATION = 3600 * 2
 
-            async def event_stream(file_item):
-                if file_item:
-                    for _ in range(MAX_FILE_PROCESSING_DURATION):
-                        file_item = Files.get_file_by_id(file_item.id, db=db)
-                        if file_item:
-                            data = file_item.model_dump().get("data", {})
-                            status = data.get("status")
+            async def event_stream(file_id):
+                # NOTE: We intentionally do NOT capture the request's db session here.
+                # Each poll creates its own short-lived session to avoid holding a
+                # connection for hours. A WebSocket push would be more efficient.
+                for _ in range(MAX_FILE_PROCESSING_DURATION):
+                    file_item = Files.get_file_by_id(file_id)  # Creates own session
+                    if file_item:
+                        data = file_item.model_dump().get("data", {})
+                        status = data.get("status")
 
-                            if status:
-                                event = {"status": status}
-                                if status == "failed":
-                                    event["error"] = data.get("error")
+                        if status:
+                            event = {"status": status}
+                            if status == "failed":
+                                event["error"] = data.get("error")
 
-                                yield f"data: {json.dumps(event)}\n\n"
-                                if status in ("completed", "failed"):
-                                    break
-                            else:
-                                # Legacy
+                            yield f"data: {json.dumps(event)}\n\n"
+                            if status in ("completed", "failed"):
                                 break
+                        else:
+                            # Legacy
+                            break
+                    else:
+                        yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
+                        break
 
-                        await asyncio.sleep(0.5)
-                else:
-                    yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
+                    await asyncio.sleep(1)
 
             return StreamingResponse(
-                event_stream(file),
+                event_stream(file.id),
                 media_type="text/event-stream",
             )
         else:
