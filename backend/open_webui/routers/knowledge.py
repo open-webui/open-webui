@@ -414,9 +414,12 @@ async def update_knowledge_by_id(
     id: str,
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations manage their own short-lived sessions internally.
+    # This prevents holding a connection during embed_knowledge_base_metadata()
+    # which makes external embedding API calls (1-5+ seconds).
+    knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -425,7 +428,7 @@ async def update_knowledge_by_id(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -441,12 +444,11 @@ async def update_knowledge_by_id(
             user.id,
             "sharing.public_knowledge",
             request.app.state.config.USER_PERMISSIONS,
-            db=db,
         )
     ):
         form_data.access_control = {}
 
-    knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data, db=db)
+    knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
         # Re-embed knowledge base for semantic search
         await embed_knowledge_base_metadata(
@@ -457,7 +459,7 @@ async def update_knowledge_by_id(
         )
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            files=Knowledges.get_file_metadatas_by_id(knowledge.id),
         )
     else:
         raise HTTPException(
