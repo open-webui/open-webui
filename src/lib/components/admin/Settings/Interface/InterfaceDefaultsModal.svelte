@@ -58,7 +58,7 @@
 			'iframeSandboxAllowSameOrigin', 'iframeSandboxAllowForms',
 			'stylizedPdfExport', 'hapticFeedback', 'ctrlEnterToSend',
 			'showFloatingActionButtons', 'imageCompression', 'imageCompressionInChannels',
-			'textScale'
+			'textScale', 'backgroundImageUrl'
 		];
 
 		for (const field of directFields) {
