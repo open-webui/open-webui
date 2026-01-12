@@ -597,6 +597,9 @@ class InterfaceDefaultsForm(BaseModel):
     imageCompressionInChannels: Optional[bool] = None
     textScale: Optional[float] = None
     backgroundImageUrl: Optional[str] = None
+    webSearch: Optional[str] = None  # 'always' or null
+    floatingActionButtons: Optional[list] = None  # Array of button configs
+    imageCompressionSize: Optional[dict] = None  # {width: str, height: str}
 
     @field_validator("chatDirection")
     @classmethod
@@ -612,6 +615,13 @@ class InterfaceDefaultsForm(BaseModel):
     def validate_text_scale(cls, value):
         if value is not None and not (0.5 <= value <= 1.5):
             raise ValueError("textScale must be between 0.5 and 1.5")
+        return value
+
+    @field_validator("webSearch")
+    @classmethod
+    def validate_web_search(cls, value):
+        if value is not None and value not in ("always",):
+            raise ValueError("webSearch must be 'always' or null")
         return value
 
     class Config:
