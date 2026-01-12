@@ -25,6 +25,7 @@ from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
 from open_webui.utils.misc import is_string_allowed
+from open_webui.utils.sse_parser import parse_sse_line, is_sse_done_signal
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
@@ -2811,7 +2812,11 @@ async def process_chat_response(
                         data = data[len("data:") :].strip()
 
                         try:
-                            data = json.loads(data)
+                            # Use enhanced SSE parser for better third-party API compatibility
+                            data = parse_sse_line(line)
+                            if data is None:
+                                # Skip this line (terminator, heartbeat, invalid data, etc.)
+                                continue
 
                             data, _ = await process_filter_functions(
                                 request=request,
@@ -3158,11 +3163,11 @@ async def process_chat_response(
                                         }
                                     )
                         except Exception as e:
-                            done = "data: [DONE]" in line
-                            if done:
+                            # Check for done signal using enhanced parser
+                            if is_sse_done_signal(line):
                                 pass
                             else:
-                                log.debug(f"Error: {e}")
+                                log.debug(f"Stream processing error: {e}")
                                 continue
                     await flush_pending_delta_data()
 

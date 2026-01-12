@@ -1,0 +1,15 @@
+============================================================
+Test Case 1: OpenRouter.qwen/qwen3-235b-a22b:free
+============================================================
+   840 | qwen-color (1).png             | MODEL_STARTS_WITH_LOGO
+     0 | openrouter (2).png             | NO_MATCH
+     0 | gpt-5-chat-latest.png          | NO_MATCH
+     0 | gpt-5.2.png                    | NO_MATCH
+
+============================================================
+Test Case 2: OpenRouter.openai/gpt-5.2
+============================================================
+  1000 | gpt-5.2.png                    | EXACT
+     0 | qwen-color (1).png             | NO_MATCH
+     0 | openrouter (2).png             | NO_MATCH
+     0 | gpt-5-chat-latest.png          | NO_MATCH
