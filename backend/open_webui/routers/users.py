@@ -498,10 +498,8 @@ async def get_user_oauth_sessions_by_id(
 
 
 @router.get("/{user_id}/profile/image")
-async def get_user_profile_image_by_id(
-    user_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
-    user = Users.get_user_by_id(user_id, db=db)
+def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_user)):
+    user = Users.get_user_by_id(user_id)
     if user:
         if user.profile_image_url:
             # check if it's url or base64
