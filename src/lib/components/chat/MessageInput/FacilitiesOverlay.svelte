@@ -4,6 +4,7 @@
 	import { slide } from 'svelte/transition';
 	import { generateFacilitiesResponse, downloadFacilitiesDocument, extractFormDataFromFiles } from '$lib/apis/facilities';
 	import { updateChatById, getChatList } from '$lib/apis/chats';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { toast } from 'svelte-sonner';
 	
 	const dispatch = createEventDispatcher();
@@ -700,6 +701,22 @@
 </script>
 
 <style>
+	.generation-blocker {
+		position: absolute;
+		inset: 0;
+		z-index: 50;
+		background: rgba(255, 255, 255, 0.9);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
+	}
+
+	.dark .generation-blocker {
+		background: rgba(224, 219, 219, 0.92);
+	}
+
 	/* Enhanced scrollbar styles for better visibility */
 	.custom-scrollbar {
 		scrollbar-width: thin;
@@ -761,7 +778,28 @@
 </style>
 
 {#if $showFacilitiesOverlay}
-	<div class="flex flex-col h-full bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-850 rounded-xl shadow-lg dark:shadow-lg">
+	<div
+	class="flex flex-col h-full bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-850 rounded-xl shadow-lg dark:shadow-lg relative"
+	class:pointer-events-none={generating}
+	class:opacity-50={generating}
+	>
+		{#if generating}
+			<div class="generation-blocker">
+				
+				<div class="dark:text-black">
+					<Spinner />
+				</div>
+				
+
+				<p class="font-medium text-black">
+					Generating facilities content
+				</p>
+
+				<p class="text-sm text-gray-900 mt-1 text-center max-w-sm">
+					This process may take some time. Please stay on this page.
+				</p>
+			</div>
+		{/if}
 		<!-- Header -->
 		<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
 			<div class="flex-1">
@@ -858,10 +896,9 @@
 					aria-describedby="generate-files-help"
 				>
 					{#if generating}
-						<svg class="animate-spin h-4 w-4 inline mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle>
-							<path fill="currentColor" class="opacity-75" d="m12 2 A10 10 0 0 1 22 12"></path>
-						</svg>
+						<div class="dark:text-black">
+							<Spinner />
+						</div>
 						Extracting...
 					{:else}
 						{('Generate form input using uploaded files')}
