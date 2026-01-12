@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	import { writable } from 'svelte/store';
+
 	import Modal from '$lib/components/common/Modal.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+
 	import { getInterfaceDefaults, setInterfaceDefaults } from '$lib/apis/configs';
 	import InterfaceSettings from '$lib/components/chat/Settings/Interface.svelte';
 
@@ -79,11 +83,10 @@
 		);
 	};
 
-	const handleSave = async () => {
+	const submitHandler = async () => {
 		saving = true;
 		try {
 			const currentDefaults = $adminDefaults;
-			// Transform frontend format to backend format before sending
 			const backendPayload = transformToBackendSchema(currentDefaults);
 			await setInterfaceDefaults(localStorage.token, backendPayload);
 			toast.success($i18n.t('Interface defaults saved successfully'));
@@ -96,89 +99,68 @@
 		}
 	};
 
-	const handleCancel = () => {
-		show = false;
-	};
-
 	$: if (show) {
 		loadDefaults();
 	}
 </script>
 
-<Modal size="xl" bind:show>
-	<div class="text-gray-700 dark:text-gray-100">
-		<div class="flex justify-between dark:text-gray-300 px-4 md:px-4.5 pt-4.5 pb-2.5">
-			<div class="text-lg font-medium self-center">
-				{$i18n.t('Configure Global Interface Defaults')}
+<Modal size="lg" bind:show>
+	<div>
+		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+			<div class=" text-lg font-medium self-center font-primary">
+				{$i18n.t('Interface Defaults')}
 			</div>
 			<button
-				aria-label={$i18n.t('Close modal')}
 				class="self-center"
-				on:click={handleCancel}
+				on:click={() => {
+					show = false;
+				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
-		<div class="text-xs text-gray-500 dark:text-gray-400 px-4 pb-3">
-			{$i18n.t(
-				"These settings will be used as defaults for all users who haven't customized their interface settings."
-			)}
-		</div>
+		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
+			<div class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+				{$i18n.t(
+					"These settings will be used as defaults for all users who haven't customized their interface settings."
+				)}
+			</div>
 
-		<div class="px-4 pb-4" style="max-height: calc(100vh - 300px); overflow-y: auto;">
 			{#if !loading}
-				<!-- Pass adminDefaults to Interface component as initialSettings -->
-				<div class="interface-defaults-wrapper">
-					<InterfaceSettings initialSettings={$adminDefaults} saveSettings={saveAdminSettings} />
-				</div>
+				<form
+					class="flex flex-col w-full"
+					on:submit|preventDefault={() => {
+						submitHandler();
+					}}
+				>
+					<div class="interface-defaults-wrapper">
+						<InterfaceSettings initialSettings={$adminDefaults} saveSettings={saveAdminSettings} />
+					</div>
+
+					<div class="flex justify-end pt-3 text-sm font-medium">
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {saving
+								? ' cursor-not-allowed'
+								: ''}"
+							type="submit"
+							disabled={saving}
+						>
+							{$i18n.t('Save')}
+
+							{#if saving}
+								<div class="ml-2 self-center">
+									<Spinner />
+								</div>
+							{/if}
+						</button>
+					</div>
+				</form>
 			{:else}
 				<div class="flex justify-center items-center py-8">
-					<div
-						class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"
-					></div>
+					<Spinner className="size-5" />
 				</div>
 			{/if}
-		</div>
-
-		<!-- Modal footer with Save/Cancel buttons -->
-		<div
-			class="flex justify-end gap-2 px-4 py-3 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-900"
-		>
-			<button
-				type="button"
-				class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-				on:click={handleCancel}
-				disabled={saving}
-			>
-				{$i18n.t('Cancel')}
-			</button>
-			<button
-				type="button"
-				class="px-4 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-				on:click={handleSave}
-				disabled={saving || loading}
-			>
-				{#if saving}
-					<div class="flex items-center gap-2">
-						<div
-							class="animate-spin rounded-full h-4 w-4 border-b-2 border-white dark:border-gray-900"
-						></div>
-						{$i18n.t('Saving...')}
-					</div>
-				{:else}
-					{$i18n.t('Save Defaults')}
-				{/if}
-			</button>
 		</div>
 	</div>
 </Modal>
