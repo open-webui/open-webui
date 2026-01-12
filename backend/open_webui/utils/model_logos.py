@@ -132,8 +132,14 @@ def _scan_available_logos() -> list[tuple[list[str], Path]]:
     # Sort by longest keyword length (descending) for more specific matching first
     logos.sort(key=lambda x: max(len(k) for k in x[0]) if x[0] else 0, reverse=True)
     
-    _available_logos_cache = logos
-    log.info(f"Scanned {len(logos)} logo files from {LOGOS_DIR}")
+    # Only cache if we found logos OR the directory doesn't exist
+    # This prevents caching empty results during startup race conditions
+    if logos or not LOGOS_DIR.exists():
+        _available_logos_cache = logos
+        log.info(f"Scanned {len(logos)} logo files from {LOGOS_DIR}")
+    else:
+        log.warning(f"No logos found in {LOGOS_DIR}, not caching to allow retry")
+    
     return logos
 
 
@@ -186,12 +192,12 @@ def _match_logo_for_model(model_id: str) -> Optional[Path]:
     provider = info["provider"]
     model_id_lower = model_id.lower()
     
-    # Special case: Gemini image models -> nana-banana
+    # Special case: Gemini image models -> nano-banana
     if "gemini" in model_id_lower and "image" in model_id_lower:
         for logo_keywords, logo_path in _scan_available_logos():
-            if any("nana" in k and "banana" in k for k in logo_keywords):
+            if any("nano" in k and "banana" in k for k in logo_keywords):
                 return logo_path
-            if "nana" in logo_keywords and "banana" in logo_keywords:
+            if "nano" in logo_keywords and "banana" in logo_keywords:
                 return logo_path
     
     logos = _scan_available_logos()
@@ -346,7 +352,14 @@ def get_logo_path(model_id: str) -> Optional[Path]:
         log.debug(f"Logo matched: '{model_id}' -> {logo_path.name}")
         return logo_path
     
-    _logo_cache[model_id] = None
+    # Only cache None if we have a valid logo scan
+    # This prevents permanently caching failures during startup
+    if _available_logos_cache is not None:
+        _logo_cache[model_id] = None
+        log.debug(f"No logo match for '{model_id}', cached as None")
+    else:
+        log.debug(f"No logo match for '{model_id}', not caching (logos not loaded)")
+    
     return None
 
 
