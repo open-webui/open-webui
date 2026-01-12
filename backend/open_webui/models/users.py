@@ -37,6 +37,10 @@ class User(Base):
     gender = Column(Text, nullable=True)
     date_of_birth = Column(Date, nullable=True)
 
+    # Hanyang University specific fields
+    department = Column(Text, nullable=True)  # 소속 (e.g., "에듀테크혁신팀")
+    user_status = Column(Text, nullable=True)  # 상세 신분 (e.g., "학사", "석사", "박사", "교수", "직원")
+
     info = Column(JSONField, nullable=True)
     settings = Column(JSONField, nullable=True)
 
@@ -68,6 +72,10 @@ class UserModel(BaseModel):
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
+
+    # Hanyang University specific fields
+    department: Optional[str] = None
+    user_status: Optional[str] = None
 
     info: Optional[dict] = None
     settings: Optional[UserSettings] = None
@@ -172,6 +180,8 @@ class UsersTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
+        department: Optional[str] = None,
+        user_status: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -185,6 +195,8 @@ class UsersTable:
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
+                    "department": department,
+                    "user_status": user_status,
                 }
             )
             result = User(**user.model_dump())

@@ -30,9 +30,10 @@ class Prompt(Base):
     prompt_type = Column(String, nullable=True)  # 'base', 'proficiency', 'style', 'tool', or None
     persona_value = Column(String, nullable=True)  # '1','2','3' or 'simple','detailed'
 
-    # Tool gating fields (for prompt_type='tool')
+    # Tool gating fields (for prompt_type='basic_tool' or 'json_tool')
     tool_description = Column(Text, nullable=True)  # Short description for tool catalog (50-100 chars)
     tool_priority = Column(Integer, nullable=True, default=0)  # Priority for ordering tools
+    validation_rules = Column(JSON, nullable=True)  # Regex validation rules for json_tool type
 
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
@@ -65,6 +66,7 @@ class PromptModel(BaseModel):
     # Tool gating fields
     tool_description: Optional[str] = None
     tool_priority: Optional[int] = 0
+    validation_rules: Optional[dict] = None  # For json_tool type
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -87,6 +89,7 @@ class PromptForm(BaseModel):
     persona_value: Optional[str] = None
     tool_description: Optional[str] = None
     tool_priority: Optional[int] = 0
+    validation_rules: Optional[dict] = None  # For json_tool type
 
 
 class PromptsTable:
@@ -210,6 +213,7 @@ class PromptsTable:
                 prompt.persona_value = form_data.persona_value
                 prompt.tool_description = form_data.tool_description
                 prompt.tool_priority = form_data.tool_priority
+                prompt.validation_rules = form_data.validation_rules
                 prompt.timestamp = int(time.time())
                 db.commit()
                 return PromptModel.model_validate(prompt)
@@ -225,6 +229,22 @@ class PromptsTable:
                 return True
         except Exception:
             return False
+
+    def get_all_tool_prompts(self) -> list[PromptModel]:
+        """Get all tool prompts (both basic_tool and json_tool types)"""
+        try:
+            with get_db() as db:
+                prompts = db.query(Prompt).filter(
+                    Prompt.prompt_type.in_(["basic_tool", "json_tool", "tool"])
+                ).all()
+                return [PromptModel.model_validate(p) for p in prompts]
+        except Exception:
+            return []
+
+    def is_json_tool(self, command: str) -> bool:
+        """Check if a tool prompt requires JSON validation"""
+        prompt = self.get_prompt_by_command(command)
+        return prompt is not None and prompt.prompt_type == "json_tool"
 
 
 Prompts = PromptsTable()

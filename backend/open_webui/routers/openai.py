@@ -1173,12 +1173,19 @@ async def generate_chat_completion(
         metadata["tool_prompts_dict"] = {
             t.command.lstrip('/'): t.content for t in tool_prompts
         }
+        # Pass validation rules for json_tool types
+        metadata["tool_validation_rules"] = {
+            t.command.lstrip('/'): t.validation_rules
+            for t in tool_prompts
+            if t.prompt_type == "json_tool" and t.validation_rules
+        }
         # Pass API info for inline LLM calls
         metadata["api_request_url"] = request_url
         metadata["api_headers"] = dict(headers)
         metadata["api_cookies"] = dict(cookies) if cookies else {}
         log.info(f"[OPENAI] Inline tool execution enabled for: {metadata['tool_commands']}")
         log.info(f"[OPENAI] Tool prompts dict keys: {list(metadata['tool_prompts_dict'].keys())}")
+        log.info(f"[OPENAI] Tool validation rules keys: {list(metadata['tool_validation_rules'].keys())}")
 
         # Store updated metadata back in form_data for middleware access
         form_data["metadata"] = metadata

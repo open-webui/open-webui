@@ -16,6 +16,7 @@ import logging
 from typing import Optional, Callable, Awaitable, Dict, List, Any, Set
 
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.tool_validator import validate_tool_output
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS.get("MAIN", logging.INFO))
@@ -47,12 +48,15 @@ class ToolInlineExecutor:
         self,
         event_emitter: Optional[Callable[[dict], Awaitable[None]]] = None,
         tool_prompts: Optional[Dict[str, Any]] = None,
+        tool_validation_rules: Optional[Dict[str, Dict]] = None,
         llm_call_fn: Optional[Callable] = None,
         conversation_context: Optional[str] = None,
     ):
         self.event_emitter = event_emitter
         # Map: normalized command -> full prompt content
         self.tool_prompts = tool_prompts or {}
+        # Map: normalized command -> validation rules dict (for json_tool types)
+        self.tool_validation_rules = tool_validation_rules or {}
         self.llm_call_fn = llm_call_fn
         # Store conversation context for recovery calls
         self.conversation_context = conversation_context or ""
@@ -72,6 +76,7 @@ class ToolInlineExecutor:
         log.info("[TOOL INLINE] Initialized")
         log.info(f"  event_emitter: {'SET' if event_emitter else 'NONE'}")
         log.info(f"  tool_prompts: {list(self.tool_prompts.keys())}")
+        log.info(f"  tool_validation_rules: {list(self.tool_validation_rules.keys())}")
         log.info(f"  llm_call_fn: {'SET' if llm_call_fn else 'NONE'}")
         log.info(f"  marker_pattern: {self._marker_pattern.pattern if self._marker_pattern else 'NONE'}")
         log.info("=" * 60)
@@ -312,6 +317,22 @@ Do NOT include any explanatory text before or after the output block."""
             if result.get("success"):
                 tool_output = result.get("text", "")
                 log.info(f"[TOOL INLINE] Tool output received: {len(tool_output)} chars")
+
+                # Validate output for json_tool types
+                normalized_cmd = command.lower().replace('_', '-').lstrip('/')
+                validation_rules = self.tool_validation_rules.get(normalized_cmd)
+                if validation_rules:
+                    is_valid, error_msg = validate_tool_output(tool_output, validation_rules)
+                    if not is_valid:
+                        log.warning(f"[TOOL INLINE] Validation failed for {command}: {error_msg}")
+                        await self._emit_event("tool_validation_failed", command, f"검증 실패: {command}")
+                        # Use recovery approach (same as tool-unsupported)
+                        recovery_text = await self._handle_validation_failure(
+                            command, error_msg, context
+                        )
+                        await self._emit_event("tool_completed", command, f"도구 완료 (복구): {command}")
+                        return f"\n{recovery_text}\n"
+
                 await self._emit_event("tool_completed", command, f"도구 완료: {command}")
                 return f"\n{tool_output}\n"
             else:
@@ -432,6 +453,77 @@ Do NOT include any explanatory text before or after the output block."""
 
         except Exception as e:
             log.error(f"[TOOL INLINE] Exception during recovery: {e}")
+            return ""
+
+    async def _handle_validation_failure(
+        self, tool_name: str, error_msg: str, original_context: str
+    ) -> str:
+        """
+        Handle validation failure by making a recovery LLM call.
+
+        When a json_tool output fails regex validation, this method makes a new
+        LLM call to continue the conversation naturally without the visualization.
+
+        Args:
+            tool_name: Name of the tool whose output failed validation
+            error_msg: Validation error message
+            original_context: The original context passed to the tool
+
+        Returns:
+            Recovery text to insert into the stream
+        """
+        log.info(f"[TOOL INLINE] Handling validation failure: {tool_name}")
+
+        await self._emit_event("tool_recovery", tool_name, f"도구 복구 중: {tool_name}")
+
+        if not self.llm_call_fn:
+            log.warning("[TOOL INLINE] No LLM call function for validation recovery")
+            return f"\n\n(시각화 검증 실패: {error_msg})\n\n"
+
+        try:
+            recovery_system = """당신은 수학 학습을 돕는 AI 튜터입니다.
+
+이전 시각화 도구 출력이 형식 검증에 실패했습니다.
+시각화 없이 텍스트 설명으로 자연스럽게 계속 설명해주세요.
+
+주의사항:
+- 검증 실패를 명시적으로 언급하지 마세요
+- 마치 처음부터 텍스트로 설명하려 했던 것처럼 자연스럽게 이어가세요
+- 수식이 필요하면 LaTeX 형식 ($...$)을 사용하세요
+- 간결하고 명확하게 설명하세요"""
+
+            context_preview = (
+                self.generated_content[-1000:]
+                if len(self.generated_content) > 1000
+                else self.generated_content
+            )
+
+            user_message = f"""지금까지 생성된 응답:
+{context_preview}
+
+원래 요청: {original_context}
+
+위 내용에서 자연스럽게 이어서 설명을 계속해주세요. 1-2문장 정도로 간결하게."""
+
+            log.info("[TOOL INLINE] Making validation recovery LLM call")
+
+            result = await self.llm_call_fn(
+                system_prompt=recovery_system,
+                user_message=user_message,
+            )
+
+            if result.get("success"):
+                recovery_text = result.get("text", "")
+                log.info(f"[TOOL INLINE] Validation recovery text received: {len(recovery_text)} chars")
+                await self._emit_event("tool_recovery_completed", tool_name, f"복구 완료: {tool_name}")
+                return f" {recovery_text}"
+            else:
+                error = result.get("error", "Unknown error")
+                log.error(f"[TOOL INLINE] Validation recovery LLM call failed: {error}")
+                return ""
+
+        except Exception as e:
+            log.error(f"[TOOL INLINE] Exception during validation recovery: {e}")
             return ""
 
     async def _emit_event(self, event_type: str, tool: str, message: str):

@@ -441,6 +441,31 @@ GITHUB_CLIENT_REDIRECT_URI = PersistentConfig(
     os.environ.get("GITHUB_CLIENT_REDIRECT_URI", ""),
 )
 
+# Hanyang University OAuth Configuration
+HANYANG_CLIENT_ID = PersistentConfig(
+    "HANYANG_CLIENT_ID",
+    "oauth.hanyang.client_id",
+    os.environ.get("HANYANG_CLIENT_ID", ""),
+)
+
+HANYANG_CLIENT_SECRET = PersistentConfig(
+    "HANYANG_CLIENT_SECRET",
+    "oauth.hanyang.client_secret",
+    os.environ.get("HANYANG_CLIENT_SECRET", ""),
+)
+
+HANYANG_OAUTH_SCOPE = PersistentConfig(
+    "HANYANG_OAUTH_SCOPE",
+    "oauth.hanyang.scope",
+    os.environ.get("HANYANG_OAUTH_SCOPE", "10"),  # API ID 10 for loginInfo
+)
+
+HANYANG_REDIRECT_URI = PersistentConfig(
+    "HANYANG_REDIRECT_URI",
+    "oauth.hanyang.redirect_uri",
+    os.environ.get("HANYANG_REDIRECT_URI", ""),
+)
+
 OAUTH_CLIENT_ID = PersistentConfig(
     "OAUTH_CLIENT_ID",
     "oauth.oidc.client_id",
@@ -710,6 +735,37 @@ def load_oauth_providers():
             "redirect_uri": GITHUB_CLIENT_REDIRECT_URI.value,
             "register": github_oauth_register,
             "sub_claim": "id",
+        }
+
+    # Hanyang University Portal SSO
+    if HANYANG_CLIENT_ID.value and HANYANG_CLIENT_SECRET.value:
+
+        def hanyang_oauth_register(oauth: OAuth):
+            client = oauth.register(
+                name="hanyang",
+                client_id=HANYANG_CLIENT_ID.value,
+                client_secret=HANYANG_CLIENT_SECRET.value,
+                # Hanyang uses plain OAuth 2.0, not OIDC
+                access_token_url="https://api.hanyang.ac.kr/oauth/token",
+                authorize_url="https://api.hanyang.ac.kr/oauth/authorize",
+                api_base_url="https://api.hanyang.ac.kr",
+                userinfo_endpoint="https://api.hanyang.ac.kr/rs/user/loginInfo.json",
+                client_kwargs={
+                    "scope": HANYANG_OAUTH_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
+                },
+                redirect_uri=HANYANG_REDIRECT_URI.value,
+            )
+            return client
+
+        OAUTH_PROVIDERS["hanyang"] = {
+            "redirect_uri": HANYANG_REDIRECT_URI.value,
+            "register": hanyang_oauth_register,
+            "sub_claim": "sub",  # Uses uuid_gaeinNo format as unique identifier
         }
 
     if (

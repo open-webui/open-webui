@@ -2628,12 +2628,15 @@ async def process_chat_response(
                                     log.error(f"[MIDDLEWARE] Inline LLM call exception: {e}")
                                     return {"success": False, "error": str(e)}
 
+                            tool_validation_rules = metadata.get("tool_validation_rules", {})
                             tool_executor = ToolInlineExecutor(
                                 event_emitter=event_emitter,
                                 tool_prompts=tool_prompts_dict,
+                                tool_validation_rules=tool_validation_rules,
                                 llm_call_fn=make_inline_llm_call
                             )
                             log.info(f"[MIDDLEWARE] ToolInlineExecutor created: {tool_executor}")
+                            log.info(f"[MIDDLEWARE] Tool validation rules: {list(tool_validation_rules.keys())}")
                         else:
                             log.warning(f"[MIDDLEWARE] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url")
                     else:
@@ -3537,12 +3540,15 @@ async def process_chat_response(
                     async def dummy_event_emitter(event: dict):
                         log.info(f"[MIDDLEWARE FALLBACK] Event (no WebSocket): {event.get('type', 'unknown')}")
 
+                    tool_validation_rules = metadata.get("tool_validation_rules", {})
                     fallback_tool_executor = ToolInlineExecutor(
                         event_emitter=dummy_event_emitter,
                         tool_prompts=tool_prompts_dict,
+                        tool_validation_rules=tool_validation_rules,
                         llm_call_fn=make_fallback_inline_llm_call
                     )
                     log.info(f"[MIDDLEWARE FALLBACK] ToolInlineExecutor created")
+                    log.info(f"[MIDDLEWARE FALLBACK] Tool validation rules: {list(tool_validation_rules.keys())}")
                 else:
                     log.warning(f"[MIDDLEWARE FALLBACK] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url")
 
