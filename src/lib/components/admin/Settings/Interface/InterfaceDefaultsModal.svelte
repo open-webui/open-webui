@@ -58,7 +58,8 @@
 			'iframeSandboxAllowSameOrigin', 'iframeSandboxAllowForms',
 			'stylizedPdfExport', 'hapticFeedback', 'ctrlEnterToSend',
 			'showFloatingActionButtons', 'imageCompression', 'imageCompressionInChannels',
-			'textScale', 'backgroundImageUrl'
+			'textScale', 'backgroundImageUrl', 'webSearch', 'floatingActionButtons',
+			'imageCompressionSize'
 		];
 
 		for (const field of directFields) {
