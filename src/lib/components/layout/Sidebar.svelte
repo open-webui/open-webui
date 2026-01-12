@@ -64,6 +64,7 @@
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
+	import { key } from 'vega';
 
 	const BREAKPOINT = 768;
 

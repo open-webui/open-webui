@@ -1,6 +1,9 @@
-import { WEBUI_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
+
+import { parse } from 'yaml';
+import { toast } from 'svelte-sonner';
 
 export const getModels = async (
 	token: string = '',
@@ -313,7 +316,7 @@ export const getToolServerData = async (token: string, url: string) => {
 			// Check if URL ends with .yaml or .yml to determine format
 			if (url.toLowerCase().endsWith('.yaml') || url.toLowerCase().endsWith('.yml')) {
 				if (!res.ok) throw await res.text();
-				const [text, { parse }] = await Promise.all([res.text(), import('yaml')]);
+				const text = await res.text();
 				return parse(text);
 			} else {
 				if (!res.ok) throw await res.json();

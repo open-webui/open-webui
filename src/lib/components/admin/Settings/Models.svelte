@@ -17,7 +17,6 @@
 	} from '$lib/apis/models';
 	import { copyToClipboard } from '$lib/utils';
 	import { page } from '$app/stores';
-	import { updateUserSettings } from '$lib/apis/users';
 
 	import { getModels } from '$lib/apis';
 	import Search from '$lib/components/icons/Search.svelte';
@@ -217,19 +216,6 @@
 			type: 'application/json'
 		});
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
-	};
-
-	const pinModelHandler = async (modelId) => {
-		let pinnedModels = $settings?.pinnedModels ?? [];
-
-		if (pinnedModels.includes(modelId)) {
-			pinnedModels = pinnedModels.filter((id) => id !== modelId);
-		} else {
-			pinnedModels = [...new Set([...pinnedModels, modelId])];
-		}
-
-		settings.set({ ...$settings, pinnedModels: pinnedModels });
-		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
 	onMount(async () => {
@@ -440,9 +426,6 @@
 									}}
 									hideHandler={() => {
 										hideModelHandler(model);
-									}}
-									pinModelHandler={() => {
-										pinModelHandler(model.id);
 									}}
 									copyLinkHandler={() => {
 										copyLinkHandler(model);

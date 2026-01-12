@@ -1,8 +1,7 @@
 import time
 from typing import Optional
 
-from sqlalchemy.orm import Session
-from open_webui.internal.db import Base, JSONField, get_db, get_db_context
+from open_webui.internal.db import Base, JSONField, get_db, get_db_context, Session
 
 
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
@@ -244,9 +243,8 @@ class UsersTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth: Optional[dict] = None,
-        db: Optional[Session] = None,
     ) -> Optional[UserModel]:
-        with get_db_context(db) as db:
+        with get_db() as db:
             user = UserModel(
                 **{
                     "id": id,
@@ -273,7 +271,7 @@ class UsersTable:
         self, id: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -283,7 +281,7 @@ class UsersTable:
         self, api_key: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 user = (
                     db.query(User)
                     .join(ApiKey, User.id == ApiKey.user_id)
@@ -298,7 +296,7 @@ class UsersTable:
         self, email: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 user = db.query(User).filter_by(email=email).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -308,7 +306,7 @@ class UsersTable:
         self, provider: str, sub: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
         try:
-            with get_db_context(db) as db:  # type: Session
+            with get_db() as db:  # type: Session
                 dialect_name = db.bind.dialect.name
 
                 query = db.query(User)
@@ -330,9 +328,8 @@ class UsersTable:
         filter: Optional[dict] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
-        db: Optional[Session] = None,
     ) -> dict:
-        with get_db_context(db) as db:
+        with get_db() as db:
             # Join GroupMember so we can order by group_id when requested
             query = db.query(User)
 
@@ -482,17 +479,17 @@ class UsersTable:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
 
-    def get_num_users(self, db: Optional[Session] = None) -> Optional[int]:
-        with get_db_context(db) as db:
+    def get_num_users(self) -> Optional[int]:
+        with get_db() as db:
             return db.query(User).count()
 
-    def has_users(self, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
+    def has_users(self) -> bool:
+        with get_db() as db:
             return db.query(db.query(User).exists()).scalar()
 
-    def get_first_user(self, db: Optional[Session] = None) -> UserModel:
+    def get_first_user(self) -> UserModel:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 user = db.query(User).order_by(User.created_at).first()
                 return UserModel.model_validate(user)
         except Exception:
@@ -502,7 +499,7 @@ class UsersTable:
         self, id: str, db: Optional[Session] = None
     ) -> Optional[str]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
 
                 if user.settings is None:
@@ -516,8 +513,8 @@ class UsersTable:
         except Exception:
             return None
 
-    def get_num_users_active_today(self, db: Optional[Session] = None) -> Optional[int]:
-        with get_db_context(db) as db:
+    def get_num_users_active_today(self) -> Optional[int]:
+        with get_db() as db:
             current_timestamp = int(datetime.datetime.now().timestamp())
             today_midnight_timestamp = current_timestamp - (current_timestamp % 86400)
             query = db.query(User).filter(
@@ -529,7 +526,7 @@ class UsersTable:
         self, id: str, role: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 db.query(User).filter_by(id=id).update({"role": role})
                 db.commit()
                 user = db.query(User).filter_by(id=id).first()
@@ -538,10 +535,10 @@ class UsersTable:
             return None
 
     def update_user_status_by_id(
-        self, id: str, form_data: UserStatus, db: Optional[Session] = None
+        self, id: str, form_data: UserStatus
     ) -> Optional[UserModel]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 db.query(User).filter_by(id=id).update(
                     {**form_data.model_dump(exclude_none=True)}
                 )
@@ -553,10 +550,10 @@ class UsersTable:
             return None
 
     def update_user_profile_image_url_by_id(
-        self, id: str, profile_image_url: str, db: Optional[Session] = None
+        self, id: str, profile_image_url: str
     ) -> Optional[UserModel]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 db.query(User).filter_by(id=id).update(
                     {"profile_image_url": profile_image_url}
                 )
@@ -572,7 +569,7 @@ class UsersTable:
         self, id: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 db.query(User).filter_by(id=id).update(
                     {"last_active_at": int(time.time())}
                 )
@@ -584,7 +581,7 @@ class UsersTable:
             return None
 
     def update_user_oauth_by_id(
-        self, id: str, provider: str, sub: str, db: Optional[Session] = None
+        self, id: str, provider: str, sub: str
     ) -> Optional[UserModel]:
         """
         Update or insert an OAuth provider/sub pair into the user's oauth JSON field.
@@ -595,7 +592,7 @@ class UsersTable:
             }
         """
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 user = db.query(User).filter_by(id=id).first()
                 if not user:
                     return None
@@ -619,7 +616,7 @@ class UsersTable:
         self, id: str, updated: dict, db: Optional[Session] = None
     ) -> Optional[UserModel]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 db.query(User).filter_by(id=id).update(updated)
                 db.commit()
 
@@ -654,15 +651,15 @@ class UsersTable:
         except Exception:
             return None
 
-    def delete_user_by_id(self, id: str, db: Optional[Session] = None) -> bool:
+    def delete_user_by_id(self, id: str) -> bool:
         try:
             # Remove User from Groups
             Groups.remove_user_from_all_groups(id)
 
             # Delete User Chats
-            result = Chats.delete_chats_by_user_id(id, db=db)
+            result = Chats.delete_chats_by_user_id(id)
             if result:
-                with get_db_context(db) as db:
+                with get_db() as db:
                     # Delete User
                     db.query(User).filter_by(id=id).delete()
                     db.commit()
@@ -677,7 +674,7 @@ class UsersTable:
         self, id: str, db: Optional[Session] = None
     ) -> Optional[str]:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 api_key = db.query(ApiKey).filter_by(user_id=id).first()
                 return api_key.key if api_key else None
         except Exception:
@@ -687,7 +684,7 @@ class UsersTable:
         self, id: str, api_key: str, db: Optional[Session] = None
     ) -> bool:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 db.query(ApiKey).filter_by(user_id=id).delete()
                 db.commit()
 
@@ -707,9 +704,9 @@ class UsersTable:
         except Exception:
             return False
 
-    def delete_user_api_key_by_id(self, id: str, db: Optional[Session] = None) -> bool:
+    def delete_user_api_key_by_id(self, id: str) -> bool:
         try:
-            with get_db_context(db) as db:
+            with get_db() as db:
                 db.query(ApiKey).filter_by(user_id=id).delete()
                 db.commit()
                 return True
@@ -723,16 +720,16 @@ class UsersTable:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [user.id for user in users]
 
-    def get_super_admin_user(self, db: Optional[Session] = None) -> Optional[UserModel]:
-        with get_db_context(db) as db:
+    def get_super_admin_user(self) -> Optional[UserModel]:
+        with get_db() as db:
             user = db.query(User).filter_by(role="admin").first()
             if user:
                 return UserModel.model_validate(user)
             else:
                 return None
 
-    def get_active_user_count(self, db: Optional[Session] = None) -> int:
-        with get_db_context(db) as db:
+    def get_active_user_count(self) -> int:
+        with get_db() as db:
             # Consider user active if last_active_at within the last 3 minutes
             three_minutes_ago = int(time.time()) - 180
             count = (
@@ -740,8 +737,8 @@ class UsersTable:
             )
             return count
 
-    def is_user_active(self, user_id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
+    def is_user_active(self, user_id: str) -> bool:
+        with get_db() as db:
             user = db.query(User).filter_by(id=user_id).first()
             if user and user.last_active_at:
                 # Consider user active if last_active_at within the last 3 minutes

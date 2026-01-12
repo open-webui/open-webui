@@ -16,9 +16,6 @@ from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from open_webui.internal.db import get_session
-from sqlalchemy.orm import Session
-
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
 
@@ -32,11 +29,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[GroupResponse])
-async def get_groups(
-    share: Optional[bool] = None,
-    user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
-):
+async def get_groups(share: Optional[bool] = None, user=Depends(get_verified_user)):
 
     filter = {}
 
@@ -46,7 +39,7 @@ async def get_groups(
         if share is not None:
             filter["share"] = share
 
-    groups = Groups.get_groups(filter=filter, db=db)
+    groups = Groups.get_groups(filter=filter)
 
     return groups
 
@@ -57,17 +50,13 @@ async def get_groups(
 
 
 @router.post("/create", response_model=Optional[GroupResponse])
-async def create_new_group(
-    form_data: GroupForm,
-    user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
-):
+async def create_new_group(form_data: GroupForm, user=Depends(get_admin_user)):
     try:
-        group = Groups.insert_new_group(user.id, form_data, db=db)
+        group = Groups.insert_new_group(user.id, form_data)
         if group:
             return GroupResponse(
                 **group.model_dump(),
-                member_count=Groups.get_group_member_count_by_id(group.id, db=db),
+                member_count=Groups.get_group_member_count_by_id(group.id),
             )
         else:
             raise HTTPException(
@@ -88,14 +77,12 @@ async def create_new_group(
 
 
 @router.get("/id/{id}", response_model=Optional[GroupResponse])
-async def get_group_by_id(
-    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
-    group = Groups.get_group_by_id(id, db=db)
+async def get_group_by_id(id: str, user=Depends(get_admin_user)):
+    group = Groups.get_group_by_id(id)
     if group:
         return GroupResponse(
             **group.model_dump(),
-            member_count=Groups.get_group_member_count_by_id(group.id, db=db),
+            member_count=Groups.get_group_member_count_by_id(group.id),
         )
     else:
         raise HTTPException(
@@ -115,15 +102,13 @@ class GroupExportResponse(GroupResponse):
 
 
 @router.get("/id/{id}/export", response_model=Optional[GroupExportResponse])
-async def export_group_by_id(
-    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
-    group = Groups.get_group_by_id(id, db=db)
+async def export_group_by_id(id: str, user=Depends(get_admin_user)):
+    group = Groups.get_group_by_id(id)
     if group:
         return GroupExportResponse(
             **group.model_dump(),
-            member_count=Groups.get_group_member_count_by_id(group.id, db=db),
-            user_ids=Groups.get_group_user_ids_by_id(group.id, db=db),
+            member_count=Groups.get_group_member_count_by_id(group.id),
+            user_ids=Groups.get_group_user_ids_by_id(group.id),
         )
     else:
         raise HTTPException(
@@ -138,11 +123,9 @@ async def export_group_by_id(
 
 
 @router.post("/id/{id}/users", response_model=list[UserInfoResponse])
-async def get_users_in_group(
-    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
+async def get_users_in_group(id: str, user=Depends(get_admin_user)):
     try:
-        users = Users.get_users_by_group_id(id, db=db)
+        users = Users.get_users_by_group_id(id)
         return users
     except Exception as e:
         log.exception(f"Error adding users to group {id}: {e}")
@@ -159,17 +142,14 @@ async def get_users_in_group(
 
 @router.post("/id/{id}/update", response_model=Optional[GroupResponse])
 async def update_group_by_id(
-    id: str,
-    form_data: GroupUpdateForm,
-    user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    id: str, form_data: GroupUpdateForm, user=Depends(get_admin_user)
 ):
     try:
-        group = Groups.update_group_by_id(id, form_data, db=db)
+        group = Groups.update_group_by_id(id, form_data)
         if group:
             return GroupResponse(
                 **group.model_dump(),
-                member_count=Groups.get_group_member_count_by_id(group.id, db=db),
+                member_count=Groups.get_group_member_count_by_id(group.id),
             )
         else:
             raise HTTPException(
@@ -191,20 +171,17 @@ async def update_group_by_id(
 
 @router.post("/id/{id}/users/add", response_model=Optional[GroupResponse])
 async def add_user_to_group(
-    id: str,
-    form_data: UserIdsForm,
-    user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    id: str, form_data: UserIdsForm, user=Depends(get_admin_user)
 ):
     try:
         if form_data.user_ids:
-            form_data.user_ids = Users.get_valid_user_ids(form_data.user_ids, db=db)
+            form_data.user_ids = Users.get_valid_user_ids(form_data.user_ids)
 
-        group = Groups.add_users_to_group(id, form_data.user_ids, db=db)
+        group = Groups.add_users_to_group(id, form_data.user_ids)
         if group:
             return GroupResponse(
                 **group.model_dump(),
-                member_count=Groups.get_group_member_count_by_id(group.id, db=db),
+                member_count=Groups.get_group_member_count_by_id(group.id),
             )
         else:
             raise HTTPException(
@@ -221,17 +198,14 @@ async def add_user_to_group(
 
 @router.post("/id/{id}/users/remove", response_model=Optional[GroupResponse])
 async def remove_users_from_group(
-    id: str,
-    form_data: UserIdsForm,
-    user=Depends(get_admin_user),
-    db: Session = Depends(get_session),
+    id: str, form_data: UserIdsForm, user=Depends(get_admin_user)
 ):
     try:
-        group = Groups.remove_users_from_group(id, form_data.user_ids, db=db)
+        group = Groups.remove_users_from_group(id, form_data.user_ids)
         if group:
             return GroupResponse(
                 **group.model_dump(),
-                member_count=Groups.get_group_member_count_by_id(group.id, db=db),
+                member_count=Groups.get_group_member_count_by_id(group.id),
             )
         else:
             raise HTTPException(
@@ -252,11 +226,9 @@ async def remove_users_from_group(
 
 
 @router.delete("/id/{id}/delete", response_model=bool)
-async def delete_group_by_id(
-    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
-):
+async def delete_group_by_id(id: str, user=Depends(get_admin_user)):
     try:
-        result = Groups.delete_group_by_id(id, db=db)
+        result = Groups.delete_group_by_id(id)
         if result:
             return result
         else:
