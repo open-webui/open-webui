@@ -174,13 +174,15 @@ def _match_logo_for_model(model_id: str) -> Optional[Path]:
     Find a matching logo for a model ID using smart prioritized matching.
     
     Matching priority:
-    1. Exact model name match (e.g., "gpt-5.2" -> "gpt-5.2.png")
-    2. Model name with version variations (e.g., "gpt-5.2" matches "gpt-5.2-pro.png")
-    3. Provider-based match (e.g., "openai" -> "openai.png") 
-    4. Fuzzy keyword match
+    1. Exact match
+    2. Logo is a full component of model ID (e.g., "Hotaru.gpt-5.1" contains "gpt-5.1")
+    3. Model starts with logo (e.g., "gpt-5.1-preview" starts with "gpt-5.1")
+    4. Model ID ends with logo (e.g., "openai/gpt-5.2" ends with "gpt-5.2")
+    5. Brand keyword matching
+    6. Fuzzy matching
     """
     info = _extract_model_info(model_id)
-    model_name = info["model_clean"]
+    model_name_extracted = info["model_clean"]
     provider = info["provider"]
     model_id_lower = model_id.lower()
     
@@ -195,72 +197,106 @@ def _match_logo_for_model(model_id: str) -> Optional[Path]:
     logos = _scan_available_logos()
     candidates = []  # List of (score, logo_path)
     
+    # Pre-calculate delimiters for boundary checks
+    delimiters = set(".-_/: ")
+    
     for logo_keywords, logo_path in logos:
         logo_stem = logo_path.stem.lower()
         logo_stem_normalized = _normalize_name(logo_stem)
         score = 0
         
-        # === EXACT MATCH (Highest Priority) ===
-        # Check if logo filename exactly matches model name
-        if logo_stem_normalized == model_name or logo_stem == model_name:
-            score = 1000
-        # Check if logo filename starts with model name (e.g., gpt-5.2 matches gpt-5.2-pro)
-        elif logo_stem_normalized.startswith(model_name) or logo_stem.startswith(model_name):
-            score = 900
-        # Check if model name starts with logo filename (e.g., gpt-5.2-xyz matches gpt-5.2)
-        elif model_name.startswith(logo_stem_normalized) or model_name.startswith(logo_stem):
-            # Length bonus - longer matches are better
-            score = 800 + len(logo_stem_normalized) * 10
+        # Candidate strings to match against (original and normalized logo names)
+        check_logos = {logo_stem}
+        if logo_stem_normalized != logo_stem:
+            check_logos.add(logo_stem_normalized)
+            
+        for check_logo in check_logos:
+            if not check_logo or len(check_logo) < 2:
+                continue
+                
+            # === STRICT SUBSTRING MATCHING ===
+            # We look for the logo name inside the model ID and check boundaries
+            
+            try:
+                # Find all occurrences
+                start_indices = [m.start() for m in re.finditer(re.escape(check_logo), model_id_lower)]
+                
+                for start_idx in start_indices:
+                    end_idx = start_idx + len(check_logo)
+                    
+                    # Check Left Boundary
+                    # Valid if at start of string OR preceded by a delimiter
+                    left_ok = (start_idx == 0) or (model_id_lower[start_idx-1] in delimiters)
+                    
+                    # Check Right Boundary
+                    # Valid if at end of string OR followed by a delimiter (or followed by digit? sometimes generic)
+                    right_ok = (end_idx == len(model_id_lower)) or (model_id_lower[end_idx] in delimiters)
+                    
+                    # 1. EXACT TOKEN MATCH: "Hotaru.gpt-5.1" matches "gpt-5.1"
+                    # "start.gpt-5.1.end" -> Both boundaries OK
+                    if left_ok and right_ok:
+                        s = 950
+                        # Boost if it's the very end (suffix match) - likely the model name
+                        if end_idx == len(model_id_lower):
+                            s += 20
+                        # Boost if it's the very start
+                        if start_idx == 0:
+                            s += 30
+                        score = max(score, s)
+                        
+                    # 2. PREFIX TOKEN MATCH: "gpt-5.1-preview" matches "gpt-5.1"
+                    # Left OK, Right NOT OK (but right is likely version info)
+                    elif left_ok and not right_ok:
+                        # Only valid if not part of a larger word?
+                        # e.g. "gpt-5.1" in "gpt-5.10" -> Right char is '0'. Not a delimiter.
+                        # We want to avoid matching "gpt-4" in "gpt-40"
+                        next_char = model_id_lower[end_idx]
+                        if not next_char.isalnum(): # It is a delimiter
+                             score = max(score, 900)
+                        else:
+                             # It continues with alphanumeric.
+                             # e.g. "gpt-5.1" in "gpt-5.12"
+                             # Should we match? Maybe lower score.
+                             if check_logo[-1].isdigit() and next_char.isdigit():
+                                 # Matching "gpt-4" in "gpt-40". BAD.
+                                 pass 
+                             else:
+                                 score = max(score, 800)
+            except Exception:
+                pass
         
         # === PROVIDER MATCH ===
-        # If provider matches (e.g., "openai" matches "openai.png" or "openai_(3).jpg")
-        if provider and score == 0:
+        if provider and score < 500:
             if provider in logo_keywords or provider == logo_stem_normalized:
-                score = 500
-            # Check if provider is in logo filename
+                score = max(score, 500)
             elif provider in logo_stem:
-                score = 400
+                score = max(score, 400)
         
         # === BRAND KEYWORD MATCH ===
-        # Check for important brand keywords in model name
+        # Important for models like "qwen-plus" matching "qwen" logo
         brand_keywords = ["qwen", "claude", "gemini", "deepseek", "grok", "llama", "mistral", 
                          "meta", "google", "anthropic", "kimi", "moonshot", "doubao", "zhipu",
                          "glm", "hunyuan", "minimax", "copilot", "gemma", "baai", "bytedance"]
         
-        if score == 0:
+        if score < 700:
             for brand in brand_keywords:
-                if brand in model_name or brand in model_id_lower:
+                if brand in model_id_lower:
+                    # Check if logo represents this brand
                     if brand in logo_keywords or brand in logo_stem_normalized:
-                        score = 700 + len(brand) * 5
-                        break
-        
-        # === FUZZY MATCH (Low Priority) ===
-        if score == 0:
-            model_keywords = set(re.split(r'[-_\.:/\s]+', model_name))
-            for logo_kw in logo_keywords:
-                if len(logo_kw) >= 4:  # Only meaningful keywords
-                    for model_kw in model_keywords:
-                        if len(model_kw) >= 4:
-                            if model_kw == logo_kw:
-                                score = 300 + len(model_kw) * 5
-                                break
-                            elif model_kw in logo_kw or logo_kw in model_kw:
-                                score = 200 + min(len(model_kw), len(logo_kw)) * 3
-                                break
-                    if score > 0:
+                        # Give a solid score, but lower than specific model matches
+                        score = max(score, 700 + len(brand))
                         break
         
         # Avoid matching generic service names like "openrouter" unless nothing else matches
         if score > 0 and score < 500:
             generic_names = ["openrouter", "newapi", "one", "api"]
             if any(g in logo_stem_normalized for g in generic_names):
-                score = max(0, score - 300)  # Heavily penalize generic matches
+                score = max(0, score - 300)
         
         if score > 0:
             candidates.append((score, logo_path))
     
     if candidates:
-        # Return the highest scoring match
         candidates.sort(key=lambda x: x[0], reverse=True)
         best_score, best_path = candidates[0]
         log.debug(f"Logo match scores for '{model_id}': top={best_score}, path={best_path.name}")
