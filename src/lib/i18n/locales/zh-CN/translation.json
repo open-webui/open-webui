@@ -1308,7 +1308,7 @@
 	"Pipe": "Pipe",
 	"Pipeline deleted successfully": "Pipeline 删除成功",
 	"Pipeline downloaded successfully": "Pipeline 下载成功",
-	"Pipelines": "流水线",
+	"Pipelines": "Pipelines",
 	"Pipelines are a plugin system with arbitrary code execution —": "Pipelines 是具有任意代码执行风险的插件系统 —",
 	"Pipelines Not Detected": "未检测到 Pipeline",
 	"Pipelines Valves": "Pipeline 配置项",
