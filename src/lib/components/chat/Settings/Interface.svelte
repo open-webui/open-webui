@@ -18,6 +18,11 @@
 	const i18n = getContext('i18n');
 
 	export let saveSettings: Function;
+	export let initialSettings: any = null;
+
+	// When initialSettings is provided, we're in admin mode (configuring defaults)
+	// In admin mode, we don't apply CSS side effects like text scale
+	$: isAdminMode = initialSettings !== null;
 
 	let backgroundImageUrl = null;
 	let inputFiles = null;
@@ -186,7 +191,11 @@
 
 	const setTextScaleHandler = (scale) => {
 		textScale = scale;
-		setTextScale(textScale);
+
+		// Only apply CSS side effect in user mode, not admin mode
+		if (!isAdminMode) {
+			setTextScale(textScale);
+		}
 
 		if (textScale === 1) {
 			textScale = null;
@@ -194,81 +203,92 @@
 		saveSettings({ textScale });
 	};
 
-	onMount(async () => {
-		titleAutoGenerate = $settings?.title?.auto ?? true;
-		autoTags = $settings?.autoTags ?? true;
-		autoFollowUps = $settings?.autoFollowUps ?? true;
+	// Centralized function to load settings from either user settings or admin defaults
+	const loadSettingsFromSource = (source: any) => {
+		titleAutoGenerate = source?.title?.auto ?? true;
+		autoTags = source?.autoTags ?? true;
+		autoFollowUps = source?.autoFollowUps ?? true;
 
-		highContrastMode = $settings?.highContrastMode ?? false;
+		highContrastMode = source?.highContrastMode ?? false;
 
-		detectArtifacts = $settings?.detectArtifacts ?? true;
-		responseAutoCopy = $settings?.responseAutoCopy ?? false;
+		detectArtifacts = source?.detectArtifacts ?? true;
+		responseAutoCopy = source?.responseAutoCopy ?? false;
 
-		showUsername = $settings?.showUsername ?? false;
-		showUpdateToast = $settings?.showUpdateToast ?? true;
-		showChangelog = $settings?.showChangelog ?? true;
+		showUsername = source?.showUsername ?? false;
+		showUpdateToast = source?.showUpdateToast ?? true;
+		showChangelog = source?.showChangelog ?? true;
 
-		showEmojiInCall = $settings?.showEmojiInCall ?? false;
-		voiceInterruption = $settings?.voiceInterruption ?? false;
+		showEmojiInCall = source?.showEmojiInCall ?? false;
+		voiceInterruption = source?.voiceInterruption ?? false;
 
-		displayMultiModelResponsesInTabs = $settings?.displayMultiModelResponsesInTabs ?? false;
-		chatFadeStreamingText = $settings?.chatFadeStreamingText ?? true;
+		displayMultiModelResponsesInTabs = source?.displayMultiModelResponsesInTabs ?? false;
+		chatFadeStreamingText = source?.chatFadeStreamingText ?? true;
 
-		richTextInput = $settings?.richTextInput ?? true;
-		showFormattingToolbar = $settings?.showFormattingToolbar ?? false;
-		insertPromptAsRichText = $settings?.insertPromptAsRichText ?? false;
-		promptAutocomplete = $settings?.promptAutocomplete ?? false;
+		richTextInput = source?.richTextInput ?? true;
+		showFormattingToolbar = source?.showFormattingToolbar ?? false;
+		insertPromptAsRichText = source?.insertPromptAsRichText ?? false;
+		promptAutocomplete = source?.promptAutocomplete ?? false;
 
-		insertSuggestionPrompt = $settings?.insertSuggestionPrompt ?? false;
-		keepFollowUpPrompts = $settings?.keepFollowUpPrompts ?? false;
-		insertFollowUpPrompt = $settings?.insertFollowUpPrompt ?? false;
+		insertSuggestionPrompt = source?.insertSuggestionPrompt ?? false;
+		keepFollowUpPrompts = source?.keepFollowUpPrompts ?? false;
+		insertFollowUpPrompt = source?.insertFollowUpPrompt ?? false;
 
-		regenerateMenu = $settings?.regenerateMenu ?? true;
+		regenerateMenu = source?.regenerateMenu ?? true;
 
-		largeTextAsFile = $settings?.largeTextAsFile ?? false;
-		copyFormatted = $settings?.copyFormatted ?? false;
+		largeTextAsFile = source?.largeTextAsFile ?? false;
+		copyFormatted = source?.copyFormatted ?? false;
 
-		collapseCodeBlocks = $settings?.collapseCodeBlocks ?? false;
-		expandDetails = $settings?.expandDetails ?? false;
+		collapseCodeBlocks = source?.collapseCodeBlocks ?? false;
+		expandDetails = source?.expandDetails ?? false;
 
-		landingPageMode = $settings?.landingPageMode ?? '';
-		chatBubble = $settings?.chatBubble ?? true;
-		widescreenMode = $settings?.widescreenMode ?? false;
-		splitLargeChunks = $settings?.splitLargeChunks ?? false;
-		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
+		landingPageMode = source?.landingPageMode ?? '';
+		chatBubble = source?.chatBubble ?? true;
+		widescreenMode = source?.widescreenMode ?? false;
+		splitLargeChunks = source?.splitLargeChunks ?? false;
+		scrollOnBranchChange = source?.scrollOnBranchChange ?? true;
 
-		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
-		chatDirection = $settings?.chatDirection ?? 'auto';
-		userLocation = $settings?.userLocation ?? false;
-		showChatTitleInTab = $settings?.showChatTitleInTab ?? true;
+		temporaryChatByDefault = source?.temporaryChatByDefault ?? false;
+		chatDirection = source?.chatDirection ?? 'auto';
+		userLocation = source?.userLocation ?? false;
+		showChatTitleInTab = source?.showChatTitleInTab ?? true;
 
-		notificationSound = $settings?.notificationSound ?? true;
-		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
+		notificationSound = source?.notificationSound ?? true;
+		notificationSoundAlways = source?.notificationSoundAlways ?? false;
 
-		iframeSandboxAllowSameOrigin = $settings?.iframeSandboxAllowSameOrigin ?? false;
-		iframeSandboxAllowForms = $settings?.iframeSandboxAllowForms ?? false;
+		iframeSandboxAllowSameOrigin = source?.iframeSandboxAllowSameOrigin ?? false;
+		iframeSandboxAllowForms = source?.iframeSandboxAllowForms ?? false;
 
-		stylizedPdfExport = $settings?.stylizedPdfExport ?? true;
+		stylizedPdfExport = source?.stylizedPdfExport ?? true;
 
-		hapticFeedback = $settings?.hapticFeedback ?? false;
-		ctrlEnterToSend = $settings?.ctrlEnterToSend ?? false;
+		hapticFeedback = source?.hapticFeedback ?? false;
+		ctrlEnterToSend = source?.ctrlEnterToSend ?? false;
 
-		showFloatingActionButtons = $settings?.showFloatingActionButtons ?? true;
-		floatingActionButtons = $settings?.floatingActionButtons ?? null;
+		showFloatingActionButtons = source?.showFloatingActionButtons ?? true;
+		floatingActionButtons = source?.floatingActionButtons ?? null;
 
-		imageCompression = $settings?.imageCompression ?? false;
-		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
-		imageCompressionInChannels = $settings?.imageCompressionInChannels ?? true;
+		imageCompression = source?.imageCompression ?? false;
+		imageCompressionSize = source?.imageCompressionSize ?? { width: '', height: '' };
+		imageCompressionInChannels = source?.imageCompressionInChannels ?? true;
 
-		defaultModelId = $settings?.models?.at(0) ?? '';
+		defaultModelId = source?.models?.at(0) ?? '';
 		if ($config?.default_models) {
 			defaultModelId = $config.default_models.split(',')[0];
 		}
 
-		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
-		webSearch = $settings?.webSearch ?? null;
+		backgroundImageUrl = source?.backgroundImageUrl ?? null;
+		webSearch = source?.webSearch ?? null;
 
-		textScale = $settings?.textScale ?? null;
+		textScale = source?.textScale ?? null;
+	};
+
+	// Reactive reload when initialSettings changes (for admin mode)
+	$: if (initialSettings !== null) {
+		loadSettingsFromSource(initialSettings);
+	}
+
+	onMount(async () => {
+		// Load from appropriate source
+		loadSettingsFromSource(initialSettings ?? $settings);
 	});
 </script>
 
