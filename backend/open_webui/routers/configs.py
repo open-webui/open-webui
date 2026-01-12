@@ -596,6 +596,7 @@ class InterfaceDefaultsForm(BaseModel):
     imageCompression: Optional[bool] = None
     imageCompressionInChannels: Optional[bool] = None
     textScale: Optional[float] = None
+    backgroundImageUrl: Optional[str] = None
 
     @field_validator("chatDirection")
     @classmethod
