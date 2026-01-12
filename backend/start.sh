@@ -79,8 +79,12 @@ else
     ARGS=(--workers "$UVICORN_WORKERS")
 fi
 
-FRONTEND_BUILD_DIR="/home/shared/hyu-math/build"
-
+export FRONTEND_BUILD_DIR="/home/shared/hyu-math/build"
+export ENABLE_OAUTH_SIGNUP=true
+export HANYANG_CLIENT_ID=b0e42ba07cdfa2e3be3889d7186d33f7
+export HANYANG_CLIENT_SECRET=196ca9394c6da9abab7c2e26bed3c7
+export HANYANG_REDIRECT_URI=http://hy-aitutor.hanyang.ac.kr:8080/oauth/hanyang/login/callback
+export HANYANG_OAUTH_SCOPE=35,10
 # Run uvicorn
 # WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
 WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" DATA_DIR="/home/shared/hyu-math/backend/open_webui/data" python -m uvicorn open_webui.main:app \

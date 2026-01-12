@@ -30,7 +30,7 @@ def build_tool_catalog(tool_prompts: List[Any]) -> str:
     Build a tool catalog from tool prompts for Stage 1.
 
     Args:
-        tool_prompts: List of PromptModel objects with prompt_type='tool'
+        tool_prompts: List of PromptModel objects with prompt_type in ('basic_tool', 'json_tool', 'tool')
 
     Returns:
         Formatted tool catalog string with short descriptions
@@ -40,8 +40,10 @@ def build_tool_catalog(tool_prompts: List[Any]) -> str:
 
     lines = ["[Available Tools]"]
     for tool in tool_prompts:
-        description = tool.tool_description or tool.title or tool.command
-        lines.append(f"- {tool.command}: {description}")
+        # Include both basic_tool and json_tool types (and legacy 'tool' for backward compatibility)
+        if tool.prompt_type in ("basic_tool", "json_tool", "tool"):
+            description = tool.tool_description or tool.title or tool.command
+            lines.append(f"- {tool.command}: {description}")
 
     return "\n".join(lines)
 
