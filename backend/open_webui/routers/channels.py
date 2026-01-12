@@ -1874,13 +1874,9 @@ async def delete_message_by_id(
 
 
 @router.get("/webhooks/{webhook_id}/profile/image")
-async def get_webhook_profile_image(
-    webhook_id: str,
-    user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
-):
+def get_webhook_profile_image(webhook_id: str, user=Depends(get_verified_user)):
     """Get webhook profile image by webhook ID."""
-    webhook = Channels.get_webhook_by_id(webhook_id, db=db)
+    webhook = Channels.get_webhook_by_id(webhook_id)
     if not webhook:
         # Return default favicon if webhook not found
         return FileResponse(f"{STATIC_DIR}/favicon.png")

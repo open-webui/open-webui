@@ -1257,8 +1257,11 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
     bypass_system_prompt: bool = False,
-    db: Session = Depends(get_session),
 ):
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations (get_model_by_id, has_access) manage their own short-lived sessions.
+    # This prevents holding a connection during the entire LLM call (30-60+ seconds),
+    # which would exhaust the connection pool under concurrent load.
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -1279,7 +1282,7 @@ async def generate_chat_completion(
         del payload["metadata"]
 
     model_id = payload["model"]
-    model_info = Models.get_model_by_id(model_id, db=db)
+    model_info = Models.get_model_by_id(model_id)
 
     if model_info:
         if model_info.base_model_id:
@@ -1307,7 +1310,6 @@ async def generate_chat_completion(
                     user.id,
                     type="read",
                     access_control=model_info.access_control,
-                    db=db,
                 )
             ):
                 raise HTTPException(
@@ -1379,8 +1381,11 @@ async def generate_openai_completion(
     form_data: dict,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations (get_model_by_id, has_access) manage their own short-lived sessions.
+    # This prevents holding a connection during the entire LLM call (30-60+ seconds),
+    # which would exhaust the connection pool under concurrent load.
     metadata = form_data.pop("metadata", None)
 
     try:
@@ -1400,7 +1405,7 @@ async def generate_openai_completion(
     if ":" not in model_id:
         model_id = f"{model_id}:latest"
 
-    model_info = Models.get_model_by_id(model_id, db=db)
+    model_info = Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -1417,7 +1422,6 @@ async def generate_openai_completion(
                     user.id,
                     type="read",
                     access_control=model_info.access_control,
-                    db=db,
                 )
             ):
                 raise HTTPException(
@@ -1462,8 +1466,11 @@ async def generate_openai_chat_completion(
     form_data: dict,
     url_idx: Optional[int] = None,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations (get_model_by_id, has_access) manage their own short-lived sessions.
+    # This prevents holding a connection during the entire LLM call (30-60+ seconds),
+    # which would exhaust the connection pool under concurrent load.
     metadata = form_data.pop("metadata", None)
 
     try:
@@ -1483,7 +1490,7 @@ async def generate_openai_chat_completion(
     if ":" not in model_id:
         model_id = f"{model_id}:latest"
 
-    model_info = Models.get_model_by_id(model_id, db=db)
+    model_info = Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -1504,7 +1511,6 @@ async def generate_openai_chat_completion(
                     user.id,
                     type="read",
                     access_control=model_info.access_control,
-                    db=db,
                 )
             ):
                 raise HTTPException(

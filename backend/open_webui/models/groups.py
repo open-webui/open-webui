@@ -165,15 +165,16 @@ class GroupTable:
                     share_value = filter["share"]
                     member_id = filter.get("member_id")
                     json_share = Group.data["config"]["share"]
-                    json_share_bool = json_share.as_boolean()
                     json_share_str = json_share.as_string()
+                    json_share_lower = func.lower(json_share_str)
 
                     if share_value:
-                        # Groups open to anyone: data is null, share is null, or share is true
+                        # Groups open to anyone: data is null, config.share is null, or share is true
+                        # Use case-insensitive string comparison to handle variations like "True", "TRUE"
                         anyone_can_share = or_(
                             Group.data.is_(None),
-                            json_share_bool.is_(None),
-                            json_share_bool == True,
+                            json_share_str.is_(None),
+                            json_share_lower == "true",
                         )
 
                         if member_id:
@@ -184,7 +185,7 @@ class GroupTable:
                                 .subquery()
                             )
                             members_only_and_is_member = and_(
-                                json_share_str == "members",
+                                json_share_lower == "members",
                                 Group.id.in_(member_groups_subq),
                             )
                             query = query.filter(
@@ -194,7 +195,7 @@ class GroupTable:
                             query = query.filter(anyone_can_share)
                     else:
                         query = query.filter(
-                            and_(Group.data.isnot(None), json_share_bool == False)
+                            and_(Group.data.isnot(None), json_share_lower == "false")
                         )
 
                 else:
