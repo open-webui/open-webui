@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🐍 Users can now ask models to perform calculations, analyze data, and generate visualizations through autonomous Python code execution—for example, "create a bar chart showing quarterly sales" or "analyze this dataset for trends and outliers." Requires Native function calling mode and the code_interpreter capability enabled. [#20592](https://github.com/open-webui/open-webui/pull/20592), [Docs:#998](https://github.com/open-webui/docs/pull/998)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Catalan, German, Polish, Portuguese (Brazil), and Spanish were enhanced and expanded.
+- 🌐 Translations for Catalan, German, Japanese, Polish, Portuguese (Brazil), Simplified Chinese, Spanish, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
