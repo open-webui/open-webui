@@ -1569,22 +1569,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if "memory" in features and features["memory"]:
-            # Skip forced memory injection when native FC is enabled - model can use memory tools
-            if metadata.get("params", {}).get("function_calling") != "native":
+            # Skip forced memory injection when native FC is enabled and builtin_tools is enabled - model can use memory tools
+            if metadata.get("params", {}).get(
+                "function_calling"
+            ) != "native" or not metadata.get("builtin_tools"):
                 form_data = await chat_memory_handler(
                     request, form_data, extra_params, user
                 )
 
         if "web_search" in features and features["web_search"]:
-            # Skip forced RAG web search when native FC is enabled - model can use web_search tool
-            if metadata.get("params", {}).get("function_calling") != "native":
+            # Skip forced RAG web search when native FC is enabled and builtin_tools is enabled - model can use web_search tool
+            if metadata.get("params", {}).get(
+                "function_calling"
+            ) != "native" or not metadata.get("builtin_tools"):
                 form_data = await chat_web_search_handler(
                     request, form_data, extra_params, user
                 )
 
         if "image_generation" in features and features["image_generation"]:
-            # Skip forced image generation when native FC is enabled - model can use generate_image tool
-            if metadata.get("params", {}).get("function_calling") != "native":
+            # Skip forced image generation when native FC is enabled and builtin_tools is enabled - model can use generate_image tool
+            if metadata.get("params", {}).get(
+                "function_calling"
+            ) != "native" or not metadata.get("builtin_tools"):
                 form_data = await chat_image_generation_handler(
                     request, form_data, extra_params, user
                 )
