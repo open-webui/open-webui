@@ -1555,41 +1555,47 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop("features", None) or {}
     extra_params["__features__"] = features
-    if features:
-        if "voice" in features and features["voice"]:
-            if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
-                if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != "":
-                    template = request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE
-                else:
-                    template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
+    # Check if builtin_tools capability is enabled for this model (defaults to True if not specified)
+    builtin_tools_enabled = (
+        model.get("info", {})
+        .get("meta", {})
+        .get("capabilities", {})
+        .get("builtin_tools", True)
+    ) and metadata.get("params", {}).get("function_calling") == "native"
 
-                form_data["messages"] = add_or_update_system_message(
-                    template,
-                    form_data["messages"],
-                )
+    if "voice" in features and features["voice"]:
+        if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
+            if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != "":
+                template = request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE
+            else:
+                template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
 
+            form_data["messages"] = add_or_update_system_message(
+                template,
+                form_data["messages"],
+            )
+
+    if not builtin_tools_enabled:
         if "memory" in features and features["memory"]:
             # Skip forced memory injection when native FC is enabled - model can use memory tools
-            if metadata.get("params", {}).get("function_calling") != "native":
-                form_data = await chat_memory_handler(
-                    request, form_data, extra_params, user
-                )
+            form_data = await chat_memory_handler(
+                request, form_data, extra_params, user
+            )
 
         if "web_search" in features and features["web_search"]:
             # Skip forced RAG web search when native FC is enabled - model can use web_search tool
-            if metadata.get("params", {}).get("function_calling") != "native":
-                form_data = await chat_web_search_handler(
-                    request, form_data, extra_params, user
-                )
+            form_data = await chat_web_search_handler(
+                request, form_data, extra_params, user
+            )
 
         if "image_generation" in features and features["image_generation"]:
             # Skip forced image generation when native FC is enabled - model can use generate_image tool
-            if metadata.get("params", {}).get("function_calling") != "native":
-                form_data = await chat_image_generation_handler(
-                    request, form_data, extra_params, user
-                )
+            form_data = await chat_image_generation_handler(
+                request, form_data, extra_params, user
+            )
 
         if "code_interpreter" in features and features["code_interpreter"]:
+            # Skip code interpreter prompt injection when native FC is enabled - model can use execute_code tool
             form_data["messages"] = add_or_update_user_message(
                 (
                     request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
@@ -1805,18 +1811,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if mcp_clients:
         metadata["mcp_clients"] = mcp_clients
 
-    # Inject builtin tools for native function calling based on enabled features and model capability
-    # Check if builtin_tools capability is enabled for this model (defaults to True if not specified)
-    builtin_tools_enabled = (
-        model.get("info", {})
-        .get("meta", {})
-        .get("capabilities", {})
-        .get("builtin_tools", True)
-    )
-    if (
-        metadata.get("params", {}).get("function_calling") == "native"
-        and builtin_tools_enabled
-    ):
+    # Inject builtin tools for native function calling
+    if builtin_tools_enabled:
         # Add file context to user messages
         chat_id = metadata.get("chat_id")
         form_data["messages"] = add_file_context(
