@@ -40,8 +40,8 @@ async def get_available_personas(user=Depends(get_verified_user)):
     # Get all style prompts
     style_prompts = Prompts.get_prompts_by_type("style")
 
-    # Get all tool prompts
-    tool_prompts = Prompts.get_prompts_by_type("tool")
+    # Get all tool prompts (basic_tool and json_tool)
+    tool_prompts = Prompts.get_all_tool_prompts()
 
     # Extract unique persona values
     proficiency_levels = sorted(list(set(
@@ -133,7 +133,7 @@ async def get_group_available_personas(
     # Filter by type
     proficiency_prompts = [p for p in prompts if p.prompt_type == "proficiency"]
     style_prompts = [p for p in prompts if p.prompt_type == "style"]
-    tool_prompts = [p for p in prompts if p.prompt_type == "tool"]
+    tool_prompts = [p for p in prompts if p.prompt_type in ("basic_tool", "json_tool", "tool")]
 
     # Extract unique persona values
     proficiency_levels = sorted(list(set(

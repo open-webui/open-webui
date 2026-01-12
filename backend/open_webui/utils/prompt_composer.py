@@ -101,13 +101,15 @@ def compose_prompts_from_group(
 
         log.debug(f"[PROMPT COMPOSER] Processing: {mapping.prompt_command} (type={prompt.prompt_type}, order={mapping.order})")
 
-        # Handle tool prompts separately
-        if prompt.prompt_type == "tool":
-            log.info(f"[PROMPT COMPOSER] Found TOOL prompt: {prompt.command}")
+        # Handle tool prompts separately (basic_tool, json_tool, and legacy 'tool')
+        if prompt.prompt_type in ("basic_tool", "json_tool", "tool"):
+            log.info(f"[PROMPT COMPOSER] Found TOOL prompt: {prompt.command} (type={prompt.prompt_type})")
             log.info(f"  - title: {prompt.title}")
             log.info(f"  - tool_description: {prompt.tool_description}")
             log.info(f"  - tool_priority: {prompt.tool_priority}")
             log.info(f"  - content length: {len(prompt.content) if prompt.content else 0} chars")
+            if prompt.prompt_type == "json_tool" and prompt.validation_rules:
+                log.info(f"  - validation_rules: {len(prompt.validation_rules.get('allow', {}))} allow, {len(prompt.validation_rules.get('forbidden', {}))} forbidden patterns")
             tool_prompts.append(prompt)
             if include_tools:
                 # Legacy mode: include tools in composed string
