@@ -165,14 +165,15 @@ class GroupTable:
                     share_value = filter["share"]
                     member_id = filter.get("member_id")
                     json_share = Group.data["config"]["share"]
-                    json_share_lower = func.lower(json_share.as_string())
+                    json_share_str = json_share.as_string()
+                    json_share_lower = func.lower(json_share_str)
 
                     if share_value:
                         # Groups open to anyone: data is null, config.share is null, or share is true
                         # Use case-insensitive string comparison to handle variations like "True", "TRUE"
                         anyone_can_share = or_(
                             Group.data.is_(None),
-                            json_share_lower.is_(None),
+                            json_share_str.is_(None),
                             json_share_lower == "true",
                         )
 
