@@ -955,7 +955,13 @@ async def update_chat_by_id(
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
         chat = Chats.update_chat_by_id(id, updated_chat, db=db)
-        return ChatResponse(**chat.model_dump())
+        if chat:
+            return ChatResponse(**chat.model_dump())
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=ERROR_MESSAGES.CHAT_HISTORY_CORRUPTED,
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

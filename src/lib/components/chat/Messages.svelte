@@ -111,13 +111,21 @@
 		if (!$temporaryChatEnabled) {
 			history = history;
 			await tick();
-			await updateChatById(localStorage.token, chatId, {
-				history: history,
-				messages: messages
-			});
+			try {
+				await updateChatById(localStorage.token, chatId, {
+					history: history,
+					messages: messages
+				});
 
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			} catch (error) {
+				if (error?.detail && error.detail.includes('Chat history integrity check failed')) {
+					toast.error($i18n.t('Chat sync failed: Data integrity compromised. Please refresh.'));
+				} else {
+					console.error(error);
+				}
+			}
 		}
 	};
 

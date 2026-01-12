@@ -109,6 +109,8 @@ class ERROR_MESSAGES(str, Enum):
         err if err else "The password does not meet the required validation criteria."
     )
 
+    CHAT_HISTORY_CORRUPTED = "Chat history integrity check failed. The message chain is broken or contains cycles."
+
 
 class TASKS(str, Enum):
     def __str__(self) -> str:

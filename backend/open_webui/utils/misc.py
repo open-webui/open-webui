@@ -80,7 +80,7 @@ def get_message_list(messages_map, message_id):
     """
 
     # Handle case where messages is None
-    if not messages_map:
+    if not messages_map or not message_id:
         return []  # Return empty list instead of None to prevent iteration errors
 
     # Find the message by its id
@@ -91,13 +91,26 @@ def get_message_list(messages_map, message_id):
 
     # Reconstruct the chain by following the parentId links
     message_list = []
+    visited_ids = set()
 
+    curr_id = message_id
     while current_message:
+        # Check for cycles using the message ID
+        if curr_id in visited_ids:
+            log.warning(f"Cycle detected in chat history at message {curr_id}")
+            break
+        visited_ids.add(curr_id)
+
         message_list.insert(
             0, current_message
         )  # Insert the message at the beginning of the list
         parent_id = current_message.get("parentId")  # Use .get() for safety
-        current_message = messages_map.get(parent_id) if parent_id else None
+
+        if parent_id and parent_id in messages_map:
+            current_message = messages_map.get(parent_id)
+            curr_id = parent_id
+        else:
+            current_message = None
 
     return message_list
 

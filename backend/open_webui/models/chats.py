@@ -281,9 +281,43 @@ class ChatTable:
 
         return changed
 
+    @staticmethod
+    def validate_chat_history(chat_data: dict) -> bool:
+        history = chat_data.get("history", {})
+        messages = history.get("messages", {})
+        if not messages:
+            return True
+
+        # 1. Validate currentId presence
+        current_id = history.get("currentId")
+        if current_id and current_id not in messages:
+            log.error(f"Integrity Error: currentId {current_id} not in messages")
+            return False
+
+        # 2. Cycle Detection (DFS on active path)
+        visited = set()
+        if current_id:
+            curr = current_id
+            while curr:
+                if curr in visited:
+                    log.error(f"Integrity Error: Cycle detected at {curr}")
+                    return False
+                visited.add(curr)
+                msg = messages.get(curr)
+                if not msg:
+                    log.error(f"Integrity Error: Broken chain at {curr}")
+                    return False
+                curr = msg.get("parentId")
+                if len(visited) > 10000:  # Safety limit
+                    return False
+        return True
+
     def insert_new_chat(
         self, user_id: str, form_data: ChatForm, db: Optional[Session] = None
     ) -> Optional[ChatModel]:
+        if not self.validate_chat_history(form_data.chat):
+            return None
+
         with get_db_context(db) as db:
             id = str(uuid.uuid4())
             chat = ChatModel(
@@ -343,8 +377,9 @@ class ChatTable:
             chats = []
 
             for form_data in chat_import_forms:
-                chat = self._chat_import_form_to_chat_model(user_id, form_data)
-                chats.append(Chat(**chat.model_dump()))
+                if self.validate_chat_history(form_data.chat):
+                    chat = self._chat_import_form_to_chat_model(user_id, form_data)
+                    chats.append(Chat(**chat.model_dump()))
 
             db.add_all(chats)
             db.commit()
@@ -354,6 +389,9 @@ class ChatTable:
         self, id: str, chat: dict, db: Optional[Session] = None
     ) -> Optional[ChatModel]:
         try:
+            if not self.validate_chat_history(chat):
+                return None
+
             with get_db_context(db) as db:
                 chat_item = db.get(Chat, id)
                 chat_item.chat = self._clean_null_bytes(chat)
