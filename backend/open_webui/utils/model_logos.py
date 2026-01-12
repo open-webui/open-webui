@@ -287,6 +287,23 @@ def _match_logo_for_model(model_id: str) -> Optional[Path]:
                         score = max(score, 700 + len(brand))
                         break
         
+        # === REVERSE SUBSTRING MATCH (Fallback) ===
+        # Ensure "gpt5" matches "gpt-5-chat-latest" or "gpt-5.png"
+        if score < 650:
+            # Create delimiter-free versions for loose comparison
+            model_simple = re.sub(r'[-_\.:/\s]+', '', model_id_lower)
+            logo_simple = re.sub(r'[-_\.:/\s]+', '', logo_stem.lower())
+            
+            # Avoid matching very short generic strings (e.g. "v1", "gpt")
+            if len(model_simple) >= 3:
+                # Check if model is contained in logo (e.g., "gpt5" in "gpt5chatlatest")
+                if model_simple in logo_simple:
+                    # Penalize if logo is much longer than model (avoid matching "gpt" to "gpt-4-turbo-32k")
+                    length_diff = len(logo_simple) - len(model_simple)
+                    base_score = 600
+                    final_score = base_score - (length_diff * 5)
+                    score = max(score, max(400, final_score))
+        
         # Avoid matching generic service names like "openrouter" unless nothing else matches
         if score > 0 and score < 500:
             generic_names = ["openrouter", "newapi", "one", "api"]

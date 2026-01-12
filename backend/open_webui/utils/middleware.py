@@ -1405,12 +1405,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
     # -> Chat Files
 
+    # Extract max_context_count BEFORE apply_params_to_form_data deletes it
+    max_context_count = form_data.get("params", {}).get("max_context_count", None)
+    
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
     # Handle max_context_count - limit the number of messages sent to the model
-    max_context_count = metadata.get("params", {}).get("max_context_count", None)
-    if max_context_count is not None and isinstance(max_context_count, int):
+    if max_context_count is not None and isinstance(max_context_count, int) and max_context_count >= 0:
         messages = form_data.get("messages", [])
         if messages:
             # Separate system message from other messages
@@ -1422,13 +1424,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 else:
                     other_messages.append(msg)
             
-            # Truncate other_messages to max_context_count
-            # max_context_count = 0 means only current message (the last one)
+            # Truncate other_messages based on max_context_count
+            # max_context_count = 0 means only the current user message (no history)
             # max_context_count = 1 means current message + 1 previous message
-            # etc.
-            if max_context_count >= 0:
+            # max_context_count = N means current message + N previous messages
+            
+            if max_context_count == 0:
+                # Only keep the last user message (current question)
+                # Find the last user message
+                for i in range(len(other_messages) - 1, -1, -1):
+                    if other_messages[i].get("role") == "user":
+                        other_messages = [other_messages[i]]
+                        break
+            else:
                 # Keep the last (max_context_count + 1) messages
-                # +1 because we always include the current user message
+                # +1 to include the current user message
                 truncation_count = max_context_count + 1
                 if len(other_messages) > truncation_count:
                     other_messages = other_messages[-truncation_count:]
