@@ -1,0 +1,28 @@
+name: ai-ui
+
+services:
+  ai-ui:
+    container_name: ai-ui
+    image: ghcr.io/open-webui/open-webui:main
+    # Or build from local Dockerfile:
+    # build: .
+    ports:
+      - "${OPEN_WEBUI_PORT:-3100}:8080"
+    volumes:
+      - ai-ui-data:/app/backend/data
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  ai-ui-data:
+    name: ai-ui-data
