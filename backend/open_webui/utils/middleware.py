@@ -25,7 +25,6 @@ from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
 from open_webui.utils.misc import is_string_allowed
-from open_webui.utils.sse_parser import parse_sse_line, is_sse_done_signal
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
@@ -1320,6 +1319,7 @@ def apply_params_to_form_data(form_data, model):
         "function_calling": str,
         "reasoning_tags": list,
         "system": str,
+        "max_context_count": int,
     }
 
     for key in list(params.keys()):
@@ -1407,6 +1407,39 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
+
+    # Handle max_context_count - limit the number of messages sent to the model
+    max_context_count = metadata.get("params", {}).get("max_context_count", None)
+    if max_context_count is not None and isinstance(max_context_count, int):
+        messages = form_data.get("messages", [])
+        if messages:
+            # Separate system message from other messages
+            system_message = None
+            other_messages = []
+            for msg in messages:
+                if msg.get("role") == "system":
+                    system_message = msg
+                else:
+                    other_messages.append(msg)
+            
+            # Truncate other_messages to max_context_count
+            # max_context_count = 0 means only current message (the last one)
+            # max_context_count = 1 means current message + 1 previous message
+            # etc.
+            if max_context_count >= 0:
+                # Keep the last (max_context_count + 1) messages
+                # +1 because we always include the current user message
+                truncation_count = max_context_count + 1
+                if len(other_messages) > truncation_count:
+                    other_messages = other_messages[-truncation_count:]
+            
+            # Reconstruct messages with system message first if it exists
+            if system_message:
+                form_data["messages"] = [system_message] + other_messages
+            else:
+                form_data["messages"] = other_messages
+            
+            log.debug(f"Applied max_context_count={max_context_count}, messages reduced to {len(form_data['messages'])}")
 
     system_message = get_system_message(form_data.get("messages", []))
     if system_message:  # Chat Controls/User Settings
@@ -2812,11 +2845,7 @@ async def process_chat_response(
                         data = data[len("data:") :].strip()
 
                         try:
-                            # Use enhanced SSE parser for better third-party API compatibility
-                            data = parse_sse_line(line)
-                            if data is None:
-                                # Skip this line (terminator, heartbeat, invalid data, etc.)
-                                continue
+                            data = json.loads(data)
 
                             data, _ = await process_filter_functions(
                                 request=request,
@@ -3163,11 +3192,11 @@ async def process_chat_response(
                                         }
                                     )
                         except Exception as e:
-                            # Check for done signal using enhanced parser
-                            if is_sse_done_signal(line):
+                            done = "data: [DONE]" in line
+                            if done:
                                 pass
                             else:
-                                log.debug(f"Stream processing error: {e}")
+                                log.debug(f"Error: {e}")
                                 continue
                     await flush_pending_delta_data()
 

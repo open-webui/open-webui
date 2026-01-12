@@ -14,6 +14,7 @@
 
 	const defaultParams = {
 		// Advanced
+		max_context_count: null, // Set the maximum context message count for the model
 		stream_response: null, // Set stream responses for this model individually
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
 		function_calling: null,
@@ -54,6 +55,62 @@
 </script>
 
 <div class=" space-y-1 text-xs pb-safe-bottom">
+	<!-- Context Count Setting -->
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Sets the maximum number of previous messages (context) to include when sending requests to the model. 0 means only the current message is sent, higher values include more conversation history.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Context Count')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.max_context_count = (params?.max_context_count ?? null) === null ? 5 : null;
+					}}
+				>
+					{#if (params?.max_context_count ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.max_context_count ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="context-count-range"
+						type="range"
+						min="0"
+						max="20"
+						step="1"
+						bind:value={params.max_context_count}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div class="flex items-center">
+					<input
+						bind:value={params.max_context_count}
+						type="number"
+						class="bg-transparent text-center w-14"
+						min="0"
+						step="1"
+					/>
+					<span class="text-xs text-gray-500 ml-1">{$i18n.t('messages')}</span>
+				</div>
+			</div>
+		{/if}
+	</div>
+
 	<div>
 		<Tooltip
 			content={$i18n.t(
