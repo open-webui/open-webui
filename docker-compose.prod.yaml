@@ -3,7 +3,7 @@ name: ai-ui
 services:
   ai-ui:
     container_name: ai-ui
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui:v0.7.2
     # Or build from local Dockerfile:
     # build: .
     ports:
