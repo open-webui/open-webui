@@ -166,7 +166,7 @@ async def search_web(
         engine = __request__.app.state.config.WEB_SEARCH_ENGINE
         user = UserModel(**__user__) if __user__ else None
 
-        results = _search_web(__request__, engine, query, user)
+        results = await asyncio.to_thread(_search_web, __request__, engine, query, user)
 
         # Limit results
         results = results[:count] if results else []
