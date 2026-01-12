@@ -203,7 +203,7 @@
 </script>
 
 <svelte:head>
-	<title>#{channel?.name ?? 'Channel'} • Open WebUI</title>
+	<title>#{channel?.name ?? 'Channel'} • HYU Math</title>
 </svelte:head>
 
 <div
