@@ -47,7 +47,10 @@
 	};
 
 	onMount(async () => {
-		groups = await getGroups(localStorage.token, true);
+		groups = await getGroups(localStorage.token, true).catch((error) => {
+			console.error(error);
+			return [];
+		});
 
 		if ($config?.features?.enable_individual_user_sharing) {
 			const res = await searchUsers(localStorage.token, '', 'name', 'asc', 1);
@@ -234,7 +237,7 @@
 							<div class="flex flex-1 items-center">
 								<div class="w-full px-0.5">
 									<select
-										class="dark:bg-gray-900 outline-hidden bg-transparent text-sm block w-full pr-10 max-w-full
+										class=" outline-hidden bg-transparent text-sm block w-full pr-10 max-w-full
 									{selectedGroupId ? '' : 'text-gray-500'}
 									dark:placeholder-gray-500"
 										bind:value={selectedGroupId}

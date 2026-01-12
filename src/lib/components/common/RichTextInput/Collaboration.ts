@@ -131,9 +131,20 @@ export class SocketIOCollaborationProvider {
 							const isEmptyEditor = !this.editor?.getText().trim();
 							if (isEmptyEditor && this.editor) {
 								if (this.initialContent && (data?.sessions ?? ['']).length === 1) {
-									const editorYdoc = prosemirrorJSONToYDoc(this.editor.schema, this.initialContent);
-									if (editorYdoc) {
-										Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
+									// Check if initialContent is HTML (string) or JSON (object)
+									if (typeof this.initialContent === 'string') {
+										// HTML content - let the editor parse it, then sync to Yjs
+										this.editor.commands.setContent(this.initialContent);
+										// The Yjs plugin will automatically sync the content
+									} else {
+										// JSON content - use the existing approach
+										const editorYdoc = prosemirrorJSONToYDoc(
+											this.editor.schema,
+											this.initialContent
+										);
+										if (editorYdoc) {
+											Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
+										}
 									}
 								}
 							} else {

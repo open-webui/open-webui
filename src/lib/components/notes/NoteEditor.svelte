@@ -145,6 +145,11 @@
 
 	let inputElement = null;
 
+	// Computed HTML for editor: fall back to markdown if HTML is missing
+	$: editorHtml =
+		note?.data?.content?.html ||
+		(note?.data?.content?.md ? marked.parse(note.data.content.md) : '');
+
 	const init = async () => {
 		loading = true;
 		const res = await getNoteById(localStorage.token, id).catch((error) => {
@@ -777,7 +782,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		await tick();
 
 		for (const file of files) {
-			if (file.type === 'image') {
+			if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) {
 				const e = new CustomEvent('data', { files: files });
 
 				const img = document.getElementById(`image:${file.id}`);
@@ -1154,7 +1159,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							className="input-prose-sm px-0.5 h-[calc(100%-2rem)]"
 							json={true}
 							bind:value={note.data.content.json}
-							html={note.data?.content?.html}
+							html={editorHtml}
 							documentId={`note:${note.id}`}
 							collaboration={true}
 							socket={$socket}
