@@ -641,6 +641,7 @@
 							title={chat.title}
 							{shiftKey}
 							on:change={(e) => {
+								setFolderItems();
 								dispatch('change', e.detail);
 							}}
 						/>

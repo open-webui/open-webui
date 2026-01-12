@@ -130,6 +130,10 @@
 				await tick();
 			}
 
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
 			dispatch('change');
 		}
 	};
