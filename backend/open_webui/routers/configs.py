@@ -1,7 +1,8 @@
 import logging
 import copy
+import asyncio
 from fastapi import APIRouter, Depends, Request, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 import aiohttp
 
 from typing import Optional
@@ -538,3 +539,110 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# Interface Defaults
+############################
+
+
+class InterfaceDefaultsForm(BaseModel):
+    """
+    Validated schema for interface defaults.
+    All fields optional - only provided values override system defaults.
+    """
+    titleAutoGenerate: Optional[bool] = None
+    autoTags: Optional[bool] = None
+    autoFollowUps: Optional[bool] = None
+    highContrastMode: Optional[bool] = None
+    detectArtifacts: Optional[bool] = None
+    responseAutoCopy: Optional[bool] = None
+    showUsername: Optional[bool] = None
+    showUpdateToast: Optional[bool] = None
+    showChangelog: Optional[bool] = None
+    showEmojiInCall: Optional[bool] = None
+    voiceInterruption: Optional[bool] = None
+    displayMultiModelResponsesInTabs: Optional[bool] = None
+    chatFadeStreamingText: Optional[bool] = None
+    richTextInput: Optional[bool] = None
+    showFormattingToolbar: Optional[bool] = None
+    insertPromptAsRichText: Optional[bool] = None
+    promptAutocomplete: Optional[bool] = None
+    insertSuggestionPrompt: Optional[bool] = None
+    keepFollowUpPrompts: Optional[bool] = None
+    insertFollowUpPrompt: Optional[bool] = None
+    regenerateMenu: Optional[bool] = None
+    largeTextAsFile: Optional[bool] = None
+    copyFormatted: Optional[bool] = None
+    collapseCodeBlocks: Optional[bool] = None
+    expandDetails: Optional[bool] = None
+    landingPageMode: Optional[str] = None
+    chatBubble: Optional[bool] = None
+    widescreenMode: Optional[bool] = None
+    splitLargeChunks: Optional[bool] = None
+    scrollOnBranchChange: Optional[bool] = None
+    temporaryChatByDefault: Optional[bool] = None
+    chatDirection: Optional[str] = None
+    userLocation: Optional[bool] = None
+    showChatTitleInTab: Optional[bool] = None
+    notificationSound: Optional[bool] = None
+    notificationSoundAlways: Optional[bool] = None
+    iframeSandboxAllowSameOrigin: Optional[bool] = None
+    iframeSandboxAllowForms: Optional[bool] = None
+    stylizedPdfExport: Optional[bool] = None
+    hapticFeedback: Optional[bool] = None
+    ctrlEnterToSend: Optional[bool] = None
+    showFloatingActionButtons: Optional[bool] = None
+    imageCompression: Optional[bool] = None
+    imageCompressionInChannels: Optional[bool] = None
+    textScale: Optional[float] = None
+
+    @field_validator("chatDirection")
+    @classmethod
+    def validate_chat_direction(cls, value):
+        if value is None:
+            return value
+        if value not in ("auto", "ltr", "rtl"):
+            raise ValueError("chatDirection must be 'auto', 'ltr', or 'rtl'")
+        return value
+
+    @field_validator("textScale")
+    @classmethod
+    def validate_text_scale(cls, value):
+        if value is not None and not (0.5 <= value <= 1.5):
+            raise ValueError("textScale must be between 0.5 and 1.5")
+        return value
+
+    class Config:
+        extra = "forbid"  # Reject unknown fields
+
+
+@router.get("/interface/defaults", response_model=dict)
+async def get_interface_defaults(user=Depends(get_verified_user)):
+    """
+    Get global interface defaults for all users.
+    Returns empty dict if no defaults are configured.
+    """
+    config = await asyncio.to_thread(get_config)
+    return config.get("ui", {}).get("interface_defaults", {})
+
+
+@router.post("/interface/defaults", response_model=dict)
+async def set_interface_defaults(
+    form_data: InterfaceDefaultsForm, user=Depends(get_admin_user)
+):
+    """
+    Set global interface defaults (admin only).
+    These will be used as defaults for all users who haven't customized their settings.
+    """
+    config = await asyncio.to_thread(get_config)
+
+    if "ui" not in config:
+        config["ui"] = {}
+
+    validated_defaults = {k: v for k, v in form_data.model_dump().items() if v is not None}
+    config["ui"]["interface_defaults"] = validated_defaults
+
+    await asyncio.to_thread(save_config, config)
+
+    return config["ui"]["interface_defaults"]
