@@ -68,12 +68,12 @@
 		"title": "Finnish (Suomalainen)"
 	},
 	{
-		"code": "fr-CA",
-		"title": "French (Canada)"
-	},
-	{
 		"code": "fr-FR",
 		"title": "French (France)"
+	},
+	{
+		"code": "fr-CA",
+		"title": "French (Canada)"
 	},
 	{
 		"code": "gl-ES",
