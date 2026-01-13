@@ -295,8 +295,9 @@ async def get_function_models(request, user: UserModel = None):
                 log.debug(f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}")
 
                 # Iterate over sub_pipes and validate each entry
-                # Determine if this admin is the creator or a co-admin
+                # Determine if this admin is the creator, a super admin, or a co-admin
                 is_pipe_creator = (user.role == "admin" and pipe.created_by == user.email)
+                user_is_super_admin = is_super_admin(user)
                 
                 for p in sub_pipes:
                     # Defensive check: ensure p is a dict with required keys
@@ -310,8 +311,8 @@ async def get_function_models(request, user: UserModel = None):
                     sub_pipe_name = p["name"]
 
                     # For users AND co-admins: only include models that are explicitly assigned to their groups
-                    # Admins who created the pipe see all models; co-admins see only assigned models
-                    if user.role == "user" or (user.role == "admin" and not is_pipe_creator):
+                    # Super admins and admins who created the pipe see all models; co-admins see only assigned models
+                    if not user_is_super_admin and (user.role == "user" or (user.role == "admin" and not is_pipe_creator)):
                         if sub_pipe_id not in accessible_model_ids:
                             log.debug(f"Skipping model {sub_pipe_id} - not assigned to user's/co-admin's groups")
                             continue
@@ -333,11 +334,13 @@ async def get_function_models(request, user: UserModel = None):
             else:
                 pipe_flag = {"type": "pipe"}
 
-                # Determine if this admin is the creator or a co-admin
+                # Determine if this admin is the creator, a super admin, or a co-admin
                 is_pipe_creator = (user.role == "admin" and pipe.created_by == user.email)
+                user_is_super_admin = is_super_admin(user)
 
                 # For users AND co-admins: only include models that are explicitly assigned to their groups
-                if user.role == "user" or (user.role == "admin" and not is_pipe_creator):
+                # Super admins and admins who created the pipe see all models
+                if not user_is_super_admin and (user.role == "user" or (user.role == "admin" and not is_pipe_creator)):
                     if pipe.id not in accessible_model_ids:
                         log.debug(f"Skipping model {pipe.id} - not assigned to user's/co-admin's groups")
                         return models  # Return empty list
