@@ -6,6 +6,8 @@
 	import { get } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import { marked } from 'marked';
+	import DOMPurify from 'dompurify';
 import { applyModeration, generateFollowUpPrompt, type ModerationResponse, saveModerationSession, getModerationSessions, postSessionActivity, assignScenario, startScenario, completeScenario, skipScenario, abandonScenario, createHighlight, getHighlights, type ScenarioAssignResponse, getAssignmentsForChild, type AssignmentWithScenario } from '$lib/apis/moderation';
 import { getChildProfileById } from '$lib/apis/child-profiles';
 import { finalizeModeration } from '$lib/apis/workflow';
@@ -1176,12 +1178,18 @@ function clearModerationLocalKeys() {
 		return false;
 	}
 
+	// Highlight information interface
+	interface HighlightInfo {
+		text: string;
+		// Offsets removed - highlights now stored as HTML with <mark> elements
+	}
+
 	// Version management interfaces
 	interface ModerationVersion {
 		response: string;
 		strategies: string[];
 		customInstructions: Array<{id: string, text: string}>;
-		highlightedTexts: string[];
+		highlightedTexts: HighlightInfo[];
 		moderationResult: ModerationResponse;
 	}
 
@@ -1190,7 +1198,7 @@ function clearModerationLocalKeys() {
 		versions: ModerationVersion[];
 		currentVersionIndex: number;
 		confirmedVersionIndex: number | null;
-		highlightedTexts1: string[];
+		highlightedTexts1: HighlightInfo[];
 		selectedModerations: Set<string>;
 		customInstructions: Array<{id: string, text: string}>;
 		showOriginal1: boolean;
@@ -1217,6 +1225,9 @@ function clearModerationLocalKeys() {
 		assignment_id?: string; // Backend assignment ID for this scenario
 		scenario_id?: string; // Backend scenario ID
 		assignmentStarted?: boolean; // Whether /start endpoint has been called
+		// HTML storage for highlights (Approach 3)
+		responseHighlightedHTML?: string; // HTML with <mark> elements for response
+		promptHighlightedHTML?: string;   // HTML with <mark> elements for prompt
 	}
 	
 	let scenarioStates: Map<number, ScenarioState> = new Map();
@@ -1318,8 +1329,12 @@ function clearModerationLocalKeys() {
 	// First pass data
 	let childPrompt1: string = scenarioList.length > 0 && scenarioList[0] ? scenarioList[0][0] : '';
 	let originalResponse1: string = scenarioList.length > 0 && scenarioList[0] ? scenarioList[0][1] : '';
-	let highlightedTexts1: string[] = [];
+	let highlightedTexts1: HighlightInfo[] = [];
 	let childPromptHTML: string = '';
+	
+	// HTML storage for highlights (Approach 3)
+	let responseHighlightedHTML: string = ''; // Store HTML with marks embedded for response
+	let promptHighlightedHTML: string = '';   // Store HTML with marks embedded for prompt
 	
 	// Text selection UI state
 	let responseContainer1: HTMLElement;
@@ -1496,16 +1511,368 @@ let currentRequestId: number = 0;
 			const selection = window.getSelection();
 			const selectedText = selection?.toString().trim() || '';
 			
-			if (!selection || selectedText.length === 0) {
+			if (!selection || selectedText.length === 0 || selection.rangeCount === 0) {
 				selectionButtonsVisible1 = false;
 				currentSelection1 = '';
 				return;
 			}
 			
-			currentSelection1 = selectedText;
-			selectionInPrompt = !!promptContainer1 && container === promptContainer1;
+			const range = selection.getRangeAt(0);
 			
-			// Automatically highlight the selected text (no button required)
+			/**
+			 * PROMPT HIGHLIGHTING FIX
+			 * 
+			 * Previously, activeContainer was set using: responseContainer1 || promptContainer1
+			 * This always defaulted to responseContainer1 if it existed, even when the selection
+			 * was in the prompt container. This caused prompt selections to fail the containment
+			 * check and return early without creating highlights.
+			 * 
+			 * Fix: Check which container actually contains the selection using contains() method,
+			 * checking promptContainer1 first, then responseContainer1. This ensures the correct
+			 * container is identified and highlighting works for both prompts and responses.
+			 */
+			// Determine which container actually contains the selection
+			let activeContainer: HTMLElement | null = null;
+			if (promptContainer1 && promptContainer1.contains(range.commonAncestorContainer)) {
+				activeContainer = promptContainer1;
+			} else if (responseContainer1 && responseContainer1.contains(range.commonAncestorContainer)) {
+				activeContainer = responseContainer1;
+			}
+			
+			if (!activeContainer || !activeContainer.contains(range.commonAncestorContainer)) {
+				selectionButtonsVisible1 = false;
+				currentSelection1 = '';
+				return;
+			}
+			
+			// Find content element (same logic as later in the function)
+			let contentElement: HTMLElement | null = null;
+			if (activeContainer === responseContainer1) {
+				contentElement = activeContainer.querySelector('.response-text') as HTMLElement;
+			} else if (activeContainer === promptContainer1) {
+				contentElement = activeContainer.querySelector('p') as HTMLElement;
+			}
+			
+			// Find all existing marks in the content element and unwrap any that overlap with the new selection
+			if (contentElement) {
+				const existingMarks = Array.from(contentElement.querySelectorAll('mark.selection-highlight'));
+				const rangeClone = range.cloneRange();
+				
+				// Unwrap any marks that overlap with the new selection
+				existingMarks.forEach(mark => {
+					try {
+						if (rangeClone.intersectsNode(mark)) {
+							// Unwrap: replace mark with its children using document fragment
+							const parent = mark.parentNode;
+							if (parent) {
+								const fragment = document.createDocumentFragment();
+								while (mark.firstChild) {
+									fragment.appendChild(mark.firstChild);
+								}
+								parent.replaceChild(fragment, mark);
+								parent.normalize();
+							}
+						}
+					} catch (e) {
+						// If intersectsNode fails (e.g., detached node), skip this mark
+						console.warn('Error checking mark overlap:', e);
+					}
+				});
+			}
+			
+			// Immediately wrap selection in <mark> element in DOM
+			const mark = document.createElement('mark');
+			mark.className = 'selection-highlight bg-yellow-200 dark:bg-yellow-600';
+			
+			/**
+			 * CROSS-BLOCK HIGHLIGHTING IMPROVEMENTS
+			 * 
+			 * This implementation handles text selections that span multiple block elements (e.g., 
+			 * highlighting from one <li> to another, or from an <h3> into a <p>).
+			 * 
+			 * Key improvements:
+			 * 1. **Preserves Block Structure**: Uses extractContents() instead of deleteContents() to
+			 *    maintain the original DOM hierarchy when selections span multiple blocks.
+			 * 
+			 * 2. **Merges into Existing Blocks**: Instead of creating duplicate block elements,
+			 *    content from the fragment's first/last blocks is merged into the existing blocks
+			 *    at the correct insertion points.
+			 * 
+			 * 3. **Correct Insertion Position**: Finds insertion points BEFORE extraction (while DOM
+			 *    is intact) and uses insertBefore() with reference nodes to insert content at the
+			 *    exact position where the selection started, not at the end of blocks.
+			 * 
+			 * 4. **Handles Last Block Correctly**: For the last block in a multi-block selection,
+			 *    the fragment contains content from where the selection STARTED in that block (not
+			 *    where it ended), so we use findRangeStartInBlock() to find the correct insertion point.
+			 * 
+			 * Motivation: Previous implementation would create duplicate <li> elements and insert
+			 * content at wrong positions when highlighting across block boundaries, breaking the
+			 * DOM structure and causing incorrect visual rendering.
+			 */
+			try {
+				// Store the start and end positions BEFORE extraction (important for cross-block selections)
+				const startContainer = range.startContainer;
+				const startOffset = range.startOffset;
+				const endContainer = range.endContainer;
+				const endOffset = range.endOffset;
+				
+				// Identify block elements that might need merging
+				// Block elements: h1-h6, p, div, li, etc.
+				const blockSelectors = 'h1, h2, h3, h4, h5, h6, p, div, li, blockquote, pre';
+				
+				// Helper function to find the containing block element for a node
+				const findContainingBlock = (node: Node): HTMLElement | null => {
+					let current: Node | null = node;
+					while (current) {
+						if (current.nodeType === Node.ELEMENT_NODE) {
+							const element = current as HTMLElement;
+							if (element.matches && element.matches(blockSelectors)) {
+								return element;
+							}
+						}
+						current = current.parentNode;
+					}
+					return null;
+				};
+				
+				// Find the existing block elements at start and end positions (BEFORE extraction)
+				const startBlock = findContainingBlock(startContainer);
+				const endBlock = findContainingBlock(endContainer);
+				
+				// Helper function to find insertion point as a direct child of the block
+				// Returns { type: 'before' | 'end', node: reference node }
+				const findInsertionPointInBlock = (block: HTMLElement, container: Node, offset: number): { type: 'before' | 'end'; node: Node | null } | null => {
+					if (!block || !block.contains(container)) {
+						return null;
+					}
+					
+					// Create a range at the selection point to compare positions
+					const selectionRange = document.createRange();
+					if (container.nodeType === Node.TEXT_NODE) {
+						selectionRange.setStart(container, Math.min(offset, container.textContent?.length || 0));
+					} else {
+						selectionRange.setStart(container, offset);
+					}
+					selectionRange.collapse(true);
+					
+					// Find the first direct child of block that comes at or after the selection point
+					const directChildren = Array.from(block.childNodes);
+					
+					for (const child of directChildren) {
+						const childRange = document.createRange();
+						childRange.selectNodeContents(child);
+						
+						// Compare positions
+						const comparison = selectionRange.compareBoundaryPoints(Range.START_TO_START, childRange);
+						if (comparison <= 0) {
+							// Selection starts at or before this child - insert before this child
+							return { type: 'before', node: child };
+						}
+					}
+					
+				// Selection is after all direct children - return last child for Range-based insertion
+				return { type: 'end', node: block.lastChild };
+			};
+			
+			// Helper to find where the range starts within a specific block
+			// This is needed for the last block because the fragment contains content from where
+			// the selection STARTED in that block, not where it ended
+			const findRangeStartInBlock = (block: HTMLElement, range: Range): { type: 'before' | 'end'; node: Node | null } | null => {
+				// If the range starts in this block, use the start position
+				if (block.contains(range.startContainer)) {
+					return findInsertionPointInBlock(block, range.startContainer, range.startOffset);
+				}
+				
+				// If the range doesn't start in this block but ends in it,
+				// the range must start before this block, so insert at the beginning
+				if (block.contains(range.endContainer)) {
+					return { type: 'before', node: block.firstChild };
+				}
+				
+				return null;
+			};
+			
+			// Find insertion points BEFORE extraction (while DOM is intact)
+			const startInsertPoint = startBlock ? findInsertionPointInBlock(startBlock, startContainer, startOffset) : null;
+			// For end block, find where the range STARTS within that block (not where it ends)
+			// because the fragment's last block contains content from where selection started in that block
+			const endInsertPoint = endBlock ? findRangeStartInBlock(endBlock, range) : null;
+				
+				// NOW extract the selected contents into a DocumentFragment (preserves block structure)
+				const fragment = range.extractContents();
+				
+				// Wrap all text nodes in the fragment with mark elements
+				// This preserves the block structure while highlighting
+				const walker = document.createTreeWalker(
+					fragment,
+					NodeFilter.SHOW_TEXT,
+					null
+				);
+				
+				const textNodes: Text[] = [];
+				let node;
+				while (node = walker.nextNode()) {
+					if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+						textNodes.push(node as Text);
+					}
+				}
+				
+				// Wrap each text node with a mark
+				textNodes.forEach(textNode => {
+					const markClone = mark.cloneNode(false) as HTMLElement;
+					markClone.textContent = textNode.textContent;
+					textNode.parentNode?.replaceChild(markClone, textNode);
+				});
+				
+				// Find the first and last block elements in the fragment
+				const firstBlockInFragment = fragment.querySelector(blockSelectors) as HTMLElement | null;
+				const allBlocksInFragment = Array.from(fragment.querySelectorAll(blockSelectors)) as HTMLElement[];
+				const lastBlockInFragment = allBlocksInFragment.length > 0 
+					? allBlocksInFragment[allBlocksInFragment.length - 1] 
+					: null;
+				
+				// Merge first block if needed
+				if (firstBlockInFragment && startBlock && firstBlockInFragment !== startBlock && startInsertPoint) {
+					// Check if first block in fragment is actually at the start of the selection
+					const fragmentFirstChild = fragment.firstChild;
+					if (fragmentFirstChild === firstBlockInFragment || 
+						firstBlockInFragment.contains(fragmentFirstChild)) {
+						if (startInsertPoint.type === 'end') {
+							// Use Range to insert at end
+							const endRange = document.createRange();
+							if (startInsertPoint.node) {
+								endRange.setStartAfter(startInsertPoint.node);
+							} else {
+								endRange.setStart(startBlock, startBlock.childNodes.length);
+							}
+							endRange.collapse(true);
+							while (firstBlockInFragment.firstChild) {
+								endRange.insertNode(firstBlockInFragment.firstChild);
+							}
+						} else {
+							// Insert before reference node (direct child of startBlock)
+							while (firstBlockInFragment.firstChild) {
+								startBlock.insertBefore(firstBlockInFragment.firstChild, startInsertPoint.node);
+							}
+						}
+						// Remove the empty first block from fragment
+						firstBlockInFragment.remove();
+					}
+				}
+				
+				// Merge last block if needed (and it's different from first block)
+				if (lastBlockInFragment && endBlock && 
+					lastBlockInFragment !== firstBlockInFragment && 
+					lastBlockInFragment !== startBlock && endInsertPoint) {
+					// Check if last block in fragment is actually at the end of the selection
+					const fragmentLastChild = fragment.lastChild;
+					if (fragmentLastChild === lastBlockInFragment || 
+						lastBlockInFragment.contains(fragmentLastChild)) {
+						if (endInsertPoint.type === 'end') {
+							// Use Range to insert at end
+							const endRange = document.createRange();
+							if (endInsertPoint.node) {
+								endRange.setStartAfter(endInsertPoint.node);
+							} else {
+								endRange.setStart(endBlock, endBlock.childNodes.length);
+							}
+							endRange.collapse(true);
+							while (lastBlockInFragment.firstChild) {
+								endRange.insertNode(lastBlockInFragment.firstChild);
+							}
+						} else {
+							// Insert before reference node (direct child of endBlock)
+							while (lastBlockInFragment.firstChild) {
+								endBlock.insertBefore(lastBlockInFragment.firstChild, endInsertPoint.node);
+							}
+						}
+						// Remove the empty last block from fragment
+						lastBlockInFragment.remove();
+					}
+				}
+				
+				// Create a new range at the stored start position
+				const newRange = document.createRange();
+				
+				// Handle case where startContainer might be a text node or element
+				if (startContainer.nodeType === Node.TEXT_NODE) {
+					// If it's a text node, use it directly
+					newRange.setStart(startContainer, Math.min(startOffset, startContainer.textContent?.length || 0));
+				} else {
+					// If it's an element, find the appropriate insertion point
+					if (startOffset < startContainer.childNodes.length) {
+						const startNode = startContainer.childNodes[startOffset];
+						if (startNode && startNode.nodeType === Node.TEXT_NODE) {
+							newRange.setStart(startNode, 0);
+						} else if (startNode) {
+							newRange.setStartBefore(startNode);
+						} else {
+							newRange.setStart(startContainer, startOffset);
+						}
+					} else {
+						// Offset is beyond child nodes, insert at end
+						newRange.setStart(startContainer, startContainer.childNodes.length);
+					}
+				}
+				
+				newRange.collapse(true); // Collapse to start
+				
+				// Insert the fragment at the stored position (preserves block structure)
+				// If fragment is empty after merging, we still need to handle it
+				if (fragment.hasChildNodes()) {
+					newRange.insertNode(fragment);
+				}
+				
+				// Normalize the DOM to remove extra whitespace/newlines
+				// Normalize each block element separately to avoid merging blocks
+				const commonAncestor = newRange.commonAncestorContainer;
+				const normalizeContainer = commonAncestor.nodeType === Node.TEXT_NODE 
+					? commonAncestor.parentNode 
+					: commonAncestor;
+				
+				if (normalizeContainer) {
+					// Normalize the container
+					normalizeContainer.normalize();
+					
+					// Also normalize any block elements that might have been affected
+					if (normalizeContainer.nodeType === Node.ELEMENT_NODE) {
+						const blockElements = (normalizeContainer as Element).querySelectorAll(blockSelectors);
+						blockElements.forEach((block: Element) => block.normalize());
+					}
+				}
+			} catch (error) {
+				console.error('Error wrapping selection in mark:', error);
+				selection.removeAllRanges();
+				return;
+			}
+			
+			// Store container's innerHTML after wrapping
+			// BUT: Only capture the content element, not the entire container
+			// Re-query the content element to ensure we have the latest DOM state after mark insertion
+			if (activeContainer === responseContainer1) {
+				// For response, find the div with class "response-text"
+				contentElement = activeContainer.querySelector('.response-text') as HTMLElement;
+			} else if (activeContainer === promptContainer1) {
+				// For prompt, find the <p> tag
+				contentElement = activeContainer.querySelector('p') as HTMLElement;
+			}
+			
+			// Fallback to activeContainer if content element not found
+			const elementToCapture = contentElement || activeContainer;
+			const containerHTML = elementToCapture.innerHTML;
+			
+			// Use activeContainer instead of container to determine which HTML to store
+			if (activeContainer === promptContainer1) {
+				promptHighlightedHTML = containerHTML;
+			} else {
+				responseHighlightedHTML = containerHTML;
+			}
+			
+			currentSelection1 = selectedText;
+			selectionInPrompt = activeContainer === promptContainer1;
+			
+			// Automatically save the selection (stores HTML and saves to backend)
 			saveSelection();
 			
 			// Clear the text selection after highlighting (visual cleanup)
@@ -1536,11 +1903,14 @@ let currentRequestId: number = 0;
 		
 		if (!text) return;
 		
-		if (!highlightedTexts1.includes(text)) {
-			// Add to local state array
-			highlightedTexts1 = [...highlightedTexts1, text];
+		// Check if this highlight already exists (by text)
+		const exists = highlightedTexts1.some(h => h.text === text);
+		if (!exists) {
+			// Add to local state array (Approach 3: no offsets, just text)
+			const highlightInfo: HighlightInfo = { text };
+			highlightedTexts1 = [...highlightedTexts1, highlightInfo];
 
-			// Save to new `/moderation/highlights` API with assignment_id and offset tracking
+			// Save to new `/moderation/highlights` API (no offsets in Approach 3)
 			try {
 				const state = scenarioStates.get(selectedScenarioIndex);
 				const assignmentId = state?.assignment_id;
@@ -1573,21 +1943,14 @@ let currentRequestId: number = 0;
 					return;
 				}
 
-				// Calculate character offsets
-				const targetText = selectionInPrompt ? childPrompt1 : originalResponse1;
-				const startOffset = targetText.indexOf(text);
-				const endOffset = startOffset >= 0 ? startOffset + text.length : undefined;
-
-				// Save to new highlights API
-				await createHighlight(localStorage.token, {
+				// Save to new highlights API (no offsets in Approach 3)
+				const highlightPayload = {
 					assignment_id: assignmentId,
-					selected_text: text,
-					source: selectionInPrompt ? 'prompt' : 'response',
-					start_offset: startOffset >= 0 ? startOffset : undefined,
-					end_offset: endOffset,
-					context: null
-				});
-				console.log('✅ Highlight saved to new API:', { assignmentId, text, startOffset, endOffset });
+					selected_text: highlightInfo.text,
+					source: (selectionInPrompt ? 'prompt' : 'response') as 'prompt' | 'response'
+				};
+				await createHighlight(localStorage.token, highlightPayload);
+				console.log('✅ Highlight saved to new API:', { assignmentId, highlightInfo });
 			} catch (e) {
 				console.error('Failed to persist highlight to highlights API', e);
 				// Fallback to old API on error
@@ -1639,9 +2002,47 @@ let currentRequestId: number = 0;
 	 * saved to `moderation_session.highlighted_texts`, they remain there until
 	 * the session is updated via `completeStep1()` or other save operations.
 	 */
-	function removeHighlight(text: string) {
+	function removeHighlight(highlight: HighlightInfo | string) {
 		// Remove from local state array
-		highlightedTexts1 = highlightedTexts1.filter(t => t !== text);
+		// Support both old string format (for backward compatibility) and new HighlightInfo format
+		const textToRemove = typeof highlight === 'string' ? highlight : highlight.text;
+		highlightedTexts1 = highlightedTexts1.filter(h => h.text !== textToRemove);
+
+		// Determine which container(s) to update
+		// Since we don't know which container the highlight was in, update both if they have stored HTML
+		const updates: Array<{ htmlVar: 'response' | 'prompt'; originalText: string; currentHTML: string }> = [];
+		
+		if (responseHighlightedHTML && originalResponse1) {
+			updates.push({
+				htmlVar: 'response',
+				originalText: originalResponse1,
+				currentHTML: responseHighlightedHTML
+			});
+		}
+		
+		if (promptHighlightedHTML && childPrompt1) {
+			updates.push({
+				htmlVar: 'prompt',
+				originalText: childPrompt1,
+				currentHTML: promptHighlightedHTML
+			});
+		}
+		
+		// Rebuild HTML for each container
+		for (const { htmlVar, originalText } of updates) {
+			// Start with clean HTML (no marks)
+			const cleanHTML = renderMarkdown(originalText);
+			
+			// Re-apply all remaining highlights
+			const updatedHTML = applyHighlightsToHTML(cleanHTML, highlightedTexts1);
+			
+			// Update stored HTML
+			if (htmlVar === 'prompt') {
+				promptHighlightedHTML = updatedHTML;
+			} else {
+				responseHighlightedHTML = updatedHTML;
+			}
+		}
 
 		// Delete from `selection` table (debounced to batch rapid removals)
 		try {
@@ -1650,7 +2051,7 @@ let currentRequestId: number = 0;
 			if (!window.__removeSelectionDebounce) {
 				window.__removeSelectionDebounce = {};
 			}
-			const key = `${scenarioId}:${text}`;
+			const key = `${scenarioId}:${textToRemove}`;
 			clearTimeout(window.__removeSelectionDebounce[key]);
 			window.__removeSelectionDebounce[key] = setTimeout(() => {
 				// POST to `/api/v1/selections/delete_by_text` - deletes from `selection` table
@@ -1660,7 +2061,7 @@ let currentRequestId: number = 0;
 						'Content-Type': 'application/json',
 						Authorization: `Bearer ${localStorage.token}`
 					},
-					body: JSON.stringify({ chat_id: scenarioId, selected_text: text, role })
+					body: JSON.stringify({ chat_id: scenarioId, selected_text: textToRemove, role })
 				});
 			}, 250);
 		} catch (e) {
@@ -1668,50 +2069,282 @@ let currentRequestId: number = 0;
 		}
 	}
 	
-	function getHighlightedHTML(text: string, highlights: string[]): string {
-		if (highlights.length === 0) return text;
-		
-		const sortedHighlights = [...highlights].sort((a, b) => b.length - a.length);
-		let processedText = text;
-		const replacements: Array<{search: string, replace: string}> = [];
-		
-		sortedHighlights.forEach((highlight, index) => {
-			const placeholder = `__HIGHLIGHT_${index}__`;
-			const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-			replacements.push({
-				search: placeholder,
-				replace: `<mark class="selection-highlight bg-yellow-200 dark:bg-yellow-600">${highlight}</mark>`
-			});
-			const regex = new RegExp(escapedHighlight);
-			processedText = processedText.replace(regex, placeholder);
+	/**
+	 * Extract text from outermost <mark> elements in HTML (for backend data storage only)
+	 * This function extracts text content from outermost marks, ignoring nested marks
+	 */
+	function extractTextFromHighlightedHTML(html: string): string[] {
+		if (!html) return [];
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = html;
+		const marks = Array.from(tempDiv.querySelectorAll('mark.selection-highlight'));
+		const texts: string[] = [];
+		marks.forEach(mark => {
+			// Ensure we only get text from outermost marks if there are nested ones
+			if (!mark.parentElement?.closest('mark.selection-highlight')) {
+				texts.push(mark.textContent || '');
+			}
 		});
+		return texts;
+	}
+
+	/**
+	 * Compute highlight offsets in original markdown text using multiple matching strategies
+	 * @deprecated This function is no longer used in Approach 3 (HTML storage)
+	 */
+	function computeHighlightOffsets(highlightText: string, originalText: string): { startOffset: number; endOffset: number } | null {
+		// Strategy 1: Exact match
+		let startOffset = originalText.indexOf(highlightText);
+		if (startOffset >= 0) {
+			return { startOffset, endOffset: startOffset + highlightText.length };
+		}
 		
-		replacements.forEach(({search, replace}) => {
-			processedText = processedText.replace(search, replace);
-		});
+		// Strategy 2: Normalize whitespace (collapse multiple spaces/newlines)
+		const normalizeWhitespace = (str: string) => str.replace(/\s+/g, ' ').trim();
+		const normalizedText = normalizeWhitespace(highlightText);
+		const normalizedOriginal = normalizeWhitespace(originalText);
+		const normalizedStart = normalizedOriginal.indexOf(normalizedText);
 		
-		return processedText;
+		if (normalizedStart >= 0) {
+			// Map back to original positions
+			let originalPos = 0;
+			let normalizedPos = 0;
+			
+			// Find start position
+			while (originalPos < originalText.length && normalizedPos < normalizedStart) {
+				if (!/\s/.test(originalText[originalPos])) {
+					normalizedPos++;
+				} else if (originalPos === 0 || !/\s/.test(originalText[originalPos - 1])) {
+					normalizedPos++;
+				}
+				originalPos++;
+			}
+			const mappedStart = originalPos;
+			
+			// Find end position
+			const targetEnd = normalizedStart + normalizedText.length;
+			let endPos = originalPos;
+			while (endPos < originalText.length && normalizedPos < targetEnd) {
+				if (!/\s/.test(originalText[endPos])) {
+					normalizedPos++;
+				} else if (endPos === 0 || !/\s/.test(originalText[endPos - 1])) {
+					normalizedPos++;
+				}
+				endPos++;
+			}
+			
+			// Verify extracted text matches (allowing for whitespace differences)
+			const extracted = normalizeWhitespace(originalText.substring(mappedStart, endPos));
+			if (extracted === normalizedText) {
+				return { startOffset: mappedStart, endOffset: endPos };
+			}
+		}
+		
+		// Strategy 3: Remove all whitespace (fuzzy match)
+		const removeWhitespace = (str: string) => str.replace(/\s+/g, '');
+		const textNoWS = removeWhitespace(highlightText);
+		const originalNoWS = removeWhitespace(originalText);
+		const fuzzyStart = originalNoWS.indexOf(textNoWS);
+		
+		if (fuzzyStart >= 0) {
+			// Map back to original positions
+			let originalPos = 0;
+			let noWSPos = 0;
+			
+			// Find start
+			while (originalPos < originalText.length && noWSPos < fuzzyStart) {
+				if (!/\s/.test(originalText[originalPos])) {
+					noWSPos++;
+				}
+				originalPos++;
+			}
+			const mappedStart = originalPos;
+			
+			// Find end
+			const targetEnd = fuzzyStart + textNoWS.length;
+			while (originalPos < originalText.length && noWSPos < targetEnd) {
+				if (!/\s/.test(originalText[originalPos])) {
+					noWSPos++;
+				}
+				originalPos++;
+			}
+			
+			// Verify match is reasonable (not too long)
+			if (originalPos - mappedStart <= highlightText.length * 2) {
+				return { startOffset: mappedStart, endOffset: originalPos };
+			}
+		}
+		
+		return null;  // Could not find match
+	}
+
+	/**
+	 * Render markdown text to HTML (without highlights)
+	 * Used for displaying markdown-formatted text in moderation responses
+	 */
+	function renderMarkdown(text: string): string {
+		if (!text) return '';
+		try {
+			const html = marked.parse(text);
+			return DOMPurify.sanitize(html);
+		} catch (error) {
+			console.error('Error rendering markdown:', error);
+			return text; // Fallback to plain text on error
+		}
+	}
+
+	/**
+	 * Helper function to find text nodes containing a specific text using TreeWalker
+	 * Returns array of text nodes that contain parts of the target text
+	 */
+	function findTextNodesInRange(root: Node, targetText: string): Text[] {
+		const nodes: Text[] = [];
+		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+		let node: Text | null;
+		let plainText = '';
+
+		// First pass: collect all text nodes and build plain text map
+		while ((node = walker.nextNode() as Text | null)) {
+			if (node.parentElement?.closest('mark.selection-highlight')) {
+				continue; // Skip nodes already inside highlights
+			}
+			plainText += node.textContent || '';
+			nodes.push(node);
+		}
+
+		// Find target text in plain text
+		const targetIndex = plainText.indexOf(targetText);
+		if (targetIndex === -1) {
+			return []; // Text not found
+		}
+
+		// Second pass: identify nodes that contain the target text
+		const result: Text[] = [];
+		let currentPos = 0;
+		for (let i = 0; i < nodes.length; i++) {
+			const node = nodes[i];
+			const nodeText = node.textContent || '';
+			const nodeStart = currentPos;
+			const nodeEnd = currentPos + nodeText.length;
+			currentPos = nodeEnd;
+
+			// Check if this node overlaps with the target range
+			if (nodeEnd > targetIndex && nodeStart < targetIndex + targetText.length) {
+				result.push(node);
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Apply highlights to HTML by wrapping matching text in <mark> elements
+	 * Uses TreeWalker pattern similar to existing selection logic
+	 * @param html - HTML string to apply highlights to
+	 * @param highlights - Array of highlight info objects containing text to highlight
+	 * @returns HTML string with highlights applied
+	 */
+	function applyHighlightsToHTML(html: string, highlights: HighlightInfo[]): string {
+		if (!html || highlights.length === 0) return html;
+		
+		// Parse HTML into temporary DOM
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = html;
+		
+		// Sort highlights by length (longest first) to avoid nested replacements
+		const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
+		
+		// Apply each highlight
+		for (const highlight of sortedHighlights) {
+			const targetText = highlight.text.trim();
+			if (!targetText) continue;
+			
+			// Use TreeWalker to find text nodes (similar to findTextNodesInRange)
+			const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null);
+			let node: Text | null;
+			
+			while ((node = walker.nextNode() as Text | null)) {
+				// Skip nodes already inside marks
+				if (node.parentElement?.closest('mark.selection-highlight')) {
+					continue;
+				}
+				
+				const nodeText = node.textContent || '';
+				const idx = nodeText.indexOf(targetText);
+				
+				if (idx !== -1) {
+					// Split text node and wrap target text with <mark> element
+					// (similar to handleTextSelection logic)
+					const mark = document.createElement('mark');
+					mark.className = 'selection-highlight bg-yellow-200 dark:bg-yellow-600';
+					mark.textContent = targetText;
+					
+					const before = node.splitText(idx);
+					before.splitText(targetText.length);
+					before.parentNode?.replaceChild(mark, before);
+					
+					// Normalize after modification
+					tempDiv.normalize();
+					break; // Only wrap first occurrence of each highlight
+				}
+			}
+		}
+		
+		return tempDiv.innerHTML;
+	}
+
+	/**
+	 * Render markdown text to HTML (simplified - highlights are now stored as HTML directly)
+	 * @deprecated In Approach 3, highlights are stored as HTML directly, so this function just renders markdown.
+	 * Use stored HTML (responseHighlightedHTML/promptHighlightedHTML) directly for display.
+	 */
+	function renderMarkdownWithHighlights(text: string, highlights: HighlightInfo[]): string {
+		// Approach 3: Highlights are stored as HTML directly, so we just render markdown
+		// The stored HTML (responseHighlightedHTML/promptHighlightedHTML) should be used directly for display
+		return renderMarkdown(text);
+	}
+
+	/**
+	 * Get highlighted HTML - Approach 3: Use stored HTML directly if available, otherwise render markdown
+	 * @deprecated In Approach 3, use stored HTML (responseHighlightedHTML/promptHighlightedHTML) directly
+	 */
+	function getHighlightedHTML(text: string, highlights: HighlightInfo[]): string {
+		// Approach 3: Just render markdown - highlights are stored as HTML directly
+		return renderMarkdown(text);
 	}
 	
+	// Reactive statement for response HTML - Approach 3: Use stored HTML directly
 	$: response1HTML = (() => {
+		// Use stored HTML if available (with marks already embedded)
+		if (responseHighlightedHTML) {
+			return responseHighlightedHTML;
+		}
+		// Fall back to rendered markdown if no stored HTML
 		// Always show original with highlights when in Step 1 of initial decision pane
 		if (showInitialDecisionPane && initialDecisionStep === 1) {
-			return getHighlightedHTML(originalResponse1, highlightedTexts1);
+			return renderMarkdown(originalResponse1);
 		}
 		if (showOriginal1) {
-			return getHighlightedHTML(originalResponse1, highlightedTexts1);
+			return renderMarkdown(originalResponse1);
 		}
 		if (currentVersionIndex >= 0 && currentVersionIndex < versions.length) {
 			return versions[currentVersionIndex].response;
 		}
-		return getHighlightedHTML(originalResponse1, highlightedTexts1);
+		return renderMarkdown(originalResponse1);
 	})();
 	
 	// Ensure original is shown during Step 1 for highlighting
 	// showOriginal1 is now derived via reactive statement above
 
-	// Highlighted Prompt HTML
-	$: childPromptHTML = getHighlightedHTML(childPrompt1, highlightedTexts1);
+	// Highlighted Prompt HTML - Approach 3: Use stored HTML directly
+	$: childPromptHTML = (() => {
+		// Use stored HTML if available (with marks already embedded)
+		if (promptHighlightedHTML) {
+			return promptHighlightedHTML;
+		}
+		// Fall back to rendered markdown if no stored HTML
+		return renderMarkdown(childPrompt1);
+	})();
 
 	// Timer management functions
 	function startTimer(scenarioIndex: number) {
@@ -1839,6 +2472,8 @@ let currentRequestId: number = 0;
 			attentionCheckPassed,
 			markedNotApplicable,
 			customPrompt: isCustomScenario && customScenarioGenerated ? customScenarioPrompt : existingState?.customPrompt,
+			responseHighlightedHTML: responseHighlightedHTML,
+			promptHighlightedHTML: promptHighlightedHTML,
 			// Unified initial decision flow state (3-step flow)
 			step1Completed,
 			step2Completed,
@@ -2053,7 +2688,23 @@ let currentRequestId: number = 0;
 		if (backendSession) {
 			// Step 1: Restore highlights from backend
 			if (backendSession.highlighted_texts && Array.isArray(backendSession.highlighted_texts) && backendSession.highlighted_texts.length > 0) {
-				highlightedTexts1 = [...backendSession.highlighted_texts];
+			// Handle both legacy string[] format and new dict[] format
+			const firstItem = backendSession.highlighted_texts[0];
+			if (typeof firstItem === 'string') {
+				// Legacy format - convert to HighlightInfo
+				highlightedTexts1 = (backendSession.highlighted_texts as unknown as string[]).map(text => ({
+					text,
+					startOffset: -1,
+					endOffset: -1
+				}));
+			} else {
+				// New format - already objects
+				highlightedTexts1 = (backendSession.highlighted_texts as any[]).map(h => ({
+					text: h.text,
+					startOffset: h.start_offset ?? -1,
+					endOffset: h.end_offset ?? -1
+				}));
+			}
 				step1Completed = true;
 				console.log('✅ Restored highlights from backend:', highlightedTexts1.length);
 			}
@@ -2089,11 +2740,31 @@ let currentRequestId: number = 0;
 			let confirmedSession: any = null;
 			if (versionSessions && versionSessions.length > 0) {
 				const { versions: restoredVersions, confirmedIndex, confirmedSession: foundConfirmedSession } = versionSessions.reduce((acc: any, session: any) => {
+					// Handle both legacy string[] format and new dict[] format for highlighted_texts
+					let highlightedTexts: HighlightInfo[] = [];
+					if (session.highlighted_texts && Array.isArray(session.highlighted_texts) && session.highlighted_texts.length > 0) {
+						const firstItem = session.highlighted_texts[0];
+						if (typeof firstItem === 'string') {
+							// Legacy format - convert to HighlightInfo
+							highlightedTexts = (session.highlighted_texts as unknown as string[]).map(text => ({
+								text,
+								startOffset: -1,
+								endOffset: -1
+							}));
+						} else {
+							// New format - already objects
+							highlightedTexts = (session.highlighted_texts as any[]).map(h => ({
+								text: h.text,
+								startOffset: h.start_offset ?? -1,
+								endOffset: h.end_offset ?? -1
+							}));
+						}
+					}
 					const version = {
 						response: session.refactored_response || '',
 						strategies: session.strategies || [],
 						customInstructions: (session.custom_instructions || []).map((text: string, idx: number) => ({ id: `custom_${idx}`, text })),
-						highlightedTexts: session.highlighted_texts || [],
+						highlightedTexts,
 						moderationResult: {} as ModerationResponse // ModerationResult may need to be reconstructed if stored
 					};
 					acc.versions.push(version);
@@ -2193,8 +2864,21 @@ let currentRequestId: number = 0;
 		const restoreFromLocalStorageIfMissing = (savedState: ScenarioState | undefined, backendProvided: Set<string>) => {
 			if (!savedState) return;
 			
-			// Restore fields only if backend didn't provide them
-			if (!backendProvided.has('highlightedTexts1') && savedState.highlightedTexts1?.length > 0) {
+			// Restore HTML fields only if backend didn't provide them
+			if (!backendProvided.has('responseHighlightedHTML') && savedState.responseHighlightedHTML) {
+				responseHighlightedHTML = savedState.responseHighlightedHTML;
+			}
+			if (!backendProvided.has('promptHighlightedHTML') && savedState.promptHighlightedHTML) {
+				promptHighlightedHTML = savedState.promptHighlightedHTML;
+			}
+			
+			// Extract highlighted texts from HTML if HTML was restored
+			if ((responseHighlightedHTML || promptHighlightedHTML) && (!backendProvided.has('responseHighlightedHTML') || !backendProvided.has('promptHighlightedHTML'))) {
+				const responseTexts = extractTextFromHighlightedHTML(responseHighlightedHTML);
+				const promptTexts = extractTextFromHighlightedHTML(promptHighlightedHTML);
+				highlightedTexts1 = [...responseTexts, ...promptTexts].map(t => ({ text: t }));
+			} else if (!backendProvided.has('highlightedTexts1') && savedState.highlightedTexts1?.length > 0) {
+				// Fallback: restore from highlightedTexts1 if HTML not available
 				highlightedTexts1 = [...savedState.highlightedTexts1];
 			}
 			
@@ -2529,7 +3213,7 @@ function cancelReset() {}
 					concern_level: stepData.concern_level,
 					strategies: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].strategies : [],
 					custom_instructions: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].customInstructions.map(c => c.text) : [],
-					highlighted_texts: [...highlightedTexts1],
+					highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 					refactored_response: confirmedVersionIndex >= 0 && versions[confirmedVersionIndex] ? versions[confirmedVersionIndex].response : undefined,
 					is_final_version: true,
 						decided_at: Date.now(),
@@ -2622,7 +3306,7 @@ function cancelReset() {}
 							initial_decision: undefined,
 							strategies: [],
 							custom_instructions: [],
-							highlighted_texts: [...highlightedTexts1],
+							highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 							refactored_response: undefined,
 							is_final_version: false,
 							is_attention_check: true,
@@ -2875,7 +3559,7 @@ function cancelReset() {}
 	 * 
 	 * **When skipped=false:**
 	 *   - **VALIDATES**: Requires at least one highlight (highlightedTexts1.length > 0)
-	 *   - Saves highlighted_texts: [...highlightedTexts1] (all highlights as JSON array)
+	 *   - Saves highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })) (all highlights as JSON array)
 	 *   - No step 2-3 data saved yet
 	 * 
 	 * @param {boolean} skipped - If true, marks scenario as not applicable and skips all remaining steps
@@ -2966,7 +3650,7 @@ function cancelReset() {}
 					initial_decision: undefined, // No decision yet, just saving highlights
 					strategies: [],
 					custom_instructions: [],
-					highlighted_texts: [...highlightedTexts1], // Save all highlights as JSON array to `moderation_session` table
+					highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })), // Save all highlights as JSON array to `moderation_session` table
 					refactored_response: undefined,
 					is_final_version: false,
 					highlights_saved_at: Date.now(),
@@ -3059,7 +3743,7 @@ function cancelReset() {}
 				decided_at: Date.now(),
 				strategies: [],
 				custom_instructions: [],
-				highlighted_texts: [...highlightedTexts1],
+				highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 				refactored_response: undefined,
 				is_final_version: true, // Mark as final - scenario is complete
 				is_attention_check: isAttentionCheckScenario,
@@ -3149,7 +3833,7 @@ function cancelReset() {}
 				custom_instructions: currentVersionIndex >= 0 && versions[currentVersionIndex]
 					? versions[currentVersionIndex].customInstructions.map(c => c.text)
 					: [],
-				highlighted_texts: [...highlightedTexts1],
+				highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 				refactored_response: currentVersionIndex >= 0 && versions[currentVersionIndex]
 					? versions[currentVersionIndex].response
 					: undefined,
@@ -3399,7 +4083,7 @@ function cancelReset() {}
 				childPrompt1,
 				customTexts,
 				originalResponse1,  // Pass original response for refactoring
-				highlightedTexts1,  // Pass highlighted texts
+				highlightedTexts1.map(h => h.text),  // Pass highlighted texts
 				childAge  // Pass child's age for age-appropriate moderation
 			);
 			
@@ -3453,7 +4137,7 @@ function cancelReset() {}
 						concern_level: stepData.concern_level,
 						strategies: [...standardStrategies],
 						custom_instructions: usedCustomInstructions.map(c => c.text), // Convert to string array
-						highlighted_texts: [...highlightedTexts1],
+						highlighted_texts: highlightedTexts1.map(h => ({ text: h.text })),
 						refactored_response: result.refactored_response,
 						is_final_version: false,
 							decided_at: Date.now(),
@@ -4663,7 +5347,7 @@ onMount(async () => {
 											on:click={() => removeHighlight(highlight)}
 											title="Click to remove"
 										>
-											{highlight.length > 30 ? highlight.substring(0, 30) + '...' : highlight}
+											{highlight.text.length > 30 ? highlight.text.substring(0, 30) + '...' : highlight.text}
 											<svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
 											</svg>
@@ -4766,7 +5450,7 @@ onMount(async () => {
 														on:click={() => removeHighlight(highlight)}
 														title="Click to remove"
 													>
-														{highlight.length > 40 ? highlight.substring(0, 40) + '...' : highlight}
+														{highlight.text.length > 40 ? highlight.text.substring(0, 40) + '...' : highlight.text}
 														<svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
 														</svg>
