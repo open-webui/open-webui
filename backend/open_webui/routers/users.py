@@ -79,7 +79,7 @@ async def get_users(
 
     filter["direction"] = direction
 
-    result = Users.get_users(filter=filter, skip=skip, limit=limit, db=db)
+    result = Users.get_users(filter=filter, skip=skip, limit=limit, defer_profile_image=True, db=db)
 
     users = result["users"]
     total = result["total"]
@@ -93,6 +93,7 @@ async def get_users(
             UserGroupIdsModel(
                 **{
                     **user.model_dump(),
+                    "profile_image_url": f"/api/v1/users/{user.id}/profile/image",
                     "group_ids": [group.id for group in user_groups.get(user.id, [])],
                 }
             )
@@ -107,7 +108,11 @@ async def get_all_users(
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
-    return Users.get_users(db=db)
+    result = Users.get_users(defer_profile_image=True, db=db)
+    # Override profile_image_url with URL path to reduce response size
+    for u in result["users"]:
+        u.profile_image_url = f"/api/v1/users/{u.id}/profile/image"
+    return result
 
 
 @router.get("/search", response_model=UserInfoListResponse)
@@ -132,7 +137,11 @@ async def search_users(
     if direction:
         filter["direction"] = direction
 
-    return Users.get_users(filter=filter, skip=skip, limit=limit, db=db)
+    result = Users.get_users(filter=filter, skip=skip, limit=limit, defer_profile_image=True, db=db)
+    # Override profile_image_url with URL path to reduce response size
+    for u in result["users"]:
+        u.profile_image_url = f"/api/v1/users/{u.id}/profile/image"
+    return result
 
 
 ############################

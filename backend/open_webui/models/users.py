@@ -1,7 +1,7 @@
 import time
 from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 
 
@@ -330,11 +330,16 @@ class UsersTable:
         filter: Optional[dict] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
+        defer_profile_image: bool = False,
         db: Optional[Session] = None,
     ) -> dict:
         with get_db_context(db) as db:
             # Join GroupMember so we can order by group_id when requested
             query = db.query(User)
+
+            # Defer loading of profile_image_url to avoid fetching large base64 data
+            if defer_profile_image:
+                query = query.options(defer(User.profile_image_url))
 
             if filter:
                 query_key = filter.get("query")
