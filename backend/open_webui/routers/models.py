@@ -389,6 +389,79 @@ def get_model_profile_image(
     return FileResponse(f"{STATIC_DIR}/favicon.png")
 
 
+@router.get("/model/debug_logo")
+def debug_model_logo(id: str, user=Depends(get_verified_user)):
+    """Temporary debug endpoint to trace logo matching logic"""
+    from open_webui.utils.model_logos import _extract_model_info, _scan_available_logos, _normalize_name
+    import re
+    from pathlib import Path
+    
+    info = _extract_model_info(id)
+    model_name_extracted = info["model_clean"]
+    provider = info["provider"]
+    model_id_lower = id.lower()
+    
+    logos = _scan_available_logos()
+    candidates = []
+    delimiters = set(".-_/: ")
+    
+    debug_log = []
+    
+    for logo_keywords, logo_path in logos:
+        logo_stem = logo_path.stem.lower()
+        logo_stem_normalized = _normalize_name(logo_stem)
+        score = 0
+        
+        # EXACT MODEL NAME MATCH
+        if logo_stem_normalized == model_name_extracted or logo_stem == model_name_extracted:
+            score = 1000
+            candidates.append({"score": score, "name": logo_path.name, "reason": "Exact Match"})
+            continue
+
+        check_logos = {logo_stem}
+        if logo_stem_normalized != logo_stem:
+            check_logos.add(logo_stem_normalized)
+            
+        for check_logo in check_logos:
+            if not check_logo or len(check_logo) < 2:
+                continue
+                
+            try:
+                start_indices = [m.start() for m in re.finditer(re.escape(check_logo), model_id_lower)]
+                for start_idx in start_indices:
+                    end_idx = start_idx + len(check_logo)
+                    left_ok = (start_idx == 0) or (model_id_lower[start_idx-1] in delimiters)
+                    right_ok = (end_idx == len(model_id_lower)) or (model_id_lower[end_idx] in delimiters)
+                    
+                    if left_ok and right_ok:
+                        s = 900 + len(check_logo)
+                        if end_idx == len(model_id_lower): s += 20
+                        if start_idx == 0: s += 30
+                        score = max(score, s)
+                        
+            except Exception:
+                pass
+        
+        # PROVIDER MATCH
+        if provider and score < 500:
+            if provider in logo_keywords or provider == logo_stem_normalized:
+                score = max(score, 500)
+            elif provider in logo_stem:
+                score = max(score, 400)
+                
+        if score > 0:
+            candidates.append({"score": score, "name": logo_path.name})
+            
+    candidates.sort(key=lambda x: x["score"], reverse=True)
+    
+    return {
+        "model_id": id,
+        "extracted_info": info,
+        "winner": candidates[0] if candidates else None,
+        "top_10_candidates": candidates[:10]
+    }
+
+
 ############################
 # ToggleModelById
 ############################
