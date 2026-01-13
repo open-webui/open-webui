@@ -117,6 +117,8 @@ VERSION = PACKAGE_DATA["version"]
 DEPLOYMENT_ID = os.environ.get("DEPLOYMENT_ID", "")
 INSTANCE_ID = os.environ.get("INSTANCE_ID", str(uuid4()))
 
+ENABLE_DB_MIGRATIONS = os.environ.get("ENABLE_DB_MIGRATIONS", "True").lower() == "true"
+
 
 # Function to parse each section
 def parse_section(section):
@@ -339,6 +341,11 @@ if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
     except Exception:
         DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = 0.0
 
+# When enabled, get_db_context reuses existing sessions; set to False to always create new sessions
+DATABASE_ENABLE_SESSION_SHARING = (
+    os.environ.get("DATABASE_ENABLE_SESSION_SHARING", "False").lower() == "true"
+)
+
 # Enable public visibility of active user count (when disabled, only admins can see it)
 ENABLE_PUBLIC_ACTIVE_USERS_COUNT = (
     os.environ.get("ENABLE_PUBLIC_ACTIVE_USERS_COUNT", "True").lower() == "true"
@@ -353,6 +360,8 @@ ENABLE_REALTIME_CHAT_SAVE = (
 )
 
 ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"
+
+RAG_SYSTEM_CONTEXT = os.environ.get("RAG_SYSTEM_CONTEXT", "False").lower() == "true"
 
 ####################################
 # REDIS
@@ -409,6 +418,16 @@ ENABLE_SIGNUP_PASSWORD_CONFIRMATION = (
     os.environ.get("ENABLE_SIGNUP_PASSWORD_CONFIRMATION", "False").lower() == "true"
 )
 
+####################################
+# Admin Account Runtime Creation
+####################################
+
+# Optional env vars for creating an admin account on startup
+# Useful for headless/automated deployments
+WEBUI_ADMIN_EMAIL = os.environ.get("WEBUI_ADMIN_EMAIL", "")
+WEBUI_ADMIN_PASSWORD = os.environ.get("WEBUI_ADMIN_PASSWORD", "")
+WEBUI_ADMIN_NAME = os.environ.get("WEBUI_ADMIN_NAME", "Admin")
+
 WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
 )
@@ -426,12 +445,14 @@ PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
     "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
 )
 
+
 try:
+    PASSWORD_VALIDATION_REGEX_PATTERN = rf"{PASSWORD_VALIDATION_REGEX_PATTERN}"
     PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(PASSWORD_VALIDATION_REGEX_PATTERN)
 except Exception as e:
     log.error(f"Invalid PASSWORD_VALIDATION_REGEX_PATTERN: {e}")
     PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(
-        "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"
+        r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"
     )
 
 
@@ -667,6 +688,8 @@ except ValueError:
     WEBSOCKET_SERVER_PING_INTERVAL = 25
 
 
+REQUESTS_VERIFY = os.environ.get("REQUESTS_VERIFY", "True").lower() == "true"
+
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
 if AIOHTTP_CLIENT_TIMEOUT == "":
@@ -760,6 +783,16 @@ else:
     except Exception:
         SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS = None
 
+# Whether to apply sigmoid normalization to CrossEncoder reranking scores.
+# When enabled (default), scores are normalized to 0-1 range for proper
+# relevance threshold behavior with MS MARCO models.
+SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION = (
+    os.environ.get(
+        "SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION", "True"
+    ).lower()
+    == "true"
+)
+
 ####################################
 # OFFLINE_MODE
 ####################################
@@ -776,6 +809,11 @@ if OFFLINE_MODE:
 ####################################
 # AUDIT LOGGING
 ####################################
+
+
+ENABLE_AUDIT_STDOUT = os.getenv("ENABLE_AUDIT_STDOUT", "False").lower() == "true"
+ENABLE_AUDIT_LOGS_FILE = os.getenv("ENABLE_AUDIT_LOGS_FILE", "True").lower() == "true"
+
 # Where to store log file
 # Defaults to the DATA_DIR/audit.log. To set AUDIT_LOGS_FILE_PATH you need to
 # provide the whole path, like: /app/audit.log

@@ -3,6 +3,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { settings } from '$lib/stores';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -52,9 +53,39 @@
 	const decodeString = (str: string) => {
 		try {
 			return decodeURIComponent(str);
-		} catch (e) {
+		} catch {
 			return str;
 		}
+	};
+
+	const getTextFragmentUrl = (doc: any): string | null => {
+		const { metadata, source, document: content } = doc ?? {};
+		const { file_id, page } = metadata ?? {};
+		const sourceUrl = source?.url;
+
+		const baseUrl = file_id
+			? `${WEBUI_API_BASE_URL}/files/${file_id}/content${page !== undefined ? `#page=${page + 1}` : ''}`
+			: sourceUrl?.includes('http')
+				? sourceUrl
+				: null;
+
+		if (!baseUrl || !content) return baseUrl;
+
+		// Extract first and last words for text fragment, filtering out URLs and emojis
+		const words = content
+			.trim()
+			.replace(/\s+/g, ' ')
+			.split(' ')
+			.filter((w: string) => w.length > 0 && !/https?:\/\/|[\u{1F300}-\u{1F9FF}]/u.test(w));
+
+		if (words.length === 0) return baseUrl;
+
+		const clean = (w: string) => w.replace(/[^\w]/g, '');
+		const first = clean(words[0]);
+		const last = clean(words.at(-1));
+		const fragment = words.length === 1 ? first : `${first},${last}`;
+
+		return fragment ? `${baseUrl}#:~:text=${fragment}` : baseUrl;
 	};
 </script>
 
@@ -123,7 +154,21 @@
 							<div
 								class=" text-sm font-medium dark:text-gray-300 flex items-center gap-2 w-fit mb-1"
 							>
-								{$i18n.t('Content')}
+								{#if document.source?.url?.includes('http')}
+									{@const snippetUrl = getTextFragmentUrl(document)}
+									{#if snippetUrl}
+										<a
+											href={snippetUrl}
+											target="_blank"
+											class="underline hover:text-gray-500 dark:hover:text-gray-100"
+											>{$i18n.t('Content')}</a
+										>
+									{:else}
+										{$i18n.t('Content')}
+									{/if}
+								{:else}
+									{$i18n.t('Content')}
+								{/if}
 
 								{#if showRelevance && document.distance !== undefined}
 									<Tooltip
@@ -163,7 +208,10 @@
 							{#if document.metadata?.html}
 								<iframe
 									class="w-full border-0 h-auto rounded-none"
-									sandbox="allow-scripts allow-forms allow-same-origin"
+									sandbox="allow-scripts allow-forms{($settings?.iframeSandboxAllowSameOrigin ??
+									false)
+										? ' allow-same-origin'
+										: ''}"
 									srcdoc={document.document}
 									title={$i18n.t('Content')}
 								></iframe>

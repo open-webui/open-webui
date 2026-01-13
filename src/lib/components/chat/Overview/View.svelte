@@ -75,6 +75,8 @@
 
 		Object.keys(history.messages).forEach((id) => {
 			const message = history.messages[id];
+			if (!message) return;
+
 			const level = message.parentId ? (positionMap.get(message.parentId)?.level ?? -1) + 1 : 0;
 			if (!layerWidths[level]) layerWidths[level] = 0;
 
@@ -88,6 +90,8 @@
 		// Adjust positions based on siblings count to centralize vertical spacing
 		Object.keys(history.messages).forEach((id) => {
 			const pos = positionMap.get(id);
+			if (!pos) return;
+
 			const x = direction === 'vertical' ? pos.position * siblingOffset : pos.level * levelOffset;
 			const y = direction === 'vertical' ? pos.level * levelOffset : pos.position * siblingOffset;
 

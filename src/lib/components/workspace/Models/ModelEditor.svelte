@@ -92,6 +92,7 @@
 	let defaultFilterIds = [];
 
 	let capabilities = {
+		file_context: true,
 		vision: true,
 		file_upload: true,
 		web_search: true,
@@ -99,12 +100,14 @@
 		code_interpreter: true,
 		citations: true,
 		status_updates: true,
-		usage: undefined
+		usage: undefined,
+		builtin_tools: true
 	};
 	let defaultFeatureIds = [];
 
 	let actionIds = [];
 	let accessControl = {};
+	let tts = { voice: '' };
 
 	const submitHandler = async () => {
 		loading = true;
@@ -192,6 +195,18 @@
 			}
 		}
 
+		if (tts.voice !== '') {
+			if (!info.meta.tts) info.meta.tts = {};
+			info.meta.tts.voice = tts.voice;
+		} else {
+			if (info.meta.tts?.voice) {
+				delete info.meta.tts.voice;
+				if (Object.keys(info.meta.tts).length === 0) {
+					delete info.meta.tts;
+				}
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
@@ -273,6 +288,7 @@
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
+			tts = { voice: model?.meta?.tts?.voice ?? '' };
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;
@@ -350,6 +366,15 @@
 				reader.onload = (event) => {
 					let originalImageUrl = `${event.target?.result}`;
 
+					// For animated formats (gif, webp), skip resizing to preserve animation
+					const fileType = (inputFiles[0] as any)?.['type'];
+					if (fileType === 'image/gif' || fileType === 'image/webp') {
+						info.meta.profile_image_url = originalImageUrl;
+						inputFiles = null;
+						filesInputElement.value = '';
+						return;
+					}
+
 					const img = new Image();
 					img.src = originalImageUrl;
 
@@ -382,7 +407,7 @@
 						ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
 
 						// Get the base64 representation of the compressed image
-						const compressedSrc = canvas.toDataURL();
+						const compressedSrc = canvas.toDataURL('image/webp', 0.8);
 
 						// Display the compressed image
 						info.meta.profile_image_url = compressedSrc;
@@ -414,7 +439,7 @@
 					submitHandler();
 				}}
 			>
-				<div class="w-full">
+				<div class="w-full px-1">
 					<div class="flex flex-col md:flex-row gap-4 w-full">
 						<div class="self-center md:self-start flex justify-center my-2 shrink-0">
 							<div class="self-center">
@@ -604,8 +629,6 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
 					<div class="my-2">
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium text-gray-500">
@@ -690,13 +713,9 @@
 						{/if}
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
 					<div class="my-2">
 						<Knowledge bind:selectedItems={knowledge} />
 					</div>
-
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
@@ -760,6 +779,20 @@
 							</div>
 						{/if}
 					{/if}
+
+					<div class="my-2">
+						<div class="flex w-full justify-between mb-1">
+							<div class="self-center text-xs font-medium text-gray-500">
+								{$i18n.t('TTS Voice')}
+							</div>
+						</div>
+						<input
+							class="w-full text-sm bg-transparent outline-hidden"
+							type="text"
+							bind:value={tts.voice}
+							placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
+						/>
+					</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 

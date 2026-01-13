@@ -68,7 +68,7 @@
 				{/each}
 
 				<div class="flex items-center flex-wrap gap-2 mt-1.5">
-					{#each files.filter((file) => file.type === 'image') as file, fileIdx}
+					{#each files.filter((file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) as file, fileIdx}
 						<Image
 							src={file.url}
 							imageClassName=" size-14 rounded-xl object-cover"

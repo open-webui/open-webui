@@ -30,7 +30,7 @@ from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
 
 
-from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL, REQUESTS_VERIFY
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -114,7 +114,7 @@ class TikaLoader:
             endpoint += "/"
         endpoint += "tika/text"
 
-        r = requests.put(endpoint, data=data, headers=headers)
+        r = requests.put(endpoint, data=data, headers=headers, verify=REQUESTS_VERIFY)
 
         if r.ok:
             raw_metadata = r.json()
