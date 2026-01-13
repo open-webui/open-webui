@@ -1335,6 +1335,9 @@ function clearModerationLocalKeys() {
 	// HTML storage for highlights (Approach 3)
 	let responseHighlightedHTML: string = ''; // Store HTML with marks embedded for response
 	let promptHighlightedHTML: string = '';   // Store HTML with marks embedded for prompt
+
+	// Hydration guard to avoid DOM mutations before Svelte finishes hydrating
+	let hasHydrated = false;
 	
 	// Text selection UI state
 	let responseContainer1: HTMLElement;
@@ -1494,7 +1497,36 @@ let currentRequestId: number = 0;
 	 *    - NOT saved if user presses "Skip" (sets `highlighted_texts: []`)
 	 *    - Used for moderation session state and restoration
 	 *    - Table: `moderation_session` (backend model: `ModerationSession`)
-	 * 
+	 *
+	 * HIGHLIGHTING IMPLEMENTATION (IN-PLACE TEXT WRAPPING)
+	 *
+	 * Historical context:
+	 * - Earlier versions used offsets + string matching, which were brittle across markdown/rendering changes.
+	 * - Then we tried DOM extraction (`range.extractContents()`), anchors, and block merging for cross-block
+	 *   selections. This caused a long tail of bugs: duplicated highlights, reordered text, missing newlines,
+	 *   highlights mysteriously appearing at the top or bottom of the response, and hydration issues.
+	 *
+	 * Current approach (Approach 3B - in-place wrapping):
+	 * - We work directly on the rendered DOM and:
+	 *   - Walk all text nodes in the active container (prompt or response).
+	 *   - Find only those text nodes that intersect with the current selection range.
+	 *   - For each such node, split it so the selected portion becomes its own `Text` node.
+	 *   - Wrap that selected portion in a `<mark.selection-highlight>` element in-place.
+	 * - We **never**:
+	 *   - Call `extractContents()` or otherwise remove large fragments from the DOM.
+	 *   - Move or recreate block elements (`<p>`, `<li>`, `<h2>`, etc.).
+	 *   - Insert content relative to container roots.
+	 *
+	 * Benefits:
+	 * - Works the same for single-block and cross-block selections.
+	 * - Preserves exact visual order and whitespace/newlines.
+	 * - Eliminates the class of bugs where highlights are duplicated or re-ordered.
+	 *
+	 * Data flow:
+	 * - The DOM is treated as the source of truth for highlight placement.
+	 * - After each mutation, we snapshot just the content HTML (prompt or response) into
+	 *   `promptHighlightedHTML` / `responseHighlightedHTML`, which drives rendering and persistence.
+	 *
 	 * **IMPORTANT:** If user highlights text then presses "Skip":
 	 * - Highlights remain in `selection` table (already saved)
 	 * - `moderation_session.highlighted_texts` is set to empty array `[]`
@@ -1503,7 +1535,7 @@ let currentRequestId: number = 0;
 	function handleTextSelection(event: MouseEvent) {
 		// Only allow highlighting when explicitly enabled (step 1, not loading, not skipped)
 		// This prevents saving to `selection` table during state restoration, after skip, or in steps 2-3
-		if (!isHighlightingEnabled) return;
+		if (!isHighlightingEnabled || !hasHydrated) return;
 		const container = (event.currentTarget as HTMLElement) || responseContainer1;
 		if (!container) return;
 		
@@ -1544,6 +1576,39 @@ let currentRequestId: number = 0;
 				currentSelection1 = '';
 				return;
 			}
+
+			// Guard: if the selection is entirely inside an existing highlight, skip
+			const startMark = range.startContainer.parentElement?.closest('mark.selection-highlight');
+			const endMark = range.endContainer.parentElement?.closest('mark.selection-highlight');
+			if (startMark && startMark === endMark) {
+				const markRange = document.createRange();
+				markRange.selectNodeContents(startMark);
+				if (
+					range.compareBoundaryPoints(Range.START_TO_START, markRange) >= 0 &&
+					range.compareBoundaryPoints(Range.END_TO_END, markRange) <= 0
+				) {
+					selection.removeAllRanges();
+					return;
+				}
+			}
+			
+			/**
+			 * PREVENT RE-HIGHLIGHTING GUARD (cross-block)
+			 * 
+			 * Clone the selection contents and check for existing marks. If any are present,
+			 * skip highlighting to avoid deleting/altering already-highlighted content.
+			 */
+			try {
+				const cloneRange = range.cloneRange();
+				const cloneFragment = cloneRange.cloneContents(); // non-destructive
+				const hasExistingMark = cloneFragment.querySelector('mark.selection-highlight');
+				if (hasExistingMark) {
+					selection.removeAllRanges();
+					return;
+				}
+			} catch (e) {
+				console.warn('Guard check failed when cloning selection:', e);
+			}
 			
 			// Find content element (same logic as later in the function)
 			let contentElement: HTMLElement | null = null;
@@ -1580,266 +1645,145 @@ let currentRequestId: number = 0;
 				});
 			}
 			
-			// Immediately wrap selection in <mark> element in DOM
-			const mark = document.createElement('mark');
-			mark.className = 'selection-highlight bg-yellow-200 dark:bg-yellow-600';
-			
 			/**
-			 * CROSS-BLOCK HIGHLIGHTING IMPROVEMENTS
+			 * IN-PLACE TEXT NODE WRAPPING
 			 * 
-			 * This implementation handles text selections that span multiple block elements (e.g., 
-			 * highlighting from one <li> to another, or from an <h3> into a <p>).
+			 * Instead of extracting and re-inserting content (which caused position/ordering bugs),
+			 * we wrap text nodes IN PLACE without ever removing them from the DOM.
 			 * 
-			 * Key improvements:
-			 * 1. **Preserves Block Structure**: Uses extractContents() instead of deleteContents() to
-			 *    maintain the original DOM hierarchy when selections span multiple blocks.
-			 * 
-			 * 2. **Merges into Existing Blocks**: Instead of creating duplicate block elements,
-			 *    content from the fragment's first/last blocks is merged into the existing blocks
-			 *    at the correct insertion points.
-			 * 
-			 * 3. **Correct Insertion Position**: Finds insertion points BEFORE extraction (while DOM
-			 *    is intact) and uses insertBefore() with reference nodes to insert content at the
-			 *    exact position where the selection started, not at the end of blocks.
-			 * 
-			 * 4. **Handles Last Block Correctly**: For the last block in a multi-block selection,
-			 *    the fragment contains content from where the selection STARTED in that block (not
-			 *    where it ended), so we use findRangeStartInBlock() to find the correct insertion point.
-			 * 
-			 * Motivation: Previous implementation would create duplicate <li> elements and insert
-			 * content at wrong positions when highlighting across block boundaries, breaking the
-			 * DOM structure and causing incorrect visual rendering.
+			 * This approach:
+			 * - Never extracts content from the DOM
+			 * - Never moves block elements
+			 * - Works identically for single-block and cross-block selections
+			 * - Preserves exact positions and document structure
 			 */
 			try {
-				// Store the start and end positions BEFORE extraction (important for cross-block selections)
-				const startContainer = range.startContainer;
-				const startOffset = range.startOffset;
-				const endContainer = range.endContainer;
-				const endOffset = range.endOffset;
+				// The container to search within (use contentElement if available, else activeContainer)
+				const searchRoot = contentElement || activeContainer;
 				
-				// Identify block elements that might need merging
-				// Block elements: h1-h6, p, div, li, etc.
-				const blockSelectors = 'h1, h2, h3, h4, h5, h6, p, div, li, blockquote, pre';
-				
-				// Helper function to find the containing block element for a node
-				const findContainingBlock = (node: Node): HTMLElement | null => {
-					let current: Node | null = node;
-					while (current) {
-						if (current.nodeType === Node.ELEMENT_NODE) {
-							const element = current as HTMLElement;
-							if (element.matches && element.matches(blockSelectors)) {
-								return element;
-							}
-						}
-						current = current.parentNode;
-					}
-					return null;
-				};
-				
-				// Find the existing block elements at start and end positions (BEFORE extraction)
-				const startBlock = findContainingBlock(startContainer);
-				const endBlock = findContainingBlock(endContainer);
-				
-				// Helper function to find insertion point as a direct child of the block
-				// Returns { type: 'before' | 'end', node: reference node }
-				const findInsertionPointInBlock = (block: HTMLElement, container: Node, offset: number): { type: 'before' | 'end'; node: Node | null } | null => {
-					if (!block || !block.contains(container)) {
-						return null;
-					}
-					
-					// Create a range at the selection point to compare positions
-					const selectionRange = document.createRange();
-					if (container.nodeType === Node.TEXT_NODE) {
-						selectionRange.setStart(container, Math.min(offset, container.textContent?.length || 0));
-					} else {
-						selectionRange.setStart(container, offset);
-					}
-					selectionRange.collapse(true);
-					
-					// Find the first direct child of block that comes at or after the selection point
-					const directChildren = Array.from(block.childNodes);
-					
-					for (const child of directChildren) {
-						const childRange = document.createRange();
-						childRange.selectNodeContents(child);
-						
-						// Compare positions
-						const comparison = selectionRange.compareBoundaryPoints(Range.START_TO_START, childRange);
-						if (comparison <= 0) {
-							// Selection starts at or before this child - insert before this child
-							return { type: 'before', node: child };
-						}
-					}
-					
-				// Selection is after all direct children - return last child for Range-based insertion
-				return { type: 'end', node: block.lastChild };
-			};
-			
-			// Helper to find where the range starts within a specific block
-			// This is needed for the last block because the fragment contains content from where
-			// the selection STARTED in that block, not where it ended
-			const findRangeStartInBlock = (block: HTMLElement, range: Range): { type: 'before' | 'end'; node: Node | null } | null => {
-				// If the range starts in this block, use the start position
-				if (block.contains(range.startContainer)) {
-					return findInsertionPointInBlock(block, range.startContainer, range.startOffset);
+				// Collect all text nodes that intersect with the selection range
+				interface TextNodeInfo {
+					node: Text;
+					startOffset: number;
+					endOffset: number;
 				}
+				const textNodesInRange: TextNodeInfo[] = [];
 				
-				// If the range doesn't start in this block but ends in it,
-				// the range must start before this block, so insert at the beginning
-				if (block.contains(range.endContainer)) {
-					return { type: 'before', node: block.firstChild };
-				}
-				
-				return null;
-			};
-			
-			// Find insertion points BEFORE extraction (while DOM is intact)
-			const startInsertPoint = startBlock ? findInsertionPointInBlock(startBlock, startContainer, startOffset) : null;
-			// For end block, find where the range STARTS within that block (not where it ends)
-			// because the fragment's last block contains content from where selection started in that block
-			const endInsertPoint = endBlock ? findRangeStartInBlock(endBlock, range) : null;
-				
-				// NOW extract the selected contents into a DocumentFragment (preserves block structure)
-				const fragment = range.extractContents();
-				
-				// Wrap all text nodes in the fragment with mark elements
-				// This preserves the block structure while highlighting
 				const walker = document.createTreeWalker(
-					fragment,
+					searchRoot,
 					NodeFilter.SHOW_TEXT,
 					null
 				);
 				
-				const textNodes: Text[] = [];
-				let node;
-				while (node = walker.nextNode()) {
-					if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
-						textNodes.push(node as Text);
+				let textNode: Text | null;
+				while ((textNode = walker.nextNode() as Text | null)) {
+					// Skip empty text nodes
+					if (!textNode.textContent || textNode.textContent.length === 0) {
+						continue;
 					}
-				}
-				
-				// Wrap each text node with a mark
-				textNodes.forEach(textNode => {
-					const markClone = mark.cloneNode(false) as HTMLElement;
-					markClone.textContent = textNode.textContent;
-					textNode.parentNode?.replaceChild(markClone, textNode);
-				});
-				
-				// Find the first and last block elements in the fragment
-				const firstBlockInFragment = fragment.querySelector(blockSelectors) as HTMLElement | null;
-				const allBlocksInFragment = Array.from(fragment.querySelectorAll(blockSelectors)) as HTMLElement[];
-				const lastBlockInFragment = allBlocksInFragment.length > 0 
-					? allBlocksInFragment[allBlocksInFragment.length - 1] 
-					: null;
-				
-				// Merge first block if needed
-				if (firstBlockInFragment && startBlock && firstBlockInFragment !== startBlock && startInsertPoint) {
-					// Check if first block in fragment is actually at the start of the selection
-					const fragmentFirstChild = fragment.firstChild;
-					if (fragmentFirstChild === firstBlockInFragment || 
-						firstBlockInFragment.contains(fragmentFirstChild)) {
-						if (startInsertPoint.type === 'end') {
-							// Use Range to insert at end
-							const endRange = document.createRange();
-							if (startInsertPoint.node) {
-								endRange.setStartAfter(startInsertPoint.node);
-							} else {
-								endRange.setStart(startBlock, startBlock.childNodes.length);
-							}
-							endRange.collapse(true);
-							while (firstBlockInFragment.firstChild) {
-								endRange.insertNode(firstBlockInFragment.firstChild);
-							}
-						} else {
-							// Insert before reference node (direct child of startBlock)
-							while (firstBlockInFragment.firstChild) {
-								startBlock.insertBefore(firstBlockInFragment.firstChild, startInsertPoint.node);
-							}
-						}
-						// Remove the empty first block from fragment
-						firstBlockInFragment.remove();
-					}
-				}
-				
-				// Merge last block if needed (and it's different from first block)
-				if (lastBlockInFragment && endBlock && 
-					lastBlockInFragment !== firstBlockInFragment && 
-					lastBlockInFragment !== startBlock && endInsertPoint) {
-					// Check if last block in fragment is actually at the end of the selection
-					const fragmentLastChild = fragment.lastChild;
-					if (fragmentLastChild === lastBlockInFragment || 
-						lastBlockInFragment.contains(fragmentLastChild)) {
-						if (endInsertPoint.type === 'end') {
-							// Use Range to insert at end
-							const endRange = document.createRange();
-							if (endInsertPoint.node) {
-								endRange.setStartAfter(endInsertPoint.node);
-							} else {
-								endRange.setStart(endBlock, endBlock.childNodes.length);
-							}
-							endRange.collapse(true);
-							while (lastBlockInFragment.firstChild) {
-								endRange.insertNode(lastBlockInFragment.firstChild);
-							}
-						} else {
-							// Insert before reference node (direct child of endBlock)
-							while (lastBlockInFragment.firstChild) {
-								endBlock.insertBefore(lastBlockInFragment.firstChild, endInsertPoint.node);
-							}
-						}
-						// Remove the empty last block from fragment
-						lastBlockInFragment.remove();
-					}
-				}
-				
-				// Create a new range at the stored start position
-				const newRange = document.createRange();
-				
-				// Handle case where startContainer might be a text node or element
-				if (startContainer.nodeType === Node.TEXT_NODE) {
-					// If it's a text node, use it directly
-					newRange.setStart(startContainer, Math.min(startOffset, startContainer.textContent?.length || 0));
-				} else {
-					// If it's an element, find the appropriate insertion point
-					if (startOffset < startContainer.childNodes.length) {
-						const startNode = startContainer.childNodes[startOffset];
-						if (startNode && startNode.nodeType === Node.TEXT_NODE) {
-							newRange.setStart(startNode, 0);
-						} else if (startNode) {
-							newRange.setStartBefore(startNode);
-						} else {
-							newRange.setStart(startContainer, startOffset);
-						}
-					} else {
-						// Offset is beyond child nodes, insert at end
-						newRange.setStart(startContainer, startContainer.childNodes.length);
-					}
-				}
-				
-				newRange.collapse(true); // Collapse to start
-				
-				// Insert the fragment at the stored position (preserves block structure)
-				// If fragment is empty after merging, we still need to handle it
-				if (fragment.hasChildNodes()) {
-					newRange.insertNode(fragment);
-				}
-				
-				// Normalize the DOM to remove extra whitespace/newlines
-				// Normalize each block element separately to avoid merging blocks
-				const commonAncestor = newRange.commonAncestorContainer;
-				const normalizeContainer = commonAncestor.nodeType === Node.TEXT_NODE 
-					? commonAncestor.parentNode 
-					: commonAncestor;
-				
-				if (normalizeContainer) {
-					// Normalize the container
-					normalizeContainer.normalize();
 					
-					// Also normalize any block elements that might have been affected
-					if (normalizeContainer.nodeType === Node.ELEMENT_NODE) {
-						const blockElements = (normalizeContainer as Element).querySelectorAll(blockSelectors);
-						blockElements.forEach((block: Element) => block.normalize());
+					// Skip nodes inside existing marks
+					if (textNode.parentElement?.closest('mark.selection-highlight')) {
+						continue;
 					}
+					
+					// Create a range for this text node to compare with selection
+					const nodeRange = document.createRange();
+					nodeRange.selectNodeContents(textNode);
+					
+					// Check if this text node intersects with the selection range
+					// Node is entirely after selection - skip
+					if (range.compareBoundaryPoints(Range.END_TO_START, nodeRange) >= 0) {
+						continue;
+					}
+					// Node is entirely before selection - skip
+					if (range.compareBoundaryPoints(Range.START_TO_END, nodeRange) <= 0) {
+						continue;
+					}
+					
+					// This node intersects - calculate the selected portion
+					let startOffset = 0;
+					let endOffset = textNode.length;
+					
+					// If selection starts within this node
+					if (range.startContainer === textNode) {
+						startOffset = range.startOffset;
+					} else {
+						// Check if selection starts after this node begins
+						const startComparison = range.compareBoundaryPoints(Range.START_TO_START, nodeRange);
+						if (startComparison > 0) {
+							// Selection starts after node begins - but we need to find where
+							// Since selection doesn't start in this node, use 0
+							startOffset = 0;
+						}
+					}
+					
+					// If selection ends within this node
+					if (range.endContainer === textNode) {
+						endOffset = range.endOffset;
+					} else {
+						// Check if selection ends before this node ends
+						const endComparison = range.compareBoundaryPoints(Range.END_TO_END, nodeRange);
+						if (endComparison < 0) {
+							// Selection ends before node ends - use full length
+							endOffset = textNode.length;
+						}
+					}
+					
+					// Only include if there's actual content to highlight
+					const selectedPortion = textNode.textContent.substring(startOffset, endOffset);
+					if (startOffset < endOffset && selectedPortion.trim()) {
+						textNodesInRange.push({ node: textNode, startOffset, endOffset });
+					}
+				}
+				
+				// If no text nodes found, nothing to highlight
+				if (textNodesInRange.length === 0) {
+					selection.removeAllRanges();
+					return;
+				}
+				
+				// Wrap each text node portion IN PLACE (no extraction)
+				// Process in REVERSE order so that splitting earlier nodes doesn't
+				// invalidate the offsets of later nodes
+				for (let i = textNodesInRange.length - 1; i >= 0; i--) {
+					const info = textNodesInRange[i];
+					let targetNode: Text = info.node;
+					const nodeLength = targetNode.length;
+					
+					// Validate offsets are still valid (in case DOM changed)
+					if (info.startOffset >= nodeLength || info.endOffset > nodeLength) {
+						continue;
+					}
+					
+					// Split the text node to isolate the selected portion
+					// Split off the end first (if not selecting to end)
+					if (info.endOffset < nodeLength) {
+						targetNode.splitText(info.endOffset);
+						// targetNode now contains text from 0 to endOffset
+					}
+					
+					// Split off the beginning (if not selecting from start)
+					if (info.startOffset > 0) {
+						targetNode = targetNode.splitText(info.startOffset);
+						// targetNode now contains exactly the selected text
+					}
+					
+					// Now targetNode contains exactly the selected text - wrap it in a mark
+					const mark = document.createElement('mark');
+					mark.className = 'selection-highlight bg-yellow-200 dark:bg-yellow-600';
+					
+					// Insert mark before the text node, then move text node into mark
+					if (targetNode.parentNode) {
+						targetNode.parentNode.insertBefore(mark, targetNode);
+						mark.appendChild(targetNode);
+					}
+				}
+				
+				// Normalize the container to merge adjacent text nodes
+				// This cleans up the splits we made
+				if (searchRoot) {
+					searchRoot.normalize();
 				}
 			} catch (error) {
 				console.error('Error wrapping selection in mark:', error);
@@ -1847,38 +1791,41 @@ let currentRequestId: number = 0;
 				return;
 			}
 			
-			// Store container's innerHTML after wrapping
-			// BUT: Only capture the content element, not the entire container
-			// Re-query the content element to ensure we have the latest DOM state after mark insertion
-			if (activeContainer === responseContainer1) {
-				// For response, find the div with class "response-text"
-				contentElement = activeContainer.querySelector('.response-text') as HTMLElement;
-			} else if (activeContainer === promptContainer1) {
-				// For prompt, find the <p> tag
-				contentElement = activeContainer.querySelector('p') as HTMLElement;
-			}
-			
-			// Fallback to activeContainer if content element not found
-			const elementToCapture = contentElement || activeContainer;
-			const containerHTML = elementToCapture.innerHTML;
-			
-			// Use activeContainer instead of container to determine which HTML to store
-			if (activeContainer === promptContainer1) {
-				promptHighlightedHTML = containerHTML;
-			} else {
-				responseHighlightedHTML = containerHTML;
-			}
-			
-			currentSelection1 = selectedText;
-			selectionInPrompt = activeContainer === promptContainer1;
-			
-			// Automatically save the selection (stores HTML and saves to backend)
-			saveSelection();
-			
-			// Clear the text selection after highlighting (visual cleanup)
-			setTimeout(() => {
-				selection.removeAllRanges();
-			}, 100);
+			// Defer reactive updates to avoid hydration conflicts
+			// Use requestAnimationFrame to ensure DOM is stable before triggering Svelte updates
+			requestAnimationFrame(() => {
+				// Store container's innerHTML after wrapping
+				// Re-query the content element to ensure we have the latest DOM state after mark insertion
+				if (activeContainer === responseContainer1) {
+					// For response, find the div with class "response-text"
+					contentElement = activeContainer.querySelector('.response-text') as HTMLElement;
+				} else if (activeContainer === promptContainer1) {
+					// For prompt, find the <p> tag
+					contentElement = activeContainer.querySelector('p') as HTMLElement;
+				}
+				
+				// Fallback to activeContainer if content element not found
+				const elementToCapture = contentElement || activeContainer;
+				const containerHTML = elementToCapture.innerHTML;
+				
+				// Use activeContainer instead of container to determine which HTML to store
+				if (activeContainer === promptContainer1) {
+					promptHighlightedHTML = containerHTML;
+				} else {
+					responseHighlightedHTML = containerHTML;
+				}
+				
+				currentSelection1 = selectedText;
+				selectionInPrompt = activeContainer === promptContainer1;
+				
+				// Automatically save the selection (stores HTML and saves to backend)
+				saveSelection();
+				
+				// Clear the text selection after highlighting (visual cleanup)
+				setTimeout(() => {
+					selection.removeAllRanges();
+				}, 100);
+			});
 		}, 10);
 	}
 	
@@ -4311,6 +4258,7 @@ function cancelReset() {}
 // =================================================================================================
 
 onMount(async () => {
+	hasHydrated = true;
     // Close assignment steps sidebar by default (scenarios sidebar is controlled separately by sidebarOpen)
     showSidebar.set(false);
     
