@@ -320,15 +320,18 @@ def apply_source_context_to_messages(
                 )
         return context.strip(), citation_idx
 
-    def is_static_source(source: dict) -> bool:
-        """
-        Determine if a source is static (stable across turns) or dynamic.
-        Static sources: full document context, tool results
-        Dynamic sources: per-query chunks from embedding retrieval
-        """
+    def is_static_source(source: dict, request: Request) -> bool:
         source_info = source.get("source", {})
-        # Static if: explicitly set to full context OR is a tool result
-        return source_info.get("context") == "full" or source.get("tool_result", False)
+        
+        # Tool results are always dynamic - they belong to the turn they were generated
+        if source.get("tool_result"):
+            return False
+        
+        return (
+            source_info.get("context") == "full"
+            or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+            or request.app.state.config.RAG_FULL_CONTEXT
+        )
 
     if RAG_SYSTEM_CONTEXT:
         # Hybrid approach: separate static and dynamic sources
