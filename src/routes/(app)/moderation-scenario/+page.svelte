@@ -1539,7 +1539,17 @@ let currentRequestId: number = 0;
 		const container = (event.currentTarget as HTMLElement) || responseContainer1;
 		if (!container) return;
 		
+		// Capture the scenario index at the start to guard against navigation during async operations
+		// This prevents race conditions where highlighting from scenario A overwrites scenario B's state
+		const scenarioAtSelection = selectedScenarioIndex;
+		
 		setTimeout(() => {
+			// Guard: If user navigated to a different scenario, don't proceed with highlighting
+			if (selectedScenarioIndex !== scenarioAtSelection) {
+				console.log('Skipping highlight: scenario changed during selection');
+				return;
+			}
+			
 			const selection = window.getSelection();
 			const selectedText = selection?.toString().trim() || '';
 			
@@ -1794,6 +1804,13 @@ let currentRequestId: number = 0;
 			// Defer reactive updates to avoid hydration conflicts
 			// Use requestAnimationFrame to ensure DOM is stable before triggering Svelte updates
 			requestAnimationFrame(() => {
+				// Guard: If user navigated to a different scenario, don't save the highlight
+				// This prevents race conditions where old scenario's HTML overwrites new scenario's state
+				if (selectedScenarioIndex !== scenarioAtSelection) {
+					console.log('Skipping highlight save: scenario changed');
+					return;
+				}
+				
 				// Store container's innerHTML after wrapping
 				// Re-query the content element to ensure we have the latest DOM state after mark insertion
 				if (activeContainer === responseContainer1) {
@@ -1809,9 +1826,12 @@ let currentRequestId: number = 0;
 				const containerHTML = elementToCapture.innerHTML;
 				
 				// Use activeContainer instead of container to determine which HTML to store
+				console.log('🟠 Saving HTML - scenarioAtSelection:', scenarioAtSelection, 'selectedScenarioIndex:', selectedScenarioIndex, 'containerHTML length:', containerHTML.length);
 				if (activeContainer === promptContainer1) {
+					console.log('🟠 Setting promptHighlightedHTML');
 					promptHighlightedHTML = containerHTML;
 				} else {
+					console.log('🟠 Setting responseHighlightedHTML');
 					responseHighlightedHTML = containerHTML;
 				}
 				
@@ -2262,21 +2282,39 @@ let currentRequestId: number = 0;
 	
 	// Reactive statement for response HTML - Approach 3: Use stored HTML directly
 	$: response1HTML = (() => {
+		console.log('🔴 response1HTML computing:', {
+			selectedScenarioIndex,
+			hasResponseHighlightedHTML: !!responseHighlightedHTML,
+			responseHighlightedHTMLLength: responseHighlightedHTML?.length || 0,
+			responseHighlightedHTMLPreview: responseHighlightedHTML?.substring(0, 100) || '',
+			showInitialDecisionPane,
+			initialDecisionStep,
+			showOriginal1,
+			currentVersionIndex,
+			versionsLength: versions.length,
+			originalResponse1Preview: originalResponse1?.substring(0, 50) || ''
+		});
+		
 		// Use stored HTML if available (with marks already embedded)
 		if (responseHighlightedHTML) {
+			console.log('🔴 Using responseHighlightedHTML');
 			return responseHighlightedHTML;
 		}
 		// Fall back to rendered markdown if no stored HTML
 		// Always show original with highlights when in Step 1 of initial decision pane
 		if (showInitialDecisionPane && initialDecisionStep === 1) {
+			console.log('🔴 Using renderMarkdown (step 1)');
 			return renderMarkdown(originalResponse1);
 		}
 		if (showOriginal1) {
+			console.log('🔴 Using renderMarkdown (showOriginal1)');
 			return renderMarkdown(originalResponse1);
 		}
 		if (currentVersionIndex >= 0 && currentVersionIndex < versions.length) {
+			console.log('🔴 Using versions[currentVersionIndex].response');
 			return versions[currentVersionIndex].response;
 		}
+		console.log('🔴 Using renderMarkdown (default fallback)');
 		return renderMarkdown(originalResponse1);
 	})();
 	
@@ -2285,11 +2323,21 @@ let currentRequestId: number = 0;
 
 	// Highlighted Prompt HTML - Approach 3: Use stored HTML directly
 	$: childPromptHTML = (() => {
+		console.log('🔵 childPromptHTML computing:', {
+			selectedScenarioIndex,
+			hasPromptHighlightedHTML: !!promptHighlightedHTML,
+			promptHighlightedHTMLLength: promptHighlightedHTML?.length || 0,
+			promptHighlightedHTMLPreview: promptHighlightedHTML?.substring(0, 100) || '',
+			childPrompt1Preview: childPrompt1?.substring(0, 50) || ''
+		});
+		
 		// Use stored HTML if available (with marks already embedded)
 		if (promptHighlightedHTML) {
+			console.log('🔵 Using promptHighlightedHTML');
 			return promptHighlightedHTML;
 		}
 		// Fall back to rendered markdown if no stored HTML
+		console.log('🔵 Using renderMarkdown (default fallback)');
 		return renderMarkdown(childPrompt1);
 	})();
 
@@ -2404,6 +2452,12 @@ let currentRequestId: number = 0;
 	}
 
 	function saveCurrentScenarioState() {
+		// Guard: Don't save during scenario transitions to prevent saving old state to new scenario index
+		if (isLoadingScenario) {
+			console.log('⚠️ saveCurrentScenarioState skipped - isLoadingScenario is true');
+			return;
+		}
+		
 		// Get existing customPrompt if we're saving state for a custom scenario
 		const existingState = scenarioStates.get(selectedScenarioIndex);
 		const currentState: ScenarioState = {
@@ -2481,10 +2535,21 @@ let currentRequestId: number = 0;
 		
 		console.log('🔍 Loading scenario:', index, 'Prompt:', prompt, 'Is custom:', prompt === CUSTOM_SCENARIO_PROMPT);
 		
+		// Set original content FIRST, before clearing HTML, so reactive statements have correct fallback values
+		// (Custom scenario handling will override these later if needed)
+		childPrompt1 = prompt;
+		originalResponse1 = response;
+		
 		// Reset content variables to defaults at the start to prevent persisting from previous scenario
 		// BUT: Don't reset completion flags yet - wait until after backend check to preserve skip/accept states
 		// This ensures clean content state before loading backend/localStorage data for THIS specific scenario
 		highlightedTexts1 = [];
+		console.log('🟢 Clearing HTML for scenario', index, '- previous values:', {
+			responseHighlightedHTMLLength: responseHighlightedHTML?.length || 0,
+			promptHighlightedHTMLLength: promptHighlightedHTML?.length || 0
+		});
+		responseHighlightedHTML = ''; // Clear highlighted HTML from previous scenario
+		promptHighlightedHTML = '';   // Clear highlighted HTML from previous scenario
 		concernLevel = null;
 		concernReason = '';
 		satisfactionLevel = null;
@@ -2813,10 +2878,16 @@ let currentRequestId: number = 0;
 			
 			// Restore HTML fields only if backend didn't provide them
 			if (!backendProvided.has('responseHighlightedHTML') && savedState.responseHighlightedHTML) {
+				console.log('🟡 Restoring responseHighlightedHTML from savedState for scenario', index, '- length:', savedState.responseHighlightedHTML.length);
 				responseHighlightedHTML = savedState.responseHighlightedHTML;
+			} else {
+				console.log('🟡 NOT restoring responseHighlightedHTML - backendProvided:', backendProvided.has('responseHighlightedHTML'), 'savedState has HTML:', !!savedState.responseHighlightedHTML);
 			}
 			if (!backendProvided.has('promptHighlightedHTML') && savedState.promptHighlightedHTML) {
+				console.log('🟡 Restoring promptHighlightedHTML from savedState for scenario', index, '- length:', savedState.promptHighlightedHTML.length);
 				promptHighlightedHTML = savedState.promptHighlightedHTML;
+			} else {
+				console.log('🟡 NOT restoring promptHighlightedHTML - backendProvided:', backendProvided.has('promptHighlightedHTML'), 'savedState has HTML:', !!savedState.promptHighlightedHTML);
 			}
 			
 			// Extract highlighted texts from HTML if HTML was restored
@@ -2921,11 +2992,13 @@ let currentRequestId: number = 0;
 			markedNotApplicable = false;
 		}
 		
-		// Only set childPrompt1 if it wasn't already set for a custom scenario
-		if (!(prompt === CUSTOM_SCENARIO_PROMPT && customScenarioGenerated && customScenarioPrompt)) {
-			childPrompt1 = prompt;
+		// Only override childPrompt1/originalResponse1 for custom scenarios (regular scenarios were set at start)
+		// Custom scenarios need special handling because they use customScenarioPrompt instead of the marker
+		if (prompt === CUSTOM_SCENARIO_PROMPT && customScenarioGenerated && customScenarioPrompt) {
+			childPrompt1 = customScenarioPrompt;
 			originalResponse1 = response;
 		}
+		// Otherwise, childPrompt1 and originalResponse1 were already set at the start of loadScenario
 		selectionButtonsVisible1 = false;
 		currentSelection1 = '';
 		
@@ -3262,7 +3335,7 @@ function cancelReset() {}
 						});
 						
 						// Show success message
-						toast.success('✓ Passed attention check! Moving to next scenario...');
+						toast.success('✓ Passed attention check!');
 						
 						// Mark scenario as completed with all necessary flags
 						// Scenario completion is now tracked via confirmedVersionIndex
@@ -3272,15 +3345,6 @@ function cancelReset() {}
 						
 						// Save state to localStorage so it persists when navigating back
 						saveCurrentScenarioState();
-						
-						// Navigate to next scenario after a brief delay
-						setTimeout(() => {
-							if (selectedScenarioIndex < scenarioList.length - 1) {
-								loadScenario(selectedScenarioIndex + 1, false);
-							} else {
-								toast.info('You have completed all scenarios!');
-							}
-						}, 1000);
 					} catch (e) {
 						console.error('Failed to save attention check status:', e);
 						toast.error('Failed to save attention check status');
@@ -3702,15 +3766,6 @@ function cancelReset() {}
 			console.error('Failed to save identification completion (non-blocking):', e);
 			// Don't throw - allow step to complete even if backend save fails
 		}
-		
-		// Navigate to next scenario if available
-		if (selectedScenarioIndex < scenarioList.length - 1) {
-			setTimeout(() => {
-				loadScenario(selectedScenarioIndex + 1, false);
-			}, 500);
-		} else {
-			toast.success('All scenarios completed!');
-		}
 	}
 	
 	// ============================================================================
@@ -3798,15 +3853,6 @@ function cancelReset() {}
 				step3Completed = true;
 				// UI visibility is now derived, no need to set directly
 				saveCurrentScenarioState();
-				
-				// Navigate to next scenario if available
-				if (selectedScenarioIndex < scenarioList.length - 1) {
-					setTimeout(() => {
-						loadScenario(selectedScenarioIndex + 1, false);
-					}, 500);
-				} else {
-					toast.success('All scenarios completed!');
-				}
 			}
 		} catch (e) {
 			console.error('Failed to save satisfaction check', e);
