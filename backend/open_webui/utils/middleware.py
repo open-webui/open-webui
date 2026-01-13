@@ -335,8 +335,8 @@ def apply_source_context_to_messages(
 
     if RAG_SYSTEM_CONTEXT:
         # Hybrid approach: separate static and dynamic sources
-        static_sources = [s for s in sources if is_static_source(s)]
-        dynamic_sources = [s for s in sources if not is_static_source(s)]
+        static_sources = [s for s in sources if is_static_source(s, request)]
+        dynamic_sources = [s for s in sources if not is_static_source(s, request)]
 
         # Apply static sources to system message (stable prefix for KV caching)
         if static_sources:
