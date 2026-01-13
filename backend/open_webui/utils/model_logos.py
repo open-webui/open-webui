@@ -211,6 +211,14 @@ def _match_logo_for_model(model_id: str) -> Optional[Path]:
         logo_stem_normalized = _normalize_name(logo_stem)
         score = 0
         
+        # === EXACT MODEL NAME MATCH (Highest Priority) ===
+        # If logo filename precisely matches the extracted model name, give highest score
+        # e.g., "gpt-oss-120b.png" matches model_name "gpt-oss-120b" from "OpenRouter.openai/gpt-oss-120b:free"
+        if logo_stem_normalized == model_name_extracted or logo_stem == model_name_extracted:
+            score = 1000
+            candidates.append((score, logo_path))
+            continue  # Skip other matching for this logo, we have the best match
+        
         # Candidate strings to match against (original and normalized logo names)
         check_logos = {logo_stem}
         if logo_stem_normalized != logo_stem:
@@ -241,7 +249,7 @@ def _match_logo_for_model(model_id: str) -> Optional[Path]:
                     # 1. EXACT TOKEN MATCH: "Hotaru.gpt-5.1" matches "gpt-5.1"
                     # "start.gpt-5.1.end" -> Both boundaries OK
                     if left_ok and right_ok:
-                        s = 950
+                        s = 900 + len(check_logo)  # Base 900 + length bonus
                         # Boost if it's the very end (suffix match) - likely the model name
                         if end_idx == len(model_id_lower):
                             s += 20
