@@ -354,7 +354,9 @@ def get_model_profile_image(
     if model:
         etag = f'"{model.updated_at}"' if model.updated_at else None
 
-        if model.meta.profile_image_url:
+        # Only use custom profile_image_url if it's set to a real custom image
+        # Skip if it's the default favicon URL (user clicked "Reset Image")
+        if model.meta.profile_image_url and "/static/favicon" not in model.meta.profile_image_url:
             if model.meta.profile_image_url.startswith("http"):
                 return Response(
                     status_code=status.HTTP_302_FOUND,
