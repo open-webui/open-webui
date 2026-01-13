@@ -27,11 +27,15 @@ interface UsageData {
 
 interface BillingConfig {
     type?: 'free' | 'per_use' | 'per_token';
-    price?: number;
-    multiplier?: number;
+    // per_use fields
+    per_use_price?: number;
+    per_use_multiplier?: number;
+    // per_token fields
     input_price?: number;
     output_price?: number;
-    unit?: 'K' | 'M';
+    price_unit?: 'K' | 'M';
+    token_multiplier?: number;
+    // common
     currency?: 'USD' | 'CNY';
 }
 
@@ -103,14 +107,14 @@ function calculateCost(
     outputTokens: number,
     billing: BillingConfig
 ): number | null {
-    const multiplier = billing.multiplier ?? 1;
-
     if (billing.type === 'per_use') {
-        return (billing.price ?? 0) * multiplier;
+        const multiplier = billing.per_use_multiplier ?? 1;
+        return (billing.per_use_price ?? 0) * multiplier;
     }
 
     if (billing.type === 'per_token') {
-        const unitDivisor = billing.unit === 'M' ? 1_000_000 : 1_000;
+        const multiplier = billing.token_multiplier ?? 1;
+        const unitDivisor = billing.price_unit === 'M' ? 1_000_000 : 1_000;
         const inputPrice = billing.input_price ?? 0;
         const outputPrice = billing.output_price ?? 0;
 
