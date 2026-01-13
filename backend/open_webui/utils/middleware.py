@@ -3529,6 +3529,7 @@ async def process_chat_response(
 
                                 if isinstance(output, dict):
                                     stdout = output.get("stdout", "")
+                                    image_files = []  # Collect image files for event emission
 
                                     if isinstance(stdout, str):
                                         stdoutLines = stdout.split("\n")
@@ -3545,6 +3546,7 @@ async def process_chat_response(
                                                     stdoutLines[idx] = (
                                                         f"![Output Image]({image_url})"
                                                     )
+                                                    image_files.append({"type": "image", "url": image_url})
 
                                         output["stdout"] = "\n".join(stdoutLines)
 
@@ -3560,10 +3562,32 @@ async def process_chat_response(
                                                     metadata,
                                                     user,
                                                 )
-                                                resultLines[idx] = (
-                                                    f"![Output Image]({image_url})"
-                                                )
+                                                if image_url:
+                                                    resultLines[idx] = (
+                                                        f"![Output Image]({image_url})"
+                                                    )
+                                                    image_files.append({"type": "image", "url": image_url})
                                         output["result"] = "\n".join(resultLines)
+
+                                    # Emit images to frontend if any were generated
+                                    if image_files:
+                                        # Persist files to DB if chat context is available
+                                        if metadata.get("chat_id") and metadata.get("message_id"):
+                                            image_files = Chats.add_message_files_by_id_and_message_id(
+                                                metadata["chat_id"],
+                                                metadata["message_id"],
+                                                image_files,
+                                            )
+
+                                        # Emit the images to the UI
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:message:files",
+                                                "data": {
+                                                    "files": image_files,
+                                                },
+                                            }
+                                        )
                         except Exception as e:
                             output = str(e)
 

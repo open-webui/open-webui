@@ -452,6 +452,8 @@ async def execute_code(
 
         # Handle image outputs (base64 encoded) - replace with uploaded URLs
         # Get actual user object for image upload (upload_image requires user.id attribute)
+        image_files = []  # Collect image files for event emission
+
         if __user__ and __user__.get("id"):
             from open_webui.models.users import Users
             from open_webui.utils.files import get_image_url_from_base64
@@ -471,6 +473,7 @@ async def execute_code(
                         )
                         if image_url:
                             stdout_lines[idx] = f"![Output Image]({image_url})"
+                            image_files.append({"type": "image", "url": image_url})
                 stdout = "\n".join(stdout_lines)
 
             # Extract and upload images from result
@@ -486,7 +489,29 @@ async def execute_code(
                         )
                         if image_url:
                             result_lines[idx] = f"![Output Image]({image_url})"
+                            image_files.append({"type": "image", "url": image_url})
                 result = "\n".join(result_lines)
+
+        # Emit images to frontend if any were generated
+        if image_files:
+            # Persist files to DB if chat context is available
+            if __chat_id__ and __message_id__:
+                image_files = Chats.add_message_files_by_id_and_message_id(
+                    __chat_id__,
+                    __message_id__,
+                    image_files,
+                )
+
+            # Emit the images to the UI if event emitter is available
+            if __event_emitter__:
+                await __event_emitter__(
+                    {
+                        "type": "chat:message:files",
+                        "data": {
+                            "files": image_files,
+                        },
+                    }
+                )
 
         response = {
             "status": "success",
