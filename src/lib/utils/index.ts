@@ -1733,12 +1733,53 @@ const injectXyChartLegend = (svg: string, code: string) => {
 	return new XMLSerializer().serializeToString(svgEl);
 };
 
+const limitXyChartXAxisLabels = (svg: string, code: string) => {
+	if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+		return svg;
+	}
+
+	const hasLinePlots = /^\s*line\s+/gim.test(code);
+	const hasBarPlots = /^\s*bar\s+/gim.test(code);
+	if (!hasLinePlots || hasBarPlots) {
+		return svg;
+	}
+
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(svg, 'image/svg+xml');
+	const svgEl = doc.documentElement;
+	const labelGroup = svgEl.querySelector('g.bottom-axis g.label');
+	if (!labelGroup) {
+		return svg;
+	}
+
+	const labels = Array.from(labelGroup.querySelectorAll('text'));
+	if (labels.length <= 6) {
+		return svg;
+	}
+
+	const keepIndices = new Set<number>([0, labels.length - 1]);
+	const targetCount = 6;
+	const step = (labels.length - 1) / (targetCount - 1);
+	for (let i = 1; i < targetCount - 1; i += 1) {
+		keepIndices.add(Math.round(i * step));
+	}
+
+	labels.forEach((label, index) => {
+		if (!keepIndices.has(index)) {
+			label.setAttribute('visibility', 'hidden');
+		}
+	});
+
+	return new XMLSerializer().serializeToString(svgEl);
+};
+
 export const renderMermaidDiagram = async (mermaid, code: string) => {
 	const parseResult = await mermaid.parse(code, { suppressErrors: false });
 	if (parseResult) {
 		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
 		if (/^\s*xychart(-beta)?\b/i.test(code)) {
-			return injectXyChartLegend(svg, code);
+			const withLegend = injectXyChartLegend(svg, code);
+			return limitXyChartXAxisLabels(withLegend, code);
 		}
 		return svg;
 	}
