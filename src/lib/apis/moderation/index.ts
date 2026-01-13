@@ -36,7 +36,9 @@ export interface ModerationSessionPayload {
   saved_at?: number;
   strategies?: string[];
   custom_instructions?: string[];  // Simplified from {id, text}[] to string[]
-  highlighted_texts?: string[];
+  highlighted_texts?: Array<{text: string; start_offset?: number; end_offset?: number}>;
+  responseHighlightedHTML?: string;  // HTML with <mark> elements for response
+  promptHighlightedHTML?: string;     // HTML with <mark> elements for prompt
   refactored_response?: string;
   is_final_version?: boolean;
   session_metadata?: Record<string, any>;
@@ -68,7 +70,9 @@ export interface ModerationSessionResponse {
   saved_at?: number;
   strategies?: string[];
   custom_instructions?: string[];
-  highlighted_texts?: string[];
+  highlighted_texts?: Array<{text: string; start_offset?: number; end_offset?: number}>;
+  responseHighlightedHTML?: string;  // HTML with <mark> elements for response
+  promptHighlightedHTML?: string;     // HTML with <mark> elements for prompt
   refactored_response?: string;
   session_metadata?: Record<string, any>;
   is_attention_check: boolean;
@@ -261,6 +265,7 @@ export interface ScenarioAssignResponse {
 
 export interface ScenarioStatusUpdateRequest {
 	assignment_id: string;
+	duration_seconds?: number;
 	skip_stage?: string;
 	skip_reason?: string;
 	skip_reason_text?: string;
@@ -320,6 +325,33 @@ export const startScenario = async (
 	payload: ScenarioStatusUpdateRequest
 ): Promise<ScenarioStatusResponse> => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/start`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export interface ScenarioDurationUpdateRequest {
+  assignment_id: string;
+  duration_seconds: number;
+}
+
+export interface ScenarioDurationUpdateResponse {
+  status: string;
+  assignment_id: string;
+  duration_seconds: number;
+}
+
+export const updateScenarioDuration = async (
+	token: string,
+	payload: ScenarioDurationUpdateRequest
+): Promise<ScenarioDurationUpdateResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/update-duration`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

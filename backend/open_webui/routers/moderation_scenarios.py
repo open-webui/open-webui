@@ -60,7 +60,7 @@ class ModerationSessionPayload(BaseModel):
     saved_at: Optional[int] = None
     strategies: Optional[List[str]] = None
     custom_instructions: Optional[List[str]] = None
-    highlighted_texts: Optional[List[str]] = None
+    highlighted_texts: Optional[List[dict]] = None
     refactored_response: Optional[str] = None
     is_final_version: Optional[bool] = False
     session_metadata: Optional[dict] = None
@@ -195,6 +195,7 @@ async def assign_scenario(
 
 class ScenarioStatusUpdateRequest(BaseModel):
     assignment_id: str
+    duration_seconds: Optional[int] = None
     skip_stage: Optional[str] = None
     skip_reason: Optional[str] = None
     skip_reason_text: Optional[str] = None
@@ -260,6 +261,7 @@ async def complete_scenario(
                 AssignmentStatus.COMPLETED,
                 ended_at=ts,
                 issue_any=issue_any,
+                duration_seconds=request.duration_seconds,
             )
             
             if not updated:
@@ -307,6 +309,7 @@ async def skip_scenario(
                 skip_stage=request.skip_stage,
                 skip_reason=request.skip_reason,
                 skip_reason_text=request.skip_reason_text,
+                duration_seconds=request.duration_seconds,
             )
             
             if not updated:
@@ -347,6 +350,7 @@ async def abandon_scenario(
                 AssignmentStatus.ABANDONED,
                 ended_at=ts,
                 issue_any=None,
+                duration_seconds=request.duration_seconds,
             )
             
             if not updated:
@@ -402,6 +406,152 @@ async def abandon_scenario(
         raise
     except Exception as e:
         log.error(f"Error abandoning scenario: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+class ScenarioDurationUpdateRequest(BaseModel):
+    assignment_id: str
+    duration_seconds: int
+
+class ScenarioDurationUpdateResponse(BaseModel):
+    status: str
+    assignment_id: str
+    duration_seconds: int
+
+@router.post("/moderation/scenarios/update-duration", response_model=ScenarioDurationUpdateResponse)
+async def update_scenario_duration(
+    request: ScenarioDurationUpdateRequest,
+    user: UserModel = Depends(get_verified_user),
+):
+    """Update the duration_seconds for a scenario assignment without changing its status"""
+    try:
+        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        
+        if assignment.participant_id != user.id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        
+        updated = ScenarioAssignments.update_duration(
+            request.assignment_id,
+            request.duration_seconds,
+        )
+        
+        if not updated:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        
+        return {
+            "status": "duration_updated",
+            "assignment_id": request.assignment_id,
+            "duration_seconds": updated.duration_seconds,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error updating scenario duration: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# Highlights endpoints (using Selection table)
+class HighlightCreateRequest(BaseModel):
+    assignment_id: str
+    selected_text: str
+    source: str  # 'prompt' | 'response'
+    start_offset: Optional[int] = None
+    end_offset: Optional[int] = None
+    context: Optional[str] = None
+
+class HighlightResponse(BaseModel):
+    id: str
+    assignment_id: str
+    selected_text: str
+    source: str
+    start_offset: Optional[int] = None
+    end_offset: Optional[int] = None
+    created_at: int
+
+@router.post("/moderation/highlights", response_model=HighlightResponse)
+async def create_highlight(
+    request: HighlightCreateRequest,
+    user: UserModel = Depends(get_verified_user),
+):
+    """Create a highlight for an assignment using Selection table"""
+    try:
+        # Get assignment to verify ownership
+        assignment = ScenarioAssignments.get_by_id(request.assignment_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        
+        if assignment.participant_id != user.id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        
+        # Create selection record with offsets
+        from open_webui.models.selections import SelectionForm, Selections
+        
+        form = SelectionForm(
+            chat_id=f"assignment_{request.assignment_id}",
+            message_id=f"{request.assignment_id}:{request.source}",
+            role='user' if request.source == 'prompt' else 'assistant',
+            selected_text=request.selected_text,
+            assignment_id=request.assignment_id,
+            source=request.source,
+            start_offset=request.start_offset,
+            end_offset=request.end_offset,
+            context=request.context,
+        )
+        
+        selection = Selections.insert_new_selection(form, user.id)
+        if not selection:
+            raise HTTPException(status_code=500, detail="Failed to create highlight")
+        
+        return HighlightResponse(
+            id=selection.id,
+            assignment_id=selection.assignment_id or request.assignment_id,
+            selected_text=selection.selected_text,
+            source=selection.source or request.source,
+            start_offset=selection.start_offset,
+            end_offset=selection.end_offset,
+            created_at=selection.created_at,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error creating highlight: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.get("/moderation/highlights/{assignment_id}", response_model=List[HighlightResponse])
+async def get_highlights(
+    assignment_id: str,
+    user: UserModel = Depends(get_verified_user),
+):
+    """Get all highlights for an assignment using Selection table"""
+    try:
+        assignment = ScenarioAssignments.get_by_id(assignment_id)
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        
+        if assignment.participant_id != user.id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        
+        from open_webui.models.selections import Selections
+        selections = Selections.get_selections_by_assignment(assignment_id)
+        
+        return [
+            HighlightResponse(
+                id=s.id,
+                assignment_id=s.assignment_id or assignment_id,
+                selected_text=s.selected_text,
+                source=s.source or 'response',
+                start_offset=s.start_offset,
+                end_offset=s.end_offset,
+                created_at=s.created_at,
+            )
+            for s in selections
+        ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error getting highlights: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
