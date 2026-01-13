@@ -107,6 +107,9 @@ class SelectionTable:
                     "source": form_data.source,
                     "context": form_data.context,
                     "meta": form_data.meta,
+                    "assignment_id": form_data.assignment_id,
+                    "start_offset": form_data.start_offset,
+                    "end_offset": form_data.end_offset,
                     "created_at": ts,
                     "updated_at": ts,
                 }

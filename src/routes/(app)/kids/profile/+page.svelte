@@ -386,150 +386,6 @@ let parentLLMMonitoringOther: string = '';
 		selectedChildIndex = -1;
 	}
 
-	async function saveNewProfile() {
-		try {
-			// Validate required fields
-			if (!childName.trim()) {
-				toast.error('Please enter a name for the child');
-				return;
-			}
-			if (!childAge) {
-				toast.error('Please select an age');
-				return;
-			}
-			if (!childGender) {
-				toast.error('Please select a gender');
-				return;
-			}
-			// Enforce child quiz required fields
-			if (!isOnlyChild) {
-				toast.error('Please indicate if this child is an only child');
-				return;
-			}
-			if (!childHasAIUse) {
-				toast.error("Please answer whether this child has used ChatGPT or similar AI tools");
-				return;
-			}
-            if (childHasAIUse === 'yes' && childAIUseContexts.length === 0) {
-                toast.error('Please select at least one context of AI use');
-                return;
-            }
-			if (!parentLLMMonitoringLevel) {
-				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
-				return;
-			}
-            if (!childCharacteristics.trim()) {
-                toast.error('Please enter additional characteristics & interests');
-                return;
-            }
-			// Required research fields
-			if (!isOnlyChild) {
-				toast.error('Please indicate if this child is an only child');
-				return;
-			}
-			if (!childHasAIUse) {
-				toast.error("Please answer whether this child has used ChatGPT or similar AI tools");
-				return;
-			}
-            if (childHasAIUse === 'yes' && childAIUseContexts.length === 0) {
-                toast.error('Please select at least one context of AI use');
-                return;
-            }
-			if (!parentLLMMonitoringLevel) {
-				toast.error("Please indicate how you've monitored or adjusted this child's AI use");
-				return;
-			}
-            if (!childCharacteristics.trim()) {
-                toast.error('Please enter additional characteristics & interests');
-                return;
-            }
-
-		// Combine personality traits with characteristics
-		const personalityDesc = getPersonalityDescription();
-		const combinedCharacteristics = personalityDesc 
-			? (childCharacteristics.trim() 
-				? `${personalityDesc}\n\nAdditional characteristics:\n${childCharacteristics}`
-				: personalityDesc)
-			: childCharacteristics;
-		
-		// Determine session number before creating child profile
-		const userId = ($user as any)?.id;
-		const token = localStorage.getItem('token') || '';
-		let sessionNumber = 1;
-		
-		if (userId && token) {
-			sessionNumber = await determineSessionNumberForUser(userId, token);
-		}
-		
-		const newChild = await childProfileSync.createChildProfile({
-			name: childName,
-			child_age: childAge,
-			child_gender: childGender === 'Other' ? 'Other' : childGender,
-			child_characteristics: combinedCharacteristics,
-			is_only_child: isOnlyChild === 'yes',
-			child_has_ai_use: childHasAIUse as any,
-			child_ai_use_contexts: childAIUseContexts,
-			parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
-			child_gender_other: childGenderOther || undefined,
-			child_ai_use_contexts_other: childAIUseContextsOther || undefined,
-			parent_llm_monitoring_other: parentLLMMonitoringOther || undefined,
-			session_number: sessionNumber
-		} as any);
-			
-			childProfiles = [...childProfiles, newChild];
-			selectedChildIndex = childProfiles.length - 1;
-			showForm = true;
-			
-			// Trigger async scenario assignment (don't await - runs in background)
-			if (userId && token) {
-				assignScenariosForChild(newChild.id, userId, sessionNumber, token, 6)
-					.then(result => {
-						console.log(`✅ Assigned ${result.assignmentCount} scenarios for child ${newChild.id}`);
-						if (result.assignmentCount < 6) {
-							console.warn(`⚠️ Only ${result.assignmentCount}/6 scenarios assigned`);
-						}
-					})
-					.catch(error => {
-						console.error('❌ Failed to assign scenarios:', error);
-						// Assignment will happen on page load as fallback
-					});
-			}
-			
-		// Automatically select the newly created child for questions
-		const newChildId = newChild.id;
-		if (newChildId) {
-			childSelectedForQuestions = selectedChildIndex;
-			await childProfileSync.setCurrentChildId(newChildId);
-			
-			// Unlock Step 2
-				localStorage.setItem('assignmentStep', '2');
-				localStorage.setItem('moderationScenariosAccessed', 'true');
-				localStorage.setItem('unlock_moderation', 'true');
-				window.dispatchEvent(new Event('storage'));
-				window.dispatchEvent(new Event('workflow-updated'));
-				
-				// Show confirmation modal after creating profile
-				showConfirmationModal = true;
-			}
-			
-			// Dispatch event to notify sidebar of child profile changes
-			window.dispatchEvent(new CustomEvent('child-profiles-updated'));
-			
-			toast.success('Child profile created successfully!');
-		} catch (error) {
-			console.error('Failed to create child profile:', error);
-			// Extract error message for user display
-			let errorMessage = 'Failed to create child profile';
-			if (error instanceof Error) {
-				errorMessage = error.message;
-			} else if (error && typeof error === 'object' && 'detail' in error) {
-					const detail = (error as any).detail;
-				errorMessage = typeof detail === 'string' ? detail : errorMessage;
-			}
-			toast.error(errorMessage);
-		}
-	}
-
 	function cancelAddProfile() {
 		if (childProfiles.length > 0) {
 			// If profiles exist, return to view mode
@@ -675,6 +531,15 @@ let parentLLMMonitoringOther: string = '';
 						: personalityDesc)
 					: childCharacteristics;
 				
+				// Determine session number before creating child profile
+				const userId = get(user)?.id;
+				const token = localStorage.getItem('token') || '';
+				let sessionNumber = 1;
+				
+				if (userId && token) {
+					sessionNumber = await determineSessionNumberForUser(userId, token);
+				}
+				
 			const newChild = await childProfileSync.createChildProfile({
 					name: childName,
 					child_age: childAge,
@@ -686,7 +551,8 @@ let parentLLMMonitoringOther: string = '';
 				parent_llm_monitoring_level: parentLLMMonitoringLevel as any,
 				child_gender_other: childGenderOther || undefined,
 				child_ai_use_contexts_other: childAIUseContextsOther || undefined,
-				parent_llm_monitoring_other: parentLLMMonitoringOther || undefined
+					parent_llm_monitoring_other: parentLLMMonitoringOther || undefined,
+					session_number: sessionNumber
 				} as any);
 				if (childProfiles.length === 0) {
 					childProfiles = [newChild];
@@ -698,6 +564,20 @@ let parentLLMMonitoringOther: string = '';
 				
 				// Set the new profile as the current selected profile
 				await childProfileSync.setCurrentChildId(newChild.id);
+				
+				// Trigger async scenario assignment (don't await - runs in background)
+				if (userId && token) {
+					assignScenariosForChild(newChild.id, userId, sessionNumber, token, 6)
+						.then(result => {
+							console.log(`✅ Assigned ${result.assignmentCount} scenarios for child ${newChild.id}`);
+							if (result.assignmentCount < 6) {
+								console.warn(`⚠️ Only ${result.assignmentCount}/6 scenarios assigned`);
+							}
+						})
+						.catch(error => {
+							console.error('❌ Failed to assign scenarios:', error);
+						});
+				}
 				
 				// Automatically select the newly created child for questions
 				childSelectedForQuestions = selectedChildIndex;

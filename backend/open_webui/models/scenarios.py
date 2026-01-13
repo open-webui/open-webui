@@ -126,6 +126,9 @@ class ScenarioAssignment(Base):
     skip_reason = Column(String, nullable=True)  # Reason code for skip
     skip_reason_text = Column(Text, nullable=True)  # Optional text explanation
     
+    # Time tracking
+    duration_seconds = Column(Integer, nullable=True)  # Time spent on scenario in seconds (including prompt generation time for custom scenarios)
+    
     # Relationships
     scenario = relationship("Scenario", back_populates="assignments")
     # Bidirectional relationship to Selection (defined in selections.py).
@@ -198,6 +201,7 @@ class ScenarioAssignmentModel(BaseModel):
     skip_stage: Optional[str] = None
     skip_reason: Optional[str] = None
     skip_reason_text: Optional[str] = None
+    duration_seconds: Optional[int] = None
 
 
 class ScenarioAssignmentForm(BaseModel):
@@ -512,7 +516,8 @@ class ScenarioAssignmentTable:
     def update_status(self, assignment_id: str, status: AssignmentStatus, 
                      started_at: Optional[int] = None, ended_at: Optional[int] = None,
                      issue_any: Optional[int] = None, skip_stage: Optional[str] = None,
-                     skip_reason: Optional[str] = None, skip_reason_text: Optional[str] = None) -> Optional[ScenarioAssignmentModel]:
+                     skip_reason: Optional[str] = None, skip_reason_text: Optional[str] = None,
+                     duration_seconds: Optional[int] = None) -> Optional[ScenarioAssignmentModel]:
         """Update assignment status and related fields"""
         with get_db() as db:
             obj = db.query(ScenarioAssignment).filter(ScenarioAssignment.assignment_id == assignment_id).first()
@@ -532,7 +537,21 @@ class ScenarioAssignmentTable:
                 obj.skip_reason = skip_reason
             if skip_reason_text is not None:
                 obj.skip_reason_text = skip_reason_text
+            if duration_seconds is not None:
+                obj.duration_seconds = duration_seconds
             
+            db.commit()
+            db.refresh(obj)
+            return ScenarioAssignmentModel.model_validate(obj)
+    
+    def update_duration(self, assignment_id: str, duration_seconds: int) -> Optional[ScenarioAssignmentModel]:
+        """Update duration_seconds for an assignment without changing status"""
+        with get_db() as db:
+            obj = db.query(ScenarioAssignment).filter(ScenarioAssignment.assignment_id == assignment_id).first()
+            if not obj:
+                return None
+            
+            obj.duration_seconds = duration_seconds
             db.commit()
             db.refresh(obj)
             return ScenarioAssignmentModel.model_validate(obj)

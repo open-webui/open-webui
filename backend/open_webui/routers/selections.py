@@ -27,6 +27,9 @@ class SelectionResponse(BaseModel):
     child_id: Optional[str] = None
     context: Optional[str] = None
     meta: Optional[dict] = None
+    assignment_id: Optional[str] = None
+    start_offset: Optional[int] = None
+    end_offset: Optional[int] = None
     created_at: int
     updated_at: int
 

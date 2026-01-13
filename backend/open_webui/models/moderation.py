@@ -125,7 +125,7 @@ class ModerationSessionForm(BaseModel):
     # Note: would_show_child was removed - column existed in DB but not in model (migration 84b2215f7772)
     strategies: Optional[List[str]] = None
     custom_instructions: Optional[List[str]] = None
-    highlighted_texts: Optional[List[str]] = None
+    highlighted_texts: Optional[List[dict]] = None
     refactored_response: Optional[str] = None
     is_final_version: Optional[bool] = False
     session_metadata: Optional[dict] = None
