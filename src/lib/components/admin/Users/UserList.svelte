@@ -4,11 +4,24 @@
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
 
-	import dayjs from 'dayjs';
+	import dayjs from '$lib/dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	dayjs.extend(relativeTime);
 	dayjs.extend(localizedFormat);
+
+	async function loadLocale(locales) {
+		for (const locale of locales) {
+			try {
+				dayjs.locale(locale);
+				break;
+			} catch (error) {
+				console.error(`Could not load locale '${locale}':`, error);
+			}
+		}
+	}
+
+	$: loadLocale($i18n.languages);
 
 	import { toast } from 'svelte-sonner';
 
