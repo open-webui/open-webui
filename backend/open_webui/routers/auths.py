@@ -3,6 +3,7 @@ import uuid
 import time
 import datetime
 import logging
+import secrets
 from aiohttp import ClientSession
 
 from open_webui.models.auths import (
@@ -14,6 +15,9 @@ from open_webui.models.auths import (
     SigninForm,
     SigninResponse,
     SignupForm,
+    TwoFactorChallengeResponse,
+    TwoFactorResendForm,
+    TwoFactorVerifyForm,
     UpdatePasswordForm,
     UserResponse,
 )
@@ -21,6 +25,7 @@ from open_webui.models.users import Users, UpdateProfileForm
 from open_webui.models.tenants import Tenants
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.email_2fa import Email2FA
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -50,10 +55,11 @@ from open_webui.utils.auth import (
     get_password_hash,
     get_http_authorization_cred,
 )
+from open_webui.utils.email import send_email
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
 
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
@@ -64,6 +70,96 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def _mask_email(email: str) -> str:
+    if "@" not in email:
+        return "***"
+    local, domain = email.split("@", 1)
+    if len(local) <= 2:
+        masked_local = f"{local[:1]}***"
+    else:
+        masked_local = f"{local[:1]}***{local[-1:]}"
+    return f"{masked_local}@{domain}"
+
+
+def _build_session_response(request: Request, response: Response, user):
+    expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+    expires_at = None
+    if expires_delta:
+        expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=expires_delta,
+    )
+
+    datetime_expires_at = (
+        datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+        if expires_at
+        else None
+    )
+
+    response.set_cookie(
+        key="token",
+        value=token,
+        expires=datetime_expires_at,
+        httponly=True,
+        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+        secure=WEBUI_AUTH_COOKIE_SECURE,
+    )
+
+    user_permissions = get_permissions(
+        user.id, request.app.state.config.USER_PERMISSIONS
+    )
+
+    tenant_bucket = None
+    if user.tenant_id:
+        tenant = Tenants.get_tenant_by_id(user.tenant_id)
+        tenant_bucket = tenant.s3_bucket if tenant else None
+
+    return {
+        "token": token,
+        "token_type": "Bearer",
+        "expires_at": expires_at,
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "profile_image_url": user.profile_image_url,
+        "eula_signed_at": user.eula_signed_at,
+        "permissions": user_permissions,
+        "tenant_id": user.tenant_id,
+        "tenant_s3_bucket": tenant_bucket,
+    }
+
+
+async def _issue_email_2fa_challenge(
+    request: Request, user
+) -> TwoFactorChallengeResponse:
+    ttl_seconds = max(int(request.app.state.config.EMAIL_2FA_CODE_TTL_SECONDS), 60)
+    max_attempts = max(int(request.app.state.config.EMAIL_2FA_MAX_ATTEMPTS), 1)
+    code = f"{secrets.randbelow(1000000):06d}"
+
+    challenge = Email2FA.create_challenge(user.id, code, ttl_seconds, max_attempts)
+    if not challenge:
+        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT())
+
+    subject = f"{request.app.state.WEBUI_NAME} verification code"
+    body = (
+        f"Your verification code is: {code}\n\n"
+        f"This code expires in {int(ttl_seconds / 60)} minutes."
+    )
+
+    sent = await send_email(request.app.state.config, user.email, subject, body)
+    if not sent:
+        raise HTTPException(500, detail=ERROR_MESSAGES.EMAIL_SEND_FAILED)
+
+    return TwoFactorChallengeResponse(
+        challenge_id=challenge.id,
+        masked_email=_mask_email(user.email),
+        expires_at=challenge.expires_at,
+    )
 
 ############################
 # GetSessionUser
@@ -207,7 +303,9 @@ async def update_password(
 ############################
 # LDAP Authentication
 ############################
-@router.post("/ldap", response_model=SessionUserResponse)
+@router.post(
+    "/ldap", response_model=Union[SessionUserResponse, TwoFactorChallengeResponse]
+)
 async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     ENABLE_LDAP = request.app.state.config.ENABLE_LDAP
     LDAP_SERVER_LABEL = request.app.state.config.LDAP_SERVER_LABEL
@@ -414,36 +512,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             user = Auths.authenticate_user_by_email(email)
 
             if user:
-                expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
-                expires_at = None
-                if expires_delta:
-                    expires_at = int(time.time()) + int(expires_delta.total_seconds())
-
-                token = create_token(
-                    data={"id": user.id},
-                    expires_delta=expires_delta,
-                )
-
-                # Set the cookie token
-                response.set_cookie(
-                    key="token",
-                    value=token,
-                    expires=(
-                        datetime.datetime.fromtimestamp(
-                            expires_at, datetime.timezone.utc
-                        )
-                        if expires_at
-                        else None
-                    ),
-                    httponly=True,  # Ensures the cookie is not accessible via JavaScript
-                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                    secure=WEBUI_AUTH_COOKIE_SECURE,
-                )
-
-                user_permissions = get_permissions(
-                    user.id, request.app.state.config.USER_PERMISSIONS
-                )
-
                 if (
                     user.role != "admin"
                     and ENABLE_LDAP_GROUP_MANAGEMENT
@@ -459,26 +527,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         )
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
+                if request.app.state.config.ENABLE_EMAIL_2FA:
+                    return await _issue_email_2fa_challenge(request, user)
 
-                tenant_bucket = None
-                if user.tenant_id:
-                    tenant = Tenants.get_tenant_by_id(user.tenant_id)
-                    tenant_bucket = tenant.s3_bucket if tenant else None
-
-                return {
-                    "token": token,
-                    "token_type": "Bearer",
-                    "expires_at": expires_at,
-                    "id": user.id,
-                    "email": user.email,
-                    "name": user.name,
-                    "role": user.role,
-                    "profile_image_url": user.profile_image_url,
-                    "eula_signed_at": user.eula_signed_at,
-                    "permissions": user_permissions,
-                    "tenant_id": user.tenant_id,
-                    "tenant_s3_bucket": tenant_bucket,
-                }
+                return _build_session_response(request, response, user)
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         else:
@@ -493,7 +545,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 ############################
 
 
-@router.post("/signin", response_model=SessionUserResponse)
+@router.post(
+    "/signin", response_model=Union[SessionUserResponse, TwoFactorChallengeResponse]
+)
 async def signin(request: Request, response: Response, form_data: SigninForm):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
@@ -552,58 +606,63 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
+        if (
+            request.app.state.config.ENABLE_EMAIL_2FA
+            and WEBUI_AUTH
+            and not WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+        ):
+            return await _issue_email_2fa_challenge(request, user)
 
-        expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
-        expires_at = None
-        if expires_delta:
-            expires_at = int(time.time()) + int(expires_delta.total_seconds())
-
-        token = create_token(
-            data={"id": user.id},
-            expires_delta=expires_delta,
-        )
-
-        datetime_expires_at = (
-            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-            if expires_at
-            else None
-        )
-
-        # Set the cookie token
-        response.set_cookie(
-            key="token",
-            value=token,
-            expires=datetime_expires_at,
-            httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-            secure=WEBUI_AUTH_COOKIE_SECURE,
-        )
-
-        user_permissions = get_permissions(
-            user.id, request.app.state.config.USER_PERMISSIONS
-        )
-
-        tenant_bucket = None
-        if user.tenant_id:
-            tenant = Tenants.get_tenant_by_id(user.tenant_id)
-            tenant_bucket = tenant.s3_bucket if tenant else None
-
-        return {
-            "token": token,
-            "token_type": "Bearer",
-            "expires_at": expires_at,
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "profile_image_url": user.profile_image_url,
-            "eula_signed_at": user.eula_signed_at,
-            "permissions": user_permissions,
-            "tenant_id": user.tenant_id,
-            "tenant_s3_bucket": tenant_bucket,
-        }
+        return _build_session_response(request, response, user)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+
+############################
+# Email 2FA
+############################
+
+
+@router.post("/2fa/verify", response_model=SessionUserResponse)
+async def verify_two_factor(
+    request: Request, response: Response, form_data: TwoFactorVerifyForm
+):
+    if not request.app.state.config.ENABLE_EMAIL_2FA:
+        raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+
+    result = Email2FA.verify_challenge(form_data.challenge_id, form_data.code)
+    if result.user_id:
+        user = Users.get_user_by_id(result.user_id)
+        if not user:
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        return _build_session_response(request, response, user)
+
+    if result.error == "expired":
+        raise HTTPException(400, detail=ERROR_MESSAGES.TWO_FACTOR_EXPIRED)
+    if result.error == "max_attempts":
+        raise HTTPException(400, detail=ERROR_MESSAGES.TWO_FACTOR_MAX_ATTEMPTS)
+
+    raise HTTPException(400, detail=ERROR_MESSAGES.TWO_FACTOR_INVALID)
+
+
+@router.post("/2fa/resend", response_model=TwoFactorChallengeResponse)
+async def resend_two_factor(request: Request, form_data: TwoFactorResendForm):
+    if not request.app.state.config.ENABLE_EMAIL_2FA:
+        raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+
+    challenge = Email2FA.get_active_challenge(form_data.challenge_id)
+    if not challenge:
+        raise HTTPException(400, detail=ERROR_MESSAGES.TWO_FACTOR_EXPIRED)
+
+    now = int(time.time())
+    if now > challenge.expires_at:
+        raise HTTPException(400, detail=ERROR_MESSAGES.TWO_FACTOR_EXPIRED)
+
+    user = Users.get_user_by_id(challenge.user_id)
+    if not user:
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+    return await _issue_email_2fa_challenge(request, user)
 
 
 ############################
