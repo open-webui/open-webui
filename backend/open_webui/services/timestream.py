@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 # RAG Platform endpoint - configured via environment
 RAG_PLATFORM_URL = os.getenv("RAG_PLATFORM_URL", "http://localhost:9000/2015-03-31/functions/function/invocations")
 
+# The AWS Lambda runtime container only processes one invocation at a time. The
+# local emulator can crash if it receives overlapping requests, so we serialize
+# calls through a single async lock.
+_rag_platform_lock = asyncio.Lock()
+
 
 async def _invoke_rag_platform(action: str, params: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -36,41 +41,42 @@ async def _invoke_rag_platform(action: str, params: Dict[str, Any]) -> Dict[str,
     last_error: Exception | None = None
     for attempt in range(3):
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    RAG_PLATFORM_URL,
-                    json=payload,
-                    headers={"Content-Type": "application/json"},
-                    timeout=aiohttp.ClientTimeout(total=30),
-                ) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        logger.error(f"Rag-platform error: {response.status} - {error_text}")
-                        raise Exception(f"Rag-platform returned {response.status}")
+            async with _rag_platform_lock:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        RAG_PLATFORM_URL,
+                        json=payload,
+                        headers={"Content-Type": "application/json"},
+                        timeout=aiohttp.ClientTimeout(total=30),
+                    ) as response:
+                        if response.status != 200:
+                            error_text = await response.text()
+                            logger.error(f"Rag-platform error: {response.status} - {error_text}")
+                            raise Exception(f"Rag-platform returned {response.status}")
 
-                    raw_text = await response.text()
-                    try:
-                        result = json.loads(raw_text)
-                    except json.JSONDecodeError as e:
-                        logger.error(
-                            "Failed to decode rag-platform response as JSON: "
-                            f"status={response.status} content_type={response.headers.get('Content-Type')} "
-                            f"error={e} body_prefix={raw_text[:500]!r}"
-                        )
-                        raise Exception("Dashboard backend returned invalid JSON") from e
-
-                    # Handle Lambda response format (may have statusCode/body wrapper)
-                    if isinstance(result, dict) and "statusCode" in result:
-                        if result.get("statusCode") != 200:
-                            raise Exception(
-                                f"Lambda returned status {result.get('statusCode')}: {result.get('body')}"
+                        raw_text = await response.text()
+                        try:
+                            result = json.loads(raw_text)
+                        except json.JSONDecodeError as e:
+                            logger.error(
+                                "Failed to decode rag-platform response as JSON: "
+                                f"status={response.status} content_type={response.headers.get('Content-Type')} "
+                                f"error={e} body_prefix={raw_text[:500]!r}"
                             )
-                        body = result.get("body", "{}")
-                        if isinstance(body, str):
-                            return json.loads(body)
-                        return body
+                            raise Exception("Dashboard backend returned invalid JSON") from e
 
-                    return result
+                        # Handle Lambda response format (may have statusCode/body wrapper)
+                        if isinstance(result, dict) and "statusCode" in result:
+                            if result.get("statusCode") != 200:
+                                raise Exception(
+                                    f"Lambda returned status {result.get('statusCode')}: {result.get('body')}"
+                                )
+                            body = result.get("body", "{}")
+                            if isinstance(body, str):
+                                return json.loads(body)
+                            return body
+
+                        return result
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             last_error = e
             if attempt < 2:
