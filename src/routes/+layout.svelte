@@ -658,6 +658,13 @@
 
 					if (sessionUser) {
 						await user.set(sessionUser);
+						if (sessionUser.default_language) {
+							const normalizedLanguage =
+								sessionUser.default_language === 'en-ES'
+									? 'es-ES'
+									: sessionUser.default_language;
+							changeLanguage(normalizedLanguage);
+						}
 						await config.set(await getBackendConfig());
 					} else {
 						// Redirect Invalid Session User to /auth Page
