@@ -1546,18 +1546,11 @@
 
 									<!-- Clear Context Button -->
 									{#if history?.currentId}
-										<Tooltip
-											content={contextBreakEnabled
-												? $i18n.t('Context break enabled')
-												: $i18n.t('Clear Context')}
-											placement="top"
-										>
+										<Tooltip content={$i18n.t('Clear Context')} placement="top">
 											<button
 												type="button"
 												id="clear-context-button"
-												class="bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden transition-colors {contextBreakEnabled
-													? 'text-orange-500 dark:text-orange-400'
-													: 'text-gray-700 dark:text-white'}"
+												class="bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden transition-colors text-gray-700 dark:text-white"
 												on:click={onToggleContextBreak}
 											>
 												<svg

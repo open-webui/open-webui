@@ -139,8 +139,8 @@
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 
-	// Context break: message ID after which to start sending context
-	let contextBreakMessageId: string | null = null;
+	// Context break: message IDs after which to start sending context
+	let contextBreakMessageIds: string[] = [];
 
 	let showCommands = false;
 
@@ -1782,8 +1782,16 @@
 							: createMessagesList(_history, responseMessageId);
 
 					// Apply context break truncation if set
-					if (contextBreakMessageId) {
-						const breakIndex = messagesToSend.findIndex((m) => m.id === contextBreakMessageId);
+					if (contextBreakMessageIds.length > 0) {
+						let breakIndex = -1;
+						// Find the last break point that exists in the current message list
+						for (let i = messagesToSend.length - 1; i >= 0; i--) {
+							if (contextBreakMessageIds.includes(messagesToSend[i].id)) {
+								breakIndex = i;
+								break;
+							}
+						}
+
 						if (breakIndex !== -1 && breakIndex < messagesToSend.length - 1) {
 							messagesToSend = messagesToSend.slice(breakIndex + 1);
 						}
@@ -2541,9 +2549,9 @@
 										topPadding={true}
 										bottomPadding={files.length > 0}
 										{onSelect}
-										{contextBreakMessageId}
-										onRemoveContextBreak={() => {
-											contextBreakMessageId = null;
+										{contextBreakMessageIds}
+										onRemoveContextBreak={(id) => {
+											contextBreakMessageIds = contextBreakMessageIds.filter((i) => i !== id);
 										}}
 									/>
 								</div>
@@ -2570,12 +2578,12 @@
 									{stopResponse}
 									{createMessagePair}
 									{onUpload}
-									contextBreakEnabled={contextBreakMessageId !== null}
+									contextBreakEnabled={contextBreakMessageIds.length > 0}
 									onToggleContextBreak={() => {
-										if (contextBreakMessageId) {
-											contextBreakMessageId = null;
-										} else if (history?.currentId) {
-											contextBreakMessageId = history.currentId;
+										if (history?.currentId) {
+											if (!contextBreakMessageIds.includes(history.currentId)) {
+												contextBreakMessageIds = [...contextBreakMessageIds, history.currentId];
+											}
 										}
 									}}
 									onChange={(data) => {

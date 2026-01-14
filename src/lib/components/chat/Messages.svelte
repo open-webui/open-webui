@@ -58,8 +58,8 @@
 
 	export let onSelect = (e) => {};
 
-	export let contextBreakMessageId: string | null = null;
-	export let onRemoveContextBreak: () => void = () => {};
+	export let contextBreakMessageIds: string[] = [];
+	export let onRemoveContextBreak: (id: string) => void = () => {};
 
 	export let messagesCount: number | null = 20;
 	let messagesLoading = false;
@@ -467,8 +467,8 @@
 								{editCodeBlock}
 								{topPadding}
 							/>
-							{#if contextBreakMessageId && message.id === contextBreakMessageId}
-								<ContextBreakDivider onRemove={onRemoveContextBreak} />
+							{#if contextBreakMessageIds.includes(message.id)}
+								<ContextBreakDivider onRemove={() => onRemoveContextBreak(message.id)} />
 							{/if}
 						{/each}
 					</ul>
