@@ -36,6 +36,7 @@ class User(Base):
     job_title = Column(String(255), nullable=True)
     primary_location = Column(String(255), nullable=True)
     job_description = Column(String(2500), nullable=True)
+    default_language = Column(String, nullable=False, server_default="en-US")
 
     bio = Column(Text, nullable=True)
     gender = Column(Text, nullable=True)
@@ -74,6 +75,7 @@ class UserModel(BaseModel):
     job_title: Optional[str] = None
     primary_location: Optional[str] = None
     job_description: Optional[str] = None
+    default_language: str = "en-US"
 
     bio: Optional[str] = None
     gender: Optional[str] = None
