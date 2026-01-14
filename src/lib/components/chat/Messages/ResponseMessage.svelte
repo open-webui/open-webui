@@ -12,7 +12,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
-	import { getChatById, createNewChat } from '$lib/apis/chats';
+	import { getChatById, createNewChat, getChatList } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 	import { goto } from '$app/navigation';
 
@@ -23,7 +23,9 @@
 		settings,
 		temporaryChatEnabled,
 		TTSWorker,
-		user
+		user,
+		chats,
+		currentChatPage
 	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
@@ -245,6 +247,8 @@
 
 			if (newChat && newChat.id) {
 				toast.success($i18n.t('Branched to new chat'));
+				// Update chat list
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				// Navigate to the new chat in current tab
 				goto(`/c/${newChat.id}`);
 			} else {
