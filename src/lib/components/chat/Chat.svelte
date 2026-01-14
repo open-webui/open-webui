@@ -1282,6 +1282,11 @@
 			const modelId = selectedModels[0];
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
+			if (!model) {
+				toast.error($i18n.t('Model not found'));
+				return;
+			}
+
 			const messages = createMessagesList(history, history.currentId);
 			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
 
