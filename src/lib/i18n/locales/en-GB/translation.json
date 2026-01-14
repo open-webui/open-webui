@@ -1849,4 +1849,10 @@
 ,
 	"Primary Location": "Primary Location",
 	"Job Description": "Job Description"
+,
+	"Tenants": "Tenants",
+	"S3 Bucket": "S3 Bucket"
+,
+	"Tenant Configuration": "Tenant Configuration",
+	"Upload .txt files to populate the tenant prompts directory.": "Upload .txt files to populate the tenant prompts directory."
 }

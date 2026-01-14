@@ -509,7 +509,7 @@
 	"Editing": "Editando",
 	"Eject": "Expulsar",
 	"ElevenLabs": "ElevenLabs",
-	"Email": "Email",
+	"Email": "Correo electrónico",
 	"Embark on adventures": "Embarcate en aventuras",
 	"Embedding": "Incrustación",
 	"Embedding Batch Size": "Tamaño del Lote de Incrustación",
@@ -1793,7 +1793,7 @@
 ,
 	"Loading tenant list…": "Cargando lista de tenants…",
 	"No tenants available": "No hay tenants disponibles",
-	"Tenant": "Tenant",
+	"Tenant": "Inquilino",
 	"Target Tenant Bucket": "Bucket de tenant objetivo",
 	"Loading your profile": "Cargando tu perfil"
 ,
@@ -1850,4 +1850,25 @@
 ,
 	"Primary Location": "Ubicación principal",
 	"Job Description": "Descripción del puesto"
+,
+	"Tenants": "Inquilinos",
+	"S3 Bucket": "Bucket de S3"
+,
+	"Edit Tenant": "Editar inquilino",
+	"Delete Tenant": "Eliminar inquilino"
+,
+	"Tenant Logo": "Logo del inquilino",
+	"Table Name": "Nombre de la tabla",
+	"System Config Client Name": "Nombre del cliente de configuración del sistema",
+	"Upload Prompt": "Subir prompt",
+	"Choose File": "Elegir archivo",
+	"Edit Help Text": "Editar texto de ayuda"
+,
+	"Tenant Configuration": "Configuración del inquilino",
+	"Upload .txt files to populate the tenant prompts directory.": "Sube archivos .txt para poblar el directorio de prompts del inquilino."
+,
+	"Tenant Name": "Nombre del inquilino",
+	"Add Tenant": "Agregar inquilino"
+,
+	"Select a tenant": "Selecciona un inquilino"
 }
