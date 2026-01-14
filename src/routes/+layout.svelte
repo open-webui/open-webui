@@ -63,6 +63,8 @@
 
 	const bc = new BroadcastChannel('active-tab-channel');
 
+	const seenCompletionNotifications = new Set();
+
 	let loaded = false;
 	let tokenTimer = null;
 
@@ -286,13 +288,24 @@
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 
-		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
-			if (type === 'chat:completion') {
-				const { done, content, title } = data;
+			if (!chat && (!$temporaryChatEnabled || isFocused)) {
+				if (type === 'chat:completion') {
+					const { done, content, title } = data;
 
-				if (done) {
-					if ($settings?.notificationSoundAlways ?? false) {
-						playingNotificationSound.set(true);
+					if (done) {
+						const notificationKey =
+							event?.message_id ??
+							`${event?.chat_id ?? ''}:${title ?? ''}:${content ?? ''}`;
+						if (seenCompletionNotifications.has(notificationKey)) {
+							return;
+						}
+						seenCompletionNotifications.add(notificationKey);
+						if (seenCompletionNotifications.size > 200) {
+							seenCompletionNotifications.clear();
+						}
+
+						if ($settings?.notificationSoundAlways ?? false) {
+							playingNotificationSound.set(true);
 
 						const audio = new Audio(`/audio/notification.mp3`);
 						audio.play().finally(() => {
