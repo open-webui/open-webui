@@ -1855,4 +1855,6 @@
 ,
 	"Tenant Configuration": "Tenant Configuration",
 	"Upload .txt files to populate the tenant prompts directory.": "Upload .txt files to populate the tenant prompts directory."
+,
+	"Default Language": "Default Language"
 }

@@ -169,6 +169,7 @@ class UserUpdateForm(BaseModel):
     profile_image_url: str
     password: Optional[str] = None
     tenant_id: Optional[str] = None
+    default_language: Optional[str] = None
 
 
 class UsersTable:
@@ -181,6 +182,7 @@ class UsersTable:
         role: str = "pending",
         oauth_sub: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        default_language: str = "en-US",
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -191,6 +193,7 @@ class UsersTable:
                     "role": role,
                     "profile_image_url": profile_image_url,
                     "tenant_id": tenant_id,
+                    "default_language": default_language,
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),

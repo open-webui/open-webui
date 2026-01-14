@@ -463,6 +463,7 @@ type UserUpdateForm = {
 	email: string;
 	name: string;
 	password: string;
+	default_language?: string;
 };
 
 export const updateUserById = async (token: string, userId: string, user: UserUpdateForm) => {
@@ -479,7 +480,8 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 			role: user.role,
 			email: user.email,
 			name: user.name,
-			password: user.password !== '' ? user.password : undefined
+			password: user.password !== '' ? user.password : undefined,
+			default_language: user.default_language
 		})
 	})
 		.then(async (res) => {
