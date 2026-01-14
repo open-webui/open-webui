@@ -185,10 +185,8 @@ def initialize_department_server(department_prefix: str):
         logger.error(
             f"Failed to initialize SharePoint server for {department_prefix}: {e}"
         )
-        # Exit with error code so the MCP server doesn't start with broken config
-        import sys
-
-        sys.exit(1)
+        # Return False to allow other MCP servers to continue
+        return False
 
 
 def extract_user_token(context: Optional[Dict[str, Any]] = None) -> Optional[str]:
