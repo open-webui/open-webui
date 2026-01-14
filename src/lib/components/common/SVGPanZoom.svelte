@@ -52,7 +52,7 @@
 		{@html DOMPurify.sanitize(svg, {
 			USE_PROFILES: { svg: true, svgFilters: true }, // allow <svg>, <defs>, <filter>, etc.
 			WHOLE_DOCUMENT: false,
-			ADD_TAGS: ['style', 'foreignObject'], // include foreignObject if using HTML labels
+			ADD_TAGS: ['style', 'foreignObject', 'div', 'span'], // include foreignObject + HTML legend labels
 			ADD_ATTR: [
 				'class',
 				'style',

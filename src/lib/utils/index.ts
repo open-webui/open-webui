@@ -1604,10 +1604,183 @@ export const initMermaid = async () => {
 	return mermaid;
 };
 
+const parseXyChartLegendItems = (code: string) => {
+	const items: { label: string; type: 'line' | 'bar' }[] = [];
+	const plotRegex = /^\s*(line|bar)\s+(?:"([^"]+)"|([^\[]+?))\s*\[/gim;
+	let match;
+	while ((match = plotRegex.exec(code)) !== null) {
+		const type = match[1].toLowerCase() as 'line' | 'bar';
+		const label = (match[2] ?? match[3] ?? '').trim();
+		if (label) {
+			items.push({ label, type });
+		}
+	}
+	return items;
+};
+
+const injectXyChartLegend = (svg: string, code: string) => {
+	if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+		return svg;
+	}
+
+	const items = parseXyChartLegendItems(code);
+	if (items.length < 2) {
+		return svg;
+	}
+
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(svg, 'image/svg+xml');
+	const svgEl = doc.documentElement;
+
+	const viewBox = svgEl.getAttribute('viewBox');
+	let viewBoxX = 0;
+	let viewBoxY = 0;
+	let viewBoxWidth = 800;
+	let viewBoxHeight = 600;
+	if (viewBox) {
+		const parts = viewBox.split(/\s+/).map((val) => Number(val));
+		if (parts.length === 4 && parts.every((val) => Number.isFinite(val))) {
+			[viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight] = parts;
+		}
+	}
+
+	const plotGroup = svgEl.querySelector('g.plot');
+	const plotGroups = plotGroup ? Array.from(plotGroup.children).filter((el) => el.tagName === 'g') : [];
+	const plotColors = plotGroups.map((group) => {
+		const path = group.querySelector('path');
+		if (path?.getAttribute('stroke')) {
+			return path.getAttribute('stroke');
+		}
+		const rect = group.querySelector('rect');
+		if (rect?.getAttribute('fill')) {
+			return rect.getAttribute('fill');
+		}
+		return null;
+	});
+
+	const isDark = document.documentElement.classList.contains('dark');
+	const textColor = isDark ? '#e5e7eb' : '#111827';
+	const borderColor = isDark ? '#1f2937' : '#e5e7eb';
+	const bgColor = isDark ? '#0b0f14' : '#ffffff';
+
+	const fontSize = 12;
+	const rowHeight = fontSize + 6;
+	const lineLength = 18;
+	const markerSize = 10;
+	const padding = 8;
+	const charWidth = 7;
+	const maxLabelWidth = Math.max(...items.map((item) => item.label.length * charWidth), 0);
+	const legendWidth = padding * 2 + lineLength + 6 + maxLabelWidth;
+	const legendHeight = padding * 2 + rowHeight * items.length;
+
+	let legendX = viewBoxX + viewBoxWidth - legendWidth - 10;
+	let legendY = viewBoxY + 10;
+	if (legendX < viewBoxX + 10) {
+		legendX = viewBoxX + 10;
+	}
+
+	const svgNS = 'http://www.w3.org/2000/svg';
+	const legendGroup = doc.createElementNS(svgNS, 'g');
+	legendGroup.setAttribute('class', 'xychart-legend');
+
+	const legendBg = doc.createElementNS(svgNS, 'rect');
+	legendBg.setAttribute('x', String(legendX));
+	legendBg.setAttribute('y', String(legendY));
+	legendBg.setAttribute('width', String(legendWidth));
+	legendBg.setAttribute('height', String(legendHeight));
+	legendBg.setAttribute('rx', '6');
+	legendBg.setAttribute('fill', bgColor);
+	legendBg.setAttribute('fill-opacity', '0.85');
+	legendBg.setAttribute('stroke', borderColor);
+	legendBg.setAttribute('stroke-width', '1');
+	legendGroup.appendChild(legendBg);
+
+	items.forEach((item, index) => {
+		const color = plotColors[index] || (item.type === 'bar' ? '#2563eb' : '#f97316');
+		const rowY = legendY + padding + index * rowHeight + fontSize;
+		const iconX = legendX + padding;
+
+		if (item.type === 'line') {
+			const line = doc.createElementNS(svgNS, 'line');
+			line.setAttribute('x1', String(iconX));
+			line.setAttribute('y1', String(rowY - fontSize / 2));
+			line.setAttribute('x2', String(iconX + lineLength));
+			line.setAttribute('y2', String(rowY - fontSize / 2));
+			line.setAttribute('stroke', color);
+			line.setAttribute('stroke-width', '2');
+			legendGroup.appendChild(line);
+		} else {
+			const rect = doc.createElementNS(svgNS, 'rect');
+			rect.setAttribute('x', String(iconX));
+			rect.setAttribute('y', String(rowY - fontSize / 2 - markerSize / 2));
+			rect.setAttribute('width', String(markerSize));
+			rect.setAttribute('height', String(markerSize));
+			rect.setAttribute('fill', color);
+			legendGroup.appendChild(rect);
+		}
+
+		const text = doc.createElementNS(svgNS, 'text');
+		text.setAttribute('x', String(iconX + lineLength + 6));
+		text.setAttribute('y', String(rowY - fontSize / 2));
+		text.setAttribute('fill', textColor);
+		text.setAttribute('font-size', String(fontSize));
+		text.setAttribute('dominant-baseline', 'hanging');
+		text.textContent = item.label;
+		legendGroup.appendChild(text);
+	});
+
+	svgEl.appendChild(legendGroup);
+	return new XMLSerializer().serializeToString(svgEl);
+};
+
+const limitXyChartXAxisLabels = (svg: string, code: string) => {
+	if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+		return svg;
+	}
+
+	const hasLinePlots = /^\s*line\s+/gim.test(code);
+	const hasBarPlots = /^\s*bar\s+/gim.test(code);
+	if (!hasLinePlots || hasBarPlots) {
+		return svg;
+	}
+
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(svg, 'image/svg+xml');
+	const svgEl = doc.documentElement;
+	const labelGroup = svgEl.querySelector('g.bottom-axis g.label');
+	if (!labelGroup) {
+		return svg;
+	}
+
+	const labels = Array.from(labelGroup.querySelectorAll('text'));
+	if (labels.length <= 6) {
+		return svg;
+	}
+
+	const keepIndices = new Set<number>([0, labels.length - 1]);
+	const targetCount = 6;
+	const step = (labels.length - 1) / (targetCount - 1);
+	for (let i = 1; i < targetCount - 1; i += 1) {
+		keepIndices.add(Math.round(i * step));
+	}
+
+	labels.forEach((label, index) => {
+		if (!keepIndices.has(index)) {
+			label.setAttribute('visibility', 'hidden');
+		}
+	});
+
+	return new XMLSerializer().serializeToString(svgEl);
+};
+
 export const renderMermaidDiagram = async (mermaid, code: string) => {
 	const parseResult = await mermaid.parse(code, { suppressErrors: false });
 	if (parseResult) {
 		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+		if (/^\s*xychart(-beta)?\b/i.test(code)) {
+			const withLegend = injectXyChartLegend(svg, code);
+			return limitXyChartXAxisLabels(withLegend, code);
+		}
 		return svg;
 	}
 	return '';
