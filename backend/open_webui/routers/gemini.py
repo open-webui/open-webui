@@ -120,10 +120,20 @@ def _openai_chunk(
     }
 
 
-def _extract_text_and_images(candidate: dict) -> tuple[str, str]:
+def _wants_web_search(fd: dict) -> bool:
+    if fd.get("web_search") is True:
+        return True
+    tools = fd.get("tools") or []
+    for t in tools:
+        if isinstance(t, dict) and t.get("type") in ("web_search", "web_search_preview", "browser_search"):
+            return True
+    return False
+
+
+def _extract_content(candidate: dict) -> tuple[str, str, str]:
     """
-    Extract text + inline image markdown from a Gemini candidate.
-    Returns: (text, image_markdown)
+    Extract text + inline image markdown + grounding metadata from a Gemini candidate.
+    Returns: (text, image_markdown, grounding_markdown)
     """
     content = candidate.get("content", {}) or {}
     parts = content.get("parts", []) or []
@@ -141,7 +151,27 @@ def _extract_text_and_images(candidate: dict) -> tuple[str, str]:
             if data:
                 image_md_parts.append(f"\n![Generated Image](data:{mime_type};base64,{data})\n")
 
-    return "".join(text_parts), "".join(image_md_parts)
+    # Extract Grounding Metadata (Search Sources)
+    grounding_md = ""
+    grounding_metadata = candidate.get("groundingMetadata", {})
+    if grounding_metadata:
+        chunks = grounding_metadata.get("groundingChunks", [])
+        supports = grounding_metadata.get("groundingSupports", [])
+        
+        # Only process if we have web chunks
+        web_sources = []
+        for chunk in chunks:
+            web = chunk.get("web", {})
+            if web:
+                title = web.get("title", "Source")
+                uri = web.get("uri", "")
+                if uri:
+                    web_sources.append(f"[{title}]({uri})")
+        
+        if web_sources:
+            grounding_md = "\n\n**Sources:**\n" + "\n".join([f"{i+1}. {s}" for i, s in enumerate(web_sources)]) + "\n"
+
+    return "".join(text_parts), "".join(image_md_parts), grounding_md
 
 
 ##########################################
@@ -509,8 +539,8 @@ async def generate_chat_completion(
         )
 
     # Enable Google Search (Grounding)
-    web_search_enabled = form_data.get("web_search", False)
-    if web_search_enabled:
+    # Enable Google Search (Grounding)
+    if _wants_web_search(form_data):
         log.info(f"Enabling Google Search (Grounding) for model: {gemini_model}")
         gemini_payload["tools"] = [{"googleSearch": {}}]
 
@@ -549,13 +579,31 @@ async def generate_chat_completion(
 
                         if response.status != 200:
                             try:
-                                error_data = await response.json(content_type=None)
-                            except Exception:
-                                error_text = await response.text()
-                                error_data = {"error": {"message": f"Gemini API Error: {error_text}"}}
-                            error_msg = error_data.get("error", {}).get("message", "Gemini API Error")
-                            yield f"data: {json.dumps({'error': error_msg}, ensure_ascii=False)}\n\n"
+                                err_text = await response.text()
+                            except Exception as e:
+                                err_text = f"Failed to read error body: {e}"
+                            
+                            # Format understandable error message
+                            msg = f"[Gemini API Error {response.status}] {err_text[:500]}"
+                            try:
+                                err_json = json.loads(err_text)
+                                if "error" in err_json:
+                                    msg = f"[Gemini API Error {response.status}] {err_json['error'].get('message', err_text[:200])}"
+                            except:
+                                pass
+
+                            # Stream as content
+                            chunk = _openai_chunk(stream_id, model_id, {"content": msg}, None)
+                            yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                            
+                            # Stream finish chunk
+                            fin_chunk = _openai_chunk(stream_id, model_id, {}, "stop")
+                            yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
                             yield "data: [DONE]\n\n"
+                            try:
+                                await response.release()
+                            except:
+                                pass
                             return
 
                         # Optional: send role first (OpenAI-style)
@@ -606,8 +654,8 @@ async def generate_chat_completion(
                                             continue
 
                                         c0 = candidates[0]
-                                        text, image_md = _extract_text_and_images(c0)
-                                        out_text = (text or "") + (image_md or "")
+                                        text, image_md, grounding_md = _extract_content(c0)
+                                        out_text = (text or "") + (image_md or "") + (grounding_md or "")
 
                                         # 1) yield content first
                                         if out_text:
@@ -661,8 +709,8 @@ async def generate_chat_completion(
                                         candidates = gemini_obj.get("candidates") or []
                                         if candidates:
                                             c0 = candidates[0]
-                                            text, image_md = _extract_text_and_images(c0)
-                                            out_text = (text or "") + (image_md or "")
+                                            text, image_md, grounding_md = _extract_content(c0)
+                                            out_text = (text or "") + (image_md or "") + (grounding_md or "")
                                             if out_text:
                                                 chunk = _openai_chunk(stream_id, model_id, {"content": out_text}, None, 0)
                                                 yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
@@ -717,8 +765,8 @@ def convert_gemini_to_openai(gemini_response: dict, model_id: str) -> dict:
 
     choices = []
     for i, candidate in enumerate(candidates):
-        text, image_md = _extract_text_and_images(candidate)
-        combined = (text or "") + (image_md or "")
+        text, image_md, grounding_md = _extract_content(candidate)
+        combined = (text or "") + (image_md or "") + (grounding_md or "")
 
         choices.append(
             {
@@ -750,8 +798,8 @@ def convert_gemini_to_openai_stream(gemini_chunk: dict, model_id: str) -> dict:
     choices = []
 
     for i, candidate in enumerate(candidates):
-        text, image_md = _extract_text_and_images(candidate)
-        combined = (text or "") + (image_md or "")
+        text, image_md, grounding_md = _extract_content(candidate)
+        combined = (text or "") + (image_md or "") + (grounding_md or "")
         delta = {"content": combined} if combined else {}
         choices.append(
             {

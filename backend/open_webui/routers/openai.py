@@ -2,6 +2,8 @@ import asyncio
 import hashlib
 import json
 import logging
+import uuid
+import time
 from typing import Optional
 
 import aiohttp
@@ -63,6 +65,28 @@ log = logging.getLogger(__name__)
 # Utility functions
 #
 ##########################################
+
+
+async def error_stream_generator(model_id, error_msg):
+    # Determine stream_id
+    stream_id = f"chatcmpl-{uuid.uuid4().hex}"
+    timestamp = int(time.time())
+    
+    # Chunk 1: Error Content
+    chunk = {
+        "id": stream_id,
+        "object": "chat.completion.chunk",
+        "created": timestamp,
+        "model": model_id,
+        "choices": [{"index": 0, "delta": {"content": error_msg}, "finish_reason": None}]
+    }
+    yield f"data: {json.dumps(chunk)}\n\n"
+    
+    # Chunk 2: Finish
+    chunk["choices"][0]["delta"] = {}
+    chunk["choices"][0]["finish_reason"] = "stop"
+    yield f"data: {json.dumps(chunk)}\n\n"
+    yield "data: [DONE]\n\n"
 
 
 async def send_get_request(url, key=None, user: UserModel = None):
@@ -973,6 +997,26 @@ async def generate_chat_completion(
             
             await cleanup_response(r, session)
             
+            # IMPROVEMENT: Stream error to frontend if streaming was requested
+            # This ensures the error is visible in the chat UI instead of a generic failure
+            if form_data.get("stream"):
+                error_msg = f"HTTP Error {r.status}"
+                if isinstance(response, dict) and "error" in response:
+                    # Extract message from OpenAI error format
+                     err = response["error"]
+                     if isinstance(err, dict):
+                         error_msg = f"{err.get('message', str(err))} (Code: {r.status})"
+                     else:
+                         error_msg = f"{str(err)} (Code: {r.status})"
+                elif isinstance(response, str):
+                     error_msg = f"{response} (Code: {r.status})"
+                
+                return StreamingResponse(
+                    error_stream_generator(model_id, error_msg),
+                    media_type="text/event-stream"
+                )
+
+            # Fallback to standard JSON/Text response for non-stream requests
             if isinstance(response, (dict, list)):
                 return JSONResponse(status_code=r.status, content=response)
             else:
