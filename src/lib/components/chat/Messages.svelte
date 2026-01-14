@@ -19,6 +19,7 @@
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import ContextBreakDivider from './Messages/ContextBreakDivider.svelte';
 
 	import ChatPlaceholder from './ChatPlaceholder.svelte';
 
@@ -56,6 +57,9 @@
 	export let autoScroll;
 
 	export let onSelect = (e) => {};
+
+	export let contextBreakMessageId: string | null = null;
+	export let onRemoveContextBreak: () => void = () => {};
 
 	export let messagesCount: number | null = 20;
 	let messagesLoading = false;
@@ -463,6 +467,9 @@
 								{editCodeBlock}
 								{topPadding}
 							/>
+							{#if contextBreakMessageId && message.id === contextBreakMessageId}
+								<ContextBreakDivider onRemove={onRemoveContextBreak} />
+							{/if}
 						{/each}
 					</ul>
 				</section>

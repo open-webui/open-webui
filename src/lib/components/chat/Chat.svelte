@@ -139,6 +139,9 @@
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 
+	// Context break: message ID after which to start sending context
+	let contextBreakMessageId: string | null = null;
+
 	let showCommands = false;
 
 	let generating = false;
@@ -1771,15 +1774,22 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					await sendMessageSocket(
-						model,
+
+					// Build message list and apply context break truncation
+					let messagesToSend =
 						messages && messages.length > 0
 							? messages
-							: createMessagesList(_history, responseMessageId),
-						_history,
-						responseMessageId,
-						_chatId
-					);
+							: createMessagesList(_history, responseMessageId);
+
+					// Apply context break truncation if set
+					if (contextBreakMessageId) {
+						const breakIndex = messagesToSend.findIndex((m) => m.id === contextBreakMessageId);
+						if (breakIndex !== -1 && breakIndex < messagesToSend.length - 1) {
+							messagesToSend = messagesToSend.slice(breakIndex + 1);
+						}
+					}
+
+					await sendMessageSocket(model, messagesToSend, _history, responseMessageId, _chatId);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -2531,6 +2541,10 @@
 										topPadding={true}
 										bottomPadding={files.length > 0}
 										{onSelect}
+										{contextBreakMessageId}
+										onRemoveContextBreak={() => {
+											contextBreakMessageId = null;
+										}}
 									/>
 								</div>
 							</div>
@@ -2556,6 +2570,14 @@
 									{stopResponse}
 									{createMessagePair}
 									{onUpload}
+									contextBreakEnabled={contextBreakMessageId !== null}
+									onToggleContextBreak={() => {
+										if (contextBreakMessageId) {
+											contextBreakMessageId = null;
+										} else if (history?.currentId) {
+											contextBreakMessageId = history.currentId;
+										}
+									}}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data, $chatId);
