@@ -935,7 +935,13 @@ async def generate_chat_completion(
         log.info(f"Detected image generation model in OpenAI router: {model_id}, forcing stream=False")
         payload["stream"] = False
 
+    # Add Responses API format for reasoning_effort to maximize compatibility
+    # Some third-party proxies expect reasoning: {effort: "..."} instead of reasoning_effort
+    if payload.get("reasoning_effort"):
+        payload["reasoning"] = {"effort": payload["reasoning_effort"]}
+
     payload = json.dumps(payload)
+
 
     r = None
     session = None
