@@ -332,6 +332,9 @@ def upload_file_handler(
                     detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
                 )
 
+    except HTTPException:
+        # Re-raise HTTPException to preserve original message
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(
