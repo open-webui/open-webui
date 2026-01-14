@@ -209,6 +209,7 @@
 	"Beta": "Beta",
 	"Branch to New Chat": "分支到新对话",
 	"Branched Chat": "分支对话",
+	"{{title}}'s Branch": "{{title}}的分支",
 	"Branched to new chat": "已成功分支到新对话",
 	"No messages to branch": "没有可分支的消息",
 	"Failed to create branch": "创建分支失败",

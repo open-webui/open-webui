@@ -25,7 +25,8 @@
 		TTSWorker,
 		user,
 		chats,
-		currentChatPage
+		currentChatPage,
+		chatTitle
 	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
@@ -221,11 +222,10 @@
 			const modelsToUse = selectedModels.length > 0 ? selectedModels : [message.model];
 
 			// Create first line of conversation as title
-			const firstUserMessage = messagesList.find((m) => m.role === 'user');
-			const title = firstUserMessage
-				? firstUserMessage.content?.substring(0, 50) +
-						(firstUserMessage.content?.length > 50 ? '...' : '') || $i18n.t('Branched Chat')
-				: $i18n.t('Branched Chat');
+			const title = $chatTitle
+				? $i18n.t("{{title}}'s Branch", { title: $chatTitle })
+				: messagesList.find((m) => m.role === 'user')?.content?.substring(0, 50) ||
+					$i18n.t('Branched Chat');
 
 			// Create new chat
 			const newChat = await createNewChat(
