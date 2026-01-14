@@ -3,6 +3,13 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
 
+# ===== Memory Optimization Defaults =====
+# Use external embedding to save ~200-400MB memory (can be overridden by user)
+export RAG_EMBEDDING_ENGINE="${RAG_EMBEDDING_ENGINE:-openai}"
+# Disable less common features to speed up startup
+export ENABLE_MEMORIES="${ENABLE_MEMORIES:-false}"
+# =========================================
+
 # Add conditional Playwright browser installation
 if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
     if [[ -z "${PLAYWRIGHT_WS_URL}" ]]; then

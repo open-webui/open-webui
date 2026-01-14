@@ -134,7 +134,8 @@ def get_ef(
 ):
     ef = None
     if embedding_model and engine == "":
-        from sentence_transformers import SentenceTransformer
+        from open_webui.utils.lazy_loader import get_sentence_transformer
+        SentenceTransformer = get_sentence_transformer()
 
         try:
             ef = SentenceTransformer(
@@ -191,11 +192,12 @@ def get_rf(
                     log.error(f"ExternalReranking: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT(e))
             else:
-                import sentence_transformers
+                from open_webui.utils.lazy_loader import get_cross_encoder
                 import torch
+                CrossEncoder = get_cross_encoder()
 
                 try:
-                    rf = sentence_transformers.CrossEncoder(
+                    rf = CrossEncoder(
                         get_model_path(reranking_model, auto_update),
                         device=DEVICE_TYPE,
                         trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,

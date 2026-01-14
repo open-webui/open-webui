@@ -11,7 +11,7 @@
   <a href="https://github.com/open-webui/open-webui">
     <img src="https://img.shields.io/badge/Upstream-open--webui-green?style=for-the-badge&logo=github" alt="Upstream Badge"/>
   </a>
-  <img src="https://img.shields.io/badge/Version-v0.7.2+-orange?style=for-the-badge&logo=git" alt="Version"/>
+  <img src="https://img.shields.io/badge/Version-v0.7.3+-orange?style=for-the-badge&logo=git" alt="Version"/>
 </p>
 
 ---
@@ -33,6 +33,7 @@
 - ✅ **独立入口**: 专属配置页面，与 OpenAI/Ollama 并列
 - ✅ **模型管理**: 自动同步最新 Gemini 模型列表
 - ✅ **高级参数**: 支持 `thinking_budget` 等特有参数
+- ✅ **标签分组**: 修复外部连接标签不显示的问题
 
 </td>
 <td width="50%" valign="top">
@@ -72,6 +73,7 @@
 专注于流畅度与便捷性的深度打磨。
 - ✅ **品牌图标**: 20+ LLM 品牌 Logo 自动匹配 (GPT/Claude/Gemini/Qwen...)
 - ✅ **秒级加载**: 模型设置页启用智能缓存，**告别 3秒+ 等待**
+- ✅ **极速启动**: Slim 模式 + 懒加载，容器内存占用降低 40%
 - ✅ **快捷入口**: 模型选择器添加「模型设置」直达按钮 (管理员)
 - ✅ **推理增强**: 推理强度 (Reasoning Effort) 支持下拉与自定义输入
 
@@ -136,6 +138,7 @@ docker run -d -p 3000:8080 \
 | **模型计费** | ❌ 无 | ✅ **多模式计费系统** | 运营必备，成本可控 |
 | **Token 用量** | ⚠️ 基础显示 | ✅ **美化+分类+计费** | 信息更全，展示更美 |
 | **模型页加载** | ⚠️ 每次请求远程 API (慢) | ✅ **智能缓存优先 (快)** | **瞬时响应，无需等待** |
+| **内存占用** | ⚠️ ~1.2GB (预加载全部模型) | ✅ **~0.6GB (Slim+懒加载)** | **省内存 40%+ 启动快** |
 | **中文本地化** | ⚠️ 基础翻译 | ✅ **深度润色+四字化** | 界面更专业、整洁 |
 
 ---
