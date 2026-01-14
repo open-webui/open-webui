@@ -2,12 +2,16 @@
 Gemini API Router
 
 This module provides native Google Gemini API integration for Open WebUI.
-It uses the google-genai SDK for direct API access, supporting multimodal features.
+It uses the REST v1beta endpoints (generateContent / streamGenerateContent with alt=sse)
+and converts responses into OpenAI-compatible format for the Open WebUI frontend.
 """
 
 import asyncio
+import codecs
 import json
 import logging
+import time
+import uuid
 from typing import Optional
 
 import aiohttp
@@ -31,7 +35,6 @@ from open_webui.utils.access_control import has_access
 
 log = logging.getLogger(__name__)
 
-
 ##########################################
 #
 # Utility functions
@@ -41,7 +44,7 @@ log = logging.getLogger(__name__)
 
 async def send_get_request(url: str, key: str = None, config: dict = None) -> dict:
     """Send a GET request to the Gemini API.
-    
+
     Supports both Bearer token authentication (via Authorization header)
     and API key authentication (via query parameter).
     """
@@ -49,33 +52,96 @@ async def send_get_request(url: str, key: str = None, config: dict = None) -> di
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             headers = {"Content-Type": "application/json"}
-            
+
             # Determine authentication method based on config
             auth_type = (config or {}).get("auth_type", "bearer")
-            
+
             if auth_type == "bearer" and key:
-                # Use API key as query parameter for Gemini even if auth_type is bearer
-                # This ensures compatibility with standard Gemini API which expects ?key=
+                # Gemini standard expects ?key=
                 full_url = f"{url}?key={key}"
             elif auth_type == "none":
-                # No authentication
                 full_url = url
             else:
-                # Default: Gemini uses API key as query parameter
                 full_url = f"{url}?key={key}" if key else url
-            
+
             log.info(f"send_get_request full_url: {full_url}")
             async with session.get(full_url, headers=headers) as response:
                 try:
                     return await response.json(content_type=None)
-                except Exception as json_error:
-                    # If JSON parsing fails, try to get text content for debugging
+                except Exception:
                     text_content = await response.text()
-                    log.error(f"Failed to parse JSON response (status {response.status}): {text_content[:500]}")
-                    return {"error": {"message": f"Invalid response from Gemini API: {text_content[:200]}"}}
+                    log.error(
+                        f"Failed to parse JSON response (status {response.status}): {text_content[:500]}"
+                    )
+                    return {
+                        "error": {
+                            "message": f"Invalid response from Gemini API: {text_content[:200]}"
+                        }
+                    }
     except Exception as e:
         log.error(f"Connection error: {e}")
         return None
+
+
+def _map_finish_reason(fr: Optional[str]) -> Optional[str]:
+    """Map Gemini finishReason to OpenAI finish_reason."""
+    if not fr:
+        return None
+    fr_u = str(fr).upper()
+    if fr_u == "STOP":
+        return "stop"
+    if fr_u == "MAX_TOKENS":
+        return "length"
+    if fr_u in ("SAFETY", "RECITATION"):
+        return "content_filter"
+    # Fallback: treat as stop
+    return "stop"
+
+
+def _openai_chunk(
+    stream_id: str,
+    model_id: str,
+    delta: dict,
+    finish_reason: Optional[str] = None,
+    index: int = 0,
+) -> dict:
+    return {
+        "id": stream_id,
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model_id,
+        "choices": [
+            {
+                "index": index,
+                "delta": delta,
+                "finish_reason": finish_reason,
+            }
+        ],
+    }
+
+
+def _extract_text_and_images(candidate: dict) -> tuple[str, str]:
+    """
+    Extract text + inline image markdown from a Gemini candidate.
+    Returns: (text, image_markdown)
+    """
+    content = candidate.get("content", {}) or {}
+    parts = content.get("parts", []) or []
+
+    text_parts = []
+    image_md_parts = []
+
+    for part in parts:
+        if "text" in part and part["text"]:
+            text_parts.append(part["text"])
+        elif "inlineData" in part:
+            inline_data = part.get("inlineData", {}) or {}
+            mime_type = inline_data.get("mimeType", "image/png")
+            data = inline_data.get("data", "")
+            if data:
+                image_md_parts.append(f"\n![Generated Image](data:{mime_type};base64,{data})\n")
+
+    return "".join(text_parts), "".join(image_md_parts)
 
 
 ##########################################
@@ -161,9 +227,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
     if num_keys != num_urls:
         if num_keys > num_urls:
-            request.app.state.config.GEMINI_API_KEYS = (
-                request.app.state.config.GEMINI_API_KEYS[:num_urls]
-            )
+            request.app.state.config.GEMINI_API_KEYS = request.app.state.config.GEMINI_API_KEYS[:num_urls]
         else:
             request.app.state.config.GEMINI_API_KEYS += [""] * (num_urls - num_keys)
 
@@ -175,16 +239,14 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
         if enable:
             if len(model_ids) == 0:
-                # Fetch models from Gemini API
                 request_tasks.append(
                     send_get_request(
                         f"{url}/models",
                         request.app.state.config.GEMINI_API_KEYS[idx],
-                        api_config,  # Pass config for auth_type handling
+                        api_config,
                     )
                 )
             else:
-                # Use predefined model IDs
                 model_list = {
                     "models": [
                         {
@@ -209,7 +271,6 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             model_list = response.get("models", [])
             for model in model_list:
-                # Add metadata
                 model["urlIdx"] = idx
                 if prefix_id:
                     model_name = model.get("name", "").replace("models/", "")
@@ -249,8 +310,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict:
         if response and "models" in response:
             for model in response["models"]:
                 model_id = model.get("id", model.get("name", "").replace("models/", ""))
-                
-                # Only include models that support generateContent
+
                 supported_methods = model.get("supportedGenerationMethods", [])
                 if "generateContent" not in supported_methods:
                     continue
@@ -282,8 +342,9 @@ async def get_models(
     else:
         url = request.app.state.config.GEMINI_API_BASE_URLS[url_idx]
         key = request.app.state.config.GEMINI_API_KEYS[url_idx]
+        api_config = request.app.state.config.GEMINI_API_CONFIGS.get(str(url_idx), {})
 
-        response = await send_get_request(f"{url}/models", key)
+        response = await send_get_request(f"{url}/models", key, api_config)
         if response and "models" in response:
             models = {
                 "data": [
@@ -323,9 +384,7 @@ async def verify_connection(
     try:
         response = await send_get_request(f"{url}/models", key, config)
         if response is None:
-            raise HTTPException(
-                status_code=500, detail="Failed to connect to Gemini API"
-            )
+            raise HTTPException(status_code=500, detail="Failed to connect to Gemini API")
         if "error" in response:
             raise HTTPException(
                 status_code=response.get("error", {}).get("code", 500),
@@ -336,9 +395,7 @@ async def verify_connection(
         raise
     except Exception as e:
         log.exception(f"Unexpected error: {e}")
-        raise HTTPException(
-            status_code=500, detail="Open WebUI: Server Connection Error"
-        )
+        raise HTTPException(status_code=500, detail="Open WebUI: Server Connection Error")
 
 
 @router.post("/chat/completions")
@@ -350,48 +407,47 @@ async def generate_chat_completion(
 ):
     """
     Generate chat completion using Gemini API.
-    
+
     This endpoint accepts OpenAI-compatible format and converts it to Gemini format.
     """
     model_id = form_data.get("model", "")
     stream = form_data.get("stream", False)
-    
+
     # Find the model's URL index
     idx = None
     model_info = request.app.state.GEMINI_MODELS.get(model_id)
     if model_info:
         idx = model_info.get("urlIdx", 0)
     else:
-        # Try to find by prefix
         for key, info in request.app.state.GEMINI_MODELS.items():
             if model_id.endswith(key) or key.endswith(model_id):
                 idx = info.get("urlIdx", 0)
                 break
-    
+
     if idx is None:
         idx = 0
-    
+
     url = request.app.state.config.GEMINI_API_BASE_URLS[idx]
     key = request.app.state.config.GEMINI_API_KEYS[idx]
     api_config = request.app.state.config.GEMINI_API_CONFIGS.get(str(idx), {})
-    
+
     # Convert OpenAI format to Gemini format
     messages = form_data.get("messages", [])
-    
+
     # Build Gemini contents
     contents = []
     system_instruction = None
-    
+
     for msg in messages:
         role = msg.get("role", "user")
         content = msg.get("content", "")
-        
+
         if role == "system":
             system_instruction = content
             continue
-        
+
         gemini_role = "user" if role == "user" else "model"
-        
+
         # Handle multimodal content
         if isinstance(content, list):
             parts = []
@@ -401,51 +457,45 @@ async def generate_chat_completion(
                 elif item.get("type") == "image_url":
                     image_url = item.get("image_url", {}).get("url", "")
                     if image_url.startswith("data:"):
-                        # Base64 image
-                        import base64
                         header, data = image_url.split(",", 1)
                         mime_type = header.split(":")[1].split(";")[0]
-                        parts.append({
-                            "inline_data": {
-                                "mime_type": mime_type,
-                                "data": data
+                        parts.append(
+                            {
+                                "inline_data": {
+                                    "mime_type": mime_type,
+                                    "data": data,
+                                }
                             }
-                        })
+                        )
                     else:
-                        # URL image (Gemini doesn't support URL directly, would need to download)
                         parts.append({"text": f"[Image: {image_url}]"})
             contents.append({"role": gemini_role, "parts": parts})
         else:
             contents.append({"role": gemini_role, "parts": [{"text": content}]})
-    
+
     # Clean model ID for Gemini API
     gemini_model = model_id
     for prefix_check in request.app.state.config.GEMINI_API_CONFIGS.values():
         prefix = prefix_check.get("prefix_id", "")
         if prefix and model_id.startswith(f"{prefix}."):
-            gemini_model = model_id[len(prefix) + 1:]
+            gemini_model = model_id[len(prefix) + 1 :]
             break
-    
+
     # Build Gemini request
-    gemini_payload = {
-        "contents": contents,
-        "generationConfig": {}
-    }
-    
+    gemini_payload = {"contents": contents, "generationConfig": {}}
+
     # Enable image output for image-capable models
-    # Check for keywords indicating image generation capabilities
     image_keywords = ["image", "draw", "paint", "picture", "art", "create-preview"]
     if any(keyword in gemini_model.lower() for keyword in image_keywords):
         log.info(f"Detected image generation model: {gemini_model}")
         gemini_payload["generationConfig"]["responseModalities"] = ["TEXT", "IMAGE"]
-        # Image generation typically doesn't support streaming
         if stream:
             log.info(f"Forcing stream=False for image model {gemini_model}")
             stream = False
-    
+
     if system_instruction:
         gemini_payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
-    
+
     # Map OpenAI parameters to Gemini
     if "temperature" in form_data:
         gemini_payload["generationConfig"]["temperature"] = form_data["temperature"]
@@ -454,52 +504,49 @@ async def generate_chat_completion(
     if "top_p" in form_data:
         gemini_payload["generationConfig"]["topP"] = form_data["top_p"]
     if "stop" in form_data:
-        gemini_payload["generationConfig"]["stopSequences"] = form_data["stop"] if isinstance(form_data["stop"], list) else [form_data["stop"]]
-    
-    # Enable Google Search (Grounding) if web_search is enabled
-    # This allows Gemini to search the web for up-to-date information
+        gemini_payload["generationConfig"]["stopSequences"] = (
+            form_data["stop"] if isinstance(form_data["stop"], list) else [form_data["stop"]]
+        )
+
+    # Enable Google Search (Grounding)
     web_search_enabled = form_data.get("web_search", False)
     if web_search_enabled:
         log.info(f"Enabling Google Search (Grounding) for model: {gemini_model}")
         gemini_payload["tools"] = [{"googleSearch": {}}]
-    
+
     # Make request to Gemini API
     endpoint = "streamGenerateContent" if stream else "generateContent"
-    
+
     # Determine authentication method based on config
     auth_type = api_config.get("auth_type", "bearer")
     headers = {"Content-Type": "application/json"}
-    
+
     if auth_type == "bearer" and key:
-        # Use API key as query parameter for Gemini even if auth_type is bearer
         gemini_url = f"{url}/models/{gemini_model}:{endpoint}?key={key}"
     elif auth_type == "none":
-        # No authentication
         gemini_url = f"{url}/models/{gemini_model}:{endpoint}"
     else:
-        # Default: Gemini uses API key as query parameter
         gemini_url = f"{url}/models/{gemini_model}:{endpoint}?key={key}"
-    
+
     if stream:
         gemini_url += ("&" if "?" in gemini_url else "?") + "alt=sse"
-    
+
     log.info(f"Gemini Chat Request: URL={gemini_url}, AuthType={auth_type}, Stream={stream}")
-    
+
     if stream:
-        # For streaming, we need to keep the session alive inside the generator
+
         async def stream_generator():
-            log.info("Starting stream generator with new session")
             timeout = aiohttp.ClientTimeout(total=300)
+            decoder = codecs.getincrementaldecoder("utf-8")()
+            buf = ""
+            stream_id = f"chatcmpl-gemini-{uuid.uuid4().hex}"
+
             try:
                 async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-                    async with session.post(
-                        gemini_url,
-                        json=gemini_payload,
-                        headers=headers,
-                    ) as response:
+                    async with session.post(gemini_url, json=gemini_payload, headers=headers) as response:
                         log.info(f"Gemini Stream Response Status: {response.status}")
                         log.info(f"Gemini Stream Response Headers: {response.headers}")
-                        
+
                         if response.status != 200:
                             try:
                                 error_data = await response.json(content_type=None)
@@ -507,67 +554,140 @@ async def generate_chat_completion(
                                 error_text = await response.text()
                                 error_data = {"error": {"message": f"Gemini API Error: {error_text}"}}
                             error_msg = error_data.get("error", {}).get("message", "Gemini API Error")
-                            yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
+                            yield f"data: {json.dumps({'error': error_msg}, ensure_ascii=False)}\n\n"
+                            yield "data: [DONE]\n\n"
                             return
-                        
-                        buffer = ""
-                        chunk_count = 0
-                        async for chunk in response.content.iter_any():
-                            chunk_count += 1
-                            chunk_text = chunk.decode("utf-8")
-                            if chunk_count <= 3:
-                                log.info(f"Stream chunk {chunk_count}: {chunk_text[:200]}")
-                            buffer += chunk_text
-                            
-                            # Process complete lines from buffer
-                            while "\n" in buffer:
-                                line, buffer = buffer.split("\n", 1)
-                                line = line.strip()
-                                if not line:
+
+                        # Optional: send role first (OpenAI-style)
+                        yield f"data: {json.dumps(_openai_chunk(stream_id, model_id, {'role': 'assistant'}), ensure_ascii=False)}\n\n"
+
+                        async for raw in response.content.iter_any():
+                            if not raw:
+                                continue
+                            buf += decoder.decode(raw)
+
+                            # SSE events are separated by blank line
+                            while "\n\n" in buf:
+                                event, buf = buf.split("\n\n", 1)
+                                if not event.strip():
                                     continue
-                                if line.startswith("data: "):
-                                    data = line[6:]
-                                    if data == "[DONE]":
-                                        yield "data: [DONE]\n\n"
-                                        return
+
+                                # collect all data lines
+                                data_lines = []
+                                for line in event.splitlines():
+                                    line = line.rstrip("\r")
+                                    if line.startswith("data:"):
+                                        data_lines.append(line[5:].lstrip())
+                                if not data_lines:
+                                    continue
+
+                                data_str = "\n".join(data_lines).strip()
+                                if not data_str:
+                                    continue
+
+                                if data_str == "[DONE]":
+                                    yield "data: [DONE]\n\n"
+                                    return
+
+                                # Handle potentially stacked JSONs (e.g. if \n\n was missed or data lines merged)
+                                decoder = json.JSONDecoder()
+                                pos = 0
+                                while pos < len(data_str):
+                                    search_str = data_str[pos:].lstrip()
+                                    if not search_str:
+                                        break
                                     try:
-                                        gemini_response = json.loads(data)
-                                        openai_chunk = convert_gemini_to_openai_stream(gemini_response, model_id)
-                                        yield f"data: {json.dumps(openai_chunk)}\n\n"
+                                        gemini_obj, idx = decoder.raw_decode(search_str)
+                                        # raw_decode returns index relative to search_str
+                                        pos += len(data_str[pos:]) - len(search_str) + idx
+                                        
+                                        candidates = gemini_obj.get("candidates") or []
+                                        if not candidates:
+                                            continue
+
+                                        c0 = candidates[0]
+                                        text, image_md = _extract_text_and_images(c0)
+                                        out_text = (text or "") + (image_md or "")
+
+                                        # 1) yield content first
+                                        if out_text:
+                                            chunk = _openai_chunk(stream_id, model_id, {"content": out_text}, None, 0)
+                                            yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+
+                                        # 2) then yield finish
+                                        finish = _map_finish_reason(c0.get("finishReason"))
+                                        if finish:
+                                            fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0)
+                                            yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
+                                            yield "data: [DONE]\n\n"
+                                            return
+                                            
                                     except json.JSONDecodeError as e:
-                                        log.warning(f"JSON decode error: {e}, data: {data[:100]}")
-                                        continue
-                        
-                        # Handle remaining buffer
-                        if buffer.strip():
-                            log.info(f"Remaining buffer: {buffer[:200]}")
-                            try:
-                                gemini_response = json.loads(buffer)
-                                openai_chunk = convert_gemini_to_openai_stream(gemini_response, model_id)
-                                yield f"data: {json.dumps(openai_chunk)}\n\n"
-                            except json.JSONDecodeError:
-                                pass
-                        
-                        log.info(f"Stream ended, total chunks: {chunk_count}")
+                                        # If we can't decode the *first* object, it might be a partial frame (in main loop)
+                                        # If we are in flush, it's just broken data.
+                                        if pos == 0:
+                                            # Put back and wait for more bytes (rare but safe)
+                                            log.warning(f"JSON decode error (event): {e}, head={data_str[:120]}")
+                                            buf = event + "\n\n" + buf
+                                        else:
+                                            log.warning(f"JSON decode error (stacked): {e} at pos {pos}")
+                                        break
+
+                        # flush remaining
+                        tail = buf.strip()
+                        if tail:
+                            # try treat as one SSE event too
+                            data_lines = []
+                            for line in tail.splitlines():
+                                line = line.rstrip("\r")
+                                if line.startswith("data:"):
+                                    data_lines.append(line[5:].lstrip())
+                            if data_lines:
+                                data_str = "\n".join(data_lines).strip()
+                            else:
+                                data_str = tail
+
+                            if data_str and data_str != "[DONE]":
+                                decoder = json.JSONDecoder()
+                                pos = 0
+                                while pos < len(data_str):
+                                    search_str = data_str[pos:].lstrip()
+                                    if not search_str:
+                                        break
+                                    try:
+                                        gemini_obj, idx = decoder.raw_decode(search_str)
+                                        pos += len(data_str[pos:]) - len(search_str) + idx
+
+                                        candidates = gemini_obj.get("candidates") or []
+                                        if candidates:
+                                            c0 = candidates[0]
+                                            text, image_md = _extract_text_and_images(c0)
+                                            out_text = (text or "") + (image_md or "")
+                                            if out_text:
+                                                chunk = _openai_chunk(stream_id, model_id, {"content": out_text}, None, 0)
+                                                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                                            finish = _map_finish_reason(c0.get("finishReason"))
+                                            if finish:
+                                                fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0)
+                                                yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
+                                    except json.JSONDecodeError as e:
+                                        log.warning(f"JSON decode error (flush): {e}, head={data_str[:120]}")
+                                        break
+
                         yield "data: [DONE]\n\n"
+
             except Exception as e:
                 log.exception(f"Error in stream generator: {e}")
-                yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
-        
-        return StreamingResponse(
-            stream_generator(),
-            media_type="text/event-stream"
-        )
-    
+                yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+
+        return StreamingResponse(stream_generator(), media_type="text/event-stream")
+
     # Non-streaming response
     try:
         timeout = aiohttp.ClientTimeout(total=300)
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.post(
-                gemini_url,
-                json=gemini_payload,
-                headers=headers,
-            ) as response:
+            async with session.post(gemini_url, json=gemini_payload, headers=headers) as response:
                 log.info(f"Gemini Chat Response Status: {response.status}")
                 if response.status != 200:
                     try:
@@ -577,13 +697,13 @@ async def generate_chat_completion(
                         error_data = {"error": {"message": f"Gemini API Error: {error_text}"}}
                     raise HTTPException(
                         status_code=response.status,
-                        detail=error_data.get("error", {}).get("message", "Gemini API Error")
+                        detail=error_data.get("error", {}).get("message", "Gemini API Error"),
                     )
-                
+
                 gemini_response = await response.json(content_type=None)
                 openai_response = convert_gemini_to_openai(gemini_response, model_id)
                 return JSONResponse(content=openai_response)
-                    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -592,42 +712,24 @@ async def generate_chat_completion(
 
 
 def convert_gemini_to_openai(gemini_response: dict, model_id: str) -> dict:
-    """Convert Gemini response to OpenAI format."""
-    log.info(f"Converting Gemini response: {json.dumps(gemini_response)[:500]}")
-    candidates = gemini_response.get("candidates", [])
-    
+    """Convert Gemini response to OpenAI non-streaming format."""
+    candidates = gemini_response.get("candidates", []) or []
+
     choices = []
     for i, candidate in enumerate(candidates):
-        content = candidate.get("content", {})
-        parts = content.get("parts", [])
-        
-        # Build content from all parts (text and images)
-        content_parts = []
-        for part in parts:
-            if "text" in part:
-                content_parts.append(part["text"])
-            elif "inlineData" in part:
-                # Handle inline image data (base64)
-                inline_data = part["inlineData"]
-                mime_type = inline_data.get("mimeType", "image/png")
-                data = inline_data.get("data", "")
-                # Convert to data URL format for display
-                content_parts.append(f"\n![Generated Image](data:{mime_type};base64,{data})\n")
-                log.info(f"Found inline image: mimeType={mime_type}, data_length={len(data)}")
-        
-        text = "".join(content_parts)
-        
-        choices.append({
-            "index": i,
-            "message": {
-                "role": "assistant",
-                "content": text
-            },
-            "finish_reason": candidate.get("finishReason", "stop").lower()
-        })
-    
-    usage = gemini_response.get("usageMetadata", {})
-    
+        text, image_md = _extract_text_and_images(candidate)
+        combined = (text or "") + (image_md or "")
+
+        choices.append(
+            {
+                "index": i,
+                "message": {"role": "assistant", "content": combined},
+                "finish_reason": _map_finish_reason(candidate.get("finishReason")) or "stop",
+            }
+        )
+
+    usage = gemini_response.get("usageMetadata", {}) or {}
+
     return {
         "id": f"chatcmpl-gemini-{model_id}",
         "object": "chat.completion",
@@ -636,47 +738,33 @@ def convert_gemini_to_openai(gemini_response: dict, model_id: str) -> dict:
         "usage": {
             "prompt_tokens": usage.get("promptTokenCount", 0),
             "completion_tokens": usage.get("candidatesTokenCount", 0),
-            "total_tokens": usage.get("totalTokenCount", 0)
-        }
+            "total_tokens": usage.get("totalTokenCount", 0),
+        },
     }
 
 
+# 保留（可不用），以免你其他地方引用；流式现在由 stream_generator 直接拆分输出更稳
 def convert_gemini_to_openai_stream(gemini_chunk: dict, model_id: str) -> dict:
-    """Convert Gemini streaming chunk to OpenAI format."""
-    candidates = gemini_chunk.get("candidates", [])
-    
+    """Convert Gemini streaming chunk to OpenAI format (single-chunk)."""
+    candidates = gemini_chunk.get("candidates", []) or []
     choices = []
+
     for i, candidate in enumerate(candidates):
-        content = candidate.get("content", {})
-        parts = content.get("parts", [])
-        
-        # Build content from all parts (text and images)
-        content_parts = []
-        for part in parts:
-            if "text" in part:
-                content_parts.append(part["text"])
-            elif "inlineData" in part:
-                # Handle inline image data (base64)
-                inline_data = part["inlineData"]
-                mime_type = inline_data.get("mimeType", "image/png")
-                data = inline_data.get("data", "")
-                content_parts.append(f"\n![Generated Image](data:{mime_type};base64,{data})\n")
-        
-        text = "".join(content_parts)
-        
-        delta = {"content": text} if text else {}
-        if candidate.get("finishReason"):
-            delta = {}
-        
-        choices.append({
-            "index": i,
-            "delta": delta,
-            "finish_reason": candidate.get("finishReason", None)
-        })
-    
+        text, image_md = _extract_text_and_images(candidate)
+        combined = (text or "") + (image_md or "")
+        delta = {"content": combined} if combined else {}
+        choices.append(
+            {
+                "index": i,
+                "delta": delta,
+                "finish_reason": _map_finish_reason(candidate.get("finishReason")),
+            }
+        )
+
     return {
         "id": f"chatcmpl-gemini-{model_id}",
         "object": "chat.completion.chunk",
+        "created": int(time.time()),
         "model": model_id,
-        "choices": choices
+        "choices": choices,
     }
