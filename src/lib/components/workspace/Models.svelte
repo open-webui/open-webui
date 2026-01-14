@@ -45,6 +45,8 @@
 	import TagSelector from './common/TagSelector.svelte';
 	import Pagination from '../common/Pagination.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import GlobeAlt from '../icons/GlobeAlt.svelte';
+	import LockClosed from '../icons/LockClosed.svelte';
 
 	let shiftKey = false;
 
@@ -230,6 +232,65 @@
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
+	// Set all models to public or private
+	const setModelsAccessHandler = async (isPublic: boolean) => {
+		const confirmMessage = isPublic
+			? $i18n.t(
+					'Are you sure you want to set all models to public? This will make them visible to everyone.'
+				)
+			: $i18n.t(
+					'Are you sure you want to set all models to private? This will restrict access to them.'
+				);
+
+		if (!confirm(confirmMessage)) {
+			return;
+		}
+
+		const accessControl = isPublic ? null : {};
+
+		let successCount = 0;
+		let errorCount = 0;
+
+		for (const model of models ?? []) {
+			if (!model.write_access) continue;
+
+			try {
+				await updateModelById(localStorage.token, model.id, {
+					...model,
+					access_control: accessControl
+				});
+				successCount++;
+			} catch (e) {
+				console.error(`Failed to update model ${model.id}:`, e);
+				errorCount++;
+			}
+		}
+
+		if (errorCount > 0) {
+			toast.warning(
+				$i18n.t('Updated {{success}} models, {{error}} failed', {
+					success: successCount,
+					error: errorCount
+				})
+			);
+		} else {
+			toast.success(
+				isPublic ? $i18n.t('All models set to public') : $i18n.t('All models set to private')
+			);
+		}
+
+		// Refresh the model list
+		page = 1;
+		getModelList();
+
+		await _models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
+	};
+
 	onMount(async () => {
 		viewOption = localStorage.workspaceViewOption ?? '';
 		page = 1;
@@ -349,6 +410,28 @@
 				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
 					{total}
 				</div>
+
+				<!-- Public/Private Toggle Buttons -->
+				{#if $user?.role === 'admin'}
+					<div class="flex gap-1 ml-2">
+						<Tooltip content={$i18n.t('Set All Public')}>
+							<button
+								class="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-gray-50 hover:bg-green-100 dark:bg-gray-850 dark:hover:bg-green-900/30 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition"
+								on:click={() => setModelsAccessHandler(true)}
+							>
+								<GlobeAlt className="size-3.5" />
+							</button>
+						</Tooltip>
+						<Tooltip content={$i18n.t('Set All Private')}>
+							<button
+								class="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-gray-50 hover:bg-orange-100 dark:bg-gray-850 dark:hover:bg-orange-900/30 text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition"
+								on:click={() => setModelsAccessHandler(false)}
+							>
+								<LockClosed className="size-3.5" />
+							</button>
+						</Tooltip>
+					</div>
+				{/if}
 			</div>
 
 			<div class="flex w-full justify-end gap-1.5">

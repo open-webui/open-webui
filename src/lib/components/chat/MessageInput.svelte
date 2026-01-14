@@ -1521,6 +1521,8 @@
 											bind:imageGenerationEnabled
 											bind:codeInterpreterEnabled
 											closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
+											{history}
+											{onToggleContextBreak}
 											onShowValves={(e) => {
 												const { type, id } = e;
 												selectedValvesType = type;
