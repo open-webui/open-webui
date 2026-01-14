@@ -23,6 +23,7 @@ class TenantDashboardConfig(BaseModel):
     display_name: str
     available_lines: List[str]
     available_systems: List[str]
+    line_systems: Optional[Dict[str, List[str]]] = None
     metrics: Dict[str, Dict[str, str]]
     default_period_days: int = 7
 

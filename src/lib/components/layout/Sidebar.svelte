@@ -62,6 +62,7 @@ import Sidebar from '../icons/Sidebar.svelte';
 import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 import Note from '../icons/Note.svelte';
 import CloudArrowUp from '../icons/CloudArrowUp.svelte';
+import ChartBar from '../icons/ChartBar.svelte';
 import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
@@ -641,6 +642,30 @@ import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 					</Tooltip>
 				</div>
 
+				{#if $user?.role === 'admin'}
+					<div class="">
+						<Tooltip content={$i18n.t('Dashboard')} placement="right">
+							<a
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/admin/dashboard"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/admin/dashboard');
+									itemClickHandler();
+								}}
+								draggable="false"
+								aria-label={$i18n.t('Dashboard')}
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<ChartBar className="size-4.5" />
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
+
 				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 					<div class="">
 						<Tooltip content={$i18n.t('Notes')} placement="right">
@@ -898,6 +923,27 @@ import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 							</div>
 						</a>
 					</div>
+
+					{#if $user?.role === 'admin'}
+						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-dashboard-button"
+								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								href="/admin/dashboard"
+								on:click={itemClickHandler}
+								draggable="false"
+								aria-label={$i18n.t('Dashboard')}
+							>
+								<div class="self-center">
+									<ChartBar className="size-4.5" />
+								</div>
+
+								<div class="flex self-center translate-y-[0.5px]">
+									<div class=" self-center text-sm font-primary">{$i18n.t('Dashboard')}</div>
+								</div>
+							</a>
+						</div>
+					{/if}
 
 					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">

@@ -38,6 +38,11 @@
 	let isDark = false;
 	let loading = true;
 	let error: string | null = null;
+	let overviewLoading = false;
+	let overviewError: string | null = null;
+	let lineLoading = false;
+	let lineError: string | null = null;
+	let lineRequestId = 0;
 
 	let availableTenants: { id: string; display_name: string }[] = [];
 	let tenantConfig: TenantDashboardConfig | null = null;
@@ -48,7 +53,11 @@
 	// Computed
 	$: currentDays = $dateRange.days;
 	$: tenantChips = availableTenants.map((t) => ({ id: t.id, label: t.display_name }));
-	$: systemOptions = tenantConfig?.available_systems.map((s) => s.toUpperCase()) || [];
+	$: supportedSystemsForLine =
+		$selectedLine && tenantConfig?.line_systems?.[$selectedLine]
+			? tenantConfig.line_systems[$selectedLine]
+			: tenantConfig?.available_systems || [];
+	$: systemOptions = supportedSystemsForLine.map((s) => s.toUpperCase());
 	$: lineOptions = tenantConfig?.available_lines || [];
 	$: secondaryOptions = ['Metrics', 'Orientation', 'Coating', 'System'];
 
@@ -87,9 +96,13 @@
 					selectedLine.set(tenantConfig.available_lines[0]);
 				}
 
-				// Set default system if current is not available
-				if (!tenantConfig.available_systems.includes($selectedSystem.toLowerCase())) {
-					selectedSystem.set(tenantConfig.available_systems[0] || 'uvbc');
+				// Ensure selected system is valid for the selected line
+				const lineId = $selectedLine;
+				const supportedSystems =
+					(lineId && tenantConfig.line_systems?.[lineId]) || tenantConfig.available_systems || [];
+				const desiredSystem = $selectedSystem.toLowerCase();
+				if (!supportedSystems.includes(desiredSystem)) {
+					selectedSystem.set(supportedSystems[0] || tenantConfig.available_systems[0] || 'uvbc');
 				}
 
 				// Load overview
@@ -97,8 +110,7 @@
 
 				// Load line metrics if line selected
 				if ($selectedLine) {
-					await loadLineMetrics();
-					await loadTimeSeries();
+					await loadLineData();
 				}
 			}
 		} catch (e) {
@@ -110,45 +122,49 @@
 	}
 
 	async function loadOverview() {
+		overviewLoading = true;
+		overviewError = null;
 		try {
 			const response = await getOverview(token, $selectedTenantId, currentDays);
 			overviewMetrics = response.metrics;
 		} catch (e) {
+			overviewError = e instanceof Error ? e.message : 'Failed to load overview';
 			console.error('Failed to load overview:', e);
+		} finally {
+			overviewLoading = false;
 		}
 	}
 
-	async function loadLineMetrics() {
-		if (!$selectedLine) return;
+	async function loadLineData() {
+		const tenantId = $selectedTenantId;
+		const lineId = $selectedLine;
+		const system = $selectedSystem.toLowerCase();
+		const days = currentDays;
+
+		if (!tenantId || !lineId) return;
+
+		const requestId = ++lineRequestId;
+		lineLoading = true;
+		lineError = null;
+		lineMetrics = null;
+		timeSeriesData = [];
 
 		try {
-			lineMetrics = await getLineMetrics(
-				token,
-				$selectedTenantId,
-				$selectedLine,
-				$selectedSystem.toLowerCase(),
-				currentDays
-			);
-		} catch (e) {
-			console.error('Failed to load line metrics:', e);
-		}
-	}
+			const [metrics, ts] = await Promise.all([
+				getLineMetrics(token, tenantId, lineId, system, days),
+				getTimeSeries(token, tenantId, lineId, 'down', system, 14)
+			]);
 
-	async function loadTimeSeries() {
-		if (!$selectedLine) return;
+			if (requestId !== lineRequestId) return;
 
-		try {
-			const response = await getTimeSeries(
-				token,
-				$selectedTenantId,
-				$selectedLine,
-				'down',
-				$selectedSystem.toLowerCase(),
-				14
-			);
-			timeSeriesData = response.data;
+			lineMetrics = metrics;
+			timeSeriesData = ts.data;
 		} catch (e) {
-			console.error('Failed to load time series:', e);
+			if (requestId !== lineRequestId) return;
+			lineError = e instanceof Error ? e.message : 'Failed to load line data';
+			console.error('Failed to load line data:', e);
+		} finally {
+			if (requestId === lineRequestId) lineLoading = false;
 		}
 	}
 
@@ -158,16 +174,21 @@
 		loadDashboard();
 	}
 
-	function handleLineChange(line: string) {
+	async function handleLineChange(line: string) {
 		selectedLine.set(line);
-		loadLineMetrics();
-		loadTimeSeries();
+
+		// Ensure selected system is valid for this line
+		const supportedSystems = tenantConfig?.line_systems?.[line] || tenantConfig?.available_systems || [];
+		if (supportedSystems.length > 0 && !supportedSystems.includes($selectedSystem.toLowerCase())) {
+			selectedSystem.set(supportedSystems[0]);
+		}
+
+		await loadLineData();
 	}
 
-	function handleSystemChange(system: string) {
+	async function handleSystemChange(system: string) {
 		selectedSystem.set(system.toLowerCase());
-		loadLineMetrics();
-		loadTimeSeries();
+		await loadLineData();
 	}
 
 	function handleSecondaryChange(option: string) {
@@ -181,7 +202,7 @@
 			start: new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 		}));
 		loadOverview();
-		loadLineMetrics();
+		loadLineData();
 	}
 </script>
 
@@ -235,19 +256,31 @@
 				<h2 class="text-lg font-semibold {isDark ? 'text-white' : 'text-gray-900'}">
 					Overview
 				</h2>
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-					{#each overviewMetrics as metric}
-						<DPMOCard
-							line={metric.line || metric.device_key || 'Unknown'}
-							system={metric.system}
-							dpmo={metric.dpmo}
-							totalUnits={metric.total_units}
-							changePercent={metric.change_percent}
-							{isDark}
-							onClick={() => metric.line && handleLineChange(metric.line)}
-						/>
-					{/each}
-				</div>
+				{#if overviewLoading}
+					<div class="flex items-center justify-center h-24">
+						<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5CC9D3]"></div>
+					</div>
+				{:else if overviewError}
+					<div
+						class="p-3 rounded-lg {isDark ? 'bg-red-900/50 text-red-200' : 'bg-red-50 text-red-700'}"
+					>
+						{overviewError}
+					</div>
+				{:else}
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+						{#each overviewMetrics as metric}
+							<DPMOCard
+								line={metric.line || metric.device_id || 'Unknown'}
+								system={metric.system}
+								dpmo={metric.dpmo}
+								totalUnits={metric.total_units}
+								changePercent={metric.change_percent}
+								{isDark}
+								onClick={() => metric.line && handleLineChange(metric.line)}
+							/>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<!-- Line Details Section -->
@@ -295,58 +328,61 @@
 					/>
 
 					<!-- Metrics Cards -->
-					{#if lineMetrics}
-						<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-							<MetricCard
-								label="Total Units"
-								value={lineMetrics.total}
+					{#if lineLoading}
+						<div class="flex items-center justify-center h-24">
+							<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5CC9D3]"></div>
+						</div>
+					{:else if lineError}
+						<div
+							class="p-3 rounded-lg {isDark ? 'bg-red-900/50 text-red-200' : 'bg-red-50 text-red-700'}"
+						>
+							{lineError}
+						</div>
+					{:else if lineMetrics}
+						{#if $selectedSystem.toLowerCase() === 'washer'}
+							<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+								<MetricCard label="Total Units" value={lineMetrics.metrics?.total ?? 0} {isDark} />
+								<MetricCard label="Down" value={lineMetrics.metrics?.down ?? 0} {isDark} />
+								<MetricCard label="Inverted" value={lineMetrics.metrics?.inverted ?? 0} {isDark} />
+								<MetricCard label="Avg FPS" value={lineMetrics.avg_fps} {isDark} />
+							</div>
+						{:else}
+							<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+								<MetricCard label="Total Units" value={lineMetrics.metrics?.total ?? 0} {isDark} />
+								<MetricCard
+									label="UV Down"
+									value={lineMetrics.metrics?.down ?? 0}
+									chipValue={(lineMetrics.metrics?.down ?? 0) > 0 && (lineMetrics.metrics?.total ?? 0) > 0
+										? `${(((lineMetrics.metrics?.down ?? 0) / (lineMetrics.metrics?.total ?? 0)) * 100).toFixed(2)}%`
+										: null}
+									chipColor="red"
+									{isDark}
+								/>
+								<MetricCard label="Edge" value={lineMetrics.metrics?.edge ?? 0} {isDark} />
+								<MetricCard label="Inverted" value={lineMetrics.metrics?.inverted ?? 0} {isDark} />
+								<MetricCard label="No Coats" value={lineMetrics.metrics?.no_coats ?? 0} {isDark} />
+								<MetricCard label="Partials" value={lineMetrics.metrics?.partials ?? 0} {isDark} />
+								<MetricCard label="Blobs" value={lineMetrics.metrics?.blobs ?? 0} {isDark} />
+							</div>
+						{/if}
+
+						<!-- Chart Section -->
+						<div
+							class="p-4 rounded-lg border {isDark
+								? 'bg-gray-800/50 border-gray-700/50'
+								: 'bg-white border-gray-200'}"
+						>
+							<LineChart
+								title={$selectedSystem.toLowerCase() === 'washer' ? 'Down Trend' : 'UV Down Trend'}
+								subtitle="Last 14 days"
+								data={timeSeriesData}
+								color={chartColors.primary}
 								{isDark}
-							/>
-							<MetricCard
-								label="UV Down"
-								value={lineMetrics.down}
-								chipValue={lineMetrics.down > 0 ? `${((lineMetrics.down / lineMetrics.total) * 100).toFixed(2)}%` : null}
-								chipColor="red"
-								{isDark}
-							/>
-							<MetricCard
-								label="Edge"
-								value={lineMetrics.edge}
-								{isDark}
-							/>
-							<MetricCard
-								label="Inverted"
-								value={lineMetrics.inverted}
-								{isDark}
-							/>
-							<MetricCard
-								label="No Coats"
-								value={lineMetrics.no_coats}
-								{isDark}
-							/>
-							<MetricCard
-								label="Partials"
-								value={lineMetrics.partials}
-								{isDark}
+								height={250}
 							/>
 						</div>
 					{/if}
 
-					<!-- Chart Section -->
-					<div
-						class="p-4 rounded-lg border {isDark
-							? 'bg-gray-800/50 border-gray-700/50'
-							: 'bg-white border-gray-200'}"
-					>
-						<LineChart
-							title="UV Down Trend"
-							subtitle="Last 14 days"
-							data={timeSeriesData}
-							color={chartColors.primary}
-							{isDark}
-							height={250}
-						/>
-					</div>
 				</div>
 			{/if}
 		{/if}

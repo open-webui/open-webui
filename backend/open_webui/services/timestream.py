@@ -7,6 +7,8 @@ All sensitive Timestream queries and tenant configurations are handled by rag-pl
 import os
 import logging
 import aiohttp
+import json
+import asyncio
 from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -31,35 +33,53 @@ async def _invoke_rag_platform(action: str, params: Dict[str, Any]) -> Dict[str,
         "params": params
     }
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                RAG_PLATFORM_URL,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as response:
-                if response.status != 200:
-                    error_text = await response.text()
-                    logger.error(f"Rag-platform error: {response.status} - {error_text}")
-                    raise Exception(f"Rag-platform returned {response.status}")
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    RAG_PLATFORM_URL,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(f"Rag-platform error: {response.status} - {error_text}")
+                        raise Exception(f"Rag-platform returned {response.status}")
 
-                result = await response.json()
+                    raw_text = await response.text()
+                    try:
+                        result = json.loads(raw_text)
+                    except json.JSONDecodeError as e:
+                        logger.error(
+                            "Failed to decode rag-platform response as JSON: "
+                            f"status={response.status} content_type={response.headers.get('Content-Type')} "
+                            f"error={e} body_prefix={raw_text[:500]!r}"
+                        )
+                        raise Exception("Dashboard backend returned invalid JSON") from e
 
-                # Handle Lambda response format (may have statusCode/body wrapper)
-                if isinstance(result, dict) and "statusCode" in result:
-                    if result.get("statusCode") != 200:
-                        raise Exception(f"Lambda returned status {result.get('statusCode')}: {result.get('body')}")
-                    body = result.get("body", "{}")
-                    if isinstance(body, str):
-                        import json
-                        return json.loads(body)
-                    return body
+                    # Handle Lambda response format (may have statusCode/body wrapper)
+                    if isinstance(result, dict) and "statusCode" in result:
+                        if result.get("statusCode") != 200:
+                            raise Exception(
+                                f"Lambda returned status {result.get('statusCode')}: {result.get('body')}"
+                            )
+                        body = result.get("body", "{}")
+                        if isinstance(body, str):
+                            return json.loads(body)
+                        return body
 
-                return result
-    except aiohttp.ClientError as e:
-        logger.error(f"Failed to connect to rag-platform: {e}")
-        raise Exception(f"Failed to connect to dashboard backend: {str(e)}")
+                    return result
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            last_error = e
+            if attempt < 2:
+                await asyncio.sleep(0.25 * (2**attempt))
+                continue
+            logger.error(f"Failed to connect to rag-platform: {e}")
+            raise Exception(f"Failed to connect to dashboard backend: {str(e)}") from e
+
+    raise Exception(f"Failed to connect to dashboard backend: {last_error}")
 
 
 async def get_available_tenants() -> List[Dict[str, str]]:

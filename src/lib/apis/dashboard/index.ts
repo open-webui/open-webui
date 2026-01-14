@@ -24,6 +24,7 @@ export type TenantDashboardConfig = {
 	display_name: string;
 	available_lines: string[];
 	available_systems: string[];
+	line_systems?: Record<string, string[]>;
 	metrics: Record<string, MetricDefinition>;
 	default_period_days: number;
 };
@@ -32,7 +33,6 @@ export type OverviewMetric = {
 	device_id: string;
 	line: string | null;
 	system: string | null;
-	device_key: string | null;
 	total_units: number;
 	defect_count: number;
 	dpmo: number;
@@ -52,13 +52,6 @@ export type LineMetrics = {
 	device_id: string | null;
 	avg_fps: number;
 	metrics: Record<string, number>;
-	total: number;
-	down: number;
-	edge: number;
-	inverted: number;
-	no_coats: number;
-	partials: number;
-	blobs: number;
 };
 
 export type Incident = {

@@ -42,12 +42,18 @@ def upsert_tenant(entry: dict[str, Any]):
         raise SystemExit("Each tenant entry must include a 'name'.")
     
     s3_bucket = entry.get("s3_bucket")
+    table_name = entry.get("table_name")
+    system_config_client_name = entry.get("system_config_client_name")
 
     existing = Tenants.get_tenant_by_name(name)
     if existing:
         update_fields = {}
         if s3_bucket:
             update_fields["s3_bucket"] = s3_bucket
+        if table_name:
+            update_fields["table_name"] = table_name
+        if system_config_client_name:
+            update_fields["system_config_client_name"] = system_config_client_name
         if update_fields:
             Tenants.update_tenant(existing.id, TenantUpdateForm(**update_fields))
         tenant = Tenants.get_tenant_by_name(name)
@@ -58,7 +64,14 @@ def upsert_tenant(entry: dict[str, Any]):
             print(f"Warning: could not upsert tenant schedule for existing tenant {tenant.id}: {e}")
         return tenant
     
-    tenant = Tenants.create_tenant(TenantForm(name=name, s3_bucket=s3_bucket))
+    tenant = Tenants.create_tenant(
+        TenantForm(
+            name=name,
+            s3_bucket=s3_bucket,
+            table_name=table_name,
+            system_config_client_name=system_config_client_name,
+        )
+    )
     print(f"Created tenant '{name}'.")
     try:
         upsert_tenant_schedule(tenant.id)
