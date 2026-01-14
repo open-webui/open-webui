@@ -456,6 +456,13 @@ async def generate_chat_completion(
     if "stop" in form_data:
         gemini_payload["generationConfig"]["stopSequences"] = form_data["stop"] if isinstance(form_data["stop"], list) else [form_data["stop"]]
     
+    # Enable Google Search (Grounding) if web_search is enabled
+    # This allows Gemini to search the web for up-to-date information
+    web_search_enabled = form_data.get("web_search", False)
+    if web_search_enabled:
+        log.info(f"Enabling Google Search (Grounding) for model: {gemini_model}")
+        gemini_payload["tools"] = [{"googleSearch": {}}]
+    
     # Make request to Gemini API
     endpoint = "streamGenerateContent" if stream else "generateContent"
     

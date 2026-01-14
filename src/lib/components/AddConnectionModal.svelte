@@ -332,6 +332,19 @@
 										autocomplete="off"
 										required
 									/>
+									{#if gemini}
+										<div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+											{$i18n.t('e.g. https://generativelanguage.googleapis.com/v1beta')}
+										</div>
+									{:else if ollama}
+										<div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+											{$i18n.t('e.g. http://localhost:11434')}
+										</div>
+									{:else}
+										<div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+											{$i18n.t('e.g. https://api.openai.com/v1')}
+										</div>
+									{/if}
 								</div>
 							</div>
 
