@@ -5,9 +5,13 @@ All sensitive data and Timestream queries are handled by rag-platform.
 """
 
 import logging
+import re
+from typing import Optional, Set
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.models.tenants import Tenants
 from open_webui.models.rmmc_dashboard import (
     TenantDashboardInfo,
     TenantDashboardConfig,
@@ -32,6 +36,74 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+def _normalize_dashboard_id(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", (value or "").strip().lower())
+
+
+def _candidate_dashboard_ids_from_tenant(tenant) -> Set[str]:
+    """
+    Derive a set of dashboard tenant IDs that a non-admin user can access.
+
+    We intentionally avoid introducing new schema fields by matching the rag-platform
+    dashboard ID against identifiers already present on the tenant row.
+    """
+    candidates: Set[str] = set()
+
+    def add(value: Optional[str]) -> None:
+        if not value:
+            return
+        raw = value.strip().lower()
+        if raw:
+            candidates.add(raw)
+        normalized = _normalize_dashboard_id(raw)
+        if normalized:
+            candidates.add(normalized)
+
+    add(getattr(tenant, "s3_bucket", None))
+    add(getattr(tenant, "table_name", None))
+    add(getattr(tenant, "system_config_client_name", None))
+
+    bucket = (getattr(tenant, "s3_bucket", "") or "").strip().lower()
+    if bucket:
+        tokens = [t for t in re.split(r"[^a-z0-9]+", bucket) if t]
+        if tokens:
+            first = tokens[0]
+            last = tokens[-1]
+            candidates.update({first, last, f"{first}_{last}", f"{first}{last}"})
+
+    return {c for c in candidates if c}
+
+
+def _get_allowed_dashboard_ids(user) -> Optional[Set[str]]:
+    """
+    Returns:
+      - None for admin users (meaning "all dashboards allowed")
+      - A set of allowed dashboard tenant IDs for non-admin users
+    """
+    if getattr(user, "role", None) == "admin":
+        return None
+
+    user_tenant_id = getattr(user, "tenant_id", None)
+    if not user_tenant_id:
+        raise HTTPException(status_code=403, detail="User is not associated with a tenant")
+
+    tenant = Tenants.get_tenant_by_id(user_tenant_id)
+    if not tenant:
+        raise HTTPException(status_code=403, detail="Tenant not found for user")
+
+    allowed = _candidate_dashboard_ids_from_tenant(tenant)
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Tenant is not configured for dashboards")
+    return allowed
+
+
+def _require_dashboard_access(user, dashboard_tenant_id: str) -> None:
+    allowed = _get_allowed_dashboard_ids(user)
+    if allowed is None:
+        return
+    if dashboard_tenant_id.lower() not in allowed:
+        raise HTTPException(status_code=403, detail="Dashboard is not available for this tenant")
+
 
 # =============================================================================
 # TENANT DISCOVERY ENDPOINTS
@@ -42,9 +114,14 @@ async def get_available_dashboards(user=Depends(get_verified_user)):
     """Get list of available tenant dashboards"""
     try:
         tenants = await timestream.get_available_tenants()
+        allowed = _get_allowed_dashboard_ids(user)
+        if allowed is not None:
+            tenants = [t for t in tenants if (t.get("id") or "").lower() in allowed]
         return AvailableTenantDashboards(
             tenants=[TenantDashboardInfo(**t) for t in tenants]
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to get available dashboards: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -53,6 +130,7 @@ async def get_available_dashboards(user=Depends(get_verified_user)):
 @router.get("/tenants/{tenant_id}/config", response_model=TenantDashboardConfig)
 async def get_tenant_config(tenant_id: str, user=Depends(get_verified_user)):
     """Get configuration for a specific tenant dashboard"""
+    _require_dashboard_access(user, tenant_id)
     try:
         config = await timestream.get_tenant_config(tenant_id)
         if not config:
@@ -76,6 +154,7 @@ async def get_overview(
     user=Depends(get_verified_user)
 ):
     """Get overview DPMO metrics for all lines of a tenant"""
+    _require_dashboard_access(user, tenant_id)
     try:
         metrics = await timestream.get_overview_metrics(tenant_id=tenant_id, days=days)
         return OverviewResponse(
@@ -101,6 +180,7 @@ async def get_line_metrics(
     user=Depends(get_verified_user)
 ):
     """Get detailed metrics for a specific line"""
+    _require_dashboard_access(user, tenant_id)
     try:
         metrics = await timestream.get_line_metrics(
             tenant_id=tenant_id,
@@ -129,6 +209,7 @@ async def get_line_incidents(
     user=Depends(get_verified_user)
 ):
     """Get incident records for a line"""
+    _require_dashboard_access(user, tenant_id)
     try:
         incidents = await timestream.get_incidents(
             tenant_id=tenant_id,
@@ -159,6 +240,7 @@ async def get_line_timeseries(
     user=Depends(get_verified_user)
 ):
     """Get time series data for charting"""
+    _require_dashboard_access(user, tenant_id)
     try:
         data = await timestream.get_time_series(
             tenant_id=tenant_id,
@@ -191,6 +273,7 @@ async def get_uvbc_intensity(
     user=Depends(get_verified_user)
 ):
     """Get UVBC ring intensity data for a line"""
+    _require_dashboard_access(user, tenant_id)
     try:
         data = await timestream.get_uvbc_intensity(tenant_id=tenant_id, line_id=line_id, days=days)
         return IntensityResponse(
@@ -211,6 +294,7 @@ async def get_partial_ring_data(
     user=Depends(get_verified_user)
 ):
     """Get partial ring percentage distribution"""
+    _require_dashboard_access(user, tenant_id)
     try:
         data = await timestream.get_partial_ring_data(tenant_id=tenant_id, line_id=line_id, days=days)
         return PartialRingResponse(
@@ -234,6 +318,7 @@ async def get_incident_image_url(
     user=Depends(get_verified_user)
 ):
     """Get image URL for an incident"""
+    _require_dashboard_access(user, tenant_id)
     if not uuid:
         raise HTTPException(status_code=400, detail="UUID is required")
 

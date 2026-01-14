@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Info from '$lib/components/icons/Info.svelte';
+
 	export let line: string;
 	export let system: string | null = null;
 	export let dpmo: number;
@@ -6,6 +9,7 @@
 	export let changePercent: number = 0;
 	export let isDark: boolean = false;
 	export let onClick: (() => void) | null = null;
+	export let dpmoHelpText: string | null = null;
 
 	$: chipColor = changePercent > 0 ? 'red' : changePercent < 0 ? 'green' : 'neutral';
 	$: chipValue = changePercent !== 0 ? `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(1)}%` : null;
@@ -38,7 +42,21 @@
 					<span class="text-xs {isDark ? 'text-gray-400' : 'text-gray-500'}">({system})</span>
 				{/if}
 			</span>
-			<span class="text-xs {isDark ? 'text-gray-400' : 'text-gray-500'}">DPMO</span>
+			<div class="flex items-center gap-1">
+				<span class="text-xs {isDark ? 'text-gray-400' : 'text-gray-500'}">DPMO</span>
+				{#if dpmoHelpText}
+					<Tooltip content={dpmoHelpText} placement="top">
+						<span
+							class="shrink-0 cursor-help {isDark
+								? 'text-gray-500 hover:text-gray-300'
+								: 'text-gray-400 hover:text-gray-600'}"
+							aria-label="DPMO info"
+						>
+							<Info className="size-4" />
+						</span>
+					</Tooltip>
+				{/if}
+			</div>
 		</div>
 
 		<div class="flex items-end justify-between">

@@ -642,22 +642,22 @@ import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 					</Tooltip>
 				</div>
 
-				{#if $user?.role === 'admin'}
-					<div class="">
-						<Tooltip content={$i18n.t('Dashboard')} placement="right">
-							<a
-								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
-								href="/admin/dashboard"
-								on:click={async (e) => {
-									e.stopImmediatePropagation();
-									e.preventDefault();
+					{#if $user?.role === 'admin' || $user?.role === 'user'}
+						<div class="">
+							<Tooltip content={$i18n.t('Dashboard')} placement="right">
+								<a
+									class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+									href="/dashboard"
+									on:click={async (e) => {
+										e.stopImmediatePropagation();
+										e.preventDefault();
 
-									goto('/admin/dashboard');
-									itemClickHandler();
-								}}
-								draggable="false"
-								aria-label={$i18n.t('Dashboard')}
-							>
+										goto('/dashboard');
+										itemClickHandler();
+									}}
+									draggable="false"
+									aria-label={$i18n.t('Dashboard')}
+								>
 								<div class=" self-center flex items-center justify-center size-9">
 									<ChartBar className="size-4.5" />
 								</div>
@@ -924,12 +924,12 @@ import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 						</a>
 					</div>
 
-					{#if $user?.role === 'admin'}
+					{#if $user?.role === 'admin' || $user?.role === 'user'}
 						<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-dashboard-button"
 								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-								href="/admin/dashboard"
+								href="/dashboard"
 								on:click={itemClickHandler}
 								draggable="false"
 								aria-label={$i18n.t('Dashboard')}
