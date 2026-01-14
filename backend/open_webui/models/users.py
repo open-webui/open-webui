@@ -107,6 +107,7 @@ class UpdateProfileForm(BaseModel):
     job_title: Optional[constr(max_length=255)] = None
     primary_location: Optional[constr(max_length=255)] = None
     job_description: Optional[constr(max_length=2500)] = None
+    default_language: Optional[str] = None
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None

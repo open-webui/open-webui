@@ -4,6 +4,7 @@
 
 	import { user } from '$lib/stores';
 import { updateUserProfile, getSessionUser } from '$lib/apis/auths';
+import { changeLanguage } from '$lib/i18n';
 import { getTenantById } from '$lib/apis/tenants';
 	import { generateInitialsImage } from '$lib/utils';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -19,6 +20,9 @@ let jobTitle = '';
 let primaryLocation = '';
 let jobDescription = '';
 let tenantLogoUrl = '';
+	let defaultLanguage = 'en-US';
+
+	const normalizeLanguage = (value: string) => (value === 'en-ES' ? 'es-ES' : value);
 
 	const submitHandler = async () => {
 		if (name !== $user?.name) {
@@ -27,15 +31,17 @@ let tenantLogoUrl = '';
 			}
 		}
 
-		const updatedUser = await updateUserProfile(localStorage.token, {
-			name: name,
-			profile_image_url: profileImageUrl,
-			job_title: jobTitle ? jobTitle : null,
-			primary_location: primaryLocation ? primaryLocation : null,
-			job_description: jobDescription ? jobDescription : null
-		}).catch((error) => {
-			toast.error(`${error}`);
-		});
+			const normalizedLanguage = normalizeLanguage(defaultLanguage);
+			const updatedUser = await updateUserProfile(localStorage.token, {
+				name: name,
+				profile_image_url: profileImageUrl,
+				job_title: jobTitle ? jobTitle : null,
+				primary_location: primaryLocation ? primaryLocation : null,
+				job_description: jobDescription ? jobDescription : null,
+				default_language: normalizedLanguage
+			}).catch((error) => {
+				toast.error(`${error}`);
+			});
 
 		if (updatedUser) {
 			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
@@ -44,17 +50,21 @@ let tenantLogoUrl = '';
 			});
 
 			await user.set(sessionUser);
-			if (sessionUser) {
-				jobTitle = sessionUser?.job_title ?? '';
-				primaryLocation = sessionUser?.primary_location ?? '';
-				jobDescription = sessionUser?.job_description ?? '';
-				profileImageUrl = sessionUser?.profile_image_url ?? profileImageUrl;
-				tenantLogoUrl = sessionUser?.tenant_logo_image_url ?? tenantLogoUrl;
+				if (sessionUser) {
+					jobTitle = sessionUser?.job_title ?? '';
+					primaryLocation = sessionUser?.primary_location ?? '';
+					jobDescription = sessionUser?.job_description ?? '';
+					profileImageUrl = sessionUser?.profile_image_url ?? profileImageUrl;
+					tenantLogoUrl = sessionUser?.tenant_logo_image_url ?? tenantLogoUrl;
+					defaultLanguage = normalizeLanguage(
+						sessionUser?.default_language ?? defaultLanguage
+					);
+				}
+				changeLanguage(normalizedLanguage);
+				return true;
 			}
-			return true;
-		}
-		return false;
-	};
+			return false;
+		};
 
 	onMount(async () => {
 		const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
@@ -62,13 +72,16 @@ let tenantLogoUrl = '';
 			return null;
 		});
 
-		if (sessionUser) {
-			name = sessionUser?.name ?? '';
-			profileImageUrl = sessionUser?.profile_image_url ?? '';
-			jobTitle = sessionUser?.job_title ?? '';
-			primaryLocation = sessionUser?.primary_location ?? '';
-			jobDescription = sessionUser?.job_description ?? '';
-			tenantLogoUrl = sessionUser?.tenant_logo_image_url ?? '';
+			if (sessionUser) {
+				name = sessionUser?.name ?? '';
+				profileImageUrl = sessionUser?.profile_image_url ?? '';
+				jobTitle = sessionUser?.job_title ?? '';
+				primaryLocation = sessionUser?.primary_location ?? '';
+				jobDescription = sessionUser?.job_description ?? '';
+				tenantLogoUrl = sessionUser?.tenant_logo_image_url ?? '';
+				defaultLanguage = normalizeLanguage(
+					sessionUser?.default_language ?? defaultLanguage
+				);
 
 			if (!tenantLogoUrl && sessionUser?.tenant_id) {
 				const tenant = await getTenantById(localStorage.token, sessionUser.tenant_id).catch(
@@ -118,8 +131,8 @@ let tenantLogoUrl = '';
 
 				<div class="flex flex-1 flex-col">
 					<div class=" flex-1 w-full">
-						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
+								<div class="flex flex-col w-full">
+									<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
 
 							<div class="flex-1">
 								<input
@@ -129,7 +142,21 @@ let tenantLogoUrl = '';
 									required
 									placeholder={$i18n.t('Enter your name')}
 								/>
-							</div>
+								</div>
+
+								<div class="flex flex-col w-full mt-2">
+									<div class=" mb-1 text-xs font-medium">{$i18n.t('Default Language')}</div>
+
+									<div class="flex-1">
+										<select
+											class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
+											bind:value={defaultLanguage}
+										>
+											<option value="en-US">English (en-US)</option>
+											<option value="es-ES">Spanish (es-ES)</option>
+										</select>
+									</div>
+								</div>
 						</div>
 
 						<div class="flex flex-col w-full mt-2">

@@ -171,6 +171,7 @@ class SessionUserResponse(Token, UserResponse):
     permissions: Optional[dict] = None
     tenant_id: Optional[str] = None
     tenant_s3_bucket: Optional[str] = None
+    default_language: Optional[str] = None
 
 
 class SessionUserInfoResponse(SessionUserResponse):
@@ -250,8 +251,7 @@ async def get_session_user(
         "tenant_id": user.tenant_id,
         "tenant_s3_bucket": tenant_bucket,
         "tenant_logo_image_url": tenant_logo,
-        "tenant_id": user.tenant_id,
-        "tenant_s3_bucket": tenant_bucket,
+        "default_language": user.default_language,
     }
 
 

@@ -279,7 +279,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 											bind:value={_user.default_language}
 										>
 											<option value="en-US">English (en-US)</option>
-											<option value="en-ES">Spanish (en-ES)</option>
+											<option value="es-ES">Spanish (es-ES)</option>
 										</select>
 									</div>
 								</div>
