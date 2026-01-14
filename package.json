@@ -136,7 +136,7 @@
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
 		"turndown-plugin-gfm": "^1.0.2",
-		"undici": "^7.3.0",
+		"undici": "^7.18.2",
 		"uuid": "^9.0.1",
 		"vega": "^6.2.0",
 		"vega-lite": "^6.4.1",
