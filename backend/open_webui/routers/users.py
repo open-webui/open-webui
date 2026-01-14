@@ -516,6 +516,9 @@ async def update_user_by_id(
         if form_data.tenant_id is not None:
             updated_payload["tenant_id"] = form_data.tenant_id or None
 
+        if form_data.default_language is not None:
+            updated_payload["default_language"] = form_data.default_language
+
         updated_user = Users.update_user_by_id(user_id, updated_payload)
 
         if updated_user:

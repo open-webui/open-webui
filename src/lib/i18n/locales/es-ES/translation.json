@@ -396,7 +396,7 @@
 	"Default to ALL": "Predeterminado a TODOS",
 	"Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.": "Por defecto está predeterminada una segmentación de la recuperación para una extracción de contenido centrado y relevante, recomendado para la mayoría de los casos.",
 	"Default User Role": "Rol predeterminado de los nuevos usuarios",
-	"Delete": "Borrar",
+	"Delete": "Eliminar",
 	"Delete a model": "Borrar un modelo",
 	"Delete All Chats": "Borrar todos los chats",
 	"Delete All Models": "Borrar todos los modelos",
@@ -509,7 +509,7 @@
 	"Editing": "Editando",
 	"Eject": "Expulsar",
 	"ElevenLabs": "ElevenLabs",
-	"Email": "Email",
+	"Email": "Correo electrónico",
 	"Embark on adventures": "Embarcate en aventuras",
 	"Embedding": "Incrustación",
 	"Embedding Batch Size": "Tamaño del Lote de Incrustación",
@@ -1244,7 +1244,7 @@
 	"Prefix ID": "prefijo ID",
 	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "El prefijo ID se utiliza para evitar conflictos con otras conexiones al añadir un prefijo a los IDs de modelo, dejar vacío para deshabilitarlo",
 	"Prevent File Creation": "",
-	"Preview": "Previsualización",
+	"Preview": "Vista previa",
 	"Previous 30 days": "30 días previos",
 	"Previous 7 days": "7 días previos",
 	"Previous message": "Mensaje anterior",
@@ -1316,7 +1316,7 @@
 	"required": "requerido",
 	"Reranking Engine": "Motor de Reclasificación",
 	"Reranking Model": "Modelo de Reclasificación",
-	"Reset": "Reiniciar",
+	"Reset": "Restablecer",
 	"Reset All Models": "Reiniciar Todos los Modelos",
 	"Reset Image": "Restablecer imagen",
 	"Reset Upload Directory": "Reiniciar Directorio de Subidas",
@@ -1772,4 +1772,135 @@
 	"YouTube": "Youtube",
 	"Youtube Language": "Youtube Idioma",
 	"Youtube Proxy URL": "Youtube URL Proxy"
+,
+	"How to Ask Luxor": "Cómo preguntar a Luxor",
+	"Hello": "Hola"
+,
+	"Uploads": "Subidas",
+	"Upload documents (.pdf) to use as references. LUXOR will read them and you will be able to reference them in your questions.": "Sube documentos (.pdf) para usarlos como referencias. LUXOR los leerá y podrás referenciarlos en tus preguntas.",
+	"Upload documents {{pdf}} to use as references. {{product}} will read them and you will be able to reference them in your questions.": "Sube documentos {{pdf}} para usarlos como referencias. {{product}} los leerá y podrás referenciarlos en tus preguntas.",
+	"Admin User Only": "Solo usuario administrador",
+	"Choose Files": "Elegir archivos",
+	"No file chosen": "Ningún archivo seleccionado",
+	"Teams": "Equipos",
+	"Personal": "Personal",
+	"Uploads List": "Lista de subidas",
+	"No files found for this path.": "No se encontraron archivos para esta ruta.",
+	"Size": "Tamaño",
+	"Date Added": "Fecha de agregado",
+	"Rebuild Tenant Artidact": "Reconstruir artefacto del tenant",
+	"Rebuild Private Artifact": "Reconstruir artefacto privado"
+,
+	"Loading tenant list…": "Cargando lista de tenants…",
+	"No tenants available": "No hay tenants disponibles",
+	"Tenant": "Inquilino",
+	"Target Tenant Bucket": "Bucket de tenant objetivo",
+	"Loading your profile": "Cargando tu perfil"
+,
+	"Your tenant does not have an S3 bucket configured yet. Please contact an administrator before using this page.": "Tu tenant no tiene un bucket de S3 configurado todavía. Ponte en contacto con un administrador antes de usar esta página.",
+	"file(s) selected": "archivo(s) seleccionado(s)",
+	"Toggle file access (Private / Public)": "Alternar acceso de archivos (Privado / Público)",
+	"Uploading": "Subiendo"
+,
+	"Only you can access this file": "Solo tú puedes acceder a este archivo",
+	"This file is accessible to the team": "Este archivo es accesible para el equipo"
+,
+	"Upload complete": "Carga completada"
+,
+	"public": "público",
+	"private": "privado"
+,
+	"Rebuilding": "Reconstruyendo",
+	"Select a tenant to view its public or private files.": "Selecciona un tenant para ver sus archivos públicos o privados.",
+	"Select a tenant to view private files.": "Selecciona un tenant para ver archivos privados."
+,
+	"Failed to load tenants.": "No se pudieron cargar los tenants.",
+	"Please choose at least one file to upload.": "Por favor, elige al menos un archivo para subir.",
+	"Your tenant does not have an S3 bucket configured.": "Tu tenant no tiene un bucket de S3 configurado.",
+	"You must be signed in to upload files.": "Debes iniciar sesión para subir archivos.",
+	"file(s) failed to upload.": "archivo(s) no se pudieron subir.",
+	"Digitization requested.": "Digitalización solicitada.",
+	"Failed to trigger digitization of the uploaded files.": "No se pudo iniciar la digitalización de los archivos subidos."
+,
+	"Private artifact rebuild requested.": "Reconstrucción del artefacto privado solicitada.",
+	"Failed to rebuild private artifact.": "No se pudo reconstruir el artefacto privado.",
+	"You must be signed in for this action.": "Debes iniciar sesión para esta acción.",
+	"Select a tenant to rebuild.": "Selecciona un tenant para reconstruir.",
+	"Tenant artifact rebuild requested.": "Reconstrucción del artefacto del tenant solicitada.",
+	"Failed to rebuild tenant artifact.": "No se pudo reconstruir el artefacto del tenant.",
+	"Tenant information unavailable.": "Información del tenant no disponible."
+,
+	"You must be signed in to delete files": "Debes iniciar sesión para eliminar archivos",
+	"Delete {{name}}? This cannot be undone.": "¿Eliminar {{name}}? Esto no se puede deshacer."
+,
+	"File deleted.": "Archivo eliminado.",
+	"Failed to delete file.": "No se pudo eliminar el archivo.",
+	"Loading files": "Cargando archivos",
+	"No files found for these paths.": "No se encontraron archivos para estas rutas.",
+	"Deleting": "Eliminando"
+,
+	"Tenant Scope": "Alcance del tenant",
+	"Loading tenants...": "Cargando tenants...",
+	"Use assigned tenant": "Usar tenant asignado",
+	"No tenants available.": "No hay tenants disponibles."
+,
+	"Export to Excel": "Exportar a Excel"
+,
+	"Select a tenant to preview their help experience.": "Selecciona un tenant para previsualizar su experiencia de ayuda."
+,
+	"Primary Location": "Ubicación principal",
+	"Job Description": "Descripción del puesto"
+,
+	"Tenants": "Inquilinos",
+	"S3 Bucket": "Bucket de S3"
+,
+	"Edit Tenant": "Editar inquilino",
+	"Delete Tenant": "Eliminar inquilino"
+,
+	"Tenant Logo": "Logo del inquilino",
+	"Table Name": "Nombre de la tabla",
+	"System Config Client Name": "Nombre del cliente de configuración del sistema",
+	"Upload Prompt": "Subir prompt",
+	"Choose File": "Elegir archivo",
+	"Edit Help Text": "Editar texto de ayuda"
+,
+	"Tenant Configuration": "Configuración del inquilino",
+	"Upload .txt files to populate the tenant prompts directory.": "Sube archivos .txt para poblar el directorio de prompts del inquilino."
+,
+	"Tenant Name": "Nombre del inquilino",
+	"Add Tenant": "Agregar inquilino"
+,
+	"Select a tenant": "Selecciona un inquilino"
+,
+	"Select a tenant first.": "Administra los archivos de prompts de este inquilino.",
+	"Choose a .txt file to upload.": "Administra los archivos de prompts de este inquilino.",
+	"Only .txt files are allowed.": "Administra los archivos de prompts de este inquilino.",
+	"Prompt uploaded": "Administra los archivos de prompts de este inquilino.",
+	"Failed to upload prompt.": "Administra los archivos de prompts de este inquilino.",
+	"Tenant updated": "Administra los archivos de prompts de este inquilino.",
+	"Failed to update tenant.": "Administra los archivos de prompts de este inquilino.",
+	"Tenant Details": "Administra los archivos de prompts de este inquilino.",
+	"Manage prompt files for this tenant.": "Administra los archivos de prompts de este inquilino."
+,
+	"Cannot delete tenant with assigned users.": "No se puede eliminar un inquilino con usuarios asignados."
+,
+	"Tenant created": "Inquilino creado"
+,
+	"Help text updated": "Texto de ayuda actualizado",
+	"Failed to update help text.": "No se pudo actualizar el texto de ayuda.",
+	"Tenant Help": "Ayuda del inquilino",
+	"Updating help for": "Actualizando ayuda para",
+	"Back to Tenants": "Volver a inquilinos",
+	"Prompt Storage": "Almacenamiento de prompts",
+	"Last Updated": "Última actualización",
+	"Help Text Markdown": "Markdown del texto de ayuda",
+	"Use markdown to describe how this tenant should use the assistant.": "Usa markdown para describir cómo debe usar el asistente este inquilino.",
+	"Edit Markdown": "Editar Markdown",
+	"Enter markdown...": "Introduce markdown...",
+	"Nothing to preview yet.": "Nada que previsualizar aún.",
+	"Save Help Text": "Guardar texto de ayuda"
+,
+	"Characters": "Caracteres"
+,
+	"Default Language": "Idioma predeterminado"
 }

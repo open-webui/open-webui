@@ -107,6 +107,7 @@ class SignupForm(BaseModel):
 class AddUserForm(SignupForm):
     role: Optional[str] = "pending"
     tenant_id: Optional[str] = None
+    default_language: Optional[str] = "en-US"
 
 
 class AuthsTable:
@@ -119,6 +120,7 @@ class AuthsTable:
         role: str = "pending",
         oauth_sub: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        default_language: str = "en-US",
     ) -> Optional[UserModel]:
         with get_db() as db:
             log.info("insert_new_auth")
@@ -132,7 +134,14 @@ class AuthsTable:
             db.add(result)
 
             user = Users.insert_new_user(
-                id, name, email, profile_image_url, role, oauth_sub, tenant_id
+                id,
+                name,
+                email,
+                profile_image_url,
+                role,
+                oauth_sub,
+                tenant_id,
+                default_language=default_language,
             )
 
             db.commit()

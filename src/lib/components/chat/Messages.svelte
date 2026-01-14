@@ -506,12 +506,12 @@
 								</div>
 
 								{#if message.role !== 'user'}
-									{@const metricValue = extractMetricValue(message?.content ?? '')}
+									{@const metricValue = extractMetricValue(message?.content ?? '', $i18n.language)}
 									{@const parentContent = message?.parentId
 										? history?.messages?.[message.parentId]?.content ?? ''
 										: ''}
-									{@const timeframeValue = extractTimeframe(parentContent)}
-									{@const titleValue = extractMetricTitle(message?.content ?? '')}
+									{@const timeframeValue = extractTimeframe(parentContent, $i18n.language)}
+									{@const titleValue = extractMetricTitle(message?.content ?? '', $i18n.language)}
 									{#if message?.done && metricValue && !dismissedMetricCardIds.has(message.id)}
 										<div class="hidden md:block flex-shrink-0">
 											<MetricCard

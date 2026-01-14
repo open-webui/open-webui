@@ -54,7 +54,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 			const defaultId = $user?.tenant_id ?? list[0]?.id ?? null;
 			selectedTenantId = defaultId;
 		} catch (err) {
-			const message = typeof err === 'string' ? err : (err?.detail ?? 'Failed to load tenants.');
+			const message = typeof err === 'string' ? err : (err?.detail ?? $i18n.t('Failed to load tenants.'));
 			toast.error(message);
 		} finally {
 			tenantsLoading = false;
@@ -106,17 +106,17 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 	const handleSubmit = async (event: SubmitEvent) => {
 		event.preventDefault();
 		if (selectedFiles.length === 0) {
-			toast.error('Please choose at least one file to upload.');
+			toast.error($i18n.t('Please choose at least one file to upload.'));
 			return;
 		}
 
 		if (!tenantBucket) {
-			toast.error('Your tenant does not have an S3 bucket configured.');
+			toast.error($i18n.t('Your tenant does not have an S3 bucket configured.'));
 			return;
 		}
 
 		if (!localStorage.token) {
-			toast.error('You must be signed in to upload files.');
+			toast.error($i18n.t('You must be signed in to upload files.'));
 			return;
 		}
 
@@ -143,12 +143,12 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 			if (successes.length > 0) {
 				uploadResults = successes;
-				toast.success(`Upload complete (${successes.length}).`);
+				toast.success(`${$i18n.t("Upload complete")} (${successes.length}).`);
 			}
 
 			if (failures.length > 0) {
 				toast.error(
-					`${failures.length} file(s) failed to upload.`
+					`${failures.length} ${$i18n.t('file(s) failed to upload.')}`
 				);
 			}
 
@@ -159,24 +159,24 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 							localStorage.token,
 							successes.map((item) => item.key)
 						);
-						toast.success('Digitization requested.');
+						toast.success($i18n.t('Digitization requested.'));
 					} catch (err) {
 						const message =
 							typeof err === 'string'
 								? err
-								: (err?.detail ?? 'Failed to trigger digitization of the uploaded files.');
+								: (err?.detail ?? $i18n.t('Failed to trigger digitization of the uploaded files.'));
 						toast.error(message);
 					}
 				} else {
 					if (tenantBucket && $user?.id) {
 						try {
 							await rebuildUserArtifact(localStorage.token, tenantBucket, $user.id);
-							toast.success('Private artifact rebuild requested.');
+							toast.success($i18n.t('Private artifact rebuild requested.'));
 						} catch (err) {
 							const message =
 								typeof err === 'string'
 									? err
-									: (err?.detail ?? 'Failed to rebuild private artifact.');
+									: (err?.detail ?? $i18n.t('Failed to rebuild private artifact.'));
 							toast.error(message);
 						}
 					}
@@ -196,7 +196,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	const ensureToken = () => {
 		if (!localStorage.token) {
-			toast.error('You must be signed in for this action.');
+			toast.error($i18n.t('You must be signed in for this action.'));
 			return null;
 		}
 		return localStorage.token;
@@ -204,7 +204,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	const handleRebuildTenant = async () => {
 		if (!selectedTenant?.s3_bucket) {
-			toast.error('Select a tenant to rebuild.');
+			toast.error($i18n.t('Select a tenant to rebuild.'));
 			return;
 		}
 		const token = ensureToken();
@@ -213,12 +213,12 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 		isRebuildingTenant = true;
 		try {
 			await rebuildTenantArtifact(token, selectedTenant.s3_bucket);
-			toast.success('Tenant artifact rebuild requested.');
+			toast.success($i18n.t('Tenant artifact rebuild requested.'));
 		} catch (err) {
 			const message =
 				typeof err === 'string'
 					? err
-					: (err?.detail ?? 'Failed to rebuild tenant artifact.');
+					: (err?.detail ?? $i18n.t('Failed to rebuild tenant artifact.'));
 			toast.error(message);
 		} finally {
 			isRebuildingTenant = false;
@@ -227,7 +227,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 	const handleRebuildPrivate = async () => {
 		if (!tenantBucket || !$user?.id) {
-			toast.error('Tenant information unavailable.');
+			toast.error($i18n.t('Tenant information unavailable.'));
 			return;
 		}
 		const token = ensureToken();
@@ -236,12 +236,12 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 		isRebuildingPrivate = true;
 		try {
 			await rebuildUserArtifact(token, tenantBucket, $user.id);
-			toast.success('Private artifact rebuild requested.');
+			toast.success($i18n.t('Private artifact rebuild requested.'));
 		} catch (err) {
 			const message =
 				typeof err === 'string'
 					? err
-					: (err?.detail ?? 'Failed to rebuild private artifact.');
+					: (err?.detail ?? $i18n.t('Failed to rebuild private artifact.'));
 			toast.error(message);
 		} finally {
 			isRebuildingPrivate = false;
@@ -273,9 +273,9 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 		: null;
 	
 	$: tabs = [
-		{ id: 'all', label: `All (${publicCount + privateCount})` },
-		{ id: 'public', label: `Teams (${publicCount})` },
-		{ id: 'private', label: `Personal (${privateCount})` }
+		{ id: 'all', label: `${$i18n.t("All")} (${publicCount + privateCount})` },
+		{ id: 'public', label: `${$i18n.t("Teams")} (${publicCount})` },
+		{ id: 'private', label: `${$i18n.t("Personal")} (${privateCount})` }
 	];
 
 	let _countCallId = 0;
@@ -334,8 +334,8 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 	}
 
 	$: accessIcon   = isPrivate ? '/icons/private.png' : '/icons/public.png';
-	$: accessLabel  = isPrivate ? 'Personal:' : 'Teams:';
-	$: accessDesc   = isPrivate ? 'Only you can access this file' : 'This file is accessible to the team';
+	$: accessLabel  = isPrivate ? $i18n.t('Personal') + ':' : $i18n.t('Teams') + ':';
+	$: accessDesc   = isPrivate ? $i18n.t('Only you can access this file') : $i18n.t('This file is accessible to the team');
 	$: accessStyle  = isPrivate ? 'text-blue-600 font-semibold' : 'text-gray-900 font-semibold';
 
 	const AUTO_HIDE_MS = 4000;
@@ -367,7 +367,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 </script>
 
 <svelte:head>
-	<title>Uploads • {$WEBUI_NAME}</title>
+	<title>{$i18n.t("Uploads")} • {$WEBUI_NAME}</title>
 </svelte:head>
 
 <div
@@ -444,34 +444,34 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 	<div class="mx-auto w-full flex max-w-4xl flex-col gap-6">
 		<div class="flex flex-col gap-4">
 			<div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 w-full">
-				<h1 class="text-3xl font-bold leading-tight">Uploads</h1>
+				<h1 class="text-3xl font-bold leading-tight">{$i18n.t("Uploads")}</h1>
 
 				{#if $user?.role === 'admin'}
 				<div class="md:flex-shrink-0 md:w-60 flex flex-col items-start">
 					<span class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-					Admin User Only
+						{$i18n.t("Admin User Only")}
 					</span>
 
 					{#if tenantsLoading}
 					<div class="rounded-lg border border-gray-200 bg-gray-100 px-4 py-1 text-sm text-gray-600 shadow-sm dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-300 w-full">
-						Loading tenant list…
+						{$i18n.t("Loading tenant list…")}
 					</div>
 					{:else if tenants.length === 0}
 					<div class="rounded-lg border border-gray-200 bg-gray-100 px-4 py-1 text-sm text-gray-600 shadow-sm dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-300 w-full">
-						No tenants available
+						{$i18n.t("No tenants available")}
 					</div>
 					{:else}
 					<div class="relative rounded-lg border border-gray-200 bg-gray-100 px-2 py-0.5 shadow-sm dark:border-gray-800 dark:bg-gray-900/60 w-full">
 						<div class="flex items-center gap-2 flex-nowrap">
 							<span class="inline-flex items-center h-7 text-[13px] font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap leading-[28px]">
-								Tenant:
+								{$i18n.t("Tenant")}:
 							</span>
 
 							<div class="flex-1 min-w-0">
 								<select
 								id="tenant-select"
 								bind:value={selectedTenantId}
-								aria-label="Target Tenant Bucket"
+								aria-label={$i18n.t("Target Tenant Bucket")}
 								class="w-full bg-transparent text-[13px] font-semibold text-gray-900 dark:text-gray-50 h-7 leading-[28px] py-0 pl-0 -ml-1"
 								>
 								{#each tenants as tenant}
@@ -489,8 +489,13 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 			</div>
 
 			<p class={"text-sm text-gray-600 dark:text-gray-400" + ($user?.role === 'admin' ? ' md:max-w-[80%]' : '')}>
-				Upload documents <span class="font-mono">(.pdf)</span> to use as references.
-				<span class="font-semibold">LUXOR</span> will read them and you will be able to reference them in your questions.
+				{@html $i18n.t(
+					'Upload documents {{pdf}} to use as references. {{product}} will read them and you will be able to reference them in your questions.',
+					{
+						pdf: '<span class="font-mono">(.pdf)</span>',
+						product: '<span class="font-semibold">LUXOR</span>'
+					}
+				)}
 			</p>
 		</div>
 
@@ -499,14 +504,13 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 				<div
 					class="rounded-2xl border border-gray-100 bg-white/60 p-5 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-900"
 				>
-					Loading your profile…
+					{$i18n.t("Loading your profile")}…
 				</div>
 			{:else if !tenantBucket}
 				<div
 					class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
 				>
-					Your tenant does not have an S3 bucket configured yet. Please contact an administrator
-					before using this page.
+					{$i18n.t("Your tenant does not have an S3 bucket configured yet. Please contact an administrator before using this page.")}
 				</div>
 			{:else}
 				<form
@@ -516,7 +520,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 					<div class="space-y-2">
 						<div class="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4">
 							<label class="flex items-center gap-4 cursor-pointer select-none">
-								<span class="bg-gray-600 text-white rounded-md px-3 py-1.5 font-medium text-sm">Choose Files</span>
+								<span class="bg-gray-600 text-white rounded-md px-3 py-1.5 font-medium text-sm">{$i18n.t("Choose Files")}</span>
 
 								<input
 									type="file"
@@ -528,9 +532,9 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 
 								<span class="text-sm text-gray-600 dark:text-gray-300">
 									{#if selectedFiles.length > 0}
-										{selectedFiles.length} file(s) selected
+										{selectedFiles.length} {$i18n.t("file(s) selected")}
 									{:else}
-										No file chosen
+										{$i18n.t("No file chosen")}
 									{/if}
 								</span>
 							</label>
@@ -561,14 +565,14 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 						</div>
 
 						<div class="flex items-center gap-3">
-							<span class="text-gray-700 font-medium mr-2">Access:</span>
+							<span class="text-gray-700 font-medium mr-2">{$i18n.t("Access")}:</span>
 
 							<label class="relative inline-flex items-center cursor-pointer select-none">
 								<input
 									type="checkbox"
 									class="sr-only"
 									bind:checked={isPrivate}
-									aria-label="Toggle file access (Private / Public)"
+									aria-label={$i18n.t("Toggle file access (Private / Public)")}
 								/>
 
 								<div
@@ -590,9 +594,9 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 							disabled={selectedFiles.length === 0 || isUploading}
 						>
 							{#if isUploading}
-								<span class="animate-pulse">Uploading…</span>
+								<span class="animate-pulse">{$i18n.t("Uploading")}…</span>
 							{:else}
-								Upload
+								{$i18n.t("Upload")}
 							{/if}
 						</button>
 
@@ -605,7 +609,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 								if (fileInput) fileInput.value = '';
 							}}
 							>
-							Reset
+							{$i18n.t("Reset")}
 						</button>
 					</div>
 				</form>
@@ -617,7 +621,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 					class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 text-sm text-emerald-900 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100"
 				>
 					<h2 class="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
-						Upload complete ({uploadResults.length})
+						{$i18n.t("Upload complete")} ({uploadResults.length})
 					</h2>
 					<div class="mt-3 space-y-3">
 						{#each uploadResults as result}
@@ -626,9 +630,9 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 									{result.original_filename}
 								</div>
 								<div class="mt-2 space-y-1 text-xs text-emerald-800/90 dark:text-emerald-200/80">
-									<div class="font-mono break-all">Key: {result.key}</div>
-									<div class="font-mono break-all">URL: {result.url}</div>
-									<div class="capitalize">Visibility: {result.visibility}</div>
+									<div class="font-mono break-all">{$i18n.t("Key")}: {result.key}</div>
+									<div class="font-mono break-all">{$i18n.t("URL")}: {result.url}</div>
+									<div class="capitalize">{$i18n.t("Visibility")}: {$i18n.t(result.visibility)}</div>
 								</div>
 							</div>
 						{/each}
@@ -638,7 +642,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 		</div>
 
 		<div class="mt-4 flex items-center justify-between w-full gap-4">
-			<h2 class="text-2xl font-bold leading-tight">Uploads List</h2>
+			<h2 class="text-2xl font-bold leading-tight">{$i18n.t("Uploads List")}</h2>
 
 			<div class="flex items-center gap-4">
 				<div class="flex items-center gap-2">
@@ -651,9 +655,9 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 								disabled={!selectedTenant?.s3_bucket || isRebuildingTenant}
 							>
 								{#if isRebuildingTenant}
-									<span class="animate-pulse">Rebuilding…</span>
+									<span class="animate-pulse">{$i18n.t("Rebuilding")}…</span>
 								{:else}
-									Rebuild Tenant Artifact
+									{$i18n.t("Rebuild Tenant Artifact")}
 								{/if}
 							</button>
 						</div>
@@ -666,9 +670,9 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 							disabled={!tenantBucket || !$user?.id || isRebuildingPrivate}
 						>
 							{#if isRebuildingPrivate}
-								<span class="animate-pulse">Rebuilding…</span>
+								<span class="animate-pulse">{$i18n.t("Rebuilding")}…</span>
 							{:else}
-								Rebuild Private Artifact
+								{$i18n.t("Rebuild Private Artifact")}
 							{/if}
 						</button>
 					</div>
@@ -726,7 +730,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 				<div
 					class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
 				>
-					Select a tenant to view its public files.
+					{$i18n.t("Select a tenant to view its public files.")}
 				</div>
 			{/if}
 		{:else if activeTab === 'private'}
@@ -744,7 +748,7 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 				<div
 					class="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
 				>
-					Select a tenant to view private files.
+					{$i18n.t("Select a tenant to view private files.")}
 				</div>
 			{/if}
 		{/if}

@@ -36,6 +36,7 @@ class User(Base):
     job_title = Column(String(255), nullable=True)
     primary_location = Column(String(255), nullable=True)
     job_description = Column(String(2500), nullable=True)
+    default_language = Column(String(10), nullable=False, server_default="en-US")
 
     bio = Column(Text, nullable=True)
     gender = Column(Text, nullable=True)
@@ -74,6 +75,7 @@ class UserModel(BaseModel):
     job_title: Optional[str] = None
     primary_location: Optional[str] = None
     job_description: Optional[str] = None
+    default_language: str = "en-US"
 
     bio: Optional[str] = None
     gender: Optional[str] = None
@@ -105,6 +107,7 @@ class UpdateProfileForm(BaseModel):
     job_title: Optional[constr(max_length=255)] = None
     primary_location: Optional[constr(max_length=255)] = None
     job_description: Optional[constr(max_length=2500)] = None
+    default_language: Optional[str] = None
     bio: Optional[str] = None
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
@@ -167,6 +170,7 @@ class UserUpdateForm(BaseModel):
     profile_image_url: str
     password: Optional[str] = None
     tenant_id: Optional[str] = None
+    default_language: Optional[str] = None
 
 
 class UsersTable:
@@ -179,6 +183,7 @@ class UsersTable:
         role: str = "pending",
         oauth_sub: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        default_language: str = "en-US",
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -189,6 +194,7 @@ class UsersTable:
                     "role": role,
                     "profile_image_url": profile_image_url,
                     "tenant_id": tenant_id,
+                    "default_language": default_language,
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),

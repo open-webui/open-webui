@@ -13,22 +13,16 @@
 
 	import {
 		config,
-		user,
 		models as _models,
 		temporaryChatEnabled,
 		selectedFolder,
-		chats,
-		currentChatPage
 	} from '$lib/stores';
-	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
-	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import FolderPlaceholder from './Placeholder/FolderPlaceholder.svelte';
-	import FolderTitle from './Placeholder/FolderTitle.svelte';
 	import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 
 	const i18n = getContext('i18n');
@@ -93,7 +87,7 @@
 					
 				<Tooltip 
 				className="flex items-center justify-center rounded-full p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition"
-				content={$i18n.t("How to ask Luxor")}>
+				content={$i18n.t("How to Ask Luxor")}>
 					<button
 						type="button"
 						aria-label={$i18n.t('How to Ask Luxor')}
@@ -112,7 +106,7 @@
 						draggable="false"
 					/>
 					<h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-						Hello
+						{$i18n.t("Hello")}
 					</h1>
 				</div>
 

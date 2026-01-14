@@ -42,7 +42,8 @@ export let tenantLookup: Record<string, TenantInfo> = {};
 		name: '',
 		email: '',
 		password: '',
-		tenant_id: ''
+		tenant_id: '',
+		default_language: 'en-US'
 	};
 
 	let tenantDisplay = '';
@@ -156,15 +157,29 @@ export let tenantLookup: Record<string, TenantInfo> = {};
 										</div>
 									</div>
 
-									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Tenant')}</div>
+										<div class="flex flex-col w-full">
+											<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Tenant')}</div>
 
 										<div
 											class="px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-800 bg-transparent text-sm text-gray-900 dark:text-gray-100"
 										>
-											{tenantDisplay || $i18n.t('Unassigned')}
+												{tenantDisplay || $i18n.t('Unassigned')}
+											</div>
 										</div>
-									</div>
+
+										<div class="flex flex-col w-full">
+											<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Default Language')}</div>
+
+											<div class="flex-1">
+												<select
+													class="w-full rounded-lg text-sm bg-transparent dark:disabled:text-gray-500 outline-hidden"
+													bind:value={_user.default_language}
+												>
+													<option value="en-US">English (en-US)</option>
+													<option value="es-ES">Spanish (es-ES)</option>
+												</select>
+											</div>
+										</div>
 
 									<div class="flex flex-col w-full">
 										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
@@ -196,15 +211,15 @@ export let tenantLookup: Record<string, TenantInfo> = {};
 										</div>
 									</div>
 
-									{#if _user?.oauth_sub}
-										<div class="flex flex-col w-full">
-											<div class=" mb-1 text-xs text-gray-500">{$i18n.t('OAuth ID')}</div>
+										{#if _user?.oauth_sub}
+											<div class="flex flex-col w-full">
+												<div class=" mb-1 text-xs text-gray-500">{$i18n.t('OAuth ID')}</div>
 
-											<div class="flex-1 text-sm break-all mb-1">
-												{_user.oauth_sub ?? ''}
+												<div class="flex-1 text-sm break-all mb-1">
+													{_user.oauth_sub ?? ''}
+												</div>
 											</div>
-										</div>
-									{/if}
+										{/if}
 
 									<div class="flex flex-col w-full">
 										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>

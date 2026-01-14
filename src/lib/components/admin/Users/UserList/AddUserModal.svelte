@@ -31,7 +31,8 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 		email: '',
 		password: '',
 		role: 'user',
-		tenant_id: ''
+		tenant_id: '',
+		default_language: 'en-US'
 	};
 
 	$: if (show) {
@@ -40,7 +41,8 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 			email: '',
 			password: '',
 			role: 'user',
-			tenant_id: ''
+			tenant_id: '',
+			default_language: 'en-US'
 		};
 	}
 
@@ -94,7 +96,8 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 				_user.password,
 				_user.role,
 				generateInitialsImage(_user.name),
-				_user.role === 'admin' ? null : _user.tenant_id
+				_user.role === 'admin' ? null : _user.tenant_id,
+				_user.default_language
 			).catch((error) => {
 				toast.error(`${error}`);
 			});
@@ -125,17 +128,19 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 								columns.length === 4 &&
 								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
 							) {
-								const res = await addUser(
-									localStorage.token,
-									columns[0],
-									columns[1],
-									columns[2],
-									columns[3].toLowerCase(),
-									generateInitialsImage(columns[0])
-								).catch((error) => {
-									toast.error(`Row ${idx + 1}: ${error}`);
-									return null;
-								});
+									const res = await addUser(
+										localStorage.token,
+										columns[0],
+										columns[1],
+										columns[2],
+										columns[3].toLowerCase(),
+										generateInitialsImage(columns[0]),
+										null,
+										_user.default_language
+									).catch((error) => {
+										toast.error(`Row ${idx + 1}: ${error}`);
+										return null;
+									});
 
 								if (res) {
 									userCount = userCount + 1;
@@ -263,6 +268,20 @@ import { getUploadTenants, type TenantInfo } from '$lib/apis/tenants';
 									{:else if !tenantOptionsLoading && tenantOptions.length === 0}
 										<p class="mt-1 text-xs text-gray-500">{$i18n.t('No tenants available.')}</p>
 									{/if}
+								</div>
+
+								<div class="flex flex-col w-full mt-1">
+									<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Default Language')}</div>
+
+									<div class="flex-1">
+										<select
+											class="w-full rounded-lg text-sm bg-transparent dark:disabled:text-gray-500 outline-hidden"
+											bind:value={_user.default_language}
+										>
+											<option value="en-US">English (en-US)</option>
+											<option value="es-ES">Spanish (es-ES)</option>
+										</select>
+									</div>
 								</div>
 							{/if}
 
