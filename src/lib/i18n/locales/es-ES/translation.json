@@ -1838,4 +1838,9 @@
 	"Loading files": "Cargando archivos",
 	"No files found for these paths.": "No se encontraron archivos para estas rutas.",
 	"Deleting": "Eliminando"
+,
+	"Tenant Scope": "Alcance del tenant",
+	"Loading tenants...": "Cargando tenants...",
+	"Use assigned tenant": "Usar tenant asignado",
+	"No tenants available.": "No hay tenants disponibles."
 }

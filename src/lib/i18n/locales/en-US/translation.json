@@ -1845,4 +1845,9 @@
 	"Loading files": "Loading files",
 	"No files found for these paths.": "No files found for these paths.",
 	"Deleting": "Deleting"
+,
+	"Tenant Scope": "Tenant Scope",
+	"Loading tenants...": "Loading tenants...",
+	"Use assigned tenant": "Use assigned tenant",
+	"No tenants available.": "No tenants available."
 }
