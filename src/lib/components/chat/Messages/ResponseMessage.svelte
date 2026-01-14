@@ -12,8 +12,9 @@
 	const dispatch = createEventDispatcher();
 
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
-	import { getChatById } from '$lib/apis/chats';
+	import { getChatById, createNewChat } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
+	import { goto } from '$app/navigation';
 
 	import {
 		audioQueue,
@@ -171,8 +172,91 @@
 	let speakingIdx: number | undefined;
 
 	let loadingSpeech = false;
+	let branchingChat = false;
 
 	let showRateComment = false;
+
+	// Branch conversation to a new chat from this message
+	const branchToNewChat = async () => {
+		if (branchingChat || $temporaryChatEnabled) return;
+		branchingChat = true;
+
+		try {
+			// Get all messages from root to current message
+			const messagesList = createMessagesList(history, message.id);
+
+			if (messagesList.length === 0) {
+				toast.error($i18n.t('No messages to branch'));
+				return;
+			}
+
+			// Build new history structure
+			const newHistory = {
+				messages: {},
+				currentId: null
+			};
+
+			let prevId = null;
+			for (const msg of messagesList) {
+				const newMsg = {
+					...JSON.parse(JSON.stringify(msg)),
+					parentId: prevId,
+					childrenIds: []
+				};
+
+				// Link previous message's children to current
+				if (prevId !== null) {
+					newHistory.messages[prevId].childrenIds = [msg.id];
+				}
+
+				newHistory.messages[msg.id] = newMsg;
+				prevId = msg.id;
+			}
+
+			newHistory.currentId = message.id;
+
+			// Get selected models from current chat or use current message's model
+			const modelsToUse = selectedModels.length > 0 ? selectedModels : [message.model];
+
+			// Create first line of conversation as title
+			const firstUserMessage = messagesList.find((m) => m.role === 'user');
+			const title = firstUserMessage
+				? firstUserMessage.content?.substring(0, 50) +
+						(firstUserMessage.content?.length > 50 ? '...' : '') || $i18n.t('Branched Chat')
+				: $i18n.t('Branched Chat');
+
+			// Create new chat
+			const newChat = await createNewChat(
+				localStorage.token,
+				{
+					title: title,
+					models: modelsToUse,
+					history: newHistory,
+					messages: messagesList.map((m) => ({
+						...m,
+						parentId: undefined,
+						childrenIds: undefined
+					})),
+					tags: [],
+					timestamp: Date.now()
+				},
+				null // No folder
+			);
+
+			if (newChat && newChat.id) {
+				toast.success($i18n.t('Branched to new chat'));
+				// Navigate to the new chat in current tab
+				goto(`/c/${newChat.id}`);
+			} else {
+				toast.error($i18n.t('Failed to create branch'));
+			}
+		} catch (error) {
+			console.error('Error branching chat:', error);
+			toast.error($i18n.t('Failed to create branch'));
+		} finally {
+			branchingChat = false;
+		}
+	};
 
 	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
@@ -1107,6 +1191,60 @@
 													d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
 												/>
 											</svg>
+										</button>
+									</Tooltip>
+								{/if}
+
+								{#if !readOnly && !$temporaryChatEnabled}
+									<Tooltip content={$i18n.t('Branch to New Chat')} placement="bottom">
+										<button
+											aria-label={$i18n.t('Branch to New Chat')}
+											class="{isLastMessage || ($settings?.highContrastMode ?? false)
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition disabled:cursor-progress disabled:opacity-50"
+											disabled={branchingChat}
+											on:click={() => {
+												branchToNewChat();
+											}}
+										>
+											{#if branchingChat}
+												<svg
+													class="w-4 h-4 animate-spin"
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+												>
+													<circle
+														class="opacity-25"
+														cx="12"
+														cy="12"
+														r="10"
+														stroke="currentColor"
+														stroke-width="4"
+													/>
+													<path
+														class="opacity-75"
+														fill="currentColor"
+														d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+													/>
+												</svg>
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2.3"
+													stroke="currentColor"
+													aria-hidden="true"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
+													/>
+												</svg>
+											{/if}
 										</button>
 									</Tooltip>
 								{/if}
