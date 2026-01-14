@@ -17,6 +17,7 @@ by isolating all logic in this new file.
 
 import re
 import logging
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
@@ -376,7 +377,16 @@ def get_logo_bytes(model_id: str) -> Optional[tuple[bytes, str]]:
     logo_path = get_logo_path(model_id)
     if not logo_path:
         return None
-    
+    return _read_logo_file_cached(str(logo_path))
+
+
+@lru_cache(maxsize=100)
+def _read_logo_file_cached(logo_path_str: str) -> Optional[tuple[bytes, str]]:
+    """
+    Cached file read for logo bytes.
+    Uses LRU cache to avoid repeated disk I/O for frequently accessed logos.
+    """
+    logo_path = Path(logo_path_str)
     try:
         content = logo_path.read_bytes()
         ext = logo_path.suffix.lower()
@@ -398,7 +408,8 @@ def clear_cache():
     global _logo_cache, _available_logos_cache
     _logo_cache = {}
     _available_logos_cache = None
-    log.info("Logo cache cleared")
+    _read_logo_file_cached.cache_clear()  # Clear LRU cache for file bytes
+    log.info("Logo cache cleared (including LRU file cache)")
 
 
 def list_available_logos() -> list[str]:
