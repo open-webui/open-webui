@@ -30,15 +30,22 @@ def setup_mpo_server():
         # Initialize server for MPO department
         success = initialize_department_server("MPO")
         if not success:
-            logging.error("Failed to initialize MPO SharePoint server")
-            return False
+            logging.error(
+                "Failed to initialize MPO SharePoint server - will continue with no tools"
+            )
+            logging.warning("Server will run but tools will not be available")
+            # Don't return False - let the server run even if init fails
+            # This allows the process to stay alive for debugging
+            return True  # Changed from False
 
         logging.info("MPO SharePoint MCP Server configuration complete")
         return True
 
     except Exception as e:
-        logging.error(f"Error setting up MPO SharePoint server: {e}")
-        return False
+        logging.error(f"Error setting up MPO SharePoint server: {e}", exc_info=True)
+        logging.warning("Server will run but tools will not be available")
+        # Don't fail - let the server run for debugging
+        return True  # Changed from False
 
 
 if __name__ == "__main__":
