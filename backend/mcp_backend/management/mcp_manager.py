@@ -308,16 +308,22 @@ class FastMCPManager:
                 else:
                     # For stdio servers, use the stored transport to create a new client connection
                     if server_name in self.clients:
+                        log.debug(f"Getting tools from stdio server: {server_name}")
                         transport = self.clients[server_name]  # This is the transport
                         client = Client(transport)
                         async with client:
+                            log.debug(
+                                f"Client initialized for {server_name}, calling list_tools()"
+                            )
                             tools = await client.list_tools()
+                            log.info(f"Got {len(tools)} tools from {server_name}")
 
                             for tool in tools:
                                 # Mark if this is a built-in server
                                 is_builtin = server_name in [
                                     "time_server",
                                     "news_server",
+                                    "mpo_sharepoint_server",
                                 ]
                                 tool_dict = {
                                     "name": tool.name,
@@ -334,9 +340,17 @@ class FastMCPManager:
                                     "is_builtin": is_builtin,
                                 }
                                 all_tools.append(tool_dict)
+                                log.debug(f"Added tool {tool.name} from {server_name}")
+                    else:
+                        log.warning(
+                            f"No client/transport found for stdio server: {server_name}"
+                        )
 
             except Exception as e:
                 log.exception(f"Error getting tools from server {server_name}: {e}")
+                log.error(
+                    f"Server {server_name} will appear as running but with no tools"
+                )
 
         return all_tools
 
