@@ -36,7 +36,7 @@ class User(Base):
     job_title = Column(String(255), nullable=True)
     primary_location = Column(String(255), nullable=True)
     job_description = Column(String(2500), nullable=True)
-    default_language = Column(String, nullable=False, server_default="en-US")
+    default_language = Column(String(10), nullable=False, server_default="en-US")
 
     bio = Column(Text, nullable=True)
     gender = Column(Text, nullable=True)

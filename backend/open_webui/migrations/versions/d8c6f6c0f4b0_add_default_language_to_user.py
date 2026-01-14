@@ -21,7 +21,7 @@ def upgrade() -> None:
         "user",
         sa.Column(
             "default_language",
-            sa.String(),
+            sa.String(length=10),
             nullable=False,
             server_default="en-US",
         ),
