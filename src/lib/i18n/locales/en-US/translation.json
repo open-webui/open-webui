@@ -1850,4 +1850,8 @@
 	"Loading tenants...": "Loading tenants...",
 	"Use assigned tenant": "Use assigned tenant",
 	"No tenants available.": "No tenants available."
+,
+	"Export to Excel": "Export to Excel"
+,
+	"Select a tenant to preview their help experience.": "Select a tenant to preview their help experience."
 }

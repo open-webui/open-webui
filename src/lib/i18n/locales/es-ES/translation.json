@@ -1843,4 +1843,8 @@
 	"Loading tenants...": "Cargando tenants...",
 	"Use assigned tenant": "Usar tenant asignado",
 	"No tenants available.": "No hay tenants disponibles."
+,
+	"Export to Excel": "Exportar a Excel"
+,
+	"Select a tenant to preview their help experience.": "Selecciona un tenant para previsualizar su experiencia de ayuda."
 }
