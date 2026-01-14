@@ -2,9 +2,8 @@
 	import { browser } from '$app/environment';
 	import { deleteUpload, getFiles, rebuildUserArtifact, type StoredFile } from '$lib/apis/uploads';
 	import { getTenantPromptFiles, deleteTenantPromptFile } from '$lib/apis/tenants';
-	import { user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, getContext } from 'svelte';
 
 	export let tenantId: string | null = null;
 	export let path: string | null = null;
@@ -21,6 +20,7 @@
 	let _lastRefreshKey: number | null = null;
 
 	const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
 
 	const formatSize = (bytes: number) => {
 		if (!bytes) return '0 B';
@@ -209,12 +209,14 @@
 	const deleteFileHandler = async (file: StoredFile) => {
 		if (!browser) return;
 		if (!localStorage.token) {
-			toast.error('You must be signed in to delete files.');
+			toast.error($i18n.t('You must be signed in to delete files.'));
 			return;
 		}
 
 		const name = displayName(file.key);
-		const confirmed = window.confirm(`Delete ${name}? This cannot be undone.`);
+		const confirmed = window.confirm(
+			$i18n.t('Delete {{name}}? This cannot be undone.', { name })
+		);
 		if (!confirmed) return;
 
 		const parts = file.key.split('/');
@@ -233,24 +235,24 @@
 				await deleteUpload(token, file.key);
 			}
 			files = files.filter((item) => item.key !== file.key);
-			toast.success('File deleted.');
+			toast.success($i18n.t('File deleted.'));
 
 			dispatch('filesChanged', { key: file.key });
 
 			if (derivedBucket && derivedUserId) {
 				try {
 					await rebuildUserArtifact(token, derivedBucket, derivedUserId);
-					toast.success('Private artifact rebuild requested.');
+					toast.success($i18n.t('Private artifact rebuild requested.'));
 				} catch (err) {
 					const message =
 						typeof err === 'string'
 							? err
-							: (err?.detail ?? 'Failed to rebuild private artifact.');
+							: (err?.detail ?? $i18n.t('Failed to rebuild private artifact.'));
 					toast.error(message);
 				}
 			}
 		} catch (err) {
-			const message = typeof err === 'string' ? err : err?.detail ?? 'Failed to delete file.';
+			const message = typeof err === 'string' ? err : err?.detail ?? $i18n.t('Failed to delete file.');
 			toast.error(message);
 		} finally {
 			deletingKey = null;
@@ -278,7 +280,7 @@
 
 {#if loading}
 	<div class="rounded-2xl border border-gray-100 bg-white/60 p-5 text-sm shadow-sm dark:border-gray-850 dark:bg-gray-900/70">
-		Loading files…
+		{$i18n.t("Loading files")}…
 	</div>
 {:else if error}
 	<div class="rounded-2xl border border-red-200 bg-red-50/70 p-5 text-sm text-red-900 shadow-sm dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-100">
@@ -287,9 +289,9 @@
 {:else if files.length === 0}
 	<div class="rounded-2xl border border-gray-100 bg-white/70 p-5 text-sm text-gray-600 shadow-sm dark:border-gray-850 dark:bg-gray-900/70 dark:text-gray-300">
 		{#if paths && paths.length > 0}
-			No files found for these paths.
+			{$i18n.t("No files found for these paths.")}"
 		{:else}
-			No files found for this path.
+			{$i18n.t("No files found for this path.")}"
 		{/if}
 	</div>
 {:else}
@@ -297,10 +299,10 @@
 		<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800 text-sm">
 			<thead class="bg-gray-50 dark:bg-gray-900/80 text-gray-600 dark:text-gray-300">
 				<tr>
-					<th class="px-4 py-3 text-left font-semibold min-w-0">File</th>
-					<th class="px-4 py-3 text-left font-semibold min-w-[7rem] whitespace-nowrap">Size</th>
-					<th class="px-4 py-3 text-left font-semibold">Date Added</th>
-					<th class="px-4 py-3 text-left font-semibold">Actions</th>
+					<th class="px-4 py-3 text-left font-semibold min-w-0">{$i18n.t("File")}</th>
+					<th class="px-4 py-3 text-left font-semibold min-w-[7rem] whitespace-nowrap">{$i18n.t("Size")}</th>
+					<th class="px-4 py-3 text-left font-semibold">{$i18n.t("Date Added")}</th>
+					<th class="px-4 py-3 text-left font-semibold">{$i18n.t("Actions")}</th>
 				</tr>
 			</thead>
 			<tbody class="divide-y divide-gray-100 dark:divide-gray-850 text-gray-800 dark:text-gray-100">
@@ -333,7 +335,7 @@
 									rel="noreferrer"
 									class="inline-flex w-28 items-center justify-center rounded-lg border border-blue-600 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:hover:bg-blue-950/30"
 								>
-									Download
+									{$i18n.t("Download")}
 								</a>
 								<button
 									type="button"
@@ -341,7 +343,7 @@
 									disabled={deletingKey === file.key}
 									class="inline-flex w-28 items-center justify-center rounded-lg border border-red-600 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70 dark:hover:bg-red-950/30"
 								>
-									{deletingKey === file.key ? 'Deleting...' : 'Delete'}
+									{deletingKey === file.key ? `${$i18n.t("Deleting")}...` : $i18n.t('Delete')}
 								</button>
 							</div>
 						</td>

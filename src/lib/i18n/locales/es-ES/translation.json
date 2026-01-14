@@ -396,7 +396,7 @@
 	"Default to ALL": "Predeterminado a TODOS",
 	"Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.": "Por defecto está predeterminada una segmentación de la recuperación para una extracción de contenido centrado y relevante, recomendado para la mayoría de los casos.",
 	"Default User Role": "Rol predeterminado de los nuevos usuarios",
-	"Delete": "Borrar",
+	"Delete": "Eliminar",
 	"Delete a model": "Borrar un modelo",
 	"Delete All Chats": "Borrar todos los chats",
 	"Delete All Models": "Borrar todos los modelos",
@@ -1316,7 +1316,7 @@
 	"required": "requerido",
 	"Reranking Engine": "Motor de Reclasificación",
 	"Reranking Model": "Modelo de Reclasificación",
-	"Reset": "Reiniciar",
+	"Reset": "Restablecer",
 	"Reset All Models": "Reiniciar Todos los Modelos",
 	"Reset Image": "Restablecer imagen",
 	"Reset Upload Directory": "Reiniciar Directorio de Subidas",
@@ -1772,4 +1772,70 @@
 	"YouTube": "Youtube",
 	"Youtube Language": "Youtube Idioma",
 	"Youtube Proxy URL": "Youtube URL Proxy"
+,
+	"How to Ask Luxor": "Cómo preguntar a Luxor",
+	"Hello": "Hola"
+,
+	"Uploads": "Subidas",
+	"Upload documents (.pdf) to use as references. LUXOR will read them and you will be able to reference them in your questions.": "Sube documentos (.pdf) para usarlos como referencias. LUXOR los leerá y podrás referenciarlos en tus preguntas.",
+	"Upload documents {{pdf}} to use as references. {{product}} will read them and you will be able to reference them in your questions.": "Sube documentos {{pdf}} para usarlos como referencias. {{product}} los leerá y podrás referenciarlos en tus preguntas.",
+	"Admin User Only": "Solo usuario administrador",
+	"Choose Files": "Elegir archivos",
+	"No file chosen": "Ningún archivo seleccionado",
+	"Teams": "Equipos",
+	"Personal": "Personal",
+	"Uploads List": "Lista de subidas",
+	"No files found for this path.": "No se encontraron archivos para esta ruta.",
+	"Size": "Tamaño",
+	"Date Added": "Fecha de agregado",
+	"Rebuild Tenant Artidact": "Reconstruir artefacto del tenant",
+	"Rebuild Private Artifact": "Reconstruir artefacto privado"
+,
+	"Loading tenant list…": "Cargando lista de tenants…",
+	"No tenants available": "No hay tenants disponibles",
+	"Tenant": "Tenant",
+	"Target Tenant Bucket": "Bucket de tenant objetivo",
+	"Loading your profile": "Cargando tu perfil"
+,
+	"Your tenant does not have an S3 bucket configured yet. Please contact an administrator before using this page.": "Tu tenant no tiene un bucket de S3 configurado todavía. Ponte en contacto con un administrador antes de usar esta página.",
+	"file(s) selected": "archivo(s) seleccionado(s)",
+	"Toggle file access (Private / Public)": "Alternar acceso de archivos (Privado / Público)",
+	"Uploading": "Subiendo"
+,
+	"Only you can access this file": "Solo tú puedes acceder a este archivo",
+	"This file is accessible to the team": "Este archivo es accesible para el equipo"
+,
+	"Upload complete": "Carga completada"
+,
+	"public": "público",
+	"private": "privado"
+,
+	"Rebuilding": "Reconstruyendo",
+	"Select a tenant to view its public or private files.": "Selecciona un tenant para ver sus archivos públicos o privados.",
+	"Select a tenant to view private files.": "Selecciona un tenant para ver archivos privados."
+,
+	"Failed to load tenants.": "No se pudieron cargar los tenants.",
+	"Please choose at least one file to upload.": "Por favor, elige al menos un archivo para subir.",
+	"Your tenant does not have an S3 bucket configured.": "Tu tenant no tiene un bucket de S3 configurado.",
+	"You must be signed in to upload files.": "Debes iniciar sesión para subir archivos.",
+	"file(s) failed to upload.": "archivo(s) no se pudieron subir.",
+	"Digitization requested.": "Digitalización solicitada.",
+	"Failed to trigger digitization of the uploaded files.": "No se pudo iniciar la digitalización de los archivos subidos."
+,
+	"Private artifact rebuild requested.": "Reconstrucción del artefacto privado solicitada.",
+	"Failed to rebuild private artifact.": "No se pudo reconstruir el artefacto privado.",
+	"You must be signed in for this action.": "Debes iniciar sesión para esta acción.",
+	"Select a tenant to rebuild.": "Selecciona un tenant para reconstruir.",
+	"Tenant artifact rebuild requested.": "Reconstrucción del artefacto del tenant solicitada.",
+	"Failed to rebuild tenant artifact.": "No se pudo reconstruir el artefacto del tenant.",
+	"Tenant information unavailable.": "Información del tenant no disponible."
+,
+	"You must be signed in to delete files": "Debes iniciar sesión para eliminar archivos",
+	"Delete {{name}}? This cannot be undone.": "¿Eliminar {{name}}? Esto no se puede deshacer."
+,
+	"File deleted.": "Archivo eliminado.",
+	"Failed to delete file.": "No se pudo eliminar el archivo.",
+	"Loading files": "Cargando archivos",
+	"No files found for these paths.": "No se encontraron archivos para estas rutas.",
+	"Deleting": "Eliminando"
 }
