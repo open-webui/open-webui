@@ -192,8 +192,8 @@ importers:
         specifier: ^0.10.1
         version: 0.10.1
       jspdf:
-        specifier: ^3.0.0
-        version: 3.0.4
+        specifier: ^4.0.0
+        version: 4.0.0
       katex:
         specifier: ^0.16.22
         version: 0.16.27
@@ -391,7 +391,7 @@ importers:
         specifier: ^5.5.4
         version: 5.9.3
       vite:
-        specifier: ^5.4.14
+        specifier: ^5.4.21
         version: 5.4.21(@types/node@25.0.3)(lightningcss@1.30.2)(sass-embedded@1.97.0)(sass@1.97.0)
       vitest:
         specifier: ^1.6.1
@@ -3548,8 +3548,8 @@ packages:
   jsonfile@6.2.0:
     resolution: {integrity: sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg==}
 
-  jspdf@3.0.4:
-    resolution: {integrity: sha512-dc6oQ8y37rRcHn316s4ngz/nOjayLF/FFxBF4V9zamQKRqXxyiH1zagkCdktdWhtoQId5K20xt1lB90XzkB+hQ==}
+  jspdf@4.0.0:
+    resolution: {integrity: sha512-w12U97Z6edKd2tXDn3LzTLg7C7QLJlx0BPfM3ecjK2BckUl9/81vZ+r5gK4/3KQdhAcEZhENUxRhtgYBj75MqQ==}
 
   jsprim@2.0.2:
     resolution: {integrity: sha512-gqXddjPqQ6G40VdnI6T6yObEC+pDNvyP95wdQhkWkg7crHH3km5qP1FsOXEkzEQwnz6gz5qGTn1c2Y52wP3OyQ==}
@@ -8659,7 +8659,7 @@ snapshots:
     optionalDependencies:
       graceful-fs: 4.2.11
 
-  jspdf@3.0.4:
+  jspdf@4.0.0:
     dependencies:
       '@babel/runtime': 7.28.4
       fast-png: 6.4.0
