@@ -470,19 +470,38 @@ async def get_all_documents_comprehensive(
 
         drive_id = drives[0].get("id")
 
-        # Recursively get ALL documents from ALL folders silently
+        # Recursively get documents - limit to default_search_folders if configured
         all_documents = []
         folders_processed = {"count": 0}  # Track folder count
-        await _traverse_all_folders_recursive(
-            oauth_client,
-            access_token,
-            site_id,
-            drive_id,
-            "",
-            all_documents,
-            folders_processed,
-            max_depth=10,
-        )
+
+        # If default_search_folders is configured, only search those specific folders
+        if config.default_search_folders:
+            logger.info(f"Searching specific folders: {config.default_search_folders}")
+            for folder_path in config.default_search_folders:
+                await _traverse_all_folders_recursive(
+                    oauth_client,
+                    access_token,
+                    site_id,
+                    drive_id,
+                    folder_path,
+                    all_documents,
+                    folders_processed,
+                    max_depth=10,
+                )
+            search_scope = f"folders: {', '.join(config.default_search_folders)}"
+        else:
+            # No specific folders configured - search everything from root
+            await _traverse_all_folders_recursive(
+                oauth_client,
+                access_token,
+                site_id,
+                drive_id,
+                "",
+                all_documents,
+                folders_processed,
+                max_depth=10,
+            )
+            search_scope = "all folders (no default_search_folders configured)"
 
         return {
             "status": "success",
@@ -490,7 +509,8 @@ async def get_all_documents_comprehensive(
             "folders_processed": folders_processed["count"],
             "documents": all_documents,
             "organization": config.org_name,
-            "message": f"Found {len(all_documents)} documents from {folders_processed['count']} folders by comprehensive traversal",
+            "search_scope": search_scope,
+            "message": f"Found {len(all_documents)} documents from {folders_processed['count']} folders in {search_scope}",
         }
 
     except Exception as e:
