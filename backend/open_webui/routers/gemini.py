@@ -262,6 +262,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict:
                         "owned_by": "google",
                         "gemini": model,
                         "urlIdx": idx,
+                        **({"tags": model["tags"]} if "tags" in model else {}),
                     }
 
     request.app.state.GEMINI_MODELS = models
