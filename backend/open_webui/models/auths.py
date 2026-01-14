@@ -66,6 +66,23 @@ class SigninForm(BaseModel):
     password: str
 
 
+class TwoFactorChallengeResponse(BaseModel):
+    requires_2fa: bool = True
+    challenge_id: str
+    delivery: str = "email"
+    masked_email: Optional[str] = None
+    expires_at: Optional[int] = None
+
+
+class TwoFactorVerifyForm(BaseModel):
+    challenge_id: str
+    code: str
+
+
+class TwoFactorResendForm(BaseModel):
+    challenge_id: str
+
+
 class LdapForm(BaseModel):
     user: str
     password: str

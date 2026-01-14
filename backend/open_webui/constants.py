@@ -49,6 +49,13 @@ class ERROR_MESSAGES(str, Enum):
         "The password provided is incorrect. Please check for typos and try again."
     )
     INVALID_TRUSTED_HEADER = "Your provider has not provided a trusted header. Please contact your administrator for assistance."
+    EMAIL_SEND_FAILED = "We couldn't send the verification email. Please try again later."
+    TWO_FACTOR_REQUIRED = "Two-factor authentication is required."
+    TWO_FACTOR_INVALID = "The verification code is invalid. Please try again."
+    TWO_FACTOR_EXPIRED = "The verification code has expired. Please sign in again."
+    TWO_FACTOR_MAX_ATTEMPTS = (
+        "Too many invalid attempts. Please sign in again to get a new code."
+    )
 
     EXISTING_USERS = "You can't turn off authentication because there are existing users. If you want to disable WEBUI_AUTH, make sure your web interface doesn't have any existing users and is a fresh installation."
 
