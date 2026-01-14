@@ -1244,7 +1244,7 @@
 	"Prefix ID": "prefijo ID",
 	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "El prefijo ID se utiliza para evitar conflictos con otras conexiones al añadir un prefijo a los IDs de modelo, dejar vacío para deshabilitarlo",
 	"Prevent File Creation": "",
-	"Preview": "Previsualización",
+	"Preview": "Vista previa",
 	"Previous 30 days": "30 días previos",
 	"Previous 7 days": "7 días previos",
 	"Previous message": "Mensaje anterior",
@@ -1871,4 +1871,34 @@
 	"Add Tenant": "Agregar inquilino"
 ,
 	"Select a tenant": "Selecciona un inquilino"
+,
+	"Select a tenant first.": "Administra los archivos de prompts de este inquilino.",
+	"Choose a .txt file to upload.": "Administra los archivos de prompts de este inquilino.",
+	"Only .txt files are allowed.": "Administra los archivos de prompts de este inquilino.",
+	"Prompt uploaded": "Administra los archivos de prompts de este inquilino.",
+	"Failed to upload prompt.": "Administra los archivos de prompts de este inquilino.",
+	"Tenant updated": "Administra los archivos de prompts de este inquilino.",
+	"Failed to update tenant.": "Administra los archivos de prompts de este inquilino.",
+	"Tenant Details": "Administra los archivos de prompts de este inquilino.",
+	"Manage prompt files for this tenant.": "Administra los archivos de prompts de este inquilino."
+,
+	"Cannot delete tenant with assigned users.": "No se puede eliminar un inquilino con usuarios asignados."
+,
+	"Tenant created": "Inquilino creado"
+,
+	"Help text updated": "Texto de ayuda actualizado",
+	"Failed to update help text.": "No se pudo actualizar el texto de ayuda.",
+	"Tenant Help": "Ayuda del inquilino",
+	"Updating help for": "Actualizando ayuda para",
+	"Back to Tenants": "Volver a inquilinos",
+	"Prompt Storage": "Almacenamiento de prompts",
+	"Last Updated": "Última actualización",
+	"Help Text Markdown": "Markdown del texto de ayuda",
+	"Use markdown to describe how this tenant should use the assistant.": "Usa markdown para describir cómo debe usar el asistente este inquilino.",
+	"Edit Markdown": "Editar Markdown",
+	"Enter markdown...": "Introduce markdown...",
+	"Nothing to preview yet.": "Nada que previsualizar aún.",
+	"Save Help Text": "Guardar texto de ayuda"
+,
+	"Characters": "Caracteres"
 }

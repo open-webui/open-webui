@@ -83,7 +83,10 @@
 			toast.success($i18n.t('Tenant deleted'));
 			await loadTenants();
 		} catch (error) {
-			const message = typeof error === 'string' ? error : (error?.detail ?? 'Failed to delete tenant.');
+			const message =
+				typeof error === 'string'
+					? $i18n.t(error)
+					: $i18n.t(error?.detail ?? 'Failed to delete tenant.');
 			toast.error(message);
 		} finally {
 			showDeleteConfirm = false;

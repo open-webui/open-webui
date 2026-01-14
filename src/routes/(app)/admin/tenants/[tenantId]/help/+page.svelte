@@ -77,7 +77,7 @@ let activeTab: 'edit' | 'preview' = 'edit';
 			toast.success($i18n.t('Help text updated'));
 		} catch (error) {
 			const message =
-				typeof error === 'string' ? error : (error?.detail ?? 'Failed to update help text.');
+				typeof error === 'string' ? error : ($i18n.t(error?.detail) ?? $i18n.t('Failed to update help text.'));
 			toast.error(message);
 		} finally {
 			saving = false;
