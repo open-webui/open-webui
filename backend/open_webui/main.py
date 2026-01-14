@@ -1707,7 +1707,7 @@ async def chat_completion(
 
     async def process_chat(request, form_data, user, metadata, model):
         try:
-            form_data, metadata, events = await process_chat_payload(
+            form_data, metadata, events, mcp_clients = await process_chat_payload(
                 request, form_data, user, metadata, model
             )
 
@@ -1772,7 +1772,7 @@ async def chat_completion(
                     pass
         finally:
             try:
-                if mcp_clients := metadata.get("mcp_clients"):
+                if mcp_clients:
                     for client in reversed(mcp_clients.values()):
                         await client.disconnect()
             except Exception as e:
@@ -1785,12 +1785,11 @@ async def chat_completion(
         and metadata.get("message_id")
     ):
         # Asynchronous Chat Processing
-        task_id, _ = await create_task(
-            request.app.state.redis,
-            process_chat(request, form_data, user, metadata, model),
-            id=metadata["chat_id"],
+        # Fix for Issue #20629: Use asyncio.create_task to avoid pickling 'request' object
+        asyncio.create_task(
+            process_chat(request, form_data, user, metadata, model)
         )
-        return {"status": True, "task_id": task_id}
+        return {"status": True, "task_id": metadata["chat_id"]}
     else:
         return await process_chat(request, form_data, user, metadata, model)
 

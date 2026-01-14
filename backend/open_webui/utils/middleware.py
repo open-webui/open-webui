@@ -1802,8 +1802,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     "server": tool_server,
                 }
 
-    if mcp_clients:
-        metadata["mcp_clients"] = mcp_clients
+    # if mcp_clients:
+    #     metadata["mcp_clients"] = mcp_clients
 
     # Inject builtin tools for native function calling based on enabled features and model capability
     # Check if builtin_tools capability is enabled for this model (defaults to True if not specified)
@@ -1901,7 +1901,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
-    return form_data, metadata, events
+    return form_data, metadata, events, mcp_clients
 
 
 async def process_chat_response(
