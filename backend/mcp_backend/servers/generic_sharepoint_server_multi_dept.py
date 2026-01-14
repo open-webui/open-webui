@@ -665,18 +665,21 @@ async def analyze_all_documents_for_content(
         relevant_documents.sort(key=lambda x: x["relevance_score"], reverse=True)
 
         # Simple response size limiting (remove double truncation that causes slowdown)
-        limited_results = relevant_documents[:8]  # Just take top 8 results
+        limited_results = relevant_documents[
+            :25
+        ]  # Increased to 25 results to capture more documents
 
-        # Light content limiting
+        # Light content limiting - increased preview size to capture early pages of documents
         for doc in limited_results:
             if "content_preview" in doc:
                 doc["content_preview"] = (
-                    doc["content_preview"][:200] + "..."
-                    if len(doc["content_preview"]) > 200
+                    doc["content_preview"][:2000]
+                    + "..."  # Increased to 2000 chars for multi-page content
+                    if len(doc["content_preview"]) > 2000
                     else doc["content_preview"]
                 )
             if "matches" in doc:
-                doc["matches"] = doc["matches"][:3]
+                doc["matches"] = doc["matches"][:7]  # Increased to 7 matches
 
         # FORCE performance logging - short message to prevent truncation
         perf_message = f"🚀 {folders_processed}F/{total_docs}D in {round(processing_time, 1)}s → {len(relevant_documents)} results"
