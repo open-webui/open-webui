@@ -22,7 +22,7 @@ fi
 
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
-if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
+if [ -z "$WEBUI_SECRET_KEY" ] && [ -z "$WEBUI_JWT_SECRET_KEY" ]; then
   echo "Loading WEBUI_SECRET_KEY from file, not provided as an environment variable."
 
   if ! [ -e "$KEY_FILE" ]; then
