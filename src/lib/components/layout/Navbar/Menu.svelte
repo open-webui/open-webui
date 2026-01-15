@@ -313,7 +313,7 @@
 				<div class="flex items-center">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item> -->
 
-			{#if $mobile && ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true))}
+			{#if $mobile && ($user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && (($user?.permissions.chat?.valves ?? true) || ($user?.permissions.chat?.system_prompt ?? true) || ($user?.permissions.chat?.params ?? true))))}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
 					id="chat-controls-button"

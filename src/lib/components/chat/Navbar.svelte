@@ -210,7 +210,7 @@
 						</Menu>
 					{/if}
 
-					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
+					{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && (($user?.permissions.chat?.valves ?? true) || ($user?.permissions.chat?.system_prompt ?? true) || ($user?.permissions.chat?.params ?? true)))}
 						<Tooltip content={$i18n.t('Controls')}>
 							<button
 								class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"

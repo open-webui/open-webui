@@ -30,7 +30,7 @@
 		</button>
 	</div>
 
-	{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
+	{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && (($user?.permissions.chat?.valves ?? true) || ($user?.permissions.chat?.system_prompt ?? true) || ($user?.permissions.chat?.params ?? true)))}
 		<div class=" dark:text-gray-200 text-sm font-primary py-0.5 px-0.5">
 			{#if chatFiles.length > 0}
 				<Collapsible title={$i18n.t('Files')} open={true} buttonClassName="w-full">
