@@ -4,21 +4,29 @@
 
 	export let line: string;
 	export let system: string | null = null;
-	export let dpmo: number;
-	export let totalUnits: number;
+	export let dpmo: number | null = null;
+	export let totalUnits: number | null = null;
 	export let changePercent: number = 0;
 	export let isDark: boolean = false;
 	export let onClick: (() => void) | null = null;
 	export let dpmoHelpText: string | null = null;
+	export let isEstimated: boolean = false;
+	export let historicalDpmo: number | null = null;
 
+	$: hasDpmo = dpmo !== null && dpmo !== undefined;
+	$: hasUnits = totalUnits !== null && totalUnits !== undefined;
+	$: hasHistorical = historicalDpmo !== null && historicalDpmo !== undefined;
 	$: chipColor = changePercent > 0 ? 'red' : changePercent < 0 ? 'green' : 'neutral';
-	$: chipValue = changePercent !== 0 ? `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(1)}%` : null;
-	$: formattedDPMO = dpmo.toLocaleString(undefined, { maximumFractionDigits: 0 });
-	$: formattedUnits = totalUnits >= 1000000
-		? `${(totalUnits / 1000000).toFixed(1)}M`
-		: totalUnits >= 1000
-			? `${(totalUnits / 1000).toFixed(1)}K`
-			: totalUnits.toString();
+	$: chipValue = hasDpmo && changePercent !== 0 ? `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(1)}%` : null;
+	$: formattedDPMO = hasDpmo ? dpmo.toLocaleString(undefined, { maximumFractionDigits: 0 }) : 'N/A';
+	$: formattedHistorical = hasHistorical ? historicalDpmo.toLocaleString(undefined, { maximumFractionDigits: 0 }) : null;
+	$: formattedUnits = hasUnits
+		? totalUnits >= 1000000
+			? `${(totalUnits / 1000000).toFixed(1)}M`
+			: totalUnits >= 1000
+				? `${(totalUnits / 1000).toFixed(1)}K`
+				: totalUnits.toString()
+		: 'N/A';
 
 	const chipColorClasses = {
 		green: 'bg-[#5CC9D3] text-white',
@@ -60,13 +68,25 @@
 		</div>
 
 		<div class="flex items-end justify-between">
-			<div class="flex items-center gap-2">
-				<span class="text-2xl font-bold {isDark ? 'text-white' : 'text-gray-900'}">
-					{formattedDPMO}
-				</span>
-				{#if chipValue}
-					<span class="text-xs px-2 py-0.5 rounded-full font-medium {chipColorClasses[chipColor]}">
-						{chipValue}
+			<div class="flex flex-col gap-1">
+				<div class="flex items-center gap-2">
+					<span class="text-2xl font-bold {isDark ? 'text-white' : 'text-gray-900'}">
+						{formattedDPMO}
+					</span>
+					{#if isEstimated && hasDpmo}
+						<span class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500 text-white">
+							Est.
+						</span>
+					{/if}
+					{#if chipValue}
+						<span class="text-xs px-2 py-0.5 rounded-full font-medium {chipColorClasses[chipColor]}">
+							{chipValue}
+						</span>
+					{/if}
+				</div>
+				{#if formattedHistorical}
+					<span class="text-xs {isDark ? 'text-gray-500' : 'text-gray-400'}">
+						vs {formattedHistorical} prev period
 					</span>
 				{/if}
 			</div>

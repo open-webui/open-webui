@@ -7,6 +7,8 @@
 	import ToggleBar from './Toggle/ToggleBar.svelte';
 	import ChipBar from './Toggle/ChipBar.svelte';
 	import LineChart from './Charts/LineChart.svelte';
+	import HistogramChart from './Charts/HistogramChart.svelte';
+	import IncidentsList from './Incidents/IncidentsList.svelte';
 
 	import {
 		getAvailableDashboards,
@@ -14,10 +16,20 @@
 		getOverview,
 		getLineMetrics,
 		getTimeSeries,
+		getOrientation,
+		getIncidents,
+		getUVBCIntensity,
+		getPartialRings,
+		getSystemHealth,
 		type TenantDashboardConfig,
 		type OverviewMetric,
 		type LineMetrics as LineMetricsType,
-		type TimeSeriesPoint
+		type TimeSeriesPoint,
+		type OrientationBin,
+		type Incident,
+		type IntensityStats,
+		type PartialRingData,
+		type DeviceHealth
 	} from '$lib/apis/dashboard';
 
 	import {
@@ -39,8 +51,9 @@
 
 	const METRIC_HELP: Record<string, Record<string, string>> = {
 		uvbc: {
-			total: 'Total units for UVBC is SUM(uvring) over the selected time range (matches Grafana “UVRing”).',
+			total: 'Total units for UVBC is SUM(uvring) over the selected time range (matches Grafana "UVRing").',
 			down: 'UV Down defects: SUM(uvdown) over the selected time range.',
+			edge: 'Edge defects: SUM(edge) over the selected time range.',
 			no_coats: 'No Coating defects: SUM(nocoating) over the selected time range.',
 			partials: 'Partial Coverage defects: SUM(uvpartial) over the selected time range.',
 			blobs: 'Blob defects: SUM(blob) over the selected time range.',
@@ -70,6 +83,20 @@
 	let overviewMetrics: OverviewMetric[] = [];
 	let lineMetrics: LineMetricsType | null = null;
 	let timeSeriesData: TimeSeriesPoint[] = [];
+	let orientationData: OrientationBin[] = [];
+	let orientationLoading = false;
+	let orientationError: string | null = null;
+	let incidentsData: Incident[] = [];
+	let incidentsLoading = false;
+	let incidentsError: string | null = null;
+	let intensityData: any[] = [];
+	let partialRingsData: PartialRingData[] = [];
+	let coatingLoading = false;
+	let coatingError: string | null = null;
+	let systemHealthData: DeviceHealth[] = [];
+	let systemHealthLoading = false;
+	let systemHealthError: string | null = null;
+	let systemHealthTimestamp: string = '';
 
 	// Computed
 	$: currentDays = $dateRange.days;
@@ -140,9 +167,10 @@
 				// Load overview
 				await loadOverview(undefined, tenantId);
 
-				// Load line metrics if line selected
+				// Load line metrics and incidents if line selected
 				if ($selectedLine) {
 					await loadLineData({ tenantId });
+					await loadIncidentsData({ tenantId });
 				}
 			}
 		} catch (e) {
@@ -202,6 +230,115 @@
 		}
 	}
 
+	async function loadOrientationData(options: { tenantId?: string; lineId?: string; system?: string; days?: number } = {}) {
+		const tenantId = options.tenantId ?? $selectedTenantId;
+		const lineId = options.lineId ?? $selectedLine;
+		const system = (options.system ?? $selectedSystem).toLowerCase();
+		const days = options.days ?? $dateRange.days;
+
+		if (!tenantId || !lineId) return;
+
+		orientationLoading = true;
+		orientationError = null;
+		orientationData = [];
+
+		try {
+			const response = await getOrientation(token, tenantId, lineId, {
+				system,
+				defectType: system === 'washer' ? 'down' : 'uvdown',
+				days,
+				binSize: 100
+			});
+			orientationData = response.data;
+		} catch (e) {
+			orientationError = e instanceof Error ? e.message : 'Failed to load orientation data';
+			console.error('Failed to load orientation data:', e);
+		} finally {
+			orientationLoading = false;
+		}
+	}
+
+	async function loadIncidentsData(options: { tenantId?: string; lineId?: string; system?: string; days?: number } = {}) {
+		const tenantId = options.tenantId ?? $selectedTenantId;
+		const lineId = options.lineId ?? $selectedLine;
+		const system = (options.system ?? $selectedSystem).toLowerCase();
+		const days = options.days ?? $dateRange.days;
+
+		if (!tenantId || !lineId) return;
+
+		incidentsLoading = true;
+		incidentsError = null;
+		incidentsData = [];
+
+		try {
+			const response = await getIncidents(token, tenantId, lineId, {
+				system,
+				limit: 10,
+				largeOnly: false,
+				days
+			});
+			incidentsData = response.incidents;
+		} catch (e) {
+			incidentsError = e instanceof Error ? e.message : 'Failed to load incidents';
+			console.error('Failed to load incidents:', e);
+		} finally {
+			incidentsLoading = false;
+		}
+	}
+
+	async function loadCoatingData(options: { tenantId?: string; lineId?: string; days?: number } = {}) {
+		const tenantId = options.tenantId ?? $selectedTenantId;
+		const lineId = options.lineId ?? $selectedLine;
+		const days = options.days ?? $dateRange.days;
+
+		// Coating only applies to UVBC system
+		if (!tenantId || !lineId || $selectedSystem.toLowerCase() !== 'uvbc') {
+			intensityData = [];
+			partialRingsData = [];
+			return;
+		}
+
+		coatingLoading = true;
+		coatingError = null;
+
+		try {
+			const [intensityResponse, partialsResponse] = await Promise.all([
+				getUVBCIntensity(token, tenantId, lineId, days),
+				getPartialRings(token, tenantId, lineId, days)
+			]);
+			intensityData = intensityResponse.data;
+			partialRingsData = partialsResponse.data;
+		} catch (e) {
+			coatingError = e instanceof Error ? e.message : 'Failed to load coating data';
+			console.error('Failed to load coating data:', e);
+		} finally {
+			coatingLoading = false;
+		}
+	}
+
+	async function loadSystemHealthData(options: { tenantId?: string } = {}) {
+		const tenantId = options.tenantId ?? $selectedTenantId;
+
+		if (!tenantId) {
+			systemHealthData = [];
+			return;
+		}
+
+		systemHealthLoading = true;
+		systemHealthError = null;
+
+		try {
+			const response = await getSystemHealth(token, tenantId);
+			systemHealthData = response.devices;
+			systemHealthTimestamp = response.timestamp;
+		} catch (e) {
+			systemHealthError = e instanceof Error ? e.message : 'Failed to load system health';
+			console.error('Failed to load system health:', e);
+		} finally {
+			systemHealthLoading = false;
+		}
+	}
+
 	function handleTenantChange(tenantId: string) {
 		selectedTenantId.set(tenantId);
 		selectedLine.set(null);
@@ -218,15 +355,26 @@
 			}
 
 		await loadLineData({ lineId: line });
+		await loadIncidentsData({ lineId: line });
 	}
 
 	async function handleSystemChange(system: string) {
 		selectedSystem.set(system.toLowerCase());
 		await loadLineData({ system });
+		await loadIncidentsData({ system });
 	}
 
-	function handleSecondaryChange(option: string) {
-		selectedSecondaryOption.set(option.toLowerCase());
+	async function handleSecondaryChange(option: string) {
+		const lowerOption = option.toLowerCase();
+		selectedSecondaryOption.set(lowerOption);
+
+		if (lowerOption === 'orientation') {
+			await loadOrientationData();
+		} else if (lowerOption === 'coating') {
+			await loadCoatingData();
+		} else if (lowerOption === 'system') {
+			await loadSystemHealthData();
+		}
 	}
 
 	function handleDaysChange(days: number) {
@@ -237,6 +385,12 @@
 		}));
 		loadOverview(days);
 		loadLineData({ days });
+		loadIncidentsData({ days });
+		if ($selectedSecondaryOption === 'orientation') {
+			loadOrientationData({ days });
+		} else if ($selectedSecondaryOption === 'coating') {
+			loadCoatingData({ days });
+		}
 	}
 </script>
 
@@ -310,6 +464,8 @@
 									dpmo={metric.dpmo}
 									totalUnits={metric.total_units}
 									changePercent={metric.change_percent}
+									isEstimated={metric.dpmo_estimated ?? false}
+									historicalDpmo={metric.historical_dpmo}
 									dpmoHelpText={DPMO_HELP}
 									{isDark}
 									onClick={() => metric.line && handleLineChange(metric.line)}
@@ -363,17 +519,19 @@
 						size="sm"
 					/>
 
-					<!-- Metrics Cards -->
-					{#if lineLoading}
-						<div class="flex items-center justify-center h-24">
-							<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5CC9D3]"></div>
-						</div>
-					{:else if lineError}
-						<div
-							class="p-3 rounded-lg {isDark ? 'bg-red-900/50 text-red-200' : 'bg-red-50 text-red-700'}"
-						>
-							{lineError}
-						</div>
+					<!-- Content based on secondary option -->
+					{#if $selectedSecondaryOption === 'metrics'}
+						<!-- Metrics View -->
+						{#if lineLoading}
+							<div class="flex items-center justify-center h-24">
+								<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5CC9D3]"></div>
+							</div>
+						{:else if lineError}
+							<div
+								class="p-3 rounded-lg {isDark ? 'bg-red-900/50 text-red-200' : 'bg-red-50 text-red-700'}"
+							>
+								{lineError}
+							</div>
 						{:else if lineMetrics}
 							{#if $selectedSystem.toLowerCase() === 'washer'}
 								<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -398,7 +556,7 @@
 									<MetricCard label="Avg FPS" value={lineMetrics.avg_fps} helpText={METRIC_HELP.washer.avg_fps} {isDark} />
 								</div>
 							{:else}
-								<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+								<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
 									<MetricCard
 										label="Total Units (UV Ring)"
 										value={lineMetrics.metrics?.total ?? 0}
@@ -413,6 +571,12 @@
 											: null}
 										chipColor="red"
 										helpText={METRIC_HELP.uvbc.down}
+										{isDark}
+									/>
+									<MetricCard
+										label="Edge"
+										value={lineMetrics.metrics?.edge ?? 0}
+										helpText={METRIC_HELP.uvbc.edge}
 										{isDark}
 									/>
 									<MetricCard
@@ -437,12 +601,12 @@
 								</div>
 							{/if}
 
-						<!-- Chart Section -->
-						<div
-							class="p-4 rounded-lg border {isDark
-								? 'bg-gray-800/50 border-gray-700/50'
-								: 'bg-white border-gray-200'}"
-						>
+							<!-- Chart Section -->
+							<div
+								class="p-4 rounded-lg border {isDark
+									? 'bg-gray-800/50 border-gray-700/50'
+									: 'bg-white border-gray-200'}"
+							>
 								<LineChart
 									title={$selectedSystem.toLowerCase() === 'washer' ? 'Down Trend' : 'UV Down Trend'}
 									subtitle={$dateRange.days === 1 ? 'Last 24 hours' : `Last ${$dateRange.days} days`}
@@ -450,9 +614,212 @@
 									color={chartColors.primary}
 									{isDark}
 									height={250}
-							/>
+								/>
+							</div>
+						{/if}
+
+					{:else if $selectedSecondaryOption === 'orientation'}
+						<!-- Orientation View -->
+						{#if orientationLoading}
+							<div class="flex items-center justify-center h-24">
+								<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5CC9D3]"></div>
+							</div>
+						{:else if orientationError}
+							<div
+								class="p-3 rounded-lg {isDark ? 'bg-red-900/50 text-red-200' : 'bg-red-50 text-red-700'}"
+							>
+								{orientationError}
+							</div>
+						{:else}
+							<div
+								class="p-4 rounded-lg border {isDark
+									? 'bg-gray-800/50 border-gray-700/50'
+									: 'bg-white border-gray-200'}"
+							>
+								<HistogramChart
+									title="Defect Location Distribution"
+									subtitle={`${$selectedSystem.toLowerCase() === 'washer' ? 'Down' : 'UV Down'} defects by X position - ${$dateRange.days === 1 ? 'Last 24 hours' : `Last ${$dateRange.days} days`}`}
+									data={orientationData}
+									color={chartColors.primary}
+									xAxisLabel="X Position (pixels)"
+									yAxisLabel="Defect Count"
+									{isDark}
+									height={300}
+								/>
+							</div>
+						{/if}
+
+					{:else if $selectedSecondaryOption === 'coating'}
+						<!-- Coating View (UVBC only) -->
+						{#if $selectedSystem.toLowerCase() !== 'uvbc'}
+							<div
+								class="p-8 rounded-lg border text-center {isDark
+									? 'bg-gray-800/50 border-gray-700/50 text-gray-400'
+									: 'bg-white border-gray-200 text-gray-500'}"
+							>
+								<p class="text-sm">Coating metrics only available for UVBC system</p>
+								<p class="text-xs mt-1">Select UVBC system to view intensity data</p>
+							</div>
+						{:else if coatingLoading}
+							<div class="flex items-center justify-center h-32">
+								<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5CC9D3]"></div>
+							</div>
+						{:else if coatingError}
+							<div
+								class="p-3 rounded-lg {isDark ? 'bg-red-900/50 text-red-200' : 'bg-red-50 text-red-700'}"
+							>
+								{coatingError}
+							</div>
+						{:else}
+							<div class="space-y-4">
+								<!-- Intensity Chart -->
+								<div
+									class="p-4 rounded-lg border {isDark
+										? 'bg-gray-800/50 border-gray-700/50'
+										: 'bg-white border-gray-200'}"
+								>
+									<h4 class="text-sm font-semibold mb-2 {isDark ? 'text-white' : 'text-gray-900'}">
+										Ring Intensity (Daily Average)
+									</h4>
+									{#if intensityData.length > 0}
+										<LineChart
+											title=""
+											subtitle=""
+											data={intensityData.map(d => ({ time: d.date || d.time, value: d.avg_intensity || d.average_intensity || 0 }))}
+											color={chartColors.primary}
+											{isDark}
+											height={200}
+										/>
+									{:else}
+										<p class="text-sm text-center py-8 {isDark ? 'text-gray-500' : 'text-gray-400'}">
+											No intensity data available
+										</p>
+									{/if}
+								</div>
+
+								<!-- Partial Rings Distribution -->
+								<div
+									class="p-4 rounded-lg border {isDark
+										? 'bg-gray-800/50 border-gray-700/50'
+										: 'bg-white border-gray-200'}"
+								>
+									<h4 class="text-sm font-semibold mb-2 {isDark ? 'text-white' : 'text-gray-900'}">
+										Partial Ring Distribution
+									</h4>
+									{#if partialRingsData.length > 0}
+										<HistogramChart
+											title=""
+											subtitle=""
+											data={partialRingsData.map(d => ({ bin_start: Math.round(d.ring_percentage), bin_end: Math.round(d.ring_percentage) + 10, count: d.count }))}
+											color={chartColors.secondary || '#f59e0b'}
+											xAxisLabel="Ring Coverage %"
+											yAxisLabel="Count"
+											{isDark}
+											height={200}
+										/>
+									{:else}
+										<p class="text-sm text-center py-8 {isDark ? 'text-gray-500' : 'text-gray-400'}">
+											No partial ring data available
+										</p>
+									{/if}
+								</div>
+							</div>
+						{/if}
+
+					{:else if $selectedSecondaryOption === 'system'}
+						<!-- System Health View -->
+						<div class="space-y-4">
+							{#if systemHealthLoading}
+								<div class="flex items-center justify-center h-32">
+									<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5CC9D3]"></div>
+								</div>
+							{:else if systemHealthError}
+								<div class="p-4 rounded-lg {isDark ? 'bg-red-900/50 text-red-200' : 'bg-red-50 text-red-700'}">
+									{systemHealthError}
+								</div>
+							{:else if systemHealthData.length === 0}
+								<div class="p-8 text-center {isDark ? 'text-gray-400' : 'text-gray-500'}">
+									<p class="text-sm">No device health data available</p>
+								</div>
+							{:else}
+								<div class="flex items-center justify-between mb-2">
+									<h4 class="text-sm font-medium {isDark ? 'text-white' : 'text-gray-900'}">
+										Device Status
+									</h4>
+									{#if systemHealthTimestamp}
+										<span class="text-xs {isDark ? 'text-gray-500' : 'text-gray-400'}">
+											Updated: {new Date(systemHealthTimestamp).toLocaleTimeString()}
+										</span>
+									{/if}
+								</div>
+								<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+									{#each systemHealthData as device}
+										<div
+											class="p-3 rounded-lg border {isDark
+												? 'bg-gray-800/50 border-gray-700/50'
+												: 'bg-white border-gray-200'}"
+										>
+											<div class="flex items-center justify-between mb-2">
+												<span class="text-sm font-medium {isDark ? 'text-white' : 'text-gray-900'}">
+													{device.line_id}
+												</span>
+												<span
+													class="px-2 py-0.5 rounded-full text-xs font-medium {device.status === 'ok'
+														? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
+														: device.status === 'warning'
+															? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
+															: device.status === 'error'
+																? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+																: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}"
+												>
+													{device.status.toUpperCase()}
+												</span>
+											</div>
+											<div class="space-y-1 text-xs {isDark ? 'text-gray-400' : 'text-gray-500'}">
+												<div class="flex justify-between">
+													<span>System:</span>
+													<span class="{isDark ? 'text-gray-300' : 'text-gray-700'}">{device.system.toUpperCase()}</span>
+												</div>
+												{#if device.latest_fps !== null}
+													<div class="flex justify-between">
+														<span>FPS:</span>
+														<span class="{isDark ? 'text-gray-300' : 'text-gray-700'}">{device.latest_fps.toFixed(1)}</span>
+													</div>
+												{/if}
+												{#if device.last_seen}
+													<div class="flex justify-between">
+														<span>Last Seen:</span>
+														<span class="{isDark ? 'text-gray-300' : 'text-gray-700'}">
+															{new Date(device.last_seen).toLocaleTimeString()}
+														</span>
+													</div>
+												{/if}
+												{#if device.message}
+													<p class="mt-1 text-xs italic {device.status === 'error' ? 'text-red-400' : device.status === 'warning' ? 'text-yellow-400' : ''}">
+														{device.message}
+													</p>
+												{/if}
+											</div>
+										</div>
+									{/each}
+								</div>
+							{/if}
 						</div>
 					{/if}
+
+					<!-- Incidents Section -->
+					<div class="space-y-3 mt-6">
+						<h3 class="text-sm font-semibold {isDark ? 'text-white' : 'text-gray-900'}">
+							Recent Incidents (Last {currentDays} {currentDays === 1 ? 'day' : 'days'})
+						</h3>
+						<IncidentsList
+							incidents={incidentsData}
+							system={$selectedSystem.toLowerCase()}
+							{isDark}
+							loading={incidentsLoading}
+							error={incidentsError}
+						/>
+					</div>
 
 				</div>
 			{/if}

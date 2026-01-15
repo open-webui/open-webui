@@ -29,6 +29,10 @@ from open_webui.models.rmmc_dashboard import (
     PartialRingData,
     ImageUrlResponse,
     CacheClearResponse,
+    OrientationResponse,
+    OrientationBin,
+    SystemHealthResponse,
+    DeviceHealth,
 )
 from open_webui.services import timestream
 
@@ -261,6 +265,40 @@ async def get_line_timeseries(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/tenants/{tenant_id}/lines/{line_id}/orientation", response_model=OrientationResponse)
+async def get_line_orientation(
+    tenant_id: str,
+    line_id: str,
+    system: str = Query(default="washer"),
+    defect_type: str = Query(default="down"),
+    days: int = Query(default=7, ge=1, le=30),
+    bin_size: int = Query(default=100, ge=10, le=500),
+    user=Depends(get_verified_user)
+):
+    """Get defect location distribution (x-position histogram)"""
+    _require_dashboard_access(user, tenant_id)
+    try:
+        result = await timestream.get_orientation_data(
+            tenant_id=tenant_id,
+            line_id=line_id,
+            system=system,
+            defect_type=defect_type,
+            days=days,
+            bin_size=bin_size,
+        )
+        return OrientationResponse(
+            tenant_id=tenant_id,
+            line_id=line_id,
+            system=system,
+            defect_type=result.get("defect_type", defect_type),
+            bin_size=result.get("bin_size", bin_size),
+            data=[OrientationBin(**d) for d in result.get("data", [])],
+        )
+    except Exception as e:
+        logger.error(f"Failed to get orientation for {tenant_id}/{line_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # =============================================================================
 # UVBC-SPECIFIC ENDPOINTS
 # =============================================================================
@@ -275,11 +313,12 @@ async def get_uvbc_intensity(
     """Get UVBC ring intensity data for a line"""
     _require_dashboard_access(user, tenant_id)
     try:
-        data = await timestream.get_uvbc_intensity(tenant_id=tenant_id, line_id=line_id, days=days)
+        result = await timestream.get_uvbc_intensity(tenant_id=tenant_id, line_id=line_id, days=days)
+        intensity_data = result.get("data", [])
         return IntensityResponse(
             tenant_id=tenant_id,
             line_id=line_id,
-            data=[IntensityStats(**d) for d in data],
+            data=[IntensityStats(**d) for d in intensity_data],
         )
     except Exception as e:
         logger.error(f"Failed to get UVBC intensity for {tenant_id}/{line_id}: {e}")
@@ -342,4 +381,32 @@ async def clear_cache(user=Depends(get_admin_user)):
         return CacheClearResponse(status="ok", message="Cache cleared successfully")
     except Exception as e:
         logger.error(f"Failed to clear cache: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# SYSTEM HEALTH ENDPOINTS
+# =============================================================================
+
+@router.get("/tenants/{tenant_id}/health", response_model=SystemHealthResponse)
+async def get_system_health(
+    tenant_id: str,
+    minutes: int = Query(default=30, ge=5, le=120),
+    user=Depends(get_verified_user)
+):
+    """Get system health status for all devices of a tenant"""
+    _require_dashboard_access(user, tenant_id)
+    try:
+        result = await timestream.get_system_health(tenant_id=tenant_id, minutes=minutes)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        return SystemHealthResponse(
+            tenant_id=tenant_id,
+            devices=[DeviceHealth(**d) for d in result.get("devices", [])],
+            timestamp=result.get("timestamp", "")
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get system health for {tenant_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

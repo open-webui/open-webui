@@ -42,10 +42,12 @@ class OverviewMetric(BaseModel):
     device_id: Optional[str] = None
     line: Optional[str] = None
     system: Optional[str] = None
-    total_units: int
+    total_units: Optional[int] = None  # None when washer can data unavailable
     defect_count: int
-    dpmo: float
+    dpmo: Optional[float] = None  # None when total_units unknown
+    dpmo_estimated: bool = False  # True when DPMO is based on estimated totals
     change_percent: float = 0.0
+    historical_dpmo: Optional[float] = None  # Historical average DPMO for comparison
 
 
 class OverviewResponse(BaseModel):
@@ -70,18 +72,30 @@ class LineMetrics(BaseModel):
 # =============================================================================
 
 class Incident(BaseModel):
-    """Single incident record"""
+    """Single incident record - supports both washer and UVBC systems"""
     time: str
     device_id: Optional[str] = None
     line_id: str
     system: str
     inc_hits: int
-    down: int
-    inverted: int
-    down_conf: float
-    inverted_conf: float
     uuid: Optional[str] = None
     image_url: Optional[str] = None
+    # Washer-specific fields
+    down: Optional[int] = None
+    inverted: Optional[int] = None
+    down_conf: Optional[float] = None
+    inverted_conf: Optional[float] = None
+    # UVBC-specific fields
+    uvdown: Optional[int] = None
+    nocoating: Optional[int] = None
+    uvpartial: Optional[int] = None
+    edge: Optional[int] = None
+    blob: Optional[int] = None
+    uvdown_conf: Optional[float] = None
+    nocoating_conf: Optional[float] = None
+    uvpartial_conf: Optional[float] = None
+    edge_conf: Optional[float] = None
+    blob_conf: Optional[float] = None
 
 
 class IncidentsResponse(BaseModel):
@@ -117,13 +131,10 @@ class TimeSeriesResponse(BaseModel):
 
 class IntensityStats(BaseModel):
     """UVBC ring intensity statistics"""
-    time: str
-    ring: int
-    average_intensity: float
+    date: str
+    avg_intensity: float
     min_intensity: float
     max_intensity: float
-    median_intensity: float
-    std_deviation: float
 
 
 class IntensityResponse(BaseModel):
@@ -161,3 +172,46 @@ class CacheClearResponse(BaseModel):
     """Cache clear response"""
     status: str
     message: str
+
+
+# =============================================================================
+# ORIENTATION MODELS
+# =============================================================================
+
+class OrientationBin(BaseModel):
+    """Single orientation histogram bin"""
+    bin_start: int
+    bin_end: int
+    count: int
+
+
+class OrientationResponse(BaseModel):
+    """Defect location distribution (x-position histogram)"""
+    tenant_id: str
+    line_id: str
+    system: str
+    defect_type: str
+    bin_size: int
+    data: List[OrientationBin]
+
+
+# =============================================================================
+# SYSTEM HEALTH MODELS
+# =============================================================================
+
+class DeviceHealth(BaseModel):
+    """Health status for a single device/camera"""
+    device_id: str
+    line_id: str
+    system: str
+    status: str  # "ok", "warning", "error", "offline"
+    last_seen: Optional[str] = None
+    latest_fps: Optional[float] = None
+    message: Optional[str] = None
+
+
+class SystemHealthResponse(BaseModel):
+    """System health status for all devices"""
+    tenant_id: str
+    devices: List[DeviceHealth]
+    timestamp: str

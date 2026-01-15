@@ -33,10 +33,12 @@ export type OverviewMetric = {
 	device_id: string;
 	line: string | null;
 	system: string | null;
-	total_units: number;
+	total_units: number | null;  // null when washer can data unavailable
 	defect_count: number;
-	dpmo: number;
+	dpmo: number | null;  // null when total_units unknown
+	dpmo_estimated: boolean;  // true when DPMO is based on estimated totals
 	change_percent: number;
+	historical_dpmo: number | null;  // historical average DPMO for comparison
 };
 
 export type OverviewResponse = {
@@ -60,12 +62,24 @@ export type Incident = {
 	line_id: string;
 	system: string;
 	inc_hits: number;
-	down: number;
-	inverted: number;
-	down_conf: number;
-	inverted_conf: number;
 	uuid: string | null;
 	image_url: string | null;
+	// Washer-specific fields
+	down: number | null;
+	inverted: number | null;
+	down_conf: number | null;
+	inverted_conf: number | null;
+	// UVBC-specific fields
+	uvdown: number | null;
+	nocoating: number | null;
+	uvpartial: number | null;
+	edge: number | null;
+	blob: number | null;
+	uvdown_conf: number | null;
+	nocoating_conf: number | null;
+	uvpartial_conf: number | null;
+	edge_conf: number | null;
+	blob_conf: number | null;
 };
 
 export type IncidentsResponse = {
@@ -89,13 +103,10 @@ export type TimeSeriesResponse = {
 };
 
 export type IntensityStats = {
-	time: string;
-	ring: number;
-	average_intensity: number;
+	date: string;
+	avg_intensity: number;
 	min_intensity: number;
 	max_intensity: number;
-	median_intensity: number;
-	std_deviation: number;
 };
 
 export type IntensityResponse = {
@@ -113,6 +124,37 @@ export type PartialRingResponse = {
 	tenant_id: string;
 	line_id: string;
 	data: PartialRingData[];
+};
+
+export type OrientationBin = {
+	bin_start: number;
+	bin_end: number;
+	count: number;
+};
+
+export type OrientationResponse = {
+	tenant_id: string;
+	line_id: string;
+	system: string;
+	defect_type: string;
+	bin_size: number;
+	data: OrientationBin[];
+};
+
+export type DeviceHealth = {
+	device_id: string;
+	line_id: string;
+	system: string;
+	status: 'ok' | 'warning' | 'error' | 'offline';
+	last_seen: string | null;
+	latest_fps: number | null;
+	message: string | null;
+};
+
+export type SystemHealthResponse = {
+	tenant_id: string;
+	devices: DeviceHealth[];
+	timestamp: string;
 };
 
 // =============================================================================
@@ -354,6 +396,48 @@ export const getPartialRings = async (
 };
 
 /**
+ * Get defect orientation/location distribution
+ */
+export const getOrientation = async (
+	token: string,
+	tenantId: string,
+	lineId: string,
+	options: {
+		system?: string;
+		defectType?: string;
+		days?: number;
+		binSize?: number;
+	} = {}
+): Promise<OrientationResponse> => {
+	const { system = 'washer', defectType = 'down', days = 7, binSize = 100 } = options;
+
+	const params = new URLSearchParams({
+		system,
+		defect_type: defectType,
+		days: days.toString(),
+		bin_size: binSize.toString()
+	});
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/dashboard/tenants/${tenantId}/lines/${lineId}/orientation?${params}`,
+		{
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	);
+
+	if (!res.ok) {
+		const error = await res.json().catch(() => ({ detail: 'Failed to fetch orientation data' }));
+		throw new Error(error.detail || 'Failed to fetch orientation data');
+	}
+
+	return res.json();
+};
+
+/**
  * Clear dashboard cache (admin only)
  */
 export const clearDashboardCache = async (token: string): Promise<{ status: string; message: string }> => {
@@ -368,6 +452,33 @@ export const clearDashboardCache = async (token: string): Promise<{ status: stri
 	if (!res.ok) {
 		const error = await res.json().catch(() => ({ detail: 'Failed to clear cache' }));
 		throw new Error(error.detail || 'Failed to clear cache');
+	}
+
+	return res.json();
+};
+
+/**
+ * Get system health status for all devices
+ */
+export const getSystemHealth = async (
+	token: string,
+	tenantId: string,
+	minutes: number = 30
+): Promise<SystemHealthResponse> => {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/dashboard/tenants/${tenantId}/health?minutes=${minutes}`,
+		{
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	);
+
+	if (!res.ok) {
+		const error = await res.json().catch(() => ({ detail: 'Failed to fetch system health' }));
+		throw new Error(error.detail || 'Failed to fetch system health');
 	}
 
 	return res.json();

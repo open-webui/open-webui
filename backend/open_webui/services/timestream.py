@@ -158,14 +158,35 @@ async def get_time_series(
     return result.get("data", [])
 
 
-async def get_uvbc_intensity(tenant_id: str, line_id: str, days: int = 7) -> List[Dict[str, Any]]:
+async def get_uvbc_intensity(tenant_id: str, line_id: str, days: int = 7, mode: str = "daily") -> Dict[str, Any]:
     """Get UVBC ring intensity data"""
     result = await _invoke_rag_platform("dashboard_uvbc_intensity", {
         "tenant_id": tenant_id,
         "line_id": line_id,
-        "days": days
+        "days": days,
+        "mode": mode
     })
-    return result.get("data", [])
+    return result
+
+
+async def get_orientation_data(
+    tenant_id: str,
+    line_id: str,
+    system: str = "washer",
+    defect_type: str = "down",
+    days: int = 7,
+    bin_size: int = 100
+) -> Dict[str, Any]:
+    """Get defect location distribution (x-position histogram)"""
+    result = await _invoke_rag_platform("dashboard_orientation", {
+        "tenant_id": tenant_id,
+        "line_id": line_id,
+        "system": system,
+        "defect_type": defect_type,
+        "days": days,
+        "bin_size": bin_size
+    })
+    return result
 
 
 async def get_partial_ring_data(tenant_id: str, line_id: str, days: int = 7) -> List[Dict[str, Any]]:
@@ -190,3 +211,12 @@ async def generate_incident_image_url(tenant_id: str, uuid: str) -> Optional[str
 async def clear_cache() -> None:
     """Clear dashboard caches on rag-platform"""
     await _invoke_rag_platform("dashboard_clear_cache", {})
+
+
+async def get_system_health(tenant_id: str, minutes: int = 30) -> Dict[str, Any]:
+    """Get system health status for all devices of a tenant"""
+    result = await _invoke_rag_platform("dashboard_system_health", {
+        "tenant_id": tenant_id,
+        "minutes": minutes
+    })
+    return result
