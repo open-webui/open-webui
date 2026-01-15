@@ -16,6 +16,8 @@ from fastmcp.client import Client
 from fastmcp.client.transports import PythonStdioTransport
 
 log = logging.getLogger(__name__)
+# Ensure MCP manager logs are visible
+log.setLevel(logging.INFO)
 
 
 class FastMCPManager:
