@@ -2785,6 +2785,9 @@ async def process_chat_response(
                     )
                     last_delta_data = None
 
+                    last_db_save_time = time.time()
+                    tokens_since_db_save = 0
+
                     async def flush_pending_delta_data(threshold: int = 0):
                         nonlocal delta_count
                         nonlocal last_delta_data
@@ -3147,6 +3150,27 @@ async def process_chat_response(
                                                 },
                                             )
                                         else:
+                                            tokens_since_db_save += 1
+                                            if (
+                                                time.time() - last_db_save_time > 2.0
+                                                or tokens_since_db_save >= 100
+                                            ):
+                                                if metadata.get("chat_id") and metadata.get(
+                                                    "message_id"
+                                                ):
+                                                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                                                        metadata["chat_id"],
+                                                        metadata["message_id"],
+                                                        {
+                                                            "content": serialize_content_blocks(
+                                                                content_blocks
+                                                            ),
+                                                            "done": False,
+                                                        },
+                                                    )
+                                                last_db_save_time = time.time()
+                                                tokens_since_db_save = 0
+
                                             data = {
                                                 "content": serialize_content_blocks(
                                                     content_blocks

@@ -1000,38 +1000,34 @@ export const generateAutoCompletion = async (
 
 export const generateMoACompletion = async (
 	token: string = '',
-	model: string,
-	prompt: string,
-	responses: string[]
+	body: object
 ) => {
-	const controller = new AbortController();
 	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/moa/completions`, {
-		signal: controller.signal,
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			model: model,
-			prompt: prompt,
-			responses: responses,
-			stream: true
+		body: JSON.stringify(body)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
-	}).catch((err) => {
-		console.error(err);
-		error = err;
-		return null;
-	});
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
 
 	if (error) {
 		throw error;
 	}
 
-	return [res, controller];
+	return res;
 };
 
 export const getPipelinesList = async (token: string = '') => {

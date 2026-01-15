@@ -1585,6 +1585,12 @@ ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
     "evaluation.arena.enable",
     os.environ.get("ENABLE_EVALUATION_ARENA_MODELS", "True").lower() == "true",
 )
+
+ENABLE_SERVER_SIDE_ORCHESTRATION = PersistentConfig(
+    "ENABLE_SERVER_SIDE_ORCHESTRATION",
+    "chat.server_side_orchestration",
+    os.environ.get("ENABLE_SERVER_SIDE_ORCHESTRATION", "False").lower() == "true",
+)
 EVALUATION_ARENA_MODELS = PersistentConfig(
     "EVALUATION_ARENA_MODELS",
     "evaluation.arena.models",

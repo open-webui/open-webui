@@ -696,6 +696,21 @@ async def disconnect(sid):
         # print(f"Unknown session ID {sid} disconnected")
 
 
+@sio.on("message:sync")
+async def message_sync(sid, data):
+    """
+    Allows a client to request the current state of a message (e.g. during rehydration).
+    """
+    chat_id = data.get("chat_id")
+    message_id = data.get("message_id")
+    
+    if chat_id and message_id:
+        message = Chats.get_message_by_id_and_message_id(chat_id, message_id)
+        if message:
+            return {"status": True, "message": message}
+    
+    return {"status": False, "error": "Message not found"}
+
 def get_event_emitter(request_info, update_db=True):
     async def __event_emitter__(event_data):
         user_id = request_info["user_id"]

@@ -10,7 +10,7 @@ import inspect
 import uuid
 import asyncio
 
-from fastapi import Request, status
+from fastapi import Request, status, HTTPException
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
@@ -55,12 +55,153 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 
-from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
-
+from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL, ENABLE_SERVER_SIDE_ORCHESTRATION
+from open_webui.models.chats import Chats
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
+class ServerSideChatManager:
+    @staticmethod
+    def snapshot_context(request: Request, form_data: dict, user: Any, metadata: dict, model: dict):
+        """
+        Creates a background-safe snapshot of the chat context.
+        """
+        # Capture only what's necessary to avoid serializing massive objects
+        return {
+            "form_data": json.loads(json.dumps(form_data)),
+            "user_id": user.id,
+            "user_role": user.role,
+            "metadata": json.loads(json.dumps(metadata)),
+            "model": json.loads(json.dumps(model)) if model else None,
+            "session_id": metadata.get("session_id"),
+            "chat_id": metadata.get("chat_id"),
+            "message_id": metadata.get("message_id"),
+            "direct": getattr(request.state, "direct", False),
+            "token": getattr(request.state, "token", None)
+        }
+
+    @staticmethod
+    async def orchestrate(snapshot: dict, app_state: Any):
+        """
+        The main orchestration loop for server-side chat generation.
+        """
+        chat_id = snapshot.get("chat_id")
+        message_id = snapshot.get("message_id")
+        user_id = snapshot.get("user_id")
+        user_role = snapshot.get("user_role")
+
+        log.info(f"Starting server-side orchestration for chat {chat_id}, message {message_id}")
+
+        # 1. Setup Event Emitter
+        metadata = snapshot["metadata"]
+
+        # 2. Create User and Request objects
+        user = type('obj', (object,), {"id": user_id, "role": user_role})
+        
+        class MockRequest:
+            def __init__(self, app_state, metadata, snapshot):
+                self.app = type('obj', (object,), {'state': app_state})
+                self.state = type('obj', (object,), {
+                    'metadata': metadata,
+                    'direct': snapshot.get("direct", False),
+                    'token': snapshot.get("token")
+                })
+                self.cookies = {}
+
+        mock_request = MockRequest(app_state, metadata, snapshot)
+
+        from open_webui.constants import TASKS
+        
+        # Inlets, LLM call, and Outlets are all handled within this block
+        try:
+            # Short-circuit for MoA to provide instant feedback
+            if snapshot.get("form_data", {}).get("metadata", {}).get("task") == str(TASKS.MOA_RESPONSE_GENERATION):
+                emitter = get_event_emitter(snapshot["metadata"])
+                if emitter:
+                    await emitter({
+                        "type": "status",
+                        "data": {"action": "agent_mixing", "status": "in_progress", "content": "Mixing agent responses..."},
+                    })
+
+            # 3. Process Payload (Inlets)
+            from open_webui.utils.middleware import process_chat_payload, process_chat_response
+            
+            form_data, metadata, events = await process_chat_payload(
+                mock_request, snapshot["form_data"], user, metadata, snapshot["model"]
+            )
+
+            # 4. Trigger LLM Call
+            # Note: We set orchestrate=False here to perform actual generation
+            response = await generate_chat_completion(
+                request=mock_request,
+                form_data=form_data,
+                user=user,
+                orchestrate=False
+            )
+
+            # 5. Handle Response (Outlet, Persistence, Streaming to SIO)
+            # tasks come from form_data (background_tasks)
+            tasks = snapshot.get("form_data", {}).get("background_tasks")
+            
+            streaming_response = await process_chat_response(
+                mock_request, response, form_data, user, metadata, snapshot["model"], events, tasks
+            )
+
+            # If it's a StreamingResponse, we must iterate over it to execute the logic
+            if isinstance(streaming_response, StreamingResponse):
+                async for chunk in streaming_response.body_iterator:
+                    # Logic is handled inside the generator (emits SIO, saves to DB)
+                    pass
+                if streaming_response.background:
+                    await streaming_response.background()
+
+            log.info(f"Server-side orchestration completed for chat {chat_id}")
+
+        except Exception as e:
+            log.exception(f"Error in server-side orchestration: {e}")
+            
+            error_message = "An unexpected error occurred. Please try again."
+            if snapshot.get("form_data", {}).get("metadata", {}).get("task") == str(TASKS.MOA_RESPONSE_GENERATION):
+                error_message = "One of the agents failed to respond. Please try again."
+
+            event_emitter = get_event_emitter(metadata)
+            if event_emitter:
+                await event_emitter({"type": "chat:message:error", "data": {"error": {"content": error_message}}})
+            
+            if chat_id and message_id:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    chat_id, message_id, {"error": {"content": str(e)}, "done": True}
+                )
+
+    @staticmethod
+    async def periodic_zombie_cleanup(app):
+        """
+        Periodically checks for messages stuck in 'processing' state without an active task.
+        """
+        from open_webui.tasks import list_tasks
+        from open_webui.models.chats import Chats
+        while True:
+            await asyncio.sleep(300)  # Every 5 minutes
+            try:
+                log.debug("Running periodic zombie cleanup...")
+                active_task_ids = await list_tasks(getattr(app.state, "redis", None))
+                
+                processing_chat_ids = Chats.get_processing_chat_ids()
+                for chat_id in processing_chat_ids:
+                    from open_webui.tasks import list_task_ids_by_item_id
+                    chat_tasks = await list_task_ids_by_item_id(getattr(app.state, "redis", None), chat_id)
+                    
+                    if not chat_tasks:
+                        log.warning(f"Found zombie chat {chat_id}. Marking messages as interrupted.")
+                        messages = Chats.get_messages_by_chat_id(chat_id)
+                        if messages:
+                            for message in messages:
+                                if message.get("role") == "assistant" and message.get("done") is False:
+                                    Chats.mark_message_as_interrupted(chat_id, message.get("id"))
+                
+            except Exception as e:
+                log.error(f"Error in zombie cleanup: {e}")
 
 async def generate_direct_chat_completion(
     request: Request,
@@ -167,8 +308,138 @@ async def generate_chat_completion(
     user: Any,
     bypass_filter: bool = False,
     bypass_system_prompt: bool = False,
+    orchestrate: bool = True,
 ):
     log.debug(f"generate_chat_completion: {form_data}")
+
+    metadata = form_data.get("metadata", {})
+    if not metadata and hasattr(request.state, "metadata"):
+        metadata = request.state.metadata
+
+    if orchestrate and ENABLE_SERVER_SIDE_ORCHESTRATION:
+        chat_id = metadata.get("chat_id")
+        if chat_id and not chat_id.startswith("local:"):
+            from open_webui.tasks import list_task_ids_by_item_id, create_task
+            # Check if there is already an active task for this chat
+            active_tasks = await list_task_ids_by_item_id(
+                getattr(request.app.state, "redis", None),
+                chat_id
+            )
+            if active_tasks:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Generation already in progress for this chat."
+                )
+
+            models = getattr(request.app.state, "MODELS", {})
+            model_id = form_data.get("model")
+            model = models.get(model_id) if models else None
+
+            snapshot = ServerSideChatManager.snapshot_context(request, form_data, user, metadata, model)
+            task_id, _ = await create_task(
+                getattr(request.app.state, "redis", None),
+                ServerSideChatManager.orchestrate(snapshot, request.app.state),
+                id=chat_id
+            )
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content={
+                    "status": "processing",
+                    "chat_id": chat_id,
+                    "message_id": metadata.get("message_id"),
+                    "task_id": task_id
+                }
+            )
+
+    # If we are here, it means either:
+    # 1. Orchestration is disabled
+    # 2. It's a local/temp chat
+    # 3. We are INSIDE the orchestrated background task (orchestrate=False)
+    
+    if not orchestrate:
+        # Direct dispatch (Old behavior of generate_chat_completion)
+        return await _generate_chat_completion_direct(
+            request, form_data, user, bypass_filter, bypass_system_prompt
+        )
+    else:
+        # Standard flow with inlets/outlets
+        return await _generate_chat_completion_with_middleware(
+            request, form_data, user, metadata
+        )
+
+async def _generate_chat_completion_with_middleware(request, form_data, user, metadata):
+    from open_webui.utils.middleware import process_chat_payload, process_chat_response
+    
+    # We need models for pipeline/filters
+    models = getattr(request.app.state, "MODELS", {})
+    model_id = form_data.get("model")
+    model = models.get(model_id) if models else None
+
+    try:
+        form_data, metadata, events = await process_chat_payload(
+            request, form_data, user, metadata, model
+        )
+
+        response = await _generate_chat_completion_direct(request, form_data, user)
+        
+        # background_tasks might be in form_data or metadata
+        tasks = form_data.get("background_tasks")
+        
+        return await process_chat_response(
+            request, response, form_data, user, metadata, model, events, tasks
+        )
+    except asyncio.CancelledError:
+        log.info("Chat processing was cancelled")
+        try:
+            event_emitter = get_event_emitter(metadata)
+            if event_emitter:
+                await asyncio.shield(
+                    event_emitter(
+                        {"type": "chat:tasks:cancel"},
+                    )
+                )
+        except Exception:
+            pass
+        finally:
+            raise
+    except Exception as e:
+        log.exception(f"Error in chat completion middleware: {e}")
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            try:
+                if not metadata["chat_id"].startswith("local:"):
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "error": {"content": str(e)},
+                        },
+                    )
+
+                event_emitter = get_event_emitter(metadata)
+                if event_emitter:
+                    await event_emitter(
+                        {
+                            "type": "chat:message:error",
+                            "data": {"error": {"content": str(e)}},
+                        }
+                    )
+                    await event_emitter(
+                        {"type": "chat:tasks:cancel"},
+                    )
+            except:
+                pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+async def _generate_chat_completion_direct(
+    request: Request,
+    form_data: dict,
+    user: Any,
+    bypass_filter: bool = False,
+    bypass_system_prompt: bool = False,
+):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -187,7 +458,7 @@ async def generate_chat_completion(
         }
         log.debug(f"direct connection to model: {models}")
     else:
-        models = request.app.state.MODELS
+        models = getattr(request.app.state, "MODELS", {})
 
     model_id = form_data["model"]
     if model_id not in models:
@@ -243,6 +514,7 @@ async def generate_chat_completion(
                     user,
                     bypass_filter=True,
                     bypass_system_prompt=bypass_system_prompt,
+                    orchestrate=False
                 )
                 return StreamingResponse(
                     stream_wrapper(response.body_iterator),
@@ -258,6 +530,7 @@ async def generate_chat_completion(
                             user,
                             bypass_filter=True,
                             bypass_system_prompt=bypass_system_prompt,
+                            orchestrate=False
                         )
                     ),
                     "selected_model_id": selected_model_id,

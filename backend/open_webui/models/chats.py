@@ -8,7 +8,11 @@ from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
-from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
+from open_webui.utils.misc import (
+    sanitize_data_for_db,
+    sanitize_text_for_db,
+    get_message_list,
+)
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
@@ -1506,6 +1510,47 @@ class ChatTable:
             return [
                 ChatFileModel.model_validate(chat_file) for chat_file in all_chat_files
             ]
+
+    def get_messages_by_chat_id(self, id: str) -> Optional[list[dict]]:
+        chat = self.get_chat_by_id(id)
+        if chat is None:
+            return None
+
+        history = chat.chat.get("history", {})
+        return get_message_list(history.get("messages", {}), history.get("currentId"))
+
+    def get_processing_chat_ids(self) -> list[str]:
+        with get_db_context() as db:
+            # This is a bit tricky because messages are inside a JSON field.
+            # We can use a raw SQL query or SQLAlchemy's JSON support.
+            # Since we want it to be efficient, let's use a heuristic or a specific index if we had one.
+            # For now, we'll scan recently updated chats.
+            
+            # dialect_name = db.bind.dialect.name
+            # if dialect_name == "sqlite":
+            #     ...
+            
+            # Simple approach: find chats updated in the last hour that might be processing
+            one_hour_ago = int(time.time()) - 3600
+            chats = db.query(Chat).filter(Chat.updated_at > one_hour_ago).all()
+            
+            processing_chat_ids = []
+            for chat_item in chats:
+                history = chat_item.chat.get("history", {})
+                messages = history.get("messages", {})
+                for message in messages.values():
+                    if message.get("role") == "assistant" and message.get("done") is False:
+                        processing_chat_ids.append(chat_item.id)
+                        break
+            return processing_chat_ids
+
+    def mark_message_as_interrupted(self, chat_id: str, message_id: str):
+        message = self.get_message_by_id_and_message_id(chat_id, message_id)
+        if message:
+            message["done"] = True
+            if "error" not in message:
+                message["error"] = {"content": "Interrupted: The server task was lost."}
+            self.upsert_message_to_chat_by_id_and_message_id(chat_id, message_id, message)
 
     def delete_chat_file(
         self, chat_id: str, file_id: str, db: Optional[Session] = None

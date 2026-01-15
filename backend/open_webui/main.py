@@ -479,6 +479,7 @@ from open_webui.env import (
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_WEBSOCKET_SUPPORT,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_SERVER_SIDE_ORCHESTRATION,
     RESET_CONFIG_ON_START,
     ENABLE_VERSION_UPDATE_CHECK,
     ENABLE_OTEL,
@@ -503,10 +504,12 @@ from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
     chat_completed as chat_completed_handler,
     chat_action as chat_action_handler,
+    ServerSideChatManager,
 )
 from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.middleware import process_chat_payload, process_chat_response
 from open_webui.utils.access_control import has_access
+from open_webui.tasks import create_task, list_task_ids_by_item_id
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -623,6 +626,7 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    asyncio.create_task(ServerSideChatManager.periodic_zombie_cleanup(app))
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
@@ -1698,101 +1702,14 @@ async def chat_completion(
         request.state.metadata = metadata
         form_data["metadata"] = metadata
 
+        return await chat_completion_handler(request, form_data, user)
+
     except Exception as e:
-        log.debug(f"Error processing chat metadata: {e}")
+        log.exception(f"Error processing chat metadata: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
-
-    async def process_chat(request, form_data, user, metadata, model):
-        try:
-            form_data, metadata, events = await process_chat_payload(
-                request, form_data, user, metadata, model
-            )
-
-            response = await chat_completion_handler(request, form_data, user)
-            if metadata.get("chat_id") and metadata.get("message_id"):
-                try:
-                    if not metadata["chat_id"].startswith("local:"):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
-                            {
-                                "parentId": metadata.get("parent_message_id", None),
-                                "model": model_id,
-                            },
-                        )
-                except:
-                    pass
-
-            return await process_chat_response(
-                request, response, form_data, user, metadata, model, events, tasks
-            )
-        except asyncio.CancelledError:
-            log.info("Chat processing was cancelled")
-            try:
-                event_emitter = get_event_emitter(metadata)
-                await asyncio.shield(
-                    event_emitter(
-                        {"type": "chat:tasks:cancel"},
-                    )
-                )
-            except Exception as e:
-                pass
-            finally:
-                raise  # re-raise to ensure proper task cancellation handling
-        except Exception as e:
-            log.debug(f"Error processing chat payload: {e}")
-            if metadata.get("chat_id") and metadata.get("message_id"):
-                # Update the chat message with the error
-                try:
-                    if not metadata["chat_id"].startswith("local:"):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
-                            {
-                                "parentId": metadata.get("parent_message_id", None),
-                                "error": {"content": str(e)},
-                            },
-                        )
-
-                    event_emitter = get_event_emitter(metadata)
-                    await event_emitter(
-                        {
-                            "type": "chat:message:error",
-                            "data": {"error": {"content": str(e)}},
-                        }
-                    )
-                    await event_emitter(
-                        {"type": "chat:tasks:cancel"},
-                    )
-
-                except:
-                    pass
-        finally:
-            try:
-                if mcp_clients := metadata.get("mcp_clients"):
-                    for client in reversed(mcp_clients.values()):
-                        await client.disconnect()
-            except Exception as e:
-                log.debug(f"Error cleaning up: {e}")
-                pass
-
-    if (
-        metadata.get("session_id")
-        and metadata.get("chat_id")
-        and metadata.get("message_id")
-    ):
-        # Asynchronous Chat Processing
-        task_id, _ = await create_task(
-            request.app.state.redis,
-            process_chat(request, form_data, user, metadata, model),
-            id=metadata["chat_id"],
-        )
-        return {"status": True, "task_id": task_id}
-    else:
-        return await process_chat(request, form_data, user, metadata, model)
 
 
 # Alias for chat_completion (Legacy)

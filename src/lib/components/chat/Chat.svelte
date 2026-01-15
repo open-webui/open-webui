@@ -360,10 +360,22 @@
 				const data = event?.data?.data ?? null;
 
 				if (type === 'status') {
-					if (message?.statusHistory) {
-						message.statusHistory.push(data);
+					if (data.action === 'agent_mixing') {
+						const newStatus = {
+							...data,
+							content: $i18n.t('Mixing agent responses...')
+						};
+						if (message?.statusHistory) {
+							message.statusHistory.push(newStatus);
+						} else {
+							message.statusHistory = [newStatus];
+						}
 					} else {
-						message.statusHistory = [data];
+						if (message?.statusHistory) {
+							message.statusHistory.push(data);
+						} else {
+							message.statusHistory = [data];
+						}
 					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
@@ -1120,7 +1132,22 @@
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
 						if (message && message.role === 'assistant') {
-							message.done = true;
+							if (message.done === undefined || message.done === true) {
+								message.done = true;
+							} else {
+								// If message.done is explicitly false, it's still processing!
+								// We should sync it with the server
+								console.log('Rehydrating message:', message.id);
+								$socket?.emit('message:sync', { chat_id: $chatId, message_id: message.id }, (res) => {
+									if (res.status && res.message) {
+										history.messages[message.id] = {
+											...history.messages[message.id],
+											...res.message
+										};
+										history = history;
+									}
+								});
+							}
 						}
 					}
 				}
@@ -1131,6 +1158,9 @@
 
 				if (taskRes) {
 					taskIds = taskRes.task_ids;
+					if (taskIds.length > 0) {
+						generating = true;
+					}
 				}
 
 				await tick();
@@ -2248,42 +2278,25 @@
 
 		try {
 			generating = true;
-			const [res, controller] = await generateMoACompletion(
-				localStorage.token,
-				message.model ?? '',
-				message.parentId ? history.messages[message.parentId].content : '',
-				responses
-			);
+			const res = await generateMoACompletion(localStorage.token, {
+				model: message.model ?? '',
+				prompt: message.parentId ? history.messages[message.parentId].content : '',
+				responses: responses,
+				stream: true,
+				chat_id: _chatId,
+				message_id: messageId
+			});
 
-			if (res && res.ok && res.body && generating) {
-				generationController = controller as AbortController;
-				const textStream = await createOpenAITextStream(
-					res.body,
-					Boolean($settings?.splitLargeChunks ?? false)
-				);
-				for await (const update of textStream) {
-					const { value, done, sources, error, usage } = update;
-					if (error || done) {
-						generating = false;
-						generationController = null;
-						break;
-					}
-
-					if (mergedResponse.content == '' && value == '\n') {
-						continue;
+			if (res) {
+				if (res.error) {
+					await handleOpenAIError(res.error, message);
+				} else {
+					if (taskIds) {
+						taskIds.push(res.task_id);
 					} else {
-						mergedResponse.content += value;
-						history.messages[messageId] = message;
-					}
-
-					if (autoScroll) {
-						scrollToBottom();
+						taskIds = [res.task_id];
 					}
 				}
-
-				await saveChatHandler(_chatId, history);
-			} else {
-				console.error(res);
 			}
 		} catch (e) {
 			console.error(e);

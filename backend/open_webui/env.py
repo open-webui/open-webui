@@ -359,6 +359,10 @@ ENABLE_REALTIME_CHAT_SAVE = (
     os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
 )
 
+ENABLE_SERVER_SIDE_ORCHESTRATION = (
+    os.environ.get("ENABLE_SERVER_SIDE_ORCHESTRATION", "False").lower() == "true"
+)
+
 ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"
 
 RAG_SYSTEM_CONTEXT = os.environ.get("RAG_SYSTEM_CONTEXT", "False").lower() == "true"
