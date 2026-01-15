@@ -68,25 +68,225 @@ log = logging.getLogger(__name__)
 
 
 async def error_stream_generator(model_id, error_msg):
-    # Determine stream_id
+    """
+    Generate an SSE error stream that the frontend can recognize and display with red error styling.
+    The frontend checks for 'error' field in SSE data to trigger error rendering.
+    """
+    # Send error object that frontend can detect
+    error_chunk = {
+        "error": {
+            "message": error_msg,
+            "type": "api_error",
+            "code": "upstream_error"
+        }
+    }
+    yield f"data: {json.dumps(error_chunk)}\n\n"
+    yield "data: [DONE]\n\n"
+
+
+def convert_to_responses_payload(chat_payload: dict) -> dict:
+    """
+    Convert Chat Completions API format to Responses API format.
+    
+    Chat Completions:
+        {"messages": [...], "model": "...", "stream": true, ...}
+    
+    Responses API:
+        {"input": [...], "model": "...", "stream": true, ...}
+    """
+    responses_payload = {}
+    
+    # Model is the same
+    if "model" in chat_payload:
+        responses_payload["model"] = chat_payload["model"]
+    
+    # Convert messages to input items
+    messages = chat_payload.get("messages", [])
+    input_items = []
+    
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        
+        if role == "system":
+            # System messages become instructions in Responses API
+            responses_payload["instructions"] = content if isinstance(content, str) else str(content)
+        else:
+            # Convert role: 'assistant' -> 'assistant', 'user' -> 'user'
+            item = {
+                "type": "message",
+                "role": role if role in ["user", "assistant"] else "user",
+                "content": []
+            }
+            
+            # Handle content
+            if isinstance(content, str):
+                item["content"].append({"type": "input_text", "text": content})
+            elif isinstance(content, list):
+                for c in content:
+                    if isinstance(c, dict):
+                        if c.get("type") == "text":
+                            item["content"].append({"type": "input_text", "text": c.get("text", "")})
+                        elif c.get("type") == "image_url":
+                            # Handle image
+                            image_url = c.get("image_url", {}).get("url", "")
+                            item["content"].append({"type": "input_image", "image_url": image_url})
+                    elif isinstance(c, str):
+                        item["content"].append({"type": "input_text", "text": c})
+            
+            input_items.append(item)
+    
+    responses_payload["input"] = input_items
+    
+    # Copy other common parameters
+    if "stream" in chat_payload:
+        responses_payload["stream"] = chat_payload["stream"]
+    if "max_tokens" in chat_payload:
+        responses_payload["max_output_tokens"] = chat_payload["max_tokens"]
+    if "temperature" in chat_payload:
+        responses_payload["temperature"] = chat_payload["temperature"]
+    if "top_p" in chat_payload:
+        responses_payload["top_p"] = chat_payload["top_p"]
+    
+    # Handle reasoning parameters - convert reasoning_effort to Responses API format
+    reasoning_effort = chat_payload.get("reasoning_effort") or chat_payload.get("reasoning", {}).get("effort")
+    if reasoning_effort:
+        responses_payload["reasoning"] = {"effort": reasoning_effort.lower()}
+        # Enable reasoning summary to get thinking content in stream
+        responses_payload["reasoning_summary"] = "auto"
+    
+    return responses_payload
+
+
+async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientResponse, model_id: str):
+    """
+    Convert Responses API streaming events to Chat Completions format.
+    
+    Responses API events:
+        {"type": "response.output_text.delta", "delta": "..."} 
+        {"type": "response.done", ...}
+    
+    Converts to Chat Completions format:
+        {"choices": [{"delta": {"content": "..."}}]}
+    """
     stream_id = f"chatcmpl-{uuid.uuid4().hex}"
     timestamp = int(time.time())
     
-    # Chunk 1: Error Content
-    chunk = {
-        "id": stream_id,
-        "object": "chat.completion.chunk",
-        "created": timestamp,
-        "model": model_id,
-        "choices": [{"index": 0, "delta": {"content": error_msg}, "finish_reason": None}]
-    }
-    yield f"data: {json.dumps(chunk)}\n\n"
+    buffer = ""
+    decoder = json.JSONDecoder()
     
-    # Chunk 2: Finish
-    chunk["choices"][0]["delta"] = {}
-    chunk["choices"][0]["finish_reason"] = "stop"
-    yield f"data: {json.dumps(chunk)}\n\n"
-    yield "data: [DONE]\n\n"
+    async for chunk in response.content.iter_any():
+        if not chunk:
+            continue
+        
+        buffer += chunk.decode("utf-8", errors="replace")
+        
+        # Process SSE events
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+            line = line.strip()
+            
+            if not line:
+                continue
+            
+            # Handle SSE data: prefix
+            if line.startswith("data:"):
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    yield f"data: [DONE]\n\n"
+                    return
+                
+                try:
+                    event = json.loads(data)
+                    event_type = event.get("type", "")
+                    
+                    # Handle text delta
+                    if event_type == "response.output_text.delta":
+                        delta_text = event.get("delta", "")
+                        chunk_data = {
+                            "id": stream_id,
+                            "object": "chat.completion.chunk",
+                            "created": timestamp,
+                            "model": model_id,
+                            "choices": [{"index": 0, "delta": {"content": delta_text}, "finish_reason": None}]
+                        }
+                        yield f"data: {json.dumps(chunk_data)}\n\n"
+                    
+                    # Handle reasoning/thinking delta (Responses API reasoning events)
+                    elif event_type in ("response.reasoning_summary_text.delta", "response.reasoning.delta"):
+                        reasoning_text = event.get("delta", "")
+                        if reasoning_text:
+                            chunk_data = {
+                                "id": stream_id,
+                                "object": "chat.completion.chunk",
+                                "created": timestamp,
+                                "model": model_id,
+                                "choices": [{"index": 0, "delta": {"reasoning_content": reasoning_text}, "finish_reason": None}]
+                            }
+                            yield f"data: {json.dumps(chunk_data)}\n\n"
+                    
+                    # Handle completion
+                    elif event_type == "response.done":
+                        # Send finish chunk
+                        finish_chunk = {
+                            "id": stream_id,
+                            "object": "chat.completion.chunk",
+                            "created": timestamp,
+                            "model": model_id,
+                            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]
+                        }
+                        yield f"data: {json.dumps(finish_chunk)}\n\n"
+                        yield f"data: [DONE]\n\n"
+                        return
+                    
+                    # Handle errors
+                    elif event_type == "error":
+                        error_msg = event.get("error", {}).get("message", "Unknown error")
+                        error_chunk = {
+                            "error": {
+                                "message": error_msg,
+                                "type": "api_error",
+                                "code": "responses_api_error"
+                            }
+                        }
+                        yield f"data: {json.dumps(error_chunk)}\n\n"
+                        yield f"data: [DONE]\n\n"
+                        return
+                        
+                except json.JSONDecodeError:
+                    log.warning(f"Failed to decode Responses API event: {data[:100]}")
+                    continue
+    
+    # Ensure we always send [DONE]
+    yield f"data: [DONE]\n\n"
+
+
+def convert_responses_to_chat_completions(responses_data: dict, model_id: str) -> dict:
+    """
+    Convert non-streaming Responses API response to Chat Completions format.
+    """
+    output = responses_data.get("output", [])
+    content = ""
+    
+    # Extract text from output items
+    for item in output:
+        if item.get("type") == "message":
+            for part in item.get("content", []):
+                if part.get("type") == "output_text":
+                    content += part.get("text", "")
+    
+    return {
+        "id": responses_data.get("id", f"chatcmpl-{uuid.uuid4().hex}"),
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": model_id,
+        "choices": [{
+            "index": 0,
+            "message": {"role": "assistant", "content": content},
+            "finish_reason": "stop"
+        }],
+        "usage": responses_data.get("usage", {})
+    }
 
 
 async def send_get_request(url, key=None, user: UserModel = None):
@@ -935,6 +1135,9 @@ async def generate_chat_completion(
         request, url, key, api_config, metadata, user=user
     )
 
+    # Initialize Responses API flag (only applicable to non-Azure connections)
+    use_responses_api = False
+
     if api_config.get("azure", False):
         api_version = api_config.get("api_version", "2023-03-15-preview")
         request_url, payload = convert_to_azure_payload(url, payload, api_version)
@@ -947,7 +1150,15 @@ async def generate_chat_completion(
         headers["api-version"] = api_version
         request_url = f"{request_url}/chat/completions?api-version={api_version}"
     else:
-        request_url = f"{url}/chat/completions"
+        # Check if Responses API is enabled for this connection
+        use_responses_api = api_config.get("use_responses_api", False)
+        if use_responses_api:
+            request_url = f"{url}/responses"
+            # Convert Chat Completions format to Responses API format
+            payload = convert_to_responses_payload(payload)
+            log.info(f"Using Responses API for model {model_id}")
+        else:
+            request_url = f"{url}/chat/completions"
 
     # Force stream=False for image generation models to prevent "Chunk too big" errors
     # These models return large base64 image data that can't be streamed properly
@@ -1160,14 +1371,26 @@ async def generate_chat_completion(
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
-            return StreamingResponse(
-                stream_chunks_handler(HeartbeatStreamWrapper(r.content)),
-                status_code=r.status,
-                headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
-            )
+            
+            # Use Responses API stream converter if enabled
+            if use_responses_api:
+                return StreamingResponse(
+                    responses_stream_to_chat_completions_stream(r, model_id),
+                    status_code=r.status,
+                    headers={"Content-Type": "text/event-stream"},
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
+            else:
+                return StreamingResponse(
+                    stream_chunks_handler(HeartbeatStreamWrapper(r.content)),
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
         else:
             try:
                 response = await r.json()
@@ -1181,6 +1404,10 @@ async def generate_chat_completion(
                 else:
                     return PlainTextResponse(status_code=r.status, content=response)
 
+            # Convert Responses API format to Chat Completions format if needed
+            if use_responses_api and isinstance(response, dict):
+                response = convert_responses_to_chat_completions(response, model_id)
+            
             return response
     except Exception as e:
         log.exception(e)

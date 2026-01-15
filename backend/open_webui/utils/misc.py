@@ -655,6 +655,9 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
     Handle stream response chunks, supporting large data chunks that exceed the original 16kb limit.
     When a single line exceeds max_buffer_size, returns an empty JSON string {} and skips subsequent data
     until encountering normally sized data.
+    
+    Also normalizes SSE format: if a line looks like raw JSON (starts with '{') but doesn't have 
+    'data:' prefix, it adds the prefix for compatibility with proxies that return raw JSON.
 
     :param stream: The stream reader to handle.
     :return: An async generator that yields the stream data.
@@ -663,6 +666,30 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
     max_buffer_size = CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
     if max_buffer_size is None or max_buffer_size <= 0:
         return stream
+
+    def normalize_sse_line(line: bytes) -> bytes:
+        """
+        Normalize a line to ensure proper SSE format.
+        If a line looks like raw JSON but doesn't have 'data:' prefix, add it.
+        This handles proxies that return raw JSON instead of standard SSE format.
+        """
+        stripped = line.strip()
+        if not stripped:
+            return line
+        
+        # Already has SSE prefix (data:, event:, id:, retry:, etc.)
+        if stripped.startswith((b"data:", b"event:", b"id:", b"retry:", b":")):
+            return line
+        
+        # Looks like raw JSON object or array - wrap with 'data:' prefix
+        if stripped.startswith((b"{", b"[")):
+            return b"data: " + stripped
+        
+        # Other content (like [DONE] without data: prefix) - also normalize
+        if stripped == b"[DONE]":
+            return b"data: [DONE]"
+        
+        return line
 
     async def yield_safe_stream_chunks():
         buffer = b""
@@ -686,7 +713,7 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
                     # Skip mode: check if current line is small enough to exit skip mode
                     if len(line) <= max_buffer_size:
                         skip_mode = False
-                        yield line
+                        yield normalize_sse_line(line)
                     else:
                         yield b"data: {}"
                         yield b"\n"
@@ -698,7 +725,7 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
                         yield b"\n"
                         log.info(f"Skip mode triggered, line size: {len(line)}")
                     else:
-                        yield line
+                        yield normalize_sse_line(line)
                         yield b"\n"
 
             # Save the last incomplete fragment
@@ -713,7 +740,8 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
 
         # Process remaining buffer data
         if buffer and not skip_mode:
-            yield buffer
+            yield normalize_sse_line(buffer)
             yield b"\n"
 
     return yield_safe_stream_chunks()
+

@@ -726,13 +726,15 @@ async def generate_chat_completion(
                             except:
                                 pass
 
-                            # Stream as content
-                            chunk = _openai_chunk(stream_id, model_id, {"content": msg}, None)
-                            yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
-                            
-                            # Stream finish chunk
-                            fin_chunk = _openai_chunk(stream_id, model_id, {}, "stop")
-                            yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
+                            # Stream error object that frontend can detect for red styling
+                            error_chunk = {
+                                "error": {
+                                    "message": msg,
+                                    "type": "api_error",
+                                    "code": f"http_{response.status}"
+                                }
+                            }
+                            yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
                             yield "data: [DONE]\n\n"
                             try:
                                 await response.release()
@@ -860,7 +862,14 @@ async def generate_chat_completion(
 
             except Exception as e:
                 log.exception(f"Error in stream generator: {e}")
-                yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+                error_chunk = {
+                    "error": {
+                        "message": str(e),
+                        "type": "stream_error",
+                        "code": "internal_error"
+                    }
+                }
+                yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
                 yield "data: [DONE]\n\n"
 
         return StreamingResponse(stream_generator(), media_type="text/event-stream")

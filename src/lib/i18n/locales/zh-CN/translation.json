@@ -1836,6 +1836,8 @@
 	"Use '#' in the prompt input to load and include your knowledge.": "在输入框中输入 '#' 号可加载您需要的知识库内容",
 	"Use /v1/chat/completions endpoint instead of /v1/audio/transcriptions for potentially better accuracy.": "使用 /v1/chat/completions 接口替换 /v1/audio/transcriptions 以提高准确性。",
 	"Use Chat Completions API": "使用 Chat Completions 接口",
+	"Use Responses API": "使用 Responses API",
+	"Use OpenAI Responses API instead of Chat Completions API": "使用 OpenAI Responses API 替代 Chat Completions API",
 	"Use groups to group your users and assign permissions.": "使用权限组设置用户分组并分配权限",
 	"Use LLM": "使用大语言模型（LLM）",
 	"Use no proxy to fetch page contents.": "不使用代理获取页面内容",

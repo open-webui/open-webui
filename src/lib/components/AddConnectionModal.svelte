@@ -53,6 +53,8 @@
 	let modelId = '';
 	let modelIds = [];
 
+	let useResponsesApi = false;
+
 	let loading = false;
 
 	const verifyOllamaHandler = async () => {
@@ -205,7 +207,8 @@
 				connection_type: connectionType,
 				auth_type,
 				headers: headers ? JSON.parse(headers) : undefined,
-				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {})
+				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {}),
+				...(!ollama && !gemini && useResponsesApi ? { use_responses_api: true } : {})
 			}
 		};
 
@@ -221,6 +224,7 @@
 		remark = '';
 		tags = [];
 		modelIds = [];
+		useResponsesApi = false;
 	};
 
 	const init = () => {
@@ -245,6 +249,7 @@
 				connectionType = connection.config?.connection_type ?? 'external';
 				azure = connection.config?.azure ?? false;
 				apiVersion = connection.config?.api_version ?? '';
+				useResponsesApi = connection.config?.use_responses_api ?? false;
 			}
 		}
 	};
@@ -552,6 +557,25 @@
 									>
 										{azure ? $i18n.t('Azure OpenAI') : $i18n.t('OpenAI')}
 									</button>
+								</div>
+							</div>
+						{/if}
+
+						{#if !ollama && !direct && !gemini && !azure}
+							<div class="flex flex-row justify-between items-center w-full mt-2">
+								<Tooltip
+									content={$i18n.t('Use OpenAI Responses API instead of Chat Completions API')}
+								>
+									<div
+										class={`mb-0.5 text-xs text-gray-500
+									${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+									>
+										{$i18n.t('Use Responses API')}
+									</div>
+								</Tooltip>
+
+								<div class="flex flex-col shrink-0">
+									<Switch bind:state={useResponsesApi} />
 								</div>
 							</div>
 						{/if}
