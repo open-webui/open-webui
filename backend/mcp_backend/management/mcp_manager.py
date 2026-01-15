@@ -410,8 +410,12 @@ class FastMCPManager:
 
     async def initialize_default_servers(self):
         """Initialize and start default MCP servers with stdio transport"""
+        log.info("=== Initializing default MCP servers ===")
+
         # Add configuration for time server (stdio)
         backend_dir = Path(__file__).parent.parent.parent  # Go up to backend/ directory
+        log.info(f"Backend directory resolved to: {backend_dir}")
+
         time_server_path = (
             backend_dir / "mcp_backend" / "servers" / "fastmcp_time_server.py"
         )
@@ -429,8 +433,13 @@ class FastMCPManager:
             )
 
             # Start the time server
-            await self.start_server("time_server")
-            log.info("Time server started successfully")
+            log.info(f"About to start time server...")
+            start_result = await self.start_server("time_server")
+            log.info(f"Time server start_server returned: {start_result}")
+            if start_result:
+                log.info("Time server started successfully")
+            else:
+                log.error("Time server failed to start")
         else:
             log.warning(f"Time server not found at {time_server_path}")
 
@@ -452,8 +461,13 @@ class FastMCPManager:
             )
 
             # Start the news server
-            await self.start_server("news_server")
-            log.info("News server started successfully")
+            log.info(f"About to start news server...")
+            start_result = await self.start_server("news_server")
+            log.info(f"News server start_server returned: {start_result}")
+            if start_result:
+                log.info("News server started successfully")
+            else:
+                log.error("News server failed to start")
         else:
             log.warning(f"News server not found at {news_server_path}")
 
@@ -475,8 +489,13 @@ class FastMCPManager:
             )
 
             # Start the MPO SharePoint server
-            await self.start_server("mpo_sharepoint_server")
-            log.info("MPO SharePoint server started successfully")
+            log.info(f"About to start MPO SharePoint server...")
+            start_result = await self.start_server("mpo_sharepoint_server")
+            log.info(f"MPO SharePoint server start_server returned: {start_result}")
+            if start_result:
+                log.info("MPO SharePoint server started successfully")
+            else:
+                log.error("MPO SharePoint server failed to start")
         else:
             log.warning(
                 f"MPO SharePoint server not found at {mpo_sharepoint_server_path}"
@@ -542,8 +561,17 @@ class FastMCPManager:
 
     async def initialize_all_servers(self):
         """Initialize both built-in and external servers"""
+        log.info("=== Starting MCP server initialization ===")
+        log.info(f"Calling initialize_default_servers()")
         await self.initialize_default_servers()
+        log.info(f"Completed initialize_default_servers()")
+        log.info(f"Calling initialize_external_servers()")
         await self.initialize_external_servers()
+        log.info(f"Completed initialize_external_servers()")
+        log.info("=== MCP server initialization complete ===")
+        log.info(f"Total configured servers: {len(self.server_configs)}")
+        log.info(f"Configured server names: {list(self.server_configs.keys())}")
+        log.info(f"Running servers: {self.get_running_servers()}")
 
     async def cleanup(self):
         """Clean up all server processes and connections"""
