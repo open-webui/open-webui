@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.3] - 2026-01-15
+## [0.7.3] - 2026-01-16
 
 ### Added
 
 - 🐍 Users can now ask models to perform calculations, analyze data, and generate visualizations through autonomous Python code execution—for example, "create a bar chart showing quarterly sales" or "analyze this dataset for trends and outliers." Requires Native function calling mode and the code_interpreter capability enabled. [#20592](https://github.com/open-webui/open-webui/pull/20592), [Docs:#998](https://github.com/open-webui/docs/pull/998)
 - 🔍 Web search operations no longer block other tasks, allowing the application to remain responsive while searches are in progress. [#20630](https://github.com/open-webui/open-webui/pull/20630)
+- 🧠 Knowledge base queries now handle LLM tool call parameter formatting variations automatically, preventing intermittent failures when models send parameters as strings instead of their expected types. [#20705](https://github.com/open-webui/open-webui/pull/20705)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Catalan, German, Japanese, Polish, Portuguese (Brazil), Simplified Chinese, Spanish, and Traditional Chinese were enhanced and expanded.
 
