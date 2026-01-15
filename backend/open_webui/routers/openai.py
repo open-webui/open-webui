@@ -151,7 +151,11 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
     # Handle reasoning parameters - convert reasoning_effort to Responses API format
     reasoning_effort = chat_payload.get("reasoning_effort") or chat_payload.get("reasoning", {}).get("effort")
     if reasoning_effort:
-        responses_payload["reasoning"] = {"effort": reasoning_effort.lower()}
+        # Responses API format: reasoning.effort and reasoning.summary are inside the same object
+        responses_payload["reasoning"] = {
+            "effort": reasoning_effort.lower(),
+            "summary": "auto"  # Enable reasoning summary to get thinking content in stream
+        }
     
     return responses_payload
 
