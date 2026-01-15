@@ -140,6 +140,12 @@
 						</div>
 
 						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+						
+
+						<div class="mb-2.5 flex w-full justify-between">
+							<div class=" text-xs font-medium">{$i18n.t('Per-Chat Randomization')}</div>
+							<Switch bind:state={evaluationConfig.EVALUATION_ARENA_PER_CHAT_RANDOMIZATION} />
+						</div>
 
 						<div class="flex flex-col gap-2">
 							{#if (evaluationConfig?.EVALUATION_ARENA_MODELS ?? []).length > 0}

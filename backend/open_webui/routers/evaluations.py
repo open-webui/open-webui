@@ -284,6 +284,8 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
     return {
         "ENABLE_EVALUATION_ARENA_MODELS": request.app.state.config.ENABLE_EVALUATION_ARENA_MODELS,
         "EVALUATION_ARENA_MODELS": request.app.state.config.EVALUATION_ARENA_MODELS,
+        # fix
+        "EVALUATION_ARENA_PER_CHAT_RANDOMIZATION": request.app.state.config.EVALUATION_ARENA_PER_CHAT_RANDOMIZATION,
     }
 
 
@@ -295,6 +297,8 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
 class UpdateConfigForm(BaseModel):
     ENABLE_EVALUATION_ARENA_MODELS: Optional[bool] = None
     EVALUATION_ARENA_MODELS: Optional[list[dict]] = None
+    # fix
+    EVALUATION_ARENA_PER_CHAT_RANDOMIZATION: Optional[bool] = None
 
 
 @router.post("/config")
@@ -308,9 +312,14 @@ async def update_config(
         config.ENABLE_EVALUATION_ARENA_MODELS = form_data.ENABLE_EVALUATION_ARENA_MODELS
     if form_data.EVALUATION_ARENA_MODELS is not None:
         config.EVALUATION_ARENA_MODELS = form_data.EVALUATION_ARENA_MODELS
+        # fix
+    if form_data.EVALUATION_ARENA_PER_CHAT_RANDOMIZATION is not None:
+        config.EVALUATION_ARENA_PER_CHAT_RANDOMIZATION = form_data.EVALUATION_ARENA_PER_CHAT_RANDOMIZATION
     return {
         "ENABLE_EVALUATION_ARENA_MODELS": config.ENABLE_EVALUATION_ARENA_MODELS,
         "EVALUATION_ARENA_MODELS": config.EVALUATION_ARENA_MODELS,
+        # fix
+        "EVALUATION_ARENA_PER_CHAT_RANDOMIZATION": config.EVALUATION_ARENA_PER_CHAT_RANDOMIZATION,
     }
 
 

@@ -200,39 +200,57 @@ async def generate_chat_completion(
             request, form_data, user=user, models=models
         )
     else:
-        # Check if user has access to the model
+        
         if not bypass_filter and user.role == "user":
             try:
                 check_model_access(user, model)
             except Exception as e:
                 raise e
-
+# Start Fix
         if model.get("owned_by") == "arena":
-            model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
-            filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
+            from open_webui.config import EVALUATION_ARENA_PER_CHAT_RANDOMIZATION
+            
+            info = model.get("info")
+            meta = info.get("meta") if info else None
+            model_ids = meta.get("model_ids") if meta else None
+            filter_mode = meta.get("filter_mode") if meta else None
+
             if model_ids and filter_mode == "exclude":
                 model_ids = [
-                    model["id"]
-                    for model in list(request.app.state.MODELS.values())
-                    if model.get("owned_by") != "arena" and model["id"] not in model_ids
+                    m["id"]
+                    for m in request.app.state.MODELS.values()
+                    if m.get("owned_by") != "arena" and m["id"] not in model_ids
                 ]
 
+            chat_id = form_data.get("metadata", {}).get("chat_id")
+            if not chat_id:
+                for msg in form_data.get("messages", []):
+                    chat_id = msg.get("metadata", {}).get("chat_id")
+                    if chat_id:
+                        break
+
+            request.app.state.ARENA_MODEL_CACHE = getattr(request.app.state, "ARENA_MODEL_CACHE", {})
+
+            per_chat = EVALUATION_ARENA_PER_CHAT_RANDOMIZATION.value
             selected_model_id = None
-            if isinstance(model_ids, list) and model_ids:
+            
+            if per_chat and chat_id:
+                selected_model_id = request.app.state.ARENA_MODEL_CACHE.get(chat_id)
+                if selected_model_id and model_ids and selected_model_id not in model_ids:
+                    selected_model_id = None
+            
+            if not selected_model_id:
+                if not model_ids:
+                    model_ids = [m["id"] for m in request.app.state.MODELS.values() if m.get("owned_by") != "arena"]
                 selected_model_id = random.choice(model_ids)
-            else:
-                model_ids = [
-                    model["id"]
-                    for model in list(request.app.state.MODELS.values())
-                    if model.get("owned_by") != "arena"
-                ]
-                selected_model_id = random.choice(model_ids)
+                
+                if per_chat and chat_id:
+                    request.app.state.ARENA_MODEL_CACHE[chat_id] = selected_model_id
 
             form_data["model"] = selected_model_id
 
-            if form_data.get("stream") == True:
-
-                async def stream_wrapper(stream):
+            if form_data.get("stream"):
+                async def stream_wrapper(stream, selected_model_id):
                     yield f"data: {json.dumps({'selected_model_id': selected_model_id})}\n\n"
                     async for chunk in stream:
                         yield chunk
@@ -245,24 +263,22 @@ async def generate_chat_completion(
                     bypass_system_prompt=bypass_system_prompt,
                 )
                 return StreamingResponse(
-                    stream_wrapper(response.body_iterator),
+                    stream_wrapper(response.body_iterator, selected_model_id),
                     media_type="text/event-stream",
                     background=response.background,
                 )
             else:
-                return {
-                    **(
-                        await generate_chat_completion(
-                            request,
-                            form_data,
-                            user,
-                            bypass_filter=True,
-                            bypass_system_prompt=bypass_system_prompt,
-                        )
-                    ),
-                    "selected_model_id": selected_model_id,
-                }
+                completion = await generate_chat_completion(
+                    request,
+                    form_data,
+                    user,
+                    bypass_filter=True,
+                    bypass_system_prompt=bypass_system_prompt,
+                )
+                completion["selected_model_id"] = selected_model_id
+                return completion
 
+# End Fix
         if model.get("pipe"):
             # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
             return await generate_function_chat_completion(

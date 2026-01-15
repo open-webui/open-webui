@@ -1590,7 +1590,13 @@ EVALUATION_ARENA_MODELS = PersistentConfig(
     "evaluation.arena.models",
     [],
 )
-
+# start fix
+EVALUATION_ARENA_PER_CHAT_RANDOMIZATION = PersistentConfig(
+    "EVALUATION_ARENA_PER_CHAT_RANDOMIZATION",
+    "evaluation.arena.per_chat_randomization",
+    os.environ.get("EVALUATION_ARENA_PER_CHAT_RANDOMIZATION", "True").lower() == "true",
+)
+# end fix
 DEFAULT_ARENA_MODEL = {
     "id": "arena-model",
     "name": "Arena Model",

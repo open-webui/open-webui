@@ -623,6 +623,12 @@
 					</span>
 				</Tooltip>
 
+				{#if message.selectedModelId}
+					<span class="text-[10px] opacity-50 font-mono ml-1">
+						[{message.selectedModelId}]
+					</span>
+				{/if}
+
 				{#if message.timestamp}
 					<div
 						class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
