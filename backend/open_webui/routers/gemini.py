@@ -464,6 +464,140 @@ async def generate_chat_completion(
     # Convert OpenAI format to Gemini format
     messages = form_data.get("messages", [])
 
+    # Detect if this is an image editing model
+    image_edit_keywords = ["image-preview", "image-edit", "imagen"]
+    is_image_edit_model = any(keyword in model_id.lower() for keyword in image_edit_keywords)
+    
+    # For image editing models, only use the last user message to save tokens
+    # Image editing is a single-shot operation that doesn't need conversation history
+    if is_image_edit_model:
+        original_count = len(messages)
+        
+        # Extract system message if present
+        system_msg = None
+        for msg in messages:
+            if msg.get("role") == "system":
+                system_msg = msg
+                break
+        
+        # Helper function to check if a message contains an image
+        # Supports both OpenAI format {"type": "image_url"} and Markdown format ![...](data:image/...)
+        import re
+        markdown_image_pattern = re.compile(r'!\[.*?\]\((data:image/[^;]+;base64,[A-Za-z0-9+/=]+)\)')
+        
+        def has_image(msg):
+            content = msg.get("content", "")
+            # Check OpenAI multimodal format
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict):
+                        if item.get("type") in ["image_url", "image"]:
+                            return True
+            # Check for Markdown embedded base64 image in string content
+            if isinstance(content, str):
+                if markdown_image_pattern.search(content):
+                    return True
+            return False
+            
+        # Helper function to extract images from a message
+        # Converts Markdown images to OpenAI format for consistency
+        def extract_images(msg):
+            images = []
+            content = msg.get("content", "")
+            # Extract from OpenAI multimodal format
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") in ["image_url", "image"]:
+                        images.append(item)
+            # Extract from Markdown format and convert to OpenAI format
+            if isinstance(content, str):
+                matches = markdown_image_pattern.findall(content)
+                for data_url in matches:
+                    images.append({
+                        "type": "image_url",
+                        "image_url": {"url": data_url}
+                    })
+            return images
+        
+        # Helper function to extract text from a message
+        def extract_text(msg):
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                # Remove Markdown image syntax from text
+                text = markdown_image_pattern.sub('', content).strip()
+                return text if text else content
+            if isinstance(content, list):
+                texts = []
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        texts.append(item.get("text", ""))
+                    elif isinstance(item, str):
+                        texts.append(item)
+                return " ".join(texts)
+            return ""
+
+        # DEBUG LOGGING: Print structure of last few messages to understand why image is not found
+        log.info(f"DEBUG: Scanning {len(messages)} messages for images. Dumping structure:")
+        for i, msg in enumerate(reversed(messages)):
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            content_type = type(content).__name__
+            content_preview = "..."
+            if isinstance(content, list):
+                content_preview = str([
+                    {k: v for k, v in item.items() if k != 'image_url'} 
+                    if isinstance(item, dict) else str(item)[:50] 
+                    for item in content
+                ])
+            elif isinstance(content, str):
+                content_preview = content[:100]
+            
+            log.info(f"DEBUG Msg {len(messages)-1-i} [{role}]: type={content_type}, content={content_preview}")
+            if i >= 4: # Only check last 5 messages to avoid log spam
+                break
+
+        # Find the last message with an image (from ANY role: user or assistant)
+        last_image_msg = None
+        last_image_index = -1
+        for i, msg in enumerate(reversed(messages)):
+            if has_image(msg):
+                last_image_msg = msg
+                last_image_index = len(messages) - 1 - i
+                log.info(f"Found image in message {last_image_index} (Role: {msg.get('role')})")
+                break
+        
+        # Find the last user message (the edit instruction)
+        last_user_msg = None
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                last_user_msg = msg
+                break
+        
+        # CRITICAL FIX: Only modify messages if we actually found what we need
+        if last_image_msg and last_user_msg:
+            # Build the combined message
+            if last_image_msg != last_user_msg:
+                # Image and instruction are in different messages - merge them
+                images = extract_images(last_image_msg)
+                instruction_text = extract_text(last_user_msg)
+                
+                # Create combined content: images + instruction text
+                combined_content = images + [{"type": "text", "text": instruction_text}]
+                combined_msg = {"role": "user", "content": combined_content}
+                
+                messages = [combined_msg]
+                log.info(f"Image edit mode: Merged image from msg {last_image_index} with instruction from last user msg")
+            else:
+                # Last message already contains the image, use it directly
+                messages = [last_user_msg]
+                log.info("Image edit mode: Last user message already contains the image")
+            
+            if system_msg:
+                messages.insert(0, system_msg)
+            log.info(f"Image edit mode: Trimmed messages from {original_count} to {len(messages)} to save tokens")
+        else:
+            log.warning(f"Image edit mode: Aborted optimization. Found Image: {bool(last_image_msg)}, Found User Msg: {bool(last_user_msg)}. Sending original messages.")
+
     # Build Gemini contents
     contents = []
     system_instruction = None
