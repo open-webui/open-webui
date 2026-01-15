@@ -152,8 +152,6 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
     reasoning_effort = chat_payload.get("reasoning_effort") or chat_payload.get("reasoning", {}).get("effort")
     if reasoning_effort:
         responses_payload["reasoning"] = {"effort": reasoning_effort.lower()}
-        # Enable reasoning summary to get thinking content in stream
-        responses_payload["reasoning_summary"] = "auto"
     
     return responses_payload
 
