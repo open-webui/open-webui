@@ -270,13 +270,22 @@ class FastMCPManager:
     async def get_all_tools(self) -> List[Dict[str, Any]]:
         """Get all tools from all connected MCP servers"""
         all_tools = []
+        log.info(f"=== get_all_tools() called ===")
+        log.info(f"Total servers configured: {len(self.server_configs)}")
+        log.info(f"Server names: {list(self.server_configs.keys())}")
 
         for server_name in self.server_configs.keys():
-            if self.get_server_status(server_name) != "running":
+            log.info(f"Processing server: {server_name}")
+            server_status = self.get_server_status(server_name)
+            log.info(f"Server {server_name} status: {server_status}")
+
+            if server_status != "running":
+                log.warning(f"Skipping {server_name} - not running")
                 continue
 
             try:
                 config = self.server_configs[server_name]
+                log.info(f"Server {server_name} transport: {config.get('transport')}")
 
                 if config.get("transport") == "http":
                     # For HTTP servers, create a new client connection
