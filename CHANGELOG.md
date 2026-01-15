@@ -10,12 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - 🐍 Users can now ask models to perform calculations, analyze data, and generate visualizations through autonomous Python code execution—for example, "create a bar chart showing quarterly sales" or "analyze this dataset for trends and outliers." Requires Native function calling mode and the code_interpreter capability enabled. [#20592](https://github.com/open-webui/open-webui/pull/20592), [Docs:#998](https://github.com/open-webui/docs/pull/998)
+- 🔍 Web search operations no longer block other tasks, allowing the application to remain responsive while searches are in progress. [#20630](https://github.com/open-webui/open-webui/pull/20630)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Catalan, German, Japanese, Polish, Portuguese (Brazil), Simplified Chinese, Spanish, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
 - 🔐 Sharing resources with groups configured for member-only access no longer fails with database errors. [#20666](https://github.com/open-webui/open-webui/issues/20666), [Commit](https://github.com/open-webui/open-webui/commit/5a075a2c836e46b83f8710285f09aff1f6125072)
+- 🔑 Docling API key authentication now works correctly by using the proper "X-Api-Key" header format instead of the incorrect "Bearer" authorization prefix. [#20652](https://github.com/open-webui/open-webui/pull/20652)
+- 💬 Adding message pairs with Ctrl+Shift+Enter no longer crashes when the chat's model is unavailable, showing a helpful error message instead. [#20663](https://github.com/open-webui/open-webui/pull/20663)
 - ⚡ Database connection pool exhaustion and timeout errors during concurrent usage have been resolved by releasing connections before chat completion requests and embedding operations for memory and knowledge base processing. [#20569](https://github.com/open-webui/open-webui/pull/20569), [#20570](https://github.com/open-webui/open-webui/pull/20570), [#20571](https://github.com/open-webui/open-webui/pull/20571), [#20572](https://github.com/open-webui/open-webui/pull/20572), [#20574](https://github.com/open-webui/open-webui/pull/20574), [#20575](https://github.com/open-webui/open-webui/pull/20575), [#20576](https://github.com/open-webui/open-webui/pull/20576), [#20577](https://github.com/open-webui/open-webui/pull/20577), [#20578](https://github.com/open-webui/open-webui/pull/20578), [#20579](https://github.com/open-webui/open-webui/pull/20579), [#20580](https://github.com/open-webui/open-webui/pull/20580), [#20581](https://github.com/open-webui/open-webui/pull/20581), [Commit](https://github.com/open-webui/open-webui/commit/7da37b4f66b9b2e821796b06b75e03cb0237e0a9)
 
 ## [0.7.2] - 2026-01-10
