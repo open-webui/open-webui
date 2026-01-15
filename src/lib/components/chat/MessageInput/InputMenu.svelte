@@ -133,7 +133,9 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[280px] rounded-xl px-1 py-1  border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+			class={`w-full ${
+				$config?.features?.pbmm_env ? 'max-w-[380px]' : 'max-w-[280px]'
+			} rounded-xl px-1 py-1 border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow`}
 			sideOffset={15}
 			alignOffset={-8}
 			side="top"
@@ -254,7 +256,9 @@
 				<Tooltip
 					content={wikiGroundingEnabled
 						? $i18n.t('Web Search disabled - Wiki Grounding is active')
-						: $i18n.t('Web Search (Beta)')}
+						: $config?.features?.pbmm_env
+							? $i18n.t('Web Search (UNCLASSIFIED Beta)')
+							: $i18n.t('Web Search (Beta)')}
 					placement="right"
 				>
 					<button
@@ -275,7 +279,13 @@
 					>
 						<div class="flex-1 flex items-center gap-2">
 							<GlobeAltSolid />
-							<div class=" line-clamp-1">{$i18n.t('Web Search (Beta)')}</div>
+							<div class="line-clamp-1">
+								{#if $config?.features?.pbmm_env}
+									{$i18n.t('Web Search (UNCLASSIFIED Beta)')}
+								{:else}
+									{$i18n.t('Web Search (Beta)')}
+								{/if}
+							</div>
 						</div>
 
 						<Switch
