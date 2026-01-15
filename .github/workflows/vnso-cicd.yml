@@ -100,8 +100,11 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           envs: GHCR_PAT,USERNAME
           script: |
+            set -e
+
             # 1. Login vào GHCR trên VPS (để kéo image về)
             # Lưu ý: Image trên GHCR mặc định là Private, cần login mới kéo được
+            echo "Login to GHCR..."
             echo $GHCR_PAT | docker login ghcr.io -u $USERNAME --password-stdin
 
             # 2. Định nghĩa tên Image (chữ thường)
@@ -109,17 +112,20 @@ jobs:
             CONTAINER_NAME="open-webui-vnso"
 
             # 3. Pull image mới nhất
-            docker pull $IMAGE_TAG
+            echo "Pulling image..."
+            timeout 20m docker pull $IMAGE_TAG
 
             # 4. Xóa container cũ (nếu có)
+            echo "Removing old container if exists..."
             if [ "$(docker ps -aq -f name=$CONTAINER_NAME)" ]; then
                 echo "Removing existing container..."
-                docker stop $CONTAINER_NAME
+                docker stop -t 10 $CONTAINER_NAME || true
                 docker rm $CONTAINER_NAME
             fi
 
             # 5. Chạy container mới
             # Cần map volume data để không mất dữ liệu khi update
+            echo "Starting new container..."
             docker run -d \
               --name $CONTAINER_NAME \
               --restart always \
@@ -128,4 +134,5 @@ jobs:
               $IMAGE_TAG
 
             # 6. Dọn dẹp image cũ cho sạch ổ cứng
+            echo "Pruning old images..."
             docker image prune -f
