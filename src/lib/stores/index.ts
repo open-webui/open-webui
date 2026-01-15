@@ -30,11 +30,20 @@ export const downloadProgressTitle = derived(MODEL_DOWNLOAD_POOL, ($pool) => {
 	const first = downloads[0];
 	const model = first[0];
 	const progress = first[1].pullProgress;
+	const remainingCount = downloads.length - 1;
 
+	let title = '';
 	if (progress !== undefined) {
-		return `(${progress.toFixed(1)}%) ${model}`;
+		title = `(${progress.toFixed(1)}%) ${model}`;
+	} else {
+		title = `(Downloading) ${model}`;
 	}
-	return `(Downloading) ${model}`;
+
+	if (remainingCount > 0) {
+		title += ` +${remainingCount} more`;
+	}
+
+	return title;
 });
 
 export const mobile = writable(false);
