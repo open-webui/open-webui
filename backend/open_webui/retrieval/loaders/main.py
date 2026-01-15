@@ -143,7 +143,7 @@ class DoclingLoader:
         with open(self.file_path, "rb") as f:
             headers = {}
             if self.api_key:
-                headers["X-Api-Key"] = f"Bearer {self.api_key}"
+                headers["X-Api-Key"] = f"{self.api_key}"
 
             r = requests.post(
                 f"{self.url}/v1/convert/file",
