@@ -152,10 +152,11 @@ def _extract_model_info(model_id: str) -> dict:
     - "openai/gpt-5.2" -> provider="openai", model="gpt-5.2"
     - "OpenRouter.openai/gpt-5.2" -> service="openrouter", provider="openai", model="gpt-5.2"
     - "OpenRouter.qwen/qwen3-235b-a22b:free" -> service="openrouter", provider="qwen", model="qwen3-235b-a22b"
+    - "openai.gpt-5.1-2025-11-13" -> prefix="openai", model="gpt-5.1-2025-11-13"
     - "gpt-4o-mini" -> model="gpt-4o-mini"
     """
     model_id_lower = model_id.lower()
-    info = {"original": model_id, "model": model_id_lower, "provider": None, "service": None}
+    info = {"original": model_id, "model": model_id_lower, "provider": None, "service": None, "prefix": None}
     
     # Check for service.provider/model pattern (e.g., OpenRouter.openai/gpt-5.2)
     service_match = re.match(r'^([a-z]+)\.([a-z]+)/(.+)$', model_id_lower)
@@ -169,6 +170,24 @@ def _extract_model_info(model_id: str) -> dict:
         if provider_match:
             info["provider"] = provider_match.group(1)
             info["model"] = provider_match.group(2)
+        else:
+            # Check for prefix.model pattern (e.g., openai.gpt-5.1-2025-11-13)
+            # prefix is a short word (max 20 chars), followed by . and then the model name
+            prefix_match = re.match(r'^([a-z][a-z0-9_-]{0,19})\.(.+)$', model_id_lower)
+            if prefix_match:
+                prefix = prefix_match.group(1)
+                model_part = prefix_match.group(2)
+                # Only treat as prefix if the prefix is a known provider/service name
+                # or if the model part looks like a standard model name
+                known_prefixes = {"openai", "anthropic", "google", "gemini", "claude", "meta", 
+                                  "cohere", "huggingface", "mistral", "together", "anyscale",
+                                  "perplexity", "groq", "fireworks", "deepinfra", "openrouter",
+                                  "azure", "aws", "bedrock", "vertex", "siliconflow", "alibaba",
+                                  "bytedance", "baidu", "tencent", "zhipu", "moonshot", "minimax",
+                                  "stepfun", "yi", "doubao", "kimi", "deepseek", "qwen", "hotaru"}
+                if prefix in known_prefixes:
+                    info["prefix"] = prefix
+                    info["model"] = model_part
     
     # Clean up model name - remove suffixes like :free, :latest
     info["model_clean"] = re.sub(r':[a-z]+$', '', info["model"])
