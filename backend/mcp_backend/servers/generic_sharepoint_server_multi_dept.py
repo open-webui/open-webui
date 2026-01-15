@@ -230,11 +230,6 @@ async def get_sharepoint_document_content(
         if not user_token:
             user_token = os.getenv("USER_JWT_TOKEN")
 
-        # DEBUG: Log token presence for troubleshooting
-        logger.info(
-            f"🔍 get_sharepoint_document_content - user_token param: {bool(user_token)}, env USER_JWT_TOKEN: {bool(os.getenv('USER_JWT_TOKEN'))}"
-        )
-
         # For local development, don't try OBO if no valid token available
         if user_token == "user_token_placeholder" or not user_token:
             user_token = None
@@ -614,11 +609,6 @@ async def analyze_all_documents_for_content(
 
         # Get user token from parameter or environment variable
         effective_token = user_token or os.getenv("USER_JWT_TOKEN")
-
-        # DEBUG: Log token presence for troubleshooting
-        logger.info(
-            f"🔍 analyze_all_documents_for_content - user_token param: {bool(user_token)}, env USER_JWT_TOKEN: {bool(os.getenv('USER_JWT_TOKEN'))}, effective_token: {bool(effective_token)}"
-        )
 
         # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
         if config.use_delegated_access:

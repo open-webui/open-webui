@@ -401,11 +401,18 @@ class CrewMCPManager:
     - Do NOT make up or hallucinate answers
     - REPORT the authentication failure to the user clearly
     - Inform the user that valid authentication credentials are required to access SharePoint
-    - Do NOT use any information from your training data to answer the question""",
+    - Do NOT use any information from your training data to answer the question
+    
+    RESPONSE FORMAT:
+    - Provide ONLY the final answer to the user
+    - Do NOT show your reasoning process ("Thought:", "Action:", etc.)
+    - Be direct and concise
+    - Include document sources for credibility""",
                 tools=mcp_tools,
                 llm=llm,
                 verbose=CREW_VERBOSE,
                 max_iter=5,
+                allow_delegation=False,
             )
 
             # Create task for SharePoint query
@@ -435,20 +442,23 @@ class CrewMCPManager:
     5. Focus on the specific information requested
     6. DON'T dump entire document contents in your response
                 """,
-                expected_output="""Provide a CONCISE, INTELLIGENT answer to the user's specific question based on SharePoint search results. 
+                expected_output="""A DIRECT, CONCISE answer to the user's question without showing any reasoning process.
 
-    RESPONSE RULES:
-    - Extract the key answer from the most relevant document
-    - Provide a direct response to what the user asked for
+    FORMAT REQUIREMENTS:
+    - Start immediately with the answer (NO "Thought:", "Action:", or process explanations)
+    - Extract the key information from the most relevant document
     - Include document name and source for credibility
-    - Keep your answer focused and concise
-    - DON'T copy-paste entire document contents
-    - Focus on the specific information requested
+    - Keep response focused on what was asked
+    - Maximum 2-3 sentences unless more detail is specifically requested
 
-    EXAMPLE GOOD RESPONSE:
-    "Based on the document 'MPO - Transformative strategies. pdf' from the Major Projects Office, Canada's first high-speed railway is projected to span approximately 1,000 km from Toronto to Québec City."
+    EXAMPLE RESPONSE:
+    "Canada's new high-speed railway is proposed to span approximately 1,000 km, according to the document '2025-12-05-Alto-Letter to MPO.pdf' from the Major Projects Office."
 
-    AVOID:  Dumping entire document contents or being overly verbose.""",
+    AVOID:  
+    - Showing reasoning ("Thought:", "I will use tool X")
+    - Dumping entire document contents
+    - Being overly verbose
+    - Including process descriptions""",
                 agent=sharepoint_agent,
             )
 
