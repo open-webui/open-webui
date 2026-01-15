@@ -1,4 +1,4 @@
-# Open WebUI (自定义增强版) 🚀
+# Open WebUI (Custom Edition)
 
 <p align="center">
   <img src="./banner.png" alt="Open WebUI Banner" width="100%"/>
@@ -11,131 +11,54 @@
   <a href="https://github.com/open-webui/open-webui">
     <img src="https://img.shields.io/badge/Upstream-open--webui-green?style=for-the-badge&logo=github" alt="Upstream Badge"/>
   </a>
-  <img src="https://img.shields.io/badge/Version-v0.7.3+-orange?style=for-the-badge&logo=git" alt="Version"/>
+  <img src="https://img.shields.io/badge/Version-v0.7.4+-orange?style=for-the-badge&logo=git" alt="Version"/>
+    <img src="https://img.shields.io/badge/Arch-x86__64%20%7C%20ARM64-blueviolet?style=for-the-badge&logo=docker" alt="Arch Badge"/>
 </p>
 
 ---
 
-## ✨ 核心增强功能
+## 💡 简介
 
-本仓库是 [Open WebUI](https://github.com/open-webui/open-webui) 的深度定制版本，专为**提升中文体验**与**多模型管理效率**而打造。
+本项目基于优秀的 [Open WebUI](https://github.com/open-webui/open-webui) 构建，旨在为特定需求场景提供**功能扩展**与**体验优化**。我们保持对上游的紧密跟随，并在此基础上增添了更精细的模型控制、更符合中文习惯的本地化以及一些便捷的实验性功能。
 
 ---
 
-### 🌐 Gemini API 原生集成
+## ✨ 特色功能概览
 
-<img src="https://img.shields.io/badge/Google-Gemini-4285F4?style=flat-square&logo=google&logoColor=white" alt="Gemini"/>
+### 🧠 模型能力深度集成
 
-不再依赖 OpenAI 兼容层，直接调用原生接口！
-
-| 功能 | 说明 |
+| 功能 | 详情 |
 |------|------|
-| 🔌 原生支持 | 完整对接 Google Gemini API |
-| ⚙️ 独立入口 | 专属配置页面，与 OpenAI/Ollama 并列 |
-| 📋 模型同步 | 自动同步最新 Gemini 模型列表 |
-| 🎛️ 高级参数 | 支持 `thinking_budget` 等特有参数 |
-| 🏷️ 标签分组 | 修复外部连接标签不显示的问题 |
+| **OpenAI Responses API** | ✅ **首发支持**：完整对接 OpenAI 新版 `/v1/responses` 接口，支持流式输出与 **Reasoning Content (思考过程)** 实时展示。 |
+| **Google Gemini 原生** | 🔌 **直连官方**：内置 Gemini 原生 SDK，支持 `thinking_budget` 等特有参数，无需中间层转换。 |
+| **Reasoning Effort** | 🎛️ **灵活控制**：支持为 o1/o3 等模型配置推理强度（Low/Medium/High），并支持自定义输入。 |
+| **图像编辑优化** | 🖼️ **Token节省**：智能识别图像编辑上下文，自动精简历史消息，既保留图像又节省大量 Token。 |
 
----
+### 🛠️ 系统与管理增强
 
-### 💰 精细化计费系统
-
-<img src="https://img.shields.io/badge/Billing-System-gold?style=flat-square" alt="Billing"/>
-
-企业级、运营级的模型计费方案。
-
-| 功能 | 说明 |
+| 功能 | 详情 |
 |------|------|
-| 📊 多模式计费 | 支持 免费 / 按次 / 按Token 三种模式 |
-| 💱 双货币支持 | 完美支持 CNY (¥) 和 USD ($) |
-| 🔢 自定义倍率 | 可针对输入/输出分别设置价格倍率 |
-| 💵 实时成本 | 聊天过程中自动计算并展示消耗金额 |
+| **精细化计费** | 💰 **运营级方案**：支持按次/Token计费，区分输入/输出/推理价格，实时计算对话成本。 |
+| **ARM 架构支持** | 🍓 **多端运行**：提供 ARM64 镜像，完美运行于 Raspberry Pi 等设备。 |
+| **模型权限管理** | 🔒 **访问控制**：支持设置模型的公开/私有状态，灵活分配资源。 |
+| **启动速度优化** | 🚀 **性能提升**：Lazy Loading 策略 + 镜像精简，内存占用大幅降低，启动更迅速。 |
 
----
+### 🎨 交互体验打磨
 
-### 📊 智能用量统计
-
-<img src="https://img.shields.io/badge/Usage-Statistics-purple?style=flat-square" alt="Stats"/>
-
-让每一次对话的消耗都清晰可见。
-
-| 功能 | 说明 |
+| 功能 | 详情 |
 |------|------|
-| ✅ 默认开启 | 无需繁琐配置，开箱即用的 Usage 能力 |
-| 📈 详细分类 | 区分 Input、Output 和 Reasoning Token |
-| 🎨 美化展示 | 重新设计的 Token 统计 UI，直观易读 |
-| 💰 费用计算 | 结合计费配置，自动计算单次对话成本 |
+| **对话分支** | 🌿 **思维发散**：在任意对话节点创建新分支 (Branch Chat)，在同一标签页探索不同走向。 |
+| **上下文控制** | ✂️ **精准断点**：可视化插入 Context Break，精准控制发送给模型的上下文长度；支持设置 Context Count。 |
+| **品牌 Logo 适配** | 🏷️ **自动匹配**：智能模糊匹配算法，自动为各类模型（GPT, Claude, Gemini, Qwen 等）适配精美图标。 |
+| **深度中文优化** | 🇨🇳 **全量汉化**：覆盖新增功能、专业术语、报错信息的深度本地化翻译。 |
 
 ---
 
-### 🔀 对话分支功能 <sup>NEW</sup>
+## 🚀 快速开始
 
-<img src="https://img.shields.io/badge/Conversation-Branch-brightgreen?style=flat-square" alt="Branch"/>
+### Docker 一键部署
 
-从任意对话节点创建新分支，探索不同方向！
-
-| 功能 | 说明 |
-|------|------|
-| 🌿 一键分支 | 在任意 AI 回复处点击分支按钮 |
-| 📋 历史保留 | 完整保留从对话开始到该节点的所有内容 |
-| 🚀 即时跳转 | 创建后自动跳转到新对话 |
-| 💡 使用场景 | 想问多个问题但不想污染当前上下文时 |
-
-**使用方法**: 鼠标悬停在 AI 回复上 → 点击 🔗 **分支按钮** → 自动创建新对话并跳转
-
----
-
-### ⚡ 体验与性能优化
-
-<img src="https://img.shields.io/badge/UX%20%26%20Perf-Turbo-orange?style=flat-square" alt="UX"/>
-
-专注于流畅度与便捷性的深度打磨。
-
-| 功能 | 说明 |
-|------|------|
-| 🎨 品牌图标 | 20+ LLM 品牌 Logo 自动匹配 (GPT/Claude/Gemini/Qwen...) |
-| ⚡ 秒级加载 | 模型设置页启用智能缓存，**告别 3秒+ 等待** |
-| 🚀 极速启动 | Slim 模式 + 懒加载，容器内存占用降低 40% |
-| 🔧 快捷入口 | 模型选择器添加「模型设置」直达按钮 (管理员) |
-| 🧠 推理增强 | 推理强度 (Reasoning Effort) 支持下拉与自定义输入 |
-| 📐 上下文控制 | 支持设置发送给模型的历史消息条数 |
-| ✂️ 清除上下文 | 支持插入断点，仅发送断点后的消息给模型 |
-
----
-
-### 🇨🇳 深度中文本地化
-
-<img src="https://img.shields.io/badge/I18n-简体中文-red?style=flat-square" alt="I18n"/>
-
-更符合中文用户习惯的界面交互。
-
-| 功能 | 说明 |
-|------|------|
-| 🌍 全界面汉化 | 覆盖所有新增功能与设置项 |
-| 📝 四字标签 | 高级参数采用整齐划一的四字中文标签 |
-| 📚 术语校准 | 计费、Token 等专业术语的精准翻译 |
-| 🔄 持续更新 | 跟随上游版本实时更新本地化内容 |
-
----
-
-### 🐳 自动化构建与部署
-
-<img src="https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue?style=flat-square&logo=github-actions" alt="CI/CD"/>
-
-现代化的开发运维流程支持。
-
-| 功能 | 说明 |
-|------|------|
-| 🔨 自动构建 | 随代码提交自动触发 Docker 镜像构建 |
-| 📦 镜像托管 | 推送到 GHCR (GitHub Container Registry) |
-| ⚙️ 架构优化 | 针对 x86_64 平台优化的精简构建 |
-| 🏷️ 最新标签 | `ghcr.io/ztx888/openwebui:latest` |
-
----
-
-## 🚀 快速部署
-
-### Docker 一键启动
+支持 x86_64 real ARM64 架构，自动拉取对应镜像。
 
 ```bash
 docker run -d -p 3000:8080 \
@@ -145,40 +68,37 @@ docker run -d -p 3000:8080 \
   ghcr.io/ztx888/openwebui:latest
 ```
 
-### 💡 推荐配置
+### 💡 推荐设置
 
-1. **配置 Gemini**: 进入 `管理设置` → `连接` → `Gemini 接口`，填入 API Key
-2. **开启计费**: 进入 `模型设置`，为模型选择 `按Token` 计费并设置费率
-3. **享受极速**: 点击模型选择器的 `⚙️` 图标，体验秒开的模型配置页
-
----
-
-## 📋 功能对比
-
-| 功能特性 | 官方上游 | 本定制版 | 核心优势 |
-|:---------|:--------:|:--------:|:---------|
-| **Gemini API** | ❌ 仅 OpenAI 兼容 | ✅ 原生 SDK | Thinking Parameters 支持 |
-| **模型计费** | ❌ 无 | ✅ 多模式 | 运营必备，成本可控 |
-| **Token 用量** | ⚠️ 基础 | ✅ 美化+分类 | 信息更全，展示更美 |
-| **对话分支** | ❌ 无 | ✅ 一键分支 | 探索不同方向不污染上下文 |
-| **清除上下文** | ❌ 无 | ✅ 可视化断点 | 灵活控制上文长度 |
-| **模型页加载** | ⚠️ 远程 API | ✅ 智能缓存 | **瞬时响应** |
-| **内存占用** | ⚠️ ~1.2GB | ✅ ~0.6GB | **省 40%+** |
-| **中文本地化** | ⚠️ 基础 | ✅ 深度润色 | 界面更专业 |
+1.  **启用 Responses API**: 在 Open WebUI 连接设置中开启 `Use Responses API`，即可体验新版接口与思考过程展示。
+2.  **配置 Gemini**: 直接在 `Gemini 接口` 中填入 Key 即可使用原生功能。
+3.  **开启计费显示**: 在模型设置中配置费率，即时掌握 Token 消耗。
 
 ---
 
-## 🔄 同步与维护
+## 📊 功能差异对比
 
-本仓库定期与上游 [open-webui/open-webui](https://github.com/open-webui/open-webui) 的 `main` 分支同步。
-
-- **合并策略**: 使用 `ours` 策略优先保留所有自定义功能
-- **冲突处理**: 手动解决代码冲突，确保功能稳定性
-- **功能跟进**: 上游发布新功能时，第一时间进行适配和汉化
+| 特性 | 官方原版 | 本定制版 | 差异点 |
+|:-----|:--------:|:--------:|:-------|
+| **API 协议** | Chat Completions | **Responses API + Chat** | 支持新版 API 及思考过程流式输出 |
+| **Gemini 支持** | OpenAI 兼容层 | **原生 SDK** | 支持更多原生参数与特性 |
+| **推理控制** | 基础 | **Reasoning Effort** | 支持调节推理强度 |
+| **计费系统** | 无 | **完整计费** | 支持多模式、多货币计费 |
+| **对话管理** | 基础 | **分支 & 断点** | 更灵活的对话流控制 |
+| **运行环境** | 通用 | **ARM & x86 优化** | 针对低功耗设备优化内存与构建 |
+| **本地化** | 社区翻译 | **深度校对** | 更准确的中文术语 |
 
 ---
 
-## 📜 许可证
+## 🙌 致谢与声明
 
-本项目遵循 [MIT License](./LICENSE)。
-基于 [Open WebUI](https://github.com/open-webui/open-webui) 二次开发。
+本项目基于 [open-webui/open-webui](https://github.com/open-webui/open-webui) 开发，感谢原作者及社区的杰出工作。
+
+- **同步策略**: 定期同步上游 `main` 分支，优先合并上游新特性。
+- **许可证**: 遵循 [MIT License](./LICENSE)。
+
+---
+
+<p align="center">
+  <sub>Made with ❤️ for the AI community</sub>
+</p>
