@@ -70,6 +70,7 @@
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
 	let showChatTitleInTab = true;
+	let showDownloadProgress = true;
 
 	let showFloatingActionButtons = true;
 	let floatingActionButtons = null;
@@ -241,6 +242,7 @@
 		chatDirection = $settings?.chatDirection ?? 'auto';
 		userLocation = $settings?.userLocation ?? false;
 		showChatTitleInTab = $settings?.showChatTitleInTab ?? true;
+		showDownloadProgress = $settings?.showDownloadProgress ?? true;
 
 		notificationSound = $settings?.notificationSound ?? true;
 		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
@@ -441,6 +443,25 @@
 							bind:state={showChatTitleInTab}
 							on:change={() => {
 								saveSettings({ showChatTitleInTab });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="display-download-progress-label" class=" self-center text-xs">
+						{$i18n.t('Display download progress in tab')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledById="display-download-progress-label"
+							tooltip={true}
+							bind:state={showDownloadProgress}
+							on:change={() => {
+								saveSettings({ showDownloadProgress });
 							}}
 						/>
 					</div>

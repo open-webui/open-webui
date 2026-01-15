@@ -30,7 +30,9 @@
 		toolServers,
 		playingNotificationSound,
 		channels,
-		channelId
+		channelId,
+		downloadProgressTitle,
+		chatTitle
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -849,6 +851,30 @@
 		window.removeEventListener('message', windowMessageEventHandler);
 		bc.close();
 	});
+
+	// Update document title with download progress
+	$: {
+		if ($settings?.showDownloadProgress && $downloadProgressTitle) {
+			document.title = `${$downloadProgressTitle} • ${$WEBUI_NAME}`;
+		} else if (!$settings?.showDownloadProgress && $downloadProgressTitle) {
+			// Setting toggled off during download - restore appropriate title
+			if ($chatTitle && $settings?.showChatTitleInTab !== false) {
+				document.title = `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`;
+			} else {
+				document.title = $WEBUI_NAME;
+			}
+		} else if ($downloadProgressTitle === null && $chatTitle) {
+			// Download finished and we're in a chat - restore chat title
+			if ($settings?.showChatTitleInTab !== false) {
+				document.title = `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`;
+			} else {
+				document.title = $WEBUI_NAME;
+			}
+		} else if ($downloadProgressTitle === null) {
+			// No chat title, just reset to base
+			document.title = $WEBUI_NAME;
+		}
+	}
 </script>
 
 <svelte:head>
