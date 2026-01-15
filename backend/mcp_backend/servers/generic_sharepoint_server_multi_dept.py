@@ -230,6 +230,11 @@ async def get_sharepoint_document_content(
         if not user_token:
             user_token = os.getenv("USER_JWT_TOKEN")
 
+        # DEBUG: Log token presence for troubleshooting
+        logger.info(
+            f"🔍 get_sharepoint_document_content - user_token param: {bool(user_token)}, env USER_JWT_TOKEN: {bool(os.getenv('USER_JWT_TOKEN'))}"
+        )
+
         # For local development, don't try OBO if no valid token available
         if user_token == "user_token_placeholder" or not user_token:
             user_token = None
@@ -610,6 +615,11 @@ async def analyze_all_documents_for_content(
         # Get user token from parameter or environment variable
         effective_token = user_token or os.getenv("USER_JWT_TOKEN")
 
+        # DEBUG: Log token presence for troubleshooting
+        logger.info(
+            f"🔍 analyze_all_documents_for_content - user_token param: {bool(user_token)}, env USER_JWT_TOKEN: {bool(os.getenv('USER_JWT_TOKEN'))}, effective_token: {bool(effective_token)}"
+        )
+
         # STRICT AUTHENTICATION CHECK: If delegated access is enabled, user token is REQUIRED
         if config.use_delegated_access:
             if (
@@ -752,7 +762,7 @@ async def _analyze_documents_parallel_ultra_fast(
             search_lower = search_terms.lower()
             filename_score = 20 if search_lower in doc_name.lower() else 0
 
-            # Check cache first
+            # Check cache to avoid re-downloading same document within this query
             cache_key = f"{folder_path}::{doc_name}"
             if cache_key in content_cache:
                 content = content_cache[cache_key]
