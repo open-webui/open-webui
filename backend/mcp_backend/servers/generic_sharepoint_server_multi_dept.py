@@ -1028,6 +1028,8 @@ async def parse_document_content_embedded(content: bytes, file_name: str) -> str
             return await parse_pdf_content_embedded(content, file_name)
         elif file_ext in ["docx", "doc"]:
             return await parse_word_content_embedded(content, file_name)
+        elif file_ext in ["pptx", "ppt"]:
+            return await parse_pptx_content_embedded(content, file_name)
         elif file_ext in ["txt", "csv", "text"]:
             return await parse_text_content_embedded(content, file_name)
         else:
@@ -1151,6 +1153,53 @@ async def parse_word_content_embedded(content: bytes, file_name: str) -> str:
 
     except Exception:
         return f"Error parsing Word document {file_name}"
+
+
+async def parse_pptx_content_embedded(content: bytes, file_name: str) -> str:
+    """
+    Parse PowerPoint document content using python-pptx (embedded implementation).
+
+    Args:
+        content: PowerPoint document content bytes
+        file_name: Name of the PowerPoint file
+
+    Returns:
+        Extracted text content from all slides
+    """
+    try:
+        from io import BytesIO
+        from pptx import Presentation
+
+        # Parse PPTX
+        pptx_stream = BytesIO(content)
+        prs = Presentation(pptx_stream)
+
+        text_content = []
+
+        # Extract text from all slides
+        for slide_num, slide in enumerate(prs.slides, start=1):
+            slide_text = []
+            slide_text.append(f"--- Slide {slide_num} ---")
+
+            # Extract text from all shapes in the slide
+            for shape in slide.shapes:
+                if hasattr(shape, "text") and shape.text.strip():
+                    slide_text.append(shape.text.strip())
+
+            if len(slide_text) > 1:  # Has more than just the slide number header
+                text_content.append("\n".join(slide_text))
+
+        if text_content:
+            extracted_text = "\n\n".join(text_content)
+            return extracted_text
+        else:
+            return f"No text content found in PowerPoint file {file_name}"
+
+    except ImportError:
+        return f"python-pptx library not available. Cannot parse {file_name}"
+    except Exception as e:
+        logger.warning(f"Error parsing PowerPoint document {file_name}: {e}")
+        return f"Error parsing PowerPoint document {file_name}: {str(e)}"
 
 
 async def parse_text_content_embedded(content: bytes, file_name: str) -> str:
