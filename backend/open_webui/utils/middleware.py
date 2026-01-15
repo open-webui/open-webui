@@ -1816,6 +1816,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if (
         metadata.get("params", {}).get("function_calling") == "native"
         and builtin_tools_enabled
+        and not metadata.get("task")  # Skip for task model requests
     ):
         # Add file context to user messages
         chat_id = metadata.get("chat_id")
