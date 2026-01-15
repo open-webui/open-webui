@@ -3358,6 +3358,25 @@ async def process_chat_response(
                             except Exception as e:
                                 log.exception(f"Error extracting citation source: {e}")
 
+                        # For citation sources, don't include the full result as it's 
+                        # already provided in the RAG template
+                        if tool_function_name in ["search_web","view_knowledge_file","query_knowledge_files",]:
+                            try:
+                                parsed_result = json.loads(tool_result)
+
+                                if isinstance(parsed_result, list):
+                                    for item in parsed_result:
+                                        item["snippet"] = "Tool completed. Snippet omitted here but provided in context."
+                                    tool_result = json.dumps(parsed_result)
+
+                                elif isinstance(parsed_result, dict):
+                                    parsed_result["content"] = "Tool completed. Content omitted here but provided in context."
+                                    tool_result = json.dumps(parsed_result)
+                            except Exception as e:
+                                log.error(f"Error updating tool result content: {e}")
+                                pass
+                            
+                            
                         results.append(
                             {
                                 "tool_call_id": tool_call_id,
