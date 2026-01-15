@@ -1306,11 +1306,6 @@ async def generate_chat_completion(
         else:
             log.warning(f"Image edit mode: Aborted optimization. Found Image: {bool(last_image_msg)}, Found User Msg: {bool(last_user_msg)}. Sending original messages.")
 
-    # Add Responses API format for reasoning_effort to maximize compatibility
-    # Some third-party proxies expect reasoning: {effort: "..."} instead of reasoning_effort
-    if payload.get("reasoning_effort"):
-        payload["reasoning"] = {"effort": payload["reasoning_effort"]}
-
     payload = json.dumps(payload)
 
 
