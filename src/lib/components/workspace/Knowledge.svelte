@@ -142,10 +142,15 @@
 {#if loaded}
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
+		title={$i18n.t('Delete Collection?')}
 		on:confirm={() => {
 			deleteHandler(selectedItem);
 		}}
-	/>
+	>
+		<div class="text-sm text-gray-500">
+			{$i18n.t('This will delete collection')} <span class="font-semibold">{selectedItem?.name}</span>.
+		</div>
+	</DeleteConfirmDialog>
 
 	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
 		<div class="flex justify-between items-center">

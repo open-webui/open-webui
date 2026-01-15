@@ -276,10 +276,15 @@
 {#if loaded}
 	<ModelDeleteConfirmDialog
 		bind:show={showModelDeleteConfirm}
+		title={$i18n.t('Delete Model?')}
 		on:confirm={() => {
 			deleteModelHandler(selectedModel);
 		}}
-	/>
+	>
+		<div class="text-sm text-gray-500">
+			{$i18n.t('This will delete model')} <span class="font-semibold">{selectedModel?.name ?? selectedModel?.id}</span>.
+		</div>
+	</ModelDeleteConfirmDialog>
 
 	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
 		<input

@@ -598,10 +598,15 @@
 
 <ModelDeleteConfirmDialog
 	bind:show={showModelDeleteConfirm}
+	title={$i18n.t('Delete Model?')}
 	on:confirm={() => {
 		deleteModelHandler();
 	}}
-/>
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will delete model')} <span class="font-semibold">{deleteModelTag}</span>.
+	</div>
+</ModelDeleteConfirmDialog>
 
 {#if !loading}
 	<div class=" flex flex-col w-full">

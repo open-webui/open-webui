@@ -86,11 +86,16 @@
 
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
+	title={$i18n.t('Delete User Group?')}
 	on:confirm={() => {
 		onDelete();
 		show = false;
 	}}
-/>
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will delete user group')} <span class="font-semibold">{group?.name ?? name}</span>.
+	</div>
+</ConfirmDialog>
 
 <Modal size="lg" bind:show>
 	<div>

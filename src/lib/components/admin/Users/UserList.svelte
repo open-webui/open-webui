@@ -104,10 +104,15 @@
 
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
+	title={$i18n.t('Delete User?')}
 	on:confirm={() => {
 		deleteUserHandler(selectedUser.id);
 	}}
-/>
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will permanently delete user')} <span class="font-semibold">{selectedUser?.name ?? selectedUser?.email}</span>.
+	</div>
+</ConfirmDialog>
 
 <AddUserModal
 	bind:show={showAddUserModal}

@@ -122,11 +122,16 @@
 
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
+	title={$i18n.t('Delete Arena Model?')}
 	on:confirm={() => {
 		dispatch('delete', model);
 		show = false;
 	}}
-/>
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will delete arena model')} <span class="font-semibold">{model?.name}</span>.
+	</div>
+</ConfirmDialog>
 
 <Modal size="sm" bind:show>
 	<div>

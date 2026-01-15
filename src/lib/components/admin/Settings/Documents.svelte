@@ -275,6 +275,8 @@
 
 <ResetUploadDirConfirmDialog
 	bind:show={showResetUploadDirConfirm}
+	title={$i18n.t('Reset Upload Directory?')}
+	message={$i18n.t('This will permanently delete all files in your /data/uploads folder. This action cannot be undone.')}
 	on:confirm={async () => {
 		const res = await deleteAllFiles(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
@@ -289,6 +291,8 @@
 
 <ResetVectorDBConfirmDialog
 	bind:show={showResetConfirm}
+	title={$i18n.t('Reset Vector Storage?')}
+	message={$i18n.t('This will reset the vector storage by deleting all knowledge base data. This action cannot be undone.')}
 	on:confirm={() => {
 		const res = resetVectorDB(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
@@ -303,6 +307,8 @@
 
 <ReindexKnowledgeFilesConfirmDialog
 	bind:show={showReindexConfirm}
+	title={$i18n.t('Reindex Knowledge Base Vectors?')}
+	message={$i18n.t('This will reindex all knowledge base vectors. This may take a while and requires significant resources.')}
 	on:confirm={async () => {
 		const res = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
 			toast.error(`${error}`);

@@ -138,7 +138,8 @@
 
 <UnarchiveAllConfirmDialog
 	bind:show={showUnarchiveAllConfirmDialog}
-	message={$i18n.t('Are you sure you want to unarchive all archived chats?')}
+	title={$i18n.t('Unarchive All Chats?')}
+	message={$i18n.t('This will restore all archived chats back to your main chat list.')}
 	confirmLabel={$i18n.t('Unarchive All')}
 	on:confirm={() => {
 		unarchiveAllHandler();

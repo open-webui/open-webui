@@ -35,11 +35,16 @@
 
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
+	title={$i18n.t('Delete Tool Server?')}
 	on:confirm={() => {
 		onDelete();
 		showConfigModal = false;
 	}}
-/>
+>
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will delete tool server')} <span class="font-semibold">{connection?.info?.name ?? connection?.url}</span>.
+	</div>
+</ConfirmDialog>
 
 <div class="flex w-full gap-2 items-center">
 	<Tooltip className="w-full relative" content={''} placement="top-start">
