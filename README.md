@@ -1,29 +1,28 @@
 # Open WebUI 👋
 
-![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
-![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
-![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
-![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
-![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
-![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
-[![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
-[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
+![GitHub stars](https://img.shields.io/github/stars/CodingSoft/open-webui?style=social)
+![GitHub forks](https://img.shields.io/github/forks/CodingSoft/open-webui?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/CodingSoft/open-webui?style=social)
+![GitHub repo size](https://img.shields.io/github/repo-size/CodingSoft/open-webui)
+![GitHub language count](https://img.shields.io/github/languages/count/CodingSoft/open-webui)
+![GitHub top language](https://img.shields.io/github/languages/top/CodingSoft/open-webui)
+![GitHub last commit](https://img.shields.io/github/last-commit/CodingSoft/open-webui?color=red)
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/CodingSoft)
 
 ![Open WebUI Banner](./banner.png)
 
-**Open WebUI is an [extensible](https://docs.openwebui.com/features/plugin/), feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
+**Open WebUi is an [extensible](https://docs.webui.codingsoft.org/features/plugin/), feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
 
-Passionate about open-source AI? [Join our team →](https://careers.openwebui.com/)
+Passionate about open-source AI? [Join our team →](https://careers.codingsoft.org/)
 
 ![Open WebUI Demo](./demo.png)
 
 > [!TIP]  
-> **Looking for an [Enterprise Plan](https://docs.openwebui.com/enterprise)?** – **[Speak with Our Sales Team Today!](https://docs.openwebui.com/enterprise)**
+> **Looking for an [Enterprise Plan](https://docs.webui.codingsoft.org/enterprise)?** – **[Speak with Our Sales Team Today!](https://docs.webui.codingsoft.org/enterprise)**
 >
 > Get **enhanced capabilities**, including **custom theming and branding**, **Service Level Agreement (SLA) support**, **Long-Term Support (LTS) versions**, and **more!**
 
-For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
+For more information, be sure to check out our [Open WebUi Documentation](https://docs.webui.codingsoft.org/).
 
 ## Key Features of Open WebUI ⭐
 
@@ -41,7 +40,7 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🎤📹 **Hands-Free Voice/Video Call**: Experience seamless communication with integrated hands-free voice and video call features using multiple Speech-to-Text providers (Local Whisper, OpenAI, Deepgram, Azure) and Text-to-Speech engines (Azure, ElevenLabs, OpenAI, Transformers, WebAPI), allowing for dynamic and interactive chat environments.
 
-- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Open WebUI Community](https://openwebui.com/) integration.
+- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Open WebUi Community](https://codingsoft.org/) integration.
 
 - 🐍 **Native Python Function Calling Tool**: Enhance your LLMs with built-in code editor support in the tools workspace. Bring Your Own Function (BYOF) by simply adding your pure Python functions, enabling seamless integration with LLMs.
 
@@ -77,7 +76,7 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🌟 **Continuous Updates**: We are committed to improving Open WebUI with regular updates, fixes, and new features.
 
-Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
+Want to learn more about Open WebUI's features? Check out our [Open WebUi documentation](https://docs.webui.codingsoft.org/features) for a comprehensive overview!
 
 ---
 
@@ -108,7 +107,7 @@ This will start the Open WebUI server, which you can access at [http://localhost
 ### Quick Start with Docker 🐳
 
 > [!NOTE]  
-> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
+> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUi Documentation](https://docs.webui.codingsoft.org/) is ready to assist you.
 
 > [!WARNING]
 > When using Docker to install Open WebUI, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
@@ -170,27 +169,13 @@ After installation, you can access Open WebUI at [http://localhost:3000](http://
 
 ### Other Installation Methods
 
-We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
+We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUi Documentation](https://docs.webui.codingsoft.org/getting-started/) for comprehensive guidance.
 
-Look at the [Local Development Guide](https://docs.openwebui.com/getting-started/advanced-topics/development) for instructions on setting up a local development environment.
+Look at the [Local Development Guide](https://docs.webui.codingsoft.org/getting-started/advanced-topics/development) for instructions on setting up a local development environment.
 
-### Troubleshooting
+Encountering connection issues? Our [Open WebUi Documentation](https://docs.webui.codingsoft.org/troubleshooting/) has got you covered. For further assistance, visit our [GitHub](https://github.com/CodingSoft/open-webui).
 
-Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
-
-#### Open WebUI: Server Connection Error
-
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
-
-**Example Docker Command**:
-
-```bash
-docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-```
-
-### Keeping Your Docker Installation Up-to-Date
-
-Check our Updating Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/updating).
+Check our Updating Guide available in our [Open WebUi Documentation](https://docs.webui.codingsoft.org/getting-started/updating).
 
 ### Using the Dev Branch 🌙
 
@@ -213,7 +198,7 @@ export HF_HUB_OFFLINE=1
 
 ## What's Next? 🌟
 
-Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
+Discover upcoming features on our roadmap in the [Open WebUi Documentation](https://docs.webui.codingsoft.org/roadmap/).
 
 ## License 📜
 
