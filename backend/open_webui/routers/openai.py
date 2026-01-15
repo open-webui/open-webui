@@ -793,6 +793,116 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     url = f"{url}/openai/deployments/{model}"
     return url, payload
 
+@router.post("/completions")
+async def generate_completion(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    idx = 0
+    payload = {**form_data}
+
+    model_id = payload.get("model")
+    if not model_id:
+        raise HTTPException(status_code=400, detail="model is required")
+
+    # Resolve model & access control
+    model_info = Models.get_model_by_id(model_id, db=db)
+    if model_info:
+        if model_info.base_model_id:
+            payload["model"] = model_info.base_model_id
+            model_id = payload["model"]
+
+        if user.role == "user" and not (
+            user.id == model_info.user_id
+            or has_access(
+                user.id,
+                type="read",
+                access_control=model_info.access_control,
+                db=db,
+            )
+        ):
+            raise HTTPException(status_code=403, detail="Model not found")
+    elif user.role != "admin":
+        raise HTTPException(status_code=403, detail="Model not found")
+
+    # Resolve backend
+    await get_all_models(request, user=user)
+    model = request.app.state.OPENAI_MODELS.get(model_id)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    idx = model["urlIdx"]
+
+    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    key = request.app.state.config.OPENAI_API_KEYS[idx]
+    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+        str(idx),
+        request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),
+    )
+
+    # Remove prefix_id if any
+    prefix_id = api_config.get("prefix_id")
+    if prefix_id:
+        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+
+    headers, cookies = await get_headers_and_cookies(
+        request, url, key, api_config, user=user
+    )
+
+    body = json.dumps(payload)
+
+    session = None
+    r = None
+    streaming = False
+
+    try:
+        session = aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        )
+
+        r = await session.post(
+            f"{url}/completions",
+            data=body,
+            headers=headers,
+            cookies=cookies,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        )
+
+        if "text/event-stream" in r.headers.get("Content-Type", ""):
+            streaming = True
+            return StreamingResponse(
+                stream_chunks_handler(r.content),
+                status_code=r.status,
+                headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
+
+        try:
+            response = await r.json()
+        except Exception:
+            response = await r.text()
+
+        if r.status >= 400:
+            if isinstance(response, (dict, list)):
+                return JSONResponse(status_code=r.status, content=response)
+            return PlainTextResponse(status_code=r.status, content=response)
+
+        return response
+
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=r.status if r else 500,
+            detail="Open WebUI: Server Connection Error",
+        )
+    finally:
+        if not streaming:
+            await cleanup_response(r, session)
 
 @router.post("/chat/completions")
 async def generate_chat_completion(
