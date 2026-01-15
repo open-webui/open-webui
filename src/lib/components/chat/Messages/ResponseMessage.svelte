@@ -623,11 +623,6 @@
 					</span>
 				</Tooltip>
 
-				{#if message.selectedModelId}
-					<span class="text-[10px] opacity-50 font-mono ml-1">
-						[{message.selectedModelId}]
-					</span>
-				{/if}
 
 				{#if message.timestamp}
 					<div
