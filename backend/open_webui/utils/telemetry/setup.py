@@ -42,13 +42,13 @@ def setup(app: FastAPI, db_engine: Engine):
         if OTEL_OTLP_SPAN_EXPORTER == "http":
             exporter = HttpOTLPSpanExporter(
                 endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
-                headers=headers,
+                headers=(headers or None),
             )
         else:
             exporter = OTLPSpanExporter(
                 endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
                 insecure=OTEL_EXPORTER_OTLP_INSECURE,
-                headers=headers,
+                headers=(headers or None),
             )
         trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(exporter))
         Instrumentor(app=app, db_engine=db_engine).instrument()

@@ -65,7 +65,7 @@ def _build_meter_provider(resource: Resource) -> MeterProvider:
         readers: List[PeriodicExportingMetricReader] = [
             PeriodicExportingMetricReader(
                 OTLPHttpMetricExporter(
-                    endpoint=OTEL_METRICS_EXPORTER_OTLP_ENDPOINT, headers=headers
+                    endpoint=OTEL_METRICS_EXPORTER_OTLP_ENDPOINT, headers=(headers or None)
                 ),
                 export_interval_millis=_EXPORT_INTERVAL_MILLIS,
             )
@@ -76,7 +76,7 @@ def _build_meter_provider(resource: Resource) -> MeterProvider:
                 OTLPMetricExporter(
                     endpoint=OTEL_METRICS_EXPORTER_OTLP_ENDPOINT,
                     insecure=OTEL_METRICS_EXPORTER_OTLP_INSECURE,
-                    headers=headers,
+                    headers=(headers or None),
                 ),
                 export_interval_millis=_EXPORT_INTERVAL_MILLIS,
             )

@@ -109,6 +109,14 @@ def httpx_response_hook(span: Span, request: RequestInfo, response: ResponseInfo
         if response.status_code >= status.HTTP_400_BAD_REQUEST
         else StatusCode.OK
     )
+    # PATCH: Capture usage from headers
+    try:
+        if hasattr(response, "headers"):
+            for k, v in response.headers.items():
+                if any(x in k.lower() for x in ["usage", "token", "x-request-id"]):
+                    span.set_attribute(f"llm.header.{k.lower()}", v)
+    except Exception:
+        pass
 
 
 async def httpx_async_request_hook(span: Span, request: RequestInfo):
@@ -157,6 +165,15 @@ def aiohttp_response_hook(
             if response.response.status >= status.HTTP_400_BAD_REQUEST
             else StatusCode.OK
         )
+        # PATCH: Capture usage from headers
+        try:
+            if hasattr(response.response, "headers"):
+                for k, v in response.response.headers.items():
+                    if any(x in k.lower() for x in ["usage", "token", "x-request-id"]):
+                        span.set_attribute(f"llm.header.{k.lower()}", v)
+        except Exception:
+            pass
+            
     elif isinstance(response, TraceRequestExceptionParams):
         span.set_status(StatusCode.ERROR)
         span.set_attribute(SpanAttributes.ERROR_MESSAGE, str(response.exception))
