@@ -84,6 +84,123 @@ async def error_stream_generator(model_id, error_msg):
     yield "data: [DONE]\n\n"
 
 
+def convert_tools_to_responses_format(tools):
+    if not isinstance(tools, list):
+        return tools
+
+    converted = []
+    for tool in tools:
+        if not isinstance(tool, dict):
+            converted.append(tool)
+            continue
+
+        tool_type = tool.get("type", "function")
+        function_spec = tool.get("function")
+
+        # Already in Responses format; drop nested function if present.
+        if "name" in tool:
+            converted_tool = {k: v for k, v in tool.items() if k != "function"}
+            converted.append(converted_tool)
+            continue
+
+        # Convert Chat Completions function tool -> Responses format.
+        if tool_type == "function" and isinstance(function_spec, dict):
+            converted_tool = {"type": "function"}
+            converted_tool.update(function_spec)
+            # Preserve any extra tool-level fields except the nested function.
+            for key, value in tool.items():
+                if key in ("function",):
+                    continue
+                converted_tool.setdefault(key, value)
+            converted.append(converted_tool)
+            continue
+
+        # Fallback: keep as-is for non-function tool types.
+        converted.append(tool)
+
+    return converted
+
+
+def convert_tool_choice_to_responses_format(tool_choice):
+    if isinstance(tool_choice, dict):
+        if tool_choice.get("type") == "function":
+            function_spec = tool_choice.get("function", {})
+            if isinstance(function_spec, dict) and function_spec.get("name"):
+                converted = {"type": "function", "name": function_spec.get("name")}
+                for key, value in tool_choice.items():
+                    if key not in ("type", "function"):
+                        converted.setdefault(key, value)
+                return converted
+        return tool_choice
+
+    return tool_choice
+
+
+def _tool_call_id_from_item(item, event=None):
+    if not isinstance(item, dict):
+        item = {}
+    if event is None or not isinstance(event, dict):
+        event = {}
+
+    for key in ("id", "call_id", "tool_call_id"):
+        value = item.get(key)
+        if value:
+            return value
+
+    for key in ("call_id", "tool_call_id", "id"):
+        value = event.get(key)
+        if value:
+            return value
+
+    for key in ("item_id", "output_id"):
+        value = event.get(key)
+        if value:
+            return value
+
+    return None
+
+
+def _tool_call_name_from_item(item):
+    if not isinstance(item, dict):
+        return ""
+    return (
+        item.get("name")
+        or item.get("name_delta")
+        or item.get("function_name")
+        or item.get("tool_name")
+        or item.get("function", {}).get("name")
+        or ""
+    )
+
+
+def _tool_call_args_from_item(item):
+    if not isinstance(item, dict):
+        return ""
+    return (
+        item.get("arguments")
+        or item.get("arguments_delta")
+        or item.get("arguments_text")
+        or item.get("arguments_text_delta")
+        or item.get("input")
+        or item.get("parameters")
+        or item.get("args")
+        or item.get("function", {}).get("arguments")
+        or item.get("function", {}).get("parameters")
+        or ""
+    )
+
+
+def _stringify_tool_call_args(arguments):
+    if arguments is None:
+        return ""
+    if isinstance(arguments, str):
+        return arguments
+    try:
+        return json.dumps(arguments, ensure_ascii=False)
+    except Exception:
+        return str(arguments)
+
+
 def convert_to_responses_payload(chat_payload: dict) -> dict:
     """
     Convert Chat Completions API format to Responses API format.
@@ -114,6 +231,26 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
         if role == "system":
             # System messages become instructions in Responses API
             responses_payload["instructions"] = content if isinstance(content, str) else str(content)
+            continue
+        if role in ("tool", "function"):
+            tool_call_id = (
+                msg.get("tool_call_id")
+                or msg.get("id")
+                or msg.get("name")
+            )
+            output = (
+                content
+                if isinstance(content, str)
+                else json.dumps(content, ensure_ascii=False, default=str)
+            )
+            input_items.append(
+                {
+                    "type": "function_call_output",
+                    "call_id": tool_call_id,
+                    "output": output,
+                }
+            )
+            continue
         else:
             # Map role: assistant -> assistant, user -> user, anything else -> user
             mapped_role = role if role in ["user", "assistant"] else "user"
@@ -180,6 +317,24 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
                 }
             
             input_items.append(item)
+
+            if mapped_role == "assistant" and msg.get("tool_calls"):
+                for tool_call in msg.get("tool_calls", []):
+                    if not isinstance(tool_call, dict):
+                        continue
+                    tool_call_id = _tool_call_id_from_item(tool_call)
+                    tool_call_name = _tool_call_name_from_item(tool_call)
+                    tool_call_args = _stringify_tool_call_args(
+                        _tool_call_args_from_item(tool_call)
+                    )
+                    input_items.append(
+                        {
+                            "type": "function_call",
+                            "call_id": tool_call_id or f"call_{uuid.uuid4().hex}",
+                            "name": tool_call_name,
+                            "arguments": tool_call_args,
+                        }
+                    )
     
     responses_payload["input"] = input_items
     
@@ -201,6 +356,16 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
             "effort": reasoning_effort.lower(),
             "summary": "auto"  # Enable reasoning summary to get thinking content in stream
         }
+    
+    # Convert tools/tool_choice from Chat Completions format to Responses format.
+    if "tools" in chat_payload:
+        responses_payload["tools"] = convert_tools_to_responses_format(
+            chat_payload["tools"]
+        )
+    if "tool_choice" in chat_payload:
+        responses_payload["tool_choice"] = convert_tool_choice_to_responses_format(
+            chat_payload["tool_choice"]
+        )
     
     log.info(f"Responses API payload: {json.dumps(responses_payload, ensure_ascii=False, default=str)[:2000]}")
     return responses_payload
@@ -226,13 +391,20 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
     
     buffer = ""
     
-    def create_chunk(delta_content=None, reasoning_content=None, finish_reason=None):
+    def create_chunk(
+        delta_content=None,
+        reasoning_content=None,
+        tool_calls=None,
+        finish_reason=None,
+    ):
         """Helper to create a chat completion chunk."""
         delta = {}
         if delta_content is not None:
             delta["content"] = delta_content
         if reasoning_content is not None:
             delta["reasoning_content"] = reasoning_content
+        if tool_calls is not None:
+            delta["tool_calls"] = tool_calls
         
         return {
             "id": stream_id,
@@ -242,6 +414,82 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
             "choices": [{"index": 0, "delta": delta, "finish_reason": finish_reason}]
         }
     
+    tool_call_index_by_id = {}
+    tool_call_index_by_fallback = {}
+    next_tool_call_index = 0
+    seen_tool_call_ids = set()
+    tool_call_from_added = {}
+    tool_call_has_delta = set()
+    content_started = False
+    reasoning_source = None
+
+    def get_tool_call_index(tool_call_id, provided_index=None):
+        nonlocal next_tool_call_index
+
+        if tool_call_id:
+            if tool_call_id not in tool_call_index_by_id:
+                tool_call_index_by_id[tool_call_id] = next_tool_call_index
+                next_tool_call_index += 1
+            return tool_call_index_by_id[tool_call_id]
+
+        if provided_index is not None:
+            if provided_index not in tool_call_index_by_fallback:
+                tool_call_index_by_fallback[provided_index] = next_tool_call_index
+                next_tool_call_index += 1
+            return tool_call_index_by_fallback[provided_index]
+
+        tool_call_index = next_tool_call_index
+        next_tool_call_index += 1
+        return tool_call_index
+
+    def build_tool_call_delta(item, event=None, use_delta=False):
+        if event is None:
+            event = {}
+        if not isinstance(item, dict):
+            return None
+
+        tool_type = (
+            item.get("type")
+            or event.get("item", {}).get("type")
+            or event.get("delta", {}).get("type")
+            or ""
+        )
+        if tool_type not in ("tool_call", "function_call"):
+            return None
+
+        tool_call_id = _tool_call_id_from_item(item, event)
+        provided_index = (
+            item.get("index")
+            or event.get("output_index")
+            or event.get("item_index")
+            or event.get("index")
+        )
+        tool_call_index = get_tool_call_index(tool_call_id, provided_index)
+
+        name = _tool_call_name_from_item(item)
+        arguments = _tool_call_args_from_item(item)
+        if use_delta and not name and not arguments:
+            return None
+
+        name = name or ""
+        arguments = _stringify_tool_call_args(arguments)
+
+        if tool_call_id:
+            tool_call_id_value = tool_call_id
+        else:
+            tool_call_id_value = f"call_{stream_id}_{tool_call_index}"
+
+        tool_call = {
+            "index": tool_call_index,
+            "id": tool_call_id_value,
+            "type": "function",
+            "function": {
+                "name": name,
+                "arguments": arguments,
+            },
+        }
+        return tool_call
+
     try:
         async for chunk in response.content.iter_any():
             if not chunk:
@@ -274,15 +522,69 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                         # Handle text delta (main response content)
                         if event_type == "response.output_text.delta":
                             delta_text = event.get("delta", "")
+                            if delta_text:
+                                content_started = True
                             yield f"data: {json.dumps(create_chunk(delta_content=delta_text))}\n\n"
                         
                         # Handle reasoning/thinking delta - just forward as reasoning_content
                         # middleware.py will handle the <details> tag wrapping
                         elif event_type in ("response.reasoning_summary_text.delta", "response.reasoning.delta"):
                             reasoning_text = event.get("delta", "")
-                            if reasoning_text:
+                            if reasoning_text and not content_started:
+                                event_source = (
+                                    "summary"
+                                    if event_type == "response.reasoning_summary_text.delta"
+                                    else "reasoning"
+                                )
+                                if reasoning_source is None:
+                                    reasoning_source = event_source
+                                if reasoning_source != event_source:
+                                    continue
                                 yield f"data: {json.dumps(create_chunk(reasoning_content=reasoning_text))}\n\n"
 
+                        elif event_type == "response.output_item.added":
+                            item = event.get("item", {})
+                            # Debug: log the full item to see its structure
+                            log.info(f"[TOOL DEBUG] output_item.added - item: {json.dumps(item, default=str)[:500]}")
+                            tool_call = build_tool_call_delta(item, event)
+                            if tool_call:
+                                log.info(f"[TOOL DEBUG] Built tool_call from added: {json.dumps(tool_call, default=str)}")
+                                tool_call_from_added[tool_call.get("id")] = tool_call
+
+                        elif event_type == "response.output_item.delta":
+                            item = event.get("item", {})
+                            delta = event.get("delta", {})
+
+                            tool_item = {}
+                            if isinstance(delta, dict):
+                                tool_item.update(delta)
+                            if isinstance(item, dict) and "type" not in tool_item:
+                                tool_item["type"] = item.get("type")
+
+                            tool_call = build_tool_call_delta(
+                                tool_item, event, use_delta=True
+                            )
+                            if tool_call:
+                                tool_call_has_delta.add(tool_call.get("id"))
+                                yield f"data: {json.dumps(create_chunk(tool_calls=[tool_call]))}\n\n"
+
+                        elif event_type == "response.output_item.done":
+                            item = event.get("item", {})
+                            # Debug: log the full item to see its structure
+                            log.info(f"[TOOL DEBUG] output_item.done - item: {json.dumps(item, default=str)[:1000]}")
+                            tool_call_id = _tool_call_id_from_item(item, event)
+                            if tool_call_id and tool_call_id in tool_call_has_delta:
+                                continue
+                            tool_call = build_tool_call_delta(item, event)
+                            if tool_call:
+                                log.info(f"[TOOL DEBUG] Built tool_call from done: {json.dumps(tool_call, default=str)}")
+                                tool_call_id_value = tool_call.get("id")
+                                if tool_call_id_value in tool_call_has_delta:
+                                    continue
+                                # FIX: Use the current tool_call directly (has full arguments)
+                                # Do NOT use tool_call_from_added which has empty arguments from the initial event
+                                seen_tool_call_ids.add(tool_call_id_value)
+                                yield f"data: {json.dumps(create_chunk(tool_calls=[tool_call]))}\n\n"
                         
                         # Handle completion (OpenAI uses "response.completed", not "response.done")
                         elif event_type in ("response.completed", "response.done"):
@@ -414,6 +716,8 @@ def convert_responses_to_chat_completions(responses_data: dict, model_id: str) -
     """
     output = responses_data.get("output", [])
     content = ""
+    tool_calls = []
+    tool_call_index = 0
     
     # Extract text from output items
     for item in output:
@@ -421,6 +725,24 @@ def convert_responses_to_chat_completions(responses_data: dict, model_id: str) -
             for part in item.get("content", []):
                 if part.get("type") == "output_text":
                     content += part.get("text", "")
+        elif item.get("type") in ("tool_call", "function_call"):
+            tool_call_id = _tool_call_id_from_item(item)
+            tool_call_name = _tool_call_name_from_item(item)
+            tool_call_args = _stringify_tool_call_args(
+                _tool_call_args_from_item(item)
+            )
+            tool_calls.append(
+                {
+                    "index": tool_call_index,
+                    "id": tool_call_id or f"call_{uuid.uuid4().hex}",
+                    "type": "function",
+                    "function": {
+                        "name": tool_call_name,
+                        "arguments": tool_call_args,
+                    },
+                }
+            )
+            tool_call_index += 1
     
     return {
         "id": responses_data.get("id", f"chatcmpl-{uuid.uuid4().hex}"),
@@ -429,8 +751,12 @@ def convert_responses_to_chat_completions(responses_data: dict, model_id: str) -
         "model": model_id,
         "choices": [{
             "index": 0,
-            "message": {"role": "assistant", "content": content},
-            "finish_reason": "stop"
+            "message": {
+                "role": "assistant",
+                "content": content,
+                **({"tool_calls": tool_calls} if tool_calls else {}),
+            },
+            "finish_reason": "tool_calls" if tool_calls else "stop"
         }],
         "usage": responses_data.get("usage", {})
     }
@@ -467,6 +793,65 @@ async def cleanup_response(
         response.close()
     if session:
         await session.close()
+
+
+def is_tool_calling_disabled_error(response) -> bool:
+    """
+    Detect if the API error indicates that tool calling is disabled.
+    This allows automatic fallback to retry without tools.
+    
+    Common error patterns:
+    - Anthropic/Claude proxies: "Tool calling is disabled by configuration"
+    - Some proxies: moderation_error with MODERATION_BLOCKED
+    - Generic: "tool definitions" or "tool-related content" in message
+    
+    Args:
+        response: Can be dict (JSON error) or str (SSE/text error)
+    """
+    # Keywords that indicate tool calling is disabled
+    tool_disabled_keywords = [
+        "tool calling is disabled",
+        "tool definitions",
+        "tool-related content",
+        "tools are not supported",
+        "function calling is disabled",
+        "functions are not supported",
+        "remove 'tools'",
+        "remove 'tool_choice'",
+    ]
+    
+    # Handle string response (SSE/text format)
+    if isinstance(response, str):
+        response_lower = response.lower()
+        for keyword in tool_disabled_keywords:
+            if keyword in response_lower:
+                return True
+        return False
+    
+    # Handle dict response (JSON format)
+    if not isinstance(response, dict):
+        return False
+    
+    error = response.get("error", {})
+    if isinstance(error, str):
+        error_text = error.lower()
+    elif isinstance(error, dict):
+        error_text = (error.get("message", "") or "").lower()
+        error_code = (error.get("code", "") or "").upper()
+        error_type = (error.get("type", "") or "").lower()
+        
+        # Check for moderation block on tools
+        if error_type == "moderation_error" and error_code == "MODERATION_BLOCKED":
+            if "tool" in error_text:
+                return True
+    else:
+        return False
+    
+    for keyword in tool_disabled_keywords:
+        if keyword in error_text:
+            return True
+    
+    return False
 
 
 def openai_reasoning_model_handler(payload):
@@ -1464,7 +1849,11 @@ async def generate_chat_completion(
         else:
             log.info(f"[DEBUG] stream_options in payload: {payload.get('stream_options')}")
 
-    payload = json.dumps(payload)
+    # Save original payload for potential retry without tools
+    payload_dict = payload.copy()
+    has_tools = "tools" in payload_dict or "tool_choice" in payload_dict
+    
+    payload = json.dumps(payload_dict)
 
 
 
@@ -1472,6 +1861,7 @@ async def generate_chat_completion(
     session = None
     streaming = False
     response = None
+    retry_without_tools = False
 
     try:
         session = aiohttp.ClientSession(
@@ -1496,32 +1886,87 @@ async def generate_chat_completion(
                 log.error(f"Error parsing error response: {e}")
                 response = await r.text()
             
-            await cleanup_response(r, session)
-            
-            # IMPROVEMENT: Stream error to frontend if streaming was requested
-            # This ensures the error is visible in the chat UI instead of a generic failure
-            if form_data.get("stream"):
-                error_msg = f"HTTP Error {r.status}"
-                if isinstance(response, dict) and "error" in response:
-                    # Extract message from OpenAI error format
-                     err = response["error"]
-                     if isinstance(err, dict):
-                         error_msg = f"{err.get('message', str(err))} (Code: {r.status})"
-                     else:
-                         error_msg = f"{str(err)} (Code: {r.status})"
-                elif isinstance(response, str):
-                     error_msg = f"{response} (Code: {r.status})"
+            # Check if this is a "tool calling disabled" error and we can retry
+            if has_tools and is_tool_calling_disabled_error(response):
+                log.info("Tool calling disabled by API, retrying without tools...")
+                retry_without_tools = True
+                await cleanup_response(r, session)
                 
-                return StreamingResponse(
-                    error_stream_generator(model_id, error_msg),
-                    media_type="text/event-stream"
+                # Remove tools and retry
+                payload_dict.pop("tools", None)
+                payload_dict.pop("tool_choice", None)
+                retry_payload = json.dumps(payload_dict)
+                
+                session = aiohttp.ClientSession(
+                    trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
                 )
-
-            # Fallback to standard JSON/Text response for non-stream requests
-            if isinstance(response, (dict, list)):
-                return JSONResponse(status_code=r.status, content=response)
+                r = await session.request(
+                    method="POST",
+                    url=request_url,
+                    data=retry_payload,
+                    headers=headers,
+                    cookies=cookies,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
+                
+                # Check retry result
+                if r.status >= 400:
+                    try:
+                        response = await r.json()
+                    except Exception as e:
+                        log.error(f"Error parsing retry error response: {e}")
+                        response = await r.text()
+                    
+                    await cleanup_response(r, session)
+                    
+                    if form_data.get("stream"):
+                        error_msg = f"HTTP Error {r.status}"
+                        if isinstance(response, dict) and "error" in response:
+                            err = response["error"]
+                            if isinstance(err, dict):
+                                error_msg = f"{err.get('message', str(err))} (Code: {r.status})"
+                            else:
+                                error_msg = f"{str(err)} (Code: {r.status})"
+                        elif isinstance(response, str):
+                            error_msg = f"{response} (Code: {r.status})"
+                        
+                        return StreamingResponse(
+                            error_stream_generator(model_id, error_msg),
+                            media_type="text/event-stream"
+                        )
+                    
+                    if isinstance(response, (dict, list)):
+                        return JSONResponse(status_code=r.status, content=response)
+                    else:
+                        return PlainTextResponse(status_code=r.status, content=response)
             else:
-                return PlainTextResponse(status_code=r.status, content=response)
+                # Not a tool calling error or no tools in payload, handle normally
+                await cleanup_response(r, session)
+                
+                # IMPROVEMENT: Stream error to frontend if streaming was requested
+                # This ensures the error is visible in the chat UI instead of a generic failure
+                if form_data.get("stream"):
+                    error_msg = f"HTTP Error {r.status}"
+                    if isinstance(response, dict) and "error" in response:
+                        # Extract message from OpenAI error format
+                         err = response["error"]
+                         if isinstance(err, dict):
+                             error_msg = f"{err.get('message', str(err))} (Code: {r.status})"
+                         else:
+                             error_msg = f"{str(err)} (Code: {r.status})"
+                    elif isinstance(response, str):
+                         error_msg = f"{response} (Code: {r.status})"
+                    
+                    return StreamingResponse(
+                        error_stream_generator(model_id, error_msg),
+                        media_type="text/event-stream"
+                    )
+
+                # Fallback to standard JSON/Text response for non-stream requests
+                if isinstance(response, (dict, list)):
+                    return JSONResponse(status_code=r.status, content=response)
+                else:
+                    return PlainTextResponse(status_code=r.status, content=response)
 
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):

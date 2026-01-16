@@ -673,6 +673,15 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
         If a line looks like raw JSON but doesn't have 'data:' prefix, add it.
         This handles proxies that return raw JSON instead of standard SSE format.
         """
+        # SAFEGUARD: Ensure line is bytes, convert if needed
+        if isinstance(line, str):
+            line = line.encode("utf-8", errors="replace")
+        elif not isinstance(line, bytes):
+            try:
+                line = bytes(line)
+            except Exception:
+                line = str(line).encode("utf-8", errors="replace")
+        
         stripped = line.strip()
         if not stripped:
             return line
@@ -702,6 +711,16 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
         async for data, _ in stream.iter_chunks():
             if not data:
                 continue
+            
+            # SAFEGUARD: Ensure data is bytes, convert if needed
+            # Some proxy servers may return string chunks instead of bytes
+            if isinstance(data, str):
+                data = data.encode("utf-8", errors="replace")
+            elif not isinstance(data, bytes):
+                try:
+                    data = bytes(data)
+                except Exception:
+                    data = str(data).encode("utf-8", errors="replace")
 
             # In skip_mode, if buffer already exceeds the limit, clear it (it's part of an oversized line)
             if skip_mode and len(buffer) > max_buffer_size:
