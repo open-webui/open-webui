@@ -1,7 +1,11 @@
 import asyncio
 import logging
+import os
 import socket
 import ssl
+import subprocess
+import sys
+import threading
 import urllib.parse
 import urllib.request
 from datetime import datetime, time, timedelta
@@ -46,6 +50,58 @@ from open_webui.config import (
 from open_webui.utils.misc import is_string_allowed
 
 log = logging.getLogger(__name__)
+
+_PLAYWRIGHT_READY = False
+_PLAYWRIGHT_LOCK = threading.Lock()
+
+
+def _playwright_browser_exists() -> bool:
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        exec_path = p.chromium.executable_path
+    return bool(exec_path and os.path.exists(exec_path))
+
+
+def ensure_playwright_browsers_installed(playwright_ws_url: Optional[str] = None) -> None:
+    if playwright_ws_url:
+        return
+
+    global _PLAYWRIGHT_READY
+    if _PLAYWRIGHT_READY:
+        return
+
+    with _PLAYWRIGHT_LOCK:
+        if _PLAYWRIGHT_READY:
+            return
+
+        try:
+            if _playwright_browser_exists():
+                _PLAYWRIGHT_READY = True
+                return
+        except Exception as exc:
+            log.debug("Playwright browser check failed: %s", exc)
+
+        log.info("Installing Playwright Chromium browser on first use...")
+        subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
+
+        if sys.platform.startswith("linux"):
+            try:
+                if hasattr(os, "geteuid") and os.geteuid() != 0:
+                    log.warning(
+                        "Skipping Playwright install-deps (requires root privileges)."
+                    )
+                else:
+                    subprocess.check_call(
+                        [sys.executable, "-m", "playwright", "install-deps", "chromium"]
+                    )
+            except Exception as exc:
+                log.warning("Playwright install-deps failed: %s", exc)
+
+        if not _playwright_browser_exists():
+            raise RuntimeError("Playwright Chromium install did not complete successfully")
+
+        _PLAYWRIGHT_READY = True
 
 
 def resolve_hostname(hostname):
@@ -489,6 +545,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 
     def lazy_load(self) -> Iterator[Document]:
         """Safely load URLs synchronously with support for remote browser."""
+        ensure_playwright_browsers_installed(self.playwright_ws_url)
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as p:
@@ -518,6 +575,9 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Safely load URLs asynchronously with support for remote browser."""
+        await asyncio.to_thread(
+            ensure_playwright_browsers_installed, self.playwright_ws_url
+        )
         from playwright.async_api import async_playwright
 
         async with async_playwright() as p:

@@ -1994,5 +1994,6 @@
 	"Total Tokens": "总消耗 Tokens",
 	"Total Cost": "总花费",
 	"Custom Input": "自定义输入",
-	"Enter custom value": "输入自定义值"
+	"Enter custom value": "输入自定义值",
+	"Model did not return usage information": "当前模型未返回用量信息"
 }

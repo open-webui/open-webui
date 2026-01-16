@@ -543,7 +543,9 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                                 yield f"data: {json.dumps(create_chunk(reasoning_content=reasoning_text))}\n\n"
 
                         elif event_type == "response.output_item.added":
-                            item = event.get("item", {})
+                            item = event.get("item", {}) or {}
+                            if not isinstance(item, dict):
+                                item = {}
                             # Debug: log the full item to see its structure
                             log.info(f"[TOOL DEBUG] output_item.added - item: {json.dumps(item, default=str)[:500]}")
                             tool_call = build_tool_call_delta(item, event)
@@ -569,7 +571,9 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                                 yield f"data: {json.dumps(create_chunk(tool_calls=[tool_call]))}\n\n"
 
                         elif event_type == "response.output_item.done":
-                            item = event.get("item", {})
+                            item = event.get("item", {}) or {}
+                            if not isinstance(item, dict):
+                                item = {}
                             # Debug: log the full item to see its structure
                             log.info(f"[TOOL DEBUG] output_item.done - item: {json.dumps(item, default=str)[:1000]}")
                             tool_call_id = _tool_call_id_from_item(item, event)
@@ -592,7 +596,9 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                             log.info(f"Completion event received: {json.dumps(event, default=str)[:1000]}")
 
                             # Extract usage info from completion event
-                            response_data = event.get("response", {})
+                            response_data = event.get("response", {}) or {}
+                            if not isinstance(response_data, dict):
+                                response_data = {}
                             usage = response_data.get("usage", {})
 
                             # Also try to get usage directly from event (some APIs put it there)

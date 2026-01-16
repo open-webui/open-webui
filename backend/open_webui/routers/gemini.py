@@ -135,6 +135,10 @@ def _extract_content(candidate: dict) -> tuple[str, str, str]:
     Extract text + inline image markdown + grounding metadata from a Gemini candidate.
     Returns: (text, image_markdown, grounding_markdown)
     """
+    # SAFEGUARD: Handle None or invalid candidate
+    if candidate is None or not isinstance(candidate, dict):
+        return "", "", ""
+    
     content = candidate.get("content", {}) or {}
     parts = content.get("parts", []) or []
 
@@ -790,6 +794,9 @@ async def generate_chat_completion(
                                             continue
 
                                         c0 = candidates[0]
+                                        # SAFEGUARD: Skip if candidate is None
+                                        if c0 is None:
+                                            continue
                                         text, image_md, grounding_md = _extract_content(c0)
                                         out_text = (text or "") + (image_md or "") + (grounding_md or "")
 
@@ -799,7 +806,7 @@ async def generate_chat_completion(
                                             yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
 
                                         # 2) then yield finish
-                                        finish = _map_finish_reason(c0.get("finishReason"))
+                                        finish = _map_finish_reason(c0.get("finishReason") if isinstance(c0, dict) else None)
                                         if finish:
                                             fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0)
                                             yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
@@ -845,12 +852,15 @@ async def generate_chat_completion(
                                         candidates = gemini_obj.get("candidates") or []
                                         if candidates:
                                             c0 = candidates[0]
+                                            # SAFEGUARD: Skip if candidate is None
+                                            if c0 is None or not isinstance(c0, dict):
+                                                continue
                                             text, image_md, grounding_md = _extract_content(c0)
                                             out_text = (text or "") + (image_md or "") + (grounding_md or "")
                                             if out_text:
                                                 chunk = _openai_chunk(stream_id, model_id, {"content": out_text}, None, 0)
                                                 yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
-                                            finish = _map_finish_reason(c0.get("finishReason"))
+                                            finish = _map_finish_reason(c0.get("finishReason") if isinstance(c0, dict) else None)
                                             if finish:
                                                 fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0)
                                                 yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
@@ -908,6 +918,9 @@ def convert_gemini_to_openai(gemini_response: dict, model_id: str) -> dict:
 
     choices = []
     for i, candidate in enumerate(candidates):
+        # SAFEGUARD: Skip if candidate is None
+        if candidate is None or not isinstance(candidate, dict):
+            continue
         text, image_md, grounding_md = _extract_content(candidate)
         combined = (text or "") + (image_md or "") + (grounding_md or "")
 
@@ -915,7 +928,7 @@ def convert_gemini_to_openai(gemini_response: dict, model_id: str) -> dict:
             {
                 "index": i,
                 "message": {"role": "assistant", "content": combined},
-                "finish_reason": _map_finish_reason(candidate.get("finishReason")) or "stop",
+                "finish_reason": _map_finish_reason(candidate.get("finishReason") if isinstance(candidate, dict) else None) or "stop",
             }
         )
 

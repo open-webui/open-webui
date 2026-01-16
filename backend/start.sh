@@ -10,14 +10,8 @@ export RAG_EMBEDDING_ENGINE="${RAG_EMBEDDING_ENGINE:-openai}"
 export ENABLE_MEMORIES="${ENABLE_MEMORIES:-false}"
 # =========================================
 
-# Add conditional Playwright browser installation
+# Add conditional Playwright extras
 if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
-    if [[ -z "${PLAYWRIGHT_WS_URL}" ]]; then
-        echo "Installing Playwright browsers..."
-        playwright install chromium
-        playwright install-deps chromium
-    fi
-
     python -c "import nltk; nltk.download('punkt_tab')"
 fi
 

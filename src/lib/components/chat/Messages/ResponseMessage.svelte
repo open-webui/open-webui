@@ -1165,7 +1165,7 @@
 									</Tooltip>
 								{/if}
 
-								{#if message.usage}
+								<!-- Info button: always show, formatUsageStats handles missing usage data -->
 									<Tooltip
 										content={formatUsageStats(message.usage, model, $i18n.t.bind($i18n))}
 										placement="bottom"
@@ -1197,7 +1197,7 @@
 											</svg>
 										</button>
 									</Tooltip>
-								{/if}
+
 
 								{#if !readOnly && !$temporaryChatEnabled}
 									<Tooltip content={$i18n.t('Branch to New Chat')} placement="bottom">

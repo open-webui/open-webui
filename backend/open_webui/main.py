@@ -511,6 +511,7 @@ from open_webui.utils.chat import (
     chat_action as chat_action_handler,
 )
 from open_webui.utils.embeddings import generate_embeddings
+from open_webui.utils.lazy_loader import LazyStateProxy
 from open_webui.utils.middleware import process_chat_payload, process_chat_response
 from open_webui.utils.access_control import has_access
 
@@ -1042,32 +1043,24 @@ app.state.rf = None
 app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
-try:
-    app.state.ef = get_ef(
-        app.state.config.RAG_EMBEDDING_ENGINE, app.state.config.RAG_EMBEDDING_MODEL
-    )
-    if (
-        app.state.config.ENABLE_RAG_HYBRID_SEARCH
-        and not app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
-    ):
-        app.state.rf = get_rf(
-            app.state.config.RAG_RERANKING_ENGINE,
-            app.state.config.RAG_RERANKING_MODEL,
-            app.state.config.RAG_EXTERNAL_RERANKER_URL,
-            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-            app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
+lazy_ef = None
+if app.state.config.RAG_EMBEDDING_ENGINE == "":
+    def load_embedding_model():
+        ef = get_ef(
+            app.state.config.RAG_EMBEDDING_ENGINE,
+            app.state.config.RAG_EMBEDDING_MODEL,
         )
-    else:
-        app.state.rf = None
-except Exception as e:
-    log.error(f"Error updating models: {e}")
-    pass
+        if ef is None:
+            raise ValueError("Embedding model is not configured or failed to load")
+        return ef
+
+    lazy_ef = LazyStateProxy(app.state, "ef", load_embedding_model)
 
 
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
-    embedding_function=app.state.ef,
+    embedding_function=lazy_ef,
     url=(
         app.state.config.RAG_OPENAI_API_BASE_URL
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
@@ -1095,11 +1088,34 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     enable_async=app.state.config.ENABLE_ASYNC_EMBEDDING,
 )
 
-app.state.RERANKING_FUNCTION = get_reranking_function(
-    app.state.config.RAG_RERANKING_ENGINE,
-    app.state.config.RAG_RERANKING_MODEL,
-    reranking_function=app.state.rf,
-)
+lazy_rf = None
+if (
+    app.state.config.ENABLE_RAG_HYBRID_SEARCH
+    and not app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+    and app.state.config.RAG_RERANKING_MODEL
+):
+    def load_reranking_model():
+        rf = get_rf(
+            app.state.config.RAG_RERANKING_ENGINE,
+            app.state.config.RAG_RERANKING_MODEL,
+            app.state.config.RAG_EXTERNAL_RERANKER_URL,
+            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+            app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
+        )
+        if rf is None:
+            raise ValueError("Reranking model is not configured or failed to load")
+        return rf
+
+    lazy_rf = LazyStateProxy(app.state, "rf", load_reranking_model)
+
+if lazy_rf is None:
+    app.state.RERANKING_FUNCTION = None
+else:
+    app.state.RERANKING_FUNCTION = get_reranking_function(
+        app.state.config.RAG_RERANKING_ENGINE,
+        app.state.config.RAG_RERANKING_MODEL,
+        reranking_function=lazy_rf,
+    )
 
 ########################################
 #

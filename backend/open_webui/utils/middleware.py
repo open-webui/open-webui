@@ -2017,7 +2017,8 @@ async def process_chat_response(
 
                     if res and isinstance(res, dict):
                         choices = res.get("choices", [])
-                        if len(choices) == 1 and choices[0] is not None:
+                        # SAFEGUARD: Check choices[0] is a valid dict
+                        if len(choices) == 1 and choices[0] is not None and isinstance(choices[0], dict):
                             response_message = choices[0].get(
                                 "message", {}
                             ) or {}
@@ -2905,7 +2906,8 @@ async def process_chat_response(
                                             }
                                         )
 
-                                    if not choices or choices[0] is None:
+                                    # SAFEGUARD: Check choices[0] is a valid dict
+                                    if not choices or choices[0] is None or not isinstance(choices[0], dict):
                                         error = data.get("error", {})
                                         if error:
                                             await event_emitter(

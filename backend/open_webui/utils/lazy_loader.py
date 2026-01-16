@@ -13,6 +13,7 @@ Usage:
 
 import importlib
 import logging
+import threading
 from functools import lru_cache
 from typing import Any, TypeVar
 
@@ -38,6 +39,32 @@ class LazyModule:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._load(), name)
+
+
+class LazyStateProxy:
+    """
+    Lazy proxy for app.state-backed objects (e.g., embedding/reranker models).
+    Loads the object on first attribute access and caches it on app.state.
+    """
+
+    def __init__(self, state, attr: str, loader):
+        self._state = state
+        self._attr = attr
+        self._loader = loader
+        self._lock = threading.Lock()
+
+    def _get(self):
+        obj = getattr(self._state, self._attr, None)
+        if obj is None:
+            with self._lock:
+                obj = getattr(self._state, self._attr, None)
+                if obj is None:
+                    obj = self._loader()
+                    setattr(self._state, self._attr, obj)
+        return obj
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._get(), name)
 
 
 @lru_cache(maxsize=1)

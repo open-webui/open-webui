@@ -57,7 +57,10 @@ export function formatUsageStats(
     model: ModelInfo | null | undefined,
     t: I18nFunction
 ): string {
-    if (!usage) return '';
+    // If usage is null/undefined, show a friendly message
+    if (!usage) {
+        return `<pre style="margin: 0; font-family: inherit;">${t('Model did not return usage information')}</pre>`;
+    }
 
     const lines: string[] = [];
 
@@ -83,6 +86,11 @@ export function formatUsageStats(
     const totalTokens = usage.total_tokens ?? (inputTokens + outputTokens);
     if (totalTokens > 0) {
         lines.push(`${t('Total Tokens')}: ${totalTokens.toLocaleString()}`);
+    }
+
+    // If we have no token data at all, show a friendly message
+    if (lines.length === 0) {
+        return `<pre style="margin: 0; font-family: inherit;">${t('Model did not return usage information')}</pre>`;
     }
 
     // Calculate cost if billing config is available

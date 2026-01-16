@@ -93,6 +93,7 @@ from open_webui.utils.misc import (
     sanitize_text_for_db,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.lazy_loader import LazyStateProxy
 from open_webui.utils.access_control import has_permission
 
 from open_webui.config import (
@@ -388,15 +389,26 @@ async def update_embedding_config(
                     form_data.azure_openai_config.version
                 )
 
-        request.app.state.ef = get_ef(
-            request.app.state.config.RAG_EMBEDDING_ENGINE,
-            request.app.state.config.RAG_EMBEDDING_MODEL,
-        )
+        request.app.state.ef = None
+        lazy_ef = None
+        if request.app.state.config.RAG_EMBEDDING_ENGINE == "":
+            def load_embedding_model():
+                ef = get_ef(
+                    request.app.state.config.RAG_EMBEDDING_ENGINE,
+                    request.app.state.config.RAG_EMBEDDING_MODEL,
+                )
+                if ef is None:
+                    raise ValueError(
+                        "Embedding model is not configured or failed to load"
+                    )
+                return ef
+
+            lazy_ef = LazyStateProxy(request.app.state, "ef", load_embedding_model)
 
         request.app.state.EMBEDDING_FUNCTION = get_embedding_function(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
-            request.app.state.ef,
+            lazy_ef,
             (
                 request.app.state.config.RAG_OPENAI_API_BASE_URL
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
@@ -928,8 +940,8 @@ async def update_rag_config(
     )
 
     # Reranking settings
-    if request.app.state.config.RAG_RERANKING_ENGINE == "":
-        # Unloading the internal reranker and clear VRAM memory
+    if request.app.state.rf is not None:
+        # Clear existing reranker instance (if any)
         request.app.state.rf = None
         request.app.state.RERANKING_FUNCTION = None
         import gc
@@ -978,20 +990,32 @@ async def update_rag_config(
             if (
                 request.app.state.config.ENABLE_RAG_HYBRID_SEARCH
                 and not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+                and request.app.state.config.RAG_RERANKING_MODEL
             ):
-                request.app.state.rf = get_rf(
-                    request.app.state.config.RAG_RERANKING_ENGINE,
-                    request.app.state.config.RAG_RERANKING_MODEL,
-                    request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
-                    request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-                    request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
-                )
+                request.app.state.rf = None
 
+                def load_reranking_model():
+                    rf = get_rf(
+                        request.app.state.config.RAG_RERANKING_ENGINE,
+                        request.app.state.config.RAG_RERANKING_MODEL,
+                        request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
+                        request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+                        request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
+                    )
+                    if rf is None:
+                        raise ValueError(
+                            "Reranking model is not configured or failed to load"
+                        )
+                    return rf
+
+                lazy_rf = LazyStateProxy(request.app.state, "rf", load_reranking_model)
                 request.app.state.RERANKING_FUNCTION = get_reranking_function(
                     request.app.state.config.RAG_RERANKING_ENGINE,
                     request.app.state.config.RAG_RERANKING_MODEL,
-                    request.app.state.rf,
+                    lazy_rf,
                 )
+            else:
+                request.app.state.RERANKING_FUNCTION = None
         except Exception as e:
             log.error(f"Error loading reranking model: {e}")
             request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
