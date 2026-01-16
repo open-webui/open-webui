@@ -2254,25 +2254,24 @@ async def process_chat_response(
                         else:
                             content = ""
                             tool_calls = []
-                        
-                        if content or tool_calls:
-                            # Always emit the response, even if content is empty
-                            # This ensures the frontend gets notified
-                            await event_emitter(
-                                {
-                                    "type": "chat:completion",
-                                    "data": response_data,
-                                }
-                            )
 
+                        # Always emit the raw completion so the UI receives tool_calls/non-text payloads
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": response_data,
+                            }
+                        )
+
+                        if content:
                             title = Chats.get_chat_title_by_id(metadata["chat_id"])
-                            
+
                             done_data = {
                                 "done": True,
                                 "content": content,
                                 "title": title,
                             }
-                            
+
                             # Include tool_calls in the done event if present
                             if tool_calls:
                                 done_data["tool_calls"] = tool_calls
@@ -2311,6 +2310,22 @@ async def process_chat_response(
                                     )
 
                             await background_tasks_handler()
+                        elif tool_calls:
+                            # Mark as done so native tool execution can proceed even without text content
+                            await event_emitter(
+                                {
+                                    "type": "chat:completion",
+                                    "data": {"done": True, "tool_calls": tool_calls},
+                                }
+                            )
+                        else:
+                            # No content and no tools: still end the pending state to avoid a stuck bubble
+                            await event_emitter(
+                                {
+                                    "type": "chat:completion",
+                                    "data": {"done": True},
+                                }
+                            )
 
                     if events and isinstance(events, list):
                         extra_response = {}
