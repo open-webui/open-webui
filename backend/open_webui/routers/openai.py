@@ -768,6 +768,84 @@ def convert_responses_to_chat_completions(responses_data: dict, model_id: str) -
     }
 
 
+def _stringify_message_content(content) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+                continue
+            if isinstance(item, dict):
+                item_type = item.get("type", "")
+                if item_type in ("text", "output_text"):
+                    text = item.get("text") or item.get("content") or ""
+                    if text:
+                        parts.append(text)
+                        continue
+                text = item.get("text") or item.get("content") or item.get("value") or ""
+                if text:
+                    parts.append(text)
+        return "".join(parts)
+    if isinstance(content, dict):
+        return content.get("text") or content.get("content") or content.get("value") or ""
+    return ""
+
+
+def _normalize_chat_completion_response(response: dict) -> dict:
+    if not isinstance(response, dict):
+        return response
+
+    choices = response.get("choices")
+    if not isinstance(choices, list):
+        return response
+
+    for choice in choices:
+        if not isinstance(choice, dict):
+            continue
+        message = choice.get("message")
+        if not isinstance(message, dict):
+            if isinstance(choice.get("text"), str):
+                choice["message"] = {
+                    "role": "assistant",
+                    "content": choice.get("text"),
+                }
+            continue
+
+        content = message.get("content")
+        normalized = _stringify_message_content(content)
+        if normalized:
+            message["content"] = normalized
+            continue
+
+        for key in ("text", "output_text", "answer", "result"):
+            value = message.get(key)
+            if isinstance(value, str) and value:
+                message["content"] = value
+                break
+
+    return response
+
+
+async def _safe_response_json(response: aiohttp.ClientResponse):
+    try:
+        body = await response.text()
+    except Exception as e:
+        log.debug("Failed reading response body from %s: %s", response.url, e)
+        return None
+
+    if not body:
+        return None
+
+    try:
+        return json.loads(body)
+    except Exception:
+        snippet = body[:500].replace("\n", " ").replace("\r", " ")
+        log.debug("Non-JSON response from %s: %s", response.url, snippet)
+        return None
+
+
 async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
@@ -784,7 +862,10 @@ async def send_get_request(url, key=None, user: UserModel = None):
                 headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
-                return await response.json()
+                if response.status != 200:
+                    log.error("Model list request failed (%s): HTTP %s", url, response.status)
+                    return None
+                return await _safe_response_json(response)
     except Exception as e:
         # Handle connection error here
         log.error(f"Connection error: {e}")
@@ -1341,15 +1422,16 @@ async def get_models(
                         cookies=cookies,
                         ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as r:
+                        response_data = await _safe_response_json(r)
                         if r.status != 200:
                             # Extract response error details if available
                             error_detail = f"HTTP Error: {r.status}"
-                            res = await r.json()
-                            if "error" in res:
-                                error_detail = f"External Error: {res['error']}"
+                            if isinstance(response_data, dict) and "error" in response_data:
+                                error_detail = f"External Error: {response_data['error']}"
                             raise Exception(error_detail)
 
-                        response_data = await r.json()
+                        if response_data is None:
+                            raise Exception("Invalid JSON response from model list endpoint")
 
                         # Check if we're calling OpenAI API based on the URL
                         if "api.openai.com" in url:
@@ -1974,10 +2056,15 @@ async def generate_chat_completion(
                 else:
                     return PlainTextResponse(status_code=r.status, content=response)
 
+        # Log response info for debugging
+        content_type = r.headers.get("Content-Type", "")
+        log.info(f"[DEBUG] Response status={r.status}, Content-Type={content_type}, stream_requested={form_data.get('stream', False)}")
+
         # Check if response is SSE
-        if "text/event-stream" in r.headers.get("Content-Type", ""):
+        if "text/event-stream" in content_type:
             streaming = True
-            
+            log.info(f"[DEBUG] Streaming response detected, use_responses_api={use_responses_api}")
+
             # Use Responses API stream converter if enabled
             if use_responses_api:
                 return StreamingResponse(
@@ -1998,11 +2085,15 @@ async def generate_chat_completion(
                     ),
                 )
         else:
+            # Non-streaming response (JSON)
+            log.info(f"[DEBUG] Non-streaming response, attempting to parse JSON")
             try:
                 response = await r.json()
+                log.info(f"[DEBUG] JSON response parsed, keys={list(response.keys()) if isinstance(response, dict) else 'not a dict'}")
             except Exception as e:
                 log.error(e)
                 response = await r.text()
+                log.info(f"[DEBUG] Fallback to text response, length={len(response)}")
 
             if r.status >= 400:
                 if isinstance(response, (dict, list)):
@@ -2013,7 +2104,30 @@ async def generate_chat_completion(
             # Convert Responses API format to Chat Completions format if needed
             if use_responses_api and isinstance(response, dict):
                 response = convert_responses_to_chat_completions(response, model_id)
-            
+            if isinstance(response, dict):
+                response = _normalize_chat_completion_response(response)
+
+            # IMPORTANT: If stream was requested but API returned JSON (not SSE),
+            # we need to convert it to SSE format for the frontend to handle correctly
+            if form_data.get("stream") and isinstance(response, dict):
+                log.warning(f"[DEBUG] Stream requested but got JSON response, converting to SSE format")
+                streaming = True  # Mark as streaming to prevent double cleanup
+
+                async def json_to_sse_stream():
+                    """Convert a JSON chat completion response to SSE stream format."""
+                    # Send the response as a single chunk
+                    yield f"data: {json.dumps(response)}\n\n"
+                    yield "data: [DONE]\n\n"
+
+                return StreamingResponse(
+                    json_to_sse_stream(),
+                    status_code=r.status,
+                    headers={"Content-Type": "text/event-stream"},
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
+
             return response
     except Exception as e:
         log.exception(e)

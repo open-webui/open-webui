@@ -1608,6 +1608,7 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    log.info(f"[DEBUG] chat_completion called, original stream={form_data.get('stream')}")
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
@@ -1671,6 +1672,7 @@ async def chat_completion(
 
         # Model Params
         if model_info_params.get("stream_response") is not None:
+            log.info(f"[DEBUG] Overriding stream with model_info_params.stream_response={model_info_params.get('stream_response')}, original stream={form_data.get('stream')}")
             form_data["stream"] = model_info_params.get("stream_response")
 
         if model_info_params.get("stream_delta_chunk_size"):

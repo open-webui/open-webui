@@ -2245,10 +2245,19 @@ async def process_chat_response(
                         )
 
                     choices = response_data.get("choices", [])
-                    if choices and choices[0] is not None and choices[0].get("message", {}).get("content"):
-                        content = response_data["choices"][0]["message"]["content"]
-
-                        if content:
+                    # SAFEGUARD: Check choices[0] is a valid dict to prevent NoneType errors
+                    if choices and choices[0] is not None and isinstance(choices[0], dict):
+                        message = choices[0].get("message", {}) or {}
+                        if isinstance(message, dict):
+                            content = message.get("content", "") or ""
+                            tool_calls = message.get("tool_calls") or []
+                        else:
+                            content = ""
+                            tool_calls = []
+                        
+                        if content or tool_calls:
+                            # Always emit the response, even if content is empty
+                            # This ensures the frontend gets notified
                             await event_emitter(
                                 {
                                     "type": "chat:completion",
@@ -2257,15 +2266,21 @@ async def process_chat_response(
                             )
 
                             title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                            
+                            done_data = {
+                                "done": True,
+                                "content": content,
+                                "title": title,
+                            }
+                            
+                            # Include tool_calls in the done event if present
+                            if tool_calls:
+                                done_data["tool_calls"] = tool_calls
 
                             await event_emitter(
                                 {
                                     "type": "chat:completion",
-                                    "data": {
-                                        "done": True,
-                                        "content": content,
-                                        "title": title,
-                                    },
+                                    "data": done_data,
                                 }
                             )
 
@@ -2291,7 +2306,7 @@ async def process_chat_response(
                                             "action": "chat",
                                             "message": content,
                                             "title": title,
-                                            "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
+                                                "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
                                         },
                                     )
 
@@ -3211,7 +3226,26 @@ async def process_chat_response(
                             if done:
                                 pass
                             else:
-                                log.debug(f"Error: {e}")
+                                # Log more details for debugging NoneType errors
+                                if isinstance(e, (AttributeError, TypeError)):
+                                    log.warning(f"Stream processing error (likely NoneType): {type(e).__name__}: {e}, line={line[:200] if line else 'N/A'}")
+                                    # Send error to frontend so user knows something went wrong
+                                    try:
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": {
+                                                    "error": {
+                                                        "message": f"Response processing error: {e}",
+                                                        "type": "stream_processing_error",
+                                                    }
+                                                },
+                                            }
+                                        )
+                                    except Exception:
+                                        pass
+                                else:
+                                    log.debug(f"Error: {e}")
                                 continue
                     await flush_pending_delta_data()
 
@@ -3480,7 +3514,50 @@ async def process_chat_response(
                         if isinstance(res, StreamingResponse):
                             await stream_body_handler(res, new_form_data)
                         else:
-                            break
+                            # Provider may ignore stream flag and return JSON once tool_calls are handled
+                            res_data = res
+                            if isinstance(res, JSONResponse):
+                                try:
+                                    res_data = json.loads(
+                                        res.body.decode("utf-8", "replace")
+                                    )
+                                except Exception:
+                                    res_data = res
+
+                            if isinstance(res_data, dict):
+                                choices = res_data.get("choices", [])
+                                if choices and isinstance(choices[0], dict):
+                                    msg = choices[0].get("message", {}) or {}
+                                    chunk_content = (
+                                        msg.get("content")
+                                        or msg.get("reasoning_content")
+                                        or ""
+                                    )
+                                    if chunk_content:
+                                        # Append to content and emit to frontend
+                                        if not content_blocks:
+                                            content_blocks.append(
+                                                {
+                                                    "type": "text",
+                                                    "content": "",
+                                                }
+                                            )
+                                        content += chunk_content
+                                        content_blocks[-1]["content"] = (
+                                            content_blocks[-1]["content"]
+                                            + chunk_content
+                                        )
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": {
+                                                    "content": serialize_content_blocks(
+                                                        content_blocks
+                                                    ),
+                                                },
+                                            }
+                                        )
+
                     except Exception as e:
                         log.debug(e)
                         break

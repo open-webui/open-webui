@@ -707,10 +707,16 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
     async def yield_safe_stream_chunks():
         buffer = b""
         skip_mode = False
+        chunk_count = 0
 
         async for data, _ in stream.iter_chunks():
             if not data:
                 continue
+
+            chunk_count += 1
+            # Log first few chunks for debugging
+            if chunk_count <= 3:
+                log.info(f"[stream_chunks_handler] Chunk #{chunk_count}, size={len(data)}, preview={data[:200] if len(data) > 200 else data}")
             
             # SAFEGUARD: Ensure data is bytes, convert if needed
             # Some proxy servers may return string chunks instead of bytes
@@ -765,6 +771,8 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
         if buffer and not skip_mode:
             yield normalize_sse_line(buffer)
             yield b"\n"
+
+        log.info(f"[stream_chunks_handler] Stream ended, total chunks processed: {chunk_count}")
 
     return yield_safe_stream_chunks()
 
