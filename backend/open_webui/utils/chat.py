@@ -200,7 +200,7 @@ async def generate_chat_completion(
             request, form_data, user=user, models=models
         )
     else:
-        
+        # Check if user has access to the model
         if not bypass_filter and user.role == "user":
             try:
                 check_model_access(user, model)
@@ -217,39 +217,48 @@ async def generate_chat_completion(
 
             if model_ids and filter_mode == "exclude":
                 model_ids = [
-                    m["id"]
-                    for m in request.app.state.MODELS.values()
-                    if m.get("owned_by") != "arena" and m["id"] not in model_ids
+                    model["id"]
+                    for model in list(request.app.state.MODELS.values())
+                    if model.get("owned_by") != "arena" and model["id"] not in model_ids
                 ]
 
             chat_id = form_data.get("metadata", {}).get("chat_id")
-            if not chat_id:
+            if not chat_id and form_data.get("messages"):
                 for msg in form_data.get("messages", []):
-                    chat_id = msg.get("metadata", {}).get("chat_id")
-                    if chat_id:
+                    if isinstance(msg, dict) and msg.get("metadata", {}).get("chat_id"):
+                        chat_id = msg["metadata"]["chat_id"]
                         break
 
-            request.app.state.ARENA_MODEL_CACHE = getattr(request.app.state, "ARENA_MODEL_CACHE", {})
+            # Initialize cache if needed
+            if not hasattr(request.app.state, "ARENA_MODEL_CACHE"):
+                request.app.state.ARENA_MODEL_CACHE = {}
 
-            per_chat = EVALUATION_ARENA_PER_CHAT_RANDOMIZATION.value
             selected_model_id = None
             
-            if per_chat and chat_id:
+            # NEW FEATURE: Check per-chat setting and use cache if enabled
+            if EVALUATION_ARENA_PER_CHAT_RANDOMIZATION.value and chat_id:
                 selected_model_id = request.app.state.ARENA_MODEL_CACHE.get(chat_id)
+                # Validate cached model is still in allowed list
                 if selected_model_id and model_ids and selected_model_id not in model_ids:
                     selected_model_id = None
             
+            # Select a random model if we don't have one cached (or per-chat is off)
             if not selected_model_id:
                 if not model_ids:
-                    model_ids = [m["id"] for m in request.app.state.MODELS.values() if m.get("owned_by") != "arena"]
+                    model_ids = [
+                        model["id"]
+                        for model in list(request.app.state.MODELS.values())
+                        if model.get("owned_by") != "arena"
+                    ]
                 selected_model_id = random.choice(model_ids)
                 
-                if per_chat and chat_id:
+                # NEW FEATURE: Cache the selection if per-chat is enabled
+                if EVALUATION_ARENA_PER_CHAT_RANDOMIZATION.value and chat_id:
                     request.app.state.ARENA_MODEL_CACHE[chat_id] = selected_model_id
 
             form_data["model"] = selected_model_id
 
-            if form_data.get("stream"):
+            if form_data.get("stream") == True:
                 async def stream_wrapper(stream, selected_model_id):
                     yield f"data: {json.dumps({'selected_model_id': selected_model_id})}\n\n"
                     async for chunk in stream:
@@ -275,8 +284,8 @@ async def generate_chat_completion(
                     bypass_filter=True,
                     bypass_system_prompt=bypass_system_prompt,
                 )
-                completion["selected_model_id"] = selected_model_id
-                return completion
+            completion["selected_model_id"] = selected_model_id
+            return completion
 
 # End Fix
         if model.get("pipe"):

@@ -1590,6 +1590,7 @@ EVALUATION_ARENA_MODELS = PersistentConfig(
     "evaluation.arena.models",
     [],
 )
+
 # start fix
 EVALUATION_ARENA_PER_CHAT_RANDOMIZATION = PersistentConfig(
     "EVALUATION_ARENA_PER_CHAT_RANDOMIZATION",

@@ -623,7 +623,6 @@
 					</span>
 				</Tooltip>
 
-
 				{#if message.timestamp}
 					<div
 						class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
