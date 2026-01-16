@@ -206,68 +206,76 @@ async def generate_chat_completion(
                 check_model_access(user, model)
             except Exception as e:
                 raise e
-# Start Fix
         if model.get("owned_by") == "arena":
             from open_webui.config import EVALUATION_ARENA_PER_CHAT_RANDOMIZATION
+            from open_webui.models.chats import Chats
             
-            info = model.get("info")
-            meta = info.get("meta") if info else None
-            model_ids = meta.get("model_ids") if meta else None
-            filter_mode = meta.get("filter_mode") if meta else None
+            # Get available model IDs
+            info = model.get("info", {})
+            meta = info.get("meta", {})
+            model_ids = meta.get("model_ids")
+            filter_mode = meta.get("filter_mode")
 
             if model_ids and filter_mode == "exclude":
                 model_ids = [
-                    model["id"]
-                    for model in list(request.app.state.MODELS.values())
-                    if model.get("owned_by") != "arena" and model["id"] not in model_ids
+                    m["id"]
+                    for m in request.app.state.MODELS.values()
+                    if m.get("owned_by") != "arena" and m["id"] not in model_ids
+                ]
+            elif not model_ids:
+                model_ids = [
+                    m["id"]
+                    for m in request.app.state.MODELS.values()
+                    if m.get("owned_by") != "arena"
                 ]
 
+            # Get chat_id
             chat_id = form_data.get("metadata", {}).get("chat_id")
-            if not chat_id and form_data.get("messages"):
+            if not chat_id:
                 for msg in form_data.get("messages", []):
-                    if isinstance(msg, dict) and msg.get("metadata", {}).get("chat_id"):
-                        chat_id = msg["metadata"]["chat_id"]
+                    chat_id = msg.get("metadata", {}).get("chat_id")
+                    if chat_id:
                         break
-
-            # Initialize cache if needed
-            if not hasattr(request.app.state, "ARENA_MODEL_CACHE"):
-                request.app.state.ARENA_MODEL_CACHE = {}
 
             selected_model_id = None
             
-            # NEW FEATURE: Check per-chat setting and use cache if enabled
+            # Check if we should use per-chat model selection
             if EVALUATION_ARENA_PER_CHAT_RANDOMIZATION.value and chat_id:
-                selected_model_id = request.app.state.ARENA_MODEL_CACHE.get(chat_id)
-                # Validate cached model is still in allowed list
-                if selected_model_id and model_ids and selected_model_id not in model_ids:
-                    selected_model_id = None
+                chat = Chats.get_chat_by_id(chat_id)
+                if chat:
+                    selected_model_id = chat.meta.get("arena_selected_model")
+                    # Validate model is still valid
+                    if selected_model_id not in model_ids:
+                        selected_model_id = None
             
-            # Select a random model if we don't have one cached (or per-chat is off)
+            # Select and store random model if needed
             if not selected_model_id:
-                if not model_ids:
-                    model_ids = [
-                        model["id"]
-                        for model in list(request.app.state.MODELS.values())
-                        if model.get("owned_by") != "arena"
-                    ]
                 selected_model_id = random.choice(model_ids)
                 
-                # NEW FEATURE: Cache the selection if per-chat is enabled
                 if EVALUATION_ARENA_PER_CHAT_RANDOMIZATION.value and chat_id:
-                    request.app.state.ARENA_MODEL_CACHE[chat_id] = selected_model_id
+                    try:
+                        from open_webui.internal.db import get_db, Chat
+                        with get_db() as db:
+                            db_chat = db.get(Chat, chat_id)
+                            if db_chat:
+                                if not db_chat.meta:
+                                    db_chat.meta = {}
+                                db_chat.meta["arena_selected_model"] = selected_model_id
+                                db_chat.updated_at = int(time.time())
+                                db.commit()
+                    except Exception as e:
+                        log.debug(f"Failed to store arena model selection: {e}")
 
             form_data["model"] = selected_model_id
 
-            if form_data.get("stream") == True:
+            if form_data.get("stream"):
                 async def stream_wrapper(stream, selected_model_id):
                     yield f"data: {json.dumps({'selected_model_id': selected_model_id})}\n\n"
                     async for chunk in stream:
                         yield chunk
 
                 response = await generate_chat_completion(
-                    request,
-                    form_data,
-                    user,
+                    request, form_data, user,
                     bypass_filter=True,
                     bypass_system_prompt=bypass_system_prompt,
                 )
@@ -278,16 +286,13 @@ async def generate_chat_completion(
                 )
             else:
                 completion = await generate_chat_completion(
-                    request,
-                    form_data,
-                    user,
+                    request, form_data, user,
                     bypass_filter=True,
                     bypass_system_prompt=bypass_system_prompt,
                 )
-            completion["selected_model_id"] = selected_model_id
-            return completion
+                completion["selected_model_id"] = selected_model_id
+                return completion
 
-# End Fix
         if model.get("pipe"):
             # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
             return await generate_function_chat_completion(
