@@ -2,6 +2,7 @@ import logging
 import json
 import time
 import uuid
+import contextlib
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -13,6 +14,7 @@ from open_webui.utils.misc import (
     sanitize_text_for_db,
     get_message_list,
 )
+from open_webui.utils.redis import get_redis_client
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
@@ -35,6 +37,27 @@ from sqlalchemy.sql.expression import bindparam
 ####################
 
 log = logging.getLogger(__name__)
+
+
+@contextlib.contextmanager
+def chat_lock(chat_id: str):
+    """
+    Distributed lock for chat updates using Redis.
+    Falls back to a no-op if Redis is not available.
+    """
+    redis_client = get_redis_client(async_mode=False)
+    lock = None
+    if redis_client:
+        lock_key = f"lock:chat:{chat_id}"
+        lock = redis_client.lock(lock_key, timeout=10) # 10s timeout
+        
+    try:
+        if lock:
+            lock.acquire(blocking=True)
+        yield
+    finally:
+        if lock and lock.owned():
+            lock.release()
 
 
 class Chat(Base):
@@ -470,47 +493,49 @@ class ChatTable:
     def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
-            return None
+        with chat_lock(id):
+            chat = self.get_chat_by_id(id)
+            if chat is None:
+                return None
 
-        # Sanitize message content for null characters before upserting
-        if isinstance(message.get("content"), str):
-            message["content"] = sanitize_text_for_db(message["content"])
+            # Sanitize message content for null characters before upserting
+            if isinstance(message.get("content"), str):
+                message["content"] = sanitize_text_for_db(message["content"])
 
-        chat = chat.chat
-        history = chat.get("history", {})
+            chat = chat.chat
+            history = chat.get("history", {})
 
-        if message_id in history.get("messages", {}):
-            history["messages"][message_id] = {
-                **history["messages"][message_id],
-                **message,
-            }
-        else:
-            history["messages"][message_id] = message
+            if message_id in history.get("messages", {}):
+                history["messages"][message_id] = {
+                    **history["messages"][message_id],
+                    **message,
+                }
+            else:
+                history["messages"][message_id] = message
 
-        history["currentId"] = message_id
+            history["currentId"] = message_id
 
-        chat["history"] = history
-        return self.update_chat_by_id(id, chat)
+            chat["history"] = history
+            return self.update_chat_by_id(id, chat)
 
     def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
     ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
-            return None
+        with chat_lock(id):
+            chat = self.get_chat_by_id(id)
+            if chat is None:
+                return None
 
-        chat = chat.chat
-        history = chat.get("history", {})
+            chat = chat.chat
+            history = chat.get("history", {})
 
-        if message_id in history.get("messages", {}):
-            status_history = history["messages"][message_id].get("statusHistory", [])
-            status_history.append(status)
-            history["messages"][message_id]["statusHistory"] = status_history
+            if message_id in history.get("messages", {}):
+                status_history = history["messages"][message_id].get("statusHistory", [])
+                status_history.append(status)
+                history["messages"][message_id]["statusHistory"] = status_history
 
-        chat["history"] = history
-        return self.update_chat_by_id(id, chat)
+            chat["history"] = history
+            return self.update_chat_by_id(id, chat)
 
     def add_message_files_by_id_and_message_id(
         self, id: str, message_id: str, files: list[dict]

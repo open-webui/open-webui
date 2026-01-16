@@ -1535,7 +1535,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             request, form_data, user, models
         )
         # [DIAGNOSTIC] Log Pipeline duration
-        log.info(f"[LATENCY_DEBUG] Pipeline Inlet (Gemini/etc) took: {time.time() - pipeline_start:.4f}s")
+        pipeline_duration = time.time() - pipeline_start
+        log.info(f"[LATENCY_DEBUG] Pipeline Inlet (Gemini/etc) took: {pipeline_duration:.4f}s")
+        
+        # Store in request state for metadata inclusion
+        if not hasattr(request.state, "latency"):
+            request.state.latency = {}
+        request.state.latency["pipeline_inlet"] = pipeline_duration
     except Exception as e:
         raise e
 
@@ -1557,7 +1563,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             extra_params=extra_params,
         )
         # [DIAGNOSTIC] Log Local Filters duration
-        log.info(f"[LATENCY_DEBUG] Local Filter Functions (Preprocessing) took: {time.time() - filters_start:.4f}s")
+        filters_duration = time.time() - filters_start
+        log.info(f"[LATENCY_DEBUG] Local Filter Functions (Preprocessing) took: {filters_duration:.4f}s")
+        
+        if not hasattr(request.state, "latency"):
+            request.state.latency = {}
+        request.state.latency["local_filters"] = filters_duration
     except Exception as e:
         raise Exception(f"{e}")
 
@@ -2225,6 +2236,9 @@ async def process_chat_response(
                                         "done": True,
                                         "content": content,
                                         "title": title,
+                                        "info": {
+                                            "latency": getattr(request.state, "latency", {})
+                                        } if hasattr(request.state, "latency") and request.state.latency else {}
                                     },
                                 }
                             )
@@ -3736,6 +3750,32 @@ async def process_chat_response(
                 )
 
                 if data:
+                    # If it's the final chunk, inject latency metadata
+                    # Handle both string and bytes data
+                    data_str = data.decode("utf-8", "replace") if isinstance(data, bytes) else data
+                    
+                    if isinstance(data_str, str) and '"done": true' in data_str.lower():
+                        try:
+                            if hasattr(request.state, "latency") and request.state.latency:
+                                # Robustly find the JSON part in the SSE data
+                                # Use a non-greedy match to find the first JSON object after 'data:'
+                                match = re.search(r"data:\s*(\{.*?\})(?=\n\n|$)", data_str)
+                                if match:
+                                    json_str = match.group(1)
+                                    try:
+                                        json_data = json.loads(json_str)
+                                        if "info" not in json_data:
+                                            json_data["info"] = {}
+                                        json_data["info"]["latency"] = request.state.latency
+                                        
+                                        new_data_str = f"data: {json.dumps(json_data)}\n\n"
+                                        # Replace only the matched part to preserve other events in the same chunk
+                                        data_str = data_str.replace(match.group(0), new_data_str)
+                                        data = data_str.encode("utf-8") if isinstance(data, bytes) else data_str
+                                    except json.JSONDecodeError:
+                                        pass
+                        except Exception as e:
+                            log.error(f"Error injecting latency metadata: {e}")
                     yield data
 
         return StreamingResponse(

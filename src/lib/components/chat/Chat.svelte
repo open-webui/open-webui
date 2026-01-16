@@ -377,6 +377,10 @@
 							message.statusHistory = [data];
 						}
 					}
+
+					if (data.status === 'in_progress') {
+						generating = true;
+					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:tasks:cancel') {
@@ -396,6 +400,7 @@
 					message.embeds = data.embeds;
 				} else if (type === 'chat:message:error') {
 					message.error = data.error;
+					generating = false;
 				} else if (type === 'chat:message:follow_ups') {
 					message.followUps = data.follow_ups;
 
@@ -1541,6 +1546,7 @@
 
 		if (done) {
 			message.done = true;
+			generating = false;
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);
@@ -1609,6 +1615,10 @@
 
 		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
 			selectedModels = _selectedModels;
+		}
+
+		if (generating) {
+			return;
 		}
 
 		if (userPrompt === '' && files.length === 0) {

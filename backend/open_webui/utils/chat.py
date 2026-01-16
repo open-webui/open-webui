@@ -67,7 +67,13 @@ class ServerSideChatManager:
         """
         Creates a background-safe snapshot of the chat context.
         """
-        # Capture only what's necessary to avoid serializing massive objects
+        # Capture essential headers for tools/filters that might need them
+        headers_to_capture = ["authorization", "x-api-key", "user-agent", "host"]
+        captured_headers = {k: v for k, v in request.headers.items() if k.lower() in headers_to_capture}
+        
+        # Capture essential cookies (like session tokens)
+        captured_cookies = {k: v for k, v in request.cookies.items()}
+
         return {
             "form_data": json.loads(json.dumps(form_data)),
             "user_id": user.id,
@@ -78,7 +84,9 @@ class ServerSideChatManager:
             "chat_id": metadata.get("chat_id"),
             "message_id": metadata.get("message_id"),
             "direct": getattr(request.state, "direct", False),
-            "token": getattr(request.state, "token", None)
+            "token": getattr(request.state, "token", None),
+            "headers": captured_headers,
+            "cookies": captured_cookies
         }
 
     @staticmethod
@@ -99,21 +107,25 @@ class ServerSideChatManager:
         # 2. Create User and Request objects
         user = type('obj', (object,), {"id": user_id, "role": user_role})
         
+        class State:
+            def __init__(self, metadata, snapshot):
+                self.metadata = metadata
+                self.direct = snapshot.get("direct", False)
+                self.token = snapshot.get("token")
+                self.latency = {}
+
         class MockRequest:
             def __init__(self, app_state, metadata, snapshot):
                 self.app = type('obj', (object,), {'state': app_state})
-                self.state = type('obj', (object,), {
-                    'metadata': metadata,
-                    'direct': snapshot.get("direct", False),
-                    'token': snapshot.get("token")
-                })
-                self.cookies = {}
+                self.state = State(metadata, snapshot)
+                self.headers = snapshot.get("headers", {})
+                self.cookies = snapshot.get("cookies", {})
+                self.client = type('obj', (object,), {'host': '127.0.0.1'})
 
         mock_request = MockRequest(app_state, metadata, snapshot)
 
         from open_webui.constants import TASKS
         
-        # Inlets, LLM call, and Outlets are all handled within this block
         try:
             # Short-circuit for MoA to provide instant feedback
             if snapshot.get("form_data", {}).get("metadata", {}).get("task") == str(TASKS.MOA_RESPONSE_GENERATION):
@@ -127,12 +139,17 @@ class ServerSideChatManager:
             # 3. Process Payload (Inlets)
             from open_webui.utils.middleware import process_chat_payload, process_chat_response
             
+            # We process the payload here once
             form_data, metadata, events = await process_chat_payload(
                 mock_request, snapshot["form_data"], user, metadata, snapshot["model"]
             )
+            
+            # Ensure metadata changes are reflected in both form_data and request state
+            form_data["metadata"] = metadata
+            mock_request.state.metadata = metadata
 
             # 4. Trigger LLM Call
-            # Note: We set orchestrate=False here to perform actual generation
+            # IMPORTANT: We pass the ALREADY PROCESSED form_data and set orchestrate=False
             response = await generate_chat_completion(
                 request=mock_request,
                 form_data=form_data,
@@ -141,24 +158,43 @@ class ServerSideChatManager:
             )
 
             # 5. Handle Response (Outlet, Persistence, Streaming to SIO)
-            # tasks come from form_data (background_tasks)
             tasks = snapshot.get("form_data", {}).get("background_tasks")
             
             streaming_response = await process_chat_response(
                 mock_request, response, form_data, user, metadata, snapshot["model"], events, tasks
             )
 
-            # If it's a StreamingResponse, we must iterate over it to execute the logic
             if isinstance(streaming_response, StreamingResponse):
-                async for chunk in streaming_response.body_iterator:
-                    # Logic is handled inside the generator (emits SIO, saves to DB)
-                    pass
+                last_chunk = None
+                try:
+                    async for chunk in streaming_response.body_iterator:
+                        last_chunk = chunk
+                except Exception as stream_err:
+                    log.error(f"Error during orchestration stream iteration: {stream_err}")
+                    raise stream_err
+
                 if streaming_response.background:
                     await streaming_response.background()
 
             log.info(f"Server-side orchestration completed for chat {chat_id}")
 
         except Exception as e:
+            log.exception(f"Error in server-side orchestration: {e}")
+            
+            error_message = str(e) if len(str(e)) < 100 else "An unexpected error occurred during background processing."
+            if snapshot.get("form_data", {}).get("metadata", {}).get("task") == str(TASKS.MOA_RESPONSE_GENERATION):
+                error_message = "One of the agents failed to respond. Please try again."
+
+            event_emitter = get_event_emitter(metadata)
+            if event_emitter:
+                await event_emitter({"type": "chat:message:error", "data": {"error": {"content": error_message}}})
+            
+            # Ensure the error is persisted and the message is marked as done
+            if chat_id and message_id:
+                from open_webui.models.chats import Chats
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    chat_id, message_id, {"error": {"content": error_message}, "done": True}
+                )
             log.exception(f"Error in server-side orchestration: {e}")
             
             error_message = "An unexpected error occurred. Please try again."
