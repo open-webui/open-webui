@@ -105,7 +105,10 @@
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
 			path: '/ws/socket.io',
-			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
+			// Allow polling fallback even when websockets are enabled; Socket.IO will
+			// upgrade to websocket when possible, but polling keeps the app usable on
+			// networks that block/flap websocket.
+			transports: enableWebsocket ? ['polling', 'websocket'] : ['polling'],
 			auth: { token: localStorage.token }
 		});
 		await socket.set(_socket);
