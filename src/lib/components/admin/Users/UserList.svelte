@@ -97,6 +97,15 @@
 		}
 	};
 
+	// Track previous query to detect actual changes and reset pagination
+	let previousQuery = query;
+	$: {
+		if (query !== previousQuery) {
+			previousQuery = query;
+			page = 1;
+		}
+	}
+
 	$: if (query !== null && page !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
