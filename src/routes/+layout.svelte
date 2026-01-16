@@ -89,6 +89,7 @@
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
+	let isTabVisible = true;
 	let tokenTimer = null;
 
 	let showRefresh = false;
@@ -688,12 +689,21 @@
 
 		// Set yourself as the last active tab when this tab is focused
 		const handleVisibilityChange = () => {
-			if (document.visibilityState === 'visible') {
+			isTabVisible = document.visibilityState === 'visible';
+
+			if (isTabVisible) {
 				isLastActiveTab.set(true); // This tab is now the active tab
 				bc.postMessage('active'); // Notify other tabs that this tab is active
 
 				// Check token expiry when the tab becomes active
 				checkTokenExpiry();
+
+				// Restore normal title when tab becomes visible
+				if ($chatTitle && $settings?.showChatTitleInTab !== false) {
+					document.title = `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`;
+				} else {
+					document.title = $WEBUI_NAME;
+				}
 			}
 		};
 
@@ -849,31 +859,16 @@
 
 	onDestroy(() => {
 		window.removeEventListener('message', windowMessageEventHandler);
+		document.removeEventListener('visibilitychange', handleVisibilityChange);
 		bc.close();
 	});
 
-	// Update document title with download progress
+	// Update document title with download progress when tab is hidden
 	$: {
-		if ($settings?.showDownloadProgress && $downloadProgressTitle) {
+		if (!isTabVisible && $downloadProgressTitle) {
 			document.title = `${$downloadProgressTitle} • ${$WEBUI_NAME}`;
-		} else if (!$settings?.showDownloadProgress && $downloadProgressTitle) {
-			// Setting toggled off during download - restore appropriate title
-			if ($chatTitle && $settings?.showChatTitleInTab !== false) {
-				document.title = `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`;
-			} else {
-				document.title = $WEBUI_NAME;
-			}
-		} else if ($downloadProgressTitle === null && $chatTitle) {
-			// Download finished and we're in a chat - restore chat title
-			if ($settings?.showChatTitleInTab !== false) {
-				document.title = `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`;
-			} else {
-				document.title = $WEBUI_NAME;
-			}
-		} else if ($downloadProgressTitle === null) {
-			// No chat title, just reset to base
-			document.title = $WEBUI_NAME;
 		}
+		// When tab is visible, let the visibility handler or Chat.svelte handle the title
 	}
 </script>
 
