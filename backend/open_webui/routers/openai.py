@@ -93,6 +93,9 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
     
     Responses API:
         {"input": [...], "model": "...", "stream": true, ...}
+    
+    Uses EasyInputMessageParam format which supports all roles (user, assistant, system, developer)
+    and allows simple string content for easier compatibility.
     """
     responses_payload = {}
     
@@ -100,7 +103,7 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
     if "model" in chat_payload:
         responses_payload["model"] = chat_payload["model"]
     
-    # Convert messages to input items
+    # Convert messages to input items using EasyInputMessageParam format
     messages = chat_payload.get("messages", [])
     input_items = []
     
@@ -112,27 +115,69 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
             # System messages become instructions in Responses API
             responses_payload["instructions"] = content if isinstance(content, str) else str(content)
         else:
-            # Convert role: 'assistant' -> 'assistant', 'user' -> 'user'
-            item = {
-                "type": "message",
-                "role": role if role in ["user", "assistant"] else "user",
-                "content": []
-            }
+            # Map role: assistant -> assistant, user -> user, anything else -> user
+            mapped_role = role if role in ["user", "assistant"] else "user"
             
-            # Handle content
+            # Build the message item using EasyInputMessageParam format
+            # All roles (including assistant) can use simple string content
             if isinstance(content, str):
-                item["content"].append({"type": "input_text", "text": content})
+                # Simple text content - use direct string
+                item = {
+                    "type": "message",
+                    "role": mapped_role,
+                    "content": content
+                }
             elif isinstance(content, list):
-                for c in content:
-                    if isinstance(c, dict):
-                        if c.get("type") == "text":
-                            item["content"].append({"type": "input_text", "text": c.get("text", "")})
-                        elif c.get("type") == "image_url":
-                            # Handle image
-                            image_url = c.get("image_url", {}).get("url", "")
-                            item["content"].append({"type": "input_image", "image_url": image_url})
-                    elif isinstance(c, str):
-                        item["content"].append({"type": "input_text", "text": c})
+                # Multimodal content - need to build content array
+                # For user messages, use input_text and input_image types
+                # For assistant messages, we just extract text and use it as string
+                if mapped_role == "assistant":
+                    # Assistant messages: extract text content as simple string
+                    text_parts = []
+                    for c in content:
+                        if isinstance(c, dict):
+                            if c.get("type") == "text":
+                                text_parts.append(c.get("text", ""))
+                        elif isinstance(c, str):
+                            text_parts.append(c)
+                    item = {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": "".join(text_parts)
+                    }
+                else:
+                    # User messages with multimodal content
+                    content_parts = []
+                    for c in content:
+                        if isinstance(c, dict):
+                            if c.get("type") == "text":
+                                content_parts.append({"type": "input_text", "text": c.get("text", "")})
+                            elif c.get("type") == "image_url":
+                                image_url = c.get("image_url", {}).get("url", "")
+                                content_parts.append({"type": "input_image", "image_url": image_url})
+                        elif isinstance(c, str):
+                            content_parts.append({"type": "input_text", "text": c})
+                    
+                    if content_parts:
+                        item = {
+                            "type": "message",
+                            "role": "user",
+                            "content": content_parts
+                        }
+                    else:
+                        # Fallback to empty string if no content parts
+                        item = {
+                            "type": "message",
+                            "role": "user",
+                            "content": ""
+                        }
+            else:
+                # Fallback for other content types
+                item = {
+                    "type": "message",
+                    "role": mapped_role,
+                    "content": str(content) if content else ""
+                }
             
             input_items.append(item)
     
@@ -157,7 +202,9 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
             "summary": "auto"  # Enable reasoning summary to get thinking content in stream
         }
     
+    log.info(f"Responses API payload: {json.dumps(responses_payload, ensure_ascii=False, default=str)[:2000]}")
     return responses_payload
+
 
 
 async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientResponse, model_id: str):
@@ -174,90 +221,188 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
     stream_id = f"chatcmpl-{uuid.uuid4().hex}"
     timestamp = int(time.time())
     
-    buffer = ""
-    decoder = json.JSONDecoder()
+    # Log response info for debugging
+    log.info(f"Responses API stream: status={response.status}, content_type={response.headers.get('Content-Type', 'unknown')}")
     
-    async for chunk in response.content.iter_any():
-        if not chunk:
-            continue
+    buffer = ""
+    
+    def create_chunk(delta_content=None, reasoning_content=None, finish_reason=None):
+        """Helper to create a chat completion chunk."""
+        delta = {}
+        if delta_content is not None:
+            delta["content"] = delta_content
+        if reasoning_content is not None:
+            delta["reasoning_content"] = reasoning_content
         
-        buffer += chunk.decode("utf-8", errors="replace")
-        
-        # Process SSE events
-        while "\n" in buffer:
-            line, buffer = buffer.split("\n", 1)
-            line = line.strip()
-            
-            if not line:
+        return {
+            "id": stream_id,
+            "object": "chat.completion.chunk",
+            "created": timestamp,
+            "model": model_id,
+            "choices": [{"index": 0, "delta": delta, "finish_reason": finish_reason}]
+        }
+    
+    try:
+        async for chunk in response.content.iter_any():
+            if not chunk:
                 continue
             
-            # Handle SSE data: prefix
-            if line.startswith("data:"):
-                data = line[5:].strip()
-                if data == "[DONE]":
-                    yield f"data: [DONE]\n\n"
-                    return
+            buffer += chunk.decode("utf-8", errors="replace")
+            
+            # Process SSE events
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                line = line.strip()
                 
-                try:
-                    event = json.loads(data)
-                    event_type = event.get("type", "")
+                if not line:
+                    continue
+                
+                # Handle SSE data: prefix
+                if line.startswith("data:"):
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        yield f"data: [DONE]\n\n"
+                        return
                     
-                    # Handle text delta
-                    if event_type == "response.output_text.delta":
-                        delta_text = event.get("delta", "")
-                        chunk_data = {
-                            "id": stream_id,
-                            "object": "chat.completion.chunk",
-                            "created": timestamp,
-                            "model": model_id,
-                            "choices": [{"index": 0, "delta": {"content": delta_text}, "finish_reason": None}]
-                        }
-                        yield f"data: {json.dumps(chunk_data)}\n\n"
-                    
-                    # Handle reasoning/thinking delta (Responses API reasoning events)
-                    elif event_type in ("response.reasoning_summary_text.delta", "response.reasoning.delta"):
-                        reasoning_text = event.get("delta", "")
-                        if reasoning_text:
-                            chunk_data = {
+                    try:
+                        event = json.loads(data)
+                        event_type = event.get("type", "")
+
+                        # Debug: log event types
+                        log.info(f"Responses API event: type={event_type}")
+
+                        # Handle text delta (main response content)
+                        if event_type == "response.output_text.delta":
+                            delta_text = event.get("delta", "")
+                            yield f"data: {json.dumps(create_chunk(delta_content=delta_text))}\n\n"
+                        
+                        # Handle reasoning/thinking delta - just forward as reasoning_content
+                        # middleware.py will handle the <details> tag wrapping
+                        elif event_type in ("response.reasoning_summary_text.delta", "response.reasoning.delta"):
+                            reasoning_text = event.get("delta", "")
+                            if reasoning_text:
+                                yield f"data: {json.dumps(create_chunk(reasoning_content=reasoning_text))}\n\n"
+
+                        
+                        # Handle completion (OpenAI uses "response.completed", not "response.done")
+                        elif event_type in ("response.completed", "response.done"):
+                            # Log full event for debugging
+                            log.info(f"Completion event received: {json.dumps(event, default=str)[:1000]}")
+
+                            # Extract usage info from completion event
+                            response_data = event.get("response", {})
+                            usage = response_data.get("usage", {})
+
+                            # Also try to get usage directly from event (some APIs put it there)
+                            if not usage:
+                                usage = event.get("usage", {})
+                            
+                            # Extract usage data
+                            usage_data = None
+                            if usage:
+                                log.info(f"Extracted usage from Responses API: {usage}")
+                                usage_data = {
+                                    "prompt_tokens": usage.get("input_tokens", 0),
+                                    "completion_tokens": usage.get("output_tokens", 0),
+                                    "total_tokens": usage.get("input_tokens", 0) + usage.get("output_tokens", 0)
+                                }
+
+                                # Extract reasoning_tokens and put in completion_tokens_details (frontend expects this structure)
+                                output_details = usage.get("output_tokens_details", {})
+                                if isinstance(output_details, dict):
+                                    reasoning_tokens = output_details.get("reasoning_tokens", 0)
+                                    if reasoning_tokens:
+                                        usage_data["completion_tokens_details"] = {"reasoning_tokens": reasoning_tokens}
+
+                                # Extract cached_tokens and put in prompt_tokens_details (frontend expects this structure)
+                                input_details = usage.get("input_tokens_details", {})
+                                if isinstance(input_details, dict):
+                                    cached_tokens = input_details.get("cached_tokens", 0)
+                                    if cached_tokens:
+                                        usage_data["prompt_tokens_details"] = {"cached_tokens": cached_tokens}
+                                
+                                log.info(f"Using usage data: {usage_data}")
+                            else:
+                                log.warning(f"No usage found in response.completed event. response_data keys: {list(response_data.keys())}")
+                            
+                            # Send finish chunk with usage info (OpenAI spec)
+                            finish_chunk = {
                                 "id": stream_id,
                                 "object": "chat.completion.chunk",
                                 "created": timestamp,
                                 "model": model_id,
-                                "choices": [{"index": 0, "delta": {"reasoning_content": reasoning_text}, "finish_reason": None}]
+                                "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]
                             }
-                            yield f"data: {json.dumps(chunk_data)}\n\n"
-                    
-                    # Handle completion
-                    elif event_type == "response.done":
-                        # Send finish chunk
-                        finish_chunk = {
-                            "id": stream_id,
-                            "object": "chat.completion.chunk",
-                            "created": timestamp,
-                            "model": model_id,
-                            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]
-                        }
-                        yield f"data: {json.dumps(finish_chunk)}\n\n"
-                        yield f"data: [DONE]\n\n"
-                        return
-                    
-                    # Handle errors
-                    elif event_type == "error":
-                        error_msg = event.get("error", {}).get("message", "Unknown error")
-                        error_chunk = {
-                            "error": {
-                                "message": error_msg,
-                                "type": "api_error",
-                                "code": "responses_api_error"
-                            }
-                        }
-                        yield f"data: {json.dumps(error_chunk)}\n\n"
-                        yield f"data: [DONE]\n\n"
-                        return
+                            
+                            if usage_data:
+                                finish_chunk["usage"] = usage_data
+
+                            yield f"data: {json.dumps(finish_chunk)}\n\n"
+                            yield f"data: [DONE]\n\n"
+                            return
                         
-                except json.JSONDecodeError:
-                    log.warning(f"Failed to decode Responses API event: {data[:100]}")
-                    continue
+                        # Handle errors
+                        elif event_type == "error":
+                            error_msg = event.get("error", {}).get("message", "Unknown error")
+                            error_chunk = {
+                                "error": {
+                                    "message": error_msg,
+                                    "type": "api_error",
+                                    "code": "responses_api_error"
+                                }
+                            }
+                            yield f"data: {json.dumps(error_chunk)}\n\n"
+                            yield f"data: [DONE]\n\n"
+                            return
+                            
+                    except json.JSONDecodeError:
+                        log.warning(f"Failed to decode Responses API event: {data[:100]}")
+                        continue
+    
+
+    except aiohttp.ClientPayloadError as e:
+        # Handle transfer encoding errors (e.g., stream interrupted)
+        # This often means the API returned an error mid-stream
+        log.error(f"Stream payload error: {e}")
+        
+        # Try to extract any error message from the buffer
+        error_message = f"Stream interrupted: {str(e)}"
+        if buffer:
+            log.error(f"Buffer content at error: {buffer[:500]}")
+            # Try to parse any JSON error in the buffer
+            try:
+                # Look for JSON object in buffer
+                import re
+                json_match = re.search(r'\{[^{}]*"error"[^{}]*\}', buffer)
+                if json_match:
+                    error_data = json.loads(json_match.group())
+                    if "error" in error_data:
+                        err = error_data["error"]
+                        if isinstance(err, dict):
+                            error_message = err.get("message", error_message)
+                        else:
+                            error_message = str(err)
+            except Exception:
+                pass
+        
+        error_chunk = {
+            "error": {
+                "message": error_message,
+                "type": "stream_error",
+                "code": "transfer_encoding_error"
+            }
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
+    except Exception as e:
+        log.error(f"Stream processing error: {e}")
+        error_chunk = {
+            "error": {
+                "message": f"Stream error: {str(e)}",
+                "type": "stream_error",
+                "code": "unknown_error"
+            }
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
     
     # Ensure we always send [DONE]
     yield f"data: [DONE]\n\n"
@@ -1305,6 +1450,19 @@ async def generate_chat_completion(
             log.info(f"Image edit mode: Trimmed messages from {original_count} to {len(new_messages)} to save tokens")
         else:
             log.warning(f"Image edit mode: Aborted optimization. Found Image: {bool(last_image_msg)}, Found User Msg: {bool(last_user_msg)}. Sending original messages.")
+
+    # Force add stream_options if streaming is enabled to always get usage data
+    # NOTE: Responses API does not support stream_options, it includes usage in response.completed event
+    if payload.get("stream", False) and "stream_options" not in payload and not use_responses_api:
+        payload["stream_options"] = {"include_usage": True}
+        log.info(f"[DEBUG] Forced stream_options: {payload['stream_options']}")
+    elif "stream_options" in payload:
+        if use_responses_api:
+            # Remove stream_options for Responses API as it's not supported
+            del payload["stream_options"]
+            log.info("[DEBUG] Removed stream_options for Responses API (not supported)")
+        else:
+            log.info(f"[DEBUG] stream_options in payload: {payload.get('stream_options')}")
 
     payload = json.dumps(payload)
 

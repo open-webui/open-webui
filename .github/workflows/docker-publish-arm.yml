@@ -1,6 +1,8 @@
 name: Build and Push Docker Image (ARM64)
 
 on:
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
 
 env:

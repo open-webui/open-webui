@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n = getContext('i18n') as Writable<i18nType>;
 
 	import { settings } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
@@ -20,6 +23,27 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from './common/Textarea.svelte';
 
+	// 连接配置接口
+	interface ConnectionConfig {
+		enable?: boolean;
+		tags?: Array<{ name: string }>;
+		prefix_id?: string;
+		remark?: string;
+		model_ids?: string[];
+		connection_type?: string;
+		auth_type?: string;
+		headers?: Record<string, string>;
+		azure?: boolean;
+		api_version?: string;
+		use_responses_api?: boolean;
+	}
+
+	interface Connection {
+		url: string;
+		key: string;
+		config: ConnectionConfig;
+	}
+
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
 
@@ -30,7 +54,7 @@
 	export let gemini = false;
 	export let direct = false;
 
-	export let connection = null;
+	export let connection: Connection | null = null;
 
 	let url = '';
 	let key = '';
@@ -48,10 +72,10 @@
 
 	let headers = '';
 
-	let tags = [];
+	let tags: Array<{ name: string }> = [];
 
 	let modelId = '';
-	let modelIds = [];
+	let modelIds: string[] = [];
 
 	let useResponsesApi = false;
 
@@ -264,7 +288,7 @@
 </script>
 
 <Modal size="sm" bind:show>
-	<div>
+	<div class="select-text">
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
 			<h1 class="text-lg font-medium self-center font-primary">
 				{#if edit}
@@ -562,21 +586,30 @@
 						{/if}
 
 						{#if !ollama && !direct && !gemini && !azure}
-							<div class="flex flex-row justify-between items-center w-full mt-2">
-								<Tooltip
-									content={$i18n.t('Use OpenAI Responses API instead of Chat Completions API')}
-								>
-									<div
-										class={`mb-0.5 text-xs text-gray-500
-									${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+							<div class="flex flex-col w-full mt-2">
+								<div class="flex flex-row justify-between items-center">
+									<Tooltip
+										content={$i18n.t('Use OpenAI Responses API instead of Chat Completions API')}
 									>
-										{$i18n.t('Use Responses API')}
-									</div>
-								</Tooltip>
+										<div
+											class={`mb-0.5 text-xs text-gray-500
+									${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+										>
+											{$i18n.t('Use Responses API')}
+										</div>
+									</Tooltip>
 
-								<div class="flex flex-col shrink-0">
-									<Switch bind:state={useResponsesApi} />
+									<div class="flex flex-col shrink-0">
+										<Switch bind:state={useResponsesApi} />
+									</div>
 								</div>
+								{#if useResponsesApi}
+									<div class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+										{$i18n.t(
+											'⚠️ Please ensure the current site supports Responses format before enabling, otherwise errors will occur!'
+										)}
+									</div>
+								{/if}
 							</div>
 						{/if}
 

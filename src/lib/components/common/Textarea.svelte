@@ -4,17 +4,17 @@
 	export let value = '';
 	export let placeholder = '';
 	export let rows = 1;
-	export let minSize = null;
-	export let maxSize = null;
+	export let minSize: number | null = null;
+	export let maxSize: number | null = null;
 	export let required = false;
 	export let readonly = false;
 	export let className =
 		'w-full rounded-lg px-3.5 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden  h-full';
 
-	export let onInput = () => {};
+	export let onInput: (e?: Event) => void = () => {};
 	export let onBlur = () => {};
 
-	let textareaElement;
+	let textareaElement: HTMLTextAreaElement | null = null;
 
 	// Adjust height on mount and after setting the element.
 	onMount(async () => {
@@ -67,4 +67,4 @@
 		resize();
 	}}
 	on:blur={onBlur}
-/>
+></textarea>

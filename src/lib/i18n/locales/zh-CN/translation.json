@@ -1838,6 +1838,7 @@
 	"Use Chat Completions API": "使用 Chat Completions 接口",
 	"Use Responses API": "使用 Responses API",
 	"Use OpenAI Responses API instead of Chat Completions API": "使用 OpenAI Responses API 替代 Chat Completions API",
+	"⚠️ Please ensure the current site supports Responses format before enabling, otherwise errors will occur!": "⚠️开启前请务必确认当前站点支持Responses格式，否则会报错无法使用！",
 	"Use groups to group your users and assign permissions.": "使用权限组设置用户分组并分配权限",
 	"Use LLM": "使用大语言模型（LLM）",
 	"Use no proxy to fetch page contents.": "不使用代理获取页面内容",

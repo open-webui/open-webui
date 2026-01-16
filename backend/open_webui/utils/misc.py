@@ -676,7 +676,11 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
         stripped = line.strip()
         if not stripped:
             return line
-        
+
+        # Debug: log lines containing usage
+        if b"usage" in stripped:
+            log.info(f"[stream_chunks_handler] Line with usage: {stripped[:500]}")
+
         # Already has SSE prefix (data:, event:, id:, retry:, etc.)
         if stripped.startswith((b"data:", b"event:", b"id:", b"retry:", b":")):
             return line
