@@ -60,13 +60,16 @@ if USE_CUDA.lower() == "true":
 else:
     DEVICE_TYPE = "cpu"
 
-try:
-    import torch
+# MPS (Apple Silicon) detection - only check on macOS outside of Docker
+# Docker containers never have MPS, so skip torch import entirely to save ~200MB memory
+if not DOCKER and sys.platform == "darwin":
+    try:
+        import torch
 
-    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        DEVICE_TYPE = "mps"
-except Exception:
-    pass
+        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            DEVICE_TYPE = "mps"
+    except Exception:
+        pass
 
 ####################################
 # LOGGING
