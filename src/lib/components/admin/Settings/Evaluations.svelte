@@ -143,7 +143,7 @@
 						
 
 						<div class="mb-2.5 flex w-full justify-between">
-							<div class=" text-xs font-medium">{$i18n.t('Per-Chat Randomization')}</div>
+							<div class=" text-xs font-medium">{$i18n.t('Randomize Arena Models per chat')}</div>
 							<Switch bind:state={evaluationConfig.EVALUATION_ARENA_PER_CHAT_RANDOMIZATION} />
 						</div>
 
