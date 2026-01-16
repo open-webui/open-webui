@@ -2016,10 +2016,11 @@ async def process_chat_response(
                     )
 
                     if res and isinstance(res, dict):
-                        if len(res.get("choices", [])) == 1:
-                            response_message = res.get("choices", [])[0].get(
+                        choices = res.get("choices", [])
+                        if len(choices) == 1 and choices[0] is not None:
+                            response_message = choices[0].get(
                                 "message", {}
-                            )
+                            ) or {}
 
                             follow_ups_string = response_message.get(
                                 "content"
@@ -2078,10 +2079,11 @@ async def process_chat_response(
                             )
 
                             if res and isinstance(res, dict):
-                                if len(res.get("choices", [])) == 1:
-                                    response_message = res.get("choices", [])[0].get(
+                                choices = res.get("choices", [])
+                                if len(choices) == 1 and choices[0] is not None:
+                                    response_message = choices[0].get(
                                         "message", {}
-                                    )
+                                    ) or {}
 
                                     title_string = (
                                         response_message.get("content")
@@ -2142,10 +2144,11 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            if len(res.get("choices", [])) == 1:
-                                response_message = res.get("choices", [])[0].get(
+                            choices = res.get("choices", [])
+                            if len(choices) == 1 and choices[0] is not None:
+                                response_message = choices[0].get(
                                     "message", {}
-                                )
+                                ) or {}
 
                                 tags_string = response_message.get(
                                     "content"
@@ -2241,7 +2244,7 @@ async def process_chat_response(
                         )
 
                     choices = response_data.get("choices", [])
-                    if choices and choices[0].get("message", {}).get("content"):
+                    if choices and choices[0] is not None and choices[0].get("message", {}).get("content"):
                         content = response_data["choices"][0]["message"]["content"]
 
                         if content:
@@ -2902,7 +2905,7 @@ async def process_chat_response(
                                             }
                                         )
 
-                                    if not choices:
+                                    if not choices or choices[0] is None:
                                         error = data.get("error", {})
                                         if error:
                                             await event_emitter(
@@ -2915,7 +2918,7 @@ async def process_chat_response(
                                             )
                                         continue
 
-                                    delta = choices[0].get("delta", {})
+                                    delta = choices[0].get("delta", {}) or {}
 
                                     # Handle delta annotations
                                     annotations = delta.get("annotations")
