@@ -1,25 +1,33 @@
-from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from open_webui.test.util.abstract_integration_test import AbstractPostgresTest
+from open_webui.test.util.mock_user import mock_webui_user
 
 
 class TestModels(AbstractPostgresTest):
-    BASE_PATH = "/api/v1/models"
+    BASE_PATH = "/api/v1/models/"
 
     def setup_class(cls):
         super().setup_class()
         from open_webui.models.models import Model
+        from open_webui.models.users import Users
 
         cls.models = Model
+        cls.users = Users
+
+    def setup_method(self):
+        super().setup_method()
+        self.users.insert_new_user(
+            "2", "Admin User", "admin@example.com", "/admin.png", "admin"
+        )
 
     def test_models(self):
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0
 
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.post(
-                self.create_url("/add"),
+                self.create_url("/create"),
                 json={
                     "id": "my-model",
                     "base_model_id": "base-model-id",
@@ -35,12 +43,12 @@ class TestModels(AbstractPostgresTest):
             )
         assert response.status_code == 200
 
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 1
 
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.get(
                 self.create_url(query_params={"id": "my-model"})
             )
@@ -49,13 +57,13 @@ class TestModels(AbstractPostgresTest):
         assert data["id"] == "my-model"
         assert data["name"] == "Hello World"
 
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.delete(
-                self.create_url("/delete?id=my-model")
+                self.create_url("/model/delete?id=my-model")
             )
         assert response.status_code == 200
 
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0

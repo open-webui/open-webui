@@ -1,19 +1,32 @@
-from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from open_webui.test.util.abstract_integration_test import AbstractPostgresTest
+from open_webui.test.util.mock_user import mock_webui_user
 
 
 class TestPrompts(AbstractPostgresTest):
-    BASE_PATH = "/api/v1/prompts"
+    BASE_PATH = "/api/v1/prompts/"
+
+    @classmethod
+    def setup_class(cls):
+        super().setup_class()
+        from open_webui.models.users import Users
+
+        cls.users = Users
+
+    def setup_method(self):
+        super().setup_method()
+        self.users.insert_new_user(
+            "2", "Admin User", "admin@example.com", "/admin.png", "admin"
+        )
 
     def test_prompts(self):
         # Get all prompts
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0
 
         # Create a two new prompts
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.post(
                 self.create_url("/create"),
                 json={
@@ -30,6 +43,7 @@ class TestPrompts(AbstractPostgresTest):
                     "command": "/my-command2",
                     "title": "Hello World 2",
                     "content": "description 2",
+                    "access_control": {"read": ["3"], "write": ["3"]},
                 },
             )
         assert response.status_code == 200
@@ -38,10 +52,10 @@ class TestPrompts(AbstractPostgresTest):
         with mock_webui_user(id="2"):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
-        assert len(response.json()) == 2
+        assert len(response.json()) == 1
 
         # Get prompt by command
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.get(self.create_url("/command/my-command"))
         assert response.status_code == 200
         data = response.json()
@@ -51,7 +65,7 @@ class TestPrompts(AbstractPostgresTest):
         assert data["user_id"] == "2"
 
         # Update prompt
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.post(
                 self.create_url("/command/my-command2/update"),
                 json={
@@ -68,7 +82,7 @@ class TestPrompts(AbstractPostgresTest):
         assert data["user_id"] == "3"
 
         # Get prompt by command
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.get(self.create_url("/command/my-command2"))
         assert response.status_code == 200
         data = response.json()
@@ -78,7 +92,7 @@ class TestPrompts(AbstractPostgresTest):
         assert data["user_id"] == "3"
 
         # Delete prompt
-        with mock_webui_user(id="2"):
+        with mock_webui_user(id="2", role="admin"):
             response = self.fast_api_client.delete(
                 self.create_url("/command/my-command/delete")
             )

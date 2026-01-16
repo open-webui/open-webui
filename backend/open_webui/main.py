@@ -294,7 +294,7 @@ from open_webui.env import (
     RESET_CONFIG_ON_START,
 )
 
-from open_webui.logging import LoggingMiddleware, reconfigure_access_log
+from open_webui.custom_logging import LoggingMiddleware, reconfigure_access_log
 
 from open_webui.utils.models import (
     get_all_models,

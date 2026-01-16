@@ -9,12 +9,11 @@ from pytest_docker.plugin import get_docker_ip
 from fastapi.testclient import TestClient
 from sqlalchemy import text, create_engine
 
-
 log = logging.getLogger(__name__)
 
 
 def get_fast_api_client():
-    from main import app
+    from open_webui.main import app
 
     with TestClient(app) as c:
         return c
@@ -36,7 +35,10 @@ class AbstractIntegrationTest:
                 [f"{key}={value}" for key, value in query_params.items()]
             )
             query_parts = f"?{query_parts}"
-        return "/".join(parts + path_parts) + query_parts
+        url = "/" + "/".join(parts + path_parts)
+        if path.endswith("/") or (path == "" and self.BASE_PATH.endswith("/")):
+            url += "/"
+        return url + query_parts
 
     @classmethod
     def setup_class(cls):
@@ -76,6 +78,15 @@ class AbstractPostgresTest(AbstractIntegrationTest):
                 "POSTGRES_DB": "openwebui",
             }
             cls.docker_client = docker.from_env()
+
+            # Cleanup existing container if it exists
+            try:
+                cls.docker_client.containers.get(cls.DOCKER_CONTAINER_NAME).remove(
+                    force=True
+                )
+            except Exception:
+                pass
+
             cls.docker_client.containers.run(
                 "postgres:16.2",
                 detach=True,
@@ -84,10 +95,16 @@ class AbstractPostgresTest(AbstractIntegrationTest):
                 ports={5432: ("0.0.0.0", 8081)},
                 command="postgres -c log_statement=all",
             )
-            time.sleep(0.5)
+            time.sleep(1)
 
             database_url = cls._create_db_url(env_vars_postgres)
             os.environ["DATABASE_URL"] = database_url
+
+            # Add open_webui.env.DATABASE_URL
+            import open_webui.env
+
+            open_webui.env.DATABASE_URL = database_url
+
             retries = 10
             db = None
             while retries > 0:
@@ -102,9 +119,37 @@ class AbstractPostgresTest(AbstractIntegrationTest):
                     retries -= 1
 
             if db:
+                db.close()
+
+                # Add open_webui.internal.db module
+                from open_webui.internal import db as db_module
+                from sqlalchemy.orm import scoped_session, sessionmaker
+
+                # Re-create engine with new URL
+                new_engine = create_engine(database_url, pool_pre_ping=True)
+                db_module.engine = new_engine
+                db_module.SessionLocal = sessionmaker(
+                    autocommit=False,
+                    autoflush=False,
+                    bind=new_engine,
+                    expire_on_commit=False,
+                )
+                db_module.Session = scoped_session(db_module.SessionLocal)
+
+                # Run migrations on the new DB
+                try:
+                    db_module.handle_peewee_migration(database_url)
+                except Exception as e:
+                    log.warning(f"Peewee migration failed: {e}")
+
+                try:
+                    db_module.run_migrations()
+                except Exception as e:
+                    log.error(f"Alembic migration failed: {e}")
+                    raise e
+
                 # import must be after setting env!
                 cls.fast_api_client = get_fast_api_client()
-                db.close()
             else:
                 raise Exception("Could not connect to Postgres")
         except Exception as ex:

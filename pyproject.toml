@@ -64,3 +64,9 @@ skip = '.git*,*.svg,package-lock.json,i18n,*.lock,*.css,*-bundle.js,locales,exam
 check-hidden = true
 # ignore-regex = ''
 ignore-words-list = 'ans'
+
+[tool.pytest.ini_options]
+# Add the root of the project to the Python path to resolve imports like open_webui.app
+pythonpath = ["backend","backend/open_webui"]
+# Define the directory where pytest should look for tests
+testpaths = ["backend/open_webui/test"]

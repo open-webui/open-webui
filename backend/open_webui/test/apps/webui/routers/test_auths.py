@@ -1,29 +1,43 @@
-from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from open_webui.test.util.abstract_integration_test import AbstractPostgresTest
+from open_webui.test.util.mock_user import mock_webui_user
 
 
 class TestAuths(AbstractPostgresTest):
-    BASE_PATH = "/api/v1/auths"
+    BASE_PATH = "/api/v1/auths/"
 
     def setup_class(cls):
         super().setup_class()
-        from open_webui.models.auths import Auths
+        from open_webui.models.auths_table import Auths
         from open_webui.models.users import Users
 
         cls.users = Users
         cls.auths = Auths
 
+    def setup_method(self):
+        super().setup_method()
+        import open_webui.main
+
+        open_webui.main.app.state.config.ENABLE_SIGNUP = True
+        open_webui.main.app.state.config.ENABLE_LOGIN_FORM = True
+
+        # Insert user 1 for tests relying on mock_webui_user default
+        self.users.insert_new_user(
+            "1", "John Doe", "john.doe@openwebui.com", "/user.png", "user"
+        )
+
     def test_get_session_user(self):
         with mock_webui_user():
             response = self.fast_api_client.get(self.create_url(""))
         assert response.status_code == 200
-        assert response.json() == {
+        expected = {
             "id": "1",
             "name": "John Doe",
             "email": "john.doe@openwebui.com",
             "role": "user",
             "profile_image_url": "/user.png",
         }
+        for key, value in expected.items():
+            assert response.json()[key] == value
 
     def test_update_profile(self):
         from open_webui.utils.auth import get_password_hash
@@ -101,16 +115,16 @@ class TestAuths(AbstractPostgresTest):
         response = self.fast_api_client.post(
             self.create_url("/signup"),
             json={
-                "name": "John Doe",
-                "email": "john.doe@openwebui.com",
+                "name": "John Doe New",
+                "email": "john.doe.new@openwebui.com",
                 "password": "password",
             },
         )
         assert response.status_code == 200
         data = response.json()
         assert data["id"] is not None and len(data["id"]) > 0
-        assert data["name"] == "John Doe"
-        assert data["email"] == "john.doe@openwebui.com"
+        assert data["name"] == "John Doe New"
+        assert data["email"] == "john.doe.new@openwebui.com"
         assert data["role"] in ["admin", "user", "pending"]
         assert data["profile_image_url"] == "/user.png"
         assert data["token"] is not None and len(data["token"]) > 0

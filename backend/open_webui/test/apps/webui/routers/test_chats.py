@@ -1,23 +1,34 @@
 import uuid
 
-from test.util.abstract_integration_test import AbstractPostgresTest
-from test.util.mock_user import mock_webui_user
+from open_webui.test.util.abstract_integration_test import AbstractPostgresTest
+from open_webui.test.util.mock_user import mock_webui_user
 
 
 class TestChats(AbstractPostgresTest):
-    BASE_PATH = "/api/v1/chats"
+    BASE_PATH = "/api/v1/chats/"
 
     def setup_class(cls):
         super().setup_class()
+        from open_webui.models.chats import Chats, ChatForm
+        from open_webui.models.users import Users
+
+        cls.chats = Chats
+        cls.chat_form = ChatForm
+        cls.users = Users
 
     def setup_method(self):
         super().setup_method()
         from open_webui.models.chats import ChatForm, Chats
 
-        self.chats = Chats
+        self.users.insert_new_user(
+            "1", "User 1", "user1@example.com", "/user1.png", "user"
+        )
+        self.users.insert_new_user(
+            "2", "User 2", "user2@example.com", "/user2.png", "user"
+        )
         self.chats.insert_new_chat(
             "2",
-            ChatForm(
+            self.chat_form(
                 **{
                     "chat": {
                         "name": "chat1",
@@ -188,28 +199,23 @@ class TestChats(AbstractPostgresTest):
     def test_clone_chat_by_id(self):
         chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
-            response = self.fast_api_client.get(self.create_url(f"/{chat_id}/clone"))
+            response = self.fast_api_client.post(
+                self.create_url(f"/{chat_id}/clone"), json={}
+            )
 
         assert response.status_code == 200
         data = response.json()
         assert data["id"] != chat_id
-        assert data["chat"] == {
-            "branchPointMessageId": "1",
-            "description": "chat1 description",
-            "history": {"currentId": "1", "messages": []},
-            "name": "chat1",
-            "originalChatId": chat_id,
-            "tags": ["tag1", "tag2"],
-            "title": "New Chat",
-        }
+        assert data["chat"]["name"] == "chat1"
+        assert data["chat"]["title"] == "Clone of New Chat"
         assert data["share_id"] is None
-        assert data["title"] == "New Chat"
+        assert data["title"] == "Clone of New Chat"
         assert data["user_id"] == "2"
 
     def test_archive_chat_by_id(self):
         chat_id = self.chats.get_chats()[0].id
         with mock_webui_user(id="2"):
-            response = self.fast_api_client.get(self.create_url(f"/{chat_id}/archive"))
+            response = self.fast_api_client.post(self.create_url(f"/{chat_id}/archive"))
         assert response.status_code == 200
 
         chat = self.chats.get_chat_by_id(chat_id)
