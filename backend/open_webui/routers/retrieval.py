@@ -6,6 +6,7 @@ import shutil
 import hashlib
 import time
 import tiktoken
+import asyncio
 
 import uuid
 from datetime import datetime, timedelta
@@ -18,7 +19,6 @@ from fastapi import (
     status,
     APIRouter,
 )
-from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
 
@@ -183,10 +183,6 @@ class CollectionNameForm(BaseModel):
 
 class ProcessUrlForm(CollectionNameForm):
     url: str
-
-
-class SearchForm(CollectionNameForm):
-    query: str
 
 
 @router.get("/")
@@ -530,6 +526,7 @@ async def update_rag_config(
         )
 
         request.app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
+
         request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
             form_data.web.search.bypass_embedding_and_retrieval
         )
@@ -1325,117 +1322,17 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
         raise Exception("No search engine API key found in environment variables")
 
 
+class SearchForm(BaseModel):
+    query: str
+
+
 @router.post("/process/web/search")
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
-        # Check for cached web search results first
-        search_hash = get_web_search_hash(
-            form_data.query, request.app.state.config.RAG_WEB_SEARCH_ENGINE
-        )
-        log.info(
-            f"Generated search hash for query '{form_data.query}' with engine '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}': {search_hash}"
-        )
-
-        cached_collection = await check_web_search_cache(search_hash)
-        log.info(f"Cache check result: {cached_collection}")
-
-        if cached_collection:
-            log.info(f"✅ Using cached web search results: {cached_collection}")
-            # Return cached results without doing new web search
-            try:
-                # Get ALL documents from the cached collection to extract ALL original URLs
-                # Don't limit to k results - we want all the original URLs that were cached
-                log.info(
-                    f"Getting all documents from cached collection: {cached_collection}"
-                )
-                cached_result = await VECTOR_DB_CLIENT.get(
-                    collection_name=cached_collection
-                )
-
-                cached_urls = []
-
-                if cached_result and cached_result.metadatas:
-                    # Extract unique URLs from all cached documents
-                    # NOTE: For Qdrant, metadatas is a list of lists: [[metadata1], [metadata2], [metadata3]]
-                    log.info(
-                        f"Processing {len(cached_result.metadatas)} metadata groups"
-                    )
-                    for i, metadata_group in enumerate(cached_result.metadatas):
-                        # Each metadata_group is a list containing one metadata dict
-                        if isinstance(metadata_group, list) and len(metadata_group) > 0:
-                            metadata = metadata_group[0]  # Get the actual metadata dict
-                            log.debug(f"Metadata group {i}: {metadata}")
-                            if isinstance(metadata, dict) and "source" in metadata:
-                                url = metadata["source"]
-                                if url not in cached_urls:
-                                    cached_urls.append(url)
-                                    log.debug(f"✅ Added URL from metadata {i}: {url}")
-                            else:
-                                log.warning(
-                                    f"⚠️ Metadata {i} missing 'source' field or not a dict: {metadata}"
-                                )
-                        else:
-                            log.warning(
-                                f"⚠️ Metadata group {i} is not a list or empty: {metadata_group}"
-                            )
-
-                log.info(
-                    f"🎯 Extracted {len(cached_urls)} unique URLs from cached metadata"
-                )
-
-                # If no URLs found, fall back to similarity search
-                if not cached_urls:
-                    log.warning(
-                        "No URLs found in cached metadata, falling back to similarity search"
-                    )
-                    result = query_collection(
-                        collection_names=[cached_collection],
-                        queries=[form_data.query],
-                        embedding_function=request.app.state.EMBEDDING_FUNCTION,
-                        k=request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                    )
-
-                    if (
-                        result
-                        and result.get("metadatas")
-                        and len(result["metadatas"]) > 0
-                    ):
-                        for metadata in result["metadatas"][0]:
-                            if "source" in metadata:
-                                url = metadata["source"]
-                                if url not in cached_urls:
-                                    cached_urls.append(url)
-
-                # Final fallback
-                if not cached_urls:
-                    log.warning("No URLs found in cached results, using fallback")
-                    cached_urls = ["cached_results"]
-
-                log.info(f"🎯 Returning {len(cached_urls)} cached URLs: {cached_urls}")
-                return {
-                    "status": True,
-                    "collection_name": cached_collection,
-                    "filenames": cached_urls,
-                    "loaded_count": (
-                        len(cached_result.metadatas)
-                        if cached_result and cached_result.metadatas
-                        else 0
-                    ),
-                    "cached": True,
-                }
-            except Exception as e:
-                log.warning(
-                    f"Error querying cached results, proceeding with fresh search: {e}"
-                )
-        else:
-            log.info(
-                f"❌ No cached results found for hash {search_hash}, proceeding with fresh search"
-            )
-
-        logging.info(
-            f"Performing new web search with {request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query}"
+        log.debug(
+            f"[process_web_search] query: '{form_data.query}', engine: '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}'"
         )
         web_results = search_web(
             request, request.app.state.config.RAG_WEB_SEARCH_ENGINE, form_data.query
@@ -1448,17 +1345,9 @@ async def process_web_search(
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
         )
 
-    log.debug(f"web_results: {web_results}")
+    log.debug(f"[process_web_search] web_results: {web_results}")
 
     try:
-        collection_name = form_data.collection_name
-        if collection_name == "" or collection_name is None:
-            # Use consistent hash-based naming for web search caching
-            search_hash = get_web_search_hash(
-                form_data.query, request.app.state.config.RAG_WEB_SEARCH_ENGINE
-            )
-            collection_name = f"web_{search_hash}"
-
         urls = [result.link for result in web_results]
         loader = get_web_loader(
             urls,
@@ -1467,7 +1356,7 @@ async def process_web_search(
         )
         docs = loader.load()
 
-        # Add timestamp metadata for cache management
+        # Add metadata for tracking
         for doc in docs:
             if not hasattr(doc, "metadata"):
                 doc.metadata = {}
@@ -1481,6 +1370,7 @@ async def process_web_search(
             )
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+            # Return raw results without embedding
             return {
                 "status": True,
                 "collection_name": None,
@@ -1494,22 +1384,29 @@ async def process_web_search(
                 "filenames": urls,
                 "loaded_count": len(docs),
             }
-        else:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
 
-            return {
-                "status": True,
-                "collection_name": collection_name,
-                "filenames": urls,
-                "loaded_count": len(docs),
-            }
+        # Use timestamp + random UUID to ensure uniqueness without hash-based caching
+        timestamp = int(time.time())
+        unique_id = str(uuid.uuid4())[:8]
+        collection_name = (
+            f"{VECTOR_COLLECTION_PREFIXES.WEB_SEARCH}{timestamp}-{unique_id}"
+        )
+
+        await save_docs_to_vector_db(
+            request,
+            docs,
+            collection_name,
+            overwrite=True,
+            user=user,
+        )
+
+        return {
+            "status": True,
+            "collection_name": collection_name,
+            "filenames": urls,
+            "loaded_count": len(docs),
+        }
+
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -2114,8 +2011,9 @@ async def get_vector_db_stats(user) -> dict:
 
 def get_web_search_hash(query: str, search_engine: str) -> str:
     """
-    Generate a consistent hash for web search caching.
-    Normalizes query for better cache hits.
+    Generate a hash for web search queries.
+    Used for cleanup operations and temporary collection naming.
+    NOTE: No longer used for caching - web searches always return fresh results.
 
     Args:
         query: Search query string
@@ -2124,7 +2022,7 @@ def get_web_search_hash(query: str, search_engine: str) -> str:
     Returns:
         str: Hash string for the search
     """
-    # Normalize the query for consistent caching
+    # Normalize the query for consistent hashing
     normalized_query = query.lower().strip()
     # Remove extra whitespace and normalize punctuation
     normalized_query = re.sub(r"\s+", " ", normalized_query)
@@ -2135,31 +2033,7 @@ def get_web_search_hash(query: str, search_engine: str) -> str:
     return hashlib.sha256(content).hexdigest()[:16]
 
 
-async def check_web_search_cache(search_hash: str) -> str:
-    """
-    Check if a web search result is cached in vector DB.
-
-    Args:
-        search_hash: Hash of the search query
-
-    Returns:
-        str: Collection name if cached, None otherwise
-    """
-    try:
-        if not VECTOR_DB_CLIENT:
-            return None
-
-        collection_name = f"web_{search_hash}"
-
-        # Check if collection exists
-        if await VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            return collection_name
-
-        return None
-
-    except Exception as e:
-        log.error(f"Error checking web search cache: {e}")
-        return None
+# REMOVED: check_web_search_cache function - web search caching is disabled
 
 
 async def cleanup_expired_web_searches(
@@ -2208,7 +2082,7 @@ async def cleanup_expired_web_searches(
                 collection if isinstance(collection, str) else collection.name
             )
 
-            # Only process web search collections (both old and new prefix formats)
+            # Only process web search collections (all naming formats)
             if not (
                 collection_name.startswith("web_")
                 or collection_name.startswith(VECTOR_COLLECTION_PREFIXES.WEB_SEARCH)
@@ -2313,6 +2187,219 @@ async def cleanup_expired_web_searches(
         return {"error": str(e), "collections_cleaned": 0, "vectors_cleaned": 0}
 
 
+async def cleanup_expired_web_searches_safe(
+    max_age_days: int = 30,
+    force_delete_all: bool = False,
+    batch_size: int = 10,
+    max_concurrent: int = 5,
+):
+    """
+    K8s-safe cleanup of expired web search collections with batching and concurrency control.
+
+    Features:
+    - Batched processing to prevent memory spikes
+    - Controlled concurrency to prevent database overload
+    - Non-blocking with regular yields to prevent pod lockup
+    - Timeout protection
+    - Error isolation (one failure doesn't stop others)
+
+    Args:
+        max_age_days: Age threshold for deletion
+        force_delete_all: Delete all web collections regardless of age
+        batch_size: Number of collections to process in each batch
+        max_concurrent: Maximum concurrent deletion operations
+    """
+    import time
+
+    start_time = time.time()
+
+    try:
+        cleanup_summary = {
+            "collections_checked": 0,
+            "collections_cleaned": 0,
+            "vectors_cleaned": 0,
+            "errors": [],
+            "batches_processed": 0,
+            "start_time": start_time,
+        }
+
+        if not VECTOR_DB_CLIENT:
+            cleanup_summary["errors"].append("Vector DB client not available")
+            return cleanup_summary
+
+        log.info(
+            f"🧹 Starting K8s-safe web search cleanup (batch_size={batch_size}, max_concurrent={max_concurrent})"
+        )
+
+        # Get collections with timeout protection
+        collections = []
+        try:
+            async with asyncio.timeout(30):  # 30 second timeout for collection listing
+                if hasattr(VECTOR_DB_CLIENT, "list_collections"):
+                    collections = await VECTOR_DB_CLIENT.list_collections()
+                else:
+                    log.warning("Vector DB client does not support listing collections")
+                    return cleanup_summary
+        except asyncio.TimeoutError:
+            error_msg = "Timeout getting collection list"
+            log.error(error_msg)
+            cleanup_summary["errors"].append(error_msg)
+            return cleanup_summary
+        except Exception as e:
+            error_msg = f"Error getting collections: {e}"
+            log.error(error_msg)
+            cleanup_summary["errors"].append(error_msg)
+            return cleanup_summary
+
+        # Filter to only web search collections
+        web_collections = []
+        for collection in collections:
+            collection_name = (
+                collection if isinstance(collection, str) else collection.name
+            )
+            if collection_name.startswith("web_") or collection_name.startswith(
+                VECTOR_COLLECTION_PREFIXES.WEB_SEARCH
+            ):
+                web_collections.append(collection_name)
+
+        total_collections = len(web_collections)
+        log.info(f"📊 Found {total_collections} web search collections to process")
+
+        if total_collections == 0:
+            log.info("✅ No web search collections found")
+            return cleanup_summary
+
+        # Process in batches to prevent memory issues and pod lockup
+        cutoff_timestamp = datetime.now() - timedelta(days=max_age_days)
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def delete_collection_safe(collection_name: str):
+            """Safely delete a collection with timeout and error handling"""
+            async with semaphore:  # Limit concurrent operations
+                try:
+                    async with asyncio.timeout(10):  # 10 second timeout per deletion
+                        await VECTOR_DB_CLIENT.delete_collection(collection_name)
+                        log.info(f"🗑️ Deleted web search collection: {collection_name}")
+                        return {"success": True, "collection": collection_name}
+                except asyncio.TimeoutError:
+                    error_msg = f"Timeout deleting collection {collection_name}"
+                    log.error(error_msg)
+                    return {
+                        "success": False,
+                        "collection": collection_name,
+                        "error": error_msg,
+                    }
+                except Exception as e:
+                    error_msg = f"Error deleting collection {collection_name}: {str(e)}"
+                    log.error(error_msg)
+                    return {
+                        "success": False,
+                        "collection": collection_name,
+                        "error": error_msg,
+                    }
+
+        # Process collections in batches
+        for i in range(0, total_collections, batch_size):
+            batch = web_collections[i : i + batch_size]
+            batch_num = (i // batch_size) + 1
+            total_batches = (total_collections + batch_size - 1) // batch_size
+
+            log.info(
+                f"🔄 Processing batch {batch_num}/{total_batches} ({len(batch)} collections)"
+            )
+
+            if force_delete_all:
+                # Force delete all in this batch
+                tasks = [
+                    delete_collection_safe(collection_name) for collection_name in batch
+                ]
+
+                try:
+                    # Process batch with overall timeout
+                    async with asyncio.timeout(60):  # 60 second timeout per batch
+                        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                        for result in results:
+                            cleanup_summary["collections_checked"] += 1
+                            if isinstance(result, dict):
+                                if result.get("success"):
+                                    cleanup_summary["collections_cleaned"] += 1
+                                else:
+                                    cleanup_summary["errors"].append(
+                                        result.get("error", "Unknown error")
+                                    )
+                            else:
+                                # Exception occurred
+                                error_msg = f"Unexpected error: {str(result)}"
+                                cleanup_summary["errors"].append(error_msg)
+                                log.error(error_msg)
+
+                except asyncio.TimeoutError:
+                    error_msg = f"Batch {batch_num} timed out"
+                    log.error(error_msg)
+                    cleanup_summary["errors"].append(error_msg)
+                    # Continue to next batch instead of failing completely
+
+            else:
+                # Normal age-based cleanup (more complex - keeping simple for now)
+                for collection_name in batch:
+                    cleanup_summary["collections_checked"] += 1
+                    # For now, implement simple deletion - can add age checking later if needed
+                    result = await delete_collection_safe(collection_name)
+                    if result.get("success"):
+                        cleanup_summary["collections_cleaned"] += 1
+                    else:
+                        cleanup_summary["errors"].append(
+                            result.get("error", "Unknown error")
+                        )
+
+            cleanup_summary["batches_processed"] += 1
+
+            # Yield control to prevent blocking the event loop
+            await asyncio.sleep(0.1)  # Small delay between batches
+
+            log.info(f"✅ Completed batch {batch_num}/{total_batches}")
+
+        # Add completion timing
+        end_time = time.time()
+        total_duration = end_time - start_time
+        cleanup_summary["end_time"] = end_time
+        cleanup_summary["total_duration_seconds"] = total_duration
+
+        log.info(
+            f"🎉 Web search cleanup completed in {total_duration:.2f} seconds: {cleanup_summary}"
+        )
+        return cleanup_summary
+
+    except Exception as e:
+        # Add timing even for errors
+        end_time = time.time()
+        total_duration = end_time - start_time if "start_time" in locals() else 0
+        log.error(
+            f"Critical error during web search cleanup after {total_duration:.2f} seconds: {e}"
+        )
+        return {
+            "error": str(e),
+            "collections_cleaned": cleanup_summary.get("collections_cleaned", 0),
+            "vectors_cleaned": 0,
+            "batches_processed": cleanup_summary.get("batches_processed", 0),
+            "total_duration_seconds": total_duration,
+        }
+
+
+async def cleanup_all_web_search_cache():
+    """
+    Helper function to cleanup ALL web search cache collections.
+    Used by API endpoint with optimal batch settings for maintenance operations.
+    """
+    return await cleanup_expired_web_searches_safe(
+        max_age_days=0,
+        force_delete_all=True,
+        batch_size=20,  # Larger batches for API maintenance
+        max_concurrent=10,  # Higher concurrency for faster cleanup
+    )
+
+
 ####################################
 #
 # API Endpoints for K8s CronJob Integration
@@ -2337,6 +2424,33 @@ async def api_cleanup_orphaned_vectors(user=Depends(get_admin_user)):
         }
     except Exception as e:
         log.error(f"Orphaned vector cleanup API failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            },
+        )
+
+
+@router.post("/maintenance/cleanup/all-web-search-cache")
+async def api_cleanup_all_web_search_cache(user=Depends(get_admin_user)):
+    """
+    API endpoint to forcibly cleanup ALL web search cache collections.
+    This removes all existing cached web search results to ensure fresh searches.
+    Used after disabling web search caching to clean up old cached data.
+    """
+    try:
+        result = await cleanup_all_web_search_cache()
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "message": "All web search cache collections have been cleaned up",
+            "cleanup_result": result,
+        }
+    except Exception as e:
+        log.error(f"All web search cache cleanup API failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={

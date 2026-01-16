@@ -463,8 +463,9 @@ async def get_sources_from_files(
             if full_context:
                 try:
                     context = await get_all_items_from_collections(collection_names)
-
-                    print("context", context)
+                    log.debug(
+                        f"[get_sources_from_files] Full context retrieved: {context}"
+                    )
                 except Exception as e:
                     log.exception(e)
 

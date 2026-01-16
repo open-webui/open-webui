@@ -1193,7 +1193,7 @@ async def chat_completion_files_handler(
         except Exception as e:
             log.exception(e)
 
-        log.debug(f"rag_contexts:sources: {sources}")
+        log.debug(f"[chat_completion_file_handler] rag contexts sources: {sources}")
 
     return body, {"sources": sources}
 
@@ -1425,18 +1425,22 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                         context_string += f"<source><source_context>{doc_context}</source_context></source>\n"
 
         context_string = context_string.strip()
-        log.info(f"Generated context string length: {len(context_string)}")
-        log.info(
+        log.debug(f"Generated context string length: {len(context_string)}")
+        log.debug(
             f"Context string preview: {context_string[:500]}..."
         )  # Log first 500 chars
 
-        # Debug: Log the complete context structure for tools
-        if any(
-            "TOOL:" in source.get("source", {}).get("name", "") for source in sources
+        if (
+            log.isEnabledFor(logging.DEBUG)
+            and sources
+            and any(
+                "TOOL:" in source.get("source", {}).get("name", "")
+                for source in sources
+            )
         ):
-            log.info("=== COMPLETE TOOL CONTEXT DEBUG ===")
-            log.info(f"Full context string: {context_string}")
-            log.info("=== END COMPLETE TOOL CONTEXT DEBUG ===")
+            log.debug("=== COMPLETE TOOL CONTEXT DEBUG ===")
+            log.debug(f"Full context string: {context_string}")
+            log.debug("=== END COMPLETE TOOL CONTEXT DEBUG ===")
 
         prompt = get_last_user_message(form_data["messages"])
 
@@ -1455,8 +1459,8 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         rag_content = rag_template(
             request.app.state.config.RAG_TEMPLATE, context_string, prompt
         )
-        log.info(f"RAG template content length: {len(rag_content)}")
-        log.info(f"RAG template preview: {rag_content[:500]}...")
+        log.debug(f"RAG template content length: {len(rag_content)}")
+        log.debug(f"RAG template preview: {rag_content[:500]}...")
 
         if model["owned_by"] == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
@@ -1469,12 +1473,14 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 form_data["messages"],
             )
 
-        # Log the final messages to see what gets sent to the model
-        log.info(f"Final messages count: {len(form_data['messages'])}")
-        for idx, msg in enumerate(form_data["messages"]):
-            log.info(
-                f"Message {idx} ({msg['role']}): {msg['content'][:300]}..."
-            )  # Log first 300 chars
+        # if log level is debug, log the messages being sent to the model
+        if log.isEnabledFor(logging.DEBUG):
+            # Log the final messages to see what gets sent to the model
+            log.debug(f"Final messages count: {len(form_data['messages'])}")
+            for idx, msg in enumerate(form_data["messages"]):
+                log.debug(
+                    f"Message {idx} ({msg['role']}): {msg['content'][:300]}..."
+                )  # Log first 300 chars
 
     # If there are citations, add them to the data_items
     sources = [source for source in sources if source.get("source", {}).get("name", "")]
