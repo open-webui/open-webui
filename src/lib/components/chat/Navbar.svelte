@@ -10,6 +10,7 @@
 		showSidebar,
 		temporaryChatEnabled,
 		user,
+		config,
 		suggestionCycle,
 		ariaMessage
 	} from '$lib/stores';
@@ -91,54 +92,23 @@
 				{/if}
 			</div>
 
-			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
-				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
-				{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
-					<Tooltip content={$i18n.t('Chat Context Menu')}>
-						<Menu
-							{chat}
-							{shareEnabled}
-							buttonID={'chat-context-menu-button' + chat.id}
-							buttonClass="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							ariaLabel={$i18n.t('Chat Context Menu')}
-							shareHandler={() => {
-								showShareChatModal = !showShareChatModal;
-							}}
-							downloadHandler={() => {
-								showDownloadChatModal = !showDownloadChatModal;
-							}}
+			{#if $config?.features?.pbmm_env === true}
+				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400 mr-2">
+					<Tooltip content={$i18n.t('PROTECTED B')}>
+						<div
+							class="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none z-10 hidden sm:block"
 						>
-							<div class=" m-auto self-center">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="size-5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-									/>
-								</svg>
+							<div
+								class="text-xs leading-tight font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest"
+							>
+								{$i18n.t('PROTECTED B')}
 							</div>
-						</Menu>
+						</div>
 					</Tooltip>
-				{:else if $mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
-					<Tooltip content={$i18n.t('Controls')}>
-						<button
-							class="m-auto self-center flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={async () => {
-								await showControls.set(!$showControls);
-							}}
-							aria-label={$i18n.t('Controls')}
-						>
-							<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
-						</button>
-					</Tooltip>
-				{/if}
+				</div>
+			{/if}
+
+			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
