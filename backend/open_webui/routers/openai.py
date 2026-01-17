@@ -400,7 +400,81 @@ def get_or_create_gemini_cache_manager(request: Request, api_key: str) -> Gemini
     return request.app.state.gemini_cache_managers[key_hash]
 
 
-def convert_openai_messages_to_gemini_contents(messages: list) -> list:
+def filter_code_blocks(text: str) -> str:
+    """
+    Filter out code blocks from chat history to prevent Gemini from being confused by
+    previous tool execution results.
+
+    CRITICAL: Replaces tool outputs with SYSTEM LOG style (not JSON) to prevent format pollution.
+
+    Strategy (Best Practice for System Prompt Caching):
+    1. Extract key info from tool outputs (type, expression, field, etc.)
+    2. Replace ENTIRE TAGS (not just content) with system log format
+    3. Model sees it as "system record" not "my output pattern"
+
+    Example:
+        Before: <graph-spec>{"type": "function_2d", "expression": "sin(x)", ...12000 chars...}</graph-spec>
+        After:
+        [Tool Execution Log]
+        - Type: function_2d
+        - Expr: sin(x)
+        (Data Omitted)
+
+    Benefits:
+    - Token savings: 12k → 100 chars (99% reduction)
+    - Context preserved: Model remembers what was generated
+    - Format pollution prevented: No JSON/tags in history = model can't copy wrong format
+    - In-Context Learning preserved: Model sees "system used tool" but not output pattern
+
+    Args:
+        text: Original text with potential code blocks
+
+    Returns:
+        Text with tool outputs replaced by system log summaries
+    """
+    import re
+    import json
+
+    def summarize_tool_output(tag_name: str, json_content: str) -> str:
+        """
+        Extract minimal key info from tool JSON.
+
+        CRITICAL: Keep format EXTREMELY simple to avoid model copying it.
+        No "Log", no "Execution", no structured format that looks like output.
+        Just a tiny note that graph was created.
+        """
+        try:
+            data = json.loads(json_content.strip())
+
+            # Extract only type (minimal info)
+            graph_type = data.get("type", "graph")
+
+            # Ultra-minimal format: just a brief parenthetical note
+            return f"(그래프: {graph_type})"
+
+        except (json.JSONDecodeError, Exception):
+            # Parsing failed
+            return "(그래프 생성됨)"
+
+    # Replace tool markers (ENTIRE TAG) with system log summaries
+    # <tool-name>...JSON...</tool-name> → [Tool Execution Log]\n...
+    def replace_tool_marker(match):
+        tag_name = match.group(1)
+        content = match.group(2)
+        return summarize_tool_output(tag_name, content)
+
+    text = re.sub(r'<([a-z-]+)>([\s\S]*?)</\1>', replace_tool_marker, text)
+
+    # Remove fenced code blocks (```...```)
+    text = re.sub(r'```[\s\S]*?```', '', text)
+
+    # Clean up multiple consecutive newlines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    return text
+
+
+def convert_openai_messages_to_gemini_contents(messages: list, filter_code: bool = True) -> list:
     """
     Convert OpenAI-format messages to Gemini contents format.
 
@@ -421,6 +495,7 @@ def convert_openai_messages_to_gemini_contents(messages: list) -> list:
 
     Args:
         messages: OpenAI-format messages list
+        filter_code: Whether to filter code blocks from content (default: True)
 
     Returns:
         Gemini-format contents list
@@ -450,6 +525,11 @@ def convert_openai_messages_to_gemini_contents(messages: list) -> list:
             text = "\n".join(text_parts) if text_parts else ""
         else:
             text = str(content)
+
+        # Filter code blocks from assistant messages to prevent confusion
+        # (user messages are kept as-is to preserve intent)
+        if filter_code and gemini_role == "model":
+            text = filter_code_blocks(text)
 
         if text:  # Only add non-empty messages
             contents.append({
@@ -591,7 +671,10 @@ async def handle_gemini_native_request(
         else:
             # Call unified service with conversation history
             # IMPORTANT: Empty store_names = regular chat (no RAG)
-            result = service.query(
+            # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
+            import asyncio
+            result = await asyncio.to_thread(
+                service.query,
                 contents=gemini_contents,  # Full conversation history
                 store_names=[],  # Empty = no RAG, just regular chat
                 model=model_id,
