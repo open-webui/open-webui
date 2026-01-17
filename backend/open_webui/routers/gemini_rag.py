@@ -462,7 +462,8 @@ async def query_rag(
     log.info(f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}")
     log.info("="*80)
 
-    composed_system, tool_prompts = compose_with_fallback(
+    # Stage 1 프롬프트 (경량, base만 사용) - Tool gating용
+    composed_gating, tool_prompts = compose_with_fallback(
         group_id=body.prompt_group_id,
         system_prompt=body.system_instruction,
         default_group_id=getattr(
@@ -470,18 +471,34 @@ async def query_rag(
         ),
         proficiency_level=body.proficiency_level,
         response_style=body.response_style,
-        include_tools=False,  # Don't auto-include tools
+        include_tools=False,
+        use_only_base=True  # Stage 1: Base only (~55% token reduction)
     )
 
-    final_system = composed_system if composed_system else body.system_instruction
+    # Stage 2 프롬프트 (전체, base + proficiency + style) - Actual execution용
+    composed_full, _ = compose_with_fallback(
+        group_id=body.prompt_group_id,
+        system_prompt=body.system_instruction,
+        default_group_id=getattr(
+            request.app.state.config, "DEFAULT_PROMPT_GROUP_ID", None
+        ),
+        proficiency_level=body.proficiency_level,
+        response_style=body.response_style,
+        include_tools=False,
+        use_only_base=False  # Stage 2: Full prompt
+    )
+
+    gating_system = composed_gating if composed_gating else body.system_instruction
+    final_system = composed_full if composed_full else body.system_instruction
 
     log.info("="*80)
     log.info("[GEMINI RAG] 최종 시스템 프롬프트:")
-    log.info(f"  조합된 프롬프트 길이: {len(composed_system) if composed_system else 0} 문자")
-    log.info(f"  최종 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
+    log.info(f"  Stage 1 (gating) 프롬프트 길이: {len(gating_system) if gating_system else 0} 문자")
+    log.info(f"  Stage 2 (execution) 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
     log.info(f"  Tool prompts 개수: {len(tool_prompts)}")
     log.info(f"  Tool prompts: {[t.command for t in tool_prompts]}")
-    log.info(f"  내용: {final_system[:500] if final_system else '(없음)'}...")
+    log.info(f"  Stage 1 내용: {gating_system[:300] if gating_system else '(없음)'}...")
+    log.info(f"  Stage 2 내용: {final_system[:300] if final_system else '(없음)'}...")
     log.info("="*80)
 
     # Determine if we should use tool gating
@@ -503,10 +520,13 @@ async def query_rag(
 
         tool_gating_result = execute_with_tool_gating(
             query=body.question,
-            base_system=final_system or "",
+            base_system=gating_system or "",  # Stage 1: Lightweight prompt (base only)
+            full_system=final_system or "",  # Stage 2: Full prompt (base + proficiency + style)
             tool_prompts=tool_prompts,
             llm_call_fn=service.query,
             gating_model=tool_gating_model,
+            cache_gating_stage="gating",  # Enable global caching for Stage 1
+            cache_execution_stage="execution",  # Enable global caching for Stage 2
             store_names=body.store_names,
             model=body.model,
             temperature=body.temperature,
@@ -531,7 +551,8 @@ async def query_rag(
             store_names=body.store_names,
             model=body.model,
             temperature=body.temperature,
-            system_instruction=final_system
+            system_instruction=final_system,
+            cache_stage="execution"  # Enable global caching for legacy mode
         )
 
     # 채팅 생성 및 제목 생성 로직
@@ -655,7 +676,8 @@ async def query_rag_by_chapter(
     log.info(f"  DEFAULT_PROMPT_GROUP_ID: {getattr(request.app.state.config, 'DEFAULT_PROMPT_GROUP_ID', None)}")
     log.info("="*80)
 
-    composed_system, tool_prompts = compose_with_fallback(
+    # Stage 1 프롬프트 (경량, base만 사용) - Tool gating용
+    composed_gating, tool_prompts = compose_with_fallback(
         group_id=prompt_group_id,
         system_prompt=system_instruction,
         default_group_id=getattr(
@@ -663,18 +685,34 @@ async def query_rag_by_chapter(
         ),
         proficiency_level=proficiency_level,
         response_style=response_style,
-        include_tools=False,  # Don't auto-include tools
+        include_tools=False,
+        use_only_base=True  # Stage 1: Base only (~55% token reduction)
     )
 
-    final_system = composed_system if composed_system else system_instruction
+    # Stage 2 프롬프트 (전체, base + proficiency + style) - Actual execution용
+    composed_full, _ = compose_with_fallback(
+        group_id=prompt_group_id,
+        system_prompt=system_instruction,
+        default_group_id=getattr(
+            request.app.state.config, "DEFAULT_PROMPT_GROUP_ID", None
+        ),
+        proficiency_level=proficiency_level,
+        response_style=response_style,
+        include_tools=False,
+        use_only_base=False  # Stage 2: Full prompt
+    )
+
+    gating_system = composed_gating if composed_gating else system_instruction
+    final_system = composed_full if composed_full else system_instruction
 
     log.info("="*80)
     log.info("[GEMINI RAG BY CHAPTER] 최종 시스템 프롬프트:")
-    log.info(f"  조합된 프롬프트 길이: {len(composed_system) if composed_system else 0} 문자")
-    log.info(f"  최종 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
+    log.info(f"  Stage 1 (gating) 프롬프트 길이: {len(gating_system) if gating_system else 0} 문자")
+    log.info(f"  Stage 2 (execution) 프롬프트 길이: {len(final_system) if final_system else 0} 문자")
     log.info(f"  Tool prompts 개수: {len(tool_prompts)}")
     log.info(f"  Tool prompts: {[t.command for t in tool_prompts]}")
-    log.info(f"  내용: {final_system[:500] if final_system else '(없음)'}...")
+    log.info(f"  Stage 1 내용: {gating_system[:300] if gating_system else '(없음)'}...")
+    log.info(f"  Stage 2 내용: {final_system[:300] if final_system else '(없음)'}...")
     log.info("="*80)
 
     # Determine if we should use tool gating
@@ -696,10 +734,13 @@ async def query_rag_by_chapter(
 
         tool_gating_result = execute_with_tool_gating(
             query=question,
-            base_system=final_system or "",
+            base_system=gating_system or "",  # Stage 1: Lightweight prompt (base only)
+            full_system=final_system or "",  # Stage 2: Full prompt (base + proficiency + style)
             tool_prompts=tool_prompts,
             llm_call_fn=service.query,
             gating_model=tool_gating_model,
+            cache_gating_stage="gating",  # Enable global caching for Stage 1
+            cache_execution_stage="execution",  # Enable global caching for Stage 2
             store_names=[store_name],
             model=model,
             temperature=temperature,
@@ -724,7 +765,8 @@ async def query_rag_by_chapter(
             store_names=[store_name],
             model=model,
             temperature=temperature,
-            system_instruction=final_system
+            system_instruction=final_system,
+            cache_stage="execution"  # Enable global caching for legacy mode
         )
 
     # 채팅 생성 및 제목 생성 로직
@@ -824,3 +866,136 @@ async def health_check(request: Request):
             "status": "error",
             "message": str(e)
         }
+
+
+# ============================================================
+# 캐시 관리 API
+# ============================================================
+
+@router.get("/cache/stats")
+async def get_cache_stats(
+    request: Request,
+    user=Depends(get_admin_user)
+):
+    """
+    Get global cache statistics.
+
+    Admin only endpoint to monitor cache usage.
+
+    Returns:
+        - total_caches: Total number of cached contents
+        - max_caches: Maximum allowed caches
+        - by_stage: Count of caches by stage (gating/execution)
+        - by_model: Count of caches by model ID
+        - tool_spec_version: Current tool spec version
+    """
+    api_key = get_gemini_api_key(request)
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Gemini API key not found. Please configure Gemini in OpenAI settings."
+        )
+
+    try:
+        service = get_rag_service(request)
+        stats = service.cache_manager.get_stats()
+
+        return {
+            "status": "ok",
+            **stats
+        }
+    except Exception as e:
+        log.error(f"[CACHE] Failed to get stats: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get cache statistics: {str(e)}"
+        )
+
+
+@router.delete("/cache")
+async def clear_all_caches(
+    request: Request,
+    user=Depends(get_admin_user)
+):
+    """
+    Clear all cached system prompts.
+
+    Admin only endpoint. Use this when you modify prompts and want to
+    force cache regeneration.
+
+    Returns:
+        - deleted_count: Number of caches successfully deleted
+        - failed_count: Number of caches that failed to delete
+        - errors: List of error messages (if any)
+    """
+    api_key = get_gemini_api_key(request)
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Gemini API key not found. Please configure Gemini in OpenAI settings."
+        )
+
+    try:
+        service = get_rag_service(request)
+        result = service.cache_manager.clear_all_caches()
+
+        return {
+            "status": "ok",
+            **result
+        }
+    except Exception as e:
+        log.error(f"[CACHE] Failed to clear all caches: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to clear caches: {str(e)}"
+        )
+
+
+@router.delete("/cache/{stage}")
+async def clear_caches_by_stage(
+    request: Request,
+    stage: str,
+    user=Depends(get_admin_user)
+):
+    """
+    Clear caches for a specific stage.
+
+    Admin only endpoint. Clears only caches for the specified stage
+    (gating or execution).
+
+    Args:
+        stage: Stage to clear ("gating" or "execution")
+
+    Returns:
+        - stage: The stage that was cleared
+        - deleted_count: Number of caches successfully deleted
+        - failed_count: Number of caches that failed to delete
+        - errors: List of error messages (if any)
+    """
+    if stage not in ("gating", "execution"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid stage: {stage}. Must be 'gating' or 'execution'"
+        )
+
+    api_key = get_gemini_api_key(request)
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Gemini API key not found. Please configure Gemini in OpenAI settings."
+        )
+
+    try:
+        service = get_rag_service(request)
+        result = service.cache_manager.clear_caches_by_stage(stage)
+
+        return {
+            "status": "ok",
+            **result
+        }
+    except Exception as e:
+        log.error(f"[CACHE] Failed to clear caches for stage {stage}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to clear caches for stage {stage}: {str(e)}"
+        )

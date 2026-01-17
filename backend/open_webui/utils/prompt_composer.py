@@ -239,6 +239,7 @@ def compose_with_fallback(
     proficiency_level: Optional[str] = None,
     response_style: Optional[str] = None,
     include_tools: bool = False,
+    use_only_base: bool = False,
 ) -> Tuple[Optional[str], List[PromptModel]]:
     """
     Compose prompt with fallback logic.
@@ -256,6 +257,8 @@ def compose_with_fallback(
         proficiency_level: User's proficiency level (string)
         response_style: Desired response style (string)
         include_tools: If True, include tool prompts in composed string (legacy mode)
+        use_only_base: If True, only include base prompts (skip proficiency/style).
+                      Used for tool gating Stage 1 to reduce token count (~55% reduction).
 
     Returns:
         Tuple of (composed_prompt, tool_prompts)
@@ -263,6 +266,12 @@ def compose_with_fallback(
         - tool_prompts: List of tool PromptModel objects (for tool gating)
     """
     tool_prompts = []
+
+    # Optimization: For tool gating Stage 1, only use base prompts
+    if use_only_base:
+        log.info("[PROMPT COMPOSER] use_only_base=True: Skipping proficiency/style prompts for tool gating")
+        proficiency_level = None
+        response_style = None
 
     # Priority 1: Use specified group
     if group_id:
