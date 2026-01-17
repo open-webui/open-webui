@@ -1857,9 +1857,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     file_context_enabled = (
         model.get("info", {})
         .get("meta", {})
-        .get("capabilities", {})
-        .get("file_context", True)
-    )
+        .get("capabilities") or {}
+    ).get("file_context", True)
 
     if file_context_enabled:
         try:
