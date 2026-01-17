@@ -9,7 +9,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, Users, UserResponse
 
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from sqlalchemy import String, cast, or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
@@ -45,6 +45,11 @@ class ModelMeta(BaseModel):
     """
 
     capabilities: Optional[dict] = None
+
+    @field_validator("capabilities", mode="before")
+    @classmethod
+    def capabilities_none_to_empty(cls, value):
+        return value if value is not None else {}
 
     model_config = ConfigDict(extra="allow")
 
