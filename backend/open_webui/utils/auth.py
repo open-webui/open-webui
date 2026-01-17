@@ -174,8 +174,7 @@ def validate_password(password: str) -> bool:
 
     if ENABLE_PASSWORD_VALIDATION:
         if not PASSWORD_VALIDATION_REGEX_PATTERN.match(password):
-            hint_suffix = f"{PASSWORD_VALIDATION_HINT}" if PASSWORD_VALIDATION_HINT else ""
-            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD(hint_suffix))
+            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD(PASSWORD_VALIDATION_HINT))
 
     return True
 
