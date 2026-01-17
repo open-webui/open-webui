@@ -1,7 +1,4 @@
 <script lang="ts">
-	// @ts-ignore
-	import { v4 as uuidv4 } from 'uuid';
-
 	import { toast } from 'svelte-sonner';
 	import { config, models, settings } from '$lib/stores';
 	import { getContext, onMount, tick } from 'svelte';
@@ -21,6 +18,9 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { getOpenAIModels } from '$lib/apis/openai';
+	import { getOpenAIConfig } from '$lib/apis/openai';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -33,6 +33,86 @@
 
 	let PIPELINES_LIST: any[] | null = null;
 	let selectedPipelinesUrlIdx = '';
+
+	// Filtered pipelines list based on detection results
+	$: filteredPipelinesList = PIPELINES_LIST?.filter((item) => {
+		// If no detection has been run, show all URLs
+		if (Object.keys(pipelineUrls).length === 0) {
+			return true;
+		}
+		// Otherwise, only show URLs that support pipelines
+		return pipelineUrls[item.url] === true;
+	}) || [];
+
+	// Pipelines auto-detection settings
+	let autoDetectPipelines = false;
+	let isDetectingPipelines = false;
+	let pipelineUrls: any = {};
+	let OPENAI_API_BASE_URLS: string[] = [];
+	let OPENAI_API_CONFIGS: any = {};
+
+	// Load auto-detect setting and cached pipelines from localStorage
+	const loadPipelineSettings = () => {
+		try {
+			const saved = localStorage.getItem('autoDetectPipelines');
+			autoDetectPipelines = saved === 'true';
+
+			const cached = localStorage.getItem('pipelineUrls');
+			if (cached) {
+				pipelineUrls = JSON.parse(cached);
+			}
+		} catch (e) {
+			console.error('Failed to load pipeline settings:', e);
+		}
+	};
+
+	// Save auto-detect setting to localStorage
+	const saveAutoDetectSetting = () => {
+		localStorage.setItem('autoDetectPipelines', String(autoDetectPipelines));
+	};
+
+	// Detect pipelines support for all URLs
+	const detectPipelines = async () => {
+		if (OPENAI_API_BASE_URLS.length === 0 || isDetectingPipelines) return;
+
+		isDetectingPipelines = true;
+		pipelineUrls = {};
+
+		try {
+			const promises = OPENAI_API_BASE_URLS.map(async (url, idx) => {
+				if (!(OPENAI_API_CONFIGS[idx]?.enable ?? true)) {
+					return;
+				}
+
+				try {
+					const res = await getOpenAIModels(localStorage.token, idx);
+					if (res?.pipelines) {
+						pipelineUrls[url] = true;
+					}
+				} catch (e) {
+					console.error(`Failed to detect pipelines for ${url}:`, e);
+				}
+			});
+
+			await Promise.all(promises);
+
+			// Cache the results
+			localStorage.setItem('pipelineUrls', JSON.stringify(pipelineUrls));
+
+			// Select first detected pipeline URL
+			if (filteredPipelinesList.length > 0) {
+				selectedPipelinesUrlIdx = filteredPipelinesList[0]['idx'].toString();
+				await setPipelines();
+			}
+
+			toast.success($i18n.t('Pipelines detection completed'));
+		} catch (e) {
+			console.error('Pipelines detection error:', e);
+			toast.error($i18n.t('Failed to detect pipelines'));
+		} finally {
+			isDetectingPipelines = false;
+		}
+	};
 
 	let pipelines: any[] | null = null;
 
@@ -82,6 +162,8 @@
 	const getValves = async (idx: any) => {
 		valves = null;
 		valves_spec = null;
+
+		if (!pipelines || !pipelines[idx]) return;
 
 		valves_spec = await getPipelineValvesSpec(
 			localStorage.token,
@@ -191,6 +273,8 @@
 	};
 
 	const deletePipelineHandler = async () => {
+		if (!pipelines || !pipelines[selectedPipelineIdx]) return;
+
 		const res = await deletePipeline(
 			localStorage.token,
 			pipelines[selectedPipelineIdx].id,
@@ -215,14 +299,40 @@
 	};
 
 	onMount(async () => {
+		// Load pipeline detection settings
+		loadPipelineSettings();
+
+		// Load OpenAI config for pipeline detection
+		try {
+			const openaiConfig = await getOpenAIConfig(localStorage.token);
+			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS || [];
+			OPENAI_API_CONFIGS = openaiConfig.OPENAI_API_CONFIGS || {};
+		} catch (e) {
+			console.error('Failed to load OpenAI config:', e);
+		}
+
 		PIPELINES_LIST = await getPipelinesList(localStorage.token);
 		console.log(PIPELINES_LIST);
 
-		if (PIPELINES_LIST && PIPELINES_LIST.length > 0) {
-			selectedPipelinesUrlIdx = PIPELINES_LIST[0]['idx'].toString();
+		// Wait for reactive variables to update
+		await tick();
+
+		// Only auto-select if user has run detection before and found supported URLs
+		const hasRunDetection = Object.keys(pipelineUrls).length > 0;
+		const hasSupportedUrls = Object.values(pipelineUrls).some((supported) => supported === true);
+
+		if (hasRunDetection && hasSupportedUrls && filteredPipelinesList.length > 0) {
+			selectedPipelinesUrlIdx = filteredPipelinesList[0]['idx'].toString();
+			await setPipelines();
+		} else {
+			// If no detection has been run, set pipelines to empty array to stop loading spinner
+			pipelines = [];
 		}
 
-		await setPipelines();
+		// Auto-detect pipelines only if enabled
+		if (autoDetectPipelines && OPENAI_API_BASE_URLS.length > 0) {
+			await detectPipelines();
+		}
 	});
 </script>
 
@@ -234,351 +344,429 @@
 >
 	<div class="overflow-y-scroll scrollbar-hidden h-full">
 		{#if PIPELINES_LIST !== null}
-			<div class="mb-3">
-				<div class="flex items-center gap-2 mb-1">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-						{$i18n.t('Pipelines')}
-					</div>
-				</div>
-
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
-
-				<div class="flex w-full justify-between mb-2">
-					<div class=" self-center text-sm font-medium">
-						{$i18n.t('Manage Pipelines')}
-					</div>
-				</div>
+			<div class="max-w-5xl mx-auto mb-3">
+				<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Pipelines')}</div>
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 			</div>
 
-			{#if PIPELINES_LIST.length > 0}
-				<div class="space-y-1">
-					<div class="flex gap-2">
-						<div class="flex-1">
-							<select
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								bind:value={selectedPipelinesUrlIdx}
-								placeholder={$i18n.t('Select a pipeline url')}
-								on:change={async () => {
-									await tick();
-									await setPipelines();
-								}}
-							>
-								<option value="" selected disabled class="bg-gray-100 dark:bg-gray-700"
-									>{$i18n.t('Select a pipeline url')}</option
-								>
-
-								{#each PIPELINES_LIST as pipelines, idx}
-									<option value={pipelines.idx.toString()} class="bg-gray-100 dark:bg-gray-700"
-										>{pipelines.url}</option
-									>
-								{/each}
-							</select>
-						</div>
-					</div>
-				</div>
-
-				<div class=" my-2">
-					<div class=" mb-2 text-sm font-medium">
-						{$i18n.t('Upload Pipeline')}
-					</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<input
-								id="pipelines-upload-input"
-								bind:files={pipelineFiles}
-								type="file"
-								accept=".py"
-								hidden
-							/>
-
-							<button
-								class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
-								type="button"
-								on:click={() => {
-									document.getElementById('pipelines-upload-input')?.click();
-								}}
-							>
-								{#if pipelineFiles}
-									{pipelineFiles.length > 0 ? `${pipelineFiles.length}` : ''} pipeline(s) selected.
-								{:else}
-									{$i18n.t('Click here to select a py file.')}
-								{/if}
-							</button>
-						</div>
-						<button
-							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-							on:click={() => {
-								uploadPipelineHandler();
-							}}
-							disabled={uploading}
-							type="button"
-						>
-							{#if uploading}
-								<div class="self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-									>
-										<style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style>
-										<path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/>
-										<path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/>
-									</svg>
-								</div>
-							{:else}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="size-4"
-								>
-									<path
-										d="M7.25 10.25a.75.75 0 0 0 1.5 0V4.56l2.22 2.22a.75.75 0 1 0 1.06-1.06l-3.5-3.5a.75.75 0 0 0-1.06 0l-3.5 3.5a.75.75 0 0 0 1.06 1.06l2.22-2.22v5.69Z"
-									/>
-									<path
-										d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-									/>
-								</svg>
-							{/if}
-						</button>
-					</div>
-				</div>
-
-				<div class=" my-2">
-					<div class=" mb-2 text-sm font-medium">
-						{$i18n.t('Install from Github URL')}
-					</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								placeholder={$i18n.t('Enter Github Raw URL')}
-								bind:value={pipelineDownloadUrl}
-							/>
-						</div>
-						<button
-							class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-							on:click={() => {
-								addPipelineHandler();
-							}}
-							disabled={downloading}
-							type="button"
-						>
-							{#if downloading}
-								<div class="self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-									>
-										<style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style>
-										<path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/>
-										<path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/>
-									</svg>
-								</div>
-							{:else}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 16 16"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
-									/>
-									<path
-										d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-									/>
-								</svg>
-							{/if}
-						</button>
-					</div>
-
-					<div class="mt-2 text-xs text-gray-500">
-						<span class=" font-medium dark:text-gray-200">{$i18n.t('Warning:')}</span>
-						{$i18n.t('Pipelines are a plugin system with arbitrary code execution —')}
-						<span class=" font-medium dark:text-gray-400"
-							>{$i18n.t("don't fetch random pipelines from sources you don't trust.")}</span
-						>
-					</div>
-				</div>
-
-				<hr class="border-gray-100/30 dark:border-gray-850/30 my-3 w-full" />
-
-				{#if pipelines !== null}
-					{#if pipelines.length > 0}
-						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-medium">
-								{$i18n.t('Pipelines Valves')}
+			<!-- Pipelines Auto-detection Section -->
+			<div class="max-w-5xl mx-auto mb-4">
+				<div
+					class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+				>
+					<div class="flex flex-col gap-3">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-2">
+								<div class="text-sm font-medium">{$i18n.t('自动检测 Pipelines')}</div>
+								<Switch
+									bind:state={autoDetectPipelines}
+									on:change={() => {
+										saveAutoDetectSetting();
+										if (autoDetectPipelines) {
+											detectPipelines();
+										}
+									}}
+								/>
 							</div>
-						</div>
-						<div class="space-y-1">
-							{#if pipelines.length > 0}
-								<div class="flex gap-2">
-									<div class="flex-1">
-										<select
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-											bind:value={selectedPipelineIdx}
-											placeholder={$i18n.t('Select a pipeline')}
-											on:change={async () => {
-												await tick();
-												await getValves(selectedPipelineIdx);
-											}}
-										>
-											{#each pipelines as pipeline, idx}
-												<option value={idx} class="bg-gray-100 dark:bg-gray-700"
-													>{pipeline.name} ({pipeline.type ?? 'pipe'})</option
-												>
-											{/each}
-										</select>
-									</div>
 
-									<button
-										class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
-										on:click={() => {
-											deletePipelineHandler();
-										}}
-										type="button"
-										aria-label={$i18n.t('Delete Pipeline')}
-									>
+							<Tooltip content={$i18n.t('手动检测 Pipeline 支持')}>
+								<button
+									class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition text-xs font-medium"
+									on:click={detectPipelines}
+									disabled={isDetectingPipelines}
+									type="button"
+								>
+									{#if isDetectingPipelines}
+										<Spinner className="size-3" />
+										<span>{$i18n.t('检测中...')}</span>
+									{:else}
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											viewBox="0 0 16 16"
 											fill="currentColor"
-											class="w-4 h-4"
+											class="size-3"
 										>
 											<path
 												fill-rule="evenodd"
-												d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
+												d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75Zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273Z"
 												clip-rule="evenodd"
 											/>
 										</svg>
-									</button>
-								</div>
-							{/if}
-
-							<div class="space-y-1">
-								{#if pipelines[selectedPipelineIdx].valves}
-									{#if valves}
-										{#each Object.keys(valves_spec.properties) as property, idx}
-											<div class=" py-0.5 w-full justify-between">
-												<div class="flex w-full justify-between">
-													<div class=" self-center text-xs font-medium">
-														{valves_spec.properties[property].title}
-													</div>
-
-													<button
-														class="p-1 px-3 text-xs flex rounded-sm transition"
-														type="button"
-														on:click={() => {
-															valves[property] = (valves[property] ?? null) === null ? '' : null;
-														}}
-													>
-														{#if (valves[property] ?? null) === null}
-															<span class="ml-2 self-center"> {$i18n.t('None')} </span>
-														{:else}
-															<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
-														{/if}
-													</button>
-												</div>
-
-												{#if (valves[property] ?? null) !== null}
-													<!-- {valves[property]} -->
-													<div class="flex mt-0.5 mb-1.5 space-x-2">
-														<div class=" flex-1">
-															{#if valves_spec.properties[property]?.enum ?? null}
-																<select
-																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-																	bind:value={valves[property]}
-																>
-																	{#each valves_spec.properties[property].enum as option}
-																		<option value={option} selected={option === valves[property]}>
-																			{option}
-																		</option>
-																	{/each}
-																</select>
-															{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
-																<div class="flex justify-between items-center">
-																	<div class="text-xs text-gray-500">
-																		{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-																	</div>
-
-																	<div class=" pr-2">
-																		<Switch bind:state={valves[property]} />
-																	</div>
-																</div>
-															{:else}
-																<input
-																	class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-																	type="text"
-																	placeholder={valves_spec.properties[property].title}
-																	bind:value={valves[property]}
-																	autocomplete="off"
-																	required
-																/>
-															{/if}
-														</div>
-													</div>
-												{/if}
-											</div>
-										{/each}
-									{:else}
-										<Spinner className="size-5" />
+										<span>{$i18n.t('刷新')}</span>
 									{/if}
-								{:else}
-									<div>{$i18n.t('No valves')}</div>
-								{/if}
-							</div>
+								</button>
+							</Tooltip>
 						</div>
-					{:else if pipelines.length === 0}
-						<div>{$i18n.t('Pipelines Not Detected')}</div>
-					{/if}
-				{:else}
-					<div class="flex justify-center">
-						<div class="my-auto">
-							<Spinner className="size-4" />
+
+						<div class="text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t(
+								'自动检测会在页面加载时检查您的 OpenAI API 端点是否支持 Pipelines。关闭以提高加载速度。'
+							)}
+						</div>
+
+						{#if Object.keys(pipelineUrls).length > 0}
+							<div class="mt-1 text-xs">
+								<div class="text-gray-500 dark:text-gray-400 mb-1">
+									{$i18n.t('支持 Pipeline 的 URL:')}
+								</div>
+								<div class="flex flex-wrap gap-1">
+									{#each Object.entries(pipelineUrls) as [url, supported]}
+										{#if supported}
+											<span
+												class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs"
+											>
+												{url}
+											</span>
+										{/if}
+									{/each}
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+
+			<div class="max-w-5xl mx-auto">
+				<div
+					class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+				>
+					<div class="flex w-full justify-between mb-2">
+						<div class=" self-center text-sm font-medium">
+							{$i18n.t('Manage Pipelines')}
 						</div>
 					</div>
+
+					{#if filteredPipelinesList.length > 0}
+					<div class="space-y-1">
+						<div class="flex gap-2">
+							<div class="flex-1">
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={selectedPipelinesUrlIdx}
+									placeholder={$i18n.t('Select a pipeline url')}
+									on:change={async () => {
+										await tick();
+										await setPipelines();
+									}}
+								>
+									<option value="" selected disabled class="bg-gray-100 dark:bg-gray-700"
+										>{$i18n.t('Select a pipeline url')}</option
+									>
+
+									{#each filteredPipelinesList as pipelines}
+										<option value={pipelines.idx.toString()} class="bg-gray-100 dark:bg-gray-700"
+											>{pipelines.url}</option
+										>
+									{/each}
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<div class=" my-2">
+						<div class=" mb-2 text-sm font-medium">
+							{$i18n.t('Upload Pipeline')}
+						</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<input
+									id="pipelines-upload-input"
+									bind:files={pipelineFiles}
+									type="file"
+									accept=".py"
+									hidden
+								/>
+
+								<button
+									class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
+									type="button"
+									on:click={() => {
+										document.getElementById('pipelines-upload-input')?.click();
+									}}
+								>
+									{#if pipelineFiles}
+										{pipelineFiles.length > 0 ? `${pipelineFiles.length}` : ''} pipeline(s) selected.
+									{:else}
+										{$i18n.t('Click here to select a py file.')}
+									{/if}
+								</button>
+							</div>
+							<button
+								class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								on:click={() => {
+									uploadPipelineHandler();
+								}}
+								disabled={uploading}
+								type="button"
+							>
+								{#if uploading}
+									<div class="self-center">
+										<svg
+											class=" w-4 h-4"
+											viewBox="0 0 24 24"
+											fill="currentColor"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<style>
+												.spinner_ajPY {
+													transform-origin: center;
+													animation: spinner_AtaB 0.75s infinite linear;
+												}
+
+												@keyframes spinner_AtaB {
+													100% {
+														transform: rotate(360deg);
+													}
+												}
+											</style>
+											<path
+												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+												opacity=".25"
+											/>
+											<path
+												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+												class="spinner_ajPY"
+											/>
+										</svg>
+									</div>
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-4"
+									>
+										<path
+											d="M7.25 10.25a.75.75 0 0 0 1.5 0V4.56l2.22 2.22a.75.75 0 1 0 1.06-1.06l-3.5-3.5a.75.75 0 0 0-1.06 0l-3.5 3.5a.75.75 0 0 0 1.06 1.06l2.22-2.22v5.69Z"
+										/>
+										<path
+											d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+										/>
+									</svg>
+								{/if}
+							</button>
+						</div>
+					</div>
+
+					<div class=" my-2">
+						<div class=" mb-2 text-sm font-medium">
+							{$i18n.t('Install from Github URL')}
+						</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									placeholder={$i18n.t('Enter Github Raw URL')}
+									bind:value={pipelineDownloadUrl}
+								/>
+							</div>
+							<button
+								class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								on:click={() => {
+									addPipelineHandler();
+								}}
+								disabled={downloading}
+								type="button"
+							>
+								{#if downloading}
+									<div class="self-center">
+										<svg
+											class=" w-4 h-4"
+											viewBox="0 0 24 24"
+											fill="currentColor"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<style>
+												.spinner_ajPY {
+													transform-origin: center;
+													animation: spinner_AtaB 0.75s infinite linear;
+												}
+
+												@keyframes spinner_AtaB {
+													100% {
+														transform: rotate(360deg);
+													}
+												}
+											</style>
+											<path
+												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+												opacity=".25"
+											/>
+											<path
+												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+												class="spinner_ajPY"
+											/>
+										</svg>
+									</div>
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
+										/>
+										<path
+											d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+										/>
+									</svg>
+								{/if}
+							</button>
+						</div>
+
+						<div class="mt-2 text-xs text-gray-500">
+							<span class=" font-medium dark:text-gray-200">{$i18n.t('Warning:')}</span>
+							{$i18n.t('Pipelines are a plugin system with arbitrary code execution —')}
+							<span class=" font-medium dark:text-gray-400"
+								>{$i18n.t("don't fetch random pipelines from sources you don't trust.")}</span
+							>
+						</div>
+					</div>
+
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-3 w-full" />
+
+					{#if pipelines !== null}
+						{#if pipelines.length > 0}
+							<div class="flex w-full justify-between mb-2">
+								<div class=" self-center text-sm font-medium">
+									{$i18n.t('Pipelines Valves')}
+								</div>
+							</div>
+							<div class="space-y-1">
+								{#if pipelines.length > 0}
+									<div class="flex gap-2">
+										<div class="flex-1">
+											<select
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												bind:value={selectedPipelineIdx}
+												placeholder={$i18n.t('Select a pipeline')}
+												on:change={async () => {
+													await tick();
+													await getValves(selectedPipelineIdx);
+												}}
+											>
+												{#each pipelines as pipeline, idx}
+													<option value={idx} class="bg-gray-100 dark:bg-gray-700"
+														>{pipeline.name} ({pipeline.type ?? 'pipe'})</option
+													>
+												{/each}
+											</select>
+										</div>
+
+										<button
+											class="px-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+											on:click={() => {
+												deletePipelineHandler();
+											}}
+											type="button"
+											aria-label={$i18n.t('Delete Pipeline')}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										</button>
+									</div>
+								{/if}
+
+								<div class="space-y-1">
+									{#if pipelines[selectedPipelineIdx].valves}
+										{#if valves}
+											{#each Object.keys(valves_spec.properties) as property}
+												<div class=" py-0.5 w-full justify-between">
+													<div class="flex w-full justify-between">
+														<div class=" self-center text-xs font-medium">
+															{valves_spec.properties[property].title}
+														</div>
+
+														<button
+															class="p-1 px-3 text-xs flex rounded-lg transition"
+															type="button"
+															on:click={() => {
+																valves[property] = (valves[property] ?? null) === null ? '' : null;
+															}}
+														>
+															{#if (valves[property] ?? null) === null}
+																<span class="ml-2 self-center"> {$i18n.t('None')} </span>
+															{:else}
+																<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+															{/if}
+														</button>
+													</div>
+
+													{#if (valves[property] ?? null) !== null}
+														<!-- {valves[property]} -->
+														<div class="flex mt-0.5 mb-1.5 space-x-2">
+															<div class=" flex-1">
+																{#if valves_spec.properties[property]?.enum ?? null}
+																	<select
+																		class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+																		bind:value={valves[property]}
+																	>
+																		{#each valves_spec.properties[property].enum as option}
+																			<option value={option} selected={option === valves[property]}>
+																				{option}
+																			</option>
+																		{/each}
+																	</select>
+																{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
+																	<div class="flex justify-between items-center">
+																		<div class="text-xs text-gray-500">
+																			{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+																		</div>
+
+																		<div class=" pr-2">
+																			<Switch bind:state={valves[property]} />
+																		</div>
+																	</div>
+																{:else}
+																	<input
+																		class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+																		type="text"
+																		placeholder={valves_spec.properties[property].title}
+																		bind:value={valves[property]}
+																		autocomplete="off"
+																		required
+																	/>
+																{/if}
+															</div>
+														</div>
+													{/if}
+												</div>
+											{/each}
+										{:else}
+											<Spinner className="size-5" />
+										{/if}
+									{:else}
+										<div>{$i18n.t('No valves')}</div>
+									{/if}
+								</div>
+							</div>
+						{:else if pipelines.length === 0}
+							<div>{$i18n.t('Pipelines Not Detected')}</div>
+						{/if}
+					{:else}
+						<div class="flex justify-center">
+							<div class="my-auto">
+								<Spinner className="size-4" />
+							</div>
+						</div>
+					{/if}
+				{:else}
+					<div>{$i18n.t('Pipelines Not Detected')}</div>
 				{/if}
-			{:else}
-				<div>{$i18n.t('Pipelines Not Detected')}</div>
-			{/if}
+				</div>
+			</div>
 		{:else}
 			<div class="flex justify-center h-full">
 				<div class="my-auto">
@@ -588,7 +776,7 @@
 		{/if}
 	</div>
 
-	{#if PIPELINES_LIST !== null && PIPELINES_LIST.length > 0}
+	{#if PIPELINES_LIST !== null && filteredPipelinesList.length > 0}
 		<div class="flex justify-end pt-3 text-sm font-medium">
 			<button
 				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"

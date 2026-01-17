@@ -207,16 +207,15 @@
 		dispatch('save');
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
-		<div class="flex flex-col gap-3">
+	<div class="space-y-4 overflow-y-scroll scrollbar-hidden h-full">
+		<div class="max-w-5xl mx-auto flex flex-col gap-4">
 			<div>
-				<div class="flex items-center gap-2 mb-1">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-						{$i18n.t('Speech-to-Text')}
-					</div>
-				</div>
+				<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				<div
+					class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+				>
 
 				{#if STT_ENGINE !== 'web'}
 					<div class="mb-2">
@@ -239,7 +238,7 @@
 					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right"
 							bind:value={STT_ENGINE}
 							placeholder={$i18n.t('Select an engine')}
 						>
@@ -499,22 +498,22 @@
 						</div>
 					</div>
 				{/if}
+				</div>
 			</div>
 
 			<div>
-				<div class="flex items-center gap-2 mb-1">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-						{$i18n.t('Text-to-Speech')}
-					</div>
-				</div>
+				<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				<div
+					class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+				>
 
 				<div class="mb-2 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right"
 							bind:value={TTS_ENGINE}
 							placeholder={$i18n.t('Select a mode')}
 							on:change={async (e) => {
@@ -806,7 +805,7 @@
 					<div class="self-center text-xs font-medium">{$i18n.t('Response splitting')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right"
 							aria-label={$i18n.t('Select how to split message text for TTS requests')}
 							bind:value={TTS_SPLIT_ON}
 						>
@@ -822,6 +821,7 @@
 					{$i18n.t(
 						"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string."
 					)}
+				</div>
 				</div>
 			</div>
 		</div>

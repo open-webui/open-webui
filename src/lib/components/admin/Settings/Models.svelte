@@ -348,7 +348,7 @@
 
 {#if models !== null}
 	{#if selectedModelId === null}
-		<div class="flex flex-col gap-1 mt-1.5 mb-2">
+		<div class="max-w-5xl mx-auto flex flex-col gap-1 mt-1.5 mb-2">
 			<div class="flex justify-between items-center">
 				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2">
 					{$i18n.t('Models')}
@@ -378,6 +378,95 @@
 				</div>
 
 				<div class="flex items-center gap-1.5">
+					<!-- Import/Export Buttons for Admin -->
+					{#if $user?.role === 'admin'}
+						<input
+							id="models-import-input"
+							bind:this={modelsImportInputElement}
+							bind:files={importFiles}
+							type="file"
+							accept=".json"
+							hidden
+							on:change={() => {
+								if (importFiles.length > 0) {
+									const reader = new FileReader();
+									reader.onload = async (event) => {
+										modelsImportInProgress = true;
+
+										try {
+											const models = JSON.parse(String(event.target.result));
+											const res = await importModels(localStorage.token, models);
+
+											if (res) {
+												toast.success($i18n.t('Models imported successfully'));
+												await init();
+											} else {
+												toast.error($i18n.t('Failed to import models'));
+											}
+										} catch (e) {
+											toast.error(e?.detail ?? $i18n.t('Invalid JSON file'));
+											console.error(e);
+										}
+
+										modelsImportInProgress = false;
+									};
+									reader.readAsText(importFiles[0]);
+								}
+							}}
+						/>
+
+						<Tooltip content={$i18n.t('Import Presets')}>
+							<button
+								class="flex text-xs items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+								disabled={modelsImportInProgress}
+								on:click={() => {
+									modelsImportInputElement.click();
+								}}
+							>
+								{#if modelsImportInProgress}
+									<Spinner className="size-3" />
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="w-3.5 h-3.5"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								{/if}
+								<span class="font-medium">{$i18n.t('Import Presets')}</span>
+							</button>
+						</Tooltip>
+
+						<Tooltip content={$i18n.t('Export Presets')}>
+							<button
+								class="flex text-xs items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+								on:click={async () => {
+									downloadModels(models);
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-3.5 h-3.5"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+								<span class="font-medium">{$i18n.t('Export Presets')}</span>
+							</button>
+						</Tooltip>
+					{/if}
+
 					<Tooltip content={$i18n.t('Manage Models')}>
 						<button
 							class=" p-1 rounded-full flex gap-1 items-center"
@@ -430,7 +519,7 @@
 			</div>
 		</div>
 
-		<div class=" my-2 mb-5" id="model-list">
+		<div class="max-w-5xl mx-auto my-2 mb-5" id="model-list">
 			{#if models.length > 0}
 				{#each filteredModels as model, modelIdx (`${model.id}-${modelIdx}`)}
 					<div
@@ -580,103 +669,6 @@
 				</div>
 			{/if}
 		</div>
-
-		{#if $user?.role === 'admin'}
-			<div class=" flex justify-end w-full mb-3">
-				<div class="flex space-x-1">
-					<input
-						id="models-import-input"
-						bind:this={modelsImportInputElement}
-						bind:files={importFiles}
-						type="file"
-						accept=".json"
-						hidden
-						on:change={() => {
-							if (importFiles.length > 0) {
-								const reader = new FileReader();
-								reader.onload = async (event) => {
-									modelsImportInProgress = true;
-
-									try {
-										const models = JSON.parse(String(event.target.result));
-										const res = await importModels(localStorage.token, models);
-
-										if (res) {
-											toast.success($i18n.t('Models imported successfully'));
-											await init();
-										} else {
-											toast.error($i18n.t('Failed to import models'));
-										}
-									} catch (e) {
-										toast.error(e?.detail ?? $i18n.t('Invalid JSON file'));
-										console.error(e);
-									}
-
-									modelsImportInProgress = false;
-								};
-								reader.readAsText(importFiles[0]);
-							}
-						}}
-					/>
-
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-						disabled={modelsImportInProgress}
-						on:click={() => {
-							modelsImportInputElement.click();
-						}}
-					>
-						{#if modelsImportInProgress}
-							<Spinner className="size-3" />
-						{/if}
-						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Import Presets')}
-						</div>
-
-						<div class=" self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-3.5 h-3.5"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
-					</button>
-
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-						on:click={async () => {
-							downloadModels(models);
-						}}
-					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Presets')} ({models.length})
-						</div>
-
-						<div class=" self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-3.5 h-3.5"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
-					</button>
-				</div>
-			</div>
-		{/if}
 	{:else}
 		<ModelEditor
 			edit

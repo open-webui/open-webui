@@ -54,54 +54,51 @@
 		updateHandler();
 	}}
 >
-	<div class=" overflow-y-scroll scrollbar-hidden h-full">
+	<div class="overflow-y-scroll scrollbar-hidden h-full">
 		{#if servers !== null}
-			<div class="">
+			<div class="max-w-5xl mx-auto">
 				<div class="mb-3">
-					<div class="flex items-center gap-2 mb-1">
-						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-							{$i18n.t('Tools')}
-						</div>
-					</div>
+					<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Tools')}</div>
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+					<div
+						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+					>
+						<div class="mb-2.5 flex flex-col w-full justify-between">
+							<!-- {$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+								URL: 'server?.url'
+							})} -->
+							<div class="flex items-center gap-2 mb-4">
+								<div class="text-xs font-medium text-gray-500">{$i18n.t('Manage Tool Servers')}</div>
 
-					<div class="mb-2.5 flex flex-col w-full justify-between">
-						<!-- {$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-							URL: 'server?.url'
-						})} -->
-						<div class="flex items-center gap-2 mb-2">
-							<div class="text-sm font-medium">{$i18n.t('Manage Tool Servers')}</div>
+								<Tooltip content={$i18n.t(`Add Connection`)}>
+									<button
+										class="p-1 bg-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full transition"
+										on:click={() => {
+											showConnectionModal = true;
+										}}
+										type="button"
+									>
+										<Plus className="size-3.5" />
+									</button>
+								</Tooltip>
+							</div>
 
-							<Tooltip content={$i18n.t(`Add Connection`)}>
-								<button
-									class="p-1 bg-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full transition"
-									on:click={() => {
-										showConnectionModal = true;
-									}}
-									type="button"
-								>
-									<Plus className="size-3.5" />
-								</button>
-							</Tooltip>
-						</div>
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+								{#each servers as server, idx}
+									<Connection
+										bind:connection={server}
+										onSubmit={() => {
+											updateHandler();
+										}}
+										onDelete={() => {
+											servers = servers.filter((_, i) => i !== idx);
+											updateHandler();
+										}}
+									/>
+								{/each}
+							</div>
 
-						<div class="flex flex-col gap-1">
-							{#each servers as server, idx}
-								<Connection
-									bind:connection={server}
-									onSubmit={() => {
-										updateHandler();
-									}}
-									onDelete={() => {
-										servers = servers.filter((_, i) => i !== idx);
-										updateHandler();
-									}}
-								/>
-							{/each}
-						</div>
-
-						<div class="my-1.5">
 							<div class="text-xs text-gray-500">
 								{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
 							</div>

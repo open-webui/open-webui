@@ -902,8 +902,8 @@ async def _safe_response_json(response: aiohttp.ClientResponse):
         return None
 
 
-async def send_get_request(url, key=None, user: UserModel = None):
-    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+async def send_get_request(url, key=None, user: UserModel = None, timeout_seconds=None):
+    timeout = aiohttp.ClientTimeout(total=timeout_seconds or AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             headers = {
@@ -924,7 +924,7 @@ async def send_get_request(url, key=None, user: UserModel = None):
                 return await _safe_response_json(response)
     except Exception as e:
         # Handle connection error here
-        log.error(f"Connection error: {e}")
+        log.error(f"Connection error for URL '{url}': {e}")
         return None
 
 
@@ -1243,7 +1243,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
 
 
-async def get_all_models_responses(request: Request, user: UserModel) -> list:
+async def get_all_models_responses(request: Request, user: UserModel, timeout_seconds=None) -> list:
     if not request.app.state.config.ENABLE_OPENAI_API:
         return []
 
@@ -1270,6 +1270,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                     f"{url}/models",
                     request.app.state.config.OPENAI_API_KEYS[idx],
                     user=user,
+                    timeout_seconds=timeout_seconds,
                 )
             )
         else:
@@ -1290,6 +1291,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                             f"{url}/models",
                             request.app.state.config.OPENAI_API_KEYS[idx],
                             user=user,
+                            timeout_seconds=timeout_seconds,
                         )
                     )
                 else:
@@ -1457,9 +1459,10 @@ async def get_models(
         )
 
         r = None
+        # Use a shorter timeout (3 seconds) for model list to avoid UI blocking
         async with aiohttp.ClientSession(
             trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
+            timeout=aiohttp.ClientTimeout(total=3),
         ) as session:
             try:
                 headers, cookies = await get_headers_and_cookies(
@@ -1511,12 +1514,12 @@ async def get_models(
                         models = response_data
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
-                log.exception(f"Client error: {str(e)}")
+                log.exception(f"Client error for URL '{url}' (index {url_idx}): {str(e)}")
                 raise HTTPException(
                     status_code=500, detail="Open WebUI: Server Connection Error"
                 )
             except Exception as e:
-                log.exception(f"Unexpected error: {e}")
+                log.exception(f"Unexpected error for URL '{url}' (index {url_idx}): {e}")
                 error_detail = f"Unexpected error: {str(e)}"
                 raise HTTPException(status_code=500, detail=error_detail)
 

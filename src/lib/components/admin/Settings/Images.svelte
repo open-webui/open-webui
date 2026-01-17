@@ -296,29 +296,26 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
+	<div class="space-y-4 overflow-y-scroll scrollbar-hidden pr-2">
 		{#if config}
-			<div>
+			<div class="max-w-5xl mx-auto">
 				<div class="mb-3.5">
-					<div class="flex items-center gap-2 mb-4">
-						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-							{$i18n.t('Image Generation')}
-						</div>
-
+					<div class="flex items-center justify-between mb-2.5">
+						<div class="text-base font-medium">{$i18n.t('Image Generation')}</div>
 						<Switch bind:state={config.ENABLE_IMAGE_GENERATION} />
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 				</div>
 
 				<div class="mb-3">
-					<div class="flex items-center gap-2 mb-1">
-						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-							{$i18n.t('Create Image')}
-						</div>
-					</div>
+					<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Create Image')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div
+						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+					>
 
 					{#if config.ENABLE_IMAGE_GENERATION}
 						<div class="mb-2.5">
@@ -411,7 +408,7 @@
 							</div>
 
 							<select
-								class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right"
 								bind:value={config.IMAGE_GENERATION_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
@@ -880,7 +877,7 @@
 								</div>
 
 								<select
-									class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right"
 									bind:value={config.IMAGES_GEMINI_ENDPOINT_METHOD}
 									placeholder={$i18n.t('Select Method')}
 								>
@@ -890,12 +887,17 @@
 							</div>
 						</div>
 					{/if}
+					</div>
 				</div>
 
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Edit Image')}</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div
+						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+					>
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
@@ -963,7 +965,7 @@
 							</div>
 
 							<select
-								class=" dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								class="dark:bg-gray-900 w-fit pr-8 cursor-pointer rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right"
 								bind:value={config.IMAGE_EDIT_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
@@ -1282,6 +1284,7 @@
 					{/if}
 				</div>
 			</div>
+		</div>
 		{/if}
 	</div>
 

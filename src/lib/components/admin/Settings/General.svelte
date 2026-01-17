@@ -123,13 +123,13 @@
 		updateHandler();
 	}}
 >
-	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+	<div class="space-y-4 overflow-y-scroll scrollbar-hidden h-full pr-2">
 		{#if adminConfig !== null}
-			<div class="">
+			<div class="max-w-5xl mx-auto">
 				<div class="mb-3.5">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 						<div
@@ -185,7 +185,7 @@
 								<div class="text-xs font-medium text-gray-500 mb-2">{$i18n.t('About')}</div>
 								<div class="flex flex-col gap-2.5">
 									<a
-										href="https://docs.openwebui.com/"
+										href="https://docs.openwebui.cn/"
 										target="_blank"
 										class="flex items-center gap-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition"
 									>
@@ -371,7 +371,7 @@
 													/>
 													<div class="text-xs text-gray-400 dark:text-gray-500">
 														<a
-															href="https://docs.openwebui.com/getting-started/api-endpoints"
+															href="https://docs.openwebui.cn/getting-started/api-endpoints"
 															target="_blank"
 															class="text-gray-500 dark:text-gray-400 font-medium underline hover:text-blue-500"
 														>
@@ -415,7 +415,7 @@
 											<span class="font-medium">{$i18n.t('Warning')}:</span>
 											<span>
 												<a
-													href="https://docs.openwebui.com/getting-started/env-configuration#jwt_expires_in"
+													href="https://docs.openwebui.cn/getting-started/env-configuration#jwt_expires_in"
 													target="_blank"
 													class="underline hover:text-yellow-800 dark:hover:text-yellow-100"
 												>
@@ -736,30 +736,69 @@
 							{$i18n.t('System Connections')}
 						</div>
 
-						<div class="flex flex-col gap-4">
-							<div class="w-full">
-								<div class="text-sm font-medium mb-1.5">{$i18n.t('WebUI URL')}</div>
-								<input
-									class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-									type="text"
-									placeholder={`e.g.) "http://localhost:3000"`}
-									bind:value={adminConfig.WEBUI_URL}
-								/>
-								<div class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-									{$i18n.t(
-										'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
-									)}
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div
+								class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800"
+							>
+								<div class="flex items-center gap-2 mb-3">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										class="w-5 h-5 opacity-70 text-gray-600 dark:text-gray-400"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M19.902 4.098a3.75 3.75 0 00-5.304 0l-4.5 4.5a3.75 3.75 0 001.035 6.037.75.75 0 01-.646 1.353 5.25 5.25 0 01-1.449-8.45l4.5-4.5a5.25 5.25 0 117.424 7.424l-1.757 1.757a.75.75 0 11-1.06-1.06l1.757-1.757a3.75 3.75 0 000-5.304zm-7.389 4.267a.75.75 0 011-.353 5.25 5.25 0 011.449 8.45l-4.5 4.5a5.25 5.25 0 11-7.424-7.424l1.757-1.757a.75.75 0 111.06 1.06l-1.757 1.757a3.75 3.75 0 105.304 5.304l4.5-4.5a3.75 3.75 0 00-1.035-6.037.75.75 0 01-.354-1z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+									<div class="text-xs font-medium text-gray-500">{$i18n.t('WebUI URL')}</div>
+								</div>
+								<div>
+									<input
+										class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+										type="text"
+										placeholder={`e.g.) "http://localhost:3000"`}
+										bind:value={adminConfig.WEBUI_URL}
+									/>
+									<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+										{$i18n.t(
+											'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
+										)}
+									</div>
 								</div>
 							</div>
 
-							<div class="w-full">
-								<div class="text-sm font-medium mb-1.5">{$i18n.t('Webhook URL')}</div>
-								<input
-									class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-									type="text"
-									placeholder={`https://example.com/webhook`}
-									bind:value={webhookUrl}
-								/>
+							<div
+								class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800"
+							>
+								<div class="flex items-center gap-2 mb-3">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										class="w-5 h-5 opacity-70 text-gray-600 dark:text-gray-400"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M5.337 21.718a6.707 6.707 0 01-.533-.074.75.75 0 01-.44-1.223 3.73 3.73 0 00.814-1.686c.023-.115-.022-.317-.254-.543C3.274 16.587 2.25 14.41 2.25 12c0-5.03 4.428-9 9.75-9s9.75 3.97 9.75 9c0 5.03-4.428 9-9.75 9-.833 0-1.643-.097-2.417-.279a6.721 6.721 0 01-4.246.997z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+									<div class="text-xs font-medium text-gray-500">{$i18n.t('Webhook URL')}</div>
+								</div>
+								<div>
+									<input
+										class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+										type="text"
+										placeholder={`https://example.com/webhook`}
+										bind:value={webhookUrl}
+									/>
+									<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+										{$i18n.t('Configure webhook endpoint for system notifications')}
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>

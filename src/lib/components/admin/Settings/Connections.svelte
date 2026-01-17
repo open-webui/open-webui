@@ -54,7 +54,6 @@
 
 	let connectionsConfig: any = null;
 
-	let pipelineUrls: any = {};
 	let showAddOpenAIConnectionModal = false;
 	let showAddGeminiConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
@@ -227,17 +226,6 @@
 						OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[url] || {};
 					}
 				}
-
-				OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
-					OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[idx] || {};
-					if (!(OPENAI_API_CONFIGS[idx]?.enable ?? true)) {
-						return;
-					}
-					const res = await getOpenAIModels(localStorage.token, idx);
-					if (res.pipelines) {
-						pipelineUrls[url] = true;
-					}
-				});
 			}
 
 			if (ENABLE_OLLAMA_API) {
@@ -291,7 +279,7 @@
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5">
 				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
@@ -337,7 +325,6 @@
 											bind:url={OPENAI_API_BASE_URLS[idx]}
 											bind:key={OPENAI_API_KEYS[idx]}
 											bind:config={OPENAI_API_CONFIGS[idx]}
-											pipeline={pipelineUrls[url] ? true : false}
 											onSubmit={() => {
 												updateOpenAIHandler();
 											}}

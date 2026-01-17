@@ -323,14 +323,14 @@
 	}}
 >
 	{#if RAGConfig}
-		<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
-			<div class="">
+		<div class="space-y-4 overflow-y-scroll scrollbar-hidden h-full pr-2">
+			<div class="max-w-5xl mx-auto">
 				<div class="mb-4">
+					<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="text-xs font-medium text-gray-500 mb-4">{$i18n.t('General')}</div>
-
 						<div class="mb-2.5 flex flex-col w-full justify-between">
 							<div class="flex w-full justify-between mb-1">
 								<div class="self-center text-xs font-medium">
@@ -338,7 +338,7 @@
 								</div>
 								<div class="">
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 										bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
 									>
 										<option value="">{$i18n.t('Default')}</option>
@@ -529,7 +529,7 @@
 									</div>
 									<div class="">
 										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+											class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 											bind:value={RAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
 										>
 											<option value="markdown">{$i18n.t('Markdown')}</option>
@@ -539,17 +539,31 @@
 									</div>
 								</div>
 							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
-								<div class="my-0.5 flex gap-2 pr-2">
-									<input
-										class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-										placeholder={$i18n.t('Enter External Document Loader URL')}
-										bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
-									/>
-									<SensitiveInput
-										placeholder={$i18n.t('Enter External Document Loader API Key')}
-										required={false}
-										bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
-									/>
+								<hr class="border-gray-100 dark:border-gray-800 my-3" />
+
+								<div class="flex flex-col gap-3">
+									<div class="w-full">
+										<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											{$i18n.t('API Base URL')}
+										</div>
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+											placeholder={$i18n.t('Enter External Document Loader URL')}
+											bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											{$i18n.t('API Key')}
+										</div>
+										<div class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 transition flex items-center">
+											<SensitiveInput
+												placeholder={$i18n.t('Enter External Document Loader API Key')}
+												required={false}
+												bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
+											/>
+										</div>
+									</div>
 								</div>
 							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
 								<div class="flex w-full mt-1">
@@ -562,17 +576,31 @@
 									</div>
 								</div>
 							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
-								<div class="my-0.5 flex gap-2 pr-2">
-									<input
-										class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-										placeholder={$i18n.t('Enter Docling Server URL')}
-										bind:value={RAGConfig.DOCLING_SERVER_URL}
-									/>
-									<SensitiveInput
-										placeholder={$i18n.t('Enter Docling API Key')}
-										bind:value={RAGConfig.DOCLING_API_KEY}
-										required={false}
-									/>
+								<hr class="border-gray-100 dark:border-gray-800 my-3" />
+
+								<div class="flex flex-col gap-3">
+									<div class="w-full">
+										<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											{$i18n.t('API Base URL')}
+										</div>
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+											placeholder={$i18n.t('Enter Docling Server URL')}
+											bind:value={RAGConfig.DOCLING_SERVER_URL}
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											{$i18n.t('API Key')}
+										</div>
+										<div class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 transition flex items-center">
+											<SensitiveInput
+												placeholder={$i18n.t('Enter Docling API Key')}
+												bind:value={RAGConfig.DOCLING_API_KEY}
+												required={false}
+											/>
+										</div>
+									</div>
 								</div>
 
 								<div class="flex flex-col gap-2 mt-2">
@@ -590,17 +618,31 @@
 									</div>
 								</div>
 							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
-								<div class="my-0.5 flex gap-2 pr-2">
-									<input
-										class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-										placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
-										bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
-									/>
-									<SensitiveInput
-										placeholder={$i18n.t('Enter Document Intelligence Key')}
-										bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_KEY}
-										required={false}
-									/>
+								<hr class="border-gray-100 dark:border-gray-800 my-3" />
+
+								<div class="flex flex-col gap-3">
+									<div class="w-full">
+										<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											{$i18n.t('Document Intelligence Endpoint')}
+										</div>
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+											placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
+											bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											{$i18n.t('API Key')}
+										</div>
+										<div class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 transition flex items-center">
+											<SensitiveInput
+												placeholder={$i18n.t('Enter Document Intelligence Key')}
+												bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_KEY}
+												required={false}
+											/>
+										</div>
+									</div>
 								</div>
 								<div class="my-0.5 flex flex-col w-full">
 									<div class=" mb-1 text-xs font-medium">
@@ -617,16 +659,30 @@
 									</div>
 								</div>
 							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
-								<div class="my-0.5 flex gap-2 pr-2">
-									<input
-										class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-										placeholder={$i18n.t('Enter Mistral API Base URL')}
-										bind:value={RAGConfig.MISTRAL_OCR_API_BASE_URL}
-									/>
-									<SensitiveInput
-										placeholder={$i18n.t('Enter Mistral API Key')}
-										bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
-									/>
+								<hr class="border-gray-100 dark:border-gray-800 my-3" />
+
+								<div class="flex flex-col gap-3">
+									<div class="w-full">
+										<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											{$i18n.t('API Base URL')}
+										</div>
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+											placeholder={$i18n.t('Enter Mistral API Base URL')}
+											bind:value={RAGConfig.MISTRAL_OCR_API_BASE_URL}
+										/>
+									</div>
+									<div class="w-full">
+										<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											{$i18n.t('API Key')}
+										</div>
+										<div class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 transition flex items-center">
+											<SensitiveInput
+												placeholder={$i18n.t('Enter Mistral API Key')}
+												bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
+											/>
+										</div>
+									</div>
 								</div>
 							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
 								<!-- API Mode Selection -->
@@ -636,7 +692,7 @@
 											{$i18n.t('API Mode')}
 										</div>
 										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
+											class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 											bind:value={RAGConfig.MINERU_API_MODE}
 											on:change={() => {
 												// Auto-update URL when switching modes if it's empty or matches the opposite mode's default
@@ -672,6 +728,11 @@
 								</div>
 
 								<div class="flex w-full mt-2">
+									<div class="text-xs font-medium text-gray-500 mb-1.5">
+										{$i18n.t('API Key')}
+									</div>
+								</div>
+								<div class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 transition flex items-center">
 									<SensitiveInput
 										placeholder={$i18n.t('Enter MinerU API Key')}
 										bind:value={RAGConfig.MINERU_API_KEY}
@@ -746,7 +807,7 @@
 								<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
 								<div class="flex items-center relative">
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 										bind:value={RAGConfig.TEXT_SPLITTER}
 									>
 										<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
@@ -842,11 +903,11 @@
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 					<div class="mb-4">
+						<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
+						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 						<div
 							class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 						>
-							<div class="text-xs font-medium text-gray-500 mb-4">{$i18n.t('Embedding')}</div>
-
 							<div class="  mb-2.5 flex flex-col w-full justify-between">
 								<div class="flex w-full justify-between">
 									<div class=" self-center text-xs font-medium">
@@ -854,7 +915,7 @@
 									</div>
 									<div class="flex items-center relative">
 										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+											class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 											bind:value={RAG_EMBEDDING_ENGINE}
 											placeholder={$i18n.t('Select an embedding model engine')}
 											on:change={(e) => {
@@ -879,52 +940,93 @@
 								</div>
 
 								{#if RAG_EMBEDDING_ENGINE === 'openai'}
-									<div class="my-0.5 flex gap-2 pr-2">
-										<input
-											class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-											placeholder={$i18n.t('API Base URL')}
-											bind:value={OpenAIUrl}
-											required
-										/>
+									<hr class="border-gray-100 dark:border-gray-800 my-3" />
 
-										<SensitiveInput
-											placeholder={$i18n.t('API Key')}
-											bind:value={OpenAIKey}
-											required={false}
-										/>
+									<div class="flex flex-col gap-3">
+										<div class="w-full">
+											<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+												{$i18n.t('API Base URL')}
+											</div>
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+												placeholder={$i18n.t('API Base URL')}
+												bind:value={OpenAIUrl}
+												required
+											/>
+										</div>
+										<div class="w-full">
+											<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+												{$i18n.t('API Key')}
+											</div>
+											<div class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 transition flex items-center">
+												<SensitiveInput
+													placeholder={$i18n.t('API Key')}
+													bind:value={OpenAIKey}
+													required={false}
+												/>
+											</div>
+										</div>
 									</div>
 								{:else if RAG_EMBEDDING_ENGINE === 'ollama'}
-									<div class="my-0.5 flex gap-2 pr-2">
-										<input
-											class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-											placeholder={$i18n.t('API Base URL')}
-											bind:value={OllamaUrl}
-											required
-										/>
+									<hr class="border-gray-100 dark:border-gray-800 my-3" />
 
-										<SensitiveInput
-											placeholder={$i18n.t('API Key')}
-											bind:value={OllamaKey}
-											required={false}
-										/>
+									<div class="flex flex-col gap-3">
+										<div class="w-full">
+											<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+												{$i18n.t('API Base URL')}
+											</div>
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+												placeholder={$i18n.t('API Base URL')}
+												bind:value={OllamaUrl}
+												required
+											/>
+										</div>
+										<div class="w-full">
+											<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+												{$i18n.t('API Key')}
+											</div>
+											<div class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 transition flex items-center">
+												<SensitiveInput
+													placeholder={$i18n.t('API Key')}
+													bind:value={OllamaKey}
+													required={false}
+												/>
+											</div>
+										</div>
 									</div>
 								{:else if RAG_EMBEDDING_ENGINE === 'azure_openai'}
-									<div class="my-0.5 flex flex-col gap-2 pr-2 w-full">
-										<div class="flex gap-2">
+									<hr class="border-gray-100 dark:border-gray-800 my-3" />
+
+									<div class="flex flex-col gap-3">
+										<div class="w-full">
+											<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+												{$i18n.t('API Base URL')}
+											</div>
 											<input
-												class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+												class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
 												placeholder={$i18n.t('API Base URL')}
 												bind:value={AzureOpenAIUrl}
 												required
 											/>
-											<SensitiveInput
-												placeholder={$i18n.t('API Key')}
-												bind:value={AzureOpenAIKey}
-											/>
 										</div>
-										<div class="flex gap-2">
+										<div class="w-full">
+											<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+												{$i18n.t('API Key')}
+											</div>
+											<div class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 transition flex items-center">
+												<SensitiveInput
+													placeholder={$i18n.t('API Key')}
+													bind:value={AzureOpenAIKey}
+												/>
+											</div>
+										</div>
+										<div class="w-full">
+											<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+												{$i18n.t('Version')}
+											</div>
 											<input
-												class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+												class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
 												placeholder={$i18n.t('Version')}
 												bind:value={AzureOpenAIVersion}
 												required
@@ -1039,11 +1141,11 @@
 					</div>
 
 					<div class="mb-4">
+						<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
+						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 						<div
 							class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 						>
-							<div class="text-xs font-medium text-gray-500 mb-4">{$i18n.t('Retrieval')}</div>
-
 							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
 								<div class="flex items-center relative">
@@ -1072,6 +1174,8 @@
 								</div>
 
 								{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+									<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
+
 									<div class="mb-2.5 flex w-full justify-between">
 										<div class="self-center text-xs font-medium">
 											{$i18n.t('Enrich Hybrid Search Text')}
@@ -1096,7 +1200,7 @@
 											</div>
 											<div class="flex items-center relative">
 												<select
-													class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+													class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 													bind:value={RAGConfig.RAG_RERANKING_ENGINE}
 													placeholder={$i18n.t('Select a reranking model engine')}
 													on:change={(e) => {
@@ -1114,19 +1218,32 @@
 										</div>
 
 										{#if RAGConfig.RAG_RERANKING_ENGINE === 'external'}
-											<div class="my-0.5 flex gap-2 pr-2">
-												<input
-													class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-													placeholder={$i18n.t('API Base URL')}
-													bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_URL}
-													required
-												/>
+											<hr class="border-gray-100 dark:border-gray-800 my-3" />
 
-												<SensitiveInput
-													placeholder={$i18n.t('API Key')}
-													bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_API_KEY}
-													required={false}
-												/>
+											<div class="flex flex-col gap-3">
+												<div class="w-full">
+													<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+														{$i18n.t('API Base URL')}
+													</div>
+													<input
+														class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+														placeholder={$i18n.t('API Base URL')}
+														bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_URL}
+														required
+													/>
+												</div>
+												<div class="w-full">
+													<div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+														{$i18n.t('API Key')}
+													</div>
+													<div class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 transition flex items-center">
+														<SensitiveInput
+															placeholder={$i18n.t('API Key')}
+															bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_API_KEY}
+															required={false}
+														/>
+													</div>
+												</div>
 											</div>
 										{/if}
 									</div>
@@ -1165,6 +1282,8 @@
 								</div>
 
 								{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+									<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
+
 									<div class="mb-2.5 flex w-full justify-between">
 										<div class="self-center text-xs font-medium">{$i18n.t('Top K Reranker')}</div>
 										<div class="flex items-center relative">
@@ -1178,9 +1297,9 @@
 											/>
 										</div>
 									</div>
-								{/if}
 
-								{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+									<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
+
 									<div class="  mb-2.5 flex flex-col w-full justify-between">
 										<div class=" flex w-full justify-between">
 											<div class=" self-center text-xs font-medium">
@@ -1207,10 +1326,10 @@
 											)}
 										</div>
 									</div>
-								{/if}
 
-								{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
-									<div class=" mb-2.5 py-0.5 w-full justify-between">
+									<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
+
+									<div class="mb-2.5 py-0.5 w-full justify-between">
 										<Tooltip
 											content={$i18n.t(
 												'The Weight of BM25 Hybrid Search. 0 more semantic, 1 more lexical. Default 0.5'
@@ -1240,8 +1359,8 @@
 										</Tooltip>
 
 										{#if (RAGConfig?.HYBRID_BM25_WEIGHT ?? null) !== null}
-											<div class="flex mt-0.5 space-x-2">
-												<div class=" flex-1">
+											<div class="flex mt-2 space-x-3 items-center">
+												<div class="flex-1 max-w-md">
 													<input
 														id="steps-range"
 														type="range"
@@ -1252,12 +1371,12 @@
 														class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
 													/>
 
-													<div class="py-0.5">
+													<div class="py-1">
 														<div class="flex w-full justify-between">
-															<div class=" text-left text-xs font-small">
+															<div class="text-left text-xs text-gray-500">
 																{$i18n.t('semantic')}
 															</div>
-															<div class=" text-right text-xs font-small">
+															<div class="text-right text-xs text-gray-500">
 																{$i18n.t('lexical')}
 															</div>
 														</div>
@@ -1267,7 +1386,7 @@
 													<input
 														bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
 														type="number"
-														class=" bg-transparent text-center w-14"
+														class="w-16 rounded-lg py-1.5 px-2 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition text-center"
 														min="0"
 														max="1"
 														step="any"
@@ -1305,16 +1424,16 @@
 				{/if}
 
 				<div class="mb-4">
+					<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="text-xs font-medium text-gray-500 mb-4">{$i18n.t('Files')}</div>
-
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Allowed File Extensions')}
-							</div>
-							<div class="flex items-center relative">
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div class="md:col-span-2">
+								<div class="text-xs font-medium text-gray-500 mb-1.5">
+									{$i18n.t('Allowed File Extensions')}
+								</div>
 								<Tooltip
 									content={$i18n.t(
 										'Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.'
@@ -1322,7 +1441,7 @@
 									placement="top-start"
 								>
 									<input
-										class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
 										type="text"
 										placeholder={$i18n.t('e.g. pdf, docx, txt')}
 										bind:value={RAGConfig.ALLOWED_FILE_EXTENSIONS}
@@ -1330,11 +1449,11 @@
 									/>
 								</Tooltip>
 							</div>
-						</div>
 
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Size')}</div>
-							<div class="flex items-center relative">
+							<div>
+								<div class="text-xs font-medium text-gray-500 mb-1.5">
+									{$i18n.t('Max Upload Size')}
+								</div>
 								<Tooltip
 									content={$i18n.t(
 										'The maximum file size in MB. If the file size exceeds this limit, the file will not be uploaded.'
@@ -1342,7 +1461,7 @@
 									placement="top-start"
 								>
 									<input
-										class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
 										type="number"
 										placeholder={$i18n.t('Leave empty for unlimited')}
 										bind:value={RAGConfig.FILE_MAX_SIZE}
@@ -1351,11 +1470,11 @@
 									/>
 								</Tooltip>
 							</div>
-						</div>
 
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Count')}</div>
-							<div class="flex items-center relative">
+							<div>
+								<div class="text-xs font-medium text-gray-500 mb-1.5">
+									{$i18n.t('Max Upload Count')}
+								</div>
 								<Tooltip
 									content={$i18n.t(
 										'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
@@ -1363,7 +1482,7 @@
 									placement="top-start"
 								>
 									<input
-										class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
 										type="number"
 										placeholder={$i18n.t('Leave empty for unlimited')}
 										bind:value={RAGConfig.FILE_MAX_COUNT}
@@ -1372,13 +1491,11 @@
 									/>
 								</Tooltip>
 							</div>
-						</div>
 
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Image Compression Width')}
-							</div>
-							<div class="flex items-center relative">
+							<div>
+								<div class="text-xs font-medium text-gray-500 mb-1.5">
+									{$i18n.t('Image Compression Width')}
+								</div>
 								<Tooltip
 									content={$i18n.t(
 										'The width in pixels to compress images to. Leave empty for no compression.'
@@ -1386,7 +1503,7 @@
 									placement="top-start"
 								>
 									<input
-										class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
 										type="number"
 										placeholder={$i18n.t('Leave empty for no compression')}
 										bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_WIDTH}
@@ -1395,13 +1512,11 @@
 									/>
 								</Tooltip>
 							</div>
-						</div>
 
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Image Compression Height')}
-							</div>
-							<div class="flex items-center relative">
+							<div>
+								<div class="text-xs font-medium text-gray-500 mb-1.5">
+									{$i18n.t('Image Compression Height')}
+								</div>
 								<Tooltip
 									content={$i18n.t(
 										'The height in pixels to compress images to. Leave empty for no compression.'
@@ -1409,7 +1524,7 @@
 									placement="top-start"
 								>
 									<input
-										class="flex-1 w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
 										type="number"
 										placeholder={$i18n.t('Leave empty for no compression')}
 										bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT}
@@ -1423,21 +1538,19 @@
 				</div>
 
 				<div class="mb-4">
+					<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="text-xs font-medium text-gray-500 mb-4">{$i18n.t('Integration')}</div>
-
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Google Drive')}</div>
-							<div class="flex items-center relative">
+						<div class="flex flex-col gap-4">
+							<div class="flex items-center justify-between">
+								<div class="text-sm font-medium">{$i18n.t('Google Drive')}</div>
 								<Switch bind:state={RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION} />
 							</div>
-						</div>
 
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('OneDrive')}</div>
-							<div class="flex items-center relative">
+							<div class="flex items-center justify-between">
+								<div class="text-sm font-medium">{$i18n.t('OneDrive')}</div>
 								<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />
 							</div>
 						</div>
@@ -1445,18 +1558,16 @@
 				</div>
 
 				<div class="mb-4">
+					<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="text-xs font-medium text-gray-500 mb-4">{$i18n.t('Danger Zone')}</div>
-
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Reset Upload Directory')}
-							</div>
-							<div class="flex items-center relative">
+						<div class="flex flex-col gap-3">
+							<div class="flex items-center justify-between">
+								<div class="text-sm font-medium">{$i18n.t('Reset Upload Directory')}</div>
 								<button
-									class="px-3 py-1.5 font-medium text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 transition rounded-lg hover:scale-105 active:scale-95"
+									class="px-3.5 py-1.5 font-medium text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 transition rounded-lg"
 									type="button"
 									on:click={() => {
 										showResetUploadDirConfirm = true;
@@ -1465,15 +1576,13 @@
 									{$i18n.t('Reset')}
 								</button>
 							</div>
-						</div>
 
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Reset Vector Storage/Knowledge')}
-							</div>
-							<div class="flex items-center relative">
+							<div class="flex items-center justify-between">
+								<div class="text-sm font-medium">
+									{$i18n.t('Reset Vector Storage/Knowledge')}
+								</div>
 								<button
-									class="px-3 py-1.5 font-medium text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 transition rounded-lg hover:scale-105 active:scale-95"
+									class="px-3.5 py-1.5 font-medium text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 transition rounded-lg"
 									type="button"
 									on:click={() => {
 										showResetConfirm = true;
@@ -1482,14 +1591,13 @@
 									{$i18n.t('Reset')}
 								</button>
 							</div>
-						</div>
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Reindex Knowledge Base Vectors')}
-							</div>
-							<div class="flex items-center relative">
+
+							<div class="flex items-center justify-between">
+								<div class="text-sm font-medium">
+									{$i18n.t('Reindex Knowledge Base Vectors')}
+								</div>
 								<button
-									class="px-3 py-1.5 font-medium text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 transition rounded-lg hover:scale-105 active:scale-95"
+									class="px-3.5 py-1.5 font-medium text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 transition rounded-lg"
 									type="button"
 									on:click={() => {
 										showReindexConfirm = true;
@@ -1505,7 +1613,7 @@
 		</div>
 		<div class="flex justify-end pt-3 text-sm font-medium">
 			<button
-				class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full hover:scale-105 active:scale-95"
+				class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 				type="submit"
 			>
 				{$i18n.t('Save')}

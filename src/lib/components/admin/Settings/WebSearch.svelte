@@ -133,28 +133,28 @@
 >
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if webConfig}
-			<div>
+			<div class="max-w-5xl mx-auto">
 				<div class="mb-3">
-					<div class="flex items-center gap-2 mb-1">
-						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-							{$i18n.t('Web Search')}
-						</div>
-
+					<div class="flex items-center justify-between mb-2.5">
+						<div class="text-base font-medium">{$i18n.t('Web Search')}</div>
 						<div class="flex items-center relative">
 							<Switch bind:state={webConfig.ENABLE_WEB_SEARCH} />
 						</div>
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 				</div>
 
-				<div class="  mb-2.5 flex w-full justify-between">
+				<div
+					class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+				>
+					<div class="mb-2.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Web Search Engine')}
 					</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 							bind:value={webConfig.WEB_SEARCH_ENGINE}
 							placeholder={$i18n.t('Select a engine')}
 							required
@@ -729,7 +729,7 @@
 								<div class="flex w-full">
 									<div class="flex-1 justify-end flex">
 										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+											class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 											bind:value={webConfig.PERPLEXITY_SEARCH_CONTEXT_USAGE}
 										>
 											<option value="low">{$i18n.t('Low')}</option>
@@ -884,7 +884,7 @@
 								<div class="flex w-full">
 									<div class="flex-1 justify-end flex">
 										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+											class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 											bind:value={webConfig.DDGS_BACKEND}
 										>
 											<option value="auto">{$i18n.t('Auto (Random)')}</option>
@@ -1028,17 +1028,17 @@
 					</div>
 				</div>
 
-				<div class="mb-3">
-					<div class="flex items-center gap-2 mb-1">
-						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-							{$i18n.t('Loader')}
-						</div>
-					</div>
-
-					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 				</div>
 
-				<div class="mb-2.5">
+				<div class="mb-3">
+					<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Loader')}</div>
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+				</div>
+
+				<div
+					class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+				>
+					<div class="mb-2.5">
 					<div class="flex w-full justify-between items-center">
 						<div class="self-center text-xs font-medium shrink-0 pr-2">
 							{$i18n.t('Web Loader Engine')}
@@ -1046,7 +1046,7 @@
 						<div class="flex w-full">
 							<div class="flex-1 justify-end flex">
 								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+									class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
 									bind:value={webConfig.WEB_LOADER_ENGINE}
 									placeholder={$i18n.t('Select a engine')}
 								>
@@ -1302,7 +1302,8 @@
 					</div>
 				</div>
 			</div>
-		{/if}
+		</div>
+	{/if}
 	</div>
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button

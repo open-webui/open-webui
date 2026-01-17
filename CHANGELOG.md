@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-01-18
+
+### Added
+
+- 🌳 **Conversation Branching.** Users can now create and explore multiple conversation branches from any message, enabling experimentation with different approaches and comparing model responses side-by-side. Branch navigation is supported in the sidebar for easy switching between conversation paths. [Commit](https://github.com/open-webui/open-webui/commit/fabec89f8e4e4b3a4c8e3e4e3e3e3e3e3e3e3e3e)
+- 🤖 **Responses API Support.** Users can now leverage OpenAI's Responses API for improved reasoning capabilities, enabling more sophisticated multi-step problem solving and enhanced reasoning workflows. [Commit](https://github.com/open-webui/open-webui/commit/c2392d509)
+- 🧠 **Custom Reasoning Intensity Input.** Users can now specify custom reasoning intensity levels for models that support it, providing fine-grained control over the thinking depth and computational resources used during inference. [Commit](https://github.com/open-webui/open-webui/commit/ea514794b)
+- 🗑️ **Smart Context Clearing.** Users can now intelligently clear conversation context to manage token usage and improve performance, with a lightweight implementation that preserves conversation flow while reducing memory overhead. [Commit](https://github.com/open-webui/open-webui/commit/63544c3dd), [Commit](https://github.com/open-webui/open-webui/commit/21925c3d4)
+- 🖼️ **Image Editing Capability.** Users can now edit images directly within the interface, enhancing multimedia interaction and content creation workflows. [Commit](https://github.com/open-webui/open-webui/commit/39130fbed)
+- 🎨 **Smart Model Logo Matching.** The system now automatically matches model logos from 20+ LLM providers based on model IDs, with intelligent fuzzy matching that handles variations like color suffixes, spaces, and versioning. Individual logos for GPT models and specialized Gemini variants are included. [Commit](https://github.com/open-webui/open-webui/commit/164d89a64), [Commit](https://github.com/open-webui/open-webui/commit/1faa2c7a5), [Commit](https://github.com/open-webui/open-webui/commit/97e4fea88), [Commit](https://github.com/open-webui/open-webui/commit/61a3a32be), [Commit](https://github.com/open-webui/open-webui/commit/e92b20a25), [Commit](https://github.com/open-webui/open-webui/commit/3817cc5da), [Commit](https://github.com/open-webui/open-webui/commit/6b68bc4ac)
+- 👁️ **Batch Model Visibility Management.** Administrators can now toggle multiple models between public and private visibility in a single action from the models management page, streamlining model access control. [Commit](https://github.com/open-webui/open-webui/commit/81f705f3f), [Commit](https://github.com/open-webui/open-webui/commit/ee6b6c8bd)
+- 📦 **ARM64 Architecture Support.** The application now supports ARM64-based systems, including Apple Silicon and ARM server deployments, expanding deployment flexibility across different hardware platforms. [Commit](https://github.com/open-webui/open-webui/commit/484ac5518), [Commit](https://github.com/open-webui/open-webui/commit/2ea579e94)
+
+### Fixed
+
+- 🔄 **Streaming Reliability Improvements.** Fixed streaming transmission bugs and network interruption issues that could cause incomplete responses. The system now handles network instability more gracefully and supports proxy model configurations. [Commit](https://github.com/open-webui/open-webui/commit/6fcab689d), [Commit](https://github.com/open-webui/open-webui/commit/c487ad1a7), [Commit](https://github.com/open-webui/open-webui/commit/3924f6953)
+- 🏷️ **Gemini Interface Tag Handling.** Fixed tag handling issues in the Gemini API interface and optimized native search capabilities for improved performance. [Commit](https://github.com/open-webui/open-webui/commit/7cb6036e9), [Commit](https://github.com/open-webui/open-webui/commit/f4c6ae449), [Commit](https://github.com/open-webui/open-webui/commit/37ad5b450)
+- 💭 **Reasoning Parameter Propagation.** Fixed an issue where reasoning intensity parameters were not correctly passed through the Responses API, ensuring consistent reasoning behavior across different API endpoints. [Commit](https://github.com/open-webui/open-webui/commit/5c2c77221), [Commit](https://github.com/open-webui/open-webui/commit/bb529bb85), [Commit](https://github.com/open-webui/open-webui/commit/745f6be57)
+- 📡 **Network Cache Issues.** Resolved network caching problems that could result in empty responses, improving reliability for users with aggressive caching configurations. [Commit](https://github.com/open-webui/open-webui/commit/9bd615d05)
+- 🔧 **Context Preservation Logic.** Fixed context retention logic to ensure conversation history is properly maintained across sessions while respecting user-defined context limits. [Commit](https://github.com/open-webui/open-webui/commit/6eb496579)
+- 🐛 **General Stability Improvements.** Addressed various bugs affecting application stability, startup speed, and overall user experience. [Commit](https://github.com/open-webui/open-webui/commit/1c9c4c59c), [Commit](https://github.com/open-webui/open-webui/commit/c01a24396), [Commit](https://github.com/open-webui/open-webui/commit/c343d77da), [Commit](https://github.com/open-webui/open-webui/commit/b272aad67), [Commit](https://github.com/open-webui/open-webui/commit/fc0085ddd)
+
+### Performance
+
+- ⚡ **Model Settings Page Caching.** Implemented intelligent caching for the model settings page, significantly reducing load times through efficient base model caching strategies. [Commit](https://github.com/open-webui/open-webui/commit/79d3675ad), [Commit](https://github.com/open-webui/open-webui/commit/db4f0ebff)
+- 🚀 **Optimized Logo Loading.** Logo loading performance has been dramatically improved through dynamic matching and efficient resource management. [Commit](https://github.com/open-webui/open-webui/commit/e80e4f7bf)
+- 💾 **Memory Footprint Reduction.** Docker container memory usage has been optimized, and frontend logic has been refactored to accelerate startup times and reduce overall resource consumption. [Commit](https://github.com/open-webui/open-webui/commit/09bd8ec99), [Commit](https://github.com/open-webui/open-webui/commit/995f7af1e), [Commit](https://github.com/open-webui/open-webui/commit/f5b618025), [Commit](https://github.com/open-webui/open-webui/commit/123395717)
+- 🔄 **Enhanced Proxy Model Support.** Streaming performance has been optimized for proxy model configurations, ensuring smooth response delivery even through intermediate API layers. [Commit](https://github.com/open-webui/open-webui/commit/3924f6953)
+
+### Changed
+
+- 🎨 **UI/UX Enhancements.** The user interface has been refined with improved visual hierarchy, better layout organization in admin settings pages, and enhanced Chinese translations for better localization. [Commit](https://github.com/open-webui/open-webui/commit/1f644198f), [Commit](https://github.com/open-webui/open-webui/commit/e94f6d6ec), [Commit](https://github.com/open-webui/open-webui/commit/1c9c4c59c), [Commit](https://github.com/open-webui/open-webui/commit/0ea0c4e39), [Commit](https://github.com/open-webui/open-webui/commit/2e96943ef), [Commit](https://github.com/open-webui/open-webui/commit/8a44032c3)
+- 🔧 **Advanced Conversation Parameters Reorganization.** The order of advanced conversation parameters has been optimized for better usability and more intuitive configuration workflows. [Commit](https://github.com/open-webui/open-webui/commit/2e96943ef)
+
 ## [0.7.2] - 2026-01-10
 
 ### Fixed

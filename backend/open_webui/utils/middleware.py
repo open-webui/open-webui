@@ -2372,7 +2372,29 @@ async def process_chat_response(
                                         
                                         try:
                                             allowed_params = spec.get("parameters", {}).get("properties", {}).keys()
-                                            tc_params = {k: v for k, v in tc_params.items() if k in allowed_params}
+
+                                            # Smart parameter mapping for common variations (e.g., singular/plural)
+                                            # Some models may use 'queries' instead of 'query', etc.
+                                            mapped_params = {}
+                                            for k, v in tc_params.items():
+                                                if k in allowed_params:
+                                                    mapped_params[k] = v
+                                                else:
+                                                    # Try singular/plural variations
+                                                    if k.endswith('s') and k[:-1] in allowed_params:
+                                                        # plural to singular: 'queries' -> 'query'
+                                                        singular = k[:-1]
+                                                        log.info(f"[PARAM MAPPING] Mapping '{k}' to '{singular}'")
+                                                        # If value is a list with one item, unwrap it for singular param
+                                                        mapped_params[singular] = v[0] if isinstance(v, list) and len(v) == 1 else v
+                                                    elif k + 's' in allowed_params:
+                                                        # singular to plural: 'query' -> 'queries'
+                                                        plural = k + 's'
+                                                        log.info(f"[PARAM MAPPING] Mapping '{k}' to '{plural}'")
+                                                        # If value is not a list, wrap it for plural param
+                                                        mapped_params[plural] = [v] if not isinstance(v, list) else v
+
+                                            tc_params = mapped_params
                                             
                                             if direct_tool:
                                                 tool_result = await event_caller(
@@ -3616,11 +3638,28 @@ async def process_chat_response(
                                 log.info(f"[TOOL DEBUG] Before filter - tool_function_params: {tool_function_params}")
                                 log.info(f"[TOOL DEBUG] allowed_params: {list(allowed_params)}")
 
-                                tool_function_params = {
-                                    k: v
-                                    for k, v in tool_function_params.items()
-                                    if k in allowed_params
-                                }
+                                # Smart parameter mapping for common variations (e.g., singular/plural)
+                                # Some models may use 'queries' instead of 'query', etc.
+                                mapped_params = {}
+                                for k, v in tool_function_params.items():
+                                    if k in allowed_params:
+                                        mapped_params[k] = v
+                                    else:
+                                        # Try singular/plural variations
+                                        if k.endswith('s') and k[:-1] in allowed_params:
+                                            # plural to singular: 'queries' -> 'query'
+                                            singular = k[:-1]
+                                            log.info(f"[PARAM MAPPING] Mapping '{k}' to '{singular}'")
+                                            # If value is a list with one item, unwrap it for singular param
+                                            mapped_params[singular] = v[0] if isinstance(v, list) and len(v) == 1 else v
+                                        elif k + 's' in allowed_params:
+                                            # singular to plural: 'query' -> 'queries'
+                                            plural = k + 's'
+                                            log.info(f"[PARAM MAPPING] Mapping '{k}' to '{plural}'")
+                                            # If value is not a list, wrap it for plural param
+                                            mapped_params[plural] = [v] if not isinstance(v, list) else v
+
+                                tool_function_params = mapped_params
 
                                 log.info(f"[TOOL DEBUG] After filter - tool_function_params: {tool_function_params}")
                                 log.info(f"[TOOL DEBUG] Calling tool: {tool_function_name}")

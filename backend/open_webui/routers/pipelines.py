@@ -176,22 +176,15 @@ router = APIRouter()
 
 @router.get("/list")
 async def get_pipelines_list(request: Request, user=Depends(get_admin_user)):
-    responses = await get_all_models_responses(request, user)
-    log.debug(f"get_pipelines_list: get_openai_models_responses returned {responses}")
-
-    urlIdxs = [
-        idx
-        for idx, response in enumerate(responses)
-        if response is not None and "pipelines" in response
-    ]
-
+    # Return all configured OpenAI API URLs without auto-detection
+    # Detection should be manually triggered from the frontend
     return {
         "data": [
             {
-                "url": request.app.state.config.OPENAI_API_BASE_URLS[urlIdx],
-                "idx": urlIdx,
+                "url": request.app.state.config.OPENAI_API_BASE_URLS[idx],
+                "idx": idx,
             }
-            for urlIdx in urlIdxs
+            for idx in range(len(request.app.state.config.OPENAI_API_BASE_URLS))
         ]
     }
 

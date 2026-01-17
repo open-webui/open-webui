@@ -41,43 +41,53 @@
 	}}
 />
 
-<div class="flex w-full gap-2 items-center">
-	<Tooltip className="w-full relative" content={''} placement="top-start">
-		<div class="flex w-full">
-			<div
-				class="flex-1 relative flex gap-1.5 items-center {!(connection?.config?.enable ?? true)
-					? 'opacity-50'
-					: ''}"
-			>
+<div
+	class="bg-gray-50 dark:bg-gray-850 rounded-lg p-4 flex flex-col justify-between border border-gray-100 dark:border-gray-800 {!(connection?.config?.enable ?? true)
+		? 'opacity-50'
+		: ''}"
+>
+	<div>
+		<div class="flex items-center justify-between mb-3">
+			<div class="flex items-center gap-2">
 				<Tooltip content={connection?.type === 'mcp' ? $i18n.t('MCP') : $i18n.t('OpenAPI')}>
-					<WrenchAlt />
+					<WrenchAlt className="w-5 h-5 opacity-70" />
 				</Tooltip>
-
-				{#if connection?.info?.name}
-					<div class=" capitalize outline-hidden w-full bg-transparent">
-						{connection?.info?.name ?? connection?.url}
-						<span class="text-gray-500">{connection?.info?.id ?? ''}</span>
-					</div>
-				{:else}
-					<div>
-						{connection?.url}
-					</div>
-				{/if}
+				<div class="text-xs font-medium text-gray-500">
+					{connection?.type === 'mcp' ? $i18n.t('MCP') : $i18n.t('OpenAPI')}
+				</div>
 			</div>
+			<Tooltip content={$i18n.t('Configure')}>
+				<button
+					class="p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+					on:click={() => {
+						showConfigModal = true;
+					}}
+					type="button"
+				>
+					<Cog6 className="w-4 h-4" />
+				</button>
+			</Tooltip>
 		</div>
-	</Tooltip>
 
-	<div class="flex gap-1">
-		<Tooltip content={$i18n.t('Configure')} className="self-start">
-			<button
-				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-				on:click={() => {
-					showConfigModal = true;
-				}}
-				type="button"
-			>
-				<Cog6 />
-			</button>
-		</Tooltip>
+		<button
+			class="w-full text-left"
+			on:click={() => {
+				showConfigModal = true;
+			}}
+			type="button"
+		>
+			{#if connection?.info?.name}
+				<div class="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition">
+					{connection?.info?.name ?? connection?.url}
+				</div>
+				{#if connection?.info?.id}
+					<div class="text-xs text-gray-500 mt-1">{connection?.info?.id}</div>
+				{/if}
+			{:else}
+				<div class="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition">
+					{connection?.url}
+				</div>
+			{/if}
+		</button>
 	</div>
 </div>

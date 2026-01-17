@@ -115,15 +115,15 @@
 			dispatch('save');
 		}}
 	>
-		<div class="  overflow-y-scroll scrollbar-hidden h-full pr-1.5">
-			<div class="mb-3.5">
+		<div class="overflow-y-scroll scrollbar-hidden h-full pr-2">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<div class="text-base font-medium text-gray-900 dark:text-gray-100">
 						{$i18n.t('Tasks')}
 					</div>
 				</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class=" mb-2 font-medium flex items-center">
 					<div class=" text-xs mr-1">{$i18n.t('Task Model')}</div>
@@ -222,16 +222,16 @@
 				</div>
 			</div>
 
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<div class="text-base font-medium text-gray-900 dark:text-gray-100">
 						{$i18n.t('Title Generation')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
 				</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				{#if taskConfig.ENABLE_TITLE_GENERATION}
 					<div class="mb-2.5">
@@ -252,9 +252,9 @@
 				{/if}
 			</div>
 
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<div class="text-base font-medium text-gray-900 dark:text-gray-100">
 						{$i18n.t('Voice Mode Custom Prompt')}
 					</div>
 
@@ -270,7 +270,7 @@
 					/>
 				</div>
 
-				<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				{#if taskConfig.VOICE_MODE_PROMPT_TEMPLATE != null}
 					<div class="mb-2.5">
@@ -291,16 +291,16 @@
 				{/if}
 			</div>
 
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<div class="text-base font-medium text-gray-900 dark:text-gray-100">
 						{$i18n.t('Follow Up Generation')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} />
 				</div>
 
-				<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				{#if taskConfig.ENABLE_FOLLOW_UP_GENERATION}
 					<div class="mb-2.5">
@@ -321,16 +321,16 @@
 				{/if}
 			</div>
 
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<div class="text-base font-medium text-gray-900 dark:text-gray-100">
 						{$i18n.t('Tags')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} />
 				</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				{#if taskConfig.ENABLE_TAGS_GENERATION}
 					<div class="mb-2.5">
@@ -351,16 +351,16 @@
 				{/if}
 			</div>
 
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<div class="text-base font-medium text-gray-900 dark:text-gray-100">
 						{$i18n.t('Query Generation')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
 				</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
@@ -378,7 +378,7 @@
 					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
 				</div>
 
-				<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Query Generation Prompt')}</div>
@@ -397,9 +397,9 @@
 				</div>
 			</div>
 
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<div class="text-base font-medium text-gray-900 dark:text-gray-100">
 						{$i18n.t('Autocomplete Generation')}
 					</div>
 
@@ -408,7 +408,7 @@
 					</Tooltip>
 				</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				{#if taskConfig.ENABLE_AUTOCOMPLETE_GENERATION}
 					<div class="mb-2.5">
@@ -430,14 +430,14 @@
 				{/if}
 			</div>
 
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<div class="text-base font-medium text-gray-900 dark:text-gray-100">
 						{$i18n.t('Image Prompt Generation')}
 					</div>
 				</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Image Prompt Generation Prompt')}</div>
@@ -456,14 +456,14 @@
 				</div>
 			</div>
 
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<div class="text-base font-medium text-gray-900 dark:text-gray-100">
 						{$i18n.t('Tools Function Calling')}
 					</div>
 				</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Tools Function Calling Prompt')}</div>
@@ -482,10 +482,10 @@
 				</div>
 			</div>
 
-			<div class="mb-3.5">
+			<div class="max-w-5xl mx-auto mb-3.5 bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800">
 				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="mb-2.5">
 					<div class="flex w-full justify-between">
@@ -494,7 +494,7 @@
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
+							class="p-1 px-3 text-xs flex rounded-lg transition"
 							type="button"
 							aria-label="Add Banner"
 							on:click={() => {
