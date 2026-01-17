@@ -400,7 +400,7 @@ def get_builtin_tools(
         return (
             model.get("info", {})
             .get("meta", {})
-            .get("capabilities", {})
+            .get("capabilities") or {}
             .get(name, default)
         )
 
