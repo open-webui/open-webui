@@ -3052,6 +3052,17 @@ async def process_chat_response(
                             if content_blocks and content_blocks[-1]["type"] == "text":
                                 content_blocks[-1]["content"] += remaining
 
+                            # CRITICAL: Emit the tool execution results to frontend
+                            log.info(f"[MIDDLEWARE] Emitting tool execution results: {len(remaining)} chars")
+                            await event_emitter(
+                                {
+                                    "type": "chat:completion",
+                                    "data": {
+                                        "content": serialize_content_blocks(content_blocks),
+                                    },
+                                }
+                            )
+
                     if content_blocks:
                         # Clean up the last text block
                         if content_blocks[-1]["type"] == "text":
