@@ -77,10 +77,6 @@ class ToolInlineExecutor:
         # (to avoid duplicate emissions during streaming)
         self._emitted_tool_executing: Set[str] = set()
 
-        # IMPORTANT: Pending tool executions (to avoid blocking streaming)
-        # List of (command, context) tuples to execute after streaming completes
-        self._pending_tools: List[tuple] = []
-
         # Build dynamic pattern from tool_prompts keys
         self._marker_pattern = self._build_marker_pattern()
 
@@ -208,10 +204,22 @@ class ToolInlineExecutor:
                 # NOTE: tool_executing event was already emitted when opening tag was detected
                 # (see lines 222-227 above)
 
-                # IMPORTANT: DO NOT execute tool here (blocks streaming!)
-                # Instead, add to pending queue and execute after streaming completes
-                log.info(f"[TOOL INLINE] Adding tool to pending queue: {tool_command}")
-                self._pending_tools.append((tool_command, tool_context))
+                # IMPORTANT: Execute tool inline (mid-response, not at the end)
+                # This is non-blocking because llm_call_fn uses asyncio.to_thread()
+                log.info(f"[TOOL INLINE] Executing tool inline: {tool_command}")
+
+                # Execute tool immediately (inline during streaming)
+                # NOTE: The LLM call inside _execute_tool uses thread pool, so it won't block
+                tool_result = await self._execute_tool(tool_command, tool_context)
+
+                # Append tool result to output immediately (inline in stream)
+                output += tool_result
+                self.generated_content += tool_result
+                log.info(f"[TOOL INLINE] Tool result appended inline: {len(tool_result)} chars")
+
+                # Clear tool_executing tracking
+                self._emitted_tool_executing.discard(tool_command)
+                log.debug(f"[TOOL INLINE] Cleared tool_executing tracking for {tool_command}")
 
                 # Remove processed marker from buffer (don't show marker to user)
                 self.buffer = self.buffer[marker_end:]
@@ -433,21 +441,63 @@ Do NOT include any explanatory text before or after the output block."""
                 tool_output = result.get("text", "")
                 log.info(f"[HARDCODED TOOL] Tool output received: {len(tool_output)} chars (JSON)")
 
-                # Parse JSON and extract graph data
+                # Strip markdown code blocks if present (Gemini sometimes wraps JSON in ```json...```)
+                import re
                 import json
+
+                # Remove markdown code blocks: ```json\n{...}\n``` → {...}
+                tool_output = tool_output.strip()
+                if tool_output.startswith("```"):
+                    # Remove opening ```json or ```
+                    tool_output = re.sub(r'^```(?:json)?\s*\n?', '', tool_output)
+                    # Remove closing ```
+                    tool_output = re.sub(r'\n?```\s*$', '', tool_output)
+                    tool_output = tool_output.strip()
+                    log.info(f"[HARDCODED TOOL] Stripped markdown code blocks, new length: {len(tool_output)} chars")
+
+                # Parse JSON and check status
                 try:
                     parsed = json.loads(tool_output)
                     log.info(f"[HARDCODED TOOL] Parsed JSON structure: {list(parsed.keys())}")
 
-                    # Extract graph from result.graph
-                    if "result" in parsed and "graph" in parsed["result"]:
-                        graph_data = parsed["result"]["graph"]
-                        final_output = json.dumps(graph_data, ensure_ascii=False)
-                        log.info(f"[HARDCODED TOOL] Extracted graph data: {len(final_output)} chars")
+                    # Handle two possible JSON structures:
+                    # 1. Correct: {"result": {"status": "...", ...}}
+                    # 2. Gemini mistake: {"status": "...", ...} (missing "result" wrapper)
+                    if "result" in parsed:
+                        result_data = parsed["result"]
+                    elif "status" in parsed:
+                        # Gemini returned flat structure without "result" wrapper
+                        result_data = parsed
+                        log.warning(f"[HARDCODED TOOL] JSON missing 'result' wrapper, using top-level fields")
                     else:
-                        # If structure is different, use original output
+                        # Completely unexpected structure
                         final_output = tool_output
-                        log.warning(f"[HARDCODED TOOL] Unexpected JSON structure, using original output")
+                        log.warning(f"[HARDCODED TOOL] Unexpected JSON structure (no result/status), using original output")
+                        result_data = None
+
+                    if result_data:
+                        status = result_data.get("status", "success")
+
+                        if status == "unsupported":
+                            # Graph generation failed - use recovery with Flash model
+                            reason = result_data.get("reason", "지원하지 않는 그래프 유형입니다")
+                            log.warning(f"[HARDCODED TOOL] Graph generation failed (unsupported): {reason}")
+                            await self._emit_event("tool_unsupported", command, f"도구 미지원: {command}")
+
+                            # Handle recovery - Flash model will generate natural text explanation
+                            recovery_text = await self._handle_unsupported_tool(command, reason)
+                            await self._emit_event("tool_completed", command, f"도구 완료 (복구): {command}")
+                            return f"\n{recovery_text}\n"
+
+                        elif status == "success" and "graph" in result_data:
+                            # Success - extract graph data
+                            graph_data = result_data["graph"]
+                            final_output = json.dumps(graph_data, ensure_ascii=False)
+                            log.info(f"[HARDCODED TOOL] Extracted graph data: {len(final_output)} chars")
+                        else:
+                            # Unexpected status or missing graph field
+                            final_output = tool_output
+                            log.warning(f"[HARDCODED TOOL] Unexpected result structure (status={status}), using original output")
                 except json.JSONDecodeError as e:
                     log.error(f"[HARDCODED TOOL] JSON parsing failed: {e}")
                     final_output = tool_output
@@ -672,37 +722,16 @@ Do NOT include any explanatory text before or after the output block."""
 
     async def flush(self) -> str:
         """
-        Return any remaining buffer content AND execute pending tools.
+        Return any remaining buffer content.
 
-        This is called after streaming completes, so we can safely execute
-        tools without blocking the streaming response.
+        NOTE: Tools are now executed inline (during streaming), not deferred to flush.
+        This method now just returns remaining buffer content.
         """
-        log.info(f"[TOOL INLINE] Flushing: buffer={len(self.buffer)} chars, pending_tools={len(self._pending_tools)}")
+        log.info(f"[TOOL INLINE] Flushing: buffer={len(self.buffer)} chars")
 
-        # Start with remaining buffer content
+        # Return remaining buffer content
         output = self.buffer
         self.buffer = ""
-
-        # Execute all pending tools (these were queued during streaming)
-        if self._pending_tools:
-            log.info(f"[TOOL INLINE] Executing {len(self._pending_tools)} pending tools...")
-
-            for tool_command, tool_context in self._pending_tools:
-                log.info(f"[TOOL INLINE] Executing pending tool: {tool_command}")
-
-                # Execute tool (this may take 3-5 seconds for hardcoded tools)
-                tool_result = await self._execute_tool(tool_command, tool_context)
-
-                # Append result to output
-                output += tool_result
-
-                # Clear tracking for this tool
-                self._emitted_tool_executing.discard(tool_command)
-                log.debug(f"[TOOL INLINE] Cleared tool_executing tracking for {tool_command}")
-
-            # Clear pending queue
-            self._pending_tools = []
-            log.info(f"[TOOL INLINE] All pending tools executed")
 
         return output
 

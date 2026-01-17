@@ -1257,7 +1257,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             # Get RAG context from Gemini
             try:
                 rag_service = get_rag_service(request)
-                rag_result = rag_service.query(
+                # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
+                import asyncio
+                rag_result = await asyncio.to_thread(
+                    rag_service.query,
                     question=user_message,
                     store_names=[store_name],
                     model="gemini-2.5-flash",
@@ -2631,8 +2634,11 @@ async def process_chat_response(
                                             # Create service instance
                                             service = GeminiRAGService(api_key=gemini_api_key)
 
-                                            # Call query with caching (cache_stage="tool_execution")
-                                            result = service.query(
+                                            # CRITICAL: Run sync Gemini API call in thread pool to avoid blocking event loop
+                                            # This allows multiple users to use the service concurrently
+                                            import asyncio
+                                            result = await asyncio.to_thread(
+                                                service.query,
                                                 question=user_message,
                                                 store_names=[],  # No RAG stores for tool execution
                                                 model=gemini_model,
@@ -3576,8 +3582,20 @@ async def process_chat_response(
                     log.info(f"[MIDDLEWARE FALLBACK] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
 
                     # Create LLM call function for inline tool execution
-                    async def make_fallback_inline_llm_call(system_prompt: str, user_message: str) -> dict:
-                        """Make a non-streaming LLM call for inline tool execution."""
+                    async def make_fallback_inline_llm_call(
+                        system_prompt: str,
+                        user_message: str,
+                        use_fast_model: bool = False,
+                        response_schema: Optional[type] = None
+                    ) -> dict:
+                        """Make a non-streaming LLM call for inline tool execution.
+
+                        Args:
+                            system_prompt: System prompt for the LLM
+                            user_message: User message/question
+                            use_fast_model: Whether to use fast model (Flash) vs Pro (ignored in fallback)
+                            response_schema: Pydantic schema for structured output (ignored in fallback)
+                        """
                         try:
                             payload = {
                                 "model": form_data.get("model"),
