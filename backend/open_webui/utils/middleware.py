@@ -1676,10 +1676,14 @@ async def process_chat_response(
     if form_data.get("metadata"):
         form_metadata = form_data["metadata"]
         # Merge tool-related keys that may have been set by chat completion handler
-        for key in ["enable_tool_notifications", "tool_commands", "tool_prompts_dict", "api_request_url", "api_headers", "api_cookies"]:
+        for key in [
+            "enable_tool_notifications", "tool_commands", "tool_prompts_dict", "tool_validation_rules",
+            "api_request_url", "api_headers", "api_cookies",
+            "is_gemini_backend", "gemini_api_key", "gemini_model_id", "gemini_tool_model"  # Gemini native SDK support
+        ]:
             if key in form_metadata:
                 metadata[key] = form_metadata[key]
-        log.info(f"[MIDDLEWARE] Merged metadata from form_data: enable_tool_notifications={metadata.get('enable_tool_notifications')}, tool_commands={metadata.get('tool_commands')}")
+        log.info(f"[MIDDLEWARE] Merged metadata from form_data: enable_tool_notifications={metadata.get('enable_tool_notifications')}, tool_commands={metadata.get('tool_commands')}, is_gemini_backend={metadata.get('is_gemini_backend')}")
         log.info(f"[MIDDLEWARE] Tool prompts dict keys: {list(metadata.get('tool_prompts_dict', {}).keys())}")
 
     async def background_tasks_handler():
@@ -2587,9 +2591,65 @@ async def process_chat_response(
                             log.info(f"[MIDDLEWARE] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
 
                             # Create LLM call function for inline tool execution
-                            async def make_inline_llm_call(system_prompt: str, user_message: str) -> dict:
-                                """Make a non-streaming LLM call for inline tool execution."""
+                            async def make_inline_llm_call(system_prompt: str, user_message: str, use_fast_model: bool = False) -> dict:
+                                """
+                                Make a non-streaming LLM call for inline tool execution or recovery.
+
+                                Args:
+                                    system_prompt: System prompt for the LLM
+                                    user_message: User message for the LLM
+                                    use_fast_model: If True, use Flash model for recovery (fast but less accurate)
+                                                   If False, use original Pro model for tool execution (accurate)
+                                """
                                 try:
+                                    # Check if Gemini backend - use native SDK with caching
+                                    is_gemini = metadata.get("is_gemini_backend", False)
+                                    log.info(f"[MIDDLEWARE] Tool execution - is_gemini_backend: {is_gemini}")
+                                    log.info(f"[MIDDLEWARE] Tool execution - metadata keys: {list(metadata.keys())}")
+                                    if is_gemini:
+                                        gemini_api_key = metadata.get("gemini_api_key")
+
+                                        # Model selection based on call type:
+                                        # - Tool execution (use_fast_model=False): Use Pro model for accuracy
+                                        # - Recovery (use_fast_model=True): Use Flash model for speed
+                                        if use_fast_model:
+                                            gemini_model = metadata.get("gemini_tool_model")  # Flash for recovery
+                                            log.info(f"[MIDDLEWARE] Using Flash model for recovery: {gemini_model}")
+                                        else:
+                                            gemini_model = metadata.get("gemini_model_id")  # Pro for tool execution
+                                            log.info(f"[MIDDLEWARE] Using Pro model for tool execution: {gemini_model}")
+
+                                        if gemini_api_key and gemini_model:
+                                            log.info(f"[MIDDLEWARE] Using Gemini native SDK for tool execution")
+                                            log.info(f"[MIDDLEWARE] Model: {gemini_model}")
+                                            log.info(f"[MIDDLEWARE] System prompt length: {len(system_prompt)} chars")
+
+                                            # Import GeminiRAGService
+                                            from open_webui.utils.gemini_rag import GeminiRAGService
+
+                                            # Create service instance
+                                            service = GeminiRAGService(api_key=gemini_api_key)
+
+                                            # Call query with caching (cache_stage="tool_execution")
+                                            result = service.query(
+                                                question=user_message,
+                                                store_names=[],  # No RAG stores for tool execution
+                                                model=gemini_model,
+                                                temperature=0.2,
+                                                system_instruction=system_prompt,
+                                                cache_stage="tool_execution"  # Enable caching for tool prompts
+                                            )
+
+                                            if result.get("success"):
+                                                text = result.get("text", "")
+                                                log.info(f"[MIDDLEWARE] Gemini inline LLM response: {len(text)} chars")
+                                                return {"success": True, "text": text}
+                                            else:
+                                                error = result.get("error", "Unknown error")
+                                                log.error(f"[MIDDLEWARE] Gemini inline LLM call failed: {error}")
+                                                return {"success": False, "error": error}
+
+                                    # Fallback to OpenAI-compatible API
                                     payload = {
                                         "model": form_data.get("model"),
                                         "messages": [
