@@ -4,7 +4,8 @@
 	import { getModels as _getModels } from '$lib/apis';
 
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	const i18n: Writable<any> = getContext('i18n');
 
 	import { models, settings, user } from '$lib/stores';
 
@@ -17,12 +18,10 @@
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
 	import { getToolServerConnections, setToolServerConnections } from '$lib/apis/configs';
 
-	export let saveSettings: Function;
-
-	let servers = null;
+	let servers: any[] = [];
 	let showConnectionModal = false;
 
-	const addConnectionHandler = async (server) => {
+	const addConnectionHandler = async (server: any) => {
 		servers = [...servers, server];
 		await updateHandler();
 	};
@@ -59,26 +58,30 @@
 		{#if servers !== null}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class="flex items-center gap-2 mb-1">
+						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+							{$i18n.t('Tools')}
+						</div>
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 					<div class="mb-2.5 flex flex-col w-full justify-between">
 						<!-- {$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
 							URL: 'server?.url'
 						})} -->
-						<div class="flex justify-between items-center mb-0.5">
-							<div class="font-medium">{$i18n.t('Manage Tool Servers')}</div>
+						<div class="flex items-center gap-2 mb-2">
+							<div class="text-sm font-medium">{$i18n.t('Manage Tool Servers')}</div>
 
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
-									class="px-1"
+									class="p-1 bg-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full transition"
 									on:click={() => {
 										showConnectionModal = true;
 									}}
 									type="button"
 								>
-									<Plus />
+									<Plus className="size-3.5" />
 								</button>
 							</Tooltip>
 						</div>

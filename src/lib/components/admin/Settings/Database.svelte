@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-ignore
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -10,9 +11,12 @@
 	import { getAllUsers } from '$lib/apis/users';
 	import { exportConfig, importConfig } from '$lib/apis/configs';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
-	export let saveHandler: Function;
+	const i18n = getContext<Writable<i18nType>>('i18n');
+
+	export let saveHandler: () => void;
 
 	const exportAllUserChats = async () => {
 		let blob = new Blob([JSON.stringify(await getAllUserChats(localStorage.token))], {
@@ -28,7 +32,7 @@
 
 		const csv = [
 			headers.join(','),
-			...users.users.map((user) => {
+			...users.users.map((user: any) => {
 				return headers
 					.map((header) => {
 						if (user[header] === null || user[header] === undefined) {
@@ -57,107 +61,150 @@
 >
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div>
-			<div class=" mb-2 text-sm font-medium">{$i18n.t('Database')}</div>
+			<div>
+				<div class="mb-3">
+					<div class="flex items-center gap-2 mb-1">
+						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+							{$i18n.t('Database')}
+						</div>
+					</div>
 
-			<input
-				id="config-json-input"
-				hidden
-				type="file"
-				accept=".json"
-				on:change={(e) => {
-					const file = e.target.files[0];
-					const reader = new FileReader();
+					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+				</div>
 
-					reader.onload = async (e) => {
-						const res = await importConfig(localStorage.token, JSON.parse(e.target.result)).catch(
-							(error) => {
-								toast.error(`${error}`);
+				<input
+					id="config-json-input"
+					hidden
+					type="file"
+					accept=".json"
+					on:change={(e) => {
+						const target = e.target as HTMLInputElement;
+						const file = target.files?.[0];
+						if (!file) return;
+
+						const reader = new FileReader();
+
+						reader.onload = async (e) => {
+							const result = e.target?.result as string;
+							if (!result) return;
+
+							const res = await importConfig(localStorage.token, JSON.parse(result)).catch(
+								(error) => {
+									toast.error(`${error}`);
+								}
+							);
+
+							if (res) {
+								toast.success($i18n.t('Config imported successfully'));
 							}
-						);
+							target.value = '';
+						};
 
-						if (res) {
-							toast.success($i18n.t('Config imported successfully'));
-						}
-						e.target.value = null;
-					};
+						reader.readAsText(file);
+					}}
+				/>
 
-					reader.readAsText(file);
-				}}
-			/>
+				<button
+					type="button"
+					class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+					on:click={async () => {
+						const input = document.getElementById('config-json-input');
+						if (input) input.click();
+					}}
+				>
+					<div class=" self-center mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
+							<path
+								fill-rule="evenodd"
+								d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center text-sm font-medium">
+						{$i18n.t('Import Config from JSON File')}
+					</div>
+				</button>
 
-			<button
-				type="button"
-				class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-				on:click={async () => {
-					document.getElementById('config-json-input').click();
-				}}
-			>
-				<div class=" self-center mr-3">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
-						<path
-							fill-rule="evenodd"
-							d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</div>
-				<div class=" self-center text-sm font-medium">
-					{$i18n.t('Import Config from JSON File')}
-				</div>
-			</button>
+				<button
+					type="button"
+					class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+					on:click={async () => {
+						const config = await exportConfig(localStorage.token);
+						const blob = new Blob([JSON.stringify(config)], {
+							type: 'application/json'
+						});
+						saveAs(blob, `config-${Date.now()}.json`);
+					}}
+				>
+					<div class=" self-center mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
+							<path
+								fill-rule="evenodd"
+								d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center text-sm font-medium">
+						{$i18n.t('Export Config to JSON File')}
+					</div>
+				</button>
 
-			<button
-				type="button"
-				class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-				on:click={async () => {
-					const config = await exportConfig(localStorage.token);
-					const blob = new Blob([JSON.stringify(config)], {
-						type: 'application/json'
-					});
-					saveAs(blob, `config-${Date.now()}.json`);
-				}}
-			>
-				<div class=" self-center mr-3">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
-						<path
-							fill-rule="evenodd"
-							d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</div>
-				<div class=" self-center text-sm font-medium">
-					{$i18n.t('Export Config to JSON File')}
-				</div>
-			</button>
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
-			<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+				{#if $config?.features.enable_admin_export ?? true}
+					<div class="  flex w-full justify-between">
+						<!-- <div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Deletion')}</div> -->
 
-			{#if $config?.features.enable_admin_export ?? true}
-				<div class="  flex w-full justify-between">
-					<!-- <div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Deletion')}</div> -->
+						<button
+							class=" flex rounded-md py-1.5 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+							type="button"
+							on:click={() => {
+								// exportAllUserChats();
+
+								downloadDatabase(localStorage.token).catch((error) => {
+									toast.error(`${error}`);
+								});
+							}}
+						>
+							<div class=" self-center mr-3">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z"
+									/>
+									<path
+										fill-rule="evenodd"
+										d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</div>
+							<div class=" self-center text-sm font-medium">{$i18n.t('Download Database')}</div>
+						</button>
+					</div>
 
 					<button
-						class=" flex rounded-md py-1.5 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-						type="button"
+						class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 						on:click={() => {
-							// exportAllUserChats();
-
-							downloadDatabase(localStorage.token).catch((error) => {
-								toast.error(`${error}`);
-							});
+							exportAllUserChats();
 						}}
 					>
 						<div class=" self-center mr-3">
@@ -175,62 +222,38 @@
 								/>
 							</svg>
 						</div>
-						<div class=" self-center text-sm font-medium">{$i18n.t('Download Database')}</div>
+						<div class=" self-center text-sm font-medium">
+							{$i18n.t('Export All Chats (All Users)')}
+						</div>
 					</button>
-				</div>
 
-				<button
-					class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-					on:click={() => {
-						exportAllUserChats();
-					}}
-				>
-					<div class=" self-center mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
-							<path
-								fill-rule="evenodd"
-								d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-					<div class=" self-center text-sm font-medium">
-						{$i18n.t('Export All Chats (All Users)')}
-					</div>
-				</button>
-
-				<button
-					class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-					on:click={() => {
-						exportUsers();
-					}}
-				>
-					<div class=" self-center mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
-							<path
-								fill-rule="evenodd"
-								d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-					<div class=" self-center text-sm font-medium">
-						{$i18n.t('Export Users')}
-					</div>
-				</button>
-			{/if}
+					<button
+						class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+						on:click={() => {
+							exportUsers();
+						}}
+					>
+						<div class=" self-center mr-3">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
+								<path
+									fill-rule="evenodd"
+									d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+						<div class=" self-center text-sm font-medium">
+							{$i18n.t('Export Users')}
+						</div>
+					</button>
+				{/if}
+			</div>
 		</div>
 	</div>
 </form>

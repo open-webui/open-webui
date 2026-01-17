@@ -1,7 +1,9 @@
 <script lang="ts">
+	// @ts-ignore
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	// @ts-ignore
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
@@ -25,9 +27,10 @@
 
 	const dispatch = createEventDispatcher();
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	const i18n: Writable<any> = getContext('i18n');
 
-	let taskConfig = {
+	let taskConfig: any = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
 		ENABLE_TITLE_GENERATION: true,
@@ -46,13 +49,14 @@
 		VOICE_MODE_PROMPT_TEMPLATE: ''
 	};
 
-	let promptSuggestions = [];
+	let promptSuggestions: any[] = [];
 	let banners: Banner[] = [];
 
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
 		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
+		// @ts-ignore
 		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
 		await updateBanners();
 
@@ -63,10 +67,10 @@
 		_banners.set(await setBanners(localStorage.token, banners));
 	};
 
-	let workspaceModels = null;
-	let baseModels = null;
+	let workspaceModels: any = null;
+	let baseModels: any = null;
 
-	let models = null;
+	let models: any = null;
 
 	const init = async () => {
 		taskConfig = await getTaskConfig(localStorage.token);
@@ -76,8 +80,8 @@
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, false);
 
-		models = baseModels.map((m) => {
-			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
+		models = baseModels.map((m: any) => {
+			const workspaceModel = workspaceModels.find((wm: any) => wm.id === m.id);
 
 			if (workspaceModel) {
 				return {
@@ -113,9 +117,13 @@
 	>
 		<div class="  overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 			<div class="mb-3.5">
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Tasks')}</div>
+				<div class="flex items-center gap-2 mb-4">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Tasks')}
+					</div>
+				</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 				<div class=" mb-2 font-medium flex items-center">
 					<div class=" text-xs mr-1">{$i18n.t('Task Model')}</div>
@@ -150,7 +158,7 @@
 							placeholder={$i18n.t('Select a model')}
 							on:change={() => {
 								if (taskConfig.TASK_MODEL) {
-									const model = models.find((m) => m.id === taskConfig.TASK_MODEL);
+									const model = models.find((m: any) => m.id === taskConfig.TASK_MODEL);
 									if (model) {
 										if (model?.access_control !== null) {
 											toast.error(
@@ -185,7 +193,7 @@
 							placeholder={$i18n.t('Select a model')}
 							on:change={() => {
 								if (taskConfig.TASK_MODEL_EXTERNAL) {
-									const model = models.find((m) => m.id === taskConfig.TASK_MODEL_EXTERNAL);
+									const model = models.find((m: any) => m.id === taskConfig.TASK_MODEL_EXTERNAL);
 									if (model) {
 										if (model?.access_control !== null) {
 											toast.error(
@@ -212,14 +220,18 @@
 						</select>
 					</div>
 				</div>
+			</div>
 
-				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
+			<div class="mb-3.5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
 						{$i18n.t('Title Generation')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
 				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 				{#if taskConfig.ENABLE_TITLE_GENERATION}
 					<div class="mb-2.5">
@@ -238,9 +250,11 @@
 						</Tooltip>
 					</div>
 				{/if}
+			</div>
 
-				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
+			<div class="mb-3.5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
 						{$i18n.t('Voice Mode Custom Prompt')}
 					</div>
 
@@ -255,6 +269,8 @@
 						}}
 					/>
 				</div>
+
+				<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
 
 				{#if taskConfig.VOICE_MODE_PROMPT_TEMPLATE != null}
 					<div class="mb-2.5">
@@ -273,14 +289,18 @@
 						</Tooltip>
 					</div>
 				{/if}
+			</div>
 
-				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
+			<div class="mb-3.5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
 						{$i18n.t('Follow Up Generation')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} />
 				</div>
+
+				<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
 
 				{#if taskConfig.ENABLE_FOLLOW_UP_GENERATION}
 					<div class="mb-2.5">
@@ -299,14 +319,18 @@
 						</Tooltip>
 					</div>
 				{/if}
+			</div>
 
-				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
-						{$i18n.t('Tags Generation')}
+			<div class="mb-3.5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Tags')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} />
 				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 				{#if taskConfig.ENABLE_TAGS_GENERATION}
 					<div class="mb-2.5">
@@ -325,6 +349,18 @@
 						</Tooltip>
 					</div>
 				{/if}
+			</div>
+
+			<div class="mb-3.5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Web Search')}
+					</div>
+
+					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
+				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
@@ -342,6 +378,8 @@
 					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
 				</div>
 
+				<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
+
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Query Generation Prompt')}</div>
 
@@ -357,9 +395,11 @@
 						/>
 					</Tooltip>
 				</div>
+			</div>
 
-				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
+			<div class="mb-3.5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
 						{$i18n.t('Autocomplete Generation')}
 					</div>
 
@@ -367,6 +407,8 @@
 						<Switch bind:state={taskConfig.ENABLE_AUTOCOMPLETE_GENERATION} />
 					</Tooltip>
 				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 				{#if taskConfig.ENABLE_AUTOCOMPLETE_GENERATION}
 					<div class="mb-2.5">
@@ -386,6 +428,16 @@
 						</Tooltip>
 					</div>
 				{/if}
+			</div>
+
+			<div class="mb-3.5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Image Prompt Generation')}
+					</div>
+				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Image Prompt Generation Prompt')}</div>
@@ -402,6 +454,16 @@
 						/>
 					</Tooltip>
 				</div>
+			</div>
+
+			<div class="mb-3.5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Tools Function Calling')}
+					</div>
+				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Tools Function Calling Prompt')}</div>
@@ -434,8 +496,9 @@
 						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							type="button"
+							aria-label="Add Banner"
 							on:click={() => {
-								if (banners.length === 0 || banners.at(-1).content !== '') {
+								if (banners.length === 0 || banners.at(-1)?.content !== '') {
 									banners = [
 										...banners,
 										{

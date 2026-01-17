@@ -54,7 +54,7 @@
 
 	let connectionsConfig: any = null;
 
-	let pipelineUrls = {};
+	let pipelineUrls: any = {};
 	let showAddOpenAIConnectionModal = false;
 	let showAddGeminiConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
@@ -128,7 +128,7 @@
 		}
 	};
 
-	const addOpenAIConnectionHandler = async (connection) => {
+	const addOpenAIConnectionHandler = async (connection: any) => {
 		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
 		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
 		OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS.length - 1] = connection.config;
@@ -136,7 +136,7 @@
 		await updateOpenAIHandler();
 	};
 
-	const addOllamaConnectionHandler = async (connection) => {
+	const addOllamaConnectionHandler = async (connection: any) => {
 		OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, connection.url];
 		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length - 1] = {
 			...connection.config,
@@ -180,7 +180,7 @@
 		}
 	};
 
-	const addGeminiConnectionHandler = async (connection) => {
+	const addGeminiConnectionHandler = async (connection: any) => {
 		GEMINI_API_BASE_URLS = [...GEMINI_API_BASE_URLS, connection.url];
 		GEMINI_API_KEYS = [...GEMINI_API_KEYS, connection.key];
 		GEMINI_API_CONFIGS[GEMINI_API_BASE_URLS.length - 1] = connection.config;
@@ -300,8 +300,10 @@
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="flex justify-between items-center mb-4">
-							<div class="text-xs font-medium text-gray-500">{$i18n.t('OpenAI API')}</div>
+						<div class="flex items-center gap-2 mb-4">
+							<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+								{$i18n.t('OpenAI API')}
+							</div>
 							<Switch
 								bind:state={ENABLE_OPENAI_API}
 								on:change={async () => {
@@ -311,8 +313,9 @@
 						</div>
 
 						{#if ENABLE_OPENAI_API}
+							<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
 							<div class="flex flex-col gap-2">
-								<div class="flex justify-between items-center">
+								<div class="flex items-center gap-2">
 									<div class="text-sm font-medium">{$i18n.t('Manage OpenAI API Connections')}</div>
 
 									<Tooltip content={$i18n.t(`Add Connection`)}>
@@ -366,8 +369,10 @@
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="flex justify-between items-center mb-4">
-							<div class="text-xs font-medium text-gray-500">{$i18n.t('Gemini API')}</div>
+						<div class="flex items-center gap-2 mb-4">
+							<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+								{$i18n.t('Gemini API')}
+							</div>
 							<Switch
 								bind:state={ENABLE_GEMINI_API}
 								on:change={async () => {
@@ -377,8 +382,9 @@
 						</div>
 
 						{#if ENABLE_GEMINI_API}
+							<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
 							<div class="flex flex-col gap-2">
-								<div class="flex justify-between items-center">
+								<div class="flex items-center gap-2">
 									<div class="text-sm font-medium">{$i18n.t('Manage Gemini API Connections')}</div>
 
 									<Tooltip content={$i18n.t(`Add Connection`)}>
@@ -430,8 +436,10 @@
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="flex justify-between items-center mb-4">
-							<div class="text-xs font-medium text-gray-500">{$i18n.t('Ollama API')}</div>
+						<div class="flex items-center gap-2 mb-4">
+							<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+								{$i18n.t('Ollama API')}
+							</div>
 							<Switch
 								bind:state={ENABLE_OLLAMA_API}
 								on:change={async () => {
@@ -441,8 +449,9 @@
 						</div>
 
 						{#if ENABLE_OLLAMA_API}
+							<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
 							<div class="flex flex-col gap-2">
-								<div class="flex justify-between items-center">
+								<div class="flex items-center gap-2">
 									<div class="text-sm font-medium">{$i18n.t('Manage Ollama API Connections')}</div>
 
 									<Tooltip content={$i18n.t(`Add Connection`)}>
@@ -505,9 +514,11 @@
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="text-xs font-medium text-gray-500 mb-4">
+						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
 							{$i18n.t('Advanced Settings')}
 						</div>
+
+						<hr class="border-gray-100 dark:border-gray-800 my-2.5" />
 
 						<div class="flex flex-col gap-4">
 							<div>

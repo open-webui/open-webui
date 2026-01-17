@@ -302,6 +302,7 @@ async def generate_chat_completion(
                 bypass_filter=bypass_filter,
             )
         else:
+            log.info(f"Routing to OpenAI handler - Model ID: {model_id}, owned_by: {model.get('owned_by')}, model keys: {list(model.keys())}")
             return await generate_openai_chat_completion(
                 request=request,
                 form_data=form_data,

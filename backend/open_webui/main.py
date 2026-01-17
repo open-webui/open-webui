@@ -1754,11 +1754,14 @@ async def chat_completion(
 
     async def process_chat(request, form_data, user, metadata, model):
         try:
+            log.info(f"[DEBUG PROCESS_CHAT] Starting process_chat for model: {model.get('id', 'unknown')}")
             form_data, metadata, events = await process_chat_payload(
                 request, form_data, user, metadata, model
             )
 
+            log.info(f"[DEBUG PROCESS_CHAT] Calling chat_completion_handler")
             response = await chat_completion_handler(request, form_data, user)
+            log.info(f"[DEBUG PROCESS_CHAT] chat_completion_handler returned, response type: {type(response)}")
             if metadata.get("chat_id") and metadata.get("message_id"):
                 try:
                     if not metadata["chat_id"].startswith("local:"):
@@ -1790,7 +1793,7 @@ async def chat_completion(
             finally:
                 raise  # re-raise to ensure proper task cancellation handling
         except Exception as e:
-            log.debug(f"Error processing chat payload: {e}")
+            log.error(f"[DEBUG PROCESS_CHAT] Error processing chat payload: {e}", exc_info=True)
             if metadata.get("chat_id") and metadata.get("message_id"):
                 # Update the chat message with the error
                 try:
@@ -1832,13 +1835,16 @@ async def chat_completion(
         and metadata.get("message_id")
     ):
         # Asynchronous Chat Processing
+        log.info(f"[DEBUG] Creating async task for chat_id={metadata.get('chat_id')}, model_id={model_id}")
         task_id, _ = await create_task(
             request.app.state.redis,
             process_chat(request, form_data, user, metadata, model),
             id=metadata["chat_id"],
         )
+        log.info(f"[DEBUG] Async task created, task_id={task_id}")
         return {"status": True, "task_id": task_id}
     else:
+        log.info(f"[DEBUG] Running synchronous chat processing")
         return await process_chat(request, form_data, user, metadata, model)
 
 

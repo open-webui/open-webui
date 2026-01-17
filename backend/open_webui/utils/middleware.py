@@ -1405,6 +1405,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
     # -> Chat Files
 
+    log.info(f"[DEBUG PAYLOAD] process_chat_payload called for model: {model.get('id', 'unknown')}, owned_by: {model.get('owned_by', 'unknown')}")
+
     # Extract max_context_count BEFORE apply_params_to_form_data deletes it
     max_context_count = form_data.get("params", {}).get("max_context_count", None)
     
@@ -1526,7 +1528,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data["messages"])
-    model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
+    model_knowledge = ((model.get("info") or {}).get("meta") or {}).get("knowledge", False)
 
     if (
         model_knowledge
@@ -1852,11 +1854,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Inject builtin tools for native function calling based on enabled features and model capability
     # Check if builtin_tools capability is enabled for this model (defaults to True if not specified)
     builtin_tools_enabled = (
-        model.get("info", {})
-        .get("meta", {})
-        .get("capabilities", {})
-        .get("builtin_tools", True)
-    )
+        ((model.get("info") or {}).get("meta") or {}).get("capabilities") or {}
+    ).get("builtin_tools", True)
     if (
         metadata.get("params", {}).get("function_calling") == "native"
         and builtin_tools_enabled
@@ -1900,11 +1899,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Check if file context extraction is enabled for this model (default True)
     file_context_enabled = (
-        model.get("info", {})
-        .get("meta", {})
-        .get("capabilities", {})
-        .get("file_context", True)
-    )
+        ((model.get("info") or {}).get("meta") or {}).get("capabilities") or {}
+    ).get("file_context", True)
 
     if file_context_enabled:
         try:
@@ -2081,7 +2077,7 @@ async def process_chat_response(
 
                             if res and isinstance(res, dict):
                                 choices = res.get("choices", [])
-                                if len(choices) == 1 and choices[0] is not None:
+                                if len(choices) == 1 and choices[0] is not None and isinstance(choices[0], dict):
                                     response_message = choices[0].get(
                                         "message", {}
                                     ) or {}
@@ -2146,7 +2142,7 @@ async def process_chat_response(
 
                         if res and isinstance(res, dict):
                             choices = res.get("choices", [])
-                            if len(choices) == 1 and choices[0] is not None:
+                            if len(choices) == 1 and choices[0] is not None and isinstance(choices[0], dict):
                                 response_message = choices[0].get(
                                     "message", {}
                                 ) or {}
@@ -2531,6 +2527,26 @@ async def process_chat_response(
                                     "data": {"done": True},
                                 }
                             )
+                    else:
+                        # SAFEGUARD: Handle invalid or empty choices
+                        error_msg = "Model returned an invalid or empty response. Please try again or use a different model."
+                        log.warning(f"[DEBUG NON-STREAM] Invalid choices: {choices}")
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": {
+                                    "error": {"content": error_msg},
+                                    "done": True,
+                                },
+                            }
+                        )
+                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata["chat_id"],
+                            metadata["message_id"],
+                            {
+                                "error": {"content": error_msg},
+                            },
+                        )
 
                     if events and isinstance(events, list):
                         extra_response = {}

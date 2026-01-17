@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { getContext, tick, onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -27,7 +27,8 @@
 	import Search from '../icons/Search.svelte';
 	import XMark from '../icons/XMark.svelte';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	const i18n: Writable<any> = getContext('i18n');
 
 	let selectedTab = 'general';
 
@@ -59,7 +60,7 @@
 		scrollToTab(selectedTab);
 	}
 
-	const scrollToTab = (tabId) => {
+	const scrollToTab = (tabId: string) => {
 		const tabElement = document.getElementById(tabId);
 		if (tabElement) {
 			tabElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
@@ -67,8 +68,8 @@
 	};
 
 	let search = '';
-	let searchDebounceTimeout;
-	let filteredSettings = [];
+	let searchDebounceTimeout: any;
+	let filteredSettings: any[] = [];
 
 	const allSettings = [
 		{
@@ -323,10 +324,10 @@
 		{#each filteredSettings as tab (tab.id)}
 			<button
 				id={tab.id}
-				class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+				class="px-3 py-2 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 				tab.id
-					? ''
-					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+					? 'bg-gray-100 dark:bg-gray-800 text-black dark:text-white'
+					: 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 hover:text-gray-800 dark:hover:text-gray-200'}"
 				on:click={() => {
 					goto(tab.route);
 				}}

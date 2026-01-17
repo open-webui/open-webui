@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-ignore
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { toast } from 'svelte-sonner';
@@ -28,26 +29,26 @@
 	let downloading = false;
 	let uploading = false;
 
-	let pipelineFiles;
+	let pipelineFiles: FileList | null = null;
 
-	let PIPELINES_LIST = null;
+	let PIPELINES_LIST: any[] | null = null;
 	let selectedPipelinesUrlIdx = '';
 
-	let pipelines = null;
+	let pipelines: any[] | null = null;
 
-	let valves = null;
-	let valves_spec = null;
-	let selectedPipelineIdx = null;
+	let valves: any = null;
+	let valves_spec: any = null;
+	let selectedPipelineIdx: any = null;
 
 	let pipelineDownloadUrl = '';
 
 	const updateHandler = async () => {
-		const pipeline = pipelines[selectedPipelineIdx];
+		const pipeline = pipelines?.[selectedPipelineIdx];
 
 		if (pipeline && (pipeline?.valves ?? false)) {
 			for (const property in valves_spec.properties) {
 				if (valves_spec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
+					valves[property] = (valves[property] ?? '').split(',').map((v: string) => v.trim());
 				}
 			}
 
@@ -66,7 +67,9 @@
 				models.set(
 					await getModels(
 						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
 					)
 				);
 				saveHandler();
@@ -76,7 +79,7 @@
 		}
 	};
 
-	const getValves = async (idx) => {
+	const getValves = async (idx: any) => {
 		valves = null;
 		valves_spec = null;
 
@@ -103,11 +106,11 @@
 		valves = null;
 		valves_spec = null;
 
-		if (PIPELINES_LIST.length > 0) {
+		if (PIPELINES_LIST && PIPELINES_LIST.length > 0) {
 			console.debug(selectedPipelinesUrlIdx);
 			pipelines = await getPipelines(localStorage.token, selectedPipelinesUrlIdx);
 
-			if (pipelines.length > 0) {
+			if (pipelines && pipelines.length > 0) {
 				selectedPipelineIdx = 0;
 				await getValves(selectedPipelineIdx);
 			}
@@ -133,7 +136,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null
 				)
 			);
 		}
@@ -163,7 +168,9 @@
 				models.set(
 					await getModels(
 						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
 					)
 				);
 			}
@@ -172,10 +179,12 @@
 		}
 
 		pipelineFiles = null;
-		const pipelineUploadInputElement = document.getElementById('pipelines-upload-input');
+		const pipelineUploadInputElement = document.getElementById(
+			'pipelines-upload-input'
+		) as HTMLInputElement;
 
 		if (pipelineUploadInputElement) {
-			pipelineUploadInputElement.value = null;
+			pipelineUploadInputElement.value = '';
 		}
 
 		uploading = false;
@@ -197,7 +206,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null
 				)
 			);
 		}
@@ -207,7 +218,7 @@
 		PIPELINES_LIST = await getPipelinesList(localStorage.token);
 		console.log(PIPELINES_LIST);
 
-		if (PIPELINES_LIST.length > 0) {
+		if (PIPELINES_LIST && PIPELINES_LIST.length > 0) {
 			selectedPipelinesUrlIdx = PIPELINES_LIST[0]['idx'].toString();
 		}
 
@@ -223,9 +234,19 @@
 >
 	<div class="overflow-y-scroll scrollbar-hidden h-full">
 		{#if PIPELINES_LIST !== null}
-			<div class="flex w-full justify-between mb-2">
-				<div class=" self-center text-sm font-medium">
-					{$i18n.t('Manage Pipelines')}
+			<div class="mb-3">
+				<div class="flex items-center gap-2 mb-1">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Pipelines')}
+					</div>
+				</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
+
+				<div class="flex w-full justify-between mb-2">
+					<div class=" self-center text-sm font-medium">
+						{$i18n.t('Manage Pipelines')}
+					</div>
 				</div>
 			</div>
 
@@ -454,6 +475,7 @@
 											deletePipelineHandler();
 										}}
 										type="button"
+										aria-label={$i18n.t('Delete Pipeline')}
 									>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"

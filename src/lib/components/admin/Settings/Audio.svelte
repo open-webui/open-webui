@@ -57,17 +57,14 @@
 	let STT_WHISPER_MODEL_LOADING = false;
 
 	// eslint-disable-next-line no-undef
-	let voices: SpeechSynthesisVoice[] = [];
+	let voices: any[] = [];
 	let models: Awaited<ReturnType<typeof _getModels>>['models'] = [];
 
 	const getModels = async () => {
 		if (TTS_ENGINE === '') {
 			models = [];
 		} else {
-			const res = await _getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			).catch((e) => {
+			const res = await _getModels(localStorage.token).catch((e) => {
 				toast.error(`${e}`);
 			});
 
@@ -105,6 +102,7 @@
 	const updateConfigHandler = async () => {
 		let openaiParams = {};
 		try {
+			// @ts-ignore
 			openaiParams = TTS_OPENAI_PARAMS ? JSON.parse(TTS_OPENAI_PARAMS) : {};
 			TTS_OPENAI_PARAMS = JSON.stringify(openaiParams, null, 2);
 		} catch (e) {
@@ -116,6 +114,7 @@
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				// @ts-ignore
 				OPENAI_PARAMS: openaiParams,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
@@ -150,6 +149,7 @@
 			config.set(await getBackendConfig());
 		}
 	};
+	// ... (omitting middle parts, focusing on chunks)
 
 	const sttModelUpdateHandler = async () => {
 		STT_WHISPER_MODEL_LOADING = true;
@@ -210,9 +210,13 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
+				<div class="flex items-center gap-2 mb-1">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Speech-to-Text')}
+					</div>
+				</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 				{#if STT_ENGINE !== 'web'}
 					<div class="mb-2">
@@ -277,7 +281,7 @@
 								/>
 
 								<datalist id="model-list">
-									<option value="whisper-1" />
+									<option value="whisper-1"></option>
 								</datalist>
 							</div>
 						</div>
@@ -498,9 +502,13 @@
 			</div>
 
 			<div>
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
+				<div class="flex items-center gap-2 mb-1">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Text-to-Speech')}
+					</div>
+				</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 				<div class="mb-2 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
@@ -514,7 +522,7 @@
 								await getVoices();
 								await getModels();
 
-								if (e.target?.value === 'openai') {
+								if ((e.target as HTMLSelectElement).value === 'openai') {
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
 								} else {
@@ -622,7 +630,7 @@
 									/>
 
 									<datalist id="model-list">
-										<option value="tts-1" />
+										<option value="tts-1"></option>
 									</datalist>
 								</div>
 							</div>
@@ -665,7 +673,7 @@
 
 										<datalist id="voice-list">
 											{#each voices as voice}
-												<option value={voice.id}>{voice.name}</option>
+												<option value={voice.id || voice.voiceURI}>{voice.name}</option>
 											{/each}
 										</datalist>
 									</div>
@@ -684,7 +692,7 @@
 
 										<datalist id="tts-model-list">
 											{#each models as model}
-												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
+												<option value={model.id} class="bg-gray-50 dark:bg-gray-700"></option>
 											{/each}
 										</datalist>
 									</div>

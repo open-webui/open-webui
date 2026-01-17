@@ -9,11 +9,14 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let saveHandler: Function;
 
-	let config = null;
+	let config: any = null;
 
 	let engines = ['pyodide', 'jupyter'];
 
@@ -41,19 +44,15 @@
 		{#if config}
 			<div>
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
-
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-					<div class="mb-2.5">
-						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Enable Code Execution')}
-							</div>
-
-							<Switch bind:state={config.ENABLE_CODE_EXECUTION} />
+					<div class="flex items-center gap-2 mb-4">
+						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+							{$i18n.t('Code Execution')}
 						</div>
+
+						<Switch bind:state={config.ENABLE_CODE_EXECUTION} />
 					</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between">
@@ -164,19 +163,15 @@
 				</div>
 
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Code Interpreter')}</div>
-
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-					<div class="mb-2.5">
-						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
-								{$i18n.t('Enable Code Interpreter')}
-							</div>
-
-							<Switch bind:state={config.ENABLE_CODE_INTERPRETER} />
+					<div class="flex items-center gap-2 mb-4">
+						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+							{$i18n.t('Code Interpreter')}
 						</div>
+
+						<Switch bind:state={config.ENABLE_CODE_INTERPRETER} />
 					</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 					{#if config.ENABLE_CODE_INTERPRETER}
 						<div class="mb-2.5">

@@ -19,14 +19,25 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import CodeEditorModal from '$lib/components/common/CodeEditorModal.svelte';
+
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	type ImageModel = {
+		id: string;
+		name: string;
+		[key: string]: any;
+	};
+
 	const dispatch = createEventDispatcher();
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	let loading = false;
 
-	let models = null;
-	let config = null;
+	// eslint-disable-next-line no-undef
+	let models: ImageModel[] | null = null;
+	let config: any = null;
 
 	let showComfyUIWorkflowEditor = false;
 	let REQUIRED_WORKFLOW_NODES = [
@@ -152,7 +163,7 @@
 		return null;
 	};
 
-	const validateJSON = (json) => {
+	const validateJSON = (json: string) => {
 		try {
 			const obj = JSON.parse(json);
 
@@ -232,7 +243,7 @@
 			}
 
 			REQUIRED_WORKFLOW_NODES = REQUIRED_WORKFLOW_NODES.map((node) => {
-				const n = config.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
+				const n = config.COMFYUI_WORKFLOW_NODES.find((n: any) => n.type === node.type) ?? node;
 				console.debug(n);
 
 				return {
@@ -266,7 +277,7 @@
 
 			REQUIRED_EDIT_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
 				const n =
-					config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
+					config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES.find((n: any) => n.type === node.type) ?? node;
 				console.debug(n);
 
 				return {
@@ -288,28 +299,26 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
 		{#if config}
 			<div>
-				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
-
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-					<div class="mb-2.5">
-						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
-								<div class="">
-									{$i18n.t('Image Generation')}
-								</div>
-							</div>
-
-							<Switch bind:state={config.ENABLE_IMAGE_GENERATION} />
+				<div class="mb-3.5">
+					<div class="flex items-center gap-2 mb-4">
+						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+							{$i18n.t('Image Generation')}
 						</div>
+
+						<Switch bind:state={config.ENABLE_IMAGE_GENERATION} />
 					</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Create Image')}</div>
+					<div class="flex items-center gap-2 mb-1">
+						<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+							{$i18n.t('Create Image')}
+						</div>
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-2.5" />
 
 					{#if config.ENABLE_IMAGE_GENERATION}
 						<div class="mb-2.5">
@@ -687,15 +696,19 @@
 								type="file"
 								accept=".json"
 								on:change={(e) => {
-									const file = e.target.files[0];
-									const reader = new FileReader();
+									const target = e.target as HTMLInputElement;
+									const file = target.files?.[0];
 
-									reader.onload = (e) => {
-										config.COMFYUI_WORKFLOW = e.target.result;
-										e.target.value = null;
-									};
+									if (file) {
+										const reader = new FileReader();
 
-									reader.readAsText(file);
+										reader.onload = (e) => {
+											config.COMFYUI_WORKFLOW = e.target?.result as string;
+											target.value = '';
+										};
+
+										reader.readAsText(file);
+									}
 								}}
 							/>
 							<div class="flex w-full justify-between items-center">
@@ -742,7 +755,7 @@
 									bind:show={showComfyUIWorkflowEditor}
 									value={config.COMFYUI_WORKFLOW}
 									lang="json"
-									onChange={(e) => {
+									onChange={(e: string) => {
 										config.COMFYUI_WORKFLOW = e;
 									}}
 									onSave={() => {
@@ -1100,15 +1113,19 @@
 								type="file"
 								accept=".json"
 								on:change={(e) => {
-									const file = e.target.files[0];
-									const reader = new FileReader();
+									const target = e.target as HTMLInputElement;
+									const file = target.files?.[0];
 
-									reader.onload = (e) => {
-										config.IMAGES_EDIT_COMFYUI_WORKFLOW = e.target.result;
-										e.target.value = null;
-									};
+									if (file) {
+										const reader = new FileReader();
 
-									reader.readAsText(file);
+										reader.onload = (e) => {
+											config.IMAGES_EDIT_COMFYUI_WORKFLOW = e.target?.result as string;
+											target.value = '';
+										};
+
+										reader.readAsText(file);
+									}
 								}}
 							/>
 							<div class="flex w-full justify-between items-center">
@@ -1155,7 +1172,7 @@
 									bind:show={showComfyUIEditWorkflowEditor}
 									value={config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 									lang="json"
-									onChange={(e) => {
+									onChange={(e: string) => {
 										config.IMAGES_EDIT_COMFYUI_WORKFLOW = e;
 									}}
 									onSave={() => {
