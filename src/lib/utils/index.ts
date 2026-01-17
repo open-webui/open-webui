@@ -872,7 +872,8 @@ export const processDetails = (content) => {
 			}
 
 			if (attributes.result) {
-				content = content.replace(match, `"${attributes.result}"`);
+				const unescapedResult = unescapeHtml(attributes.result);
+				content = content.replace(match, `"${unescapedResult}"`);
 			}
 		}
 	}
