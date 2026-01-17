@@ -8,7 +8,7 @@ import redis
 from datetime import datetime
 from pathlib import Path
 from typing import Generic, Union, Optional, TypeVar
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote as urlquote
 
 import requests
 from pydantic import BaseModel
@@ -646,7 +646,7 @@ def load_oauth_providers():
             client = oauth.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
-                client_secret=GOOGLE_CLIENT_SECRET.value,
+                client_secret=urlquote(GOOGLE_CLIENT_SECRET.value, safe='') if GOOGLE_CLIENT_SECRET.value else GOOGLE_CLIENT_SECRET.value,
                 server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
                 client_kwargs={
                     "scope": GOOGLE_OAUTH_SCOPE.value,
@@ -675,7 +675,7 @@ def load_oauth_providers():
             client = oauth.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
-                client_secret=MICROSOFT_CLIENT_SECRET.value,
+                client_secret=urlquote(MICROSOFT_CLIENT_SECRET.value, safe='') if MICROSOFT_CLIENT_SECRET.value else MICROSOFT_CLIENT_SECRET.value,
                 server_metadata_url=f"{MICROSOFT_CLIENT_LOGIN_BASE_URL.value}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
                 client_kwargs={
                     "scope": MICROSOFT_OAUTH_SCOPE.value,
@@ -701,7 +701,7 @@ def load_oauth_providers():
             client = oauth.register(
                 name="github",
                 client_id=GITHUB_CLIENT_ID.value,
-                client_secret=GITHUB_CLIENT_SECRET.value,
+                client_secret=urlquote(GITHUB_CLIENT_SECRET.value, safe='') if GITHUB_CLIENT_SECRET.value else GITHUB_CLIENT_SECRET.value,
                 access_token_url="https://github.com/login/oauth/access_token",
                 authorize_url="https://github.com/login/oauth/authorize",
                 api_base_url="https://api.github.com",
@@ -759,7 +759,7 @@ def load_oauth_providers():
             client = oauth.register(
                 name="oidc",
                 client_id=OAUTH_CLIENT_ID.value,
-                client_secret=OAUTH_CLIENT_SECRET.value,
+                client_secret=urlquote(OAUTH_CLIENT_SECRET.value, safe='') if OAUTH_CLIENT_SECRET.value else OAUTH_CLIENT_SECRET.value,
                 server_metadata_url=OPENID_PROVIDER_URL.value,
                 client_kwargs=client_kwargs,
                 redirect_uri=OPENID_REDIRECT_URI.value,
@@ -778,7 +778,7 @@ def load_oauth_providers():
             client = oauth.register(
                 name="feishu",
                 client_id=FEISHU_CLIENT_ID.value,
-                client_secret=FEISHU_CLIENT_SECRET.value,
+                client_secret=urlquote(FEISHU_CLIENT_SECRET.value, safe='') if FEISHU_CLIENT_SECRET.value else FEISHU_CLIENT_SECRET.value,
                 access_token_url="https://open.feishu.cn/open-apis/authen/v2/oauth/token",
                 authorize_url="https://accounts.feishu.cn/open-apis/authen/v1/authorize",
                 api_base_url="https://open.feishu.cn/open-apis",
