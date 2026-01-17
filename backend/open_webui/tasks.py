@@ -5,6 +5,7 @@ from uuid import uuid4
 import json
 import logging
 from redis.asyncio import Redis
+from redis.cluster import RedisCluster as RedisClusterClass
 from fastapi import Request
 from typing import Dict, List, Optional
 
@@ -74,7 +75,24 @@ async def redis_list_item_tasks(redis: Redis, item_id: str) -> List[str]:
 
 
 async def redis_send_command(redis: Redis, command: dict):
-    await redis.publish(REDIS_PUBSUB_CHANNEL, json.dumps(command))
+    """
+    Send a command message via Redis pub/sub.
+
+    For standard Redis, this uses the publish() method directly.
+    For RedisCluster, we iterate through all master nodes to ensure
+    the message reaches all subscribers across the cluster.
+    """
+    command_json = json.dumps(command)
+
+    if isinstance(redis, RedisClusterClass):
+        # RedisCluster doesn't have a publish() method that broadcasts
+        # to all nodes. We need to manually publish to each master node.
+        for node in redis.get_primaries():
+            node_redis = redis.get_redis_connection(node)
+            await node_redis.publish(REDIS_PUBSUB_CHANNEL, command_json)
+    else:
+        # Standard Redis - just publish normally
+        await redis.publish(REDIS_PUBSUB_CHANNEL, command_json)
 
 
 async def cleanup_task(redis, task_id: str, id=None):
