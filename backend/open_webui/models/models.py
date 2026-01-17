@@ -56,6 +56,19 @@ class ModelMeta(BaseModel):
     # If set, prompts from this group will be used instead of default
     prompt_group_id: Optional[str] = None
 
+    # Tool gating model ID to use for Stage 1 (tool selection)
+    # If set, this model will be used for tool gating, while the main model
+    # is used for actual tool execution (Stage 2)
+    # The gating model inherits the tool_group and prompt configuration from
+    # the main model - only the model ID is different
+    # Example:
+    # - Main model: "gemini-3.0-pro" with tool_group="default_group_1"
+    # - tool_gating_model: "gemini-3.0-flash"
+    # - Result: Flash does tool selection with default_group_1 prompts,
+    #           Pro does tool execution if needed
+    # Default: None (use main model for both stages)
+    tool_gating_model: Optional[str] = None
+
     model_config = ConfigDict(extra="allow")
 
     pass
