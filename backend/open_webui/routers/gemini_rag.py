@@ -546,7 +546,10 @@ async def query_rag(
             log.info("[GEMINI RAG] Tool gating disabled, including all tools")
             final_system = compose_stage2_system_prompt(final_system or "", tool_prompts)
 
-        result = service.query(
+        # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
+        import asyncio
+        result = await asyncio.to_thread(
+            service.query,
             question=body.question,
             store_names=body.store_names,
             model=body.model,
@@ -760,7 +763,10 @@ async def query_rag_by_chapter(
             log.info("[GEMINI RAG BY CHAPTER] Tool gating disabled, including all tools")
             final_system = compose_stage2_system_prompt(final_system or "", tool_prompts)
 
-        result = service.query(
+        # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
+        import asyncio
+        result = await asyncio.to_thread(
+            service.query,
             question=question,
             store_names=[store_name],
             model=model,

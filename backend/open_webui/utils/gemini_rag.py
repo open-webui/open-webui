@@ -7,6 +7,7 @@ Google Gemini의 File Search 기능을 사용하여 RAG(Retrieval-Augmented Gene
 import logging
 import time
 from typing import Optional, List, Dict, Any
+from pydantic import BaseModel
 
 from google import genai
 from google.genai import types
@@ -16,6 +17,31 @@ from open_webui.utils.gemini_cache_manager import GeminiCacheManager
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def remove_additional_properties(schema: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Recursively remove 'additionalProperties' from JSON schema.
+    Gemini API doesn't support this field.
+
+    Args:
+        schema: JSON schema dict
+
+    Returns:
+        Schema with additionalProperties removed
+    """
+    if isinstance(schema, dict):
+        # Remove additionalProperties key
+        schema = {k: v for k, v in schema.items() if k != 'additionalProperties'}
+
+        # Recursively process nested schemas
+        for key, value in schema.items():
+            if isinstance(value, dict):
+                schema[key] = remove_additional_properties(value)
+            elif isinstance(value, list):
+                schema[key] = [remove_additional_properties(item) if isinstance(item, dict) else item for item in value]
+
+    return schema
 
 
 class GeminiRAGService:
@@ -406,8 +432,16 @@ class GeminiRAGService:
             # Add response_schema if provided (for hardcoded tools)
             if response_schema:
                 config.response_mime_type = "application/json"
-                config.response_schema = response_schema
-                log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__}")
+                # Convert Pydantic model to JSON schema and remove additionalProperties
+                # (Gemini API doesn't support additionalProperties field)
+                if isinstance(response_schema, type) and issubclass(response_schema, BaseModel):
+                    json_schema = response_schema.model_json_schema()
+                    json_schema = remove_additional_properties(json_schema)
+                    config.response_schema = json_schema
+                    log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (cleaned)")
+                else:
+                    config.response_schema = response_schema
+                    log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema}")
 
             # Use cached content if available, otherwise use system_instruction
             # CRITICAL: When using cached_content, do NOT set system_instruction
@@ -565,8 +599,16 @@ class GeminiRAGService:
             # Add response_schema if provided (for hardcoded tools)
             if response_schema:
                 config.response_mime_type = "application/json"
-                config.response_schema = response_schema
-                log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (streaming)")
+                # Convert Pydantic model to JSON schema and remove additionalProperties
+                # (Gemini API doesn't support additionalProperties field)
+                if isinstance(response_schema, type) and issubclass(response_schema, BaseModel):
+                    json_schema = response_schema.model_json_schema()
+                    json_schema = remove_additional_properties(json_schema)
+                    config.response_schema = json_schema
+                    log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (streaming, cleaned)")
+                else:
+                    config.response_schema = response_schema
+                    log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema} (streaming)")
 
             # Use cached content if available
             if cached_content_name:
