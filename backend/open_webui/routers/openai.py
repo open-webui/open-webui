@@ -62,6 +62,7 @@ from open_webui.utils.tool_gating import (
     compose_stage2_system_prompt,
 )
 from open_webui.utils.tool_inline_executor import build_tool_hints
+from open_webui.utils.gemini_cache_manager import GeminiCacheManager
 
 
 log = logging.getLogger(__name__)
@@ -287,6 +288,244 @@ async def make_gemini_llm_call(
     except Exception as e:
         log.error(f"[OPENAI-TOOL-GATING] LLM call exception: {e}")
         return {"success": False, "error": str(e)}
+
+
+async def make_gemini_native_call_with_cache(
+    api_key: str,
+    model: str,
+    system_prompt: str,
+    query: str,
+    cache_stage: Optional[str] = None,
+    cache_manager: Optional[GeminiCacheManager] = None,
+    temperature: float = 0.2,
+) -> dict:
+    """
+    Make a non-streaming LLM call using Gemini native API with caching support.
+
+    Args:
+        api_key: Gemini API key
+        model: Model ID (e.g., "gemini-2.5-flash")
+        system_prompt: System prompt to use
+        query: User query
+        cache_stage: Optional cache stage ("gating" or "execution")
+        cache_manager: Optional GeminiCacheManager instance
+        temperature: Sampling temperature
+
+    Returns:
+        dict with 'success' and 'text' (or 'error') keys
+    """
+    try:
+        from google import genai
+        from google.genai import types
+
+        log.info(f"[GEMINI-NATIVE-CACHE] Making LLM call with native API")
+        log.info(f"  Model: {model}")
+        log.info(f"  System prompt length: {len(system_prompt)} chars")
+        log.info(f"  Cache stage: {cache_stage}")
+        log.info(f"  Cache manager: {'SET' if cache_manager else 'NONE'}")
+
+        # Create Gemini client
+        client = genai.Client(api_key=api_key)
+
+        # Get or create cache if cache_stage provided
+        cached_content_name = None
+        if cache_stage and cache_manager and system_prompt:
+            cached_content_name = cache_manager.get_or_create_cache(
+                model_id=model,
+                system_prompt=system_prompt,
+                stage=cache_stage
+            )
+            if cached_content_name:
+                log.info(f"[GEMINI-NATIVE-CACHE] Using global cache: {cached_content_name}")
+
+        # Build config
+        config = types.GenerateContentConfig(
+            temperature=temperature,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                disable=False,          # Enable automatic function calling
+                maximum_remote_calls=5  # Limit to 5 calls (default is 10)
+            )
+        )
+
+        # Use cached content OR system_instruction
+        if cached_content_name:
+            config.cached_content = cached_content_name
+        elif system_prompt:
+            config.system_instruction = system_prompt
+
+        # Call Gemini native API
+        response = client.models.generate_content(
+            model=model,
+            contents=query,
+            config=config
+        )
+
+        # Extract text from native API response
+        text = response.text if hasattr(response, 'text') else ""
+
+        log.info(f"[GEMINI-NATIVE-CACHE] Response received: {len(text)} chars")
+        return {"success": True, "text": text}
+
+    except Exception as e:
+        log.error(f"[GEMINI-NATIVE-CACHE] Call exception: {e}")
+        log.exception(e)
+        return {"success": False, "error": str(e)}
+
+
+def get_or_create_gemini_cache_manager(request: Request, api_key: str) -> GeminiCacheManager:
+    """
+    Get or create a GeminiCacheManager for the given API key.
+    Cache managers are stored in app.state per API key.
+
+    Args:
+        request: FastAPI request object
+        api_key: Gemini API key
+
+    Returns:
+        GeminiCacheManager instance
+    """
+    from google import genai
+
+    # Initialize cache managers dict if not exists
+    if not hasattr(request.app.state, "gemini_cache_managers"):
+        request.app.state.gemini_cache_managers = {}
+
+    # Create cache manager if not exists for this API key
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+    if key_hash not in request.app.state.gemini_cache_managers:
+        log.info(f"[CACHE] Creating new GeminiCacheManager for key: {key_hash}")
+        client = genai.Client(api_key=api_key)
+        request.app.state.gemini_cache_managers[key_hash] = GeminiCacheManager(client)
+
+    return request.app.state.gemini_cache_managers[key_hash]
+
+
+async def handle_gemini_native_request(
+    request: Request,
+    api_key: str,
+    model_id: str,
+    payload: dict,
+    final_system: Optional[str],
+    cache_stage: Optional[str] = None,
+) -> dict:
+    """
+    Handle chat completion request using unified Gemini service.
+
+    This function routes all Gemini requests to GeminiRAGService for unified handling.
+    Regular chat (no RAG) is handled by passing empty store_names.
+
+    Args:
+        request: FastAPI request object
+        api_key: Gemini API key
+        model_id: Model ID (e.g., "gemini-2.5-flash")
+        payload: OpenAI-format payload with messages
+        final_system: Final system prompt (may be cached)
+        cache_stage: Optional cache stage ("execution", "gating", etc.)
+
+    Returns:
+        OpenAI-compatible response dict or StreamingResponse
+    """
+    try:
+        from open_webui.utils.gemini_rag import get_gemini_rag_service
+
+        log.info("=" * 80)
+        log.info("[GEMINI-NATIVE] Routing to unified GeminiRAGService")
+        log.info(f"  Model: {model_id}")
+        log.info(f"  Cache stage: {cache_stage}")
+        log.info(f"  System prompt length: {len(final_system) if final_system else 0} chars")
+        log.info("=" * 80)
+
+        # Extract user message from OpenAI-format messages
+        messages = payload.get("messages", [])
+        user_content = ""
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                content = msg.get("content", "")
+                if isinstance(content, str):
+                    user_content = content
+                elif isinstance(content, list):
+                    # Handle multimodal content
+                    for part in content:
+                        if isinstance(part, dict) and part.get("type") == "text":
+                            user_content = part.get("text", "")
+                            break
+                break
+
+        if not user_content:
+            return {
+                "error": {
+                    "message": "No user message found in request",
+                    "type": "invalid_request_error",
+                    "code": "no_user_message"
+                }
+            }
+
+        log.info(f"[GEMINI-NATIVE] User query: {user_content[:100]}...")
+
+        # Get unified Gemini service
+        service = get_gemini_rag_service(api_key)
+
+        # Extract temperature from payload
+        temperature = payload.get("temperature", 0.2)
+        stream = payload.get("stream", False)
+
+        # Call unified service
+        # IMPORTANT: Empty store_names = regular chat (no RAG)
+        result = service.query(
+            question=user_content,
+            store_names=[],  # Empty = no RAG, just regular chat
+            model=model_id,
+            temperature=temperature,
+            system_instruction=final_system,
+            cache_stage=cache_stage
+        )
+
+        if not result.get("success"):
+            return {
+                "error": {
+                    "message": result.get("error", "Unknown error"),
+                    "type": "api_error",
+                    "code": "gemini_service_error"
+                }
+            }
+
+        # Check if streaming (note: current service doesn't support streaming yet)
+        # For now, return non-streaming response
+        # TODO: Add streaming support to GeminiRAGService
+        text = result.get("text", "")
+        log.info(f"[GEMINI-NATIVE] Response received: {len(text)} chars")
+
+        # Convert to OpenAI format
+        return {
+            "id": f"chatcmpl-{int(time.time())}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": model_id,
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": text
+                },
+                "finish_reason": "stop"
+            }],
+            "usage": {
+                "prompt_tokens": 0,  # Gemini doesn't provide this
+                "completion_tokens": 0,
+                "total_tokens": 0
+            }
+        }
+
+    except Exception as e:
+        log.error(f"[GEMINI-NATIVE] Request handling error: {e}")
+        log.exception(e)
+        return {
+            "error": {
+                "message": str(e),
+                "type": "api_error",
+                "code": "gemini_native_error"
+            }
+        }
 
 
 ##########################################
@@ -916,6 +1155,7 @@ async def generate_chat_completion(
     # Check model info and override the payload
     # Model-level settings for tool handling
     model_tool_mode = None  # "gating" | "concat" | "none" | None
+    tool_gating_model = None  # Optional: Model for Stage 1 tool gating
 
     if model_info:
         if model_info.base_model_id:
@@ -927,6 +1167,7 @@ async def generate_chat_completion(
 
         # Extract tool_mode and prompt_group_id from meta (model settings)
         model_tool_mode = meta.get("tool_mode")  # "gating" | "concat" | "none" | None
+        tool_gating_model = meta.get("tool_gating_model")  # Optional: Flash model for Stage 1 tool gating
         prompt_group_id_from_meta = meta.get("prompt_group_id")
 
         # Extract system and prompt_group_id from params (legacy support)
@@ -939,7 +1180,7 @@ async def generate_chat_completion(
         # Priority: meta.prompt_group_id > params.prompt_group_id
         prompt_group_id = prompt_group_id_from_meta or prompt_group_id_from_params
 
-        log.info(f"[OPENAI] Model settings - tool_mode: {model_tool_mode}, prompt_group_id: {prompt_group_id}")
+        log.info(f"[OPENAI] Model settings - tool_mode: {model_tool_mode}, tool_gating_model: {tool_gating_model}, prompt_group_id: {prompt_group_id}")
 
         # Always try to compose prompts (even if params is None)
         # Get persona values from metadata (stored in chat)
@@ -1116,15 +1357,36 @@ async def generate_chat_completion(
 
         log.info(f"[OPENAI-TOOL-GATING] Stage 1 System Prompt Length: {len(stage1_system)} chars")
 
-        # Make Stage 1 call (non-streaming)
-        stage1_result = await make_gemini_llm_call(
-            request_url=request_url,
-            headers=headers.copy(),
-            cookies=cookies,
-            base_payload=payload.copy(),
-            system_prompt=stage1_system,
-            query=user_query,
-        )
+        # Make Stage 1 call
+        # Use Gemini native API with cache if Gemini backend, otherwise OpenAI-compatible API
+        # Use tool_gating_model if configured, otherwise use main model
+        stage1_model = tool_gating_model if tool_gating_model else payload["model"]
+        log.info(f"[OPENAI-TOOL-GATING] Stage 1 model: {stage1_model} (tool_gating_model={tool_gating_model})")
+
+        if is_gemini_backend:
+            log.info("[OPENAI-TOOL-GATING] Using Gemini native API for Stage 1")
+            cache_manager = get_or_create_gemini_cache_manager(request, key)
+            stage1_result = await make_gemini_native_call_with_cache(
+                api_key=key,
+                model=stage1_model,  # Use tool_gating_model if available
+                system_prompt=stage1_system,
+                query=user_query,
+                cache_stage="gating",
+                cache_manager=cache_manager,
+                temperature=payload.get("temperature", 0.2),
+            )
+        else:
+            log.info("[OPENAI-TOOL-GATING] Using OpenAI-compatible API for Stage 1")
+            stage1_payload = payload.copy()
+            stage1_payload["model"] = stage1_model  # Use tool_gating_model if available
+            stage1_result = await make_gemini_llm_call(
+                request_url=request_url,
+                headers=headers.copy(),
+                cookies=cookies,
+                base_payload=stage1_payload,
+                system_prompt=stage1_system,
+                query=user_query,
+            )
 
         if not stage1_result.get("success"):
             log.error(f"[OPENAI-TOOL-GATING] Stage 1 failed: {stage1_result.get('error')}")
@@ -1209,6 +1471,29 @@ async def generate_chat_completion(
     log.info(f"[OPENAI] Tool prompts count: {len(tool_prompts)}")
     log.info(f"[OPENAI] Inline tool execution: {tool_prompts and not is_utility_request}")
     log.info("=" * 80)
+
+    # CRITICAL: If Gemini backend, use native SDK for ALL requests
+    # This enables context caching and improves performance
+    if is_gemini_backend:
+        log.info("[OPENAI] Gemini backend detected - routing to native SDK")
+
+        # Determine cache stage based on tool mode
+        # - "gating" mode: Stage 1 already used "gating" cache, Stage 2 uses "execution" cache
+        # - "concat" mode: uses "execution" cache (includes all tools)
+        # - "none"/"inline" mode: uses "execution" cache (no tools or short hints)
+        cache_stage = "execution"
+
+        return await handle_gemini_native_request(
+            request=request,
+            api_key=key,
+            model_id=payload["model"],
+            payload=payload,
+            final_system=final_system,
+            cache_stage=cache_stage,
+        )
+
+    # For non-Gemini backends, continue with OpenAI-compatible flow
+    log.info("[OPENAI] Using OpenAI-compatible API flow")
 
     # Check if model is a reasoning model that needs special handling
     if is_openai_reasoning_model(payload["model"]):
@@ -1471,3 +1756,165 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     finally:
         if not streaming:
             await cleanup_response(r, session)
+
+
+# ============================================================
+# Gemini Cache Management API
+# ============================================================
+
+@router.get("/gemini/cache/stats")
+@get_role_based_limit
+async def get_gemini_cache_stats(
+    request: Request,
+    user=Depends(get_admin_user)
+):
+    """
+    Get Gemini global cache statistics.
+
+    Admin only endpoint to monitor cache usage for Gemini native SDK.
+
+    Returns:
+        - total_caches: Total number of cached contents
+        - max_caches: Maximum allowed caches
+        - by_stage: Count of caches by stage (gating/execution)
+        - by_model: Count of caches by model ID
+        - tool_spec_version: Current tool spec version
+    """
+    if not hasattr(request.app.state, "gemini_cache_managers"):
+        return {
+            "status": "ok",
+            "total_caches": 0,
+            "max_caches": 50,
+            "by_stage": {"gating": 0, "execution": 0},
+            "by_model": {},
+            "tool_spec_version": "v1.0.0",
+            "message": "No cache managers initialized yet"
+        }
+
+    # Aggregate stats from all cache managers
+    total_caches = 0
+    by_stage = {"gating": 0, "execution": 0}
+    by_model = {}
+
+    for cache_manager in request.app.state.gemini_cache_managers.values():
+        stats = cache_manager.get_stats()
+        total_caches += stats["total_caches"]
+        for stage, count in stats["by_stage"].items():
+            by_stage[stage] = by_stage.get(stage, 0) + count
+        for model, count in stats["by_model"].items():
+            by_model[model] = by_model.get(model, 0) + count
+
+    return {
+        "status": "ok",
+        "total_caches": total_caches,
+        "max_caches": 50,
+        "by_stage": by_stage,
+        "by_model": by_model,
+        "tool_spec_version": "v1.0.0",
+        "cache_managers_count": len(request.app.state.gemini_cache_managers)
+    }
+
+
+@router.delete("/gemini/cache")
+@get_write_operation_limit
+async def clear_all_gemini_caches(
+    request: Request,
+    user=Depends(get_admin_user)
+):
+    """
+    Clear all Gemini cached system prompts.
+
+    Admin only endpoint. Use this when you modify prompts and want to
+    force cache regeneration across all cache managers.
+
+    Returns:
+        - deleted_count: Number of caches successfully deleted
+        - failed_count: Number of caches that failed to delete
+        - errors: List of error messages (if any)
+    """
+    if not hasattr(request.app.state, "gemini_cache_managers"):
+        return {
+            "status": "ok",
+            "deleted_count": 0,
+            "failed_count": 0,
+            "errors": [],
+            "message": "No cache managers initialized yet"
+        }
+
+    total_deleted = 0
+    total_failed = 0
+    all_errors = []
+
+    for key_hash, cache_manager in request.app.state.gemini_cache_managers.items():
+        log.info(f"[CACHE] Clearing caches for manager: {key_hash}")
+        result = cache_manager.clear_all_caches()
+        total_deleted += result["deleted_count"]
+        total_failed += result["failed_count"]
+        all_errors.extend(result["errors"])
+
+    return {
+        "status": "ok",
+        "deleted_count": total_deleted,
+        "failed_count": total_failed,
+        "errors": all_errors,
+        "cache_managers_count": len(request.app.state.gemini_cache_managers)
+    }
+
+
+@router.delete("/gemini/cache/{stage}")
+@get_write_operation_limit
+async def clear_gemini_caches_by_stage(
+    request: Request,
+    stage: str,
+    user=Depends(get_admin_user)
+):
+    """
+    Clear Gemini caches for a specific stage.
+
+    Admin only endpoint. Clears only caches for the specified stage
+    (gating or execution) across all cache managers.
+
+    Args:
+        stage: Stage to clear ("gating" or "execution")
+
+    Returns:
+        - stage: The stage that was cleared
+        - deleted_count: Number of caches successfully deleted
+        - failed_count: Number of caches that failed to delete
+        - errors: List of error messages (if any)
+    """
+    if stage not in ("gating", "execution"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid stage: {stage}. Must be 'gating' or 'execution'"
+        )
+
+    if not hasattr(request.app.state, "gemini_cache_managers"):
+        return {
+            "status": "ok",
+            "stage": stage,
+            "deleted_count": 0,
+            "failed_count": 0,
+            "errors": [],
+            "message": "No cache managers initialized yet"
+        }
+
+    total_deleted = 0
+    total_failed = 0
+    all_errors = []
+
+    for key_hash, cache_manager in request.app.state.gemini_cache_managers.items():
+        log.info(f"[CACHE] Clearing {stage} caches for manager: {key_hash}")
+        result = cache_manager.clear_caches_by_stage(stage)
+        total_deleted += result["deleted_count"]
+        total_failed += result["failed_count"]
+        all_errors.extend(result["errors"])
+
+    return {
+        "status": "ok",
+        "stage": stage,
+        "deleted_count": total_deleted,
+        "failed_count": total_failed,
+        "errors": all_errors,
+        "cache_managers_count": len(request.app.state.gemini_cache_managers)
+    }

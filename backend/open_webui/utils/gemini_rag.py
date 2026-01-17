@@ -12,6 +12,7 @@ from google import genai
 from google.genai import types
 
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.gemini_cache_manager import GeminiCacheManager
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -29,6 +30,7 @@ class GeminiRAGService:
         """
         self.client = genai.Client(api_key=api_key)
         self._stores_cache: Dict[str, Any] = {}
+        self.cache_manager = GeminiCacheManager(self.client)  # Global cache manager
 
     # ============================================================
     # Store (코퍼스) 관리
@@ -293,17 +295,20 @@ class GeminiRAGService:
         store_names: List[str],
         model: str = "gemini-2.5-flash",
         temperature: float = 0.2,
-        system_instruction: Optional[str] = None
+        system_instruction: Optional[str] = None,
+        cache_stage: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         RAG 쿼리 실행 (문서 검색 + 응답 생성)
 
         Args:
-            question: 질문 내용
-            store_names: 검색할 Store 이름 목록
+            question: 질문 내용 (per-request, NOT cached)
+            store_names: 검색할 Store 이름 목록 (per-request, NOT cached)
             model: 사용할 Gemini 모델
             temperature: 응답 다양성 (0.0 ~ 1.0)
-            system_instruction: 시스템 지시사항
+            system_instruction: 시스템 지시사항 (cached if cache_stage provided)
+            cache_stage: Optional cache stage ("gating" or "execution").
+                        If provided, system_instruction will be globally cached.
 
         Returns:
             응답 결과
@@ -333,7 +338,22 @@ class GeminiRAGService:
             log.info(f"  System Instruction 길이: {len(system_instruction) if system_instruction else 0}")
             log.info("="*80)
 
+            # Get or create GLOBAL cache for system prompt (multi-user safe)
+            cached_content_name = None
+            if cache_stage and system_instruction:
+                cached_content_name = self.cache_manager.get_or_create_cache(
+                    model_id=model,
+                    system_prompt=system_instruction,
+                    stage=cache_stage
+                )
+                if cached_content_name:
+                    log.info(f"[CACHE] ✅ Using global cache for {cache_stage} stage")
+                    log.info(f"[CACHE] Cache name: {cached_content_name}")
+                else:
+                    log.warning(f"[CACHE] ⚠️  Cache creation failed for {cache_stage} stage, fallback to non-cached")
+
             # Only include tools if there are store names to search
+            # IMPORTANT: Store selection is per-request, NOT cached
             if normalized_store_names:
                 config = types.GenerateContentConfig(
                     tools=[
@@ -343,21 +363,36 @@ class GeminiRAGService:
                             )
                         )
                     ],
-                    temperature=temperature
+                    temperature=temperature,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                        disable=False,          # Enable automatic function calling
+                        maximum_remote_calls=5  # Limit to 5 calls (default is 10)
+                    )
                 )
             else:
                 # No RAG - simple text generation
                 config = types.GenerateContentConfig(
-                    temperature=temperature
+                    temperature=temperature,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                        disable=False,          # Enable automatic function calling
+                        maximum_remote_calls=5  # Limit to 5 calls (default is 10)
+                    )
                 )
 
-            if system_instruction:
+            # Use cached content if available, otherwise use system_instruction
+            # CRITICAL: When using cached_content, do NOT set system_instruction
+            if cached_content_name:
+                config.cached_content = cached_content_name
+                log.info("[CACHE] Using cached system prompt (system_instruction NOT set)")
+            elif system_instruction:
                 config.system_instruction = system_instruction
+                log.info("[CACHE] No cache, using system_instruction directly")
 
             log.info("[GEMINI RAG QUERY] Gemini API 호출 중...")
+            log.info(f"[GEMINI RAG QUERY] 모델: {model}")
             response = self.client.models.generate_content(
                 model=model,
-                contents=question,
+                contents=question,  # User question (per-request, NOT cached)
                 config=config
             )
             log.info("[GEMINI RAG QUERY] ✅ 응답 받음")
@@ -445,12 +480,20 @@ class GeminiRAGService:
                             )
                         )
                     ],
-                    temperature=temperature
+                    temperature=temperature,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                        disable=False,          # Enable automatic function calling
+                        maximum_remote_calls=5  # Limit to 5 calls (default is 10)
+                    )
                 )
             else:
                 # No RAG - simple text generation
                 config = types.GenerateContentConfig(
-                    temperature=temperature
+                    temperature=temperature,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                        disable=False,          # Enable automatic function calling
+                        maximum_remote_calls=5  # Limit to 5 calls (default is 10)
+                    )
                 )
 
             if system_instruction:
