@@ -69,6 +69,10 @@ class ToolInlineExecutor:
         # Track content generated so far (for recovery context)
         self.generated_content = ""
 
+        # Track which tools have already emitted tool_executing event
+        # (to avoid duplicate emissions during streaming)
+        self._emitted_tool_executing: Set[str] = set()
+
         # Build dynamic pattern from tool_prompts keys
         self._marker_pattern = self._build_marker_pattern()
 
@@ -179,11 +183,12 @@ class ToolInlineExecutor:
                 tool_command = match.group(1)
                 tool_context = match.group(2).strip()
 
-                log.info(f"[TOOL INLINE] Marker detected: command={tool_command}")
+                log.info(f"[TOOL INLINE] Complete marker detected: command={tool_command}")
                 log.info(f"[TOOL INLINE] Context preview: {tool_context[:100]}...")
 
-                # Emit tool_executing event IMMEDIATELY before LLM call
-                await self._emit_event("tool_executing", tool_command, f"도구 실행 중: {tool_command}")
+                # NOTE: tool_executing event was already emitted when opening tag was detected
+                # (see lines 222-227 above)
+                # Now just execute the tool
 
                 # Execute tool
                 tool_result = await self._execute_tool(tool_command, tool_context)
@@ -191,6 +196,10 @@ class ToolInlineExecutor:
                 # Append tool result to output
                 output += tool_result
                 self.generated_content += tool_result
+
+                # Clear tracking for this tool so it can be used again
+                self._emitted_tool_executing.discard(tool_command)
+                log.debug(f"[TOOL INLINE] Cleared tool_executing tracking for {tool_command}")
 
                 # Remove processed marker from buffer
                 self.buffer = self.buffer[marker_end:]
@@ -213,7 +222,15 @@ class ToolInlineExecutor:
                             # Opening tag without closing tag - we're in the middle of a marker
                             in_marker = True
                             marker_start_pos = open_pos
-                            log.debug(f"[TOOL INLINE] Buffering partial marker: {cmd} at pos {open_pos}")
+                            log.info(f"[TOOL INLINE] Opening tag detected: {cmd} at pos {open_pos}")
+
+                            # Emit tool_executing event IMMEDIATELY when opening tag is detected
+                            # (only once per tool to avoid duplicates)
+                            if cmd not in self._emitted_tool_executing:
+                                log.info(f"[TOOL INLINE] Emitting tool_executing event for {cmd} (opening tag detected)")
+                                await self._emit_event("tool_executing", cmd, f"도구 실행 중: {cmd}")
+                                self._emitted_tool_executing.add(cmd)
+
                             break
 
                 # Also check for partial unsupported marker
