@@ -228,6 +228,9 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
         role = msg.get("role", "user")
         content = msg.get("content", "")
         
+        # DEBUG: Log each message being processed
+        log.info(f"[DEBUG RESPONSES PAYLOAD] Processing message role={role}, has_content={bool(content)}, has_tool_calls={bool(msg.get('tool_calls'))}, tool_call_id={msg.get('tool_call_id')}")
+        
         if role == "system":
             # System messages become instructions in Responses API
             responses_payload["instructions"] = content if isinstance(content, str) else str(content)
@@ -316,9 +319,18 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
                     "content": str(content) if content else ""
                 }
             
-            input_items.append(item)
+            # For assistant messages with tool_calls but no content, skip adding empty message
+            # Only add function_call items to match Responses API expected format
+            has_tool_calls = mapped_role == "assistant" and msg.get("tool_calls")
+            has_actual_content = bool(content) if isinstance(content, str) else bool(content)
+            
+            if has_tool_calls and not has_actual_content:
+                # Skip empty message, only add function_call items
+                log.info(f"[DEBUG RESPONSES PAYLOAD] Skipping empty assistant message, adding function_calls only")
+            else:
+                input_items.append(item)
 
-            if mapped_role == "assistant" and msg.get("tool_calls"):
+            if has_tool_calls:
                 for tool_call in msg.get("tool_calls", []):
                     if not isinstance(tool_call, dict):
                         continue
@@ -350,12 +362,21 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
     
     # Handle reasoning parameters - convert reasoning_effort to Responses API format
     reasoning_effort = chat_payload.get("reasoning_effort") or chat_payload.get("reasoning", {}).get("effort")
+    model_name = chat_payload.get("model", "")
+    is_reasoning_model = is_openai_reasoning_model(model_name)
+
     if reasoning_effort:
         # Responses API format: reasoning.effort and reasoning.summary are inside the same object
         responses_payload["reasoning"] = {
             "effort": reasoning_effort.lower(),
-            "summary": "auto"  # Enable reasoning summary to get thinking content in stream
+            "summary": "detailed"  # Options: 'concise', 'detailed', 'auto'
         }
+    elif is_reasoning_model:
+        # For reasoning models without explicit reasoning_effort, still enable summary to show thinking
+        responses_payload["reasoning"] = {
+            "summary": "detailed"  # Options: 'concise', 'detailed', 'auto'
+        }
+        log.info(f"[RESPONSES API] Auto-enabled reasoning.summary for reasoning model: {model_name}")
     
     # Convert tools/tool_choice from Chat Completions format to Responses format.
     if "tools" in chat_payload:
@@ -366,6 +387,13 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
         responses_payload["tool_choice"] = convert_tool_choice_to_responses_format(
             chat_payload["tool_choice"]
         )
+    
+    # DEBUG: Log the last few input items to see function_call and function_call_output
+    if len(input_items) > 5:
+        last_items = input_items[-5:]
+    else:
+        last_items = input_items
+    log.info(f"[DEBUG RESPONSES PAYLOAD] Last {len(last_items)} input items: {json.dumps(last_items, ensure_ascii=False, default=str)[:1500]}")
     
     log.info(f"Responses API payload: {json.dumps(responses_payload, ensure_ascii=False, default=str)[:2000]}")
     return responses_payload
@@ -725,13 +753,20 @@ def convert_responses_to_chat_completions(responses_data: dict, model_id: str) -
     tool_calls = []
     tool_call_index = 0
     
+    # DEBUG: Log the output structure
+    log.info(f"[DEBUG RESPONSES->CHAT] output count: {len(output)}, text field exists: {bool(responses_data.get('text'))}")
+    
     # Extract text from output items
     for item in output:
-        if item.get("type") == "message":
+        item_type = item.get("type", "")
+        log.info(f"[DEBUG RESPONSES->CHAT] item type: {item_type}")
+        
+        if item_type == "message":
             for part in item.get("content", []):
-                if part.get("type") == "output_text":
+                part_type = part.get("type", "")
+                if part_type in ("output_text", "text"):
                     content += part.get("text", "")
-        elif item.get("type") in ("tool_call", "function_call"):
+        elif item_type in ("tool_call", "function_call"):
             tool_call_id = _tool_call_id_from_item(item)
             tool_call_name = _tool_call_name_from_item(item)
             tool_call_args = _stringify_tool_call_args(
@@ -749,6 +784,26 @@ def convert_responses_to_chat_completions(responses_data: dict, model_id: str) -
                 }
             )
             tool_call_index += 1
+    
+    # Also check top-level 'text' field (some Responses API implementations put content here)
+    if not content and responses_data.get("text"):
+        text_field = responses_data.get("text")
+        log.info(f"[DEBUG RESPONSES->CHAT] text field type: {type(text_field).__name__}, value: {str(text_field)[:200]}")
+        if isinstance(text_field, str):
+            content = text_field
+        elif isinstance(text_field, dict):
+            content = text_field.get("value", "") or text_field.get("text", "") or text_field.get("content", "")
+        elif isinstance(text_field, list):
+            # If text is a list of content items, extract text from them
+            parts = []
+            for item in text_field:
+                if isinstance(item, str):
+                    parts.append(item)
+                elif isinstance(item, dict):
+                    parts.append(item.get("text", "") or item.get("value", "") or "")
+            content = "".join(parts)
+    
+    log.info(f"[DEBUG RESPONSES->CHAT] extracted content length: {len(content)}, tool_calls: {len(tool_calls)}")
     
     return {
         "id": responses_data.get("id", f"chatcmpl-{uuid.uuid4().hex}"),
@@ -1777,6 +1832,14 @@ async def generate_chat_completion(
             # Convert Chat Completions format to Responses API format
             payload = convert_to_responses_payload(payload)
             log.info(f"Using Responses API for model {model_id}")
+
+            # WORKAROUND: Force streaming when using Responses API with native functions in non-streaming mode
+            # to prevent infinite tool call loops where the model never returns final content
+            has_tools = "tools" in payload or "tool_choice" in payload
+            is_streaming = payload.get("stream", False)
+            if has_tools and not is_streaming:
+                log.warning(f"[RESPONSES API] Detected native functions with stream=False. Forcing stream=True to prevent infinite tool call loops.")
+                payload["stream"] = True
         else:
             request_url = f"{url}/chat/completions"
 
@@ -2090,6 +2153,12 @@ async def generate_chat_completion(
             try:
                 response = await r.json()
                 log.info(f"[DEBUG] JSON response parsed, keys={list(response.keys()) if isinstance(response, dict) else 'not a dict'}")
+                # DEBUG: Log full choices structure to see where content actually is
+                if isinstance(response, dict) and "choices" in response:
+                    choices = response.get("choices", [])
+                    if choices and len(choices) > 0:
+                        import json as json_mod
+                        log.info(f"[DEBUG] choices[0] FULL: {json_mod.dumps(choices[0], ensure_ascii=False, default=str)[:1000]}")
             except Exception as e:
                 log.error(e)
                 response = await r.text()

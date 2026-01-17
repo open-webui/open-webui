@@ -2255,6 +2255,10 @@ async def process_chat_response(
                             content = ""
                             tool_calls = []
 
+                        # DEBUG: Log what we extracted from the response
+                        log.info(f"[DEBUG NON-STREAM] message keys: {list(message.keys()) if isinstance(message, dict) else 'not dict'}")
+                        log.info(f"[DEBUG NON-STREAM] content: '{content[:100] if content else 'EMPTY'}', tool_calls count: {len(tool_calls)}")
+
                         # Always emit the raw completion so the UI receives tool_calls/non-text payloads
                         await event_emitter(
                             {
@@ -2311,13 +2315,214 @@ async def process_chat_response(
 
                             await background_tasks_handler()
                         elif tool_calls:
-                            # Mark as done so native tool execution can proceed even without text content
-                            await event_emitter(
-                                {
-                                    "type": "chat:completion",
-                                    "data": {"done": True, "tool_calls": tool_calls},
+                            # Execute tool calls and get final response (non-streaming mode)
+                            # Similar to streaming mode logic at lines 3305-3530
+                            tools_metadata = metadata.get("tools", {})
+                            tool_call_retries = 0
+                            pending_tool_calls = [tool_calls]  # List of tool call batches
+                            accumulated_content = ""
+                            seen_tool_call_ids = set(tc.get("id") for tc in tool_calls if isinstance(tc, dict))
+                            tool_results_for_fallback = []
+                            max_followups = min(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES, 3)
+                            
+                            # Initialize accumulated messages with original conversation
+                            accumulated_messages = list(form_data.get("messages", []))
+                            
+                            # DEBUG: Log tool execution start
+                            log.info(f"[DEBUG NON-STREAM TOOLS] Starting tool execution. Tool calls count: {len(tool_calls)}, Available tools: {list(tools_metadata.keys())}")
+                            
+                            while pending_tool_calls and tool_call_retries < max_followups:
+                                tool_call_retries += 1
+                                current_tool_calls = pending_tool_calls.pop(0)
+                                log.info(f"[DEBUG NON-STREAM TOOLS] Retry {tool_call_retries}: processing {len(current_tool_calls)} tool calls")
+                                
+                                # Notify frontend about tool calls
+                                await event_emitter(
+                                    {
+                                        "type": "chat:completion",
+                                        "data": {"tool_calls": current_tool_calls},
+                                    }
+                                )
+                                
+                                # Execute each tool call and collect results
+                                tool_results = []
+                                for tc in current_tool_calls:
+                                    tc_id = tc.get("id", "")
+                                    tc_func = tc.get("function", {})
+                                    tc_name = tc_func.get("name", "")
+                                    tc_args_str = tc_func.get("arguments", "{}")
+                                    
+                                    # Parse arguments
+                                    tc_params = {}
+                                    try:
+                                        tc_params = ast.literal_eval(tc_args_str)
+                                    except Exception:
+                                        try:
+                                            tc_params = json.loads(tc_args_str)
+                                        except Exception:
+                                            log.debug(f"Failed to parse tool args: {tc_args_str}")
+                                    
+                                    # Execute tool if available
+                                    tool_result = None
+                                    tool = tools_metadata.get(tc_name)
+                                    if tool:
+                                        tool_type = tool.get("type", "")
+                                        direct_tool = tool.get("direct", False)
+                                        spec = tool.get("spec", {})
+                                        
+                                        try:
+                                            allowed_params = spec.get("parameters", {}).get("properties", {}).keys()
+                                            tc_params = {k: v for k, v in tc_params.items() if k in allowed_params}
+                                            
+                                            if direct_tool:
+                                                tool_result = await event_caller(
+                                                    {
+                                                        "type": "execute:tool",
+                                                        "data": {
+                                                            "id": str(uuid4()),
+                                                            "name": tc_name,
+                                                            "params": tc_params,
+                                                            "server": tool.get("server", {}),
+                                                            "session_id": metadata.get("session_id", None),
+                                                        },
+                                                    }
+                                                )
+                                            else:
+                                                tool_function = get_updated_tool_function(
+                                                    function=tool["callable"],
+                                                    extra_params={
+                                                        "__messages__": form_data.get("messages", []),
+                                                        "__files__": metadata.get("files", []),
+                                                    },
+                                                )
+                                                tool_result = await tool_function(**tc_params)
+                                        except Exception as e:
+                                            tool_result = str(e)
+                                        
+                                        # Process tool result
+                                        tool_result, tool_result_files, tool_result_embeds = process_tool_result(
+                                            request, tc_name, tool_result, tool_type, direct_tool, metadata, user
+                                        )
+                                        
+                                        if tool_result_files and event_emitter:
+                                            await event_emitter({"type": "files", "data": {"files": tool_result_files}})
+                                        if tool_result_embeds and event_emitter:
+                                            await event_emitter({"type": "embeds", "data": {"embeds": tool_result_embeds}})
+                                    else:
+                                        tool_result = f"Tool '{tc_name}' not found"
+                                    
+                                    tool_results.append({
+                                        "tool_call_id": tc_id,
+                                        "role": "tool",
+                                        "content": str(tool_result) if tool_result else "",
+                                    })
+                                
+                                # Keep latest batch for fallback text if the model never returns content
+                                tool_results_for_fallback = tool_results
+                                
+                                # DEBUG: Log tool results
+                                log.info(f"[DEBUG NON-STREAM TOOLS] Collected {len(tool_results)} tool results")
+                                for tr in tool_results:
+                                    log.info(f"[DEBUG NON-STREAM TOOLS] Tool result for {tr.get('tool_call_id')}: {str(tr.get('content', ''))[:100]}")
+                                
+                                # Build follow-up request to model with tool results
+                                # Add current round's tool calls and results to accumulated messages
+                                accumulated_messages.append({"role": "assistant", "content": None, "tool_calls": current_tool_calls})
+                                accumulated_messages.extend(tool_results)
+                                
+                                followup_messages = list(accumulated_messages)
+                                
+                                followup_form_data = {
+                                    **form_data,
+                                    "messages": followup_messages,
+                                    "stream": False,
                                 }
-                            )
+                                
+                                log.info(f"[DEBUG NON-STREAM TOOLS] Sending follow-up request (retry {tool_call_retries}/{max_followups})")
+                                
+                                # Make follow-up request
+                                try:
+                                    followup_response = await generate_chat_completion(
+                                        request, followup_form_data, user, bypass_system_prompt=True
+                                    )
+                                    
+                                    # Extract response data
+                                    followup_data = followup_response
+                                    if isinstance(followup_response, JSONResponse):
+                                        try:
+                                            followup_data = json.loads(followup_response.body.decode("utf-8", "replace"))
+                                        except Exception:
+                                            followup_data = {}
+                                    
+                                    if isinstance(followup_data, dict):
+                                        followup_choices = followup_data.get("choices", [])
+                                        if followup_choices and isinstance(followup_choices[0], dict):
+                                            followup_msg = followup_choices[0].get("message", {}) or {}
+                                            followup_content = followup_msg.get("content", "") or ""
+                                            followup_tool_calls = followup_msg.get("tool_calls") or []
+                                            
+                                            if followup_content:
+                                                accumulated_content += followup_content
+                                            
+                                            if followup_tool_calls:
+                                                # More tool calls to process (dedupe by id)
+                                                new_tool_calls = [
+                                                    tc for tc in followup_tool_calls
+                                                    if tc.get("id") not in seen_tool_call_ids
+                                                ]
+                                                for tc in new_tool_calls:
+                                                    seen_tool_call_ids.add(tc.get("id"))
+                                                if new_tool_calls:
+                                                    pending_tool_calls.append(new_tool_calls)
+                                                else:
+                                                    log.warning("[DEBUG NON-STREAM TOOLS] Repeated tool_calls detected; stopping to avoid loop.")
+                                                    break
+                                except Exception as e:
+                                    log.error(f"Error in tool call follow-up: {e}")
+                                    break
+                            
+                            # Emit final content
+                            if accumulated_content:
+                                title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                                await event_emitter(
+                                    {
+                                        "type": "chat:completion",
+                                        "data": {"done": True, "content": accumulated_content, "title": title},
+                                    }
+                                )
+                                Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    metadata["chat_id"],
+                                    metadata["message_id"],
+                                    {"role": "assistant", "content": accumulated_content},
+                                )
+                                await background_tasks_handler()
+                            else:
+                                # No final content; fall back to tool result text if available
+                                fallback_text = ""
+                                if tool_results_for_fallback:
+                                    fallback_text = tool_results_for_fallback[0].get("content", "")
+
+                                if fallback_text:
+                                    title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:completion",
+                                            "data": {"done": True, "content": fallback_text, "title": title},
+                                        }
+                                    )
+                                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        metadata["chat_id"],
+                                        metadata["message_id"],
+                                        {"role": "assistant", "content": fallback_text},
+                                    )
+                                else:
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:completion",
+                                            "data": {"done": True},
+                                        }
+                                    )
+                                await background_tasks_handler()
                         else:
                             # No content and no tools: still end the pending state to avoid a stuck bubble
                             await event_emitter(
