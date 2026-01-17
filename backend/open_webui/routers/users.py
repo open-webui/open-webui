@@ -1,6 +1,8 @@
 import logging
 from typing import Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import func, cast, text
+from sqlalchemy.exc import SQLAlchemyError
 import base64
 import io
 
@@ -16,6 +18,7 @@ from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
+    User,
     UserModel,
     UserGroupIdsModel,
     UserGroupIdsListResponse,
@@ -30,7 +33,7 @@ from open_webui.models.users import (
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import STATIC_DIR
-from open_webui.internal.db import get_session
+from open_webui.internal.db import get_session, get_db
 
 
 from open_webui.utils.auth import (
@@ -680,3 +683,66 @@ async def get_user_groups_by_id(
     user_id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
 ):
     return Groups.get_groups_by_member_id(user_id, db=db)
+
+
+############################
+# ResetAllUsersInterfaceSettings
+############################
+
+
+@router.post("/interface/settings/reset", response_model=dict)
+async def reset_all_users_interface_settings(user=Depends(get_admin_user)):
+    """
+    Reset all users' interface settings to admin-configured defaults.
+    Clears the 'ui' key in all users' settings.
+    Admin only.
+    """
+    with get_db() as db:
+        try:
+            dialect = db.bind.dialect.name
+
+            if dialect == "postgresql":
+                from sqlalchemy.dialects.postgresql import JSONB
+                reset_count = (
+                    db.query(User)
+                    .filter(
+                        User.settings.isnot(None),
+                        User.settings.has_key("ui")
+                    )
+                    .update(
+                        {
+                            User.settings: func.jsonb_set(
+                                cast(User.settings, JSONB),
+                                "{ui}",
+                                cast("{}", JSONB)
+                            )
+                        },
+                        synchronize_session=False
+                    )
+                )
+            else:
+                # SQLite: use native json_set (available since SQLite 3.9+)
+                db.execute(text("""
+                    UPDATE user 
+                    SET settings = json_set(settings, '$.ui', json('{}'))
+                    WHERE settings IS NOT NULL 
+                    AND json_extract(settings, '$.ui') IS NOT NULL
+                """))
+                reset_count = db.execute(text("SELECT changes()")).scalar()
+
+            db.commit()
+
+            log.debug(f"Reset interface settings for {reset_count} users by admin {user.id}")
+
+            return {
+                "success": True,
+                "users_reset": reset_count,
+            }
+
+        except SQLAlchemyError as e:
+            db.rollback()
+            log.exception(f"Database error resetting interface settings: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Database error while resetting interface settings"
+            )

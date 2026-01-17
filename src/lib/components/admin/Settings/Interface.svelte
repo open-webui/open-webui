@@ -20,8 +20,12 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Banners from './Interface/Banners.svelte';
+	import InterfaceDefaultsModal from './Interface/InterfaceDefaultsModal.svelte';
 	import PromptSuggestions from '$lib/components/workspace/Models/PromptSuggestions.svelte';
+
+	import { resetAllUsersInterfaceSettings } from '$lib/apis/users';
 
 	const dispatch = createEventDispatcher();
 
@@ -49,6 +53,10 @@
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
 
+	// Interface defaults modal state
+	let showInterfaceDefaultsModal = false;
+	let showResetConfirmDialog = false;
+
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
@@ -61,6 +69,20 @@
 
 	const updateBanners = async () => {
 		_banners.set(await setBanners(localStorage.token, banners));
+	};
+
+	const handleResetAllUsersInterfaceSettings = async () => {
+		try {
+			const result = await resetAllUsersInterfaceSettings(localStorage.token);
+			toast.success(
+				$i18n.t('Successfully reset interface settings for {{count}} users', {
+					count: result.users_reset
+				})
+			);
+		} catch (error) {
+			console.error('Error resetting interface settings:', error);
+			toast.error($i18n.t('Failed to reset interface settings'));
+		}
 	};
 
 	let workspaceModels = null;
@@ -476,6 +498,63 @@
 					{/if}
 				{/if}
 			</div>
+
+			<!-- Interface Defaults Section -->
+			<div class="mb-3.5">
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('User Interface Defaults')}</div>
+
+				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+				<div class="mb-2.5">
+					<div class="flex w-full justify-between items-center">
+						<div class="self-center text-xs">
+							{$i18n.t('Configure default interface settings for new users')}
+						</div>
+
+						<button
+							class="px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition"
+							type="button"
+							on:click={() => {
+								showInterfaceDefaultsModal = true;
+							}}
+						>
+							{$i18n.t('Configure Defaults')}
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Danger Zone -->
+			<div class="mb-3.5">
+				<div class=" mt-0.5 mb-2.5 text-base font-medium text-red-500 dark:text-red-400">
+					{$i18n.t('Danger Zone')}
+				</div>
+
+				<hr class=" border-red-200/50 dark:border-red-900/30 my-2" />
+
+				<div class="mb-2.5">
+					<div class="flex w-full justify-between items-center">
+						<div class="self-center text-xs">
+							<div class="font-medium">{$i18n.t('Reset All Users Interface Settings')}</div>
+							<div class="text-gray-500 dark:text-gray-400 mt-0.5">
+								{$i18n.t(
+									'This will clear all customized interface settings for all users. Users will use admin-configured defaults.'
+								)}
+							</div>
+						</div>
+
+						<button
+							class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full"
+							type="button"
+							on:click={() => {
+								showResetConfirmDialog = true;
+							}}
+						>
+							{$i18n.t('Reset All')}
+						</button>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<div class="flex justify-end text-sm font-medium">
@@ -487,6 +566,15 @@
 			</button>
 		</div>
 	</form>
+
+	<InterfaceDefaultsModal bind:show={showInterfaceDefaultsModal} />
+
+	<ConfirmDialog
+		title={$i18n.t('Reset All Users Interface Settings')}
+		message={$i18n.t('This will clear all customized interface settings for all users. This action cannot be undone.')}
+		bind:show={showResetConfirmDialog}
+		onConfirm={handleResetAllUsersInterfaceSettings}
+	/>
 {:else}
 	<div class=" h-full w-full flex justify-center items-center">
 		<Spinner className="size-5" />
