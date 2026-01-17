@@ -5,7 +5,11 @@
       "Bash(find . -name \"*.py\" -exec grep -l \"def search_web\" {} ;)",
       "Bash(python -c \"\nimport inspect\nfrom open_webui.tools.builtin import search_web\nfrom open_webui.utils.tools import convert_function_to_pydantic_model, convert_pydantic_model_to_openai_function_spec\n\n# 生成spec\npydantic_model = convert_function_to_pydantic_model\\(search_web\\)\nspec = convert_pydantic_model_to_openai_function_spec\\(pydantic_model\\)\n\nimport json\nprint\\(json.dumps\\(spec, indent=2, ensure_ascii=False\\)\\)\n\")",
       "Bash(python3 -c \"\nimport inspect\nfrom open_webui.tools.builtin import search_web\nfrom open_webui.utils.tools import convert_function_to_pydantic_model, convert_pydantic_model_to_openai_function_spec\n\n# 生成spec\npydantic_model = convert_function_to_pydantic_model\\(search_web\\)\nspec = convert_pydantic_model_to_openai_function_spec\\(pydantic_model\\)\n\nimport json\nprint\\(json.dumps\\(spec, indent=2, ensure_ascii=False\\)\\)\n\")",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)"
     ]
   }
 }
