@@ -77,6 +77,10 @@ class ToolInlineExecutor:
         # (to avoid duplicate emissions during streaming)
         self._emitted_tool_executing: Set[str] = set()
 
+        # IMPORTANT: Pending tool executions (to avoid blocking streaming)
+        # List of (command, context) tuples to execute after streaming completes
+        self._pending_tools: List[tuple] = []
+
         # Build dynamic pattern from tool_prompts keys
         self._marker_pattern = self._build_marker_pattern()
 
@@ -203,20 +207,13 @@ class ToolInlineExecutor:
 
                 # NOTE: tool_executing event was already emitted when opening tag was detected
                 # (see lines 222-227 above)
-                # Now just execute the tool
 
-                # Execute tool
-                tool_result = await self._execute_tool(tool_command, tool_context)
+                # IMPORTANT: DO NOT execute tool here (blocks streaming!)
+                # Instead, add to pending queue and execute after streaming completes
+                log.info(f"[TOOL INLINE] Adding tool to pending queue: {tool_command}")
+                self._pending_tools.append((tool_command, tool_context))
 
-                # Append tool result to output
-                output += tool_result
-                self.generated_content += tool_result
-
-                # Clear tracking for this tool so it can be used again
-                self._emitted_tool_executing.discard(tool_command)
-                log.debug(f"[TOOL INLINE] Cleared tool_executing tracking for {tool_command}")
-
-                # Remove processed marker from buffer
+                # Remove processed marker from buffer (don't show marker to user)
                 self.buffer = self.buffer[marker_end:]
             else:
                 # No complete marker found
@@ -224,7 +221,12 @@ class ToolInlineExecutor:
                 in_marker = False
                 marker_start_pos = -1
 
-                for cmd in self.tool_prompts.keys():
+                # Check both DB tools and hardcoded tools
+                from open_webui.utils.hardcoded_tools import get_hardcoded_tools
+                hardcoded_tools = get_hardcoded_tools()
+                all_commands = list(self.tool_prompts.keys()) + [tool.command for tool in hardcoded_tools]
+
+                for cmd in all_commands:
                     open_tag = f"<{cmd}>"
                     close_tag = f"</{cmd}>"
 
@@ -669,10 +671,40 @@ Do NOT include any explanatory text before or after the output block."""
                 log.error(f"[TOOL INLINE] Event emission failed: {e}")
 
     async def flush(self) -> str:
-        """Return any remaining buffer content."""
-        remaining = self.buffer
+        """
+        Return any remaining buffer content AND execute pending tools.
+
+        This is called after streaming completes, so we can safely execute
+        tools without blocking the streaming response.
+        """
+        log.info(f"[TOOL INLINE] Flushing: buffer={len(self.buffer)} chars, pending_tools={len(self._pending_tools)}")
+
+        # Start with remaining buffer content
+        output = self.buffer
         self.buffer = ""
-        return remaining
+
+        # Execute all pending tools (these were queued during streaming)
+        if self._pending_tools:
+            log.info(f"[TOOL INLINE] Executing {len(self._pending_tools)} pending tools...")
+
+            for tool_command, tool_context in self._pending_tools:
+                log.info(f"[TOOL INLINE] Executing pending tool: {tool_command}")
+
+                # Execute tool (this may take 3-5 seconds for hardcoded tools)
+                tool_result = await self._execute_tool(tool_command, tool_context)
+
+                # Append result to output
+                output += tool_result
+
+                # Clear tracking for this tool
+                self._emitted_tool_executing.discard(tool_command)
+                log.debug(f"[TOOL INLINE] Cleared tool_executing tracking for {tool_command}")
+
+            # Clear pending queue
+            self._pending_tools = []
+            log.info(f"[TOOL INLINE] All pending tools executed")
+
+        return output
 
 
 def build_tool_hints(tool_prompts: List[Any]) -> str:
