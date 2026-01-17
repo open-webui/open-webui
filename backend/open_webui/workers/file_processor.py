@@ -862,19 +862,19 @@ def process_file_job(
                         else:
                             # Use content from file.data
                             log.info(f"[JOB] USING_FILE_DATA | file_id={file.id} | content_length={len(file_content)}")
-                        docs = [
-                            Document(
-                            page_content=file_content,
-                            metadata={
-                                **file.meta,
-                                "name": file.filename,
-                                "created_by": file.user_id,
-                                "file_id": file.id,
-                                "source": file.filename,
-                            },
-                            )
-                        ]
-                        text_content = file_content
+                            docs = [
+                                Document(
+                                    page_content=file_content,
+                                    metadata={
+                                        **file.meta,
+                                        "name": file.filename,
+                                        "created_by": file.user_id,
+                                        "file_id": file.id,
+                                        "source": file.filename,
+                                    },
+                                )
+                            ]
+                            text_content = file_content
 
                     # Ensure text_content is defined (defensive check)
                     if 'text_content' not in locals() or text_content is None:
