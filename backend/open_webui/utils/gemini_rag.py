@@ -427,6 +427,124 @@ class GeminiRAGService:
                 "error": str(e)
             }
 
+    async def query_stream(
+        self,
+        question: str,
+        store_names: List[str],
+        model: str = "gemini-2.5-flash",
+        temperature: float = 0.2,
+        system_instruction: Optional[str] = None,
+        cache_stage: Optional[str] = None
+    ):
+        """
+        RAG 쿼리 실행 (스트리밍 모드)
+
+        Args:
+            question: 질문 내용 (per-request, NOT cached)
+            store_names: 검색할 Store 이름 목록 (per-request, NOT cached)
+            model: 사용할 Gemini 모델
+            temperature: 응답 다양성 (0.0 ~ 1.0)
+            system_instruction: 시스템 지시사항 (cached if cache_stage provided)
+            cache_stage: Optional cache stage ("gating" or "execution").
+                        If provided, system_instruction will be globally cached.
+
+        Yields:
+            응답 텍스트 청크
+        """
+        try:
+            # Normalize store names
+            normalized_store_names = []
+            for name in store_names:
+                if name and not name.startswith("fileSearchStores/"):
+                    normalized_name = f"fileSearchStores/{name}"
+                    log.warning(f"[GEMINI RAG STREAM] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
+                    normalized_store_names.append(normalized_name)
+                else:
+                    normalized_store_names.append(name)
+
+            log.info("="*80)
+            log.info("[GEMINI RAG STREAM] RAG 스트리밍 쿼리 시작")
+            log.info(f"  질문: {question[:100]}...")
+            log.info(f"  모델: {model}")
+            log.info(f"  Temperature: {temperature}")
+            log.info(f"  정규화된 Store Names: {normalized_store_names}")
+            log.info(f"  System Instruction 길이: {len(system_instruction) if system_instruction else 0}")
+            log.info("="*80)
+
+            # Get or create GLOBAL cache for system prompt
+            cached_content_name = None
+            if cache_stage and system_instruction:
+                cached_content_name = self.cache_manager.get_or_create_cache(
+                    model_id=model,
+                    system_prompt=system_instruction,
+                    stage=cache_stage
+                )
+                if cached_content_name:
+                    log.info(f"[CACHE] ✅ Using global cache for {cache_stage} stage (streaming)")
+                    log.info(f"[CACHE] Cache name: {cached_content_name}")
+                else:
+                    log.warning(f"[CACHE] ⚠️  Cache creation failed for {cache_stage} stage, fallback to non-cached")
+
+            # Build config
+            if normalized_store_names:
+                config = types.GenerateContentConfig(
+                    tools=[
+                        types.Tool(
+                            file_search=types.FileSearch(
+                                file_search_store_names=normalized_store_names
+                            )
+                        )
+                    ],
+                    temperature=temperature,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                        disable=False,
+                        maximum_remote_calls=5
+                    )
+                )
+            else:
+                config = types.GenerateContentConfig(
+                    temperature=temperature,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                        disable=False,
+                        maximum_remote_calls=5
+                    )
+                )
+
+            # Use cached content if available
+            if cached_content_name:
+                config.cached_content = cached_content_name
+                log.info("[CACHE] Using cached system prompt (system_instruction NOT set)")
+            elif system_instruction:
+                config.system_instruction = system_instruction
+                log.info("[CACHE] No cache, using system_instruction directly")
+
+            log.info("[GEMINI RAG STREAM] Gemini API 스트리밍 호출 중...")
+
+            # Call Gemini streaming API
+            # Note: generate_content_stream returns a regular (sync) generator, not async
+            stream = self.client.models.generate_content_stream(
+                model=model,
+                contents=question,
+                config=config
+            )
+
+            # Stream chunks
+            # Use 'for' (not 'async for') since Gemini SDK returns sync generator
+            for chunk in stream:
+                if hasattr(chunk, 'text') and chunk.text:
+                    yield chunk.text
+
+            log.info("[GEMINI RAG STREAM] ✅ 스트리밍 완료")
+
+        except Exception as e:
+            log.error("="*80)
+            log.error(f"[GEMINI RAG STREAM] ❌ 에러 발생!")
+            log.error(f"  에러 타입: {type(e).__name__}")
+            log.error(f"  에러 메시지: {e}")
+            log.error(f"  질문: {question[:100]}...")
+            log.error("="*80)
+            yield f"Error: {str(e)}"
+
     def generate_with_rag(
         self,
         messages: List[Dict[str, str]],

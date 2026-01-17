@@ -182,6 +182,9 @@ class ToolInlineExecutor:
                 log.info(f"[TOOL INLINE] Marker detected: command={tool_command}")
                 log.info(f"[TOOL INLINE] Context preview: {tool_context[:100]}...")
 
+                # Emit tool_executing event IMMEDIATELY before LLM call
+                await self._emit_event("tool_executing", tool_command, f"도구 실행 중: {tool_command}")
+
                 # Execute tool
                 tool_result = await self._execute_tool(tool_command, tool_context)
 
@@ -277,11 +280,9 @@ class ToolInlineExecutor:
     async def _execute_tool(self, command: str, context: str) -> str:
         """
         Execute a tool prompt and return the generated content.
+        NOTE: tool_executing event is emitted BEFORE this function is called (in process_chunk)
         """
         log.info(f"[TOOL INLINE] Executing tool: {command}")
-
-        # Emit tool_executing event
-        await self._emit_event("tool_executing", command, f"도구 실행 중: {command}")
 
         # Find matching tool prompt
         tool_prompt = self._find_tool_prompt(command)
@@ -307,11 +308,13 @@ Output ONLY the tool-specific JSON block wrapped in appropriate markers.
 Do NOT include any explanatory text before or after the output block."""
 
             log.info(f"[TOOL INLINE] Calling LLM with tool prompt ({len(tool_system)} chars)")
+            log.info(f"[TOOL INLINE] Using Pro model for accurate tool execution")
 
-            # Call LLM
+            # Call LLM for tool execution (use_fast_model=False by default for accuracy)
             result = await self.llm_call_fn(
                 system_prompt=tool_system,
                 user_message=context,
+                # use_fast_model=False (default) - Use Pro model for accurate tool execution
             )
 
             if result.get("success"):
@@ -325,6 +328,9 @@ Do NOT include any explanatory text before or after the output block."""
                     is_valid, error_msg = validate_tool_output(tool_output, validation_rules)
                     if not is_valid:
                         log.warning(f"[TOOL INLINE] Validation failed for {command}: {error_msg}")
+                        log.warning(f"[TOOL INLINE] Tool output FULL OUTPUT (for debugging):")
+                        log.warning(tool_output)  # Full output for debugging
+                        log.warning(f"[TOOL INLINE] Validation rules: {validation_rules}")
                         await self._emit_event("tool_validation_failed", command, f"검증 실패: {command}")
                         # Use recovery approach (same as tool-unsupported)
                         recovery_text = await self._handle_validation_failure(
@@ -433,11 +439,12 @@ Do NOT include any explanatory text before or after the output block."""
 
 위 내용에서 자연스럽게 이어서 설명을 계속해주세요. 1-2문장 정도로 간결하게."""
 
-            log.info(f"[TOOL INLINE] Making recovery LLM call")
+            log.info(f"[TOOL INLINE] Making recovery LLM call with Flash model")
 
             result = await self.llm_call_fn(
                 system_prompt=recovery_system,
                 user_message=user_message,
+                use_fast_model=True  # Use Flash model for fast recovery
             )
 
             if result.get("success"):
@@ -505,11 +512,12 @@ Do NOT include any explanatory text before or after the output block."""
 
 위 내용에서 자연스럽게 이어서 설명을 계속해주세요. 1-2문장 정도로 간결하게."""
 
-            log.info("[TOOL INLINE] Making validation recovery LLM call")
+            log.info("[TOOL INLINE] Making validation recovery LLM call with Flash model")
 
             result = await self.llm_call_fn(
                 system_prompt=recovery_system,
                 user_message=user_message,
+                use_fast_model=True  # Use Flash model for fast recovery
             )
 
             if result.get("success"):
