@@ -400,6 +400,66 @@ def get_or_create_gemini_cache_manager(request: Request, api_key: str) -> Gemini
     return request.app.state.gemini_cache_managers[key_hash]
 
 
+def convert_openai_messages_to_gemini_contents(messages: list) -> list:
+    """
+    Convert OpenAI-format messages to Gemini contents format.
+
+    OpenAI format:
+        [
+            {"role": "system", "content": "..."},  # Excluded (use system_instruction)
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there"},
+            {"role": "user", "content": "How are you?"}
+        ]
+
+    Gemini format:
+        [
+            {"role": "user", "parts": [{"text": "Hello"}]},
+            {"role": "model", "parts": [{"text": "Hi there"}]},
+            {"role": "user", "parts": [{"text": "How are you?"}]}
+        ]
+
+    Args:
+        messages: OpenAI-format messages list
+
+    Returns:
+        Gemini-format contents list
+    """
+    contents = []
+
+    for msg in messages:
+        role = msg.get("role")
+        content = msg.get("content", "")
+
+        # Skip system messages (handled by system_instruction)
+        if role == "system":
+            continue
+
+        # Convert role: assistant → model
+        gemini_role = "model" if role == "assistant" else role
+
+        # Extract text content
+        if isinstance(content, str):
+            text = content
+        elif isinstance(content, list):
+            # Handle multimodal content - extract text parts
+            text_parts = []
+            for part in content:
+                if isinstance(part, dict) and part.get("type") == "text":
+                    text_parts.append(part.get("text", ""))
+            text = "\n".join(text_parts) if text_parts else ""
+        else:
+            text = str(content)
+
+        if text:  # Only add non-empty messages
+            contents.append({
+                "role": gemini_role,
+                "parts": [{"text": text}]
+            })
+
+    return contents
+
+
 async def handle_gemini_native_request(
     request: Request,
     api_key: str,
@@ -438,32 +498,25 @@ async def handle_gemini_native_request(
         log.info(f"  System prompt length: {len(final_system) if final_system else 0} chars")
         log.info("=" * 80)
 
-        # Extract user message from OpenAI-format messages
+        # Convert OpenAI messages to Gemini contents (preserves conversation history)
         messages = payload.get("messages", [])
-        user_content = ""
-        for msg in reversed(messages):
-            if msg.get("role") == "user":
-                content = msg.get("content", "")
-                if isinstance(content, str):
-                    user_content = content
-                elif isinstance(content, list):
-                    # Handle multimodal content
-                    for part in content:
-                        if isinstance(part, dict) and part.get("type") == "text":
-                            user_content = part.get("text", "")
-                            break
-                break
+        gemini_contents = convert_openai_messages_to_gemini_contents(messages)
 
-        if not user_content:
+        if not gemini_contents:
             return {
                 "error": {
-                    "message": "No user message found in request",
+                    "message": "No valid messages found in request",
                     "type": "invalid_request_error",
-                    "code": "no_user_message"
+                    "code": "no_messages"
                 }
             }
 
-        log.info(f"[GEMINI-NATIVE] User query: {user_content[:100]}...")
+        log.info(f"[GEMINI-NATIVE] Converted {len(messages)} OpenAI messages to {len(gemini_contents)} Gemini contents")
+        if gemini_contents:
+            last_msg = gemini_contents[-1]
+            if last_msg.get("parts"):
+                preview = last_msg["parts"][0].get("text", "")[:100]
+                log.info(f"[GEMINI-NATIVE] Last message preview: {preview}...")
 
         # Store metadata in request state for middleware access
         if metadata:
@@ -486,9 +539,9 @@ async def handle_gemini_native_request(
             async def stream_generator():
                 """Generate OpenAI-compatible SSE chunks from Gemini stream"""
                 try:
-                    # Call streaming service
+                    # Call streaming service with conversation history
                     async for chunk_text in service.query_stream(
-                        question=user_content,
+                        contents=gemini_contents,  # Full conversation history
                         store_names=[],  # Empty = no RAG, just regular chat
                         model=model_id,
                         temperature=temperature,
@@ -536,10 +589,10 @@ async def handle_gemini_native_request(
 
         # Non-streaming mode
         else:
-            # Call unified service
+            # Call unified service with conversation history
             # IMPORTANT: Empty store_names = regular chat (no RAG)
             result = service.query(
-                question=user_content,
+                contents=gemini_contents,  # Full conversation history
                 store_names=[],  # Empty = no RAG, just regular chat
                 model=model_id,
                 temperature=temperature,
