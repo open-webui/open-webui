@@ -62,7 +62,7 @@
 
 						{#if $config?.features?.enable_version_update_check}
 							<a
-								href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+								href="https://github.com/ztx888/open-webui/releases/tag/v{version.latest}"
 								target="_blank"
 							>
 								{updateAvailable === null
@@ -137,10 +137,10 @@
 					/>
 				</a>
 
-				<a href="https://github.com/open-webui/open-webui" target="_blank">
+				<a href="https://github.com/ztx888/open-webui" target="_blank">
 					<img
 						alt="Github Repo"
-						src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
+						src="https://img.shields.io/github/stars/ztx888/open-webui?style=social&label=Star us on Github"
 					/>
 				</a>
 			</div>
