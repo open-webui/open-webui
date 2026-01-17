@@ -51,6 +51,7 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
+from open_webui.utils.rate_limiter import limiter, get_role_based_limit, get_write_operation_limit
 from open_webui.utils.prompt_composer import compose_with_fallback
 
 
@@ -268,6 +269,7 @@ async def verify_connection(
 
 
 @router.get("/config")
+@get_role_based_limit
 async def get_config(request: Request, user=Depends(get_admin_user)):
     return {
         "ENABLE_OLLAMA_API": request.app.state.config.ENABLE_OLLAMA_API,
@@ -283,6 +285,7 @@ class OllamaConfigForm(BaseModel):
 
 
 @router.post("/config/update")
+@get_write_operation_limit
 async def update_config(
     request: Request, form_data: OllamaConfigForm, user=Depends(get_admin_user)
 ):
@@ -439,6 +442,7 @@ async def get_filtered_models(models, user):
 
 @router.get("/api/tags")
 @router.get("/api/tags/{url_idx}")
+@get_role_based_limit
 async def get_ollama_tags(
     request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)
 ):
@@ -1162,6 +1166,7 @@ class GenerateCompletionForm(BaseModel):
 
 @router.post("/api/generate")
 @router.post("/api/generate/{url_idx}")
+@get_role_based_limit
 async def generate_completion(
     request: Request,
     form_data: GenerateCompletionForm,
@@ -1252,6 +1257,7 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
 
 @router.post("/api/chat")
 @router.post("/api/chat/{url_idx}")
+@get_role_based_limit
 async def generate_chat_completion(
     request: Request,
     form_data: dict,
@@ -1464,6 +1470,7 @@ async def generate_openai_completion(
 
 @router.post("/v1/chat/completions")
 @router.post("/v1/chat/completions/{url_idx}")
+@get_role_based_limit
 async def generate_openai_chat_completion(
     request: Request,
     form_data: dict,

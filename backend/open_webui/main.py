@@ -60,6 +60,9 @@ from starsessions.stores.redis import RedisStore
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
+from open_webui.utils.rate_limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -654,6 +657,10 @@ app.state.oauth_manager = oauth_manager
 # For Integrations
 oauth_client_manager = OAuthClientManager(app)
 app.state.oauth_client_manager = oauth_client_manager
+
+# Rate Limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.state.instance_id = None
 app.state.config = AppConfig(
