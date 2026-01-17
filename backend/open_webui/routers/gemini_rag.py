@@ -21,6 +21,7 @@ from open_webui.utils.tool_gating import (
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.textbooks import TextbookChapters
 from open_webui.models.chats import Chats, ChatForm
+from open_webui.models.models import Models
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -489,11 +490,23 @@ async def query_rag(
 
     if should_use_tool_gating(tool_prompts, body.enable_tool_gating):
         log.info("[GEMINI RAG] Using tool gating (two-stage)")
+
+        # Look up model configuration to get tool_gating_model
+        tool_gating_model = None
+        model_config = Models.get_model_by_id(body.model)
+        if model_config and model_config.meta:
+            tool_gating_model = model_config.meta.tool_gating_model
+            if tool_gating_model:
+                log.info(f"[GEMINI RAG] Found tool_gating_model in config: {tool_gating_model}")
+            else:
+                log.info(f"[GEMINI RAG] No tool_gating_model configured, using main model for both stages")
+
         tool_gating_result = execute_with_tool_gating(
             query=body.question,
             base_system=final_system or "",
             tool_prompts=tool_prompts,
             llm_call_fn=service.query,
+            gating_model=tool_gating_model,
             store_names=body.store_names,
             model=body.model,
             temperature=body.temperature,
@@ -670,11 +683,23 @@ async def query_rag_by_chapter(
 
     if should_use_tool_gating(tool_prompts, enable_tool_gating):
         log.info("[GEMINI RAG BY CHAPTER] Using tool gating (two-stage)")
+
+        # Look up model configuration to get tool_gating_model
+        tool_gating_model = None
+        model_config = Models.get_model_by_id(model)
+        if model_config and model_config.meta:
+            tool_gating_model = model_config.meta.tool_gating_model
+            if tool_gating_model:
+                log.info(f"[GEMINI RAG BY CHAPTER] Found tool_gating_model in config: {tool_gating_model}")
+            else:
+                log.info(f"[GEMINI RAG BY CHAPTER] No tool_gating_model configured, using main model for both stages")
+
         tool_gating_result = execute_with_tool_gating(
             query=question,
             base_system=final_system or "",
             tool_prompts=tool_prompts,
             llm_call_fn=service.query,
+            gating_model=tool_gating_model,
             store_names=[store_name],
             model=model,
             temperature=temperature,

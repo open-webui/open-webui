@@ -212,6 +212,7 @@ async def execute_with_tool_gating(
     base_system: str,
     tool_prompts: List[Any],
     llm_call_fn: Callable,
+    gating_model: Optional[str] = None,
     **llm_kwargs
 ) -> ToolGatingResult:
     """
@@ -223,6 +224,9 @@ async def execute_with_tool_gating(
         tool_prompts: All available tool prompts
         llm_call_fn: Async function to call LLM
             Expected signature: llm_call_fn(system_instruction, question, **kwargs) -> dict with 'text' key
+        gating_model: Optional model ID to use for Stage 1 (tool selection).
+            If provided, this model will be used for tool gating instead of the main model.
+            The gating model inherits the tool_group and prompt configuration.
         **llm_kwargs: Additional arguments for LLM call (model, temperature, store_names, etc.)
 
     Returns:
@@ -232,6 +236,8 @@ async def execute_with_tool_gating(
     log.info("[TOOL GATING] Starting two-stage execution")
     log.info(f"  Query: {query[:100]}...")
     log.info(f"  Available tools: {[t.command for t in tool_prompts]}")
+    log.info(f"  Main model: {llm_kwargs.get('model', 'N/A')}")
+    log.info(f"  Gating model: {gating_model or '(use main model)'}")
     log.info("=" * 80)
 
     # Stage 1: Tool selection
@@ -240,11 +246,19 @@ async def execute_with_tool_gating(
 
     log.info(f"[TOOL GATING] Stage 1 System Prompt Length: {len(stage1_system)} chars")
 
+    # Create kwargs for Stage 1 with gating model if provided
+    stage1_kwargs = llm_kwargs.copy()
+    if gating_model:
+        stage1_kwargs['model'] = gating_model
+        log.info(f"[TOOL GATING] Stage 1 - Using gating model: {gating_model}")
+    else:
+        log.info(f"[TOOL GATING] Stage 1 - Using main model: {llm_kwargs.get('model', 'N/A')}")
+
     log.info("[TOOL GATING] Stage 1 - Calling LLM for tool selection...")
     stage1_result = llm_call_fn(
         question=query,
         system_instruction=stage1_system,
-        **llm_kwargs
+        **stage1_kwargs
     )
 
     if not stage1_result.get("success"):
@@ -279,6 +293,7 @@ async def execute_with_tool_gating(
 
     log.info(f"[TOOL GATING] Stage 2 System Prompt Length: {len(stage2_system)} chars")
     log.info(f"[TOOL GATING] Selected tools: {[t.command for t in selected_tool_prompts]}")
+    log.info(f"[TOOL GATING] Stage 2 - Using main model: {llm_kwargs.get('model', 'N/A')}")
 
     log.info("[TOOL GATING] Stage 2 - Calling LLM with tool prompts...")
     stage2_result = llm_call_fn(
