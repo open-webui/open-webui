@@ -1810,9 +1810,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     builtin_tools_enabled = (
         model.get("info", {})
         .get("meta", {})
-        .get("capabilities", {})
-        .get("builtin_tools", True)
-    )
+        .get("capabilities") or {}
+    ).get("builtin_tools", True)
     if (
         metadata.get("params", {}).get("function_calling") == "native"
         and builtin_tools_enabled
