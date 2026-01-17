@@ -50,6 +50,7 @@ from open_webui.utils.misc import (
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.rate_limiter import limiter, get_role_based_limit, get_write_operation_limit
 from open_webui.utils.access_control import has_access
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.prompt_composer import compose_with_fallback
@@ -298,6 +299,7 @@ router = APIRouter()
 
 
 @router.get("/config")
+@get_role_based_limit
 async def get_config(request: Request, user=Depends(get_admin_user)):
     return {
         "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
@@ -315,6 +317,7 @@ class OpenAIConfigForm(BaseModel):
 
 
 @router.post("/config/update")
+@get_write_operation_limit
 async def update_config(
     request: Request, form_data: OpenAIConfigForm, user=Depends(get_admin_user)
 ):
@@ -359,6 +362,7 @@ async def update_config(
 
 
 @router.post("/audio/speech")
+@get_write_operation_limit
 async def speech(request: Request, user=Depends(get_verified_user)):
     idx = None
     try:
@@ -631,6 +635,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
 @router.get("/models")
 @router.get("/models/{url_idx}")
+@get_role_based_limit
 async def get_models(
     request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)
 ):
@@ -726,6 +731,7 @@ class ConnectionVerificationForm(BaseModel):
 
 
 @router.post("/verify")
+@get_write_operation_limit
 async def verify_connection(
     request: Request,
     form_data: ConnectionVerificationForm,
@@ -885,6 +891,7 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
 
 
 @router.post("/chat/completions")
+@get_role_based_limit
 async def generate_chat_completion(
     request: Request,
     form_data: dict,

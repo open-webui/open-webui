@@ -1747,8 +1747,10 @@ class OAuthManager:
         redirect_base_url = (
             str(request.app.state.config.WEBUI_URL or request.base_url)
         ).rstrip("/")
-        redirect_url = f"{redirect_base_url}/auth?token={jwt_token}"
-
+        try:
+            redirect_url = f"{redirect_base_url}/auth?token={jwt_token}"
+        except UnboundLocalError:
+            redirect_url = f"{redirect_base_url}/auth"
         if error_message:
             redirect_url = f"{redirect_base_url}/auth?error={error_message}"
             return RedirectResponse(url=redirect_url, headers=response.headers)
