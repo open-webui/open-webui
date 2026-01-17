@@ -64,8 +64,31 @@
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
+	import { shortcuts } from '$lib/shortcuts';
+	import { browser } from '$app/environment';
 
 	const BREAKPOINT = 768;
+
+	let mounted = false;
+
+	onMount(() => {
+		mounted = true;
+	});
+
+	$: newChatShortcut = mounted ? ` • ${formatShortcutKeys(shortcuts.newChat?.keys ?? [])}` : '';
+	$: searchShortcut = mounted ? ` • ${formatShortcutKeys(shortcuts.search?.keys ?? [])}` : '';
+
+	function formatShortcutKeys(keys: string[]): string {
+		const isMac = browser && /Mac/i.test(navigator.userAgent);
+		return keys
+			.map((key) => {
+				const lowerKey = key.toLowerCase();
+				if (lowerKey === 'mod') return isMac ? '⌘' : 'Ctrl';
+				if (lowerKey === 'shift') return isMac ? '⇧' : 'Shift';
+				return key;
+			})
+			.join(isMac ? '' : '+');
+	}
 
 	let scrollTop = 0;
 
@@ -683,7 +706,7 @@
 
 			<div class="-mt-[0.5px]">
 				<div class="">
-					<Tooltip content={$i18n.t('New Chat')} placement="right">
+					<Tooltip content={`${$i18n.t('New Chat')}${newChatShortcut}`} placement="right">
 						<a
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							href="/"
@@ -705,7 +728,7 @@
 				</div>
 
 				<div>
-					<Tooltip content={$i18n.t('Search')} placement="right">
+					<Tooltip content={`${$i18n.t('Search')}${searchShortcut}`} placement="right">
 						<button
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							on:click={(e) => {
