@@ -3172,6 +3172,7 @@ async def process_chat_response(
                                         continue
 
                                     delta = choices[0].get("delta", {}) or {}
+                                    log.info(f"[DELTA DEBUG] Received delta keys: {list(delta.keys())}")
 
                                     # Handle delta annotations
                                     annotations = delta.get("annotations")
@@ -3317,6 +3318,7 @@ async def process_chat_response(
                                         or delta.get("thinking")
                                     )
                                     if reasoning_content:
+                                        log.info(f"[REASONING DEBUG MIDDLEWARE] Found reasoning_content: {reasoning_content[:100]}")
                                         if (
                                             not content_blocks
                                             or content_blocks[-1]["type"] != "reasoning"

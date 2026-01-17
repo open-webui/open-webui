@@ -354,7 +354,7 @@
 			<div class="mb-3.5">
 				<div class="flex items-center gap-2 mb-4">
 					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-						{$i18n.t('Web Search')}
+						{$i18n.t('Query Generation')}
 					</div>
 
 					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />

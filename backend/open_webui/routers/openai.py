@@ -558,6 +558,7 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                         # middleware.py will handle the <details> tag wrapping
                         elif event_type in ("response.reasoning_summary_text.delta", "response.reasoning.delta"):
                             reasoning_text = event.get("delta", "")
+                            log.info(f"[REASONING DEBUG] Received reasoning delta: type={event_type}, text={reasoning_text[:100]}")
                             if reasoning_text and not content_started:
                                 event_source = (
                                     "summary"
@@ -1661,7 +1662,13 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
 
 
 def is_openai_reasoning_model(model: str) -> bool:
-    return model.lower().startswith(("o1", "o3", "o4", "gpt-5"))
+    model_lower = model.lower()
+    return (
+        model_lower.startswith(("o1", "o3", "o4", "gpt-5"))
+        or "thinking" in model_lower
+        or "flash-preview" in model_lower
+        or "flash-thinking" in model_lower
+    )
 
 
 def convert_to_azure_payload(url, payload: dict, api_version: str):
