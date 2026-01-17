@@ -407,7 +407,8 @@ async def handle_gemini_native_request(
     payload: dict,
     final_system: Optional[str],
     cache_stage: Optional[str] = None,
-) -> dict:
+    metadata: Optional[dict] = None,
+):
     """
     Handle chat completion request using unified Gemini service.
 
@@ -421,12 +422,14 @@ async def handle_gemini_native_request(
         payload: OpenAI-format payload with messages
         final_system: Final system prompt (may be cached)
         cache_stage: Optional cache stage ("execution", "gating", etc.)
+        metadata: Optional metadata dict (for inline tool execution)
 
     Returns:
         OpenAI-compatible response dict or StreamingResponse
     """
     try:
         from open_webui.utils.gemini_rag import get_gemini_rag_service
+        from open_webui.utils.misc import openai_chat_chunk_message_template
 
         log.info("=" * 80)
         log.info("[GEMINI-NATIVE] Routing to unified GeminiRAGService")
@@ -462,59 +465,120 @@ async def handle_gemini_native_request(
 
         log.info(f"[GEMINI-NATIVE] User query: {user_content[:100]}...")
 
+        # Store metadata in request state for middleware access
+        if metadata:
+            if not hasattr(request.state, "_metadata"):
+                request.state._metadata = {}
+            request.state._metadata.update(metadata)
+            log.info(f"[GEMINI-NATIVE] Metadata stored in request.state: {list(metadata.keys())}")
+
         # Get unified Gemini service
         service = get_gemini_rag_service(api_key)
 
-        # Extract temperature from payload
+        # Extract temperature and streaming flag from payload
         temperature = payload.get("temperature", 0.2)
         stream = payload.get("stream", False)
 
-        # Call unified service
-        # IMPORTANT: Empty store_names = regular chat (no RAG)
-        result = service.query(
-            question=user_content,
-            store_names=[],  # Empty = no RAG, just regular chat
-            model=model_id,
-            temperature=temperature,
-            system_instruction=final_system,
-            cache_stage=cache_stage
-        )
+        # Handle streaming requests
+        if stream:
+            log.info("[GEMINI-NATIVE] Streaming mode enabled")
 
-        if not result.get("success"):
+            async def stream_generator():
+                """Generate OpenAI-compatible SSE chunks from Gemini stream"""
+                try:
+                    # Call streaming service
+                    async for chunk_text in service.query_stream(
+                        question=user_content,
+                        store_names=[],  # Empty = no RAG, just regular chat
+                        model=model_id,
+                        temperature=temperature,
+                        system_instruction=final_system,
+                        cache_stage=cache_stage
+                    ):
+                        # Format as OpenAI chunk
+                        chunk_data = openai_chat_chunk_message_template(
+                            model=model_id,
+                            content=chunk_text
+                        )
+                        yield f"data: {json.dumps(chunk_data)}\n\n"
+
+                    # Send final chunk with finish_reason
+                    final_chunk = openai_chat_chunk_message_template(
+                        model=model_id,
+                        content=None  # No content = finish
+                    )
+                    yield f"data: {json.dumps(final_chunk)}\n\n"
+
+                    # Send [DONE] marker
+                    yield "data: [DONE]\n\n"
+
+                except Exception as e:
+                    log.error(f"[GEMINI-NATIVE] Streaming error: {e}")
+                    log.exception(e)
+                    error_chunk = {
+                        "error": {
+                            "message": str(e),
+                            "type": "api_error",
+                            "code": "streaming_error"
+                        }
+                    }
+                    yield f"data: {json.dumps(error_chunk)}\n\n"
+                    yield "data: [DONE]\n\n"
+
+            return StreamingResponse(
+                stream_generator(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                }
+            )
+
+        # Non-streaming mode
+        else:
+            # Call unified service
+            # IMPORTANT: Empty store_names = regular chat (no RAG)
+            result = service.query(
+                question=user_content,
+                store_names=[],  # Empty = no RAG, just regular chat
+                model=model_id,
+                temperature=temperature,
+                system_instruction=final_system,
+                cache_stage=cache_stage
+            )
+
+            if not result.get("success"):
+                return {
+                    "error": {
+                        "message": result.get("error", "Unknown error"),
+                        "type": "api_error",
+                        "code": "gemini_service_error"
+                    }
+                }
+
+            text = result.get("text", "")
+            log.info(f"[GEMINI-NATIVE] Response received: {len(text)} chars")
+
+            # Convert to OpenAI format
             return {
-                "error": {
-                    "message": result.get("error", "Unknown error"),
-                    "type": "api_error",
-                    "code": "gemini_service_error"
+                "id": f"chatcmpl-{int(time.time())}",
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": model_id,
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": text
+                    },
+                    "finish_reason": "stop"
+                }],
+                "usage": {
+                    "prompt_tokens": 0,  # Gemini doesn't provide this
+                    "completion_tokens": 0,
+                    "total_tokens": 0
                 }
             }
-
-        # Check if streaming (note: current service doesn't support streaming yet)
-        # For now, return non-streaming response
-        # TODO: Add streaming support to GeminiRAGService
-        text = result.get("text", "")
-        log.info(f"[GEMINI-NATIVE] Response received: {len(text)} chars")
-
-        # Convert to OpenAI format
-        return {
-            "id": f"chatcmpl-{int(time.time())}",
-            "object": "chat.completion",
-            "created": int(time.time()),
-            "model": model_id,
-            "choices": [{
-                "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": text
-                },
-                "finish_reason": "stop"
-            }],
-            "usage": {
-                "prompt_tokens": 0,  # Gemini doesn't provide this
-                "completion_tokens": 0,
-                "total_tokens": 0
-            }
-        }
 
     except Exception as e:
         log.error(f"[GEMINI-NATIVE] Request handling error: {e}")
@@ -1413,6 +1477,40 @@ async def generate_chat_completion(
                 log.info(f"[OPENAI-TOOL-GATING] Stage 2 System Prompt Length: {len(final_system)} chars")
                 log.info(f"[OPENAI-TOOL-GATING] Selected tools: {[t.command for t in selected_tool_prompts]}")
 
+                # Enable inline tool execution for Stage 2 (for streaming with tool markers)
+                if metadata is None:
+                    metadata = {}
+                metadata["enable_tool_notifications"] = True
+                metadata["tool_commands"] = {t.command for t in selected_tool_prompts}
+                metadata["tool_prompts_dict"] = {
+                    t.command.lstrip('/'): t.content for t in selected_tool_prompts
+                }
+                metadata["tool_validation_rules"] = {
+                    t.command.lstrip('/'): t.validation_rules
+                    for t in selected_tool_prompts
+                    if t.prompt_type == "json_tool" and t.validation_rules
+                }
+                metadata["api_request_url"] = request_url
+                metadata["api_headers"] = dict(headers)
+                metadata["api_cookies"] = dict(cookies) if cookies else {}
+
+                # Pass Gemini info for native SDK usage in inline tool execution
+                metadata["is_gemini_backend"] = is_gemini_backend
+                if is_gemini_backend:
+                    metadata["gemini_api_key"] = key
+                    metadata["gemini_model_id"] = payload["model"]
+                    # Use tool_gating_model (Flash) for tool execution if configured
+                    metadata["gemini_tool_model"] = tool_gating_model if tool_gating_model else payload["model"]
+                    log.info(f"[OPENAI-TOOL-GATING] Stage 2 inline tool execution will use Gemini native SDK")
+                    log.info(f"[OPENAI-TOOL-GATING] Tool execution model: {metadata['gemini_tool_model']}")
+
+                log.info(f"[OPENAI-TOOL-GATING] Stage 2 inline tool execution enabled for: {metadata['tool_commands']}")
+                log.info(f"[OPENAI-TOOL-GATING] Tool prompts dict keys: {list(metadata['tool_prompts_dict'].keys())}")
+
+                # Store metadata in form_data for middleware access
+                form_data["metadata"] = metadata
+                log.info(f"[OPENAI-TOOL-GATING] Updated metadata stored in form_data")
+
     elif effective_tool_mode == "concat" and tool_prompts:
         # Legacy mode: include all tool prompts in system prompt
         final_system = compose_stage2_system_prompt(base_system or "", tool_prompts)
@@ -1452,6 +1550,17 @@ async def generate_chat_completion(
         metadata["api_request_url"] = request_url
         metadata["api_headers"] = dict(headers)
         metadata["api_cookies"] = dict(cookies) if cookies else {}
+
+        # Pass Gemini info for native SDK usage in inline tool execution
+        metadata["is_gemini_backend"] = is_gemini_backend
+        if is_gemini_backend:
+            metadata["gemini_api_key"] = key
+            metadata["gemini_model_id"] = payload["model"]
+            # Use tool_gating_model (Flash) for tool execution if configured
+            metadata["gemini_tool_model"] = tool_gating_model if tool_gating_model else payload["model"]
+            log.info(f"[OPENAI] Inline tool execution will use Gemini native SDK")
+            log.info(f"[OPENAI] Tool execution model: {metadata['gemini_tool_model']}")
+
         log.info(f"[OPENAI] Inline tool execution enabled for: {metadata['tool_commands']}")
         log.info(f"[OPENAI] Tool prompts dict keys: {list(metadata['tool_prompts_dict'].keys())}")
         log.info(f"[OPENAI] Tool validation rules keys: {list(metadata['tool_validation_rules'].keys())}")
@@ -1483,13 +1592,20 @@ async def generate_chat_completion(
         # - "none"/"inline" mode: uses "execution" cache (no tools or short hints)
         cache_stage = "execution"
 
+        # Use tool_gating_model (Flash) for inline mode to improve speed
+        selected_model = payload["model"]
+        if effective_tool_mode == "inline" and tool_gating_model:
+            selected_model = tool_gating_model
+            log.info(f"[OPENAI] Inline mode: using Flash model for first call: {selected_model}")
+
         return await handle_gemini_native_request(
             request=request,
             api_key=key,
-            model_id=payload["model"],
+            model_id=selected_model,
             payload=payload,
             final_system=final_system,
             cache_stage=cache_stage,
+            metadata=metadata,
         )
 
     # For non-Gemini backends, continue with OpenAI-compatible flow
