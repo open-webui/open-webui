@@ -17,6 +17,10 @@ from typing import Optional, Callable, Awaitable, Dict, List, Any, Set
 
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.tool_validator import validate_tool_output
+from open_webui.utils.hardcoded_tools import (
+    is_hardcoded_tool,
+    get_hardcoded_tool_by_command
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS.get("MAIN", logging.INFO))
@@ -91,13 +95,22 @@ class ToolInlineExecutor:
 
         Matches format: <command>content</command>
         e.g., <base-flow-spec>...</base-flow-spec>
-        """
-        if not self.tool_prompts:
-            return None
 
-        # Get all command names (already normalized without leading slash)
-        commands = list(self.tool_prompts.keys())
+        Includes both DB tools (from self.tool_prompts) and hardcoded tools.
+        """
+        # Get all DB tool commands
+        db_commands = list(self.tool_prompts.keys()) if self.tool_prompts else []
+
+        # Get all hardcoded tool commands
+        from open_webui.utils.hardcoded_tools import get_hardcoded_tools
+        hardcoded_tools = get_hardcoded_tools()
+        hardcoded_commands = [tool.command for tool in hardcoded_tools]
+
+        # Combine all commands
+        commands = db_commands + hardcoded_commands
+
         if not commands:
+            log.warning("[TOOL INLINE] No tools available (neither DB nor hardcoded)")
             return None
 
         # Build pattern: <command>content</command>
@@ -106,7 +119,9 @@ class ToolInlineExecutor:
         escaped_commands = '|'.join(re.escape(cmd) for cmd in commands)
         pattern = rf'<({escaped_commands})>(.*?)</\1>'
 
-        log.info(f"[TOOL INLINE] Built marker pattern for commands: {commands}")
+        log.info(f"[TOOL INLINE] Built marker pattern for {len(commands)} commands:")
+        log.info(f"  DB tools: {db_commands}")
+        log.info(f"  Hardcoded tools: {hardcoded_commands}")
         return re.compile(pattern, re.DOTALL | re.IGNORECASE)
 
     async def process_chunk(self, chunk: str) -> str:
@@ -301,7 +316,12 @@ class ToolInlineExecutor:
         """
         log.info(f"[TOOL INLINE] Executing tool: {command}")
 
-        # Find matching tool prompt
+        # Check if this is a hardcoded tool (uses response_schema)
+        if is_hardcoded_tool(command):
+            log.info(f"[HARDCODED TOOL] Detected hardcoded tool: {command}")
+            return await self._execute_hardcoded_tool(command, context)
+
+        # Find matching tool prompt (DB tool)
         tool_prompt = self._find_tool_prompt(command)
 
         if not tool_prompt:
@@ -368,6 +388,88 @@ Do NOT include any explanatory text before or after the output block."""
             log.error(f"[TOOL INLINE] Exception during tool execution: {e}")
             await self._emit_event("tool_completed", command, f"도구 오류: {command}")
             return f"\n<!-- Tool exception: {str(e)} -->\n"
+
+    async def _execute_hardcoded_tool(self, command: str, context: str) -> str:
+        """
+        Execute a hardcoded tool with response_schema.
+
+        Args:
+            command: Tool command name
+            context: User context/description from the tool marker
+
+        Returns:
+            Tool output (JSON from response_schema)
+        """
+        # Get hardcoded tool metadata
+        hardcoded_tool = get_hardcoded_tool_by_command(command)
+
+        if not hardcoded_tool:
+            log.error(f"[HARDCODED TOOL] Tool metadata not found: {command}")
+            await self._emit_event("tool_completed", command, f"도구 오류: {command}")
+            return f"\n<!-- Hardcoded tool '{command}' not found -->\n"
+
+        if not self.llm_call_fn:
+            log.warning("[HARDCODED TOOL] No LLM call function provided")
+            await self._emit_event("tool_completed", command, f"도구 완료: {command}")
+            return f"\n<!-- No LLM function for hardcoded tool '{command}' -->\n"
+
+        try:
+            log.info(f"[HARDCODED TOOL] Executing {command} with response_schema")
+            log.info(f"[HARDCODED TOOL] System prompt length: {len(hardcoded_tool.system_prompt)} chars")
+            log.info(f"[HARDCODED TOOL] Response schema: {hardcoded_tool.response_schema.__name__}")
+
+            # Call LLM with response_schema
+            # Note: use_fast_model=False to use Pro model for accuracy (not Flash)
+            result = await self.llm_call_fn(
+                system_prompt=hardcoded_tool.system_prompt,
+                user_message=context,
+                use_fast_model=False,  # Use Pro model for hardcoded tools (accurate)
+                response_schema=hardcoded_tool.response_schema
+            )
+
+            if result.get("success"):
+                tool_output = result.get("text", "")
+                log.info(f"[HARDCODED TOOL] Tool output received: {len(tool_output)} chars (JSON)")
+
+                # Parse JSON and extract graph data
+                import json
+                try:
+                    parsed = json.loads(tool_output)
+                    log.info(f"[HARDCODED TOOL] Parsed JSON structure: {list(parsed.keys())}")
+
+                    # Extract graph from result.graph
+                    if "result" in parsed and "graph" in parsed["result"]:
+                        graph_data = parsed["result"]["graph"]
+                        final_output = json.dumps(graph_data, ensure_ascii=False)
+                        log.info(f"[HARDCODED TOOL] Extracted graph data: {len(final_output)} chars")
+                    else:
+                        # If structure is different, use original output
+                        final_output = tool_output
+                        log.warning(f"[HARDCODED TOOL] Unexpected JSON structure, using original output")
+                except json.JSONDecodeError as e:
+                    log.error(f"[HARDCODED TOOL] JSON parsing failed: {e}")
+                    final_output = tool_output
+
+                # Emit tool_completed event
+                await self._emit_event("tool_completed", command, f"도구 완료: {command}")
+
+                # Return JSON output wrapped in output_tag (e.g., <graph-spec>...</graph-spec>)
+                output_tag = hardcoded_tool.output_tag
+                result_str = f"\n<{output_tag}>{final_output}</{output_tag}>\n"
+                log.info(f"[HARDCODED TOOL] Wrapping output in <{output_tag}>...</{output_tag}>")
+                log.info(f"[HARDCODED TOOL] Returning result: {len(result_str)} chars")
+                log.info(f"[HARDCODED TOOL] Result preview: {result_str[:200]}...")
+                return result_str
+            else:
+                error = result.get("error", "Unknown error")
+                log.error(f"[HARDCODED TOOL] Tool execution failed: {error}")
+                await self._emit_event("tool_completed", command, f"도구 실패: {command}")
+                return f"\n<!-- Hardcoded tool error: {error} -->\n"
+
+        except Exception as e:
+            log.error(f"[HARDCODED TOOL] Exception during tool execution: {e}")
+            await self._emit_event("tool_completed", command, f"도구 오류: {command}")
+            return f"\n<!-- Hardcoded tool exception: {str(e)} -->\n"
 
     def _find_tool_prompt(self, command: str) -> Optional[str]:
         """Find tool prompt by command name."""

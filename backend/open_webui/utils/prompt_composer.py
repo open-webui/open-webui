@@ -47,7 +47,7 @@ def compose_prompts_from_group(
     proficiency_level: Optional[str] = None,
     response_style: Optional[str] = None,
     include_tools: bool = False,
-) -> Tuple[str, List[PromptModel]]:
+) -> Tuple[str, List]:
     """
     Compose prompts from a group based on persona values.
 
@@ -63,7 +63,7 @@ def compose_prompts_from_group(
     Returns:
         Tuple of (composed_prompt, tool_prompts)
         - composed_prompt: Base + proficiency + style prompts joined by double newlines
-        - tool_prompts: List of tool PromptModel objects (for tool gating)
+        - tool_prompts: List of tool objects (PromptModel for DB tools, HardcodedToolMetadata for hardcoded tools)
 
     Example:
         >>> composed, tools = compose_prompts_from_group("group-123", "1", "학생 진단 브리핑")
@@ -96,8 +96,21 @@ def compose_prompts_from_group(
     for mapping in mappings:
         prompt = Prompts.get_prompt_by_command(mapping.prompt_command)
         if not prompt:
-            log.warning(f"[PROMPT COMPOSER] Prompt not found: {mapping.prompt_command}")
-            continue
+            # Check if this is a hardcoded tool
+            from open_webui.utils.hardcoded_tools import get_hardcoded_tool_by_command
+            hardcoded_tool = get_hardcoded_tool_by_command(mapping.prompt_command)
+            if hardcoded_tool:
+                log.info(f"[PROMPT COMPOSER] Found HARDCODED TOOL: {hardcoded_tool.command}")
+                log.info(f"  - name: {hardcoded_tool.name}")
+                log.info(f"  - description: {hardcoded_tool.description}")
+                log.info(f"  - system_prompt length: {len(hardcoded_tool.system_prompt)} chars")
+                log.info(f"  - response_schema: {hardcoded_tool.response_schema.__name__}")
+                # Add hardcoded tool to tool_prompts list
+                tool_prompts.append(hardcoded_tool)
+                continue
+            else:
+                log.warning(f"[PROMPT COMPOSER] Prompt not found: {mapping.prompt_command}")
+                continue
 
         log.debug(f"[PROMPT COMPOSER] Processing: {mapping.prompt_command} (type={prompt.prompt_type}, order={mapping.order})")
 
@@ -152,17 +165,21 @@ def compose_prompts_from_group(
             log.debug(f"[PROMPT COMPOSER] SKIPPED: {prompt.command} ({prompt.prompt_type}) - {reason}")
 
     # Sort tool prompts by priority (higher first)
-    tool_prompts.sort(key=lambda t: t.tool_priority or 0, reverse=True)
+    # Note: hardcoded tools don't have tool_priority, so they'll be sorted as 0
+    tool_prompts.sort(key=lambda t: getattr(t, 'tool_priority', 0) or 0, reverse=True)
 
     # Summary logging
     log.info("=" * 60)
     log.info("[PROMPT COMPOSER] Composition Summary:")
     log.info(f"  Included prompts ({len(included_prompts)}): {included_prompts}")
-    log.info(f"  Tool prompts ({len(tool_prompts)}): {[t.command for t in tool_prompts]}")
+    log.info(f"  Tool prompts ({len(tool_prompts)}): {[getattr(t, 'command', 'unknown') for t in tool_prompts]}")
     if tool_prompts:
         log.info("  Tool details:")
         for t in tool_prompts:
-            log.info(f"    - {t.command}: priority={t.tool_priority}, desc='{t.tool_description or 'N/A'}'")
+            priority = getattr(t, 'tool_priority', 0) or 0
+            desc = getattr(t, 'tool_description', None) or 'N/A'
+            cmd = getattr(t, 'command', 'unknown')
+            log.info(f"    - {cmd}: priority={priority}, desc='{desc}'")
     log.info(f"  Total composed length: {len(''.join(prompt_parts))} chars")
     log.info("=" * 60)
 

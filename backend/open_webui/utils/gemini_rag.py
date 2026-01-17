@@ -297,7 +297,8 @@ class GeminiRAGService:
         model: str = "gemini-2.5-flash",
         temperature: float = 0.2,
         system_instruction: Optional[str] = None,
-        cache_stage: Optional[str] = None
+        cache_stage: Optional[str] = None,
+        response_schema: Optional[type] = None
     ) -> Dict[str, Any]:
         """
         RAG 쿼리 실행 (문서 검색 + 응답 생성)
@@ -313,6 +314,8 @@ class GeminiRAGService:
             system_instruction: 시스템 지시사항 (cached if cache_stage provided)
             cache_stage: Optional cache stage ("gating" or "execution").
                         If provided, system_instruction will be globally cached.
+            response_schema: Pydantic model for structured JSON output (hardcoded tools).
+                           If provided, response will be in JSON format matching the schema.
 
         Returns:
             응답 결과
@@ -400,6 +403,12 @@ class GeminiRAGService:
                     )
                 )
 
+            # Add response_schema if provided (for hardcoded tools)
+            if response_schema:
+                config.response_mime_type = "application/json"
+                config.response_schema = response_schema
+                log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__}")
+
             # Use cached content if available, otherwise use system_instruction
             # CRITICAL: When using cached_content, do NOT set system_instruction
             if cached_content_name:
@@ -456,7 +465,8 @@ class GeminiRAGService:
         model: str = "gemini-2.5-flash",
         temperature: float = 0.2,
         system_instruction: Optional[str] = None,
-        cache_stage: Optional[str] = None
+        cache_stage: Optional[str] = None,
+        response_schema: Optional[type] = None
     ):
         """
         RAG 쿼리 실행 (스트리밍 모드)
@@ -472,6 +482,8 @@ class GeminiRAGService:
             system_instruction: 시스템 지시사항 (cached if cache_stage provided)
             cache_stage: Optional cache stage ("gating" or "execution").
                         If provided, system_instruction will be globally cached.
+            response_schema: Pydantic model for structured JSON output (hardcoded tools).
+                           If provided, response will be in JSON format matching the schema.
 
         Yields:
             응답 텍스트 청크
@@ -549,6 +561,12 @@ class GeminiRAGService:
                         maximum_remote_calls=5
                     )
                 )
+
+            # Add response_schema if provided (for hardcoded tools)
+            if response_schema:
+                config.response_mime_type = "application/json"
+                config.response_schema = response_schema
+                log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (streaming)")
 
             # Use cached content if available
             if cached_content_name:
