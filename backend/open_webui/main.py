@@ -60,6 +60,7 @@ from starsessions.stores.redis import RedisStore
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
+from open_webui.utils.tools import set_tool_servers
 from open_webui.socket.main import (
     MODELS,
     app as socket_app,
@@ -644,6 +645,35 @@ async def lifespan(app: FastAPI):
             ),
             None,
         )
+
+    # Initialize tool servers from TOOL_SERVER_CONNECTIONS env var at startup
+    # This ensures tools are available immediately without requiring manual save in Admin Panel
+    # Ref: https://github.com/open-webui/open-webui/issues/18140
+    if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
+        log.info(
+            f"Initializing {len(app.state.config.TOOL_SERVER_CONNECTIONS)} tool server(s) from TOOL_SERVER_CONNECTIONS..."
+        )
+        try:
+            await set_tool_servers(
+                Request(
+                    {
+                        "type": "http",
+                        "asgi.version": "3.0",
+                        "asgi.spec_version": "2.0",
+                        "method": "GET",
+                        "path": "/internal",
+                        "query_string": b"",
+                        "headers": Headers({}).raw,
+                        "client": ("127.0.0.1", 12345),
+                        "server": ("127.0.0.1", 80),
+                        "scheme": "http",
+                        "app": app,
+                    }
+                )
+            )
+            log.info("Tool servers initialized successfully")
+        except Exception as e:
+            log.error(f"Failed to initialize tool servers: {e}")
 
     yield
 
