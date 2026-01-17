@@ -213,20 +213,29 @@ async def execute_with_tool_gating(
     tool_prompts: List[Any],
     llm_call_fn: Callable,
     gating_model: Optional[str] = None,
+    full_system: Optional[str] = None,
+    cache_gating_stage: Optional[str] = None,
+    cache_execution_stage: Optional[str] = None,
     **llm_kwargs
 ) -> ToolGatingResult:
     """
-    Execute two-stage tool gating.
+    Execute two-stage tool gating with optional context caching.
 
     Args:
         query: User's question
-        base_system: Base system prompt (base + proficiency + style)
+        base_system: Base system prompt for Stage 1 (lightweight, base only)
         tool_prompts: All available tool prompts
         llm_call_fn: Async function to call LLM
-            Expected signature: llm_call_fn(system_instruction, question, **kwargs) -> dict with 'text' key
+            Expected signature: llm_call_fn(system_instruction, question, cache_stage, **kwargs) -> dict with 'text' key
         gating_model: Optional model ID to use for Stage 1 (tool selection).
             If provided, this model will be used for tool gating instead of the main model.
             The gating model inherits the tool_group and prompt configuration.
+        full_system: Optional full system prompt for Stage 2 (base + proficiency + style).
+            If not provided, base_system will be used for both stages.
+        cache_gating_stage: Optional cache stage for Stage 1 ("gating").
+            If provided, Stage 1 system prompt will be globally cached.
+        cache_execution_stage: Optional cache stage for Stage 2 ("execution").
+            If provided, Stage 2 system prompt will be globally cached.
         **llm_kwargs: Additional arguments for LLM call (model, temperature, store_names, etc.)
 
     Returns:
@@ -258,6 +267,7 @@ async def execute_with_tool_gating(
     stage1_result = llm_call_fn(
         question=query,
         system_instruction=stage1_system,
+        cache_stage=cache_gating_stage,  # Enable caching for Stage 1
         **stage1_kwargs
     )
 
@@ -289,16 +299,22 @@ async def execute_with_tool_gating(
     log.info(f"[TOOL GATING] Stage 2 - Tools selected: {selected_tools}")
 
     selected_tool_prompts = get_tool_prompts_by_commands(tool_prompts, selected_tools)
-    stage2_system = compose_stage2_system_prompt(base_system, selected_tool_prompts)
+
+    # Use full_system for Stage 2 if provided (base + proficiency + style),
+    # otherwise fall back to base_system
+    system_for_stage2 = full_system if full_system else base_system
+    stage2_system = compose_stage2_system_prompt(system_for_stage2, selected_tool_prompts)
 
     log.info(f"[TOOL GATING] Stage 2 System Prompt Length: {len(stage2_system)} chars")
     log.info(f"[TOOL GATING] Selected tools: {[t.command for t in selected_tool_prompts]}")
+    log.info(f"[TOOL GATING] Stage 2 - Using {'full_system' if full_system else 'base_system'} for prompt")
     log.info(f"[TOOL GATING] Stage 2 - Using main model: {llm_kwargs.get('model', 'N/A')}")
 
     log.info("[TOOL GATING] Stage 2 - Calling LLM with tool prompts...")
     stage2_result = llm_call_fn(
         question=query,
         system_instruction=stage2_system,
+        cache_stage=cache_execution_stage,  # Enable caching for Stage 2
         **llm_kwargs
     )
 

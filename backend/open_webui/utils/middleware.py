@@ -1261,7 +1261,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     question=user_message,
                     store_names=[store_name],
                     model="gemini-2.5-flash",
-                    temperature=0.2
+                    temperature=0.2,
+                    cache_stage="execution"  # Enable global caching for RAG queries
                 )
 
                 if rag_result.get("success") and rag_result.get("text"):
