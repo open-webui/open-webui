@@ -2591,7 +2591,7 @@ async def process_chat_response(
                             log.info(f"[MIDDLEWARE] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
 
                             # Create LLM call function for inline tool execution
-                            async def make_inline_llm_call(system_prompt: str, user_message: str, use_fast_model: bool = False) -> dict:
+                            async def make_inline_llm_call(system_prompt: str, user_message: str, use_fast_model: bool = False, response_schema: Optional[type] = None) -> dict:
                                 """
                                 Make a non-streaming LLM call for inline tool execution or recovery.
 
@@ -2600,6 +2600,7 @@ async def process_chat_response(
                                     user_message: User message for the LLM
                                     use_fast_model: If True, use Flash model for recovery (fast but less accurate)
                                                    If False, use original Pro model for tool execution (accurate)
+                                    response_schema: Optional Pydantic model for structured output (hardcoded tools)
                                 """
                                 try:
                                     # Check if Gemini backend - use native SDK with caching
@@ -2637,7 +2638,8 @@ async def process_chat_response(
                                                 model=gemini_model,
                                                 temperature=0.2,
                                                 system_instruction=system_prompt,
-                                                cache_stage="tool_execution"  # Enable caching for tool prompts
+                                                cache_stage="tool_execution",  # Enable caching for tool prompts
+                                                response_schema=response_schema  # For hardcoded tools with structured output
                                             )
 
                                             if result.get("success"):
