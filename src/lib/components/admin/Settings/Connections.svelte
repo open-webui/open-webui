@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
@@ -22,12 +23,13 @@
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<any> = getContext('i18n');
 
 	const getModels = async () => {
 		const models = await _getModels(
 			localStorage.token,
-			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null),
+			$config?.features?.enable_direct_connections &&
+				(($settings?.directConnections ?? null) as any),
 			false,
 			true
 		);
@@ -36,21 +38,21 @@
 
 	// External
 	let OLLAMA_BASE_URLS = [''];
-	let OLLAMA_API_CONFIGS = {};
+	let OLLAMA_API_CONFIGS: any = {};
 
 	let OPENAI_API_KEYS = [''];
 	let OPENAI_API_BASE_URLS = [''];
-	let OPENAI_API_CONFIGS = {};
+	let OPENAI_API_CONFIGS: any = {};
 
 	let GEMINI_API_KEYS = [''];
 	let GEMINI_API_BASE_URLS = [''];
-	let GEMINI_API_CONFIGS = {};
+	let GEMINI_API_CONFIGS: any = {};
 
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
 	let ENABLE_GEMINI_API: null | boolean = null;
 
-	let connectionsConfig = null;
+	let connectionsConfig: any = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
@@ -188,9 +190,9 @@
 
 	onMount(async () => {
 		if ($user?.role === 'admin') {
-			let ollamaConfig = {};
-			let openaiConfig = {};
-			let geminiConfig = {};
+			let ollamaConfig: any = {};
+			let openaiConfig: any = {};
+			let geminiConfig: any = {};
 
 			await Promise.all([
 				(async () => {
@@ -294,42 +296,39 @@
 
 				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
-				<div class="my-2">
-					<div class="mt-2 space-y-2">
-						<div class="flex justify-between items-center text-sm">
-							<div class="  font-medium">{$i18n.t('OpenAI API')}</div>
-
-							<div class="flex items-center">
-								<div class="">
-									<Switch
-										bind:state={ENABLE_OPENAI_API}
-										on:change={async () => {
-											updateOpenAIHandler();
-										}}
-									/>
-								</div>
-							</div>
+				<div class="mb-4">
+					<div
+						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+					>
+						<div class="flex justify-between items-center mb-4">
+							<div class="text-xs font-medium text-gray-500">{$i18n.t('OpenAI API')}</div>
+							<Switch
+								bind:state={ENABLE_OPENAI_API}
+								on:change={async () => {
+									updateOpenAIHandler();
+								}}
+							/>
 						</div>
 
 						{#if ENABLE_OPENAI_API}
-							<div class="">
+							<div class="flex flex-col gap-2">
 								<div class="flex justify-between items-center">
-									<div class="font-medium text-xs">{$i18n.t('Manage OpenAI API Connections')}</div>
+									<div class="text-sm font-medium">{$i18n.t('Manage OpenAI API Connections')}</div>
 
 									<Tooltip content={$i18n.t(`Add Connection`)}>
 										<button
-											class="px-1"
+											class="p-1 bg-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full transition"
 											on:click={() => {
 												showAddOpenAIConnectionModal = true;
 											}}
 											type="button"
 										>
-											<Plus />
+											<Plus className="size-3.5" />
 										</button>
 									</Tooltip>
 								</div>
 
-								<div class="grid grid-cols-2 gap-1.5 mt-1.5">
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
 									{#each OPENAI_API_BASE_URLS as url, idx}
 										<OpenAIConnection
 											bind:url={OPENAI_API_BASE_URLS[idx]}
@@ -362,11 +361,13 @@
 				</div>
 
 				<!-- Gemini API Section -->
-				<div class=" my-2">
-					<div class="flex justify-between items-center text-sm mb-2">
-						<div class="  font-medium">{$i18n.t('Gemini API')}</div>
-
-						<div class="mt-1">
+				<!-- Gemini API Section -->
+				<div class="mb-4">
+					<div
+						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+					>
+						<div class="flex justify-between items-center mb-4">
+							<div class="text-xs font-medium text-gray-500">{$i18n.t('Gemini API')}</div>
 							<Switch
 								bind:state={ENABLE_GEMINI_API}
 								on:change={async () => {
@@ -374,60 +375,63 @@
 								}}
 							/>
 						</div>
+
+						{#if ENABLE_GEMINI_API}
+							<div class="flex flex-col gap-2">
+								<div class="flex justify-between items-center">
+									<div class="text-sm font-medium">{$i18n.t('Manage Gemini API Connections')}</div>
+
+									<Tooltip content={$i18n.t(`Add Connection`)}>
+										<button
+											class="p-1 bg-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full transition"
+											on:click={() => {
+												showAddGeminiConnectionModal = true;
+											}}
+											type="button"
+										>
+											<Plus className="size-3.5" />
+										</button>
+									</Tooltip>
+								</div>
+
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
+									{#each GEMINI_API_BASE_URLS as url, idx}
+										<GeminiConnection
+											bind:url={GEMINI_API_BASE_URLS[idx]}
+											bind:key={GEMINI_API_KEYS[idx]}
+											bind:config={GEMINI_API_CONFIGS[idx]}
+											onSubmit={() => {
+												updateGeminiHandler();
+											}}
+											onDelete={() => {
+												GEMINI_API_BASE_URLS = GEMINI_API_BASE_URLS.filter(
+													(url, urlIdx) => idx !== urlIdx
+												);
+												GEMINI_API_KEYS = GEMINI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+
+												let newConfig = {};
+												GEMINI_API_BASE_URLS.forEach((url, newIdx) => {
+													newConfig[newIdx] =
+														GEMINI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+												});
+												GEMINI_API_CONFIGS = newConfig;
+												updateGeminiHandler();
+											}}
+										/>
+									{/each}
+								</div>
+							</div>
+						{/if}
 					</div>
-
-					{#if ENABLE_GEMINI_API}
-						<div class="">
-							<div class="flex justify-between items-center">
-								<div class="font-medium text-xs">{$i18n.t('Manage Gemini API Connections')}</div>
-
-								<Tooltip content={$i18n.t(`Add Connection`)}>
-									<button
-										class="px-1"
-										on:click={() => {
-											showAddGeminiConnectionModal = true;
-										}}
-										type="button"
-									>
-										<Plus />
-									</button>
-								</Tooltip>
-							</div>
-
-							<div class="grid grid-cols-2 gap-1.5 mt-1.5">
-								{#each GEMINI_API_BASE_URLS as url, idx}
-									<GeminiConnection
-										bind:url={GEMINI_API_BASE_URLS[idx]}
-										bind:key={GEMINI_API_KEYS[idx]}
-										bind:config={GEMINI_API_CONFIGS[idx]}
-										onSubmit={() => {
-											updateGeminiHandler();
-										}}
-										onDelete={() => {
-											GEMINI_API_BASE_URLS = GEMINI_API_BASE_URLS.filter(
-												(url, urlIdx) => idx !== urlIdx
-											);
-											GEMINI_API_KEYS = GEMINI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
-
-											let newConfig = {};
-											GEMINI_API_BASE_URLS.forEach((url, newIdx) => {
-												newConfig[newIdx] = GEMINI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
-											});
-											GEMINI_API_CONFIGS = newConfig;
-											updateGeminiHandler();
-										}}
-									/>
-								{/each}
-							</div>
-						</div>
-					{/if}
 				</div>
 
-				<div class=" my-2">
-					<div class="flex justify-between items-center text-sm mb-2">
-						<div class="  font-medium">{$i18n.t('Ollama API')}</div>
-
-						<div class="mt-1">
+				<!-- Ollama API Section -->
+				<div class="mb-4">
+					<div
+						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+					>
+						<div class="flex justify-between items-center mb-4">
+							<div class="text-xs font-medium text-gray-500">{$i18n.t('Ollama API')}</div>
 							<Switch
 								bind:state={ENABLE_OLLAMA_API}
 								on:change={async () => {
@@ -435,110 +439,113 @@
 								}}
 							/>
 						</div>
-					</div>
 
-					{#if ENABLE_OLLAMA_API}
-						<div class="">
-							<div class="flex justify-between items-center">
-								<div class="font-medium text-xs">{$i18n.t('Manage Ollama API Connections')}</div>
+						{#if ENABLE_OLLAMA_API}
+							<div class="flex flex-col gap-2">
+								<div class="flex justify-between items-center">
+									<div class="text-sm font-medium">{$i18n.t('Manage Ollama API Connections')}</div>
 
-								<Tooltip content={$i18n.t(`Add Connection`)}>
-									<button
-										class="px-1"
-										on:click={() => {
-											showAddOllamaConnectionModal = true;
-										}}
-										type="button"
+									<Tooltip content={$i18n.t(`Add Connection`)}>
+										<button
+											class="p-1 bg-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full transition"
+											on:click={() => {
+												showAddOllamaConnectionModal = true;
+											}}
+											type="button"
+										>
+											<Plus className="size-3.5" />
+										</button>
+									</Tooltip>
+								</div>
+
+								<div class="flex w-full gap-2">
+									<div class="flex-1 flex flex-col gap-2 mt-1">
+										{#each OLLAMA_BASE_URLS as url, idx}
+											<OllamaConnection
+												bind:url={OLLAMA_BASE_URLS[idx]}
+												bind:config={OLLAMA_API_CONFIGS[idx]}
+												{idx}
+												onSubmit={() => {
+													updateOllamaHandler();
+												}}
+												onDelete={() => {
+													OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
+														(url, urlIdx) => idx !== urlIdx
+													);
+
+													let newConfig = {};
+													OLLAMA_BASE_URLS.forEach((url, newIdx) => {
+														newConfig[newIdx] =
+															OLLAMA_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+													});
+													OLLAMA_API_CONFIGS = newConfig;
+												}}
+											/>
+										{/each}
+									</div>
+								</div>
+
+								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t('Trouble accessing Ollama?')}
+									<a
+										class=" text-gray-300 font-medium underline"
+										href="https://github.com/open-webui/open-webui#troubleshooting"
+										target="_blank"
 									>
-										<Plus />
-									</button>
-								</Tooltip>
+										{$i18n.t('Click here for help.')}
+									</a>
+								</div>
 							</div>
+						{/if}
+					</div>
+				</div>
 
-							<div class="flex w-full gap-1.5">
-								<div class="flex-1 flex flex-col gap-1.5 mt-1.5">
-									{#each OLLAMA_BASE_URLS as url, idx}
-										<OllamaConnection
-											bind:url={OLLAMA_BASE_URLS[idx]}
-											bind:config={OLLAMA_API_CONFIGS[idx]}
-											{idx}
-											onSubmit={() => {
-												updateOllamaHandler();
-											}}
-											onDelete={() => {
-												OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
+				<!-- Advanced Settings -->
+				<div class="mb-4">
+					<div
+						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
+					>
+						<div class="text-xs font-medium text-gray-500 mb-4">
+							{$i18n.t('Advanced Settings')}
+						</div>
 
-												let newConfig = {};
-												OLLAMA_BASE_URLS.forEach((url, newIdx) => {
-													newConfig[newIdx] =
-														OLLAMA_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
-												});
-												OLLAMA_API_CONFIGS = newConfig;
-											}}
-										/>
-									{/each}
+						<div class="flex flex-col gap-4">
+							<div>
+								<div class="flex justify-between items-center text-sm">
+									<div class="font-medium">{$i18n.t('Direct Connections')}</div>
+									<Switch
+										bind:state={connectionsConfig.ENABLE_DIRECT_CONNECTIONS}
+										on:change={async () => {
+											updateConnectionsHandler();
+										}}
+									/>
+								</div>
+								<div class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t(
+										'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
+									)}
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-								{$i18n.t('Trouble accessing Ollama?')}
-								<a
-									class=" text-gray-300 font-medium underline"
-									href="https://github.com/open-webui/open-webui#troubleshooting"
-									target="_blank"
-								>
-									{$i18n.t('Click here for help.')}
-								</a>
+							<hr class="border-gray-100 dark:border-gray-800" />
+
+							<div>
+								<div class="flex justify-between items-center text-sm">
+									<div class="font-medium">{$i18n.t('Cache Base Model List')}</div>
+									<Switch
+										bind:state={connectionsConfig.ENABLE_BASE_MODELS_CACHE}
+										on:change={async () => {
+											updateConnectionsHandler();
+										}}
+									/>
+								</div>
+								<div class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t(
+										'Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.'
+									)}
+								</div>
 							</div>
 						</div>
-					{/if}
-				</div>
-
-				<div class="my-2">
-					<div class="flex justify-between items-center text-sm">
-						<div class="  font-medium">{$i18n.t('Direct Connections')}</div>
-
-						<div class="flex items-center">
-							<div class="">
-								<Switch
-									bind:state={connectionsConfig.ENABLE_DIRECT_CONNECTIONS}
-									on:change={async () => {
-										updateConnectionsHandler();
-									}}
-								/>
-							</div>
-						</div>
-					</div>
-
-					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-						{$i18n.t(
-							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
-						)}
-					</div>
-				</div>
-
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-				<div class="my-2">
-					<div class="flex justify-between items-center text-sm">
-						<div class=" text-xs font-medium">{$i18n.t('Cache Base Model List')}</div>
-
-						<div class="flex items-center">
-							<div class="">
-								<Switch
-									bind:state={connectionsConfig.ENABLE_BASE_MODELS_CACHE}
-									on:change={async () => {
-										updateConnectionsHandler();
-									}}
-								/>
-							</div>
-						</div>
-					</div>
-
-					<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-						{$i18n.t(
-							'Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.'
-						)}
 					</div>
 				</div>
 			</div>
@@ -553,7 +560,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

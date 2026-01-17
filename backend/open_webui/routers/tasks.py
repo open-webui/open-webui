@@ -478,7 +478,16 @@ async def generate_queries(
 
     if getattr(request.state, "cached_queries", None):
         log.info(f"Reusing cached queries: {request.state.cached_queries}")
-        return request.state.cached_queries
+        # Return in the same format as generate_chat_completion to maintain consistency
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps({"queries": request.state.cached_queries})
+                    }
+                }
+            ]
+        }
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
