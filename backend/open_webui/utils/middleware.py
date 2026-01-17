@@ -1886,6 +1886,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 {"type": "function", "function": tool.get("spec", {})}
                 for tool in tools_dict.values()
             ]
+            # Debug: Log search_web spec
+            for tool_name, tool_dict in tools_dict.items():
+                if tool_name == "search_web":
+                    log.info(f"[SPEC DEBUG] search_web spec sent to model: {json.dumps(tool_dict.get('spec', {}), ensure_ascii=False, indent=2)}")
 
         else:
             # If the function calling is not native, then call the tools function calling handler
@@ -2389,6 +2393,8 @@ async def process_chat_response(
                                                     extra_params={
                                                         "__messages__": form_data.get("messages", []),
                                                         "__files__": metadata.get("files", []),
+                                                        "__request__": request,
+                                                        "__user__": user.model_dump() if hasattr(user, 'model_dump') else (user.dict() if hasattr(user, 'dict') else {}),
                                                     },
                                                 )
                                                 tool_result = await tool_function(**tc_params)
@@ -3317,6 +3323,7 @@ async def process_chat_response(
                                         or delta.get("reasoning")
                                         or delta.get("thinking")
                                     )
+                                    log.info(f"[REASONING DEBUG] reasoning_content={repr(reasoning_content)}, type={type(reasoning_content)}, truthyness={bool(reasoning_content)}")
                                     if reasoning_content:
                                         log.info(f"[REASONING DEBUG MIDDLEWARE] Found reasoning_content: {reasoning_content[:100]}")
                                         if (
@@ -3606,11 +3613,17 @@ async def process_chat_response(
                                     .keys()
                                 )
 
+                                log.info(f"[TOOL DEBUG] Before filter - tool_function_params: {tool_function_params}")
+                                log.info(f"[TOOL DEBUG] allowed_params: {list(allowed_params)}")
+
                                 tool_function_params = {
                                     k: v
                                     for k, v in tool_function_params.items()
                                     if k in allowed_params
                                 }
+
+                                log.info(f"[TOOL DEBUG] After filter - tool_function_params: {tool_function_params}")
+                                log.info(f"[TOOL DEBUG] Calling tool: {tool_function_name}")
 
                                 if direct_tool:
                                     tool_result = await event_caller(
@@ -3636,6 +3649,8 @@ async def process_chat_response(
                                                 "messages", []
                                             ),
                                             "__files__": metadata.get("files", []),
+                                            "__request__": request,
+                                            "__user__": user.model_dump() if hasattr(user, 'model_dump') else (user.dict() if hasattr(user, 'dict') else {}),
                                         },
                                     )
 

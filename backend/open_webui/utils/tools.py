@@ -397,11 +397,8 @@ def get_builtin_tools(
     # Helper to get model capabilities (defaults to True if not specified)
     def get_model_capability(name: str, default: bool = True) -> bool:
         return (
-            model.get("info", {})
-            .get("meta", {})
-            .get("capabilities", {})
-            .get(name, default)
-        )
+            ((model.get("info") or {}).get("meta") or {}).get("capabilities") or {}
+        ).get(name, default)
 
     # Time utilities - always available for date calculations
     builtin_functions.extend([get_current_timestamp, calculate_timestamp])
@@ -409,7 +406,7 @@ def get_builtin_tools(
     # Knowledge base tools - conditional injection based on model knowledge
     # If model has attached knowledge (any type), only provide query_knowledge_files
     # Otherwise, provide all KB browsing tools
-    model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
+    model_knowledge = ((model.get("info") or {}).get("meta") or {}).get("knowledge", [])
     if model_knowledge:
         # Model has attached knowledge - only allow semantic search within it
         builtin_functions.append(query_knowledge_files)

@@ -87,6 +87,7 @@
 	"Advanced Parameters": "高级参数",
 	"Advanced parameters for MinerU parsing (enable_ocr, enable_formula, enable_table, language, model_version, page_ranges)": "用于 MinerU 解析的高级参数（enable_ocr, enable_formula, enable_table, language, model_version, page_ranges）",
 	"Advanced Params": "高级参数",
+	"Advanced Settings": "高级设置",
 	"After updating or changing the embedding model, you must reindex the knowledge base for the changes to take effect. You can do this using the \"Reindex\" button below.": "更新或更改嵌入模型后，请重新索引知识库以应用更改。只需点击下方的“重新索引”按钮即可。",
 	"AI": "AI",
 	"All": "全部",

@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(find . -name \"*.py\" -exec grep -l \"def search_web\" {} ;)"
     ]
   }
 }
