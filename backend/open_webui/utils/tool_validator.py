@@ -60,6 +60,29 @@ class ToolValidator:
                 log.error(f"[TOOL VALIDATOR] Invalid regex pattern '{name}': {e}")
         return compiled
 
+    def _strip_latex_content(self, text: str) -> str:
+        """
+        Strip LaTeX math content from text before validation.
+
+        This allows mathematical notation (like pi, theta, etc.) inside
+        LaTeX delimiters without triggering forbidden pattern matches.
+
+        Args:
+            text: Input text with potential LaTeX content
+
+        Returns:
+            Text with LaTeX content replaced by placeholders
+        """
+        import re
+        # Remove inline LaTeX: $...$
+        text = re.sub(r'\$[^$]+\$', '[LATEX]', text)
+        # Remove display LaTeX: $$...$$
+        text = re.sub(r'\$\$[^$]+\$\$', '[LATEX]', text)
+        # Remove LaTeX blocks: \[...\] or \(...\)
+        text = re.sub(r'\\\[[^\]]+\\\]', '[LATEX]', text)
+        text = re.sub(r'\\\([^\)]+\\\)', '[LATEX]', text)
+        return text
+
     def validate(self, output: str) -> ValidationResult:
         """
         Validate tool output against rules.
@@ -69,6 +92,9 @@ class ToolValidator:
         2. Check allow patterns - at least one must match for valid output
         3. If no allow patterns defined, skip allow check
 
+        Note: LaTeX math content ($...$, $$...$$, etc.) is stripped before
+        validation to allow mathematical notation without triggering false positives.
+
         Args:
             output: Tool output string to validate
 
@@ -77,9 +103,13 @@ class ToolValidator:
         """
         log.debug(f"[TOOL VALIDATOR] Validating output ({len(output)} chars)")
 
+        # Strip LaTeX content to avoid false positives on math symbols
+        output_for_validation = self._strip_latex_content(output)
+        log.debug(f"[TOOL VALIDATOR] After stripping LaTeX: {len(output_for_validation)} chars")
+
         # Step 1: Check forbidden patterns
         for name, pattern in self.forbidden_patterns.items():
-            if pattern.search(output):
+            if pattern.search(output_for_validation):
                 log.warning(f"[TOOL VALIDATOR] Forbidden pattern matched: {name}")
                 return ValidationResult(
                     is_valid=False,
@@ -90,7 +120,7 @@ class ToolValidator:
         # Step 2: Check allow patterns (if any defined)
         if self.allow_patterns:
             for name, pattern in self.allow_patterns.items():
-                if pattern.search(output):
+                if pattern.search(output_for_validation):
                     log.debug(f"[TOOL VALIDATOR] Allow pattern matched: {name}")
                     return ValidationResult(is_valid=True, matched_allow_pattern=name)
 

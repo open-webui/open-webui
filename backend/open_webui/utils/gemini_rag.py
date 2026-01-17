@@ -291,8 +291,9 @@ class GeminiRAGService:
 
     def query(
         self,
-        question: str,
-        store_names: List[str],
+        question: Optional[str] = None,
+        contents: Optional[List[Dict]] = None,
+        store_names: Optional[List[str]] = None,
         model: str = "gemini-2.5-flash",
         temperature: float = 0.2,
         system_instruction: Optional[str] = None,
@@ -302,7 +303,10 @@ class GeminiRAGService:
         RAG 쿼리 실행 (문서 검색 + 응답 생성)
 
         Args:
-            question: 질문 내용 (per-request, NOT cached)
+            question: 질문 내용 (per-request, NOT cached). For backward compatibility.
+            contents: Gemini-format conversation history (per-request, NOT cached).
+                     If provided, this takes precedence over question.
+                     Format: [{"role": "user", "parts": [{"text": "..."}]}, ...]
             store_names: 검색할 Store 이름 목록 (per-request, NOT cached)
             model: 사용할 Gemini 모델
             temperature: 응답 다양성 (0.0 ~ 1.0)
@@ -314,19 +318,36 @@ class GeminiRAGService:
             응답 결과
         """
         try:
+            # Determine contents to use: contents parameter OR convert question to single-turn
+            if contents:
+                # Use provided conversation history
+                api_contents = contents
+                log_preview = contents[-1]["parts"][0]["text"][:100] if contents else ""
+            elif question:
+                # Backward compatibility: convert single question to Gemini format
+                api_contents = question  # Gemini API accepts both string and list
+                log_preview = question[:100]
+            else:
+                return {
+                    "success": False,
+                    "error": "Either question or contents must be provided"
+                }
+
             # Normalize store names to ensure they have the correct prefix
             normalized_store_names = []
-            for name in store_names:
-                if name and not name.startswith("fileSearchStores/"):
-                    normalized_name = f"fileSearchStores/{name}"
-                    log.warning(f"[GEMINI RAG QUERY] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
-                    normalized_store_names.append(normalized_name)
-                else:
-                    normalized_store_names.append(name)
+            if store_names:
+                for name in store_names:
+                    if name and not name.startswith("fileSearchStores/"):
+                        normalized_name = f"fileSearchStores/{name}"
+                        log.warning(f"[GEMINI RAG QUERY] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
+                        normalized_store_names.append(normalized_name)
+                    else:
+                        normalized_store_names.append(name)
 
             log.info("="*80)
             log.info("[GEMINI RAG QUERY] RAG 쿼리 시작")
-            log.info(f"  질문: {question[:100]}...")
+            log.info(f"  질문/메시지: {log_preview}...")
+            log.info(f"  대화 히스토리: {len(contents) if contents else 1} turns")
             log.info(f"  모델: {model}")
             log.info(f"  Temperature: {temperature}")
             log.info(f"  원본 Store Names: {store_names}")
@@ -392,7 +413,7 @@ class GeminiRAGService:
             log.info(f"[GEMINI RAG QUERY] 모델: {model}")
             response = self.client.models.generate_content(
                 model=model,
-                contents=question,  # User question (per-request, NOT cached)
+                contents=api_contents,  # Conversation history or single question (per-request, NOT cached)
                 config=config
             )
             log.info("[GEMINI RAG QUERY] ✅ 응답 받음")
@@ -429,8 +450,9 @@ class GeminiRAGService:
 
     async def query_stream(
         self,
-        question: str,
-        store_names: List[str],
+        question: Optional[str] = None,
+        contents: Optional[List[Dict]] = None,
+        store_names: Optional[List[str]] = None,
         model: str = "gemini-2.5-flash",
         temperature: float = 0.2,
         system_instruction: Optional[str] = None,
@@ -440,7 +462,10 @@ class GeminiRAGService:
         RAG 쿼리 실행 (스트리밍 모드)
 
         Args:
-            question: 질문 내용 (per-request, NOT cached)
+            question: 질문 내용 (per-request, NOT cached). For backward compatibility.
+            contents: Gemini-format conversation history (per-request, NOT cached).
+                     If provided, this takes precedence over question.
+                     Format: [{"role": "user", "parts": [{"text": "..."}]}, ...]
             store_names: 검색할 Store 이름 목록 (per-request, NOT cached)
             model: 사용할 Gemini 모델
             temperature: 응답 다양성 (0.0 ~ 1.0)
@@ -452,19 +477,34 @@ class GeminiRAGService:
             응답 텍스트 청크
         """
         try:
+            # Determine contents to use: contents parameter OR convert question to single-turn
+            if contents:
+                # Use provided conversation history
+                api_contents = contents
+                log_preview = contents[-1]["parts"][0]["text"][:100] if contents else ""
+            elif question:
+                # Backward compatibility: convert single question to Gemini format
+                api_contents = question  # Gemini API accepts both string and list
+                log_preview = question[:100]
+            else:
+                yield f"Error: Either question or contents must be provided"
+                return
+
             # Normalize store names
             normalized_store_names = []
-            for name in store_names:
-                if name and not name.startswith("fileSearchStores/"):
-                    normalized_name = f"fileSearchStores/{name}"
-                    log.warning(f"[GEMINI RAG STREAM] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
-                    normalized_store_names.append(normalized_name)
-                else:
-                    normalized_store_names.append(name)
+            if store_names:
+                for name in store_names:
+                    if name and not name.startswith("fileSearchStores/"):
+                        normalized_name = f"fileSearchStores/{name}"
+                        log.warning(f"[GEMINI RAG STREAM] ⚠️  Store 이름 정규화: '{name}' → '{normalized_name}'")
+                        normalized_store_names.append(normalized_name)
+                    else:
+                        normalized_store_names.append(name)
 
             log.info("="*80)
             log.info("[GEMINI RAG STREAM] RAG 스트리밍 쿼리 시작")
-            log.info(f"  질문: {question[:100]}...")
+            log.info(f"  질문/메시지: {log_preview}...")
+            log.info(f"  대화 히스토리: {len(contents) if contents else 1} turns")
             log.info(f"  모델: {model}")
             log.info(f"  Temperature: {temperature}")
             log.info(f"  정규화된 Store Names: {normalized_store_names}")
@@ -524,7 +564,7 @@ class GeminiRAGService:
             # Note: generate_content_stream returns a regular (sync) generator, not async
             stream = self.client.models.generate_content_stream(
                 model=model,
-                contents=question,
+                contents=api_contents,  # Conversation history or single question (per-request, NOT cached)
                 config=config
             )
 
