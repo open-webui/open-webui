@@ -434,7 +434,8 @@ Do NOT include any explanatory text before or after the output block."""
                 system_prompt=hardcoded_tool.system_prompt,
                 user_message=context,
                 use_fast_model=False,  # Use Pro model for hardcoded tools (accurate)
-                response_schema=hardcoded_tool.response_schema
+                response_schema=hardcoded_tool.response_schema,
+                disable_afc=hardcoded_tool.disable_afc  # Tool-specific AFC control
             )
 
             if result.get("success"):
