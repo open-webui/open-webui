@@ -254,18 +254,13 @@
 	};
 
 	const resetInput = () => {
-		selectedToolIds = [];
-		selectedFilterIds = [];
-		webSearchEnabled = false;
-		imageGenerationEnabled = false;
-		codeInterpreterEnabled = false;
-
+		// Don't clear existing selections - preserve manual toggles and merge in defaults
 		if (selectedModelIds.filter((id) => id).length > 0) {
-			setDefaults();
+			mergeDefaults();
 		}
 	};
 
-	const setDefaults = async () => {
+	const mergeDefaults = async () => {
 		if (!$tools) {
 			tools.set(await getTools(localStorage.token));
 		}
@@ -273,20 +268,22 @@
 			functions.set(await getFunctions(localStorage.token));
 		}
 
-		// Aggregate toolIds, filterIds, and featureIds from ALL selected models
-		const allToolIds = new Set();
-		const allFilterIds = new Set();
+		// Start with existing selections (preserve manual toggles)
+		const allToolIds = new Set(selectedToolIds);
+		const allFilterIds = new Set(selectedFilterIds);
 
+		// Features start with current state
 		const features = {
-			web_search: false,
-			image_generation: false,
-			code_interpreter: false
+			web_search: webSearchEnabled,
+			image_generation: imageGenerationEnabled,
+			code_interpreter: codeInterpreterEnabled
 		};
 
+		// Add defaults from ALL current models
 		for (const selectedModel of selectedModels) {
 			const model = atSelectedModel ?? $models.find((m) => m.id === selectedModel);
 			if (model?.info?.meta) {
-				// Aggregate toolIds
+				// Add toolIds
 				if (model.info.meta.toolIds) {
 					model.info.meta.toolIds.forEach((id) => {
 						if ($tools.find((t) => t.id === id)) {
@@ -295,7 +292,7 @@
 					});
 				}
 
-				// Aggregate filterIds
+				// Add filterIds
 				if (model.info.meta.defaultFilterIds) {
 					model.info.meta.defaultFilterIds.forEach((id) => {
 						if (model.filters?.find((f) => f.id === id)) {
@@ -304,7 +301,7 @@
 					});
 				}
 
-				// Check and aggregate features (capability + defaultFeatureIds)
+				// Enable features if capability + defaultFeatureIds
 				if (model.info.meta.defaultFeatureIds) {
 					if (
 						model.info.meta.capabilities?.web_search &&
@@ -328,6 +325,7 @@
 			}
 		}
 
+		// Update - only ADDS, never removes
 		selectedToolIds = [...allToolIds];
 		selectedFilterIds = [...allFilterIds];
 
