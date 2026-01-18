@@ -17,7 +17,8 @@ const config = {
 			assets: 'build',
 			fallback: 'index.html'
 		}),
-		// poll for new version name every 60 seconds (to trigger reload mechanic in +layout.svelte)
+		// poll for new version name every 6 hours (to trigger reload mechanic in +layout.svelte)
+		// For self-hosted users, frequent polling is unnecessary since deployments are rare
 		version: {
 			name: (() => {
 				try {
@@ -35,7 +36,7 @@ const config = {
 					}
 				}
 			})(),
-			pollInterval: 60000
+			pollInterval: 21600000 // 6 hours
 		}
 	},
 	vitePlugin: {

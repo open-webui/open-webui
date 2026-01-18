@@ -90,13 +90,31 @@
 	let tokenTimer = null;
 
 	let showRefresh = false;
+	let pendingUpdate = false; // Flag for pending version update notification
 
 	let showSyncStatsModal = false;
 	let syncStatsEventData = null;
 
 	let heartbeatInterval = null;
+	let isInitialConnection = true; // Track if this is the first connection
 
 	const BREAKPOINT = 768;
+	const HEARTBEAT_ACTIVE = 30000; // 30 seconds when page is visible
+	const HEARTBEAT_BACKGROUND = 120000; // 2 minutes when page is hidden
+
+	// Setup heartbeat with visibility-aware interval
+	const setupHeartbeat = (_socket: any) => {
+		if (heartbeatInterval) {
+			clearInterval(heartbeatInterval);
+		}
+		const interval = document.hidden ? HEARTBEAT_BACKGROUND : HEARTBEAT_ACTIVE;
+		heartbeatInterval = setInterval(() => {
+			if (_socket.connected) {
+				console.log('Sending heartbeat');
+				_socket.emit('heartbeat', {});
+			}
+		}, interval);
+	};
 
 	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
@@ -116,39 +134,43 @@
 
 		_socket.on('connect', async () => {
 			console.log('connected', _socket.id);
-			const res = await getVersion(localStorage.token);
 
-			const deploymentId = res?.deployment_id ?? null;
-			const version = res?.version ?? null;
+			// Only check version on initial connection, skip on reconnects
+			// This prevents unnecessary API calls and potential refreshes during network instability
+			if (isInitialConnection) {
+				isInitialConnection = false;
+				const res = await getVersion(localStorage.token);
 
-			if (version !== null || deploymentId !== null) {
-				if (
-					($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) ||
-					($WEBUI_DEPLOYMENT_ID !== null && deploymentId !== $WEBUI_DEPLOYMENT_ID)
-				) {
-					await unregisterServiceWorkers();
-					location.href = location.href;
-					return;
+				const deploymentId = res?.deployment_id ?? null;
+				const version = res?.version ?? null;
+
+				if (version !== null || deploymentId !== null) {
+					if (
+						($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) ||
+						($WEBUI_DEPLOYMENT_ID !== null && deploymentId !== $WEBUI_DEPLOYMENT_ID)
+					) {
+						// Show notification instead of forcing immediate refresh
+						// This prevents interrupting user's work
+						pendingUpdate = true;
+						toast.info($i18n.t('New version available. Refresh to update.'), {
+							duration: 0 // Don't auto-dismiss
+						});
+					}
 				}
-			}
 
-			// Send heartbeat every 30 seconds
-			heartbeatInterval = setInterval(() => {
-				if (_socket.connected) {
-					console.log('Sending heartbeat');
-					_socket.emit('heartbeat', {});
+				if (deploymentId !== null) {
+					WEBUI_DEPLOYMENT_ID.set(deploymentId);
 				}
-			}, 30000);
 
-			if (deploymentId !== null) {
-				WEBUI_DEPLOYMENT_ID.set(deploymentId);
+				if (version !== null) {
+					WEBUI_VERSION.set(version);
+				}
+
+				console.log('version', version);
 			}
 
-			if (version !== null) {
-				WEBUI_VERSION.set(version);
-			}
-
-			console.log('version', version);
+			// Setup heartbeat with visibility-aware interval
+			setupHeartbeat(_socket);
 
 			if (localStorage.getItem('token')) {
 				// Emit user-join event with auth token
@@ -176,6 +198,13 @@
 
 			if (details) {
 				console.log('Additional details:', details);
+			}
+		});
+
+		// Adjust heartbeat interval based on page visibility
+		document.addEventListener('visibilitychange', () => {
+			if (_socket.connected) {
+				setupHeartbeat(_socket);
 			}
 		});
 	};
@@ -586,21 +615,38 @@
 	};
 
 	const TOKEN_EXPIRY_BUFFER = 60; // seconds
-	const checkTokenExpiry = async () => {
-		const exp = $user?.expires_at; // token expiry time in unix timestamp
-		const now = Math.floor(Date.now() / 1000); // current time in unix timestamp
 
+	// Setup precise token expiry timer instead of polling every 15 seconds
+	// This reduces unnecessary timer callbacks when token has a known expiry time
+	const setupTokenExpiryTimer = async () => {
+		if (tokenTimer) {
+			clearTimeout(tokenTimer);
+			tokenTimer = null;
+		}
+
+		const exp = $user?.expires_at; // token expiry time in unix timestamp
 		if (!exp) {
-			// If no expiry time is set, do nothing
+			// No expiry time set, nothing to do
 			return;
 		}
 
-		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
+		const now = Math.floor(Date.now() / 1000);
+		const timeUntilExpiry = (exp - TOKEN_EXPIRY_BUFFER - now) * 1000; // Convert to milliseconds
+
+		if (timeUntilExpiry <= 0) {
+			// Token already expired or about to expire, sign out immediately
 			const res = await userSignOut();
 			user.set(null);
 			localStorage.removeItem('token');
-
 			location.href = res?.redirect_url ?? '/auth';
+		} else {
+			// Set precise timer for when token will expire
+			tokenTimer = setTimeout(async () => {
+				const res = await userSignOut();
+				user.set(null);
+				localStorage.removeItem('token');
+				location.href = res?.redirect_url ?? '/auth';
+			}, timeUntilExpiry);
 		}
 	};
 
@@ -730,11 +776,8 @@
 				}
 				setTextScale($settings?.textScale ?? 1);
 
-				// Set up the token expiry check
-				if (tokenTimer) {
-					clearInterval(tokenTimer);
-				}
-				tokenTimer = setInterval(checkTokenExpiry, 15000);
+				// Set up the token expiry timer (precise timing instead of polling)
+				setupTokenExpiryTimer();
 			} else {
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('events:channel', channelEventHandler);
