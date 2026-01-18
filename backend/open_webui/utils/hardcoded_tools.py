@@ -810,6 +810,100 @@ JSON을 생성하기 전에 반드시 다음을 검증하세요. 이 검증을 �
 
 
 # ============================================================================
+# Native Function Calling Support
+# ============================================================================
+
+def create_graph_tool_declaration():
+    """
+    Create Gemini function declaration for graph tool (Native FC).
+
+    This is a simplified signature for Stage 1 (tool selection).
+    Stage 2 will use full system_prompt + response_schema for detailed execution.
+
+    Returns:
+        types.FunctionDeclaration for graph tool
+    """
+    from google.genai import types
+
+    return types.FunctionDeclaration(
+        name="draw_graph",
+        description=(
+            "Draw mathematical graphs and visualizations (2D functions, 3D surfaces, heatmaps, contours, etc.). "
+            "Use this when user requests visualization of mathematical functions, equations, or data. "
+            "Supports: function_2d (y=f(x)), parametric_2d, scatter_2d, function_3d (z=f(x,y)), "
+            "parametric_3d, scatter_3d, phase_plane (vector fields), vector_field_3d, "
+            "heatmap_2d, contour_2d, implicit_2d (F(x,y)=0), and composite graphs."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "user_request": {
+                    "type": "string",
+                    "description": (
+                        "User's original request for the graph in Korean or English. "
+                        "Include the full context of what to visualize. "
+                        "Examples: 'sin(x) * sin(y) 그려줘', 'y = x^2 그래프', "
+                        "'원의 매개변수 방정식', '전기장 등전위선'"
+                    )
+                }
+            },
+            "required": ["user_request"]
+        }
+    )
+
+
+def create_tool_declarations() -> list:
+    """
+    Create Gemini function declarations for all hardcoded tools (Native FC).
+
+    Returns:
+        List of types.FunctionDeclaration objects
+
+    Note:
+        Currently only graph tool is implemented for Native FC.
+        Other tools (step solver, etc.) will be added in future iterations.
+    """
+    return [
+        create_graph_tool_declaration(),
+        # Future: create_step_solver_declaration(),
+        # Future: create_other_tool_declarations(),
+    ]
+
+
+def get_hardcoded_tool_by_function_name(function_name: str) -> Optional[HardcodedToolMetadata]:
+    """
+    Get hardcoded tool by Native FC function name.
+
+    This maps function names from Native FC to hardcoded tool commands.
+
+    Args:
+        function_name: Function name from Native FC (e.g., "draw_graph")
+
+    Returns:
+        HardcodedToolMetadata if found, None otherwise
+
+    Example:
+        >>> tool = get_hardcoded_tool_by_function_name("draw_graph")
+        >>> tool.command
+        'system-graph-spec'
+    """
+    # Function name → command mapping
+    function_to_command = {
+        "draw_graph": "system-graph-spec",
+        # Future mappings:
+        # "solve_step_by_step": "system-step-solver",
+        # "explain_concept": "system-concept-explainer",
+    }
+
+    command = function_to_command.get(function_name)
+    if not command:
+        log.warning(f"[NATIVE FC] Unknown function name: {function_name}")
+        return None
+
+    return get_hardcoded_tool_by_command(command)
+
+
+# ============================================================================
 # Public API
 # ============================================================================
 

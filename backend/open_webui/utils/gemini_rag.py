@@ -6,6 +6,7 @@ Google Gemini의 File Search 기능을 사용하여 RAG(Retrieval-Augmented Gene
 
 import logging
 import time
+import json
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 
@@ -326,7 +327,9 @@ class GeminiRAGService:
         cache_stage: Optional[str] = None,
         cache_strategy: str = "auto",
         response_schema: Optional[type] = None,
-        disable_afc: bool = False
+        disable_afc: bool = False,
+        enable_hardcoded_tools: bool = False,
+        force_tool_use: bool = False
     ) -> Dict[str, Any]:
         """
         RAG 쿼리 실행 (문서 검색 + 응답 생성)
@@ -348,6 +351,14 @@ class GeminiRAGService:
             disable_afc: Disable AFC (Automatic Function Calling) when response_schema is used.
                         Set to True for tools that don't need RAG (e.g., graph generation).
                         Default: False (AFC enabled for tools that may need RAG).
+            enable_hardcoded_tools: Enable Native Function Calling for hardcoded tools (graph, etc.).
+                                   If True, tools will be registered via function_declarations.
+                                   LLM may return function_call instead of text.
+                                   Default: False (disabled).
+            force_tool_use: Force tool usage (function calling mode = ANY instead of AUTO).
+                           When True and tools are provided, Gemini MUST call at least one tool.
+                           Useful for ensuring FileSearch is always called for grounding.
+                           Default: False (AUTO mode).
 
         Returns:
             응답 결과
@@ -409,32 +420,49 @@ class GeminiRAGService:
                 else:
                     log.info(f"[CACHE] ⚠️  No cache used for {cache_stage} stage (strategy: {cache_strategy})")
 
-            # Only include tools if there are store names to search
+            # Build tools list (file_search + hardcoded tools via Native FC)
             # IMPORTANT: Store selection is per-request, NOT cached
+            tools = []
+
+            # Add file_search tool if stores provided
             if normalized_store_names:
-                config = types.GenerateContentConfig(
-                    tools=[
-                        types.Tool(
-                            file_search=types.FileSearch(
-                                file_search_store_names=normalized_store_names
-                            )
+                tools.append(
+                    types.Tool(
+                        file_search=types.FileSearch(
+                            file_search_store_names=normalized_store_names
                         )
-                    ],
-                    temperature=temperature,
-                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                        disable=False,          # Enable automatic function calling
-                        maximum_remote_calls=5  # Limit to 5 calls (default is 10)
                     )
                 )
-            else:
-                # No RAG - simple text generation
-                config = types.GenerateContentConfig(
-                    temperature=temperature,
-                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                        disable=False,          # Enable automatic function calling
-                        maximum_remote_calls=5  # Limit to 5 calls (default is 10)
-                    )
+
+            # Add hardcoded tools via Native Function Calling
+            if enable_hardcoded_tools:
+                from open_webui.utils.hardcoded_tools import create_tool_declarations
+                tool_declarations = create_tool_declarations()
+                tools.append(types.Tool(function_declarations=tool_declarations))
+                log.info(f"[NATIVE FC] Registered {len(tool_declarations)} hardcoded tools via Native FC")
+
+            # Create config with tools (if any)
+            # Note: AFC and tool_config.mode="ANY" conflict, so we conditionally configure AFC
+            config = types.GenerateContentConfig(
+                temperature=temperature,
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                    disable=force_tool_use,  # Disable AFC when forcing tool use (they conflict)
+                    maximum_remote_calls=5   # Limit to 5 calls when AFC is enabled
                 )
+            )
+
+            # Add tools to config if any
+            if tools:
+                config.tools = tools
+
+                # Force tool usage if requested (mode=ANY instead of AUTO)
+                if force_tool_use:
+                    config.tool_config = types.ToolConfig(
+                        function_calling_config=types.FunctionCallingConfig(
+                            mode="ANY"  # Require model to call at least one function
+                        )
+                    )
+                    log.info("[FORCE TOOL USE] AFC disabled, FileSearch mode set to ANY (required)")
 
             # Add response_schema if provided (for hardcoded tools)
             if response_schema:
@@ -475,22 +503,8 @@ class GeminiRAGService:
             )
             log.info("[GEMINI RAG QUERY] ✅ 응답 받음")
 
-            # 출처 정보 추출
-            citations = []
-            if hasattr(response, "grounding_metadata") and response.grounding_metadata:
-                for citation in getattr(response.grounding_metadata, "citations", []):
-                    citations.append({
-                        "source": getattr(citation, "source", "Unknown"),
-                        "start_index": getattr(citation, "start_index", None),
-                        "end_index": getattr(citation, "end_index", None)
-                    })
-
-            return {
-                "success": True,
-                "text": response.text,
-                "citations": citations,
-                "model": model
-            }
+            # Process response (handles both text and function_call via Native FC)
+            return self._process_response(response, model=model)
         except Exception as e:
             log.error("="*80)
             log.error(f"[GEMINI RAG QUERY] ❌ 에러 발생!")
@@ -505,6 +519,81 @@ class GeminiRAGService:
                 "error": str(e)
             }
 
+    def _extract_citations(self, response) -> List[Dict]:
+        """Extract citations from response grounding_metadata."""
+        citations = []
+        if hasattr(response, "grounding_metadata") and response.grounding_metadata:
+            for citation in getattr(response.grounding_metadata, "citations", []):
+                citations.append({
+                    "source": getattr(citation, "source", "Unknown"),
+                    "start_index": getattr(citation, "start_index", None),
+                    "end_index": getattr(citation, "end_index", None)
+                })
+        return citations
+
+    def _process_response(
+        self,
+        response,
+        model: str = "gemini-2.5-flash"
+    ) -> Dict[str, Any]:
+        """
+        Process Gemini response, handling both text and function_call (Native FC).
+
+        This method detects if the response contains a function_call (Stage 1 - tool selection)
+        or regular text. If function_call is detected, it returns tool execution info.
+
+        Args:
+            response: Gemini API response object
+            model: Model ID used for this call
+
+        Returns:
+            Dictionary with either:
+            - function_call info (requires_tool_execution=True) for Stage 2
+            - text response (success=True, text=...)
+
+        Example function_call response:
+            {
+                "success": True,
+                "function_call": {
+                    "name": "draw_graph",
+                    "arguments": {"user_request": "sin(x) 그려줘"}
+                },
+                "requires_tool_execution": True,
+                "model": "gemini-2.5-flash"
+            }
+        """
+        # Check for function_call in response parts
+        if hasattr(response, 'candidates') and response.candidates:
+            for candidate in response.candidates:
+                if hasattr(candidate, 'content') and candidate.content:
+                    if hasattr(candidate.content, 'parts') and candidate.content.parts:
+                        for part in candidate.content.parts:
+                            # Check if this part is a function_call
+                            if hasattr(part, 'function_call') and part.function_call:
+                                fc = part.function_call
+                                log.info(f"[NATIVE FC] Function call detected: {fc.name}")
+                                log.info(f"[NATIVE FC] Arguments: {fc.args}")
+
+                                return {
+                                    "success": True,
+                                    "function_call": {
+                                        "name": fc.name,
+                                        "arguments": dict(fc.args)  # Convert to regular dict
+                                    },
+                                    "requires_tool_execution": True,
+                                    "model": model
+                                }
+
+        # No function_call found, return text response
+        citations = self._extract_citations(response)
+
+        return {
+            "success": True,
+            "text": response.text,
+            "citations": citations,
+            "model": model
+        }
+
     async def query_stream(
         self,
         question: Optional[str] = None,
@@ -515,7 +604,9 @@ class GeminiRAGService:
         system_instruction: Optional[str] = None,
         cache_stage: Optional[str] = None,
         response_schema: Optional[type] = None,
-        disable_afc: bool = False
+        disable_afc: bool = False,
+        enable_hardcoded_tools: bool = False,
+        force_tool_use: bool = False
     ):
         """
         RAG 쿼리 실행 (스트리밍 모드)
@@ -536,6 +627,13 @@ class GeminiRAGService:
             disable_afc: Disable AFC (Automatic Function Calling) when response_schema is used.
                         Set to True for tools that don't need RAG (e.g., graph generation).
                         Default: False (AFC enabled for tools that may need RAG).
+            enable_hardcoded_tools: Enable hardcoded tools via Native Function Calling.
+                                   If True, tools will be registered as function_declarations.
+                                   Default: False (hardcoded tools disabled).
+            force_tool_use: Force tool usage (function calling mode = ANY instead of AUTO).
+                           When True and tools are provided, Gemini MUST call at least one tool.
+                           Useful for ensuring FileSearch is always called for grounding.
+                           Default: False (AUTO mode).
 
         Yields:
             응답 텍스트 청크
@@ -589,30 +687,48 @@ class GeminiRAGService:
                 else:
                     log.warning(f"[CACHE] ⚠️  Cache creation failed for {cache_stage} stage, fallback to non-cached")
 
-            # Build config
+            # Build tools list (file_search + hardcoded tools via Native FC)
+            tools = []
+
+            # Add file_search tool if stores provided
             if normalized_store_names:
-                config = types.GenerateContentConfig(
-                    tools=[
-                        types.Tool(
-                            file_search=types.FileSearch(
-                                file_search_store_names=normalized_store_names
-                            )
+                tools.append(
+                    types.Tool(
+                        file_search=types.FileSearch(
+                            file_search_store_names=normalized_store_names
                         )
-                    ],
-                    temperature=temperature,
-                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                        disable=False,
-                        maximum_remote_calls=5
                     )
                 )
-            else:
-                config = types.GenerateContentConfig(
-                    temperature=temperature,
-                    automatic_function_calling=types.AutomaticFunctionCallingConfig(
-                        disable=False,
-                        maximum_remote_calls=5
-                    )
+
+            # Add hardcoded tools via Native Function Calling
+            if enable_hardcoded_tools:
+                from open_webui.utils.hardcoded_tools import create_tool_declarations
+                tool_declarations = create_tool_declarations()
+                tools.append(types.Tool(function_declarations=tool_declarations))
+                log.info(f"[NATIVE FC] Registered {len(tool_declarations)} hardcoded tools via Native FC (streaming)")
+
+            # Create config with tools
+            # Note: AFC and tool_config.mode="ANY" conflict, so we conditionally configure AFC
+            config = types.GenerateContentConfig(
+                temperature=temperature,
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                    disable=force_tool_use,  # Disable AFC when forcing tool use (they conflict)
+                    maximum_remote_calls=5   # Limit to 5 calls when AFC is enabled
                 )
+            )
+
+            # Add tools to config if any
+            if tools:
+                config.tools = tools
+
+                # Force tool usage if requested (mode=ANY instead of AUTO)
+                if force_tool_use:
+                    config.tool_config = types.ToolConfig(
+                        function_calling_config=types.FunctionCallingConfig(
+                            mode="ANY"  # Require model to call at least one function
+                        )
+                    )
+                    log.info("[FORCE TOOL USE] AFC disabled, FileSearch mode set to ANY (required) - streaming")
 
             # Add response_schema if provided (for hardcoded tools)
             if response_schema:
@@ -655,11 +771,32 @@ class GeminiRAGService:
 
             # Stream chunks
             # Use 'for' (not 'async for') since Gemini SDK returns sync generator
+            final_response = None
             for chunk in stream:
                 if hasattr(chunk, 'text') and chunk.text:
                     yield chunk.text
+                # Keep track of the last chunk which contains the final response
+                final_response = chunk
 
             log.info("[GEMINI RAG STREAM] ✅ 스트리밍 완료")
+
+            # Extract citations from final response (after streaming completes)
+            citations = []
+            if final_response and hasattr(final_response, "grounding_metadata") and final_response.grounding_metadata:
+                for citation in getattr(final_response.grounding_metadata, "citations", []):
+                    citations.append({
+                        "source": getattr(citation, "source", "Unknown"),
+                        "start_index": getattr(citation, "start_index", None),
+                        "end_index": getattr(citation, "end_index", None)
+                    })
+                log.info(f"[GEMINI RAG STREAM] Extracted {len(citations)} citations from final response")
+            else:
+                log.info("[GEMINI RAG STREAM] No citations found in final response")
+
+            # Yield citations as a special marker at the end
+            # This allows the caller to extract citations after streaming completes
+            if citations:
+                yield f"\n__CITATIONS__:{json.dumps(citations)}"
 
         except Exception as e:
             log.error("="*80)
