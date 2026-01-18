@@ -25,6 +25,10 @@ from open_webui.utils.hardcoded_tools import (
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS.get("MAIN", logging.INFO))
 
+# Graph generation timeout settings
+GRAPH_TIMEOUT_SECONDS = 30  # 30초 타임아웃
+GRAPH_PROGRESS_INTERVAL_SECONDS = 5  # 5초마다 진행 상태 전송
+
 
 class ToolInlineExecutor:
     """
@@ -423,6 +427,11 @@ Do NOT include any explanatory text before or after the output block."""
             await self._emit_event("tool_completed", command, f"도구 완료: {command}")
             return f"\n<!-- No LLM function for hardcoded tool '{command}' -->\n"
 
+        # OPTIMIZATION: Use timeout mechanism for graph generation
+        if command == "system-graph-spec":
+            log.info(f"[HARDCODED TOOL] Routing to graph generation with timeout")
+            return await self._execute_graph_with_timeout(hardcoded_tool, context)
+
         try:
             log.info(f"[HARDCODED TOOL] Executing {command} with response_schema")
             log.info(f"[HARDCODED TOOL] System prompt length: {len(hardcoded_tool.system_prompt)} chars")
@@ -435,7 +444,8 @@ Do NOT include any explanatory text before or after the output block."""
                 user_message=context,
                 use_fast_model=False,  # Use Pro model for hardcoded tools (accurate)
                 response_schema=hardcoded_tool.response_schema,
-                disable_afc=hardcoded_tool.disable_afc  # Tool-specific AFC control
+                disable_afc=hardcoded_tool.disable_afc,  # Tool-specific AFC control
+                force_model=hardcoded_tool.force_model  # Tool-specific model selection
             )
 
             if result.get("success"):
@@ -523,6 +533,193 @@ Do NOT include any explanatory text before or after the output block."""
             log.error(f"[HARDCODED TOOL] Exception during tool execution: {e}")
             await self._emit_event("tool_completed", command, f"도구 오류: {command}")
             return f"\n<!-- Hardcoded tool exception: {str(e)} -->\n"
+
+    async def _execute_graph_with_timeout(self, hardcoded_tool, context: str) -> str:
+        """
+        Execute graph generation with timeout and progress updates.
+
+        Args:
+            hardcoded_tool: HardcodedToolMetadata for graph tool
+            context: User context/description for graph
+
+        Returns:
+            Graph JSON or recovery text if timeout occurs
+        """
+        import asyncio
+        import time
+
+        log.info(f"[GRAPH TIMEOUT] Starting graph generation with {GRAPH_TIMEOUT_SECONDS}s timeout")
+
+        # Create background task for graph generation
+        async def _call_llm_for_graph():
+            """Inner function to call LLM for graph generation"""
+            result = await self.llm_call_fn(
+                system_prompt=hardcoded_tool.system_prompt,
+                user_message=context,
+                use_fast_model=False,  # Use Pro model for accuracy
+                response_schema=hardcoded_tool.response_schema,
+                disable_afc=hardcoded_tool.disable_afc,
+                force_model=hardcoded_tool.force_model  # Force specific model
+            )
+            return result
+
+        task = asyncio.create_task(_call_llm_for_graph())
+
+        start_time = time.time()
+        last_progress = 0
+
+        while not task.done():
+            elapsed = int(time.time() - start_time)
+
+            # Timeout check
+            if elapsed >= GRAPH_TIMEOUT_SECONDS:
+                log.warning(f"[GRAPH TIMEOUT] Graph generation timeout ({GRAPH_TIMEOUT_SECONDS}s)")
+                task.cancel()
+
+                # Recovery: 텍스트 설명으로 대체
+                await self._emit_event("tool_timeout", hardcoded_tool.command, f"타임아웃: {hardcoded_tool.command}")
+                recovery_text = await self._handle_graph_timeout(hardcoded_tool.command, context)
+                await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 완료 (타임아웃 복구): {hardcoded_tool.command}")
+                return f"\n{recovery_text}\n"
+
+            # Progress update (every 5 seconds)
+            if elapsed > last_progress and elapsed % GRAPH_PROGRESS_INTERVAL_SECONDS == 0:
+                progress_msg = f"⏳ 그래프 생성 중... ({elapsed}초 경과)"
+                await self._emit_event("tool_progress", hardcoded_tool.command, progress_msg)
+                log.info(f"[GRAPH TIMEOUT] Progress: {elapsed}s")
+                last_progress = elapsed
+
+            await asyncio.sleep(0.5)
+
+        # Task completed successfully
+        try:
+            result = await task
+            if result.get("success"):
+                tool_output = result.get("text", "")
+                log.info(f"[GRAPH TIMEOUT] Graph generated successfully: {len(tool_output)} chars")
+
+                # Strip markdown code blocks if present
+                import re
+                import json
+
+                tool_output = tool_output.strip()
+                if tool_output.startswith("```"):
+                    tool_output = re.sub(r'^```(?:json)?\s*\n?', '', tool_output)
+                    tool_output = re.sub(r'\n?```\s*$', '', tool_output)
+                    tool_output = tool_output.strip()
+
+                # Parse JSON and check status
+                try:
+                    parsed = json.loads(tool_output)
+                    log.info(f"[GRAPH TIMEOUT] Parsed JSON structure: {list(parsed.keys())}")
+
+                    # Handle JSON structure
+                    if "result" in parsed:
+                        result_data = parsed["result"]
+                    elif "status" in parsed:
+                        result_data = parsed
+                    else:
+                        final_output = tool_output
+                        result_data = None
+
+                    if result_data:
+                        status = result_data.get("status", "success")
+
+                        if status == "unsupported":
+                            reason = result_data.get("reason", "지원하지 않는 그래프 유형입니다")
+                            log.warning(f"[GRAPH TIMEOUT] Graph generation failed (unsupported): {reason}")
+                            await self._emit_event("tool_unsupported", hardcoded_tool.command, f"도구 미지원: {hardcoded_tool.command}")
+
+                            recovery_text = await self._handle_unsupported_tool(hardcoded_tool.command, reason)
+                            await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 완료 (복구): {hardcoded_tool.command}")
+                            return f"\n{recovery_text}\n"
+
+                        elif status == "success" and "graph" in result_data:
+                            graph_data = result_data["graph"]
+                            final_output = json.dumps(graph_data, ensure_ascii=False)
+                            log.info(f"[GRAPH TIMEOUT] Extracted graph data: {len(final_output)} chars")
+                        else:
+                            final_output = tool_output
+
+                except json.JSONDecodeError as e:
+                    log.error(f"[GRAPH TIMEOUT] JSON parsing failed: {e}")
+                    final_output = tool_output
+
+                await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 완료: {hardcoded_tool.command}")
+
+                output_tag = hardcoded_tool.output_tag
+                result_str = f"\n<{output_tag}>{final_output}</{output_tag}>\n"
+                return result_str
+            else:
+                error = result.get("error", "Unknown error")
+                log.error(f"[GRAPH TIMEOUT] Tool execution failed: {error}")
+                await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 실패: {hardcoded_tool.command}")
+                return f"\n<!-- Graph generation error: {error} -->\n"
+
+        except asyncio.CancelledError:
+            log.warning(f"[GRAPH TIMEOUT] Task was cancelled")
+            return f"\n<!-- Graph generation was cancelled -->\n"
+        except Exception as e:
+            log.error(f"[GRAPH TIMEOUT] Exception: {e}")
+            await self._emit_event("tool_completed", hardcoded_tool.command, f"도구 오류: {hardcoded_tool.command}")
+            return f"\n<!-- Graph generation exception: {str(e)} -->\n"
+
+    async def _handle_graph_timeout(self, tool_name: str, context: str) -> str:
+        """
+        Handle graph generation timeout by generating text description.
+
+        Args:
+            tool_name: Name of the tool that timed out
+            context: Original user request context
+
+        Returns:
+            Text description of the graph
+        """
+        log.info(f"[GRAPH TIMEOUT] Handling timeout for: {tool_name}")
+
+        await self._emit_event("tool_recovery", tool_name, f"그래프 생성 복구 중: {tool_name}")
+
+        if not self.llm_call_fn:
+            log.warning("[GRAPH TIMEOUT] No LLM call function for recovery")
+            return f"\n\n(그래프 생성 시간 초과)\n\n"
+
+        try:
+            recovery_system = """당신은 수학 학습을 돕는 AI 튜터입니다.
+
+그래프 생성 시간이 초과되어 텍스트 설명으로 대체합니다.
+요청된 그래프에 대해 간결하고 명확한 텍스트 설명을 제공하세요.
+
+주의사항:
+- 타임아웃을 명시적으로 언급하지 마세요 (사용자 경험 저하)
+- 그래프의 주요 특징, 형태, 수학적 의미를 설명
+- 필요하면 LaTeX 수식 사용 ($...$)
+- 2-3문장으로 간결하게"""
+
+            user_message = f"""요청: {context}
+
+위 그래프에 대해 텍스트로 설명해주세요."""
+
+            log.info(f"[GRAPH TIMEOUT] Making recovery LLM call with Flash model")
+
+            result = await self.llm_call_fn(
+                system_prompt=recovery_system,
+                user_message=user_message,
+                use_fast_model=True  # Use Flash model for fast recovery
+            )
+
+            if result.get("success"):
+                recovery_text = result.get("text", "")
+                log.info(f"[GRAPH TIMEOUT] Recovery text received: {len(recovery_text)} chars")
+                await self._emit_event("tool_recovery_completed", tool_name, f"복구 완료: {tool_name}")
+                return f" {recovery_text}"
+            else:
+                error = result.get("error", "Unknown error")
+                log.error(f"[GRAPH TIMEOUT] Recovery LLM call failed: {error}")
+                return "(그래프 생성 실패)"
+
+        except Exception as e:
+            log.error(f"[GRAPH TIMEOUT] Exception during recovery: {e}")
+            return "(그래프 생성 실패)"
 
     def _find_tool_prompt(self, command: str) -> Optional[str]:
         """Find tool prompt by command name."""

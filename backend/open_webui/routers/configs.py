@@ -536,3 +536,37 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# Default RAG Store Config
+############################
+
+
+class DefaultRagStoreConfigForm(BaseModel):
+    DEFAULT_RAG_STORE_NAME: Optional[str] = None
+
+
+@router.get("/default_rag_store")
+async def get_default_rag_store_config(request: Request, user=Depends(get_admin_user)):
+    """Get the default RAG store name for chats without chapter_id."""
+    try:
+        current_value = request.app.state.config.DEFAULT_RAG_STORE_NAME
+    except AttributeError:
+        current_value = None
+    return {
+        "DEFAULT_RAG_STORE_NAME": current_value
+    }
+
+
+@router.post("/default_rag_store")
+async def set_default_rag_store_config(
+    request: Request,
+    form_data: DefaultRagStoreConfigForm,
+    user=Depends(get_admin_user),
+):
+    """Set the default RAG store name for chats without chapter_id."""
+    request.app.state.config.DEFAULT_RAG_STORE_NAME = form_data.DEFAULT_RAG_STORE_NAME
+    return {
+        "DEFAULT_RAG_STORE_NAME": request.app.state.config.DEFAULT_RAG_STORE_NAME
+    }

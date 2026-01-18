@@ -498,7 +498,7 @@ class GeminiRAGService:
             log.error(f"  에러 메시지: {e}")
             log.error(f"  원본 store_names: {store_names}")
             log.error(f"  정규화된 store_names: {normalized_store_names if 'normalized_store_names' in locals() else 'N/A'}")
-            log.error(f"  질문: {question[:100]}...")
+            log.error(f"  질문: {question[:100] if question else 'N/A (using contents)'}...")
             log.error("="*80)
             return {
                 "success": False,
@@ -666,7 +666,7 @@ class GeminiRAGService:
             log.error(f"[GEMINI RAG STREAM] ❌ 에러 발생!")
             log.error(f"  에러 타입: {type(e).__name__}")
             log.error(f"  에러 메시지: {e}")
-            log.error(f"  질문: {question[:100]}...")
+            log.error(f"  질문: {question[:100] if question else 'N/A (using contents)'}...")
             log.error("="*80)
             yield f"Error: {str(e)}"
 

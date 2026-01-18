@@ -198,15 +198,12 @@ class GeminiCacheManager:
             log.debug(f"  Padded prompt length: {len(padded_prompt)} chars")
             log.debug(f"  TTL: {ttl_seconds}s")
 
+            # CRITICAL: system_instruction must be set in cache creation, not in request
+            # When using cached_content, GenerateContent cannot have system_instruction
             cached_content = self.client.caches.create(
                 model=model_id,
                 config=types.CreateCachedContentConfig(
-                    contents=[
-                        {
-                            "role": "user",
-                            "parts": [{"text": padded_prompt}]
-                        }
-                    ],
+                    system_instruction=padded_prompt,  # System prompt goes here!
                     ttl=f"{ttl_seconds}s"
                 )
             )

@@ -128,6 +128,7 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Gemini RAG
     GEMINI_RAG_API_KEY,
+    DEFAULT_RAG_STORE_NAME,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
@@ -720,6 +721,7 @@ app.state.OPENAI_MODELS = {}
 ########################################
 
 app.state.config.GEMINI_RAG_API_KEY = GEMINI_RAG_API_KEY
+app.state.config.DEFAULT_RAG_STORE_NAME = DEFAULT_RAG_STORE_NAME
 
 ########################################
 #

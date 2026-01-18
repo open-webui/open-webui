@@ -316,6 +316,7 @@ class HardcodedToolMetadata(BaseModel):
     is_hardcoded: bool = True
     editable: bool = False
     disable_afc: bool = Field(default=False, description="Disable AFC (Automatic Function Calling) when using response_schema for this tool")
+    force_model: Optional[str] = Field(default=None, description="Force specific Gemini model for this tool (e.g., 'gemini-2.5-flash-lite' to prevent thinking mode)")
 
     # PromptModel compatibility fields
     content: str = Field(default="", description="Prompt content (auto-populated from system_prompt)")
@@ -845,6 +846,7 @@ def get_hardcoded_tools() -> List[HardcodedToolMetadata]:
             response_schema=GraphGeneratorResponse,
             output_tag="graph-spec",  # Output wrapped in <graph-spec>...</graph-spec>
             disable_afc=True,  # OPTIMIZATION: Disable AFC for graph generation (response_schema already constrains output, no RAG needed)
+            force_model="gemini-2.5-flash-lite",  # OPTIMIZATION: Use lite model (fast, no thinking mode)
         )
     ]
 

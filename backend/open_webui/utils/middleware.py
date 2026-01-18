@@ -2594,7 +2594,7 @@ async def process_chat_response(
                             log.info(f"[MIDDLEWARE] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
 
                             # Create LLM call function for inline tool execution
-                            async def make_inline_llm_call(system_prompt: str, user_message: str, use_fast_model: bool = False, response_schema: Optional[type] = None, disable_afc: bool = False) -> dict:
+                            async def make_inline_llm_call(system_prompt: str, user_message: str, use_fast_model: bool = False, response_schema: Optional[type] = None, disable_afc: bool = False, force_model: Optional[str] = None) -> dict:
                                 """
                                 Make a non-streaming LLM call for inline tool execution or recovery.
 
@@ -2605,6 +2605,7 @@ async def process_chat_response(
                                                    If False, use original Pro model for tool execution (accurate)
                                     response_schema: Optional Pydantic model for structured output (hardcoded tools)
                                     disable_afc: Disable AFC (Automatic Function Calling) for this tool (e.g., graph generation)
+                                    force_model: Force specific Gemini model for this tool (e.g., 'gemini-2.5-flash-lite')
                                 """
                                 try:
                                     # Check if Gemini backend - use native SDK with caching
@@ -2615,9 +2616,13 @@ async def process_chat_response(
                                         gemini_api_key = metadata.get("gemini_api_key")
 
                                         # Model selection based on call type:
+                                        # - Force model (force_model parameter): Use specific model (e.g., graph generation)
                                         # - Tool execution (use_fast_model=False): Use Pro model for accuracy
                                         # - Recovery (use_fast_model=True): Use Flash model for speed
-                                        if use_fast_model:
+                                        if force_model:
+                                            gemini_model = force_model  # Tool-specific model
+                                            log.info(f"[MIDDLEWARE] Using forced model for tool: {gemini_model}")
+                                        elif use_fast_model:
                                             gemini_model = metadata.get("gemini_tool_model")  # Flash for recovery
                                             log.info(f"[MIDDLEWARE] Using Flash model for recovery: {gemini_model}")
                                         else:

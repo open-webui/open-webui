@@ -5,7 +5,7 @@ import json
 import logging
 import re
 import time
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 
 import aiohttp
 from aiocache import cached
@@ -635,6 +635,54 @@ def convert_openai_messages_to_gemini_contents(messages: list, filter_code: bool
     return contents
 
 
+def extract_chapter_from_citations(citations: List[Dict], chapter_mappings: Dict) -> Optional[Tuple[str, float]]:
+    """
+    Extract most likely chapter_id from citations.
+
+    Args:
+        citations: List of citation dicts with 'source' field
+        chapter_mappings: Dict mapping chapter_id → {"store_name": ..., "display_name": ...}
+
+    Returns:
+        Tuple of (chapter_id, confidence) or None
+        confidence = ratio of citations from the detected chapter (0.0-1.0)
+    """
+    if not citations or len(citations) == 0:
+        return None
+
+    # Reverse mapping: store_name → chapter_id
+    store_to_chapter = {
+        info["store_name"]: ch_id
+        for ch_id, info in chapter_mappings.items()
+    }
+
+    # Count citations by chapter
+    chapter_counts = {}
+    for citation in citations:
+        source = citation.get("source", "")
+
+        # Try to match source to store_name
+        # Source format may vary, e.g., "projects/.../corpora/CORPUS_NAME/..."
+        # Extract store name from source string
+        for store_name, chapter_id in store_to_chapter.items():
+            if store_name in source:
+                chapter_counts[chapter_id] = chapter_counts.get(chapter_id, 0) + 1
+                break
+
+    if not chapter_counts:
+        return None
+
+    # Find chapter with most citations
+    total_citations = len(citations)
+    top_chapter = max(chapter_counts.items(), key=lambda x: x[1])
+    chapter_id, count = top_chapter
+    confidence = count / total_citations
+
+    log.info(f"[CHAPTER-AUTO] Detected chapter: {chapter_id} ({count}/{total_citations} = {confidence:.2%})")
+
+    return (chapter_id, confidence)
+
+
 async def handle_gemini_native_request(
     request: Request,
     api_key: str,
@@ -707,6 +755,61 @@ async def handle_gemini_native_request(
         temperature = payload.get("temperature", 0.2)
         stream = payload.get("stream", False)
 
+        # ============================================================
+        # Phase 3: Determine RAG store_names based on chapter_id
+        # ============================================================
+        # Get chat_id and chapter_id from metadata (if available)
+        chat_id = metadata.get("chat_id") if metadata else None
+        chapter_id = metadata.get("chapter_id") if metadata else None
+
+        # Determine RAG store_names based on chapter_id
+        store_names = []
+        used_default_chapter = False
+
+        if chat_id and not chapter_id:
+            # Chat exists but no chapter_id → check global default RAG store
+            try:
+                # Get global default RAG store from config
+                try:
+                    default_store_name = request.app.state.config.DEFAULT_RAG_STORE_NAME
+                except AttributeError:
+                    default_store_name = None
+
+                if default_store_name:
+                    # Use default RAG store (not tied to chapters)
+                    store_names = [default_store_name]
+                    used_default_chapter = True
+                    log.info(f"[CHAPTER-AUTO] Using default RAG store {default_store_name} for chat {chat_id}")
+                else:
+                    log.info(f"[CHAPTER-AUTO] Chat {chat_id} has no chapter_id and no default RAG store configured")
+            except Exception as e:
+                log.error(f"[CHAPTER-AUTO] Error determining default RAG store: {e}")
+                log.exception(e)
+
+        elif chapter_id:
+            # Chapter explicitly set → use its store
+            try:
+                from open_webui.models.textbooks import TextbookChapters
+                store_name = TextbookChapters.get_rag_store(chapter_id)
+                if store_name:
+                    store_names = [store_name]
+                    log.info(f"[CHAPTER-AUTO] Using explicit chapter {chapter_id} (store: {store_name})")
+                else:
+                    log.warning(f"[CHAPTER-AUTO] Chapter {chapter_id} has no RAG store")
+            except Exception as e:
+                log.error(f"[CHAPTER-AUTO] Error getting RAG store for chapter {chapter_id}: {e}")
+                log.exception(e)
+
+        # If no stores determined, use empty list (current behavior - no RAG)
+        if not store_names:
+            log.info("[CHAPTER-AUTO] No RAG stores configured, using regular chat mode")
+
+        # IMPORTANT: Disable caching when using RAG stores
+        # Gemini API does not allow cached_content with tools (FileSearch)
+        if store_names:
+            cache_stage = None
+            log.info("[CHAPTER-AUTO] Disabling cache when using RAG stores")
+
         # Handle streaming requests
         if stream:
             log.info("[GEMINI-NATIVE] Streaming mode enabled")
@@ -717,7 +820,7 @@ async def handle_gemini_native_request(
                     # Call streaming service with conversation history
                     async for chunk_text in service.query_stream(
                         contents=gemini_contents,  # Full conversation history
-                        store_names=[],  # Empty = no RAG, just regular chat
+                        store_names=store_names,  # RAG stores based on chapter_id or default
                         model=model_id,
                         temperature=temperature,
                         system_instruction=final_system,
@@ -765,13 +868,12 @@ async def handle_gemini_native_request(
         # Non-streaming mode
         else:
             # Call unified service with conversation history
-            # IMPORTANT: Empty store_names = regular chat (no RAG)
             # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
             import asyncio
             result = await asyncio.to_thread(
                 service.query,
                 contents=gemini_contents,  # Full conversation history
-                store_names=[],  # Empty = no RAG, just regular chat
+                store_names=store_names,  # RAG stores based on chapter_id or default
                 model=model_id,
                 temperature=temperature,
                 system_instruction=final_system,
@@ -789,6 +891,44 @@ async def handle_gemini_native_request(
 
             text = result.get("text", "")
             log.info(f"[GEMINI-NATIVE] Response received: {len(text)} chars")
+
+            # ============================================================
+            # Phase 4: Extract citations for auto-assignment
+            # ============================================================
+            citations = result.get("citations", [])
+            log.info(f"[CHAPTER-AUTO] Received {len(citations)} citations from RAG")
+
+            # If we used default chapter and got citations, analyze for auto-assignment
+            if chat_id and used_default_chapter and citations:
+                try:
+                    from open_webui.models.textbooks import TextbookChapters
+                    from open_webui.models.chats import Chats
+
+                    # Get chapter mappings
+                    chapter_mappings = TextbookChapters.get_all_rag_store_mappings()
+
+                    # Extract chapter from citations
+                    detected = extract_chapter_from_citations(citations, chapter_mappings)
+
+                    if detected:
+                        detected_chapter, confidence = detected
+
+                        # Auto-assign if confidence is high (e.g., > 60%)
+                        CONFIDENCE_THRESHOLD = 0.6
+                        if confidence >= CONFIDENCE_THRESHOLD:
+                            # Update chat's chapter_id
+                            updated_chat = Chats.update_chat_chapter_id_by_id(chat_id, detected_chapter)
+                            if updated_chat:
+                                log.info(f"[CHAPTER-AUTO] ✅ Auto-assigned chapter {detected_chapter} to chat {chat_id} (confidence: {confidence:.2%})")
+                            else:
+                                log.warning(f"[CHAPTER-AUTO] Failed to update chat {chat_id}")
+                        else:
+                            log.info(f"[CHAPTER-AUTO] Skipped auto-assignment (confidence {confidence:.2%} < threshold {CONFIDENCE_THRESHOLD:.2%})")
+                    else:
+                        log.info("[CHAPTER-AUTO] Could not extract chapter from citations")
+                except Exception as e:
+                    log.error(f"[CHAPTER-AUTO] Error during auto-assignment: {e}")
+                    log.exception(e)
 
             # Convert to OpenAI format
             return {
