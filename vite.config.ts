@@ -31,20 +31,20 @@ export default defineConfig({
 		proxy: {
 			// forward API requests to the given backend
 			'/api': {
-				target: 'http://175.45.204.157:8080',
+				target: 'https://hy-aitutor.hanyang.ac.kr',
 				changeOrigin: true,
 				rewrite: (path: string) => path.replace(/^\/api/, '/api')
 			},
 			// forward websocket (socket.io) requests - must use http target for ws upgrade
 			'/ws/socket.io': {
-				target: 'http://175.45.204.157:8080',
+				target: 'https://hy-aitutor.hanyang.ac.kr',
 				ws: true,
 				changeOrigin: true,
 				secure: false
 			},
 			// forward other socket requests if any
 			'/socket': {
-				target: 'http://175.45.204.157:8080',
+				target: 'https://hy-aitutor.hanyang.ac.kr',
 				ws: true,
 				changeOrigin: true,
 				secure: false

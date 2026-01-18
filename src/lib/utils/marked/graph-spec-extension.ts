@@ -42,6 +42,7 @@ export type Sampling3D = {
 
 export interface GraphSpecLayer {
 	type: 'function_2d' | 'parametric_2d' | 'function_parametric_2d' | 'phase_plane' | 'scatter_2d' | 'point_2d' | 'line_2d' |
+		'heatmap_2d' | 'contour_2d' | 'implicit_2d' |
 		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'point_3d' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d' |
 		'pie_2d' | 'bar_2d';
 	expression?: string | { x: string; y: string; z?: string }; // 문자열 또는 객체 형식 지원
@@ -74,11 +75,14 @@ export interface GraphSpecLayer {
 		glyph?: 'arrow'; // vector field용 glyph 타입
 		scale?: number; // vector field용 arrow 길이 스케일
 		labelFormat?: 'percent' | 'value'; // pie_2d용 레이블 형식
+		ncontours?: number; // contour_2d, implicit_2d용 등고선 레벨 수
+		showColorbar?: boolean; // heatmap_2d, contour_2d용 컬러바 표시 여부
 	};
 }
 
 export interface GraphSpec {
 	type: 'function_2d' | 'parametric_2d' | 'function_parametric_2d' | 'phase_plane' | 'scatter_2d' | 'composite_2d' | 'multi_scatter_2d' | 'line_2d' |
+		'heatmap_2d' | 'contour_2d' | 'implicit_2d' |
 		'function_3d' | 'parametric_3d' | 'scatter_3d' | 'composite_3d' | 'cartesian' | 'histogram_2d' | 'vector_2d' | 'vector_field_3d' |
 		'pie_2d' | 'bar_2d';
 	expression?: string | { x: string; y: string; z?: string }; // 문자열 또는 객체 형식 지원
@@ -110,6 +114,8 @@ export interface GraphSpec {
 		glyph?: 'arrow'; // vector field용 glyph 타입
 		scale?: number; // vector field용 arrow 길이 스케일
 		labelFormat?: 'percent' | 'value'; // pie_2d용 레이블 형식
+		ncontours?: number; // contour_2d, implicit_2d용 등고선 레벨 수
+		showColorbar?: boolean; // heatmap_2d, contour_2d용 컬러바 표시 여부
 	};
 	axis?: {
 		xLabel?: string;
@@ -158,59 +164,27 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 		let spec: GraphSpec | null = null;
 		let error: string | undefined;
 
-		//console.log('[GraphSpec Tokenizer] Raw JSON:', jsonContent);
+		console.log('[GraphSpec Tokenizer] Raw JSON:', jsonContent);
 
-		// 문자열 외부에서만 수학 상수 변환 (문자열 내용은 보존)
-		// 문자열을 임시로 플레이스홀더로 치환 후 복원
+		// 1. Remove markdown code block wrapper if present (```json ... ``` or ``` ... ```)
+		if (jsonContent.startsWith('```')) {
+			jsonContent = jsonContent.replace(/^```(?:json)?\s*\n?/, '');
+			jsonContent = jsonContent.replace(/\n?```\s*$/, '');
+			jsonContent = jsonContent.trim();
+			console.log('[GraphSpec Tokenizer] After removing code block wrapper:', jsonContent);
+		}
+
+		// 2. Convert ** to ^ for mathjs compatibility (Python-style power operator)
+		// Only convert within string values (expression fields)
 		const stringPlaceholders: string[] = [];
-		jsonContent = jsonContent.replace(/"(?:[^"\\]|\\.)*"/g, (match) => {
-			stringPlaceholders.push(match);
+		jsonContent = jsonContent.replace(/"(?:[^"\\]|\\[\\"/bfnrt]|\\u[0-9a-fA-F]{4})*"/g, (match) => {
+			// Convert ** to ^ within the string
+			const converted = match.replace(/\*\*/g, '^');
+			stringPlaceholders.push(converted);
 			return `__STRING_${stringPlaceholders.length - 1}__`;
 		});
 
-		// JSON 주석 제거 (문자열 외부의 // 주석 제거)
-		jsonContent = jsonContent.replace(/\/\/[^\n]*/g, '');
-
-		// 수학 표현식을 숫자로 변환 (PI, E 등) - 문자열 외부만
-		// 곱셈: num * PI, PI * num
-		jsonContent = jsonContent.replace(/(\d+(?:\.\d+)?)\s*\*\s*PI/gi, (_, num) => {
-			return String(parseFloat(num) * Math.PI);
-		});
-		jsonContent = jsonContent.replace(/PI\s*\*\s*(\d+(?:\.\d+)?)/gi, (_, num) => {
-			return String(parseFloat(num) * Math.PI);
-		});
-		// 나눗셈: PI / num
-		jsonContent = jsonContent.replace(/PI\s*\/\s*(\d+(?:\.\d+)?)/gi, (_, num) => {
-			return String(Math.PI / parseFloat(num));
-		});
-		// 뺄셈: PI - num (반드시 PI 치환 전에 처리)
-		jsonContent = jsonContent.replace(/PI\s*-\s*(\d+(?:\.\d+)?)/gi, (_, num) => {
-			return String(Math.PI - parseFloat(num));
-		});
-		// 덧셈: PI + num
-		jsonContent = jsonContent.replace(/PI\s*\+\s*(\d+(?:\.\d+)?)/gi, (_, num) => {
-			return String(Math.PI + parseFloat(num));
-		});
-		// 뺄셈: num - PI
-		jsonContent = jsonContent.replace(/(\d+(?:\.\d+)?)\s*-\s*PI/gi, (_, num) => {
-			return String(parseFloat(num) - Math.PI);
-		});
-		// 덧셈: num + PI
-		jsonContent = jsonContent.replace(/(\d+(?:\.\d+)?)\s*\+\s*PI/gi, (_, num) => {
-			return String(parseFloat(num) + Math.PI);
-		});
-		// 단독 PI, E
-		jsonContent = jsonContent.replace(/\bPI\b/gi, String(Math.PI));
-		jsonContent = jsonContent.replace(/\bE\b/g, String(Math.E));
-
-		// 숫자 * 숫자 형태의 간단한 곱셈 연산 처리 (예: 2.5 * 3.14159265)
-		jsonContent = jsonContent.replace(/(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)/g, (_, a, b) => {
-			return String(parseFloat(a) * parseFloat(b));
-		});
-
-		// -숫자 형태 (음수) 처리: 이미 JSON에서 지원하므로 별도 처리 불필요
-
-		// 문자열 복원
+		// Restore strings
 		jsonContent = jsonContent.replace(/__STRING_(\d+)__/g, (_, idx) => {
 			return stringPlaceholders[parseInt(idx)];
 		});
@@ -225,8 +199,9 @@ function graphSpecTokenizer(src: string): GraphSpecToken | undefined {
 			// If parsed object has a single key that matches a known type, unwrap it
 			const knownTypes = [
 				'function_2d', 'parametric_2d', 'function_parametric_2d', 'phase_plane', 'scatter_2d', 'composite_2d',
-				'multi_scatter_2d', 'line_2d', 'function_3d', 'parametric_3d', 'scatter_3d',
-				'composite_3d', 'cartesian', 'histogram_2d', 'vector_2d', 'vector_field_3d'
+				'multi_scatter_2d', 'line_2d', 'heatmap_2d', 'contour_2d', 'implicit_2d',
+				'function_3d', 'parametric_3d', 'scatter_3d',
+				'composite_3d', 'cartesian', 'histogram_2d', 'vector_2d', 'vector_field_3d', 'pie_2d', 'bar_2d'
 			];
 			const keys = Object.keys(parsed);
 			if (keys.length === 1 && knownTypes.includes(keys[0]) && typeof parsed[keys[0]] === 'object') {

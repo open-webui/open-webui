@@ -5,8 +5,252 @@
  * FunctionGraph.svelte (썸네일)와 GraphPreviewModal.svelte (모달)에서 공유
  */
 
-import { compile } from 'mathjs';
+import { create, all } from 'mathjs';
 import type { GraphSpec, GraphSpecLayer, Domain3D, Sampling3D } from '$lib/utils/marked/graph-spec-extension';
+
+// ========== Bessel Functions ==========
+
+// Bessel function J0(x) - 제1종 0차 베셀 함수
+function besselJ0(x: number): number {
+	if (x === 0) return 1;
+
+	const ax = Math.abs(x);
+
+	// 작은 x에 대한 급수 전개 (|x| < 8)
+	if (ax < 8) {
+		const y = x * x;
+		let result = 1;
+		let term = 1;
+		for (let k = 1; k < 30; k++) {
+			term *= -y / (4 * k * k);
+			result += term;
+			if (Math.abs(term) < 1e-15 * Math.abs(result)) break;
+		}
+		return result;
+	}
+
+	// 큰 x에 대한 점근 전개 (|x| >= 8)
+	const z = 8 / ax;
+	const y = z * z;
+	const xx = ax - 0.785398164; // π/4
+
+	// P0 다항식 근사
+	const p0 = 1 + y * (-0.1098628627e-2 + y * (0.2734510407e-4
+		+ y * (-0.2073370639e-5 + y * 0.2093887211e-6)));
+
+	// Q0 다항식 근사
+	const q0 = -0.1562499995e-1 + y * (0.1430488765e-3
+		+ y * (-0.6911147651e-5 + y * (0.7621095161e-6
+		- y * 0.934935152e-7)));
+
+	return Math.sqrt(0.636619772 / ax) * (p0 * Math.cos(xx) - z * q0 * Math.sin(xx));
+}
+
+// Bessel function J1(x) - 제1종 1차 베셀 함수
+function besselJ1(x: number): number {
+	const ax = Math.abs(x);
+
+	if (ax === 0) return 0;
+
+	// 작은 x에 대한 급수 전개 (|x| < 8)
+	if (ax < 8) {
+		const y = x * x;
+		let result = x / 2;
+		let term = x / 2;
+		for (let k = 1; k < 30; k++) {
+			term *= -y / (4 * k * (k + 1));
+			result += term;
+			if (Math.abs(term) < 1e-15 * Math.abs(result)) break;
+		}
+		return result;
+	}
+
+	// 큰 x에 대한 점근 전개 (|x| >= 8)
+	const z = 8 / ax;
+	const y = z * z;
+	const xx = ax - 2.356194491; // 3π/4
+
+	// P1 다항식 근사
+	const p1 = 1 + y * (0.183105e-2 + y * (-0.3516396496e-4
+		+ y * (0.2457520174e-5 + y * (-0.240337019e-6))));
+
+	// Q1 다항식 근사
+	const q1 = 0.04687499995 + y * (-0.2002690873e-3
+		+ y * (0.8449199096e-5 + y * (-0.88228987e-6
+		+ y * 0.105787412e-6)));
+
+	const result = Math.sqrt(0.636619772 / ax) * (p1 * Math.cos(xx) - z * q1 * Math.sin(xx));
+	return x < 0 ? -result : result;
+}
+
+// General Bessel function Jn(n, x) - 제1종 n차 베셀 함수
+function besselJn(n: number, x: number): number {
+	n = Math.floor(n); // n은 정수여야 함
+
+	if (n === 0) return besselJ0(x);
+	if (n === 1) return besselJ1(x);
+	if (n < 0) return (n % 2 === 0 ? 1 : -1) * besselJn(-n, x);
+	if (x === 0) return 0;
+
+	const ax = Math.abs(x);
+
+	// 작은 n과 큰 x에 대한 상향 재귀
+	if (ax > n) {
+		let j0 = besselJ0(ax);
+		let j1 = besselJ1(ax);
+		let jn = 0;
+
+		for (let i = 1; i < n; i++) {
+			jn = (2 * i / ax) * j1 - j0;
+			j0 = j1;
+			j1 = jn;
+		}
+
+		return x < 0 && n % 2 === 1 ? -jn : jn;
+	}
+
+	// Miller의 하향 재귀 알고리즘
+	const m = Math.floor((n + Math.floor(Math.sqrt(40 * n))) / 2) * 2;
+	let jnp1 = 0;
+	let jn = 1;
+	let sum = 0;
+
+	for (let j = m; j > 0; j--) {
+		const jnm1 = (2 * j / ax) * jn - jnp1;
+		jnp1 = jn;
+		jn = jnm1;
+
+		if (j % 2 === 0) sum += 2 * jn;
+		if (j === n) {
+			const ans = jn;
+			// 정규화
+			const scale = besselJ0(ax) / (sum - jn);
+			return x < 0 && n % 2 === 1 ? -ans * scale : ans * scale;
+		}
+	}
+
+	return 0;
+}
+
+// ========== Gamma Function ==========
+
+// Gamma function Γ(z) - Lanczos approximation
+function gamma(z: number): number {
+	// Lanczos approximation for gamma function
+	const g = 7;
+	const C = [
+		0.99999999999980993,
+		676.5203681218851,
+		-1259.1392167224028,
+		771.32342877765313,
+		-176.61502916214059,
+		12.507343278686905,
+		-0.13857109526572012,
+		9.9843695780195716e-6,
+		1.5056327351493116e-7
+	];
+
+	if (z < 0.5) {
+		return Math.PI / (Math.sin(Math.PI * z) * gamma(1 - z));
+	}
+
+	z -= 1;
+	let x = C[0];
+	for (let i = 1; i < g + 2; i++) {
+		x += C[i] / (z + i);
+	}
+
+	const t = z + g + 0.5;
+	return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
+}
+
+// Factorial function n! - uses gamma(n+1)
+function factorial(n: number): number {
+	if (n < 0) return NaN;
+	if (n === 0 || n === 1) return 1;
+	return gamma(n + 1);
+}
+
+// ========== Error Function ==========
+
+// Error function erf(x) - Abramowitz and Stegun approximation
+function erf(x: number): number {
+	// Constants for approximation
+	const a1 =  0.254829592;
+	const a2 = -0.284496736;
+	const a3 =  1.421413741;
+	const a4 = -1.453152027;
+	const a5 =  1.061405429;
+	const p  =  0.3275911;
+
+	// Save the sign of x
+	const sign = x >= 0 ? 1 : -1;
+	x = Math.abs(x);
+
+	// Abramowitz and Stegun formula 7.1.26
+	const t = 1.0 / (1.0 + p * x);
+	const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+	return sign * y;
+}
+
+// Complementary error function erfc(x) = 1 - erf(x)
+function erfc(x: number): number {
+	return 1 - erf(x);
+}
+
+// ========== Legendre Polynomials ==========
+
+// Legendre polynomial P_n(x) - Bonnet's recursion
+function legendreP(n: number, x: number): number {
+	n = Math.floor(n); // Ensure n is integer
+
+	if (n === 0) return 1;
+	if (n === 1) return x;
+
+	// Bonnet's recursion: (n+1)P_{n+1} = (2n+1)xP_n - nP_{n-1}
+	let p0 = 1;
+	let p1 = x;
+	let pn = 0;
+
+	for (let k = 1; k < n; k++) {
+		pn = ((2 * k + 1) * x * p1 - k * p0) / (k + 1);
+		p0 = p1;
+		p1 = pn;
+	}
+
+	return pn;
+}
+
+// Create custom mathjs instance with special functions and constants
+const math = create(all);
+math.import({
+	// Bessel functions
+	jn: besselJn,
+	j0: besselJ0,
+	j1: besselJ1,
+	besselj: besselJn,
+	besselJ: besselJn,
+
+	// Gamma functions
+	gamma: gamma,
+	factorial: factorial,
+
+	// Error functions
+	erf: erf,
+	erfc: erfc,
+
+	// Legendre polynomials
+	legendreP: legendreP,
+
+	// Mathematical constants (uppercase aliases for compatibility)
+	PI: Math.PI,
+	E: Math.E
+}, { override: true });
+
+// Export the compile function to use our custom math instance
+// This ensures all graph expressions can use Bessel functions and custom constants
+export const compile = (expr: string) => math.compile(expr);
 
 // ========== Types ==========
 
@@ -19,6 +263,10 @@ export type LayerSpec = GraphSpec | GraphSpecLayer;
 export function normalizeExpressions(layer: LayerSpec): string[] {
 	// expression (singular) 체크
 	if (layer.expression) {
+		// 배열 형식: ["expr1", "expr2", ...]
+		if (Array.isArray(layer.expression)) {
+			return layer.expression as string[];
+		}
 		// 객체 형식: {x: "...", y: "..."} 또는 {x: "...", y: "...", z: "..."}
 		if (typeof layer.expression === 'object' && layer.expression !== null) {
 			const exprObj = layer.expression as { x?: string; y?: string; z?: string };
@@ -112,6 +360,7 @@ export function isTypeSupported(type: string): boolean {
 	const supportedTypes = [
 		'function_2d', 'parametric_2d', 'function_parametric_2d', 'phase_plane', 'scatter_2d', 'point_2d', 'line_2d',
 		'composite_2d', 'multi_scatter_2d', 'cartesian', 'histogram_2d', 'vector_2d',
+		'heatmap_2d', 'contour_2d', 'implicit_2d',
 		'pie_2d', 'bar_2d',
 		'function_3d', 'parametric_3d', 'scatter_3d', 'composite_3d', 'vector_field_3d'
 	];
@@ -154,25 +403,70 @@ export function validateTraces(traces: any[]): { valid: boolean; error?: string 
 
 // function_2d: y = f(x)
 export function buildFunction2DTraces(layer: LayerSpec) {
+	// Handle x_axis format (alternative format support)
+	// Note: y_axis is ignored for function_2d as y-range is auto-scaled
+	const xAxis = (layer as unknown as Record<string, unknown>).x_axis;
+
+	let domain = layer.domain;
+
+	// Check if using axis format
+	if (xAxis && typeof xAxis === 'object' && xAxis !== null) {
+		const xAxisObj = xAxis as { min?: number; max?: number; label?: string };
+		if (typeof xAxisObj.min === 'number' && typeof xAxisObj.max === 'number') {
+			domain = [xAxisObj.min, xAxisObj.max];
+		}
+	}
+
 	const expressions = normalizeExpressions(layer);
 	const colors = normalizeColors(layer);
 
 	return expressions.map((expr, i) => {
-		const f = compile(expr);
-		const [x0, x1] = getDomain2D(layer.domain);
+		let f;
+		try {
+			f = compile(expr);
+		} catch (e) {
+			console.error('[GraphBuilder] Failed to compile expression:', expr, e);
+			return {
+				x: [],
+				y: [],
+				type: 'scatter',
+				mode: 'lines',
+				name: 'Error'
+			};
+		}
+
+		// Detect which variable name to use (x or t)
+		// Check if expression contains 't' and not 'x', or if x_axis label is 't'
+		const xAxisObj = xAxis as { label?: string } | undefined;
+		const usesT = expr.includes('t') && !expr.match(/\bx\b/);
+		const labelIsT = xAxisObj?.label === 't';
+		const varName = (usesT || labelIsT) ? 't' : 'x';
+
+		const [x0, x1] = getDomain2D(domain);
 		const sampling = getSampling2D(layer.sampling);
 
 		const x: number[] = [];
 		const y: number[] = [];
 
+		let errorCount = 0;
 		for (let j = 0; j < sampling; j++) {
 			const xv = x0 + ((x1 - x0) * j) / (sampling - 1);
 			x.push(xv);
 			try {
-				y.push(f.evaluate({ x: xv }));
-			} catch {
+				// Evaluate with detected variable name
+				const yv = varName === 't' ? f.evaluate({ t: xv }) : f.evaluate({ x: xv });
+				y.push(yv);
+			} catch (e) {
 				y.push(NaN);
+				errorCount++;
+				if (errorCount === 1) {
+					console.error(`[GraphBuilder] Error evaluating expression at ${varName} =`, xv, ':', e);
+				}
 			}
+		}
+
+		if (errorCount > 0) {
+			console.warn(`[GraphBuilder] ${errorCount}/${sampling} points failed for expression: ${expr}`);
 		}
 
 		const legendName = expr.length > 30 ? expr.slice(0, 30) + '...' : expr;
@@ -202,7 +496,31 @@ export function buildParametric2DTraces(layer: LayerSpec) {
 		sampling: layer.sampling
 	});
 
-	const expressions = normalizeExpressions(layer);
+	// Handle x_expression/y_expression format (alternative format support)
+	const xExpr = (layer as unknown as Record<string, unknown>).x_expression;
+	const yExpr = (layer as unknown as Record<string, unknown>).y_expression;
+	const tAxis = (layer as unknown as Record<string, unknown>).t_axis;
+
+	let expressions: string[];
+	let domain = layer.domain;
+
+	if (typeof xExpr === 'string' && typeof yExpr === 'string') {
+		console.log('[GraphBuilder] Found x_expression/y_expression format');
+		// Convert to expressions array
+		expressions = [xExpr, yExpr];
+
+		// Handle t_axis format: { min: 0, max: 10 }
+		if (tAxis && typeof tAxis === 'object' && tAxis !== null) {
+			const tAxisObj = tAxis as { min?: number; max?: number; label?: string };
+			if (typeof tAxisObj.min === 'number' && typeof tAxisObj.max === 'number') {
+				domain = {
+					t: [tAxisObj.min, tAxisObj.max]
+				};
+			}
+		}
+	} else {
+		expressions = normalizeExpressions(layer);
+	}
 	const colors = normalizeColors(layer);
 
 	if (expressions.length < 2) {
@@ -222,23 +540,30 @@ export function buildParametric2DTraces(layer: LayerSpec) {
 
 	// domain이 객체 형식 {t: [0, 2*pi]}이거나 배열 형식 [0, 2*pi]일 수 있음
 	let t0 = 0, t1 = Math.PI * 2;
-	if (layer.domain) {
-		const domain = layer.domain as any;
-		let domainArray: any[];
-		if (Array.isArray(domain)) {
-			domainArray = domain;
-		} else if (domain.t && Array.isArray(domain.t)) {
-			domainArray = domain.t;
+	if (domain) {
+		const domainObj = domain as unknown as Record<string, unknown>;
+		let domainArray: unknown[];
+		if (Array.isArray(domainObj)) {
+			domainArray = domainObj;
+		} else if (domainObj.t && Array.isArray(domainObj.t)) {
+			domainArray = domainObj.t as unknown[];
 		} else {
 			domainArray = [t0, t1];
 		}
 		// 문자열 수식 평가 (예: "2*pi")
-		t0 = typeof domainArray[0] === 'string' ? compile(domainArray[0]).evaluate({}) : domainArray[0];
-		t1 = typeof domainArray[1] === 'string' ? compile(domainArray[1]).evaluate({}) : domainArray[1];
+		t0 = typeof domainArray[0] === 'string' ? compile(domainArray[0]).evaluate({}) : (domainArray[0] as number);
+		t1 = typeof domainArray[1] === 'string' ? compile(domainArray[1]).evaluate({}) : (domainArray[1] as number);
 	}
 
 	// sampling도 객체 형식 {t: 200}이거나 숫자일 수 있음
 	const sampling = getSampling2D(layer.sampling);
+
+	// Detect which variable name to use (t or theta)
+	// Check if t_axis.label is 'theta', or if expressions contain 'theta' and not 't'
+	const tAxisObj = tAxis as { label?: string } | undefined;
+	const usesTheta = expressions.some(expr => expr.includes('theta') && !expr.match(/\bt\b/));
+	const labelIsTheta = tAxisObj?.label === 'theta';
+	const varName = (usesTheta || labelIsTheta) ? 'theta' : 't';
 
 	const x: number[] = [];
 	const y: number[] = [];
@@ -246,8 +571,10 @@ export function buildParametric2DTraces(layer: LayerSpec) {
 	for (let j = 0; j < sampling; j++) {
 		const t = t0 + ((t1 - t0) * j) / (sampling - 1);
 		try {
-			x.push(fX.evaluate({ t }));
-			y.push(fY.evaluate({ t }));
+			// Evaluate with detected variable name
+			const vars = varName === 'theta' ? { theta: t } : { t };
+			x.push(fX.evaluate(vars));
+			y.push(fY.evaluate(vars));
 		} catch {
 			x.push(NaN);
 			y.push(NaN);
@@ -785,10 +1112,365 @@ export function buildBar2DTraces(layer: LayerSpec, showLegend = false, legendNam
 	}];
 }
 
+// heatmap_2d: 2D scalar field visualization (z = f(x,y) as heatmap)
+export function buildHeatmap2DTraces(layer: LayerSpec): any[] {
+	// Extract expression
+	const expr = typeof layer.expression === 'string'
+		? layer.expression
+		: normalizeExpressions(layer)[0];
+
+	if (!expr) {
+		console.error('[GraphBuilder] heatmap_2d requires expression');
+		return [];
+	}
+
+	// Compile expression
+	let f;
+	try {
+		f = compile(expr);
+	} catch (e) {
+		console.error('[GraphBuilder] Failed to compile heatmap_2d expression:', expr, e);
+		return [{
+			x: [], y: [], z: [],
+			type: 'heatmap',
+			name: 'Error'
+		}];
+	}
+
+	// Extract domain (default to [-5, 5])
+	// Support both domain: {x: [min, max], y: [min, max]} and x_axis/y_axis format
+	const layerAny = layer as unknown as Record<string, unknown>;
+	const xAxis = layerAny.x_axis as { min?: number; max?: number } | undefined;
+	const yAxis = layerAny.y_axis as { min?: number; max?: number } | undefined;
+
+	let x0 = -5, x1 = 5, y0 = -5, y1 = 5;
+
+	if (xAxis && typeof xAxis.min === 'number' && typeof xAxis.max === 'number') {
+		x0 = xAxis.min;
+		x1 = xAxis.max;
+	} else {
+		const domain = layer.domain as Domain3D | undefined;
+		[x0, x1] = getDomain3D(domain, 'x', [-5, 5]);
+	}
+
+	if (yAxis && typeof yAxis.min === 'number' && typeof yAxis.max === 'number') {
+		y0 = yAxis.min;
+		y1 = yAxis.max;
+	} else {
+		const domain = layer.domain as Domain3D | undefined;
+		[y0, y1] = getDomain3D(domain, 'y', [-5, 5]);
+	}
+
+	// Extract sampling (default to 100x100 for good quality)
+	const sampling = layer.sampling as Sampling3D | number | undefined;
+	const xSampling = getSampling3D(sampling, 'x', 100);
+	const ySampling = getSampling3D(sampling, 'y', 100);
+
+	// Generate grid
+	const x: number[] = [];
+	const y: number[] = [];
+	const z: number[][] = [];
+
+	for (let i = 0; i < xSampling; i++) {
+		x.push(x0 + ((x1 - x0) * i) / (xSampling - 1));
+	}
+	for (let j = 0; j < ySampling; j++) {
+		y.push(y0 + ((y1 - y0) * j) / (ySampling - 1));
+	}
+
+	// Evaluate f(x,y) on grid
+	for (let j = 0; j < ySampling; j++) {
+		const row: number[] = [];
+		for (let i = 0; i < xSampling; i++) {
+			try {
+				row.push(f.evaluate({ x: x[i], y: y[j] }));
+			} catch {
+				row.push(NaN);
+			}
+		}
+		z.push(row);
+	}
+
+	// Access showColorbar from layer (reuse layerAny from above)
+	const showColorbar = (layerAny.style as Record<string, unknown> | undefined)?.showColorbar ?? true;
+
+	return [{
+		x,
+		y,
+		z,
+		type: 'heatmap',
+		colorscale: layer.style?.colorMap || 'Viridis',
+		opacity: layer.style?.opacity ?? 1.0,
+		showscale: showColorbar,
+		colorbar: showColorbar ? {
+			title: expr.length > 15 ? 'z' : expr,
+			thickness: 15,
+			len: 0.7
+		} : undefined,
+		name: expr.length > 20 ? expr.slice(0, 20) + '...' : expr
+	}];
+}
+
+// contour_2d: Contour plot of f(x,y) = constant
+export function buildContour2DTraces(layer: LayerSpec): any[] {
+	// Extract expression
+	const expr = typeof layer.expression === 'string'
+		? layer.expression
+		: normalizeExpressions(layer)[0];
+
+	if (!expr) {
+		console.error('[GraphBuilder] contour_2d requires expression');
+		return [];
+	}
+
+	// Compile expression
+	let f;
+	try {
+		f = compile(expr);
+	} catch (e) {
+		console.error('[GraphBuilder] Failed to compile contour_2d expression:', expr, e);
+		return [{
+			x: [], y: [], z: [],
+			type: 'contour',
+			name: 'Error'
+		}];
+	}
+
+	// Extract domain (default to [-5, 5])
+	// Support both domain: {x: [min, max], y: [min, max]} and x_axis/y_axis format
+	const layerAny = layer as unknown as Record<string, unknown>;
+	const xAxis = layerAny.x_axis as { min?: number; max?: number } | undefined;
+	const yAxis = layerAny.y_axis as { min?: number; max?: number } | undefined;
+
+	let x0 = -5, x1 = 5, y0 = -5, y1 = 5;
+
+	if (xAxis && typeof xAxis.min === 'number' && typeof xAxis.max === 'number') {
+		x0 = xAxis.min;
+		x1 = xAxis.max;
+	} else {
+		const domain = layer.domain as Domain3D | undefined;
+		[x0, x1] = getDomain3D(domain, 'x', [-5, 5]);
+	}
+
+	if (yAxis && typeof yAxis.min === 'number' && typeof yAxis.max === 'number') {
+		y0 = yAxis.min;
+		y1 = yAxis.max;
+	} else {
+		const domain = layer.domain as Domain3D | undefined;
+		[y0, y1] = getDomain3D(domain, 'y', [-5, 5]);
+	}
+
+	// Extract sampling (default to 100x100)
+	const sampling = layer.sampling as Sampling3D | number | undefined;
+	const xSampling = getSampling3D(sampling, 'x', 100);
+	const ySampling = getSampling3D(sampling, 'y', 100);
+
+	// Generate grid
+	const x: number[] = [];
+	const y: number[] = [];
+	const z: number[][] = [];
+
+	for (let i = 0; i < xSampling; i++) {
+		x.push(x0 + ((x1 - x0) * i) / (xSampling - 1));
+	}
+	for (let j = 0; j < ySampling; j++) {
+		y.push(y0 + ((y1 - y0) * j) / (ySampling - 1));
+	}
+
+	// Evaluate f(x,y) on grid
+	for (let j = 0; j < ySampling; j++) {
+		const row: number[] = [];
+		for (let i = 0; i < xSampling; i++) {
+			try {
+				row.push(f.evaluate({ x: x[i], y: y[j] }));
+			} catch {
+				row.push(NaN);
+			}
+		}
+		z.push(row);
+	}
+
+	// Contour-specific options (reuse layerAny from above)
+	const styleObj = layerAny.style as Record<string, unknown> | undefined;
+	const ncontours = (styleObj?.ncontours as number | undefined) || 15;
+	const showColorbar = styleObj?.showColorbar ?? true;
+
+	return [{
+		x,
+		y,
+		z,
+		type: 'contour',
+		colorscale: layer.style?.colorMap || 'Viridis',
+		opacity: layer.style?.opacity ?? 0.9,
+		ncontours: ncontours,
+		showscale: showColorbar,
+		colorbar: showColorbar ? {
+			title: expr.length > 15 ? 'z' : expr,
+			thickness: 15,
+			len: 0.7
+		} : undefined,
+		contours: {
+			coloring: 'heatmap',
+			showlabels: true,
+			labelfont: {
+				size: 10,
+				color: 'white'
+			}
+		},
+		name: expr.length > 20 ? expr.slice(0, 20) + '...' : expr
+	}];
+}
+
+// implicit_2d: Implicit curve F(x,y) = 0
+export function buildImplicit2DTraces(layer: LayerSpec): any[] {
+	// Extract expression
+	const expr = typeof layer.expression === 'string'
+		? layer.expression
+		: normalizeExpressions(layer)[0];
+
+	if (!expr) {
+		console.error('[GraphBuilder] implicit_2d requires expression');
+		return [];
+	}
+
+	// Compile expression
+	let f;
+	try {
+		f = compile(expr);
+	} catch (e) {
+		console.error('[GraphBuilder] Failed to compile implicit_2d expression:', expr, e);
+		return [{
+			x: [], y: [], z: [],
+			type: 'contour',
+			name: 'Error'
+		}];
+	}
+
+	// Extract domain (default to [-5, 5])
+	// Support both domain: {x: [min, max], y: [min, max]} and x_axis/y_axis format
+	const layerAny = layer as unknown as Record<string, unknown>;
+	const xAxis = layerAny.x_axis as { min?: number; max?: number } | undefined;
+	const yAxis = layerAny.y_axis as { min?: number; max?: number } | undefined;
+
+	let x0 = -5, x1 = 5, y0 = -5, y1 = 5;
+
+	if (xAxis && typeof xAxis.min === 'number' && typeof xAxis.max === 'number') {
+		x0 = xAxis.min;
+		x1 = xAxis.max;
+	} else {
+		const domain = layer.domain as Domain3D | undefined;
+		[x0, x1] = getDomain3D(domain, 'x', [-5, 5]);
+	}
+
+	if (yAxis && typeof yAxis.min === 'number' && typeof yAxis.max === 'number') {
+		y0 = yAxis.min;
+		y1 = yAxis.max;
+	} else {
+		const domain = layer.domain as Domain3D | undefined;
+		[y0, y1] = getDomain3D(domain, 'y', [-5, 5]);
+	}
+
+	// Higher sampling for smooth implicit curves (150x150)
+	const sampling = layer.sampling as Sampling3D | number | undefined;
+	const xSampling = getSampling3D(sampling, 'x', 150);
+	const ySampling = getSampling3D(sampling, 'y', 150);
+
+	// Generate grid
+	const x: number[] = [];
+	const y: number[] = [];
+	const z: number[][] = [];
+
+	for (let i = 0; i < xSampling; i++) {
+		x.push(x0 + ((x1 - x0) * i) / (xSampling - 1));
+	}
+	for (let j = 0; j < ySampling; j++) {
+		y.push(y0 + ((y1 - y0) * j) / (ySampling - 1));
+	}
+
+	// Evaluate f(x,y) on grid
+	for (let j = 0; j < ySampling; j++) {
+		const row: number[] = [];
+		for (let i = 0; i < xSampling; i++) {
+			try {
+				row.push(f.evaluate({ x: x[i], y: y[j] }));
+			} catch {
+				row.push(NaN);
+			}
+		}
+		z.push(row);
+	}
+
+	// Extract color
+	const color = Array.isArray(layer.style?.color)
+		? layer.style.color[0]
+		: layer.style?.color || '#1f77b4';
+
+	return [{
+		x,
+		y,
+		z,
+		type: 'contour',
+		// Key: only show the zero level
+		contours: {
+			type: 'constraint',
+			operation: '=',
+			value: 0,
+			coloring: 'lines'
+		},
+		line: {
+			width: layer.style?.lineWidth ?? 3,
+			color: color
+		},
+		opacity: layer.style?.opacity ?? 1.0,
+		showscale: false,  // No colorbar for implicit curves
+		name: expr.length > 20 ? expr.slice(0, 20) + '...' : expr
+	}];
+}
+
 // ========== 3D Graph Builders ==========
 
 // function_3d: z = f(x, y) 표면
 export function buildFunction3DTraces(layer: LayerSpec) {
+	// Handle x_axis/y_axis/z_axis format (alternative format support)
+	const xAxis = (layer as unknown as Record<string, unknown>).x_axis;
+	const yAxis = (layer as unknown as Record<string, unknown>).y_axis;
+	const zAxis = (layer as unknown as Record<string, unknown>).z_axis;
+
+	let domain = layer.domain as Domain3D | undefined;
+
+	// Check if using axis format
+	if (xAxis && yAxis && typeof layer.expression === 'string') {
+		console.log('[GraphBuilder] Found x_axis/y_axis/z_axis format for function_3d');
+
+		const domainObj: Domain3D = {};
+
+		// Extract x domain from x_axis
+		if (xAxis && typeof xAxis === 'object' && xAxis !== null) {
+			const xAxisObj = xAxis as { min?: number; max?: number; label?: string };
+			if (typeof xAxisObj.min === 'number' && typeof xAxisObj.max === 'number') {
+				domainObj.x = [xAxisObj.min, xAxisObj.max];
+			}
+		}
+
+		// Extract y domain from y_axis
+		if (yAxis && typeof yAxis === 'object' && yAxis !== null) {
+			const yAxisObj = yAxis as { min?: number; max?: number; label?: string };
+			if (typeof yAxisObj.min === 'number' && typeof yAxisObj.max === 'number') {
+				domainObj.y = [yAxisObj.min, yAxisObj.max];
+			}
+		}
+
+		// Extract z range (for layout, not used in trace building but good to preserve)
+		if (zAxis && typeof zAxis === 'object' && zAxis !== null) {
+			const zAxisObj = zAxis as { min?: number; max?: number; label?: string };
+			if (typeof zAxisObj.min === 'number' && typeof zAxisObj.max === 'number') {
+				domainObj.z = [zAxisObj.min, zAxisObj.max];
+			}
+		}
+
+		domain = domainObj;
+	}
+
 	// expression이 문자열인 경우만 사용, 객체면 normalizeExpressions 사용
 	let expr: string;
 	if (typeof layer.expression === 'string') {
@@ -799,8 +1481,6 @@ export function buildFunction3DTraces(layer: LayerSpec) {
 		expr = 'x^2 + y^2';
 	}
 	const f = compile(expr);
-
-	const domain = layer.domain as Domain3D | undefined;
 	const [x0, x1] = getDomain3D(domain, 'x', [-2, 2]);
 	const [y0, y1] = getDomain3D(domain, 'y', [-2, 2]);
 
@@ -907,10 +1587,16 @@ export function buildVectorField3DTraces(layer: LayerSpec) {
 				const x = xmin + i * stepX;
 				const y = ymin + j * stepY;
 				const z = zmin + k * stepZ;
+
+				// Compute spherical coordinates for compatibility
+				const r = Math.sqrt(x * x + y * y + z * z);
+				const theta = r > 0 ? Math.acos(z / r) : 0;
+				const phi = Math.atan2(y, x);
+
 				try {
-					const dx = fDx.evaluate({ x, y, z });
-					const dy = fDy.evaluate({ x, y, z });
-					const dz = fDz.evaluate({ x, y, z });
+					const dx = fDx.evaluate({ x, y, z, r, theta, phi });
+					const dy = fDy.evaluate({ x, y, z, r, theta, phi });
+					const dz = fDz.evaluate({ x, y, z, r, theta, phi });
 					const mag = Math.sqrt(dx * dx + dy * dy + dz * dz);
 					magnitudes.push(mag);
 				} catch {
@@ -943,10 +1629,15 @@ export function buildVectorField3DTraces(layer: LayerSpec) {
 				const yPos = ymin + j * stepY;
 				const zPos = zmin + k * stepZ;
 
+				// Compute spherical coordinates for compatibility
+				const r = Math.sqrt(xPos * xPos + yPos * yPos + zPos * zPos);
+				const theta = r > 0 ? Math.acos(zPos / r) : 0;
+				const phi = Math.atan2(yPos, xPos);
+
 				try {
-					const dx = fDx.evaluate({ x: xPos, y: yPos, z: zPos });
-					const dy = fDy.evaluate({ x: xPos, y: yPos, z: zPos });
-					const dz = fDz.evaluate({ x: xPos, y: yPos, z: zPos });
+					const dx = fDx.evaluate({ x: xPos, y: yPos, z: zPos, r, theta, phi });
+					const dy = fDy.evaluate({ x: xPos, y: yPos, z: zPos, r, theta, phi });
+					const dz = fDz.evaluate({ x: xPos, y: yPos, z: zPos, r, theta, phi });
 					const mag = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
 					// Skip very small vectors
@@ -993,7 +1684,39 @@ export function buildVectorField3DTraces(layer: LayerSpec) {
 
 // parametric_3d: x = f(u,v), y = g(u,v), z = h(u,v) 또는 x = f(t), y = g(t), z = h(t)
 export function buildParametric3DTraces(layer: LayerSpec) {
-	const expressions = normalizeExpressions(layer);
+	console.log('[GraphBuilder] buildParametric3DTraces called with:', {
+		expressions: layer.expressions,
+		domain: layer.domain,
+		sampling: layer.sampling
+	});
+
+	// Handle x_expression/y_expression/z_expression format (alternative format support)
+	const xExpr = (layer as unknown as Record<string, unknown>).x_expression;
+	const yExpr = (layer as unknown as Record<string, unknown>).y_expression;
+	const zExpr = (layer as unknown as Record<string, unknown>).z_expression;
+	const tAxis = (layer as unknown as Record<string, unknown>).t_axis;
+
+	let expressions: string[];
+	let domain = layer.domain as Domain3D | undefined;
+
+	if (typeof xExpr === 'string' && typeof yExpr === 'string' && typeof zExpr === 'string') {
+		console.log('[GraphBuilder] Found x_expression/y_expression/z_expression format');
+		// Convert to expressions array
+		expressions = [xExpr, yExpr, zExpr];
+
+		// Handle t_axis format: { min: 0, max: 2*PI }
+		if (tAxis && typeof tAxis === 'object' && tAxis !== null) {
+			const tAxisObj = tAxis as { min?: number; max?: number; label?: string };
+			if (typeof tAxisObj.min === 'number' && typeof tAxisObj.max === 'number') {
+				domain = {
+					t: [tAxisObj.min, tAxisObj.max]
+				} as Domain3D;
+			}
+		}
+	} else {
+		expressions = normalizeExpressions(layer);
+	}
+
 	const colors = normalizeColors(layer);
 
 	if (expressions.length < 3) {
@@ -1001,11 +1724,16 @@ export function buildParametric3DTraces(layer: LayerSpec) {
 		return [];
 	}
 
-	const fX = compile(expressions[0]);
-	const fY = compile(expressions[1]);
-	const fZ = compile(expressions[2]);
-
-	const domain = layer.domain as Domain3D | undefined;
+	let fX, fY, fZ;
+	try {
+		fX = compile(expressions[0]);
+		fY = compile(expressions[1]);
+		fZ = compile(expressions[2]);
+		console.log('[GraphBuilder] parametric_3d expressions compiled successfully');
+	} catch (e) {
+		console.error('[GraphBuilder] Failed to compile parametric_3d expressions:', e);
+		return [];
+	}
 
 	// t 도메인이 있으면 곡선 (scatter3d), u/v 도메인이 있으면 표면 (surface)
 	const hasTDomain = domain && 't' in domain;
@@ -1090,13 +1818,16 @@ export function buildParametric3DTraces(layer: LayerSpec) {
 	}
 }
 
-// scatter_3d: 3D 산점도 (data: [[x, y, z], ...])
+// scatter_3d: 3D 산점도 (data: [[x, y, z], ...] 또는 points: [[x, y, z], ...])
 export function buildScatter3DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
 	const colors = normalizeColors(layer);
-	const data = (layer.data || []) as [number, number, number][];
+
+	// Support both 'data' and 'points' field names
+	const layerAny = layer as unknown as Record<string, unknown>;
+	const data = (layer.data || (layerAny.points as [number, number, number][]) || []) as [number, number, number][];
 
 	if (data.length === 0) {
-		console.error('[GraphBuilder] scatter_3d requires data array');
+		console.error('[GraphBuilder] scatter_3d requires data or points array');
 		return [];
 	}
 
@@ -1104,19 +1835,39 @@ export function buildScatter3DTraces(layer: LayerSpec, showLegend = false, legen
 	const y = data.map((point) => point[1]);
 	const z = data.map((point) => point[2]);
 
-	return [{
+	// Determine mode: default to 'lines' for vector paths and curves
+	// Can be overridden via style.mode ('markers', 'lines', 'lines+markers')
+	const layerStyle = layer.style as Record<string, unknown> | undefined;
+	const mode = (layerStyle?.mode as string | undefined) || 'lines';
+
+	// Build trace with conditional properties
+	const trace: Record<string, unknown> = {
 		x, y, z,
 		type: 'scatter3d',
-		mode: 'markers',
-		marker: {
+		mode: mode,
+		name: legendName || 'scatter',
+		showlegend: showLegend
+	};
+
+	// Add marker properties only for markers mode
+	if (mode.includes('markers')) {
+		trace.marker = {
 			symbol: layer.style?.marker === 'sphere' ? 'circle' : (layer.style?.marker || 'circle'),
 			size: layer.style?.size ?? 5,
 			color: colors[0] || 'blue',
 			opacity: layer.style?.opacity ?? 0.9
-		},
-		name: legendName || 'scatter',
-		showlegend: showLegend
-	}];
+		};
+	}
+
+	// Add line properties only for lines mode
+	if (mode.includes('lines')) {
+		trace.line = {
+			color: colors[0] || 'blue',
+			width: layer.style?.lineWidth ?? 2
+		};
+	}
+
+	return [trace];
 }
 
 // point_3d: 단일 3D 점 (position: [x, y, z], label 지원)
@@ -1176,14 +1927,16 @@ export function buildLayer3DTraces(layer: LayerSpec, layerIndex: number, totalLa
 
 // composite_3d: 여러 3D 레이어 합성
 export function buildComposite3DTraces(spec: GraphSpec): any[] {
-	const layers = spec.layers || [];
+	// Support both 'layers' and 'graphs' field names
+	const specAny = spec as unknown as Record<string, unknown>;
+	const layers = spec.layers || (specAny.graphs as LayerSpec[]) || [];
 	if (layers.length === 0) {
-		console.error('[GraphBuilder] composite_3d requires layers array');
+		console.error('[GraphBuilder] composite_3d requires layers or graphs array');
 		return [];
 	}
 
 	const allTraces: any[] = [];
-	layers.forEach((layer, index) => {
+	layers.forEach((layer: LayerSpec, index: number) => {
 		const traces = buildLayer3DTraces(layer, index, layers.length);
 		allTraces.push(...traces);
 	});
@@ -1219,6 +1972,12 @@ export function buildLayerTraces(layer: LayerSpec, layerIndex: number, totalLaye
 			return buildPie2DTraces(layer, showLegend, legendName);
 		case 'bar_2d':
 			return buildBar2DTraces(layer, showLegend, legendName);
+		case 'heatmap_2d':
+			return buildHeatmap2DTraces(layer);
+		case 'contour_2d':
+			return buildContour2DTraces(layer);
+		case 'implicit_2d':
+			return buildImplicit2DTraces(layer);
 		case 'function_2d':
 		default:
 			return buildFunction2DTraces(layer);
@@ -1227,16 +1986,18 @@ export function buildLayerTraces(layer: LayerSpec, layerIndex: number, totalLaye
 
 // composite_2d: 여러 2D 레이어 합성
 export function buildComposite2DTraces(spec: GraphSpec): any[] {
-	const layers = spec.layers || [];
+	// Support both 'layers' and 'graphs' field names
+	const specAny = spec as unknown as Record<string, unknown>;
+	const layers = spec.layers || (specAny.graphs as LayerSpec[]) || [];
 	if (layers.length === 0) {
-		console.error('[GraphBuilder] composite_2d requires layers array');
+		console.error('[GraphBuilder] composite_2d requires layers or graphs array');
 		return [];
 	}
 
 	console.log('[GraphBuilder] Building composite_2d with', layers.length, 'layers');
 
 	const allTraces: any[] = [];
-	layers.forEach((layer, index) => {
+	layers.forEach((layer: LayerSpec, index: number) => {
 		console.log(`[GraphBuilder] Processing layer ${index}:`, layer.type);
 		const traces = buildLayerTraces(layer, index, layers.length);
 		console.log(`[GraphBuilder] Layer ${index} produced ${traces.length} traces`);
@@ -1275,6 +2036,12 @@ export function buildTraces(spec: GraphSpec): any[] {
 			return buildPie2DTraces(spec);
 		case 'bar_2d':
 			return buildBar2DTraces(spec);
+		case 'heatmap_2d':
+			return buildHeatmap2DTraces(spec);
+		case 'contour_2d':
+			return buildContour2DTraces(spec);
+		case 'implicit_2d':
+			return buildImplicit2DTraces(spec);
 		// 3D graphs
 		case 'function_3d':
 			return buildFunction3DTraces(spec);

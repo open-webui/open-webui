@@ -448,3 +448,61 @@ export const setBanners = async (token: string, banners: Banner[]) => {
 
 	return res;
 };
+
+// Default RAG Store Config
+export const getDefaultRagStoreConfig = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/default_rag_store`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const setDefaultRagStoreConfig = async (token: string, storeName: string | null) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/default_rag_store`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			DEFAULT_RAG_STORE_NAME: storeName
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail || err.message;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

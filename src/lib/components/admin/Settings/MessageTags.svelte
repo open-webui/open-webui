@@ -85,7 +85,7 @@
 	// Search setup
 	$: {
 		fuse = new Fuse(tags, {
-			keys: ['id', 'name'],
+			keys: ['id', 'name', 'chapter_name'],
 			threshold: 0.3
 		});
 	}
@@ -702,6 +702,9 @@
 							<th class="text-left py-2 px-3 font-medium text-gray-500 dark:text-gray-400">
 								{$i18n.t('이름')}
 							</th>
+							<th class="text-left py-2 px-3 font-medium text-gray-500 dark:text-gray-400">
+								{$i18n.t('챕터')}
+							</th>
 							<th class="text-center py-2 px-3 font-medium text-gray-500 dark:text-gray-400">
 								{$i18n.t('사용 횟수')}
 							</th>
@@ -724,6 +727,15 @@
 								</td>
 								<td class="py-2 px-3 text-gray-900 dark:text-white">
 									{tag.name}
+								</td>
+								<td class="py-2 px-3 text-gray-600 dark:text-gray-400 text-xs">
+									{#if tag.chapter_name}
+										<div class="max-w-xs truncate" title={tag.chapter_name}>
+											{tag.chapter_name}
+										</div>
+									{:else}
+										<span class="text-gray-400">-</span>
+									{/if}
 								</td>
 								<td class="py-2 px-3 text-center text-gray-600 dark:text-gray-400">
 									{tag.usage_count}
@@ -768,7 +780,7 @@
 							</tr>
 						{:else}
 							<tr>
-								<td colspan="6" class="py-8 text-center text-gray-500 dark:text-gray-400">
+								<td colspan="7" class="py-8 text-center text-gray-500 dark:text-gray-400">
 									{$i18n.t('태그가 없습니다.')}
 								</td>
 							</tr>

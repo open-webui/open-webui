@@ -69,10 +69,14 @@
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
-			$socket.emit('user-join', { auth: { token: sessionUser.token } });
+			try{
+				$socket.emit('user-join', { auth: { token: sessionUser.token } });
+			}catch(err){
+				console.error('Socket connection error:', err);
+			}
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
-
+			console.log('Navigating to:', redirectPath || '/');
 			goto('/');
 			localStorage.removeItem('redirectPath');
 		}

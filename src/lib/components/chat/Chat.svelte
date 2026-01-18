@@ -147,6 +147,24 @@
 	let generating = false;
 	let generationController = null;
 
+	// Check if the last message is still generating or tool is executing
+	$: {
+		if (history?.currentId && history.messages[history.currentId]?.role === 'assistant') {
+			const currentMessage = history.messages[history.currentId];
+			const isToolExecuting = currentMessage?.toolExecutions
+				? Object.values(currentMessage.toolExecutions).some((t) => t.status === 'executing')
+				: false;
+			
+			// Update generating if message is not completed or tool is executing
+			if (!currentMessage.completed || isToolExecuting) {
+				generating = true;
+			} else if (currentMessage.completed && !isToolExecuting && generating) {
+				// Only set to false if it was previously true and now should be false
+				generating = false;
+			}
+		}
+	}
+
 	let chat = null;
 	let tags = [];
 
@@ -209,10 +227,18 @@
 
 	// 채팅방 로드 시 채팅방에 저장된 정보를 우선 사용 (새 채팅 생성 중에는 스킵)
 	$: if (chat && !$temporaryChatEnabled && chat.id !== lastLoadedChatId && !isCreatingNewChat) {
+		console.log('[Initial Load] Chat loaded:', {
+			chatId: chat.id,
+			chapter_id: chat.chapter_id,
+			chat_chapter_id: chat.chat?.chapter_id,
+			chat_chapter: chat.chat?.chapter
+		});
+
 		lastLoadedChatId = chat.id;
 		lastKnownChapterId = chat.chat?.chapter_id || null;
 		// 우선순위: 1) chat 데이터 (채팅방에 기록된 정보), 2) selectedTextbookSection 스토어, 3) 기본값
 		if (chat.chapter_id) {
+			console.log('[Initial Load] Using chat.chapter_id:', chat.chapter_id);
 			// 채팅방에 챕터 정보가 있으면 해당 정보 사용
 			toolbarChapterId = chat.chapter_id;
 			
@@ -247,19 +273,29 @@
 
 	// Watch for chapter changes within the same chat (백엔드에서 chat.chat.chapter_id가 실제로 변경된 경우에만)
 	$: if (chat && chat.chat?.chapter_id && chat.chat.chapter_id !== lastKnownChapterId) {
+		console.log('[Reactive] Chapter changed detected:', {
+			chatId: chat.id,
+			newChapterId: chat.chat.chapter_id,
+			oldChapterId: lastKnownChapterId,
+			chapter: chat.chat.chapter
+		});
+
 		lastKnownChapterId = chat.chat.chapter_id;
 		toolbarChapterId = chat.chat.chapter_id;
-		
+
 		// chapter 제목이 없으면 textbook API에서 가져오기
 		if (!chat.chat.chapter) {
+			console.log('[Reactive] Loading chapter title from API...');
 			loadTextbookChapters().then(() => {
 				const chapter = findChapterById(chat.chat.chapter_id);
 				if (chapter) {
+					console.log('[Reactive] Chapter title loaded:', chapter.title);
 					toolbarTitle = chapter.title;
 					toolbarSubtitle = chapter.subtitle;
 				}
 			});
 		} else {
+			console.log('[Reactive] Using chapter title from chat:', chat.chat.chapter);
 			toolbarTitle = chat.chat.chapter;
 			toolbarSubtitle = chat.chat.subtitle || '';
 		}
@@ -325,9 +361,14 @@
 	};
 
 	const onSelect = async (e) => {
-		const { type, data } = e;
+		const { type, data, chapter_id } = e;
 
 		if (type === 'prompt') {
+			// Set chapter_id if provided
+			if (chapter_id) {
+				toolbarChapterId = chapter_id;
+			}
+
 			// Handle prompt selection
 			messageInput?.setText(data, async () => {
 				if (!($settings?.insertSuggestionPrompt ?? false)) {
@@ -686,6 +727,24 @@
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 
+		// 별도의 chat:chapter:updated 이벤트 리스너 (현재 채팅 페이지용)
+		$socket?.on('chat:chapter:updated', async (data) => {
+			console.log('[Socket] Chapter updated event received:', data);
+
+			// 현재 채팅의 chapter_id가 업데이트된 경우에만 chat 객체 다시 로드
+			if (data.chat_id === $chatId) {
+				console.log('[Socket] Reloading chat object for current chat...');
+				const updatedChat = await getChatById(localStorage.token, $chatId);
+				console.log('[Socket] Updated chat object:', {
+					id: updatedChat?.id,
+					chapter_id: updatedChat?.chapter_id,
+					chat_chapter_id: updatedChat?.chat?.chapter_id,
+					chat_chapter: updatedChat?.chat?.chapter
+				});
+				chat = updatedChat;
+			}
+		});
+
 		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
 
 		pageSubscribe = page.subscribe(async (p) => {
@@ -776,6 +835,7 @@
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
 			$socket?.off('events', chatEventHandler);
+			$socket?.off('chat:chapter:updated');
 			$audioQueue?.destroy();
 		} catch (e) {
 			console.error(e);
@@ -2750,28 +2810,28 @@
 				<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
 					<!-- chat toolbar - flex for chat view, absolute for placeholder view -->
 					<!-- Only show when chapter is selected (from chat or textbook) -->
-					{#if !$temporaryChatEnabled && (chat?.chapter || $selectedTextbookSection)}
+					{#if !$temporaryChatEnabled && (toolbarChapterId || chat?.chapter || $selectedTextbookSection)}
 						{@const hasMessages = ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 						{#if $mobile}
 							<!-- Mobile: Collapsible dropdown toolbar -->
 							<div class="{hasMessages ? 'shrink-0' : 'absolute top-0 left-0 right-0'} z-20">
 								<MobileChatToolbar
-									title={chat?.chapter || $selectedTextbookSection ? toolbarTitle : ''}
-									subtitle={chat?.chapter || $selectedTextbookSection ? toolbarSubtitle : ''}
+									title={toolbarTitle}
+									subtitle={toolbarSubtitle}
 									bind:proficiencyLevel={toolbarProficiencyLevel}
 									bind:responseStyle={toolbarResponseStyle}
-									hasChapter={!!(chat?.chapter || $selectedTextbookSection)}
+									hasChapter={!!toolbarChapterId}
 								/>
 							</div>
 						{:else}
 							<!-- Desktop: Full toolbar -->
 							<div class="{hasMessages ? 'shrink-0' : 'absolute top-0 left-0 right-0'} z-20 bg-white dark:bg-gray-900">
 								<ChatToolbar
-									title={chat?.chapter || $selectedTextbookSection ? toolbarTitle : ''}
-									subtitle={chat?.chapter || $selectedTextbookSection ? toolbarSubtitle : ''}
+									title={toolbarTitle}
+									subtitle={toolbarSubtitle}
 									bind:proficiencyLevel={toolbarProficiencyLevel}
 									bind:responseStyle={toolbarResponseStyle}
-									hasChapter={!!(chat?.chapter || $selectedTextbookSection)}
+									hasChapter={!!toolbarChapterId}
 								/>
 							</div>
 						{/if}

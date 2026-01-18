@@ -1668,6 +1668,9 @@ export interface ModelMeta {
 	description?: string;
 	capabilities?: object;
 	profile_image_url?: string;
+	tool_mode?: 'gating' | 'concat' | 'none' | null;
+	prompt_group_id?: string | null;
+	tool_gating_model?: string | null;
 }
 
 export interface ModelParams {}

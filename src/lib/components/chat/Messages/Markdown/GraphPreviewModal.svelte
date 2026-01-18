@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
-	import { compile } from 'mathjs';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import type { GraphSpec } from '$lib/utils/marked/graph-spec-extension';
+	import type { renderToString as katexRenderToString } from 'katex';
 
-	// Import shared graph builder utilities
+	// Import shared graph builder utilities (including custom compile with Bessel functions and constants)
 	import {
+		compile,
 		buildTraces,
 		is3DGraph
 	} from '$lib/utils/graph-builder';
@@ -21,6 +22,77 @@
 	let plotInitialized = false;
 	let showJsonCode = false;
 	let jsonCopied = false;
+	let katexRender: typeof katexRenderToString | null = null;
+	let katexLoaded = false;
+
+	// Load KaTeX for math rendering in captions
+	onMount(async () => {
+		try {
+			const [katex] = await Promise.all([
+				import('katex'),
+				import('katex/contrib/mhchem'),
+				import('katex/dist/katex.min.css')
+			]);
+			katexRender = katex.renderToString;
+			katexLoaded = true;
+		} catch (e) {
+			console.error('Failed to load KaTeX:', e);
+		}
+	});
+
+	// Render caption with inline math ($...$)
+	function renderCaption(text: string): string {
+		if (!katexRender || !katexLoaded) {
+			return text;
+		}
+
+		// Split text by $...$ patterns
+		const parts: string[] = [];
+		let lastIndex = 0;
+		const regex = /\$([^\$]+)\$/g;
+		let match;
+
+		while ((match = regex.exec(text)) !== null) {
+			// Add text before the match
+			if (match.index > lastIndex) {
+				parts.push(escapeHtml(text.substring(lastIndex, match.index)));
+			}
+
+			// Render the math
+			try {
+				const math = match[1];
+				const rendered = katexRender(math, {
+					throwOnError: false,
+					displayMode: false
+				});
+				parts.push(rendered);
+			} catch (e) {
+				// If rendering fails, show the original
+				parts.push(`$${escapeHtml(match[1])}$`);
+			}
+
+			lastIndex = regex.lastIndex;
+		}
+
+		// Add remaining text
+		if (lastIndex < text.length) {
+			parts.push(escapeHtml(text.substring(lastIndex)));
+		}
+
+		return parts.join('');
+	}
+
+	// Escape HTML special characters
+	function escapeHtml(text: string): string {
+		const map: Record<string, string> = {
+			'&': '&amp;',
+			'<': '&lt;',
+			'>': '&gt;',
+			'"': '&quot;',
+			"'": '&#039;'
+		};
+		return text.replace(/[&<>"']/g, (m) => map[m]);
+	}
 
 	// Copy JSON to clipboard
 	const copyJsonToClipboard = async () => {
@@ -214,6 +286,14 @@
 </script>
 
 <style>
+	/* KaTeX inline math styling */
+	:global(.katex) {
+		font-size: 1.05em;
+	}
+	:global(.katex-display) {
+		margin: 0.5em 0;
+	}
+
 	/* Custom Plotly modebar styling */
 	:global(.modebar) {
 		background: transparent !important;
@@ -318,7 +398,9 @@
 							<div class="font-semibold text-gray-900 dark:text-gray-100 mb-2">{spec.meta.title}</div>
 						{/if}
 						{#if spec.meta.caption}
-							<div class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{spec.meta.caption}</div>
+							<div class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+								{@html renderCaption(spec.meta.caption)}
+							</div>
 						{/if}
 					</div>
 				{/if}
