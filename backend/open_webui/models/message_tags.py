@@ -148,6 +148,7 @@ class TaggingDaemonConfig(Base):
     custom_system_instruction = Column(String, nullable=True)  # Custom system instruction
     blacklisted_tags = Column(JSON, nullable=True)  # List of tag IDs that should never be created
     rag_store_names = Column(JSON, nullable=True)  # List of RAG store names to use for context
+    enable_rag_chapter_detection = Column(Boolean, default=False)  # Enable RAG-based chapter detection
     last_run_at = Column(BigInteger, nullable=True)
     last_run_status = Column(String, nullable=True)
     lock_acquired_at = Column(BigInteger, nullable=True)  # For distributed locking
@@ -168,6 +169,7 @@ class TaggingDaemonConfigModel(BaseModel):
     custom_system_instruction: Optional[str] = None
     blacklisted_tags: Optional[List[str]] = None
     rag_store_names: Optional[List[str]] = None
+    enable_rag_chapter_detection: bool = False
     last_run_at: Optional[int] = None
     last_run_status: Optional[str] = None
     lock_acquired_at: Optional[int] = None

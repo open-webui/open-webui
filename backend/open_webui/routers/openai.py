@@ -1506,11 +1506,33 @@ async def generate_chat_completion(
             log.info(f"[OPENAI] Utility request detected (task={task_type}), skipping tool gating")
 
     # Also check system prompt for title generation patterns
+    # Use specific phrases to avoid false positives (e.g., "include a title" in graph prompts)
     if not is_utility_request and base_system:
-        title_keywords = ["title", "제목", "generate a title", "Create a concise"]
-        if any(keyword.lower() in base_system.lower() for keyword in title_keywords):
+        # More specific patterns for title generation tasks
+        title_patterns = [
+            "generate a title",
+            "create a title",
+            "generate title",
+            "create title",
+            "제목을 생성",
+            "제목 생성",
+            "제목을 만들",
+            "create a concise title",
+            "generate a concise title",
+        ]
+        base_system_lower = base_system.lower()
+        matched_pattern = None
+        for pattern in title_patterns:
+            if pattern.lower() in base_system_lower:
+                matched_pattern = pattern
+                break
+
+        if matched_pattern:
             is_utility_request = True
-            log.info("[OPENAI] Title generation detected in system prompt, skipping tool gating")
+            log.info(f"[OPENAI] Title generation detected in system prompt (matched: '{matched_pattern}'), skipping tool gating")
+        else:
+            # Debug: Log that we checked but didn't find title patterns
+            log.debug(f"[OPENAI] No title generation patterns found in base_system (length: {len(base_system)} chars)")
 
     # Determine tool handling mode based on model settings
     # Priority: model_tool_mode > default behavior

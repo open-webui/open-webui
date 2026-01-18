@@ -49,6 +49,7 @@ class DaemonConfigUpdateRequest(BaseModel):
     custom_system_instruction: Optional[str] = None  # Custom system instruction
     blacklisted_tags: Optional[List[str]] = None  # Tags that should never be created
     rag_store_names: Optional[List[str]] = None  # RAG store names for context
+    enable_rag_chapter_detection: Optional[bool] = None  # Enable RAG-based chapter detection
 
 
 class BlacklistUpdateRequest(BaseModel):
