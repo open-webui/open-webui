@@ -103,7 +103,7 @@ docker compose up -d
 
 ### 🧠 模型能力深度集成
 
-<table>
+<table width="100%">
 <tr>
 <td width="50%" valign="top">
 
@@ -152,7 +152,7 @@ docker compose up -d
 
 ### 🛠️ 系统管理增强
 
-<table>
+<table width="100%">
 <tr>
 <td width="50%" valign="top">
 
@@ -204,7 +204,7 @@ docker compose up -d
 
 ### 🎨 交互体验打磨
 
-<table>
+<table width="100%">
 <tr>
 <td width="50%" valign="top">
 
@@ -258,12 +258,19 @@ docker compose up -d
 
 启动 Open WebUI 后，建议进行以下配置以获得最佳体验：
 
+<table width="100%">
+<tr>
+<td width="50%" valign="top">
+
 ### 1. 启用 Responses API
 
 在 **连接设置** 中开启 `Use Responses API`，即可：
 - 体验 OpenAI 新版接口
 - 查看模型思考过程
 - 使用 o1/o3 推理模型
+
+</td>
+<td width="50%" valign="top">
 
 ### 2. 配置 Gemini
 
@@ -272,6 +279,11 @@ docker compose up -d
 - 支持 thinking_budget
 - 原生工具调用
 
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
 ### 3. 开启计费显示
 
 在 **模型设置** 中配置费率：
@@ -279,12 +291,19 @@ docker compose up -d
 - 启用计费显示
 - 实时掌握成本
 
+</td>
+<td width="50%" valign="top">
+
 ### 4. 启用对话分支
 
 在任意对话中使用 **分支功能**：
 - 右键消息选择 "创建分支"
 - 或使用快捷键
 - 侧边栏管理分支
+
+</td>
+</tr>
+</table>
 
 ---
 
