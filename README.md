@@ -105,9 +105,9 @@ docker compose up -d
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-#### OpenAI Responses API
+### OpenAI Responses API
 
 **首发支持** OpenAI 新版 `/v1/responses` 接口：
 - 流式输出思考过程 (Reasoning Content)
@@ -115,9 +115,9 @@ docker compose up -d
 - 实时展示模型的推理步骤
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-#### Google Gemini 原生
+### Google Gemini 原生
 
 **直连官方 SDK**，无需中间层转换：
 - 支持 `thinking_budget` 等原生参数
@@ -127,9 +127,9 @@ docker compose up -d
 </td>
 </tr>
 <tr>
-<td>
+<td width="50%" valign="top">
 
-#### 推理强度控制
+### 推理强度控制
 
 为 o1/o3 等模型配置 **Reasoning Effort**：
 - Low / Medium / High 三档预设
@@ -137,9 +137,9 @@ docker compose up -d
 - 灵活平衡速度与质量
 
 </td>
-<td>
+<td width="50%" valign="top">
 
-#### 智能图像编辑
+### 智能图像编辑
 
 优化的图像编辑上下文管理：
 - 自动精简历史消息
@@ -154,9 +154,9 @@ docker compose up -d
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-#### 精细化计费系统
+### 精细化计费系统
 
 **运营级**成本控制方案：
 - 按次计费 / 按 Token 计费
@@ -165,9 +165,9 @@ docker compose up -d
 - 支持多货币显示
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-#### 多架构优化
+### 多架构优化
 
 **ARM64 原生支持**：
 - Apple Silicon 完美运行
@@ -178,9 +178,9 @@ docker compose up -d
 </td>
 </tr>
 <tr>
-<td>
+<td width="50%" valign="top">
 
-#### 模型权限管理
+### 模型权限管理
 
 **灵活的访问控制**：
 - 批量设置模型可见性
@@ -188,9 +188,9 @@ docker compose up -d
 - 按组分配模型权限
 
 </td>
-<td>
+<td width="50%" valign="top">
 
-#### 启动性能优化
+### 启动性能优化
 
 **大幅提升加载速度**：
 - Lazy Loading 策略
@@ -206,9 +206,9 @@ docker compose up -d
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-#### 对话分支
+### 对话分支
 
 从任意消息创建 **Branch Chat**：
 - 探索不同的对话走向
@@ -216,9 +216,9 @@ docker compose up -d
 - 侧边栏快速切换分支
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-#### 上下文控制
+### 上下文控制
 
 **精准管理**发送给模型的内容：
 - 可视化插入 Context Break
@@ -228,9 +228,9 @@ docker compose up -d
 </td>
 </tr>
 <tr>
-<td>
+<td width="50%" valign="top">
 
-#### 智能 Logo 匹配
+### 智能 Logo 匹配
 
 **自动适配**模型图标：
 - 20+ LLM 提供商支持
@@ -238,9 +238,9 @@ docker compose up -d
 - GPT / Claude / Gemini / Qwen 等
 
 </td>
-<td>
+<td width="50%" valign="top">
 
-#### 深度中文优化
+### 深度中文优化
 
 **全量汉化**：
 - 新增功能翻译
