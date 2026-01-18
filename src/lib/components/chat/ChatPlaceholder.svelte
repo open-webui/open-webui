@@ -27,7 +27,7 @@
 		selectedModelIdx = models.length - 1;
 	}
 
-	$: models = modelIds.map((id) => $_models.find((m) => m.id === id));
+	$: models = modelIds.map((id) => $_models.find((m) => m.id === id)).filter(Boolean);
 
 	onMount(() => {
 		mounted = true;

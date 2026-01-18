@@ -67,7 +67,7 @@
 		selectedModelIdx = models.length - 1;
 	}
 
-	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
+	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id)).filter(Boolean);
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">

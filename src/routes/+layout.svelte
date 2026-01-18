@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
@@ -27,6 +27,7 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
+		appData,
 		toolServers,
 		playingNotificationSound,
 		channels,
@@ -90,13 +91,13 @@
 	let tokenTimer = null;
 
 	let showRefresh = false;
-	let pendingUpdate = false; // Flag for pending version update notification
 
 	let showSyncStatsModal = false;
 	let syncStatsEventData = null;
 
 	let heartbeatInterval = null;
 	let isInitialConnection = true; // Track if this is the first connection
+	let visibilityChangeHandler = null; // Store handler reference for cleanup
 
 	const BREAKPOINT = 768;
 	const HEARTBEAT_ACTIVE = 30000; // 30 seconds when page is visible
@@ -144,25 +145,19 @@
 				const deploymentId = res?.deployment_id ?? null;
 				const version = res?.version ?? null;
 
-				if (version !== null || deploymentId !== null) {
-					if (
-						($WEBUI_VERSION !== null && version !== $WEBUI_VERSION) ||
-						($WEBUI_DEPLOYMENT_ID !== null && deploymentId !== $WEBUI_DEPLOYMENT_ID)
-					) {
-						// Show notification instead of forcing immediate refresh
-						// This prevents interrupting user's work
-						pendingUpdate = true;
-						toast.info($i18n.t('New version available. Refresh to update.'), {
-							duration: 0 // Don't auto-dismiss
-						});
-					}
-				}
-
 				if (deploymentId !== null) {
 					WEBUI_DEPLOYMENT_ID.set(deploymentId);
 				}
 
 				if (version !== null) {
+					// Check if version changed since last visit
+					const lastVersion = localStorage.getItem('lastSeenVersion');
+					if (lastVersion && lastVersion !== version) {
+						toast.info($i18n.t('New version available: {{version}}', { version }), {
+							duration: 8000
+						});
+					}
+					localStorage.setItem('lastSeenVersion', version);
 					WEBUI_VERSION.set(version);
 				}
 
@@ -201,12 +196,16 @@
 			}
 		});
 
-		// Adjust heartbeat interval based on page visibility
-		document.addEventListener('visibilitychange', () => {
+		// Remove old visibility change handler if exists, then add new one
+		if (visibilityChangeHandler) {
+			document.removeEventListener('visibilitychange', visibilityChangeHandler);
+		}
+		visibilityChangeHandler = () => {
 			if (_socket.connected) {
 				setupHeartbeat(_socket);
 			}
-		});
+		};
+		document.addEventListener('visibilitychange', visibilityChangeHandler);
 	};
 
 	const executePythonAsWorker = async (id, code, cb) => {
@@ -616,37 +615,16 @@
 
 	const TOKEN_EXPIRY_BUFFER = 60; // seconds
 
-	// Setup precise token expiry timer instead of polling every 15 seconds
-	// This reduces unnecessary timer callbacks when token has a known expiry time
-	const setupTokenExpiryTimer = async () => {
-		if (tokenTimer) {
-			clearTimeout(tokenTimer);
-			tokenTimer = null;
-		}
-
-		const exp = $user?.expires_at; // token expiry time in unix timestamp
-		if (!exp) {
-			// No expiry time set, nothing to do
-			return;
-		}
+	const checkTokenExpiry = async () => {
+		const exp = $user?.expires_at;
+		if (!exp) return;
 
 		const now = Math.floor(Date.now() / 1000);
-		const timeUntilExpiry = (exp - TOKEN_EXPIRY_BUFFER - now) * 1000; // Convert to milliseconds
-
-		if (timeUntilExpiry <= 0) {
-			// Token already expired or about to expire, sign out immediately
+		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
 			const res = await userSignOut();
 			user.set(null);
 			localStorage.removeItem('token');
 			location.href = res?.redirect_url ?? '/auth';
-		} else {
-			// Set precise timer for when token will expire
-			tokenTimer = setTimeout(async () => {
-				const res = await userSignOut();
-				user.set(null);
-				localStorage.removeItem('token');
-				location.href = res?.redirect_url ?? '/auth';
-			}, timeUntilExpiry);
 		}
 	};
 
@@ -776,8 +754,11 @@
 				}
 				setTextScale($settings?.textScale ?? 1);
 
-				// Set up the token expiry timer (precise timing instead of polling)
-				setupTokenExpiryTimer();
+				// Set up the token expiry check (60s interval, matching TOKEN_EXPIRY_BUFFER)
+				if (tokenTimer) {
+					clearInterval(tokenTimer);
+				}
+				tokenTimer = setInterval(checkTokenExpiry, 60000);
 			} else {
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('events:channel', channelEventHandler);
@@ -891,6 +872,9 @@
 	onDestroy(() => {
 		window.removeEventListener('message', windowMessageEventHandler);
 		bc.close();
+		if (tokenTimer) {
+			clearInterval(tokenTimer);
+		}
 	});
 </script>
 

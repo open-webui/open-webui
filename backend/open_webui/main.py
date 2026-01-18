@@ -49,7 +49,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
-from starlette.datastructures import Headers
 
 from starsessions import (
     SessionMiddleware as StarSessionsMiddleware,
@@ -631,26 +630,9 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
-    if app.state.config.ENABLE_BASE_MODELS_CACHE:
-        await get_all_models(
-            Request(
-                # Creating a mock request object to pass to get_all_models
-                {
-                    "type": "http",
-                    "asgi.version": "3.0",
-                    "asgi.spec_version": "2.0",
-                    "method": "GET",
-                    "path": "/internal",
-                    "query_string": b"",
-                    "headers": Headers({}).raw,
-                    "client": ("127.0.0.1", 12345),
-                    "server": ("127.0.0.1", 80),
-                    "scheme": "http",
-                    "app": app,
-                }
-            ),
-            None,
-        )
+    # Removed: Startup model detection
+    # Models will be fetched on-demand when user accesses the model list
+    # This improves startup time and avoids connection errors for unavailable endpoints
 
     yield
 
