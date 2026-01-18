@@ -130,20 +130,107 @@ def _wants_web_search(fd: dict) -> bool:
     return False
 
 
-def _extract_content(candidate: dict) -> tuple[str, str, str]:
+def _convert_openai_tools_to_gemini(openai_tools: list) -> list:
     """
-    Extract text + inline image markdown + grounding metadata from a Gemini candidate.
-    Returns: (text, image_markdown, grounding_markdown)
+    Convert OpenAI format tools to Gemini functionDeclarations format.
+
+    OpenAI format:
+    [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_web",
+                "description": "Search the web",
+                "parameters": {
+                    "type": "object",
+                    "properties": {...},
+                    "required": [...]
+                }
+            }
+        }
+    ]
+
+    Gemini format:
+    [
+        {
+            "functionDeclarations": [
+                {
+                    "name": "search_web",
+                    "description": "Search the web",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {...},
+                        "required": [...]
+                    }
+                }
+            ]
+        }
+    ]
+    """
+    if not openai_tools or not isinstance(openai_tools, list):
+        return []
+
+    function_declarations = []
+
+    for tool in openai_tools:
+        if not isinstance(tool, dict):
+            continue
+
+        tool_type = tool.get("type", "function")
+        if tool_type != "function":
+            continue
+
+        function_spec = tool.get("function", {})
+        if not isinstance(function_spec, dict):
+            continue
+
+        # Extract function details
+        name = function_spec.get("name")
+        description = function_spec.get("description", "")
+        parameters = function_spec.get("parameters", {})
+
+        if not name:
+            continue
+
+        # Build Gemini function declaration
+        gemini_function = {
+            "name": name,
+            "description": description,
+            "parameters": parameters
+        }
+
+        function_declarations.append(gemini_function)
+
+    if not function_declarations:
+        return []
+
+    return [{"functionDeclarations": function_declarations}]
+
+
+def _extract_content(candidate: dict, starting_tool_index: int = 0) -> tuple[str, str, str, list, int]:
+    """
+    Extract text + inline image markdown + grounding metadata + tool calls from a Gemini candidate.
+    Returns: (text, image_markdown, grounding_markdown, tool_calls, next_tool_index)
+
+    Args:
+        candidate: Gemini API response candidate
+        starting_tool_index: The starting index for tool calls (for parallel tool call scenarios)
+
+    Returns:
+        Tuple of (text, image_markdown, grounding_markdown, tool_calls, next_tool_index)
+        next_tool_index is the index to use for the next tool call
     """
     # SAFEGUARD: Handle None or invalid candidate
     if candidate is None or not isinstance(candidate, dict):
-        return "", "", ""
-    
+        return "", "", "", [], starting_tool_index
+
     content = candidate.get("content", {}) or {}
     parts = content.get("parts", []) or []
 
     text_parts = []
     image_md_parts = []
+    tool_calls = []
+    tool_call_index = starting_tool_index  # CRITICAL: Use starting index for parallel tool calls
 
     for part in parts:
         if "text" in part and part["text"]:
@@ -154,6 +241,40 @@ def _extract_content(candidate: dict) -> tuple[str, str, str]:
             data = inline_data.get("data", "")
             if data:
                 image_md_parts.append(f"\n![Generated Image](data:{mime_type};base64,{data})\n")
+        elif "functionCall" in part:
+            # Extract Gemini function call and convert to OpenAI format
+            function_call = part.get("functionCall", {})
+            # DEBUG: Log the raw functionCall to see if thought_signature is present
+            log.info(f"[GEMINI DEBUG] Raw functionCall from Gemini: {json.dumps(function_call, ensure_ascii=False, default=str)[:500]}")
+            if isinstance(function_call, dict):
+                function_name = function_call.get("name", "")
+                function_args = function_call.get("args", {})
+                # Gemini 3 introduces thought_signature for security
+                thought_signature = function_call.get("thought_signature", "")
+
+                if function_name:
+                    # Convert args dict to JSON string for OpenAI format
+                    try:
+                        args_json = json.dumps(function_args, ensure_ascii=False)
+                    except Exception:
+                        args_json = "{}"
+
+                    tool_call_data = {
+                        "index": tool_call_index,  # CRITICAL FIX: Add index field for middleware
+                        "id": f"call_{uuid.uuid4().hex}",
+                        "type": "function",
+                        "function": {
+                            "name": function_name,
+                            "arguments": args_json
+                        }
+                    }
+                    # Store thought_signature in a custom field for Gemini 3 compatibility
+                    if thought_signature:
+                        tool_call_data["thought_signature"] = thought_signature
+                        log.info(f"[GEMINI 3] Captured thought_signature for function {function_name}")
+
+                    tool_calls.append(tool_call_data)
+                    tool_call_index += 1  # Increment for next tool call
 
     # Extract Grounding Metadata (Search Sources)
     grounding_md = ""
@@ -161,7 +282,7 @@ def _extract_content(candidate: dict) -> tuple[str, str, str]:
     if grounding_metadata:
         chunks = grounding_metadata.get("groundingChunks", [])
         supports = grounding_metadata.get("groundingSupports", [])
-        
+
         # Only process if we have web chunks
         web_sources = []
         for chunk in chunks:
@@ -171,11 +292,11 @@ def _extract_content(candidate: dict) -> tuple[str, str, str]:
                 uri = web.get("uri", "")
                 if uri:
                     web_sources.append(f"[{title}]({uri})")
-        
+
         if web_sources:
             grounding_md = "\n\n**Sources:**\n" + "\n".join([f"{i+1}. {s}" for i, s in enumerate(web_sources)]) + "\n"
 
-    return "".join(text_parts), "".join(image_md_parts), grounding_md
+    return "".join(text_parts), "".join(image_md_parts), grounding_md, tool_calls, tool_call_index
 
 
 ##########################################
@@ -491,6 +612,12 @@ async def generate_chat_completion(
         
         def has_image(msg):
             content = msg.get("content", "")
+            # Ensure content is string, not bytes
+            if isinstance(content, bytes):
+                try:
+                    content = content.decode("utf-8")
+                except Exception:
+                    content = ""
             # Check OpenAI multimodal format
             if isinstance(content, list):
                 for item in content:
@@ -508,6 +635,12 @@ async def generate_chat_completion(
         def extract_images(msg):
             images = []
             content = msg.get("content", "")
+            # Ensure content is string, not bytes
+            if isinstance(content, bytes):
+                try:
+                    content = content.decode("utf-8")
+                except Exception:
+                    content = ""
             # Extract from OpenAI multimodal format
             if isinstance(content, list):
                 for item in content:
@@ -526,6 +659,12 @@ async def generate_chat_completion(
         # Helper function to extract text from a message
         def extract_text(msg):
             content = msg.get("content", "")
+            # Ensure content is string, not bytes
+            if isinstance(content, bytes):
+                try:
+                    content = content.decode("utf-8")
+                except Exception:
+                    content = ""
             if isinstance(content, str):
                 # Remove Markdown image syntax from text
                 text = markdown_image_pattern.sub('', content).strip()
@@ -606,6 +745,19 @@ async def generate_chat_completion(
     contents = []
     system_instruction = None
 
+    # DEBUG: Log the raw messages before conversion
+    log.info(f"[GEMINI MESSAGES DEBUG] Received {len(messages)} messages from middleware")
+    for i, msg in enumerate(messages):
+        msg_role = msg.get("role", "unknown")
+        msg_content_preview = str(msg.get("content", ""))[:100]
+        has_tool_calls = bool(msg.get("tool_calls"))
+        tool_call_id = msg.get("tool_call_id", "")
+        log.info(f"[GEMINI MESSAGES DEBUG] Message {i}: role={msg_role}, has_tool_calls={has_tool_calls}, tool_call_id={tool_call_id}, content_preview={msg_content_preview}")
+
+        # DEBUG: Log full structure of assistant and tool messages
+        if msg_role in ("assistant", "tool", "function"):
+            log.info(f"[GEMINI MESSAGES DEBUG] Message {i} FULL: {json.dumps(msg, ensure_ascii=False, default=str)[:1000]}")
+
     for msg in messages:
         role = msg.get("role", "user")
         content = msg.get("content", "")
@@ -614,7 +766,102 @@ async def generate_chat_completion(
             system_instruction = content
             continue
 
+        # Handle tool/function response messages
+        if role in ("tool", "function"):
+            # Convert OpenAI tool response to Gemini functionResponse format
+            tool_call_id = msg.get("tool_call_id") or msg.get("id")
+            tool_name = msg.get("name", "")
+
+            # CRITICAL FIX: If tool_name is missing from the message (middleware doesn't include it),
+            # we need to find it by matching tool_call_id with previous assistant message's tool_calls
+            if not tool_name and tool_call_id:
+                # Search backwards through messages to find the assistant message with matching tool_call_id
+                for prev_msg in reversed(messages[:messages.index(msg)]):
+                    if prev_msg.get("role") == "assistant" and prev_msg.get("tool_calls"):
+                        for tool_call in prev_msg.get("tool_calls", []):
+                            if tool_call.get("id") == tool_call_id:
+                                tool_name = tool_call.get("function", {}).get("name", "")
+                                log.info(f"[TOOL RESPONSE DEBUG] Found tool_name={tool_name} by matching tool_call_id={tool_call_id}")
+                                break
+                    if tool_name:
+                        break
+
+            # Parse the response content
+            try:
+                if isinstance(content, str):
+                    response_data = json.loads(content) if content else {}
+                else:
+                    response_data = content
+            except json.JSONDecodeError:
+                response_data = {"result": content}
+
+            # DEBUG: Log the response data structure
+            log.info(f"[TOOL RESPONSE DEBUG] tool_call_id={tool_call_id}, tool_name={tool_name}, response_data type={type(response_data).__name__}, value={json.dumps(response_data, ensure_ascii=False, default=str)[:500]}")
+
+            # Gemini API expects functionResponse with 'response' field containing a dict
+            # CRITICAL FIX: If response_data is a list (e.g., search results), wrap it in a dict with 'results' key
+            # Do NOT convert to string! Keep the original structure.
+            if isinstance(response_data, list):
+                response_data = {"results": response_data}
+            elif not isinstance(response_data, dict):
+                response_data = {"result": str(response_data)}
+
+            # Gemini API要求functionResponse使用role="user"而不是"function"
+            contents.append({
+                "role": "user",
+                "parts": [{
+                    "functionResponse": {
+                        "name": tool_name,
+                        "response": response_data
+                    }
+                }]
+            })
+            log.info(f"[TOOL RESPONSE DEBUG] Added functionResponse to contents: {json.dumps(contents[-1], ensure_ascii=False, default=str)[:500]}")
+            continue
+
         gemini_role = "user" if role == "user" else "model"
+
+        # Handle assistant messages with tool_calls
+        if role == "assistant" and msg.get("tool_calls"):
+            parts = []
+
+            # Add text content if present
+            if content:
+                parts.append({"text": content})
+
+            # Add function calls
+            for tool_call in msg.get("tool_calls", []):
+                if not isinstance(tool_call, dict):
+                    continue
+
+                function_spec = tool_call.get("function", {})
+                function_name = function_spec.get("name", "")
+                function_args_str = function_spec.get("arguments", "{}")
+
+                # Parse arguments from JSON string to dict
+                try:
+                    function_args = json.loads(function_args_str) if isinstance(function_args_str, str) else function_args_str
+                except json.JSONDecodeError:
+                    function_args = {}
+
+                if function_name:
+                    function_call_part = {
+                        "functionCall": {
+                            "name": function_name,
+                            "args": function_args
+                        }
+                    }
+                    # Restore thought_signature for Gemini 3 compatibility
+                    thought_signature = tool_call.get("thought_signature", "")
+                    if thought_signature:
+                        function_call_part["functionCall"]["thought_signature"] = thought_signature
+                        log.info(f"[GEMINI 3] Restored thought_signature for function {function_name}")
+
+                    parts.append(function_call_part)
+
+            if parts:
+                contents.append({"role": gemini_role, "parts": parts})
+            continue
 
         # Handle multimodal content
         if isinstance(content, list):
@@ -676,11 +923,138 @@ async def generate_chat_completion(
             form_data["stop"] if isinstance(form_data["stop"], list) else [form_data["stop"]]
         )
 
-    # Enable Google Search (Grounding)
-    # Enable Google Search (Grounding)
+    # Enable thinking mode for Gemini 3 models to get thought_signature for function calls
+    # This is required for tool calling to work properly with Gemini 3
+    if "gemini-3" in gemini_model.lower() or "gemini-2.5" in gemini_model.lower():
+        # Check if tools are being used (function calling scenario)
+        has_tools = ("tools" in form_data and form_data["tools"]) or _wants_web_search(form_data)
+        if has_tools:
+            log.info(f"[GEMINI 3] Enabling thinkingConfig for model {gemini_model} with tools")
+            gemini_payload["generationConfig"]["thinkingConfig"] = {
+                "thinkingBudget": 1024  # Allow model to think before function calls
+            }
+
+    # Handle tools: Convert OpenAI format to Gemini format
+    # Priority: Google Search > Native Tools
     if _wants_web_search(form_data):
+        # Enable Google Search (Grounding)
         log.info(f"Enabling Google Search (Grounding) for model: {gemini_model}")
         gemini_payload["tools"] = [{"googleSearch": {}}]
+    elif "tools" in form_data and form_data["tools"]:
+        # Convert OpenAI format tools to Gemini functionDeclarations
+        gemini_tools = _convert_openai_tools_to_gemini(form_data["tools"])
+        if gemini_tools:
+            gemini_payload["tools"] = gemini_tools
+            log.info(f"Converted {len(form_data['tools'])} OpenAI tools to Gemini format for model: {gemini_model}")
+            log.debug(f"Gemini tools payload: {json.dumps(gemini_tools, ensure_ascii=False, indent=2)}")
+
+    # CRITICAL FIX: Gemini tool calling的消息序列规则
+    # 当最后一条消息包含functionResponse时,说明我们在tool calling的第二轮
+    # 此时应该只保留与当前tool call相关的user-model-functionResponse三元组,移除之前的对话历史
+    contents = gemini_payload.get("contents", [])
+
+    # 检查最后一条消息是否包含functionResponse (而不是检查role,因为role现在是"user")
+    last_has_function_response = False
+    if contents:
+        last_parts = contents[-1].get("parts", [])
+        last_has_function_response = any("functionResponse" in part for part in last_parts)
+
+    if last_has_function_response:
+        log.info("[GEMINI TOOL FIX] Detected tool calling scenario (last message contains functionResponse)")
+
+        # 从后往前找到包含tool call的model消息
+        tool_call_index = -1
+        for i in range(len(contents) - 2, -1, -1):  # 倒数第二条开始往前找
+            if contents[i].get("role") == "model":
+                parts = contents[i].get("parts", [])
+                if any("functionCall" in part for part in parts):
+                    tool_call_index = i
+                    log.info(f"[GEMINI TOOL FIX] Found tool call at index {i}")
+                    break
+
+        # 检查functionCall是否有thought_signature (Gemini 3需要)
+        has_thought_signature = False
+        if tool_call_index >= 0:
+            model_parts = contents[tool_call_index].get("parts", [])
+            for part in model_parts:
+                if "functionCall" in part:
+                    fc = part.get("functionCall", {})
+                    if fc.get("thought_signature"):
+                        has_thought_signature = True
+                        break
+
+        # 对于Gemini 3: 如果functionCall缺少thought_signature，使用替代方案
+        is_gemini_3 = "gemini-3" in gemini_model.lower()
+        if is_gemini_3 and not has_thought_signature and tool_call_index >= 0:
+            log.info("[GEMINI 3 WORKAROUND] functionCall missing thought_signature, converting to text format")
+
+            # 找到user消息
+            user_msg_index = -1
+            for i in range(tool_call_index - 1, -1, -1):
+                if contents[i].get("role") == "user":
+                    parts = contents[i].get("parts", [])
+                    has_text = any("text" in part for part in parts)
+                    has_func_response = any("functionResponse" in part for part in parts)
+                    if has_text and not has_func_response:
+                        user_msg_index = i
+                        break
+
+            if user_msg_index >= 0:
+                # 提取原始user问题
+                user_text = ""
+                for part in contents[user_msg_index].get("parts", []):
+                    if "text" in part:
+                        user_text = part.get("text", "")
+                        break
+
+                # 提取functionResponse结果
+                func_response_text = ""
+                last_msg_parts = contents[-1].get("parts", [])
+                for part in last_msg_parts:
+                    if "functionResponse" in part:
+                        fr = part.get("functionResponse", {})
+                        func_name = fr.get("name", "tool")
+                        func_result = fr.get("response", {})
+                        func_response_text = f"\n\n[Tool Result from {func_name}]:\n{json.dumps(func_result, ensure_ascii=False, indent=2)}"
+                        break
+
+                # 创建新的contents: 只有user消息，包含原始问题+工具结果
+                combined_text = user_text + func_response_text + "\n\nPlease answer based on the tool results above."
+                new_contents = [
+                    {"role": "user", "parts": [{"text": combined_text}]}
+                ]
+                gemini_payload["contents"] = new_contents
+                log.info(f"[GEMINI 3 WORKAROUND] Converted to single user message with tool results embedded")
+
+        else:
+            # 正常的tool calling流程 (非Gemini 3，或有thought_signature)
+            # 再往前找到对应的user消息 (必须是包含text的,不是包含functionResponse的)
+            if tool_call_index > 0:
+                user_msg_index = -1
+                for i in range(tool_call_index - 1, -1, -1):
+                    if contents[i].get("role") == "user":
+                        # 确保这是包含text的user消息,不是functionResponse
+                        parts = contents[i].get("parts", [])
+                        has_text = any("text" in part for part in parts)
+                        has_func_response = any("functionResponse" in part for part in parts)
+                        if has_text and not has_func_response:
+                            user_msg_index = i
+                            log.info(f"[GEMINI TOOL FIX] Found corresponding user message at index {i}")
+                            break
+
+                # 只保留user->model(tool_call)->functionResponse这三条消息
+                if user_msg_index >= 0:
+                    original_count = len(contents)
+                    trimmed_contents = contents[user_msg_index:]
+                    gemini_payload["contents"] = trimmed_contents
+                    log.info(f"[GEMINI TOOL FIX] Trimmed contents from {original_count} to {len(trimmed_contents)} messages")
+                    log.info(f"[GEMINI TOOL FIX] Kept messages from index {user_msg_index} to end")
+
+    # DEBUG: Log the complete contents array before making the request
+    log.info(f"[GEMINI PAYLOAD DEBUG] Complete contents count: {len(gemini_payload.get('contents', []))}")
+    for i, item in enumerate(gemini_payload.get("contents", [])):
+        log.info(f"[GEMINI PAYLOAD DEBUG] Content {i}: role={item.get('role')}, parts_count={len(item.get('parts', []))}, parts_types={[list(p.keys()) for p in item.get('parts', [])]}")
+    log.info(f"[GEMINI PAYLOAD DEBUG] Complete contents array: {json.dumps(gemini_payload.get('contents', []), ensure_ascii=False, default=str)[:2000]}")
 
     # Make request to Gemini API
     endpoint = "streamGenerateContent" if stream else "generateContent"
@@ -708,6 +1082,7 @@ async def generate_chat_completion(
             decoder = codecs.getincrementaldecoder("utf-8")()
             buf = ""
             stream_id = f"chatcmpl-gemini-{uuid.uuid4().hex}"
+            global_tool_call_index = 0  # CRITICAL: Track tool call index across stream chunks for parallel tool calls
 
             try:
                 async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
@@ -752,7 +1127,12 @@ async def generate_chat_completion(
                         async for raw in response.content.iter_any():
                             if not raw:
                                 continue
-                            buf += decoder.decode(raw)
+
+                            # Decode bytes to string, handling incomplete UTF-8 sequences
+                            chunk_str = decoder.decode(raw, False)
+                            if not chunk_str:
+                                continue
+                            buf += chunk_str
 
                             # SSE events are separated by blank line
                             while "\n\n" in buf:
@@ -778,14 +1158,14 @@ async def generate_chat_completion(
                                     return
 
                                 # Handle potentially stacked JSONs (e.g. if \n\n was missed or data lines merged)
-                                decoder = json.JSONDecoder()
+                                json_decoder = json.JSONDecoder()
                                 pos = 0
                                 while pos < len(data_str):
                                     search_str = data_str[pos:].lstrip()
                                     if not search_str:
                                         break
                                     try:
-                                        gemini_obj, idx = decoder.raw_decode(search_str)
+                                        gemini_obj, idx = json_decoder.raw_decode(search_str)
                                         # raw_decode returns index relative to search_str
                                         pos += len(data_str[pos:]) - len(search_str) + idx
                                         
@@ -797,17 +1177,26 @@ async def generate_chat_completion(
                                         # SAFEGUARD: Skip if candidate is None
                                         if c0 is None:
                                             continue
-                                        text, image_md, grounding_md = _extract_content(c0)
+                                        text, image_md, grounding_md, tool_calls, global_tool_call_index = _extract_content(c0, global_tool_call_index)
                                         out_text = (text or "") + (image_md or "") + (grounding_md or "")
 
-                                        # 1) yield content first
+                                        # 1) yield tool calls first if present
+                                        if tool_calls:
+                                            for tool_call in tool_calls:
+                                                tool_chunk = _openai_chunk(stream_id, model_id, {"tool_calls": [tool_call]}, None, 0)
+                                                yield f"data: {json.dumps(tool_chunk, ensure_ascii=False)}\n\n"
+
+                                        # 2) yield content if present
                                         if out_text:
                                             chunk = _openai_chunk(stream_id, model_id, {"content": out_text}, None, 0)
                                             yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
 
-                                        # 2) then yield finish
+                                        # 3) then yield finish
                                         finish = _map_finish_reason(c0.get("finishReason") if isinstance(c0, dict) else None)
                                         if finish:
+                                            # If there are tool calls, override finish_reason to "tool_calls"
+                                            if tool_calls:
+                                                finish = "tool_calls"
                                             fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0)
                                             yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
                                             yield "data: [DONE]\n\n"
@@ -839,14 +1228,14 @@ async def generate_chat_completion(
                                 data_str = tail
 
                             if data_str and data_str != "[DONE]":
-                                decoder = json.JSONDecoder()
+                                json_decoder_flush = json.JSONDecoder()
                                 pos = 0
                                 while pos < len(data_str):
                                     search_str = data_str[pos:].lstrip()
                                     if not search_str:
                                         break
                                     try:
-                                        gemini_obj, idx = decoder.raw_decode(search_str)
+                                        gemini_obj, idx = json_decoder_flush.raw_decode(search_str)
                                         pos += len(data_str[pos:]) - len(search_str) + idx
 
                                         candidates = gemini_obj.get("candidates") or []
@@ -855,13 +1244,25 @@ async def generate_chat_completion(
                                             # SAFEGUARD: Skip if candidate is None
                                             if c0 is None or not isinstance(c0, dict):
                                                 continue
-                                            text, image_md, grounding_md = _extract_content(c0)
+                                            text, image_md, grounding_md, tool_calls, global_tool_call_index = _extract_content(c0, global_tool_call_index)
                                             out_text = (text or "") + (image_md or "") + (grounding_md or "")
+
+                                            # Yield tool calls first if present
+                                            if tool_calls:
+                                                for tool_call in tool_calls:
+                                                    tool_chunk = _openai_chunk(stream_id, model_id, {"tool_calls": [tool_call]}, None, 0)
+                                                    yield f"data: {json.dumps(tool_chunk, ensure_ascii=False)}\n\n"
+
+                                            # Then yield content if present
                                             if out_text:
                                                 chunk = _openai_chunk(stream_id, model_id, {"content": out_text}, None, 0)
                                                 yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+
                                             finish = _map_finish_reason(c0.get("finishReason") if isinstance(c0, dict) else None)
                                             if finish:
+                                                # If there are tool calls, override finish_reason to "tool_calls"
+                                                if tool_calls:
+                                                    finish = "tool_calls"
                                                 fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0)
                                                 yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
                                     except json.JSONDecodeError as e:
@@ -917,18 +1318,30 @@ def convert_gemini_to_openai(gemini_response: dict, model_id: str) -> dict:
     candidates = gemini_response.get("candidates", []) or []
 
     choices = []
+    tool_call_index = 0  # Track tool call index across candidates
     for i, candidate in enumerate(candidates):
         # SAFEGUARD: Skip if candidate is None
         if candidate is None or not isinstance(candidate, dict):
             continue
-        text, image_md, grounding_md = _extract_content(candidate)
+        text, image_md, grounding_md, tool_calls, tool_call_index = _extract_content(candidate, tool_call_index)
         combined = (text or "") + (image_md or "") + (grounding_md or "")
+
+        message = {"role": "assistant", "content": combined}
+
+        # Add tool_calls to message if present
+        if tool_calls:
+            message["tool_calls"] = tool_calls
+
+        # Determine finish_reason based on whether there are tool calls
+        finish_reason = _map_finish_reason(candidate.get("finishReason") if isinstance(candidate, dict) else None) or "stop"
+        if tool_calls and finish_reason == "stop":
+            finish_reason = "tool_calls"
 
         choices.append(
             {
                 "index": i,
-                "message": {"role": "assistant", "content": combined},
-                "finish_reason": _map_finish_reason(candidate.get("finishReason") if isinstance(candidate, dict) else None) or "stop",
+                "message": message,
+                "finish_reason": finish_reason,
             }
         )
 
@@ -952,11 +1365,17 @@ def convert_gemini_to_openai_stream(gemini_chunk: dict, model_id: str) -> dict:
     """Convert Gemini streaming chunk to OpenAI format (single-chunk)."""
     candidates = gemini_chunk.get("candidates", []) or []
     choices = []
+    tool_call_index = 0  # Track tool call index
 
     for i, candidate in enumerate(candidates):
-        text, image_md, grounding_md = _extract_content(candidate)
+        text, image_md, grounding_md, tool_calls, tool_call_index = _extract_content(candidate, tool_call_index)
         combined = (text or "") + (image_md or "") + (grounding_md or "")
         delta = {"content": combined} if combined else {}
+
+        # Add tool_calls to delta if present
+        if tool_calls:
+            delta["tool_calls"] = tool_calls
+
         choices.append(
             {
                 "index": i,

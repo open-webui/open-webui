@@ -1884,6 +1884,12 @@ async def generate_chat_completion(
         
         def has_image(msg):
             content = msg.get("content", "")
+            # Ensure content is string, not bytes
+            if isinstance(content, bytes):
+                try:
+                    content = content.decode("utf-8")
+                except Exception:
+                    content = ""
             # Check OpenAI multimodal format
             if isinstance(content, list):
                 for item in content:
@@ -1901,6 +1907,12 @@ async def generate_chat_completion(
         def extract_images(msg):
             images = []
             content = msg.get("content", "")
+            # Ensure content is string, not bytes
+            if isinstance(content, bytes):
+                try:
+                    content = content.decode("utf-8")
+                except Exception:
+                    content = ""
             # Extract from OpenAI multimodal format
             if isinstance(content, list):
                 for item in content:
@@ -1919,6 +1931,12 @@ async def generate_chat_completion(
         # Helper function to extract text from a message
         def extract_text(msg):
             content = msg.get("content", "")
+            # Ensure content is string, not bytes
+            if isinstance(content, bytes):
+                try:
+                    content = content.decode("utf-8")
+                except Exception:
+                    content = ""
             if isinstance(content, str):
                 # Remove Markdown image syntax from text
                 text = markdown_image_pattern.sub('', content).strip()

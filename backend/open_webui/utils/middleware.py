@@ -327,12 +327,16 @@ def apply_source_context_to_messages(
             append=True,
         )
     else:
+        # CRITICAL FIX: Use append=True to avoid replacing the user's original question
+        # When append=False, the last user message gets completely replaced with the RAG template,
+        # which breaks the conversation flow for Gemini API (and other providers)
+        # The original user question is essential context for understanding the tool call flow
         return add_or_update_user_message(
             rag_template(
                 request.app.state.config.RAG_TEMPLATE, context_string, user_message
             ),
             messages,
-            append=False,
+            append=True,  # Changed from False to True
         )
 
 
@@ -3762,16 +3766,11 @@ async def process_chat_response(
                     for source in tool_call_sources:
                         await event_emitter({"type": "source", "data": source})
 
-                    # Apply source context to messages for model
+                    # CRITICAL FIX: Skip RAG template for tool calling scenarios
+                    # When using native tool calling, the tool response itself is the context
+                    # Adding RAG template creates malformed messages that break Gemini API
+                    # Just clear the sources after emitting them to UI
                     if tool_call_sources:
-                        user_msg = get_last_user_message(form_data["messages"])
-                        if user_msg:
-                            form_data["messages"] = apply_source_context_to_messages(
-                                request,
-                                form_data["messages"],
-                                tool_call_sources,
-                                user_msg,
-                            )
                         tool_call_sources.clear()
 
                     await event_emitter(

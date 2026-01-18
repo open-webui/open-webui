@@ -9,7 +9,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git tag:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(python3 -m py_compile:*)"
     ]
   }
 }
