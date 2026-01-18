@@ -272,43 +272,68 @@
 		if (!$functions) {
 			functions.set(await getFunctions(localStorage.token));
 		}
-		if (selectedModels.length !== 1 && !atSelectedModel) {
-			return;
+
+		// Aggregate toolIds, filterIds, and featureIds from ALL selected models
+		const allToolIds = new Set();
+		const allFilterIds = new Set();
+
+		const features = {
+			web_search: false,
+			image_generation: false,
+			code_interpreter: false
+		};
+
+		for (const selectedModel of selectedModels) {
+			const model = atSelectedModel ?? $models.find((m) => m.id === selectedModel);
+			if (model?.info?.meta) {
+				// Aggregate toolIds
+				if (model.info.meta.toolIds) {
+					model.info.meta.toolIds.forEach((id) => {
+						if ($tools.find((t) => t.id === id)) {
+							allToolIds.add(id);
+						}
+					});
+				}
+
+				// Aggregate filterIds
+				if (model.info.meta.defaultFilterIds) {
+					model.info.meta.defaultFilterIds.forEach((id) => {
+						if (model.filters?.find((f) => f.id === id)) {
+							allFilterIds.add(id);
+						}
+					});
+				}
+
+				// Check and aggregate features (capability + defaultFeatureIds)
+				if (model.info.meta.defaultFeatureIds) {
+					if (
+						model.info.meta.capabilities?.web_search &&
+						model.info.meta.defaultFeatureIds.includes('web_search')
+					) {
+						features.web_search = true;
+					}
+					if (
+						model.info.meta.capabilities?.image_generation &&
+						model.info.meta.defaultFeatureIds.includes('image_generation')
+					) {
+						features.image_generation = true;
+					}
+					if (
+						model.info.meta.capabilities?.code_interpreter &&
+						model.info.meta.defaultFeatureIds.includes('code_interpreter')
+					) {
+						features.code_interpreter = true;
+					}
+				}
+			}
 		}
 
-		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-		if (model) {
-			// Set Default Tools
-			if (model?.info?.meta?.toolIds) {
-				selectedToolIds = [
-					...new Set(
-						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
-					)
-				];
-			}
+		selectedToolIds = [...allToolIds];
+		selectedFilterIds = [...allFilterIds];
 
-			// Set Default Filters (Toggleable only)
-			if (model?.info?.meta?.defaultFilterIds) {
-				selectedFilterIds = model.info.meta.defaultFilterIds.filter((id) =>
-					model?.filters?.find((f) => f.id === id)
-				);
-			}
-
-			// Set Default Features
-			if (model?.info?.meta?.defaultFeatureIds) {
-				if (model.info?.meta?.capabilities?.['image_generation']) {
-					imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
-				}
-
-				if (model.info?.meta?.capabilities?.['web_search']) {
-					webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
-				}
-
-				if (model.info?.meta?.capabilities?.['code_interpreter']) {
-					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
-				}
-			}
-		}
+		webSearchEnabled = features.web_search;
+		imageGenerationEnabled = features.image_generation;
+		codeInterpreterEnabled = features.code_interpreter;
 	};
 
 	const showMessage = async (message, ignoreSettings = false) => {
