@@ -3,6 +3,7 @@ import copy
 import hashlib
 import json
 import logging
+import re
 import time
 from typing import Optional, List, Dict
 
@@ -514,21 +515,27 @@ def filter_code_blocks(text: str) -> str:
 
 def convert_openai_messages_to_gemini_contents(messages: list, filter_code: bool = True) -> list:
     """
-    Convert OpenAI-format messages to Gemini contents format.
+    Convert OpenAI-format messages to Gemini contents format with multimodal support.
 
     OpenAI format:
         [
             {"role": "system", "content": "..."},  # Excluded (use system_instruction)
             {"role": "user", "content": "Hello"},
             {"role": "assistant", "content": "Hi there"},
-            {"role": "user", "content": "How are you?"}
+            {"role": "user", "content": [
+                {"type": "text", "text": "What's in this image?"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}
+            ]}
         ]
 
     Gemini format:
         [
             {"role": "user", "parts": [{"text": "Hello"}]},
             {"role": "model", "parts": [{"text": "Hi there"}]},
-            {"role": "user", "parts": [{"text": "How are you?"}]}
+            {"role": "user", "parts": [
+                {"text": "What's in this image?"},
+                {"inline_data": {"mime_type": "image/png", "data": "..."}}
+            ]}
         ]
 
     Args:
@@ -551,28 +558,78 @@ def convert_openai_messages_to_gemini_contents(messages: list, filter_code: bool
         # Convert role: assistant → model
         gemini_role = "model" if role == "assistant" else role
 
-        # Extract text content
+        # Build parts array (multimodal)
+        parts = []
+
         if isinstance(content, str):
+            # Simple text content
             text = content
+            if filter_code and gemini_role == "model":
+                text = filter_code_blocks(text)
+            if text:
+                parts.append({"text": text})
+
         elif isinstance(content, list):
-            # Handle multimodal content - extract text parts
-            text_parts = []
+            # Multimodal content - handle text, images, and other types
             for part in content:
-                if isinstance(part, dict) and part.get("type") == "text":
-                    text_parts.append(part.get("text", ""))
-            text = "\n".join(text_parts) if text_parts else ""
+                if not isinstance(part, dict):
+                    continue
+
+                part_type = part.get("type")
+
+                if part_type == "text":
+                    # Text part
+                    text = part.get("text", "")
+                    if filter_code and gemini_role == "model":
+                        text = filter_code_blocks(text)
+                    if text:
+                        parts.append({"text": text})
+
+                elif part_type == "image_url":
+                    # Image part - convert to Gemini format
+                    image_url_data = part.get("image_url", {})
+                    url = image_url_data.get("url", "")
+
+                    if url.startswith("data:"):
+                        # Data URL format: data:image/png;base64,iVBORw0KGgo...
+                        try:
+                            # Extract mime type and base64 data
+                            match = re.match(r'data:([^;]+);base64,(.+)', url)
+                            if match:
+                                mime_type = match.group(1)
+                                base64_data = match.group(2)
+
+                                # Add inline_data part for Gemini
+                                parts.append({
+                                    "inline_data": {
+                                        "mime_type": mime_type,
+                                        "data": base64_data
+                                    }
+                                })
+                                log.info(f"[GEMINI-MULTIMODAL] Converted image_url to inline_data: {mime_type}")
+                            else:
+                                log.warning(f"[GEMINI-MULTIMODAL] Malformed data URL, skipping image")
+                        except Exception as e:
+                            log.error(f"[GEMINI-MULTIMODAL] Failed to parse data URL: {e}")
+
+                    elif url.startswith("http"):
+                        # HTTP URL - not yet supported
+                        log.warning(f"[GEMINI-MULTIMODAL] HTTP image URLs not yet supported: {url[:100]}...")
+
+                    else:
+                        log.warning(f"[GEMINI-MULTIMODAL] Unknown image URL format: {url[:50]}...")
+
         else:
+            # Fallback to string conversion
             text = str(content)
+            if text:
+                parts.append({"text": text})
 
-        # Filter code blocks from assistant messages to prevent confusion
-        # (user messages are kept as-is to preserve intent)
-        if filter_code and gemini_role == "model":
-            text = filter_code_blocks(text)
-
-        if text:  # Only add non-empty messages
+        # Add to contents if we have parts
+        if parts:
             contents.append({
                 "role": gemini_role,
-                "parts": [{"text": text}]
+                "parts": parts
             })
 
     return contents

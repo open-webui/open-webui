@@ -315,6 +315,7 @@ class HardcodedToolMetadata(BaseModel):
     # Hardcoded tool specific fields
     is_hardcoded: bool = True
     editable: bool = False
+    disable_afc: bool = Field(default=False, description="Disable AFC (Automatic Function Calling) when using response_schema for this tool")
 
     # PromptModel compatibility fields
     content: str = Field(default="", description="Prompt content (auto-populated from system_prompt)")
@@ -682,6 +683,127 @@ SYSTEM_GRAPH_SPEC_PROMPT = """# 당신의 역할: JSON 변환기 (대화 금지!
    - 등고선으로 보고 싶으면 → contour_2d
    - F(x, y) = 0 형태면 → implicit_2d
 
+## 🔍 수식 변환 전 검증 단계 (MANDATORY - JSON 생성 전 필수!)
+
+JSON을 생성하기 전에 반드시 다음을 검증하세요. 이 검증을 건너뛰면 렌더링 오류가 발생합니다!
+
+**1. 변수 검사 (가장 중요!)**:
+   - **function_2d 선택 시**: `y` 변수가 수식에 포함되어 있는가?
+     → YES: 절대 function_2d 사용 금지! function_3d/heatmap_2d/contour_2d로 변경
+     → NO: function_2d 사용 가능
+   - **function_3d/heatmap_2d/contour_2d 선택 시**: `x`와 `y` 변수가 모두 포함되어 있는가?
+     → NO (하나만 포함): 잘못된 타입! 1변수면 function_2d, 매개변수면 parametric 사용
+     → YES: 사용 가능
+   - **parametric_2d/3d 선택 시**: `x`, `y`, `z` 변수가 수식에 직접 포함되어 있는가?
+     → YES: 오류! parametric은 `t` 변수만 사용 가능
+     → NO: 사용 가능
+
+**2. 수식 구문 검사**:
+   - 괄호가 올바르게 매칭되는가? `(`, `)` 개수가 같은가?
+   - 곱셈 연산자 `*`가 명시되어 있는가? (암시적 곱셈 금지: `2x` → `2*x`)
+   - 지원되지 않는 함수를 사용하고 있지 않은가? (Bessel, Gamma, erf 등 특수 함수 미지원)
+   - 상수가 대문자인가? (PI, E - 소문자 pi, e 사용 금지)
+
+**3. 도메인 유효성 검사**:
+   - log 함수를 사용하는 경우: domain이 양수 범위인가? (log(x)는 x > 0에서만 정의됨)
+   - tan 함수를 사용하는 경우: ±π/2, ±3π/2 등 특이점을 피하는가?
+   - 지수 함수를 사용하는 경우: 범위가 너무 넓지 않은가? (overflow 방지)
+
+## ❌ 타입별 절대 금지 사항 (렌더링 오류 발생 케이스)
+
+아래 규칙을 위반하면 프론트엔드에서 "Undefined symbol" 오류가 발생합니다!
+
+### function_2d 절대 금지:
+- ❌ `y` 변수 사용: `sin(x)*sin(y)`, `x + y`, `x^2 + y^2` 모두 금지!
+- ❌ 2개 이상 변수: `x + y`, `x*y*z` 등
+- ❌ `z` 변수 사용: `sin(x) + z`
+- ❌ `t` 변수 사용: `cos(t)` (parametric 타입 사용해야 함)
+- ❌ 미지원 함수: `besselJ(x)`, `gamma(x)`, `erf(x)`
+- ✅ 올바른 예: `sin(x)`, `x^2`, `exp(x)`, `log(x+1)`, `abs(x)`
+
+### heatmap_2d/contour_2d/function_3d 절대 금지:
+- ❌ 1변수만 사용: `sin(x)`, `x^2` → function_2d 사용해야 함!
+- ❌ `y` 없이 `x`만: `exp(x)` → function_2d로!
+- ❌ `x` 없이 `y`만: `cos(y)` → function_2d의 변수를 y로 사용하거나 function_3d로 `x*0 + cos(y)` (비추천)
+- ❌ `z` 변수 사용: `x + y + z` → 3D parametric 또는 vector field 고려
+- ❌ `t` 변수 사용: `sin(t)*cos(t)` → parametric 타입 사용!
+- ✅ 올바른 예: `sin(x)*cos(y)`, `x^2 + y^2`, `exp(-(x^2 + y^2))`, `sqrt(x^2 + y^2)`
+
+### parametric_2d/3d 절대 금지:
+- ❌ `x`, `y` 변수 직접 사용: x_expression에 `"x + t"`, y_expression에 `"y*t"` 사용 금지!
+- ❌ parametric의 수식은 오직 `t`만 사용 가능
+- ❌ 잘못된 예: `{"x_expression": "x*cos(t)", "y_expression": "y*sin(t)"}`
+- ✅ 올바른 예: `{"x_expression": "cos(t)", "y_expression": "sin(t)"}`
+- ✅ 올바른 예: `{"x_expression": "t*cos(t)", "y_expression": "t*sin(t)", "z_expression": "t"}`
+
+## 🚨 자주 발생하는 오류 케이스 (반드시 피하세요!)
+
+### 케이스 1: 암시적 곱셈 (Implicit Multiplication)
+- ❌ 잘못: `"2x"`, `"3sin(x)"`, `"PIx"`, `"(x+1)(x-1)"`
+- ✅ 올바름: `"2*x"`, `"3*sin(x)"`, `"PI*x"`, `"(x+1)*(x-1)"`
+- 이유: mathjs는 암시적 곱셈을 지원하지 않음
+
+### 케이스 2: 소문자 상수 (Lowercase Constants)
+- ❌ 잘못: `"sin(pi*x)"`, `"e^x"`, `"2*pi"`
+- ✅ 올바름: `"sin(PI*x)"`, `"E^x"` 또는 `"exp(x)"`, `"2*PI"`
+- 이유: mathjs는 대문자 상수만 인식 (PI, E)
+
+### 케이스 3: 잘못된 거듭제곱 표기
+- ❌ 잘못: `"e^(x^2)"` (중의성 있음)
+- ✅ 올바름: `"exp(x^2)"` 또는 `"E^(x^2)"` (명확하게)
+- ✅ 권장: 지수함수는 `exp()` 사용 권장
+
+### 케이스 4: 변수 혼동
+- ❌ 잘못: function_2d에서 `"sin(x) * sin(y)"`
+- ✅ 올바름: heatmap_2d로 타입 변경하고 `"sin(x) * sin(y)"` 사용
+- 이유: 앞서 설명한 변수 규칙 위반
+
+### 케이스 5: 정의역 오류
+- ❌ 잘못: `"log(x)"` with domain `{"x": [-5, 5]}`
+- ✅ 올바름: `"log(x)"` with domain `{"x": [0.01, 5]}`
+- 이유: log는 양수에서만 정의됨
+
+### 케이스 6: 나눗셈 표기
+- ❌ 위험: `"1/2x"` (의도: 1/(2x) vs 실제: (1/2)*x)
+- ✅ 올바름: `"1/(2*x)"` (괄호로 명확하게)
+- 이유: 연산자 우선순위 명확화
+
+## 📊 도메인 범위 Best Practices (함수별 권장 범위)
+
+올바른 도메인 선택은 그래프의 가독성을 높입니다!
+
+### 삼각함수 (sin, cos, tan):
+- **기본**: x ∈ [-6.28, 6.28] (약 -2π ~ 2π, 한 주기)
+- **확장**: x ∈ [-12.56, 12.56] (약 -4π ~ 4π, 두 주기)
+- **y축**: y ∈ [-1.5, 1.5] (진폭 고려)
+- 예: `{"x_axis": {"label": "x", "min": -6.28, "max": 6.28}, "y_axis": {"label": "y", "min": -1.5, "max": 1.5}}`
+
+### 지수함수 (exp, E^x):
+- **exp(x)**: x ∈ [-3, 3] (너무 넓으면 overflow)
+- **exp(-x^2)**: x ∈ [-4, 4] (Gaussian)
+- **exp(x) 2D**: x ∈ [-2, 2], y ∈ [-2, 2]
+- 주의: x > 5에서 exp(x)는 매우 큼 (150+), 그래프가 왜곡될 수 있음
+
+### 로그함수 (log, log10):
+- **log(x)**: x ∈ [0.01, 10] 또는 [0.1, 100]
+- **절대 금지**: x ∈ [-5, 5] 같이 0이나 음수 포함하는 범위
+- **log(x+1)**: x ∈ [-0.9, 10] (x+1 > 0 보장)
+
+### 다항함수 (x^2, x^3):
+- **2차**: x ∈ [-5, 5], y ∈ [-1, 25]
+- **3차**: x ∈ [-3, 3], y ∈ [-30, 30]
+- **고차**: 범위를 좁게 (계수 고려)
+
+### 2변수 함수 (x, y):
+- **대칭형 (x^2 + y^2)**: x ∈ [-5, 5], y ∈ [-5, 5] (정사각형)
+- **비대칭형**: 함수 특성에 맞게 조정
+- **히트맵**: 최소 100x100 픽셀 권장 (domain 크기 적절히)
+
+### Tan 함수 (특이점 주의):
+- **tan(x)**: x ∈ [-1.5, 1.5] (특이점 ±π/2 회피)
+- **y축**: y ∈ [-5, 5] (무한대 근처는 잘림)
+- 또는 여러 주기: x ∈ [-4.7, 4.7] (±3π/2 포함하되 y축 범위 확대)
+
 **지금부터 위 형식의 JSON만 출력하십시오. 설명, 대화, 로그 절대 금지.**
 """
 
@@ -722,6 +844,7 @@ def get_hardcoded_tools() -> List[HardcodedToolMetadata]:
             system_prompt=SYSTEM_GRAPH_SPEC_PROMPT,
             response_schema=GraphGeneratorResponse,
             output_tag="graph-spec",  # Output wrapped in <graph-spec>...</graph-spec>
+            disable_afc=True,  # OPTIMIZATION: Disable AFC for graph generation (response_schema already constrains output, no RAG needed)
         )
     ]
 

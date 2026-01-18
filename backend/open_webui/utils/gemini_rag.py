@@ -325,7 +325,8 @@ class GeminiRAGService:
         system_instruction: Optional[str] = None,
         cache_stage: Optional[str] = None,
         cache_strategy: str = "auto",
-        response_schema: Optional[type] = None
+        response_schema: Optional[type] = None,
+        disable_afc: bool = False
     ) -> Dict[str, Any]:
         """
         RAG 쿼리 실행 (문서 검색 + 응답 생성)
@@ -344,6 +345,9 @@ class GeminiRAGService:
             cache_strategy: Cache strategy - "auto" | "force" | "off" (default: "auto")
             response_schema: Pydantic model for structured JSON output (hardcoded tools).
                            If provided, response will be in JSON format matching the schema.
+            disable_afc: Disable AFC (Automatic Function Calling) when response_schema is used.
+                        Set to True for tools that don't need RAG (e.g., graph generation).
+                        Default: False (AFC enabled for tools that may need RAG).
 
         Returns:
             응답 결과
@@ -446,6 +450,13 @@ class GeminiRAGService:
                     config.response_schema = response_schema
                     log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema}")
 
+                # OPTIMIZATION: Disable AFC if tool specifically requests it (e.g., graph generation)
+                # For tools like graph generation: response_schema already constrains output, AFC is redundant and slows down
+                # For other tools: They may need AFC for RAG (file_search), so keep it enabled
+                if disable_afc:
+                    config.automatic_function_calling = types.AutomaticFunctionCallingConfig(disable=True)
+                    log.info("[OPTIMIZATION] AFC disabled for this tool (disable_afc=True, faster JSON generation)")
+
             # Use cached content if available, otherwise use system_instruction
             # CRITICAL: When using cached_content, do NOT set system_instruction
             if cached_content_name:
@@ -503,7 +514,8 @@ class GeminiRAGService:
         temperature: float = 0.2,
         system_instruction: Optional[str] = None,
         cache_stage: Optional[str] = None,
-        response_schema: Optional[type] = None
+        response_schema: Optional[type] = None,
+        disable_afc: bool = False
     ):
         """
         RAG 쿼리 실행 (스트리밍 모드)
@@ -521,6 +533,9 @@ class GeminiRAGService:
                         If provided, system_instruction will be globally cached.
             response_schema: Pydantic model for structured JSON output (hardcoded tools).
                            If provided, response will be in JSON format matching the schema.
+            disable_afc: Disable AFC (Automatic Function Calling) when response_schema is used.
+                        Set to True for tools that don't need RAG (e.g., graph generation).
+                        Default: False (AFC enabled for tools that may need RAG).
 
         Yields:
             응답 텍스트 청크
@@ -612,6 +627,13 @@ class GeminiRAGService:
                 else:
                     config.response_schema = response_schema
                     log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema} (streaming)")
+
+                # OPTIMIZATION: Disable AFC if tool specifically requests it (e.g., graph generation)
+                # For tools like graph generation: response_schema already constrains output, AFC is redundant and slows down
+                # For other tools: They may need AFC for RAG (file_search), so keep it enabled
+                if disable_afc:
+                    config.automatic_function_calling = types.AutomaticFunctionCallingConfig(disable=True)
+                    log.info("[OPTIMIZATION] AFC disabled for this tool (disable_afc=True, faster JSON generation - streaming)")
 
             # Use cached content if available
             if cached_content_name:
