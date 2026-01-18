@@ -2594,7 +2594,7 @@ async def process_chat_response(
                             log.info(f"[MIDDLEWARE] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
 
                             # Create LLM call function for inline tool execution
-                            async def make_inline_llm_call(system_prompt: str, user_message: str, use_fast_model: bool = False, response_schema: Optional[type] = None, disable_afc: bool = False, force_model: Optional[str] = None) -> dict:
+                            async def make_inline_llm_call(system_prompt: str, user_message: str, use_fast_model: bool = False, response_schema: Optional[type] = None, disable_afc: bool = False, force_model: Optional[str] = None, enable_hardcoded_tools: bool = False) -> dict:
                                 """
                                 Make a non-streaming LLM call for inline tool execution or recovery.
 
@@ -2606,6 +2606,7 @@ async def process_chat_response(
                                     response_schema: Optional Pydantic model for structured output (hardcoded tools)
                                     disable_afc: Disable AFC (Automatic Function Calling) for this tool (e.g., graph generation)
                                     force_model: Force specific Gemini model for this tool (e.g., 'gemini-2.5-flash-lite')
+                                    enable_hardcoded_tools: Enable Native Function Calling for Stage 1 (tool selection)
                                 """
                                 try:
                                     # Check if Gemini backend - use native SDK with caching
@@ -2652,9 +2653,59 @@ async def process_chat_response(
                                                 system_instruction=system_prompt,
                                                 cache_stage="tool_execution",  # Enable caching for tool prompts
                                                 response_schema=response_schema,  # For hardcoded tools with structured output
-                                                disable_afc=disable_afc  # Tool-specific AFC control
+                                                disable_afc=disable_afc,  # Tool-specific AFC control
+                                                enable_hardcoded_tools=enable_hardcoded_tools  # Native FC for Stage 1
                                             )
 
+                                            # Check for function_call (Native FC Stage 1)
+                                            if result.get("requires_tool_execution"):
+                                                fc = result.get("function_call")
+                                                if fc:
+                                                    tool_name = fc.get("name")
+                                                    tool_args = fc.get("arguments", {})
+
+                                                    log.info(f"[NATIVE FC] Function call detected: {tool_name}")
+                                                    log.info(f"[NATIVE FC] Arguments: {tool_args}")
+
+                                                    # Map function name to hardcoded tool
+                                                    from open_webui.utils.hardcoded_tools import get_hardcoded_tool_by_function_name
+                                                    hardcoded_tool = get_hardcoded_tool_by_function_name(tool_name)
+
+                                                    if hardcoded_tool:
+                                                        # Stage 2: Execute with full system_prompt + response_schema
+                                                        user_request = tool_args.get("user_request", user_message)
+
+                                                        log.info(f"[NATIVE FC] Executing Stage 2 for tool: {hardcoded_tool.command}")
+                                                        log.info(f"[NATIVE FC] User request: {user_request[:100]}...")
+                                                        log.info(f"[NATIVE FC] System prompt length: {len(hardcoded_tool.system_prompt)} chars")
+
+                                                        # Recursively call Stage 2 (no enable_hardcoded_tools, use full prompt)
+                                                        result2 = await asyncio.to_thread(
+                                                            service.query,
+                                                            question=user_request,
+                                                            store_names=[],
+                                                            model=hardcoded_tool.force_model or gemini_model,
+                                                            temperature=0.2,
+                                                            system_instruction=hardcoded_tool.system_prompt,
+                                                            cache_stage="tool_execution",
+                                                            response_schema=hardcoded_tool.response_schema,
+                                                            disable_afc=hardcoded_tool.disable_afc,
+                                                            enable_hardcoded_tools=False  # Stage 2: direct execution
+                                                        )
+
+                                                        if result2.get("success"):
+                                                            text = result2.get("text", "")
+                                                            log.info(f"[NATIVE FC] Stage 2 response: {len(text)} chars")
+                                                            return {"success": True, "text": text}
+                                                        else:
+                                                            error = result2.get("error", "Unknown error")
+                                                            log.error(f"[NATIVE FC] Stage 2 failed: {error}")
+                                                            return {"success": False, "error": error}
+                                                    else:
+                                                        log.error(f"[NATIVE FC] Unknown function name: {tool_name}")
+                                                        return {"success": False, "error": f"Unknown tool: {tool_name}"}
+
+                                            # Normal response (no function_call)
                                             if result.get("success"):
                                                 text = result.get("text", "")
                                                 log.info(f"[MIDDLEWARE] Gemini inline LLM response: {len(text)} chars")

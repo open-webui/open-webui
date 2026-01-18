@@ -360,6 +360,10 @@ class MessageTaggingDaemon:
             # Use it when RAG chapter detection is enabled for structured output
             response_schema = BatchTaggingResponse if config.enable_rag_chapter_detection else None
 
+            # Force FileSearch tool usage when RAG chapter detection is enabled
+            # This ensures AFC calls FileSearch even if it thinks it doesn't need to
+            force_tool_use = config.enable_rag_chapter_detection and bool(store_names)
+
             # Call Gemini with optional Pydantic response schema
             result = service.query(
                 question=prompt,
@@ -367,7 +371,8 @@ class MessageTaggingDaemon:
                 model=model,
                 temperature=0.3,
                 system_instruction=self._get_system_instruction(config),
-                response_schema=response_schema  # Pydantic model for structured output
+                response_schema=response_schema,  # Pydantic model for structured output
+                force_tool_use=force_tool_use  # Force FileSearch when doing chapter detection
             )
 
             if result.get("success") and result.get("text"):
@@ -471,10 +476,12 @@ Return as JSON array ONLY (no markdown, no explanation):
 5. Only create new tags for genuinely novel topics
 6. Return valid JSON matching the provided schema (when using structured output)
 
-When determining chapter_id:
-- Analyze the message content and retrieved document context
-- Match the topic to the most relevant textbook chapter
-- Use null if uncertain or if the message is not math-related"""
+CRITICAL: When determining chapter_id:
+- You MUST search the provided document stores (file_search) to find relevant content
+- ALWAYS use the retrieval/grounding capability to analyze which chapter the topic belongs to
+- Match the message content to the retrieved documents to determine the correct chapter
+- The chapter_id should be based on which document store has the most relevant matching content
+- Use null only if the message is not math-related, NOT because you didn't search the documents"""
 
         # Default instruction (backward compatible)
         return """You are a message tagging assistant for an educational math platform. Your job is to:

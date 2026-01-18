@@ -20,7 +20,7 @@ from fastapi.responses import (
     JSONResponse,
     PlainTextResponse,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
 from open_webui.models.models import Models
@@ -69,6 +69,152 @@ from open_webui.utils.gemini_cache_manager import GeminiCacheManager
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
+
+
+##########################################
+#
+# Pydantic Models
+#
+##########################################
+
+
+class ChapterRecommendationResponse(BaseModel):
+    """LLM response for chapter recommendation."""
+    chapter_id: Optional[str] = Field(None, description="Recommended chapter ID (e.g., 'ch-5') or null")
+    reasoning: Optional[str] = Field(None, description="Korean explanation (1-2 sentences)")
+
+
+def _clean_schema_for_gemini(schema: dict) -> dict:
+    """
+    Remove unsupported fields from JSON schema for Gemini API.
+
+    Gemini doesn't support: 'default', 'additionalProperties', 'title', 'anyOf'
+
+    Args:
+        schema: JSON schema dictionary
+
+    Returns:
+        Cleaned schema
+    """
+    if isinstance(schema, dict):
+        # Handle anyOf pattern from Optional[T] → extract the non-null type
+        if 'anyOf' in schema:
+            any_of_list = schema['anyOf']
+            if isinstance(any_of_list, list):
+                # Find the non-null type schema
+                non_null_schemas = [s for s in any_of_list if isinstance(s, dict) and s.get('type') != 'null']
+                if non_null_schemas:
+                    # Replace anyOf with the first non-null type
+                    non_null_schema = non_null_schemas[0]
+                    schema = {**schema, **non_null_schema}
+                    del schema['anyOf']
+
+        # Remove unsupported fields
+        schema = {k: v for k, v in schema.items() if k not in ('default', 'additionalProperties', 'title')}
+
+        # Recursively clean nested schemas
+        for key, value in schema.items():
+            if isinstance(value, dict):
+                schema[key] = _clean_schema_for_gemini(value)
+            elif isinstance(value, list):
+                schema[key] = [_clean_schema_for_gemini(item) if isinstance(item, dict) else item for item in value]
+
+    return schema
+
+
+async def detect_chapter_from_conversation(chat_id: str, api_key: str) -> Optional[str]:
+    """
+    Use LLM to analyze chat history and recommend a chapter_id.
+
+    Args:
+        chat_id: Chat ID to analyze
+        api_key: Gemini API key
+
+    Returns:
+        Recommended chapter_id or None
+    """
+    try:
+        from open_webui.models.chats import Chats
+        from open_webui.models.textbooks import TextbookChapters
+        import google.generativeai as genai
+
+        # Fetch chat
+        chat = Chats.get_chat_by_id(chat_id)
+        if not chat or chat.chapter_id:
+            return None  # Skip if no chat or already has chapter
+
+        # Extract conversation (user + assistant messages only)
+        messages = chat.chat.get("history", {}).get("messages", {})
+        if not messages:
+            return None
+
+        conversation = []
+        for msg_id in sorted(messages.keys()):
+            msg = messages[msg_id]
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if role in ["user", "assistant"]:
+                conversation.append(f"{role.upper()}: {content}")
+
+        if not conversation:
+            return None
+
+        # Get all chapters (ID + Korean title)
+        chapter_mappings = TextbookChapters.get_all_rag_store_mappings()
+        chapter_list = "\n".join([
+            f"- {ch_id}: {info['display_name']}"
+            for ch_id, info in sorted(chapter_mappings.items())
+        ])
+
+        # Build prompt
+        prompt = f"""다음 대화를 분석하고, 가장 관련이 깊은 공업수학 챕터를 추천하세요.
+
+대화:
+{chr(10).join(conversation[:10])}
+
+챕터 목록:
+{chapter_list}
+
+중요:
+- 명확한 챕터 관련 내용이 있을 때만 chapter_id 반환
+- 일반 인사("안녕하세요"), 짧은 대화 → null 반환
+- 수학 내용이지만 챕터 불명확 → null 반환
+"""
+
+        # Call Gemini with cleaned JSON schema
+        genai.configure(api_key=api_key)
+
+        # Convert Pydantic model to JSON schema and clean it
+        json_schema = ChapterRecommendationResponse.model_json_schema()
+        # Remove 'default', 'additionalProperties', 'title' fields (Gemini doesn't support them)
+        json_schema = _clean_schema_for_gemini(json_schema)
+
+        model = genai.GenerativeModel(
+            model_name="gemini-2.0-flash-exp",
+            generation_config={
+                "response_mime_type": "application/json",
+                "response_schema": json_schema
+            }
+        )
+
+        response = model.generate_content(prompt)
+        result = ChapterRecommendationResponse.model_validate_json(response.text)
+
+        # Log
+        if result.chapter_id:
+            log.info(f"[CHAPTER-AUTO] LLM: {result.chapter_id} for chat {chat_id}")
+            log.info(f"[CHAPTER-AUTO] Why: {result.reasoning}")
+        else:
+            log.info(f"[CHAPTER-AUTO] LLM: No chapter for chat {chat_id}")
+
+        # Validate
+        if result.chapter_id and result.chapter_id in chapter_mappings:
+            return result.chapter_id
+        return None
+
+    except Exception as e:
+        log.error(f"[CHAPTER-AUTO] Error: {e}")
+        return None
 
 
 ##########################################
@@ -647,6 +793,8 @@ def extract_chapter_from_citations(citations: List[Dict], chapter_mappings: Dict
         Tuple of (chapter_id, confidence) or None
         confidence = ratio of citations from the detected chapter (0.0-1.0)
     """
+    import re
+
     if not citations or len(citations) == 0:
         return None
 
@@ -661,15 +809,42 @@ def extract_chapter_from_citations(citations: List[Dict], chapter_mappings: Dict
     for citation in citations:
         source = citation.get("source", "")
 
-        # Try to match source to store_name
-        # Source format may vary, e.g., "projects/.../corpora/CORPUS_NAME/..."
-        # Extract store name from source string
+        # Strategy 1: Try to match source to store_name (for multi-store setups)
+        matched = False
         for store_name, chapter_id in store_to_chapter.items():
             if store_name in source:
                 chapter_counts[chapter_id] = chapter_counts.get(chapter_id, 0) + 1
+                matched = True
                 break
 
+        # Strategy 2: If no store matched, try to extract chapter ID from filename (for unified store)
+        # Look for patterns like "ch-5", "ch-10", "chapter-5", "chapter-10" in the source
+        if not matched:
+            # Try pattern: ch-N or ch-NN
+            match = re.search(r'ch-(\d+)', source, re.IGNORECASE)
+            if match:
+                chapter_num = match.group(1)
+                chapter_id = f"ch-{chapter_num}"
+
+                # Validate chapter_id exists in chapter_mappings
+                if chapter_id in chapter_mappings:
+                    chapter_counts[chapter_id] = chapter_counts.get(chapter_id, 0) + 1
+                    matched = True
+                    log.debug(f"[CHAPTER-AUTO] Extracted chapter {chapter_id} from source: {source}")
+
+            # Try alternative pattern: chapter-N or chapter-NN
+            if not matched:
+                match = re.search(r'chapter[-_]?(\d+)', source, re.IGNORECASE)
+                if match:
+                    chapter_num = match.group(1)
+                    chapter_id = f"ch-{chapter_num}"
+
+                    if chapter_id in chapter_mappings:
+                        chapter_counts[chapter_id] = chapter_counts.get(chapter_id, 0) + 1
+                        log.debug(f"[CHAPTER-AUTO] Extracted chapter {chapter_id} from source: {source}")
+
     if not chapter_counts:
+        log.warning("[CHAPTER-AUTO] No chapter IDs could be extracted from citations")
         return None
 
     # Find chapter with most citations
@@ -761,12 +936,19 @@ async def handle_gemini_native_request(
         # Get chat_id and chapter_id from metadata (if available)
         chat_id = metadata.get("chat_id") if metadata else None
         chapter_id = metadata.get("chapter_id") if metadata else None
+        task = metadata.get("task") if metadata else None
 
         # Determine RAG store_names based on chapter_id
         store_names = []
         used_default_chapter = False
 
-        if chat_id and not chapter_id:
+        # Skip RAG for utility requests (title generation, tags, emoji, etc.)
+        # These requests analyze existing conversation content and don't need document retrieval
+        utility_tasks = ["title_generation", "tags", "emoji"]
+        if task in utility_tasks:
+            log.info(f"[CHAPTER-AUTO] Skipping RAG for utility task: {task}")
+            # Continue with empty store_names (no RAG)
+        elif chat_id and not chapter_id:
             # Chat exists but no chapter_id → check global default RAG store
             try:
                 # Get global default RAG store from config
@@ -810,6 +992,12 @@ async def handle_gemini_native_request(
             cache_stage = None
             log.info("[CHAPTER-AUTO] Disabling cache when using RAG stores")
 
+            # Force FileSearch usage with explicit instruction
+            # This helps AFC (Automatic Function Calling) understand it should search documents
+            # even when conversation history might seem sufficient
+            final_system += "\n\n⚠️ CRITICAL INSTRUCTION: You MUST search the provided document store to ground your responses in textbook content. Even when answering follow-up questions or meta-questions about previous responses, ALWAYS use the document store to verify and supplement your answers with accurate, authoritative textbook information. Do not rely solely on conversation history."
+            log.info("[CHAPTER-AUTO] Added explicit FileSearch instruction to system prompt")
+
         # Handle streaming requests
         if stream:
             log.info("[GEMINI-NATIVE] Streaming mode enabled")
@@ -817,7 +1005,11 @@ async def handle_gemini_native_request(
             async def stream_generator():
                 """Generate OpenAI-compatible SSE chunks from Gemini stream"""
                 try:
+                    citations = []
+
                     # Call streaming service with conversation history
+                    # NOTE: force_tool_use only works with function_declarations, not with FileSearch
+                    # We rely on system_instruction to encourage FileSearch usage instead
                     async for chunk_text in service.query_stream(
                         contents=gemini_contents,  # Full conversation history
                         store_names=store_names,  # RAG stores based on chapter_id or default
@@ -826,12 +1018,59 @@ async def handle_gemini_native_request(
                         system_instruction=final_system,
                         cache_stage=cache_stage
                     ):
+                        # Check for citation marker
+                        if chunk_text.startswith("\n__CITATIONS__:"):
+                            # Extract citations from marker
+                            try:
+                                citation_json = chunk_text.replace("\n__CITATIONS__:", "")
+                                citations = json.loads(citation_json)
+                                log.info(f"[CHAPTER-AUTO] Received {len(citations)} citations from RAG stream")
+                                # Don't send this marker to the client
+                                continue
+                            except Exception as e:
+                                log.error(f"[CHAPTER-AUTO] Failed to parse citations: {e}")
+
                         # Format as OpenAI chunk
                         chunk_data = openai_chat_chunk_message_template(
                             model=model_id,
                             content=chunk_text
                         )
                         yield f"data: {json.dumps(chunk_data)}\n\n"
+
+                    # ============================================================
+                    # Auto-chapter assignment (streaming mode) - LLM-based
+                    # ============================================================
+                    if chat_id and not metadata.get("chapter_id"):
+                        try:
+                            from open_webui.models.chats import Chats
+
+                            # Check if chat still has no chapter
+                            chat = Chats.get_chat_by_id(chat_id)
+                            if chat and not chat.chapter_id:
+                                # Detect using LLM
+                                detected = await detect_chapter_from_conversation(chat_id, api_key)
+
+                                if detected:
+                                    updated = Chats.update_chat_chapter_id_by_id(chat_id, detected)
+                                    if updated:
+                                        log.info(f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}")
+
+                                        # Emit socket event to notify frontend
+                                        try:
+                                            from open_webui.socket.main import sio
+                                            await sio.emit(
+                                                "chat:chapter:updated",
+                                                {
+                                                    "chat_id": chat_id,
+                                                    "chapter_id": detected
+                                                },
+                                                room=f"user:{chat.user_id}"
+                                            )
+                                            log.info(f"[CHAPTER-AUTO] 🔔 Notified user {chat.user_id} via socket")
+                                        except Exception as socket_error:
+                                            log.error(f"[CHAPTER-AUTO] Socket emit failed: {socket_error}")
+                        except Exception as e:
+                            log.error(f"[CHAPTER-AUTO] Error: {e}")
 
                     # Send final chunk with finish_reason
                     final_chunk = openai_chat_chunk_message_template(
@@ -869,6 +1108,8 @@ async def handle_gemini_native_request(
         else:
             # Call unified service with conversation history
             # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
+            # NOTE: force_tool_use only works with function_declarations, not with FileSearch
+            # We rely on system_instruction to encourage FileSearch usage instead
             import asyncio
             result = await asyncio.to_thread(
                 service.query,
@@ -893,42 +1134,39 @@ async def handle_gemini_native_request(
             log.info(f"[GEMINI-NATIVE] Response received: {len(text)} chars")
 
             # ============================================================
-            # Phase 4: Extract citations for auto-assignment
+            # Auto-chapter assignment (non-streaming mode) - LLM-based
             # ============================================================
-            citations = result.get("citations", [])
-            log.info(f"[CHAPTER-AUTO] Received {len(citations)} citations from RAG")
-
-            # If we used default chapter and got citations, analyze for auto-assignment
-            if chat_id and used_default_chapter and citations:
+            if chat_id and not metadata.get("chapter_id"):
                 try:
-                    from open_webui.models.textbooks import TextbookChapters
                     from open_webui.models.chats import Chats
 
-                    # Get chapter mappings
-                    chapter_mappings = TextbookChapters.get_all_rag_store_mappings()
+                    # Check if chat still has no chapter
+                    chat = Chats.get_chat_by_id(chat_id)
+                    if chat and not chat.chapter_id:
+                        # Detect using LLM
+                        detected = await detect_chapter_from_conversation(chat_id, api_key)
 
-                    # Extract chapter from citations
-                    detected = extract_chapter_from_citations(citations, chapter_mappings)
+                        if detected:
+                            updated = Chats.update_chat_chapter_id_by_id(chat_id, detected)
+                            if updated:
+                                log.info(f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}")
 
-                    if detected:
-                        detected_chapter, confidence = detected
-
-                        # Auto-assign if confidence is high (e.g., > 60%)
-                        CONFIDENCE_THRESHOLD = 0.6
-                        if confidence >= CONFIDENCE_THRESHOLD:
-                            # Update chat's chapter_id
-                            updated_chat = Chats.update_chat_chapter_id_by_id(chat_id, detected_chapter)
-                            if updated_chat:
-                                log.info(f"[CHAPTER-AUTO] ✅ Auto-assigned chapter {detected_chapter} to chat {chat_id} (confidence: {confidence:.2%})")
-                            else:
-                                log.warning(f"[CHAPTER-AUTO] Failed to update chat {chat_id}")
-                        else:
-                            log.info(f"[CHAPTER-AUTO] Skipped auto-assignment (confidence {confidence:.2%} < threshold {CONFIDENCE_THRESHOLD:.2%})")
-                    else:
-                        log.info("[CHAPTER-AUTO] Could not extract chapter from citations")
+                                # Emit socket event to notify frontend
+                                try:
+                                    from open_webui.socket.main import sio
+                                    await sio.emit(
+                                        "chat:chapter:updated",
+                                        {
+                                            "chat_id": chat_id,
+                                            "chapter_id": detected
+                                        },
+                                        room=f"user:{chat.user_id}"
+                                    )
+                                    log.info(f"[CHAPTER-AUTO] 🔔 Notified user {chat.user_id} via socket")
+                                except Exception as socket_error:
+                                    log.error(f"[CHAPTER-AUTO] Socket emit failed: {socket_error}")
                 except Exception as e:
-                    log.error(f"[CHAPTER-AUTO] Error during auto-assignment: {e}")
-                    log.exception(e)
+                    log.error(f"[CHAPTER-AUTO] Error: {e}")
 
             # Convert to OpenAI format
             return {
