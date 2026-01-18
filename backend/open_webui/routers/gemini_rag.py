@@ -508,15 +508,18 @@ async def query_rag(
     if should_use_tool_gating(tool_prompts, body.enable_tool_gating):
         log.info("[GEMINI RAG] Using tool gating (two-stage)")
 
-        # Look up model configuration to get tool_gating_model
+        # Look up model configuration to get tool_gating_model and cache_strategy
         tool_gating_model = None
+        cache_strategy = "auto"  # Default
         model_config = Models.get_model_by_id(body.model)
         if model_config and model_config.meta:
             tool_gating_model = model_config.meta.tool_gating_model
+            cache_strategy = model_config.meta.cache_strategy or "auto"
             if tool_gating_model:
                 log.info(f"[GEMINI RAG] Found tool_gating_model in config: {tool_gating_model}")
             else:
                 log.info(f"[GEMINI RAG] No tool_gating_model configured, using main model for both stages")
+            log.info(f"[GEMINI RAG] Cache strategy: {cache_strategy}")
 
         tool_gating_result = execute_with_tool_gating(
             query=body.question,
@@ -527,6 +530,7 @@ async def query_rag(
             gating_model=tool_gating_model,
             cache_gating_stage="gating",  # Enable global caching for Stage 1
             cache_execution_stage="execution",  # Enable global caching for Stage 2
+            cache_strategy=cache_strategy,  # Cache strategy from model config
             store_names=body.store_names,
             model=body.model,
             temperature=body.temperature,
