@@ -100,7 +100,8 @@ class GeminiCacheManager:
         model_id: str,
         system_prompt: str,
         stage: str,
-        ttl_seconds: int = 3600
+        ttl_seconds: int = 3600,
+        cache_strategy: str = "auto"
     ) -> Optional[str]:
         """
         Get existing global cache or create new one.
@@ -116,6 +117,10 @@ class GeminiCacheManager:
             system_prompt: System prompt text (MUST be global/shared content)
             stage: "gating" or "execution"
             ttl_seconds: Cache TTL in seconds (default: 1 hour)
+            cache_strategy: Cache strategy - "auto" | "force" | "off" (default: "auto")
+                - "auto": Only cache if prompt >= 10,240 chars (no padding)
+                - "force": Always cache (add padding if needed)
+                - "off": Disable caching entirely
 
         Returns:
             CachedContent name if successful (e.g., "cachedContents/abc123"),
@@ -131,15 +136,41 @@ class GeminiCacheManager:
         # To be safe, use the highest known requirement across all models
         MIN_CHARS_FOR_CACHE = 10240  # 2048 tokens × 4.54 chars/token ≈ 9298, rounded to 10240
 
-        # Add padding if prompt is too short
-        padded_prompt = system_prompt
-        if len(system_prompt) < MIN_CHARS_FOR_CACHE:
-            padding_needed = MIN_CHARS_FOR_CACHE - len(system_prompt)
-            # Add invisible padding that LLM will ignore
-            # Use repeated whitespace and harmless text
-            padding = "\n\n" + "---\n" + "[CACHE_PADDING] " * (padding_needed // 17)
-            padded_prompt = system_prompt + padding
-            log.info(f"[CACHE] Added {len(padding)} chars padding to reach minimum (original: {len(system_prompt)} chars)")
+        # Handle cache strategy
+        # OFF: Disable caching entirely
+        if cache_strategy == "off":
+            log.info(f"[CACHE] Strategy is 'off', skipping cache")
+            return None
+
+        # AUTO: Only cache if prompt is long enough (no padding)
+        if cache_strategy == "auto":
+            if len(system_prompt) < MIN_CHARS_FOR_CACHE:
+                log.info(f"[CACHE] Strategy 'auto': Prompt too short ({len(system_prompt)} chars < {MIN_CHARS_FOR_CACHE}), skipping cache")
+                return None
+            # Prompt is long enough, use as-is
+            padded_prompt = system_prompt
+            log.info(f"[CACHE] Strategy 'auto': Prompt long enough ({len(system_prompt)} chars), using cache without padding")
+
+        # FORCE: Always cache (add padding if needed) - legacy behavior
+        elif cache_strategy == "force":
+            padded_prompt = system_prompt
+            if len(system_prompt) < MIN_CHARS_FOR_CACHE:
+                padding_needed = MIN_CHARS_FOR_CACHE - len(system_prompt)
+                # Add invisible padding that LLM will ignore
+                # Use repeated whitespace and harmless text
+                padding = "\n\n" + "---\n" + "[CACHE_PADDING] " * (padding_needed // 17)
+                padded_prompt = system_prompt + padding
+                log.info(f"[CACHE] Strategy 'force': Added {len(padding)} chars padding (original: {len(system_prompt)} chars)")
+            else:
+                log.info(f"[CACHE] Strategy 'force': Prompt already long enough ({len(system_prompt)} chars)")
+
+        # Unknown strategy: default to auto
+        else:
+            log.warning(f"[CACHE] Unknown strategy '{cache_strategy}', defaulting to 'auto'")
+            if len(system_prompt) < MIN_CHARS_FOR_CACHE:
+                log.info(f"[CACHE] Prompt too short ({len(system_prompt)} chars), skipping cache")
+                return None
+            padded_prompt = system_prompt
 
         cache_key = self.generate_cache_key(model_id, padded_prompt, stage)
 

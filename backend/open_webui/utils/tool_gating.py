@@ -18,11 +18,32 @@ import json
 import re
 import logging
 from typing import Optional, List, Tuple, Callable, Any
+from pydantic import BaseModel, Field
 
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS.get("MAIN", logging.INFO))
+
+
+# ============================================================
+# Pydantic Models for Tool Selection (Stage 1)
+# ============================================================
+
+class ToolSelectionResponse(BaseModel):
+    """Pydantic model for structured tool selection response from Gemini."""
+    need_tools: List[str] = Field(
+        default_factory=list,
+        description="List of tool commands needed (e.g., ['system-graph-spec', 'system-step-solver']). Empty list if no tools needed."
+    )
+    reason: Optional[str] = Field(
+        None,
+        description="Brief reason for tool selection or why no tools are needed"
+    )
+    answer: Optional[str] = Field(
+        None,
+        description="Direct answer if no tools are needed. Null if tools are required."
+    )
 
 
 def build_tool_catalog(tool_prompts: List[Any]) -> str:
@@ -70,23 +91,40 @@ def build_tool_selection_system_prompt(
 [IMPORTANT: Tool Selection Instructions]
 Before answering the user's question, determine if any of the above tools are needed.
 
-Respond with ONLY a raw JSON object (no formatting):
-- If tools needed: {{"need_tools": ["tool-command-1", "tool-command-2"], "reason": "brief reason"}}
-- If no tools needed: {{"need_tools": [], "answer": "Your direct answer here"}}
+CRITICAL RULES FOR TOOL SELECTION:
+1. If the user asks for graphs, visualizations, step-by-step solutions, or other tool-specific tasks:
+   - Set need_tools to the array of tool commands (e.g., ["system-graph-spec"])
+   - Set answer to null
+   - DO NOT write tool patterns like "(그래프: function_2d)" in the answer field
+
+2. If no tools are needed (simple questions, explanations):
+   - Set need_tools to empty array []
+   - Set answer to your direct text response
+   - DO NOT include tool patterns in the answer
+
+3. NEVER mix tool selection with direct answers:
+   - WRONG: {{"need_tools": [], "answer": "(그래프: parametric_curve)"}}
+   - CORRECT: {{"need_tools": ["system-graph-spec"], "answer": null, "reason": "user requested graph"}}
+
+Response format (JSON only):
+- If tools needed: {{"need_tools": ["tool-command-1"], "reason": "brief reason", "answer": null}}
+- If no tools needed: {{"need_tools": [], "answer": "Your direct answer here", "reason": "simple question"}}
 
 CRITICAL OUTPUT FORMAT RULES:
 1. Output ONLY the raw JSON object starting with {{ and ending with }}
 2. Do NOT wrap in markdown code blocks (no ```json or ```)
 3. Do NOT add any text before or after the JSON
-4. Start your response directly with the opening brace {{"""
+4. Start your response directly with the opening brace {{
+5. NEVER put tool usage patterns like "(그래프: xxx)" in the answer field"""
 
 
 def parse_tool_selection_response(response: str) -> Tuple[List[str], Optional[str]]:
     """
     Parse LLM response from Stage 1 to extract tool selection.
+    Supports both Pydantic-structured responses and plain JSON.
 
     Args:
-        response: Raw LLM response string
+        response: Raw LLM response string (JSON format)
 
     Returns:
         Tuple of (selected_tools, direct_answer)
@@ -95,7 +133,18 @@ def parse_tool_selection_response(response: str) -> Tuple[List[str], Optional[st
         - If parsing fails: return ([], response) to treat as direct answer
     """
     try:
-        # Try to extract JSON from response
+        # First, try Pydantic validation (if response_schema was used)
+        try:
+            from pydantic import ValidationError
+            selection = ToolSelectionResponse.model_validate_json(response)
+            tools = selection.need_tools or []
+            answer = selection.answer
+            log.info(f"[TOOL GATING] Pydantic parsing succeeded - tools: {tools}, has_answer: {answer is not None}")
+            return (tools, answer)
+        except (ValidationError, json.JSONDecodeError) as e:
+            log.debug(f"[TOOL GATING] Pydantic parsing failed, falling back to manual JSON parsing: {e}")
+
+        # Fallback: Try to extract JSON from response (legacy format)
         # Handle potential markdown code blocks
         json_str = response.strip()
 
@@ -180,7 +229,26 @@ def compose_stage2_system_prompt(
     )
 
     tool_contents = "\n\n".join([t.content for t in sorted_tools])
-    return f"{base_system}\n\n{tool_contents}"
+
+    # Add strong anti-pattern instructions at the beginning to override chat history patterns
+    anti_pattern_warning = """# ⚠️ CRITICAL SYSTEM OVERRIDE - READ THIS FIRST!
+
+**IMPORTANT**: You are now using tools that require SPECIFIC OUTPUT FORMATS.
+
+DO NOT use old conversation patterns like:
+- ❌ (그래프: function_2d)
+- ❌ (시각화: parametric_curve)
+- ❌ Any parenthetical tool notation patterns
+
+These are OBSOLETE patterns from previous conversations. IGNORE THEM COMPLETELY.
+
+The tool instructions below specify the EXACT format required. Follow them precisely.
+
+---
+
+"""
+
+    return f"{anti_pattern_warning}{base_system}\n\n{tool_contents}"
 
 
 class ToolGatingResult:
@@ -216,6 +284,7 @@ async def execute_with_tool_gating(
     full_system: Optional[str] = None,
     cache_gating_stage: Optional[str] = None,
     cache_execution_stage: Optional[str] = None,
+    cache_strategy: str = "auto",
     **llm_kwargs
 ) -> ToolGatingResult:
     """
@@ -226,7 +295,7 @@ async def execute_with_tool_gating(
         base_system: Base system prompt for Stage 1 (lightweight, base only)
         tool_prompts: All available tool prompts
         llm_call_fn: Async function to call LLM
-            Expected signature: llm_call_fn(system_instruction, question, cache_stage, **kwargs) -> dict with 'text' key
+            Expected signature: llm_call_fn(system_instruction, question, cache_stage, cache_strategy, **kwargs) -> dict with 'text' key
         gating_model: Optional model ID to use for Stage 1 (tool selection).
             If provided, this model will be used for tool gating instead of the main model.
             The gating model inherits the tool_group and prompt configuration.
@@ -236,6 +305,7 @@ async def execute_with_tool_gating(
             If provided, Stage 1 system prompt will be globally cached.
         cache_execution_stage: Optional cache stage for Stage 2 ("execution").
             If provided, Stage 2 system prompt will be globally cached.
+        cache_strategy: Cache strategy for Gemini caching - "auto" | "force" | "off" (default: "auto")
         **llm_kwargs: Additional arguments for LLM call (model, temperature, store_names, etc.)
 
     Returns:
@@ -268,6 +338,7 @@ async def execute_with_tool_gating(
         question=query,
         system_instruction=stage1_system,
         cache_stage=cache_gating_stage,  # Enable caching for Stage 1
+        cache_strategy=cache_strategy,  # Cache strategy
         **stage1_kwargs
     )
 
@@ -315,6 +386,7 @@ async def execute_with_tool_gating(
         question=query,
         system_instruction=stage2_system,
         cache_stage=cache_execution_stage,  # Enable caching for Stage 2
+        cache_strategy=cache_strategy,  # Cache strategy
         **llm_kwargs
     )
 
