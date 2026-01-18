@@ -163,7 +163,7 @@
 										{:else if updateAvailable}
 											{$i18n.t('Update to v{{version}}', { version: version.latest })}
 										{:else}
-											{$i18n.t('Up to date')}
+											已是最新版本
 										{/if}
 									</button>
 								{/if}

@@ -30,6 +30,23 @@
 		show = false;
 	};
 
+	// Helper function to get section style class based on section name (supports both English and Chinese)
+	const getSectionClass = (section: string): string => {
+		const lowerSection = section.toLowerCase();
+		if (lowerSection === 'added' || section === '新增') {
+			return 'bg-blue-500/20 text-blue-700 dark:text-blue-200';
+		} else if (lowerSection === 'fixed' || section === '修复') {
+			return 'bg-green-500/20 text-green-700 dark:text-green-200';
+		} else if (lowerSection === 'changed' || section === '变更') {
+			return 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-200';
+		} else if (lowerSection === 'removed' || section === '移除') {
+			return 'bg-red-500/20 text-red-700 dark:text-red-200';
+		} else if (lowerSection === 'performance' || section === '性能') {
+			return 'bg-purple-500/20 text-purple-700 dark:text-purple-200';
+		}
+		return '';
+	};
+
 	$: if (show) {
 		init();
 	}
@@ -73,15 +90,7 @@
 							{#each Object.keys(changelog[version]).filter((section) => section !== 'date') as section}
 								<div class="w-full">
 									<div
-										class="font-semibold uppercase text-xs {section === 'added'
-											? 'bg-blue-500/20 text-blue-700 dark:text-blue-200'
-											: section === 'fixed'
-												? 'bg-green-500/20 text-green-700 dark:text-green-200'
-												: section === 'changed'
-													? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-200'
-													: section === 'removed'
-														? 'bg-red-500/20 text-red-700 dark:text-red-200'
-														: ''}  w-fit rounded-xl px-2 my-2.5"
+										class="font-semibold uppercase text-xs {getSectionClass(section)} w-fit rounded-xl px-2 my-2.5"
 									>
 										{section}
 									</div>
