@@ -65,6 +65,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
+    AIOHTTP_CLIENT_READ_BUFSIZE,
     BYPASS_MODEL_ACCESS_CONTROL,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -126,7 +127,9 @@ async def send_post_request(
     r = None
     try:
         session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            read_bufsize=AIOHTTP_CLIENT_READ_BUFSIZE,  # Handle large streaming chunks
         )
 
         headers = {

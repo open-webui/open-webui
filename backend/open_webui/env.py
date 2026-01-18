@@ -704,6 +704,17 @@ else:
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT = 300
 
+# Buffer size for reading streamed responses (bytes)
+# Default: 4MB to handle large base64-encoded images in streaming responses
+AIOHTTP_CLIENT_READ_BUFSIZE = os.environ.get("AIOHTTP_CLIENT_READ_BUFSIZE", "")
+if AIOHTTP_CLIENT_READ_BUFSIZE == "":
+    AIOHTTP_CLIENT_READ_BUFSIZE = 4 * 1024 * 1024  # 4MB default
+else:
+    try:
+        AIOHTTP_CLIENT_READ_BUFSIZE = int(AIOHTTP_CLIENT_READ_BUFSIZE)
+    except Exception:
+        AIOHTTP_CLIENT_READ_BUFSIZE = 4 * 1024 * 1024
+
 
 AIOHTTP_CLIENT_SESSION_SSL = (
     os.environ.get("AIOHTTP_CLIENT_SESSION_SSL", "True").lower() == "true"
