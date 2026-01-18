@@ -294,6 +294,9 @@ class ModelsTable:
                         or_(
                             Model.name.ilike(f"%{query_key}%"),
                             Model.base_model_id.ilike(f"%{query_key}%"),
+                            User.name.ilike(f"%{query_key}%"),
+                            User.email.ilike(f"%{query_key}%"),
+                            User.username.ilike(f"%{query_key}%"),
                         )
                     )
 
