@@ -109,6 +109,7 @@
 	let toolMode: string | null = null;
 	let promptGroupId: string | null = null;
 	let promptGroups: PromptGroupWithMappings[] = [];
+	let toolGatingModel: string | null = null;
 
 	const TOOL_MODE_OPTIONS = [
 		{ value: null, label: 'Inline (기본값)', description: 'Inline tool execution - 짧은 hints + 마커 감지' },
@@ -233,6 +234,14 @@
 			}
 		}
 
+		if (toolGatingModel) {
+			info.meta.tool_gating_model = toolGatingModel;
+		} else {
+			if (info.meta.tool_gating_model) {
+				delete info.meta.tool_gating_model;
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
@@ -327,6 +336,7 @@
 			// Load tool mode and prompt group settings
 			toolMode = model?.meta?.tool_mode ?? null;
 			promptGroupId = model?.meta?.prompt_group_id ?? null;
+			toolGatingModel = model?.meta?.tool_gating_model ?? null;
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;
@@ -837,6 +847,33 @@
 									{/if}
 								{/if}
 							</div>
+
+							<!-- Tool Gating Model (Stage 1) - Show for both 'gating' and 'inline' modes -->
+							{#if toolMode === 'gating' || toolMode === null}
+								<div>
+									<div class="text-xs font-medium mb-1">{$i18n.t('Tool Gating Model (Stage 1)')}</div>
+									<select
+										class="text-sm w-full bg-transparent outline-none border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+										bind:value={toolGatingModel}
+									>
+										<option value={null} class="text-gray-900 dark:text-gray-100">
+											{$i18n.t('None (Use main model)')}
+										</option>
+										{#each $models.filter((m) => !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
+											<option value={model.id} class="text-gray-900 dark:text-gray-100">
+												{model.name}
+											</option>
+										{/each}
+									</select>
+									<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+										{#if toolGatingModel}
+											Stage 1에서 사용할 빠른 모델 (Tool 선택용)
+										{:else}
+											메인 모델이 Stage 1, 2 모두 수행합니다
+										{/if}
+									</div>
+								</div>
+							{/if}
 						</div>
 					</div>
 

@@ -17,6 +17,8 @@ export type TagDefinition = {
 	name: string;
 	usage_count: number;
 	is_protected: boolean;
+	chapter_id?: string | null;
+	chapter_name?: string | null;
 	meta: object | null;
 	created_at: number;
 	updated_at: number;

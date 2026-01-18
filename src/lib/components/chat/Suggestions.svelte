@@ -53,7 +53,11 @@
 	}
 
 	const handlePractice = (tag: TagWithFeedback) => {
-		onSelect({ type: 'prompt', data: `${tag.name}에 대해 설명해주세요.` });
+		onSelect({
+			type: 'prompt',
+			data: `${tag.name}에 대해 설명해주세요.`,
+			chapter_id: tag.chapter_id
+		});
 	};
 </script>
 

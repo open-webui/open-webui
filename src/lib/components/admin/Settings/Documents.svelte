@@ -19,6 +19,9 @@
 
 	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
 	import { deleteAllFiles } from '$lib/apis/files';
+	import { getStores } from '$lib/apis/gemini-rag';
+	import { getDefaultRagStoreConfig, setDefaultRagStoreConfig } from '$lib/apis/configs';
+	import { config } from '$lib/stores';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -37,6 +40,11 @@
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
 	let showReindexConfirm = false;
+
+	// 온라인 지식기반 (Gemini RAG Stores)
+	let ragStores = [];
+	let defaultRagStore: string | null = null;
+	let savingRagStore = false;
 
 	let RAG_EMBEDDING_ENGINE = '';
 	let RAG_EMBEDDING_MODEL = '';
@@ -270,7 +278,32 @@
 				: config.MINERU_PARAMS;
 
 		RAGConfig = config;
+
+		// Load Gemini RAG stores
+		try {
+			ragStores = await getStores(localStorage.token);
+			const ragStoreConfig = await getDefaultRagStoreConfig(localStorage.token);
+			defaultRagStore = ragStoreConfig?.DEFAULT_RAG_STORE_NAME ?? null;
+		} catch (error) {
+			console.error('Failed to load RAG stores:', error);
+		}
 	});
+
+	const handleSaveDefaultRagStore = async () => {
+		savingRagStore = true;
+		try {
+			await setDefaultRagStoreConfig(localStorage.token, defaultRagStore);
+			toast.success($i18n.t('기본 온라인 지식기반이 저장되었습니다.'));
+			// Update config store
+			if ($config) {
+				$config.DEFAULT_RAG_STORE_NAME = defaultRagStore;
+			}
+		} catch (error) {
+			console.error('Failed to save default RAG store:', error);
+			toast.error($i18n.t('기본 온라인 지식기반 저장에 실패했습니다.'));
+		}
+		savingRagStore = false;
+	};
 </script>
 
 <ResetUploadDirConfirmDialog
@@ -1337,6 +1370,59 @@
 						<div class="flex items-center relative">
 							<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />
 						</div>
+					</div>
+				</div>
+
+				<!-- 온라인 지식기반 (Gemini RAG Store) -->
+				<div class="mb-3">
+					<div class=" mt-0.5 mb-2.5 text-base font-medium text-gray-700 dark:text-gray-200">
+						{$i18n.t('온라인 지식기반')}
+					</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="  mb-2.5 flex flex-col w-full">
+						<div class="flex w-full justify-between items-center mb-2">
+							<div class=" self-center text-xs font-medium text-gray-700 dark:text-gray-200">
+								<Tooltip
+									content={$i18n.t('챕터에 할당되지 않은 범용 지식기반 Store를 선택합니다. 모든 대화에서 기본으로 사용됩니다.')}
+									placement="top-start"
+								>
+									{$i18n.t('기본 글로벌 Store')}
+								</Tooltip>
+							</div>
+						</div>
+
+						<div class="flex gap-2">
+							<select
+								class="flex-1 text-sm bg-transparent outline-hidden border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+								bind:value={defaultRagStore}
+							>
+								<option value={null} class="text-gray-900 dark:text-gray-100">
+									{$i18n.t('없음 (사용 안 함)')}
+								</option>
+								{#each ragStores as store}
+									<option value={store.name} class="text-gray-900 dark:text-gray-100">
+										{store.display_name}
+									</option>
+								{/each}
+							</select>
+
+							<button
+								type="button"
+								class="px-4 py-2 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 transition rounded-lg disabled:opacity-50"
+								disabled={savingRagStore}
+								on:click={handleSaveDefaultRagStore}
+							>
+								{savingRagStore ? $i18n.t('저장 중...') : $i18n.t('저장')}
+							</button>
+						</div>
+
+						{#if defaultRagStore}
+							<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+								{$i18n.t('선택된 Store')}: <span class="font-mono">{ragStores.find(s => s.name === defaultRagStore)?.display_name || defaultRagStore}</span>
+							</div>
+						{/if}
 					</div>
 				</div>
 

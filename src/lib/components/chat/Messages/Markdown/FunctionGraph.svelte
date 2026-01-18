@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { compile } from 'mathjs';
 	import type { GraphSpec } from '$lib/utils/marked/graph-spec-extension';
 	import GraphPreviewModal from './GraphPreviewModal.svelte';
 	import ArrowsPointingOut from '$lib/components/icons/ArrowsPointingOut.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
-	// Import shared graph builder utilities
+	// Import shared graph builder utilities (including custom compile with Bessel functions and constants)
 	import {
+		compile,
 		normalizeExpressions,
 		buildTraces,
 		is3DGraph,

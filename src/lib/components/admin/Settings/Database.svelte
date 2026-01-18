@@ -9,10 +9,13 @@
 	import { getAllUserChats } from '$lib/apis/chats';
 	import { getAllUsers } from '$lib/apis/users';
 	import { exportConfig, importConfig } from '$lib/apis/configs';
+	import { clearGeminiCache } from '$lib/apis/gemini-rag';
 
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
+
+	let clearingCache = false;
 
 	const exportAllUserChats = async () => {
 		let blob = new Blob([JSON.stringify(await getAllUserChats(localStorage.token))], {
@@ -228,6 +231,48 @@
 					</div>
 					<div class=" self-center text-sm font-medium">
 						{$i18n.t('Export Users')}
+					</div>
+				</button>
+
+				<hr class="border-gray-50 dark:border-gray-850 my-1" />
+
+				<!-- Gemini Cache Clear Button -->
+				<button
+					type="button"
+					class=" flex rounded-md py-2 px-3 w-full hover:bg-red-100 dark:hover:bg-red-900/20 transition disabled:opacity-50"
+					disabled={clearingCache}
+					on:click={async () => {
+						if (!confirm($i18n.t('정말로 Gemini Cache를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.'))) {
+							return;
+						}
+
+						clearingCache = true;
+						try {
+							await clearGeminiCache(localStorage.token);
+							toast.success($i18n.t('Gemini Cache가 성공적으로 초기화되었습니다.'));
+						} catch (error) {
+							console.error('Failed to clear Gemini cache:', error);
+							toast.error($i18n.t('Gemini Cache 초기화에 실패했습니다.'));
+						}
+						clearingCache = false;
+					}}
+				>
+					<div class=" self-center mr-3">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center text-sm font-medium text-red-600 dark:text-red-400">
+						{clearingCache ? $i18n.t('초기화 중...') : $i18n.t('Gemini Cache 초기화')}
 					</div>
 				</button>
 			{/if}
