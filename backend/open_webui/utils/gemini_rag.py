@@ -324,6 +324,7 @@ class GeminiRAGService:
         temperature: float = 0.2,
         system_instruction: Optional[str] = None,
         cache_stage: Optional[str] = None,
+        cache_strategy: str = "auto",
         response_schema: Optional[type] = None
     ) -> Dict[str, Any]:
         """
@@ -340,6 +341,7 @@ class GeminiRAGService:
             system_instruction: 시스템 지시사항 (cached if cache_stage provided)
             cache_stage: Optional cache stage ("gating" or "execution").
                         If provided, system_instruction will be globally cached.
+            cache_strategy: Cache strategy - "auto" | "force" | "off" (default: "auto")
             response_schema: Pydantic model for structured JSON output (hardcoded tools).
                            If provided, response will be in JSON format matching the schema.
 
@@ -394,13 +396,14 @@ class GeminiRAGService:
                 cached_content_name = self.cache_manager.get_or_create_cache(
                     model_id=model,
                     system_prompt=system_instruction,
-                    stage=cache_stage
+                    stage=cache_stage,
+                    cache_strategy=cache_strategy
                 )
                 if cached_content_name:
-                    log.info(f"[CACHE] ✅ Using global cache for {cache_stage} stage")
+                    log.info(f"[CACHE] ✅ Using global cache for {cache_stage} stage (strategy: {cache_strategy})")
                     log.info(f"[CACHE] Cache name: {cached_content_name}")
                 else:
-                    log.warning(f"[CACHE] ⚠️  Cache creation failed for {cache_stage} stage, fallback to non-cached")
+                    log.info(f"[CACHE] ⚠️  No cache used for {cache_stage} stage (strategy: {cache_strategy})")
 
             # Only include tools if there are store names to search
             # IMPORTANT: Store selection is per-request, NOT cached

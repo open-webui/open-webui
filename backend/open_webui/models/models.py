@@ -69,6 +69,15 @@ class ModelMeta(BaseModel):
     # Default: None (use main model for both stages)
     tool_gating_model: Optional[str] = None
 
+    # Cache strategy for Gemini context caching
+    # Controls how the system handles prompt caching for Gemini API
+    # Values:
+    # - "auto" (default): Only cache if prompt >= 10,240 chars (no padding)
+    # - "force": Always cache (add padding if needed to meet minimum)
+    # - "off": Disable caching entirely
+    # Default: None (treated as "auto")
+    cache_strategy: Optional[str] = None
+
     model_config = ConfigDict(extra="allow")
 
     pass

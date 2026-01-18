@@ -4,7 +4,7 @@ import hashlib
 import json
 import logging
 import time
-from typing import Optional
+from typing import Optional, List, Dict
 
 import aiohttp
 from aiocache import cached
@@ -60,6 +60,7 @@ from open_webui.utils.tool_gating import (
     parse_tool_selection_response,
     get_tool_prompts_by_commands,
     compose_stage2_system_prompt,
+    ToolSelectionResponse,
 )
 from open_webui.utils.tool_inline_executor import build_tool_hints
 from open_webui.utils.gemini_cache_manager import GeminiCacheManager
@@ -294,10 +295,13 @@ async def make_gemini_native_call_with_cache(
     api_key: str,
     model: str,
     system_prompt: str,
-    query: str,
+    query: str = None,
+    contents: List[Dict] = None,
     cache_stage: Optional[str] = None,
     cache_manager: Optional[GeminiCacheManager] = None,
     temperature: float = 0.2,
+    cache_strategy: str = "auto",
+    response_schema: Optional[type] = None,
 ) -> dict:
     """
     Make a non-streaming LLM call using Gemini native API with caching support.
@@ -306,10 +310,16 @@ async def make_gemini_native_call_with_cache(
         api_key: Gemini API key
         model: Model ID (e.g., "gemini-2.5-flash")
         system_prompt: System prompt to use
-        query: User query
+        query: User query (single turn). For backward compatibility.
+        contents: Gemini-format conversation history.
+                 If provided, this takes precedence over query.
+                 Format: [{"role": "user", "parts": [{"text": "..."}]}, ...]
         cache_stage: Optional cache stage ("gating" or "execution")
         cache_manager: Optional GeminiCacheManager instance
         temperature: Sampling temperature
+        cache_strategy: Cache strategy - "auto" | "force" | "off" (default: "auto")
+        response_schema: Optional Pydantic model for structured JSON output.
+                        If provided, response will be in JSON format matching the schema.
 
     Returns:
         dict with 'success' and 'text' (or 'error') keys
@@ -333,7 +343,8 @@ async def make_gemini_native_call_with_cache(
             cached_content_name = cache_manager.get_or_create_cache(
                 model_id=model,
                 system_prompt=system_prompt,
-                stage=cache_stage
+                stage=cache_stage,
+                cache_strategy=cache_strategy
             )
             if cached_content_name:
                 log.info(f"[GEMINI-NATIVE-CACHE] Using global cache: {cached_content_name}")
@@ -347,16 +358,43 @@ async def make_gemini_native_call_with_cache(
             )
         )
 
+        # Add response_schema if provided (for structured JSON output)
+        if response_schema:
+            from pydantic import BaseModel
+            from open_webui.utils.gemini_rag import remove_additional_properties
+
+            config.response_mime_type = "application/json"
+            # Convert Pydantic model to JSON schema and remove additionalProperties
+            # (Gemini API doesn't support additionalProperties field)
+            if isinstance(response_schema, type) and issubclass(response_schema, BaseModel):
+                json_schema = response_schema.model_json_schema()
+                json_schema = remove_additional_properties(json_schema)
+                config.response_schema = json_schema
+                log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema.__name__} (cleaned)")
+            else:
+                config.response_schema = response_schema
+                log.info(f"[RESPONSE SCHEMA] ✅ Using schema: {response_schema}")
+
         # Use cached content OR system_instruction
         if cached_content_name:
             config.cached_content = cached_content_name
         elif system_prompt:
             config.system_instruction = system_prompt
 
+        # Determine contents to use: contents parameter OR convert query to single-turn
+        if contents:
+            api_contents = contents
+            log.info(f"[GEMINI-NATIVE-CACHE] Using provided contents (multi-turn): {len(contents)} messages")
+        elif query:
+            api_contents = query
+            log.info(f"[GEMINI-NATIVE-CACHE] Using query (single-turn)")
+        else:
+            raise ValueError("Either 'query' or 'contents' must be provided")
+
         # Call Gemini native API
         response = client.models.generate_content(
             model=model,
-            contents=query,
+            contents=api_contents,
             config=config
         )
 
@@ -1356,6 +1394,7 @@ async def generate_chat_completion(
     # Model-level settings for tool handling
     model_tool_mode = None  # "gating" | "concat" | "none" | None
     tool_gating_model = None  # Optional: Model for Stage 1 tool gating
+    cache_strategy = "auto"  # Default: "auto" | "force" | "off"
 
     if model_info:
         if model_info.base_model_id:
@@ -1368,6 +1407,7 @@ async def generate_chat_completion(
         # Extract tool_mode and prompt_group_id from meta (model settings)
         model_tool_mode = meta.get("tool_mode")  # "gating" | "concat" | "none" | None
         tool_gating_model = meta.get("tool_gating_model")  # Optional: Flash model for Stage 1 tool gating
+        cache_strategy = meta.get("cache_strategy") or "auto"  # Cache strategy for Gemini caching
         prompt_group_id_from_meta = meta.get("prompt_group_id")
 
         # Extract system and prompt_group_id from params (legacy support)
@@ -1586,16 +1626,25 @@ async def generate_chat_completion(
         log.info(f"[OPENAI-TOOL-GATING] Stage 1 model: {stage1_model} (tool_gating_model={tool_gating_model})")
 
         if is_gemini_backend:
-            log.info("[OPENAI-TOOL-GATING] Using Gemini native API for Stage 1")
+            log.info("[OPENAI-TOOL-GATING] Using Gemini native API for Stage 1 with Pydantic response schema")
             cache_manager = get_or_create_gemini_cache_manager(request, key)
+
+            # Convert recent chat history to Gemini format for better context
+            # Include last 6 messages (3 turns) to provide context
+            recent_messages = payload.get("messages", [])[-6:]
+            gemini_contents = convert_openai_messages_to_gemini_contents(recent_messages, filter_code=False)
+            log.info(f"[OPENAI-TOOL-GATING] Stage 1 - Using {len(recent_messages)} recent messages for context")
+
             stage1_result = await make_gemini_native_call_with_cache(
                 api_key=key,
                 model=stage1_model,  # Use tool_gating_model if available
                 system_prompt=stage1_system,
-                query=user_query,
+                contents=gemini_contents,  # Use chat history for context
                 cache_stage="gating",
                 cache_manager=cache_manager,
                 temperature=payload.get("temperature", 0.2),
+                cache_strategy=cache_strategy,
+                response_schema=ToolSelectionResponse,  # Enforce structured JSON output
             )
         else:
             log.info("[OPENAI-TOOL-GATING] Using OpenAI-compatible API for Stage 1")
