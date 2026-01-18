@@ -11,6 +11,7 @@ import logging
 import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field, ValidationError
 
 from open_webui.internal.db import get_db
 from open_webui.models.chats import Chat
@@ -24,6 +25,24 @@ from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+# ============================================================
+# Pydantic Models for Structured Tagging Responses
+# ============================================================
+
+class MessageTagResponse(BaseModel):
+    """Pydantic model for structured tagging response from Gemini."""
+    message_id: str = Field(..., description="Message ID from input")
+    tag: Optional[str] = Field(None, description="Tag ID (lowercase with underscores) or null if not math-related")
+    tag_display: Optional[str] = Field(None, description="Korean display name with English in parentheses or null")
+    summary: str = Field(..., description="50-character Korean summary")
+    chapter_id: Optional[str] = Field(None, description="Best matching chapter ID (e.g., 'ch-5') based on content analysis, or null if uncertain")
+
+
+class BatchTaggingResponse(BaseModel):
+    """Container for batch tagging results."""
+    results: List[MessageTagResponse]
 
 
 class MessageTaggingDaemon:
@@ -305,26 +324,54 @@ class MessageTaggingDaemon:
 
             # Prepare batch prompt
             existing_tags = MessageTagDefinitions.get_all_tag_names()
-            prompt = self._build_tagging_prompt(batch, existing_tags, config)
 
-            # Get RAG store names from config (if any)
-            store_names = config.rag_store_names or []
+            # Get chapter-store mappings for RAG-based chapter detection
+            chapter_mappings = None
+            store_names = []
 
-            # Use gemini-2.5-flash when RAG stores are configured (FileSearch requires 2.5+)
+            if config.enable_rag_chapter_detection:
+                # Get all chapter-store mappings
+                from open_webui.models.textbooks import TextbookChapters
+                chapter_mappings = TextbookChapters.get_all_rag_store_mappings()
+
+                if chapter_mappings:
+                    # Smart selection: Use keyword-based matching to select top 5 relevant stores
+                    # This respects Gemini's 5-store limit while maximizing accuracy
+                    store_names = self._select_relevant_stores(batch, chapter_mappings, max_stores=5)
+                    if store_names:
+                        log.info(f"[TAGGING] Using {len(store_names)} smart-selected chapter stores for RAG-based chapter detection")
+                    else:
+                        log.warning("[TAGGING] No relevant stores selected, falling back to configured stores")
+                        store_names = config.rag_store_names or []
+                else:
+                    log.warning("[TAGGING] RAG chapter detection enabled but no chapter stores found")
+            else:
+                # Fallback: Use configured stores only (current behavior)
+                store_names = config.rag_store_names or []
+
+            # Build prompt with chapter context (includes valid chapter list)
+            prompt = self._build_tagging_prompt(batch, existing_tags, config, chapter_mappings)
+
+            # Use gemini-2.5-flash when using RAG stores or Pydantic schema (FileSearch + Pydantic require 2.5+)
             # Otherwise use gemini-2.0-flash for faster processing
-            model = "gemini-2.5-flash" if store_names else "gemini-2.0-flash"
+            model = "gemini-2.5-flash" if (store_names or config.enable_rag_chapter_detection) else "gemini-2.0-flash"
 
-            # Call Gemini
+            # Determine if we should use Pydantic response schema
+            # Use it when RAG chapter detection is enabled for structured output
+            response_schema = BatchTaggingResponse if config.enable_rag_chapter_detection else None
+
+            # Call Gemini with optional Pydantic response schema
             result = service.query(
                 question=prompt,
                 store_names=store_names,
                 model=model,
                 temperature=0.3,
-                system_instruction=self._get_system_instruction(config)
+                system_instruction=self._get_system_instruction(config),
+                response_schema=response_schema  # Pydantic model for structured output
             )
 
             if result.get("success") and result.get("text"):
-                await self._parse_and_save_tags(batch, result["text"])
+                await self._parse_and_save_tags(batch, result["text"], use_pydantic=bool(response_schema))
                 return True
             else:
                 log.error(f"[MESSAGE TAGGING DAEMON] Gemini query failed: {result.get('error')}")
@@ -334,7 +381,7 @@ class MessageTaggingDaemon:
             log.error(f"[MESSAGE TAGGING DAEMON] Error processing batch: {e}")
             return False
 
-    def _build_tagging_prompt(self, batch: List[Dict], existing_tags: List[str], config=None) -> str:
+    def _build_tagging_prompt(self, batch: List[Dict], existing_tags: List[str], config=None, chapter_mappings: Optional[Dict] = None) -> str:
         """Build the prompt for Gemini tagging."""
         # Use custom prompt if configured
         if config and config.custom_tagging_prompt:
@@ -350,6 +397,22 @@ class MessageTaggingDaemon:
             custom_prompt = custom_prompt.replace("{messages}", messages_text)
             return custom_prompt
 
+        # Build chapter context if available
+        chapter_context = ""
+        if chapter_mappings and config and config.enable_rag_chapter_detection:
+            # Get list of valid chapters with their display names
+            from open_webui.models.textbooks import TextbookChapters
+            all_chapters = TextbookChapters.get_all()
+            chapter_list = "\n".join([
+                f"  - {ch.id}: {ch.title}"
+                for ch in sorted(all_chapters, key=lambda x: x.order)
+            ])
+            chapter_context = f"""
+AVAILABLE CHAPTERS (analyze message content and assign the best matching chapter):
+{chapter_list}
+
+"""
+
         # Default prompt
         messages_text = "\n\n".join([
             f"Message {i+1} (ID: {m['message_id']}):\n{m['content'][:500]}"
@@ -363,7 +426,7 @@ class MessageTaggingDaemon:
 EXISTING TAGS (prefer reusing these when appropriate):
 {existing_tags_text}
 
-MESSAGES TO TAG:
+{chapter_context}MESSAGES TO TAG:
 {messages_text}
 
 For each message, provide:
@@ -373,6 +436,9 @@ For each message, provide:
 2. tag_display: A human-readable display name (Korean with English in parentheses, e.g., "라플라스 변환 (Laplace Transform)")
    - Use null if tag is null
 3. summary: A 50-character Korean summary (can still provide summary even if tag is null)
+4. chapter_id: The best matching chapter ID based on content analysis (e.g., "ch-5")
+   - Use null if uncertain or if message is not math-related
+   - Analyze the message content and RAG context to determine the most appropriate chapter
 
 IMPORTANT:
 - Only tag messages that are clearly about math/engineering topics
@@ -380,12 +446,13 @@ IMPORTANT:
 - Create new tags only for genuinely new topics
 - tag should be lowercase English with underscores
 - tag_display should be in Korean with English term in parentheses
+- chapter_id should match one of the available chapters listed above
 - If unsure whether to tag, use null (it's better to skip than create irrelevant tags)
 
 Return as JSON array ONLY (no markdown, no explanation):
 [
-  {{"message_id": "...", "tag": "laplace_transform", "tag_display": "라플라스 변환 (Laplace Transform)", "summary": "50자 이하 요약..."}},
-  {{"message_id": "...", "tag": null, "tag_display": null, "summary": "수학 관련 없는 일반 대화"}}
+  {{"message_id": "...", "tag": "laplace_transform", "tag_display": "라플라스 변환 (Laplace Transform)", "summary": "50자 이하 요약...", "chapter_id": "ch-6"}},
+  {{"message_id": "...", "tag": null, "tag_display": null, "summary": "수학 관련 없는 일반 대화", "chapter_id": null}}
 ]"""
 
     def _get_system_instruction(self, config=None) -> str:
@@ -394,6 +461,22 @@ Return as JSON array ONLY (no markdown, no explanation):
         if config and config.custom_system_instruction:
             return config.custom_system_instruction
 
+        # Enhanced instruction when RAG chapter detection is enabled
+        if config and config.enable_rag_chapter_detection:
+            return """You are a message tagging assistant for an educational math platform. Your job is to:
+1. Analyze user messages and assign appropriate topic tags
+2. Determine the best matching textbook chapter based on content (use RAG context from retrieved documents)
+3. Generate concise 50-character Korean summaries
+4. Prefer reusing existing tags when topics match
+5. Only create new tags for genuinely novel topics
+6. Return valid JSON matching the provided schema (when using structured output)
+
+When determining chapter_id:
+- Analyze the message content and retrieved document context
+- Match the topic to the most relevant textbook chapter
+- Use null if uncertain or if the message is not math-related"""
+
+        # Default instruction (backward compatible)
         return """You are a message tagging assistant for an educational math platform. Your job is to:
 1. Analyze user messages and assign appropriate topic tags
 2. Generate concise 50-character Korean summaries
@@ -401,35 +484,51 @@ Return as JSON array ONLY (no markdown, no explanation):
 4. Only create new tags for genuinely novel topics
 5. Return valid JSON array only, no markdown formatting, no code blocks"""
 
-    async def _parse_and_save_tags(self, batch: List[Dict], response_text: str):
+    async def _parse_and_save_tags(self, batch: List[Dict], response_text: str, use_pydantic: bool = False):
         """Parse Gemini response and save tags to database."""
+        # Create lookup for batch items
+        batch_lookup = {m["message_id"]: m for m in batch}
+
+        # Get blacklist from config
+        config = TaggingDaemonConfigs.get_config()
+        blacklist = set(config.blacklisted_tags or []) if config else set()
+
         try:
-            # Extract JSON from response
-            response_text = response_text.strip()
-            if response_text.startswith("```"):
-                lines = response_text.split("\n")
-                start_idx = 1 if lines[0].startswith("```") else 0
-                end_idx = len(lines) - 1 if lines[-1].strip() == "```" else len(lines)
-                response_text = "\n".join(lines[start_idx:end_idx])
-                if response_text.startswith("json"):
-                    response_text = response_text[4:]
+            # Parse response based on format (Pydantic or plain JSON)
+            if use_pydantic:
+                # Parse Pydantic-structured response
+                try:
+                    response_text = response_text.strip()
+                    batch_response = BatchTaggingResponse.model_validate_json(response_text)
+                    results = [tag_resp.model_dump() for tag_resp in batch_response.results]
+                    log.info("[TAGGING] Successfully parsed Pydantic response")
+                except ValidationError as e:
+                    log.error(f"[TAGGING] Pydantic validation failed: {e}")
+                    log.warning("[TAGGING] Falling back to plain JSON parsing")
+                    # Fall through to plain JSON parsing
+                    use_pydantic = False
 
-            results = json.loads(response_text)
+            if not use_pydantic:
+                # Extract JSON from response (legacy format)
+                response_text = response_text.strip()
+                if response_text.startswith("```"):
+                    lines = response_text.split("\n")
+                    start_idx = 1 if lines[0].startswith("```") else 0
+                    end_idx = len(lines) - 1 if lines[-1].strip() == "```" else len(lines)
+                    response_text = "\n".join(lines[start_idx:end_idx])
+                    if response_text.startswith("json"):
+                        response_text = response_text[4:]
 
-            # Create lookup for batch items
-            batch_lookup = {m["message_id"]: m for m in batch}
+                results = json.loads(response_text)
 
-            # Get blacklist from config
-            config = TaggingDaemonConfigs.get_config()
-            blacklist = set(config.blacklisted_tags or []) if config else set()
-
+            # Process each result
             for result in results:
                 msg_id = result.get("message_id")
                 raw_tag = result.get("tag")
 
                 # Skip if tag is null (message not related to math/engineering)
                 if raw_tag is None:
-                    log.debug(f"[MESSAGE TAGGING DAEMON] Skipping message {msg_id} - no relevant topic")
+                    log.debug(f"[TAGGING] Skipping message {msg_id} - no relevant topic")
                     continue
 
                 tag_id = str(raw_tag).strip().lower().replace(" ", "_")
@@ -441,11 +540,26 @@ Return as JSON array ONLY (no markdown, no explanation):
 
                 # Skip blacklisted tags
                 if tag_id in blacklist:
-                    log.debug(f"[MESSAGE TAGGING DAEMON] Skipping blacklisted tag '{tag_id}' for message {msg_id}")
+                    log.debug(f"[TAGGING] Skipping blacklisted tag '{tag_id}' for message {msg_id}")
                     continue
 
                 msg = batch_lookup[msg_id]
-                chapter_id = msg.get("chapter_id")  # Get chapter_id from message
+
+                # Determine chapter_id: RAG-determined (validated) or fallback to chat's chapter_id
+                rag_chapter_id = result.get("chapter_id")  # From Gemini response
+                if rag_chapter_id:
+                    # Validate RAG-determined chapter_id (user preference: validate against valid chapters)
+                    validated_chapter_id = self._validate_chapter_id(rag_chapter_id)
+                    if validated_chapter_id:
+                        chapter_id = validated_chapter_id
+                        log.info(f"[TAGGING] Using RAG-determined chapter_id '{chapter_id}' for message {msg_id}")
+                    else:
+                        # Validation failed, fall back to chat's chapter_id
+                        chapter_id = msg.get("chapter_id")
+                        log.info(f"[TAGGING] Rejected invalid chapter_id '{rag_chapter_id}', using fallback '{chapter_id}' for message {msg_id}")
+                else:
+                    # No RAG chapter_id, use chat's chapter_id (backward compatible)
+                    chapter_id = msg.get("chapter_id")
 
                 # Get or create tag definition
                 tag_def = MessageTagDefinitions.get_by_id(tag_id)
@@ -473,13 +587,13 @@ Return as JSON array ONLY (no markdown, no explanation):
                     # Increment usage count
                     MessageTagDefinitions.increment_usage(tag_id)
 
-                    log.debug(f"[MESSAGE TAGGING DAEMON] Tagged message {msg_id} with '{tag_id}' ({tag_display})")
+                    log.debug(f"[TAGGING] Tagged message {msg_id} with '{tag_id}' ({tag_display}) in chapter '{chapter_id}'")
 
         except json.JSONDecodeError as e:
-            log.error(f"[MESSAGE TAGGING DAEMON] Failed to parse Gemini response: {e}")
-            log.debug(f"[MESSAGE TAGGING DAEMON] Response was: {response_text[:500]}")
+            log.error(f"[TAGGING] Failed to parse Gemini response: {e}")
+            log.debug(f"[TAGGING] Response was: {response_text[:500]}")
         except Exception as e:
-            log.error(f"[MESSAGE TAGGING DAEMON] Error saving tags: {e}")
+            log.error(f"[TAGGING] Error saving tags: {e}")
 
     async def _consolidate_tags(self, config):
         """Consolidate tags when approaching the limit."""
@@ -590,6 +704,173 @@ IMPORTANT:
             return None
         except Exception:
             return None
+
+    def _validate_chapter_id(self, chapter_id: Optional[str]) -> Optional[str]:
+        """
+        Validate chapter_id against valid textbook chapters.
+
+        Args:
+            chapter_id: Chapter ID to validate (e.g., "ch-5")
+
+        Returns:
+            Valid chapter_id or None if invalid
+        """
+        if not chapter_id:
+            return None
+
+        try:
+            from open_webui.models.textbooks import TextbookChapters
+            valid_chapters = TextbookChapters.get_valid_chapter_ids()
+
+            if chapter_id in valid_chapters:
+                return chapter_id
+            else:
+                log.warning(f"[TAGGING] Invalid chapter_id '{chapter_id}' returned by Gemini, rejecting")
+                return None
+        except Exception as e:
+            log.error(f"[TAGGING] Error validating chapter_id: {e}")
+            return None
+
+    def _select_relevant_stores(self, batch: List[Dict], chapter_mappings: dict, max_stores: int = 5) -> List[str]:
+        """
+        Select relevant RAG stores based on message content keywords.
+
+        Args:
+            batch: List of messages to analyze
+            chapter_mappings: Dictionary mapping chapter_id to store info
+            max_stores: Maximum number of stores to return (Gemini limit is 5)
+
+        Returns:
+            List of store names (up to max_stores)
+        """
+        # Keyword-to-chapter mapping (Korean and English)
+        keyword_to_chapters = {
+            # Part A: ODEs
+            "laplace": ["ch-6"],
+            "라플라스": ["ch-6"],
+            "differential": ["ch-1", "ch-2", "ch-3"],
+            "미분방정식": ["ch-1", "ch-2", "ch-3"],
+            "ode": ["ch-1", "ch-2", "ch-3", "ch-4"],
+            "상미분": ["ch-1", "ch-2", "ch-3", "ch-4"],
+            "bessel": ["ch-5"],
+            "베셀": ["ch-5"],
+            "legendre": ["ch-5"],
+            "르장드르": ["ch-5"],
+            "series": ["ch-5"],
+            "급수": ["ch-5"],
+
+            # Part B: Linear Algebra
+            "matrix": ["ch-7", "ch-8"],
+            "행렬": ["ch-7", "ch-8"],
+            "eigenvalue": ["ch-8"],
+            "고유값": ["ch-8"],
+            "eigenvector": ["ch-8"],
+            "고유벡터": ["ch-8"],
+            "determinant": ["ch-7"],
+            "행렬식": ["ch-7"],
+            "vector": ["ch-7", "ch-9", "ch-10"],
+            "벡터": ["ch-7", "ch-9", "ch-10"],
+            "gradient": ["ch-9"],
+            "그래디언트": ["ch-9"],
+            "divergence": ["ch-9"],
+            "발산": ["ch-9"],
+            "curl": ["ch-9"],
+            "회전": ["ch-9"],
+            "green": ["ch-10"],
+            "그린": ["ch-10"],
+            "stokes": ["ch-10"],
+            "스토크스": ["ch-10"],
+
+            # Part C: Fourier, PDEs
+            "fourier": ["ch-11"],
+            "푸리에": ["ch-11"],
+            "pde": ["ch-12"],
+            "편미분": ["ch-12"],
+            "heat": ["ch-12"],
+            "열방정식": ["ch-12"],
+            "wave": ["ch-12"],
+            "파동": ["ch-12"],
+
+            # Part D: Complex Analysis
+            "complex": ["ch-13", "ch-14", "ch-15", "ch-16"],
+            "복소": ["ch-13", "ch-14", "ch-15", "ch-16"],
+            "analytic": ["ch-13"],
+            "해석함수": ["ch-13"],
+            "cauchy": ["ch-14"],
+            "코시": ["ch-14"],
+            "residue": ["ch-16"],
+            "유수": ["ch-16"],
+            "laurent": ["ch-16"],
+            "로랑": ["ch-16"],
+            "taylor": ["ch-15"],
+            "테일러": ["ch-15"],
+            "conformal": ["ch-17"],
+            "등각": ["ch-17"],
+
+            # Part E: Numerical Analysis
+            "numerical": ["ch-19", "ch-20", "ch-21"],
+            "수치": ["ch-19", "ch-20", "ch-21"],
+            "newton": ["ch-19"],
+            "뉴턴": ["ch-19"],
+            "gaussian": ["ch-20"],
+            "가우스": ["ch-20"],
+            "elimination": ["ch-20"],
+            "소거": ["ch-20"],
+            "euler": ["ch-21"],
+            "오일러": ["ch-21"],
+            "runge": ["ch-21"],
+            "룽게": ["ch-21"],
+
+            # Part F: Optimization
+            "optimization": ["ch-22", "ch-23"],
+            "최적화": ["ch-22", "ch-23"],
+            "linear programming": ["ch-22"],
+            "선형계획": ["ch-22"],
+            "simplex": ["ch-22"],
+            "심플렉스": ["ch-22"],
+            "graph": ["ch-23"],
+            "그래프": ["ch-23"],
+
+            # Part G: Probability, Statistics
+            "probability": ["ch-24", "ch-25"],
+            "확률": ["ch-24", "ch-25"],
+            "statistics": ["ch-25"],
+            "통계": ["ch-25"],
+            "bayes": ["ch-24"],
+            "베이즈": ["ch-24"],
+            "normal": ["ch-24"],
+            "정규분포": ["ch-24"],
+        }
+
+        # Combine all messages in batch
+        combined_content = " ".join([msg.get("content", "").lower() for msg in batch])
+
+        # Find matching chapters based on keywords
+        chapter_scores = {}
+        for keyword, chapters in keyword_to_chapters.items():
+            if keyword.lower() in combined_content:
+                for chapter_id in chapters:
+                    chapter_scores[chapter_id] = chapter_scores.get(chapter_id, 0) + 1
+
+        # If no keywords matched, return empty list (will use default behavior)
+        if not chapter_scores:
+            log.info("[TAGGING] No keyword matches found, using fallback chapter selection")
+            # Use configured stores or first 5 chapters as fallback
+            all_chapter_ids = sorted(chapter_mappings.keys())[:max_stores]
+            return [chapter_mappings[ch_id]["store_name"] for ch_id in all_chapter_ids if ch_id in chapter_mappings]
+
+        # Sort chapters by score (most relevant first) and take top max_stores
+        top_chapters = sorted(chapter_scores.items(), key=lambda x: x[1], reverse=True)[:max_stores]
+        top_chapter_ids = [ch_id for ch_id, _ in top_chapters]
+
+        # Get store names for top chapters
+        store_names = []
+        for ch_id in top_chapter_ids:
+            if ch_id in chapter_mappings:
+                store_names.append(chapter_mappings[ch_id]["store_name"])
+
+        log.info(f"[TAGGING] Selected {len(store_names)} relevant stores based on keywords: {top_chapter_ids}")
+        return store_names
 
     async def run_manual(self):
         """Trigger a manual tagging run."""
