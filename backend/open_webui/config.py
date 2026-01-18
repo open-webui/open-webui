@@ -3917,3 +3917,13 @@ LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
     "ldap.server.attribute_for_groups",
     os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
 )
+
+####################################
+# RAG Settings
+####################################
+
+DEFAULT_RAG_STORE_NAME = PersistentConfig(
+    "DEFAULT_RAG_STORE_NAME",
+    "rag.default_store_name",
+    os.environ.get("DEFAULT_RAG_STORE_NAME", None),
+)
