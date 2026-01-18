@@ -103,154 +103,24 @@ docker compose up -d
 
 ### 🧠 模型能力深度集成
 
-<table width="100%">
-<tr>
-<td width="50%" valign="top">
-
-### OpenAI Responses API
-
-**首发支持** OpenAI 新版 `/v1/responses` 接口：
-- 流式输出思考过程 (Reasoning Content)
-- 支持 o1、o3 等推理模型
-- 实时展示模型的推理步骤
-
-</td>
-<td width="50%" valign="top">
-
-### Google Gemini 原生
-
-**直连官方 SDK**，无需中间层转换：
-- 支持 `thinking_budget` 等原生参数
-- Gemini 2.5 Pro / Gemini 3 完美兼容
-- 原生工具调用 (Function Calling)
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 推理强度控制
-
-为 o1/o3 等模型配置 **Reasoning Effort**：
-- Low / Medium / High 三档预设
-- 支持自定义数值输入
-- 灵活平衡速度与质量
-
-</td>
-<td width="50%" valign="top">
-
-### 智能图像编辑
-
-优化的图像编辑上下文管理：
-- 自动精简历史消息
-- 保留必要的图像引用
-- 大幅节省 Token 消耗
-
-</td>
-</tr>
-</table>
+| | |
+| :--- | :--- |
+| **OpenAI Responses API**<br>首发支持 OpenAI 新版 `/v1/responses` 接口：<br>- 流式输出思考过程 (Reasoning Content)<br>- 支持 o1、o3 等推理模型<br>- 实时展示模型的推理步骤 | **Google Gemini 原生**<br>直连官方 SDK，无需中间层转换：<br>- 支持 `thinking_budget` 等原生参数<br>- Gemini 2.5 Pro / Gemini 3 完美兼容<br>- 原生工具调用 (Function Calling) |
+| **推理强度控制**<br>为 o1/o3 等模型配置 **Reasoning Effort**：<br>- Low / Medium / High 三档预设<br>- 支持自定义数值输入<br>- 灵活平衡速度与质量 | **智能图像编辑**<br>优化的图像编辑上下文管理：<br>- 自动精简历史消息<br>- 保留必要的图像引用<br>- 大幅节省 Token 消耗 |
 
 ### 🛠️ 系统管理增强
 
-<table width="100%">
-<tr>
-<td width="50%" valign="top">
-
-### 精细化计费系统
-
-**运营级**成本控制方案：
-- 按次计费 / 按 Token 计费
-- 区分输入、输出、推理价格
-- 实时计算对话成本
-- 支持多货币显示
-
-</td>
-<td width="50%" valign="top">
-
-### 多架构优化
-
-**ARM64 原生支持**：
-- Apple Silicon 完美运行
-- 树莓派 / Orange Pi 优化
-- 减少内存占用
-- 加快启动速度
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 模型权限管理
-
-**灵活的访问控制**：
-- 批量设置模型可见性
-- 公开 / 私有状态切换
-- 按组分配模型权限
-
-</td>
-<td width="50%" valign="top">
-
-### 启动性能优化
-
-**大幅提升加载速度**：
-- Lazy Loading 策略
-- 智能缓存机制
-- 精简 Docker 镜像
-- 减少首屏等待时间
-
-</td>
-</tr>
-</table>
+| | |
+| :--- | :--- |
+| **精细化计费系统**<br>运营级成本控制方案：<br>- 按次计费 / 按 Token 计费<br>- 区分输入、输出、推理价格<br>- 实时计算对话成本<br>- 支持多货币显示 | **多架构优化**<br>ARM64 原生支持：<br>- Apple Silicon 完美运行<br>- 树莓派 / Orange Pi 优化<br>- 减少内存占用<br>- 加快启动速度 |
+| **模型权限管理**<br>灵活的访问控制：<br>- 批量设置模型可见性<br>- 公开 / 私有状态切换<br>- 按组分配模型权限 | **启动性能优化**<br>大幅提升加载速度：<br>- Lazy Loading 策略<br>- 智能缓存机制<br>- 精简 Docker 镜像<br>- 减少首屏等待时间 |
 
 ### 🎨 交互体验打磨
 
-<table width="100%">
-<tr>
-<td width="50%" valign="top">
-
-### 对话分支
-
-从任意消息创建 **Branch Chat**：
-- 探索不同的对话走向
-- 并排比较多个响应
-- 侧边栏快速切换分支
-
-</td>
-<td width="50%" valign="top">
-
-### 上下文控制
-
-**精准管理**发送给模型的内容：
-- 可视化插入 Context Break
-- 自定义 Context Count
-- 智能清除历史上下文
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 智能 Logo 匹配
-
-**自动适配**模型图标：
-- 20+ LLM 提供商支持
-- 模糊匹配算法
-- GPT / Claude / Gemini / Qwen 等
-
-</td>
-<td width="50%" valign="top">
-
-### 深度中文优化
-
-**全量汉化**：
-- 新增功能翻译
-- 专业术语校对
-- 报错信息本地化
-- 符合中文习惯
-
-</td>
-</tr>
-</table>
+| | |
+| :--- | :--- |
+| **对话分支**<br>从任意消息创建 **Branch Chat**：<br>- 探索不同的对话走向<br>- 并排比较多个响应<br>- 侧边栏快速切换分支 | **上下文控制**<br>精准管理发送给模型的内容：<br>- 可视化插入 Context Break<br>- 自定义 Context Count<br>- 智能清除历史上下文 |
+| **智能 Logo 匹配**<br>自动适配模型图标：<br>- 20+ LLM 提供商支持<br>- 模糊匹配算法<br>- GPT / Claude / Gemini / Qwen 等 | **深度中文优化**<br>全量汉化：<br>- 新增功能翻译<br>- 专业术语校对<br>- 报错信息本地化<br>- 符合中文习惯 |
 
 ---
 
@@ -258,52 +128,10 @@ docker compose up -d
 
 启动 Open WebUI 后，建议进行以下配置以获得最佳体验：
 
-<table width="100%">
-<tr>
-<td width="50%" valign="top">
-
-### 1. 启用 Responses API
-
-在 **连接设置** 中开启 `Use Responses API`，即可：
-- 体验 OpenAI 新版接口
-- 查看模型思考过程
-- 使用 o1/o3 推理模型
-
-</td>
-<td width="50%" valign="top">
-
-### 2. 配置 Gemini
-
-在 **Gemini 接口** 中填入 API Key：
-- 使用原生 SDK 特性
-- 支持 thinking_budget
-- 原生工具调用
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 3. 开启计费显示
-
-在 **模型设置** 中配置费率：
-- 设置输入/输出价格
-- 启用计费显示
-- 实时掌握成本
-
-</td>
-<td width="50%" valign="top">
-
-### 4. 启用对话分支
-
-在任意对话中使用 **分支功能**：
-- 右键消息选择 "创建分支"
-- 或使用快捷键
-- 侧边栏管理分支
-
-</td>
-</tr>
-</table>
+| | |
+| :--- | :--- |
+| **1. 启用 Responses API**<br>在 **连接设置** 中开启 `Use Responses API`，即可：<br>- 体验 OpenAI 新版接口<br>- 查看模型思考过程<br>- 使用 o1/o3 推理模型 | **2. 配置 Gemini**<br>在 **Gemini 接口** 中填入 API Key：<br>- 使用原生 SDK 特性<br>- 支持 `thinking_budget`<br>- 原生工具调用 |
+| **3. 开启计费显示**<br>在 **模型设置** 中配置费率：<br>- 设置输入/输出价格<br>- 启用计费显示<br>- 实时掌握成本 | **4. 启用对话分支**<br>在任意对话中使用 **分支功能**：<br>- 右键消息选择 "创建分支"<br>- 或使用快捷键<br>- 侧边栏管理分支 |
 
 ---
 

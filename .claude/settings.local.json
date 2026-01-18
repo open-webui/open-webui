@@ -15,7 +15,8 @@
       "Bash(git log:*)",
       "Bash(gh release create:*)",
       "Bash(where gh:*)",
-      "Bash(gh:*)"
+      "Bash(gh:*)",
+      "Bash(find:*)"
     ]
   }
 }
