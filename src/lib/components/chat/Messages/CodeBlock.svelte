@@ -544,8 +544,10 @@
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 								class="language-{lang} rounded-t-none whitespace-pre text-sm"
-								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
-									code}</code
+								>{@html (hljs.getLanguage(lang)
+										? hljs.highlight(code, { language: lang })
+										: hljs.highlightAuto(code)
+									).value || code}</code
 							></pre>
 					{/if}
 				{:else}
