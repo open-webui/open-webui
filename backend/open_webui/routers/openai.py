@@ -140,8 +140,9 @@ async def detect_chapter_from_conversation(chat_id: str, api_key: str) -> Option
 
         # Fetch chat
         chat = Chats.get_chat_by_id(chat_id)
-        if not chat or chat.chapter_id:
-            return None  # Skip if no chat or already has chapter
+        # Skip if no chat, or if chat has a valid chapter (not null and not "uncategorized")
+        if not chat or (chat.chapter_id and chat.chapter_id != "uncategorized"):
+            return None  # Skip if no chat or already has valid chapter
 
         # Extract conversation (user + assistant messages only)
         messages = chat.chat.get("history", {}).get("messages", {})
@@ -1040,20 +1041,31 @@ async def handle_gemini_native_request(
                     # ============================================================
                     # Auto-chapter assignment (streaming mode) - LLM-based
                     # ============================================================
-                    if chat_id and not metadata.get("chapter_id"):
+                    # Trigger detection if chapter_id is null or "uncategorized"
+                    current_chapter_id = metadata.get("chapter_id")
+                    should_detect = chat_id and (not current_chapter_id or current_chapter_id == "uncategorized")
+
+                    if should_detect:
                         try:
                             from open_webui.models.chats import Chats
 
-                            # Check if chat still has no chapter
+                            # Check if chat still has no chapter or uncategorized
                             chat = Chats.get_chat_by_id(chat_id)
-                            if chat and not chat.chapter_id:
+                            if chat and (not chat.chapter_id or chat.chapter_id == "uncategorized"):
+                                # Log if replacing uncategorized
+                                if chat.chapter_id == "uncategorized":
+                                    log.info(f"[CHAPTER-AUTO] Retrying detection for uncategorized chat {chat_id}")
+
                                 # Detect using LLM
                                 detected = await detect_chapter_from_conversation(chat_id, api_key)
 
                                 if detected:
                                     updated = Chats.update_chat_chapter_id_by_id(chat_id, detected)
                                     if updated:
-                                        log.info(f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}")
+                                        if chat.chapter_id == "uncategorized":
+                                            log.info(f"[CHAPTER-AUTO] ✅ Updated uncategorized → {detected} for chat {chat_id}")
+                                        else:
+                                            log.info(f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}")
 
                                         # Emit socket event to notify frontend
                                         try:
@@ -1136,20 +1148,31 @@ async def handle_gemini_native_request(
             # ============================================================
             # Auto-chapter assignment (non-streaming mode) - LLM-based
             # ============================================================
-            if chat_id and not metadata.get("chapter_id"):
+            # Trigger detection if chapter_id is null or "uncategorized"
+            current_chapter_id = metadata.get("chapter_id")
+            should_detect = chat_id and (not current_chapter_id or current_chapter_id == "uncategorized")
+
+            if should_detect:
                 try:
                     from open_webui.models.chats import Chats
 
-                    # Check if chat still has no chapter
+                    # Check if chat still has no chapter or uncategorized
                     chat = Chats.get_chat_by_id(chat_id)
-                    if chat and not chat.chapter_id:
+                    if chat and (not chat.chapter_id or chat.chapter_id == "uncategorized"):
+                        # Log if replacing uncategorized
+                        if chat.chapter_id == "uncategorized":
+                            log.info(f"[CHAPTER-AUTO] Retrying detection for uncategorized chat {chat_id}")
+
                         # Detect using LLM
                         detected = await detect_chapter_from_conversation(chat_id, api_key)
 
                         if detected:
                             updated = Chats.update_chat_chapter_id_by_id(chat_id, detected)
                             if updated:
-                                log.info(f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}")
+                                if chat.chapter_id == "uncategorized":
+                                    log.info(f"[CHAPTER-AUTO] ✅ Updated uncategorized → {detected} for chat {chat_id}")
+                                else:
+                                    log.info(f"[CHAPTER-AUTO] ✅ Assigned {detected} to chat {chat_id}")
 
                                 # Emit socket event to notify frontend
                                 try:
