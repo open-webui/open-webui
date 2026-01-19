@@ -20,26 +20,10 @@ item_tasks = {}
 
 REDIS_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks"
 REDIS_ITEM_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks:item"
-REDIS_PUBSUB_CHANNEL = f"{REDIS_KEY_PREFIX}:tasks:commands"
+REDIS_TASK_STOP_KEY = f"{REDIS_KEY_PREFIX}:task:stop"
 
-
-async def redis_task_command_listener(app):
-    redis: Redis = app.state.redis
-    pubsub = redis.pubsub()
-    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
-
-    async for message in pubsub.listen():
-        if message["type"] != "message":
-            continue
-        try:
-            command = json.loads(message["data"])
-            if command.get("action") == "stop":
-                task_id = command.get("task_id")
-                local_task = tasks.get(task_id)
-                if local_task:
-                    local_task.cancel()
-        except Exception as e:
-            log.exception(f"Error handling distributed task command: {e}")
+# Task stop check interval in seconds
+TASK_STOP_CHECK_INTERVAL = 1.0
 
 
 ### ------------------------------
@@ -56,13 +40,26 @@ async def redis_save_task(redis: Redis, task_id: str, item_id: Optional[str]):
 
 
 async def redis_cleanup_task(redis: Redis, task_id: str, item_id: Optional[str]):
-    pipe = redis.pipeline()
-    pipe.hdel(REDIS_TASKS_KEY, task_id)
-    if item_id:
-        pipe.srem(f"{REDIS_ITEM_TASKS_KEY}:{item_id}", task_id)
-        if (await pipe.scard(f"{REDIS_ITEM_TASKS_KEY}:{item_id}").execute())[-1] == 0:
-            pipe.delete(f"{REDIS_ITEM_TASKS_KEY}:{item_id}")  # Remove if empty set
-    await pipe.execute()
+    """Clean up task tracking in Redis."""
+    try:
+        pipe = redis.pipeline()
+        pipe.hdel(REDIS_TASKS_KEY, task_id)
+        
+        if item_id:
+            pipe.srem(f"{REDIS_ITEM_TASKS_KEY}:{item_id}", task_id)
+        
+        # Clean up stop signal if exists
+        pipe.delete(f"{REDIS_TASK_STOP_KEY}:{task_id}")
+        
+        await pipe.execute()
+        
+        # Check and delete empty item set
+        if item_id:
+            remaining_count = await redis.scard(f"{REDIS_ITEM_TASKS_KEY}:{item_id}")
+            if remaining_count == 0:
+                await redis.delete(f"{REDIS_ITEM_TASKS_KEY}:{item_id}")
+    except Exception as e:
+        log.warning(f"Error cleaning up task {task_id} from Redis: {e}")
 
 
 async def redis_list_tasks(redis: Redis) -> List[str]:
@@ -73,8 +70,15 @@ async def redis_list_item_tasks(redis: Redis, item_id: str) -> List[str]:
     return list(await redis.smembers(f"{REDIS_ITEM_TASKS_KEY}:{item_id}"))
 
 
-async def redis_send_command(redis: Redis, command: dict):
-    await redis.publish(REDIS_PUBSUB_CHANNEL, json.dumps(command))
+async def should_stop_task(redis: Redis, task_id: str) -> bool:
+    """Check if a task should be stopped based on Redis state."""
+    if not redis:
+        return False
+    try:
+        stop_key = f"{REDIS_TASK_STOP_KEY}:{task_id}"
+        return await redis.exists(stop_key) > 0
+    except Exception:
+        return False
 
 
 async def cleanup_task(redis, task_id: str, id=None):
@@ -96,9 +100,50 @@ async def cleanup_task(redis, task_id: str, id=None):
 async def create_task(redis, coroutine, id=None):
     """
     Create a new asyncio task and add it to the global task dictionary.
+    Wraps the coroutine to check for stop signals from Redis.
     """
     task_id = str(uuid4())  # Generate a unique ID for the task
-    task = asyncio.create_task(coroutine)  # Create the task
+
+    # Wrapper that checks for stop signal periodically
+    async def task_with_stop_check():
+        """Wrapper that periodically checks for stop signal from Redis."""
+        # Create the actual task
+        main_task = asyncio.create_task(coroutine)
+        
+        try:
+            # Run monitoring loop
+            while not main_task.done():
+                # Check if stop signal has been set
+                if redis and await should_stop_task(redis, task_id):
+                    log.debug(f"Stop signal detected for task {task_id}")
+                    main_task.cancel()
+                    break
+                
+                # Wait before next check, but wake up if main_task completes
+                done, pending = await asyncio.wait(
+                    [main_task],
+                    timeout=TASK_STOP_CHECK_INTERVAL,
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+                
+                if main_task in done:
+                    # Task completed normally or with exception
+                    break
+            
+            # Return result or raise exception from main_task
+            return await main_task
+            
+        except asyncio.CancelledError:
+            # Wrapper was cancelled, cancel main task too
+            if not main_task.done():
+                main_task.cancel()
+                try:
+                    await main_task
+                except asyncio.CancelledError:
+                    pass
+            raise
+
+    task = asyncio.create_task(task_with_stop_check())
 
     # Add a done callback for cleanup
     task.add_done_callback(
@@ -138,20 +183,25 @@ async def list_task_ids_by_item_id(redis, id):
 
 async def stop_task(redis, task_id: str):
     """
-    Cancel a running task and remove it from the global task list.
+    Stop a task by setting a state flag in Redis or canceling it locally.
+    Uses STATE-based approach instead of PUBLISH.
     """
     if redis:
-        # PUBSUB: All instances check if they have this task, and stop if so.
-        await redis_send_command(
-            redis,
-            {
-                "action": "stop",
-                "task_id": task_id,
-            },
-        )
-        # Optionally check if task_id still in Redis a few moments later for feedback?
-        return {"status": True, "message": f"Stop signal sent for {task_id}"}
+        try:
+            # Set stop signal with TTL to prevent orphaned keys
+            stop_key = f"{REDIS_TASK_STOP_KEY}:{task_id}"
+            await redis.set(stop_key, "1", ex=300)  # 5 minute TTL
+        except Exception as e:
+            log.warning(f"Error setting stop signal for task {task_id}: {e}")
+        
+        # Also try to cancel local task immediately if it exists
+        local_task = tasks.get(task_id)
+        if local_task and not local_task.done():
+            local_task.cancel()
+        
+        return {"status": True, "message": f"Stop signal set for {task_id}"}
 
+    # Local-only fallback (no Redis)
     task = tasks.pop(task_id, None)
     if not task:
         return {"status": False, "message": f"Task with ID {task_id} not found."}
@@ -163,10 +213,7 @@ async def stop_task(redis, task_id: str):
         # Task successfully canceled
         return {"status": True, "message": f"Task {task_id} successfully stopped."}
 
-    if task.cancelled() or task.done():
-        return {"status": True, "message": f"Task {task_id} successfully cancelled."}
-
-    return {"status": True, "message": f"Cancellation requested for {task_id}."}
+    return {"status": False, "message": f"Failed to stop task {task_id}."}
 
 
 async def stop_item_tasks(redis: Redis, item_id: str):
