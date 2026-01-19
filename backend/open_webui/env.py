@@ -673,7 +673,11 @@ WEBSOCKET_SERVER_LOGGING = (
     os.environ.get("WEBSOCKET_SERVER_LOGGING", "False").lower() == "true"
 )
 WEBSOCKET_SERVER_ENGINEIO_LOGGING = (
-    os.environ.get("WEBSOCKET_SERVER_LOGGING", "False").lower() == "true"
+    os.environ.get(
+        "WEBSOCKET_SERVER_ENGINEIO_LOGGING",
+        os.environ.get("WEBSOCKET_SERVER_LOGGING", "False"),
+    ).lower()
+    == "true"
 )
 WEBSOCKET_SERVER_PING_TIMEOUT = os.environ.get("WEBSOCKET_SERVER_PING_TIMEOUT", "20")
 try:

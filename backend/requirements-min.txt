@@ -25,8 +25,8 @@ httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 
 sqlalchemy==2.0.45
-alembic==1.17.2
-peewee==3.18.3
+alembic==1.18.1
+peewee==3.19.0
 peewee-migrate==1.14.3
 
 pycrdt==0.12.44
@@ -41,7 +41,7 @@ asgiref==3.11.0
 mcp==1.25.0
 openai
 
-langchain==1.2.0
+langchain==1.2.4
 langchain-community==0.4.1
 langchain-classic==1.0.1
 langchain-text-splitters==1.1.0

@@ -53,16 +53,16 @@
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
 		console.log('Exporting table to CSV');
 
-		// Extract header row text and escape for CSV.
-		const header = token.header.map((headerCell) => `"${headerCell.text.replace(/"/g, '""')}"`);
+		// Extract header row text, decode HTML entities, and escape for CSV.
+		const header = token.header.map((headerCell) => `"${decode(headerCell.text).replace(/"/g, '""')}"`);
 
 		// Create an array for rows that will hold the mapped cell text.
 		const rows = token.rows.map((row) =>
 			row.map((cell) => {
 				// Map tokens into a single text
 				const cellContent = cell.tokens.map((token) => token.text).join('');
-				// Escape double quotes and wrap the content in double quotes
-				return `"${cellContent.replace(/"/g, '""')}"`;
+				// Decode HTML entities and escape double quotes, wrap in double quotes
+				return `"${decode(cellContent).replace(/"/g, '""')}"`;
 			})
 		);
 

@@ -1599,6 +1599,25 @@ async def query_knowledge_files(
     if not __user__:
         return json.dumps({"error": "User context not available"})
 
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5  # Default fallback
+
+    # Handle knowledge_ids being string "None", "null", or empty
+    if isinstance(knowledge_ids, str):
+        if knowledge_ids.lower() in ("none", "null", ""):
+            knowledge_ids = None
+        else:
+            # Try to parse as JSON array if it looks like one
+            try:
+                knowledge_ids = json.loads(knowledge_ids)
+            except json.JSONDecodeError:
+                # Treat as single ID
+                knowledge_ids = [knowledge_ids]
+
     try:
         from open_webui.models.knowledge import Knowledges
         from open_webui.models.files import Files
