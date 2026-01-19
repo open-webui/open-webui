@@ -229,6 +229,9 @@ class KnowledgeTable:
                             or_(
                                 Knowledge.name.ilike(f"%{query_key}%"),
                                 Knowledge.description.ilike(f"%{query_key}%"),
+                                User.name.ilike(f"%{query_key}%"),
+                                User.email.ilike(f"%{query_key}%"),
+                                User.username.ilike(f"%{query_key}%"),
                             )
                         )
 

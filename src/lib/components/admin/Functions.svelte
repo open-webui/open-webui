@@ -86,7 +86,10 @@
 					(selectedType !== '' ? f.type === selectedType : true) &&
 					(query === '' ||
 						f.name.toLowerCase().includes(query.toLowerCase()) ||
-						f.id.toLowerCase().includes(query.toLowerCase())) &&
+						f.id.toLowerCase().includes(query.toLowerCase()) ||
+						(f.user?.name || '').toLowerCase().includes(query.toLowerCase()) ||
+						(f.user?.email || '').toLowerCase().includes(query.toLowerCase()) ||
+						(f.user?.username || '').toLowerCase().includes(query.toLowerCase())) &&
 					(viewOption === '' ||
 						(viewOption === 'created' && f.user_id === $user?.id) ||
 						(viewOption === 'shared' && f.user_id !== $user?.id))
