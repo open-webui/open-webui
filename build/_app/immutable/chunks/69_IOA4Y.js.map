@@ -1,0 +1,1 @@
+{"version":3,"file":"69_IOA4Y.js","sources":["../../../../../../node_modules/svelte/src/internal/flags/legacy.js"],"sourcesContent":["import { enable_legacy_mode_flag } from './index.js';\n\nenable_legacy_mode_flag();\n"],"names":["enable_legacy_mode_flag"],"mappings":"6BAEAA,EAAuB","x_google_ignoreList":[0]}

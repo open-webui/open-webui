@@ -294,6 +294,8 @@ def install_tool_and_function_dependencies():
     and then installing them using pip. Duplicates or similar version specifications are
     handled by pip as much as possible.
     """
+    if True:
+        return
     function_list = Functions.get_functions(active_only=True)
     tool_list = Tools.get_tools()
 

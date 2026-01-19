@@ -1,0 +1,2 @@
+import{ah as d,ai as g,aj as c,w as m,ak as b,al as l,j as p,u as h,X as k}from"./0WpKKl27.js";function j(n=!1){const s=d,e=s.l.u;if(!e)return;let f=()=>h(s.s);if(n){let a=0,t={};const _=k(()=>{let i=!1;const r=s.s;for(const o in r)r[o]!==t[o]&&(t[o]=r[o],i=!0);return i&&a++,a});f=()=>p(_)}e.b.length&&g(()=>{u(s,f),l(e.b)}),c(()=>{const a=m(()=>e.m.map(b));return()=>{for(const t of a)typeof t=="function"&&t()}}),e.a.length&&c(()=>{u(s,f),l(e.a)})}function u(n,s){if(n.l.s)for(const e of n.l.s)p(e);s()}export{j as i};
+//# sourceMappingURL=C3k0oZ3o.js.map

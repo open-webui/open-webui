@@ -1,4 +1,7 @@
-from enum import StrEnum
+try:
+    from enum import StrEnum  # Python 3.11+
+except ImportError:
+    from strenum import StrEnum  # Backport for older Python
 
 
 class VectorType(StrEnum):

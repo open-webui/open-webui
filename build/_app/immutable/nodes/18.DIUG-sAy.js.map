@@ -1,0 +1,1 @@
+{"version":3,"file":"18.DIUG-sAy.js","sources":["../../../../../../src/routes/(app)/admin/settings/[tab]/+page.svelte"],"sourcesContent":["<script>\n\timport Settings from '$lib/components/admin/Settings.svelte';\n</script>\n\n<Settings />\n"],"names":["Settings","$$anchor"],"mappings":"mHAAA,CAICA,EAAQC,EAAA,EAAA,CAFD"}

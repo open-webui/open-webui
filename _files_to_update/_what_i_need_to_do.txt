@@ -1,0 +1,26 @@
+in open-webui1/src/lib/constants.ts
+
+        export const APP_NAME = 'Geomas';
+
+IN open-webui/backend/open_webui/env.py
+line 93 
+remove if WEBUI_NAME != "Open WebUI":
+    WEBUI_NAME += " (Open WebUI)"
+
+
+
+pip install strenum
+
+type.py
+
+try:
+    from enum import StrEnum  # Python 3.11+
+except ImportError:
+    from strenum import StrEnum  # Backport for older Python
+
+/run/media/karl/really_big_HDD/open-webui-geo/backend/open_webui/utils/plugin.py
+
+last function put false
+
+yarn run build 
+
