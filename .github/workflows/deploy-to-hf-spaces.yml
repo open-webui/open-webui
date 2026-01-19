@@ -1,4 +1,4 @@
-name: Deploy to HuggingFace Spaces
+name: 🤗 CodingSoft HF Spaces Deploy
 
 on:
   push:

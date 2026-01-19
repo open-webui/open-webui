@@ -1,4 +1,4 @@
-name: Python CI
+name: 🐍 CodingSoft Python Format
 
 on:
   push:

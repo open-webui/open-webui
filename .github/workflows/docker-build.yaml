@@ -1,4 +1,4 @@
-name: Create and publish Docker images with specific build args
+name: 🐳 CodingSoft Docker Build
 
 on:
   workflow_dispatch:

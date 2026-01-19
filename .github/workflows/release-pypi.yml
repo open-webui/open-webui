@@ -1,4 +1,4 @@
-name: Release to PyPI
+name: 📦 CodingSoft PyPI Release
 
 on:
   push:
