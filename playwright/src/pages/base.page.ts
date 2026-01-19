@@ -17,6 +17,7 @@ export type Language = 'en-GB' | 'fr-CA';
 
 export class BasePage {
 	readonly page: Page;
+	readonly lang: Language;
 	t: typeof en;
 
 	// --- Locators: Header ---
@@ -38,6 +39,7 @@ export class BasePage {
 
 	constructor(page: Page, lang: 'en-GB' | 'fr-CA' = 'en-GB') {
 		this.page = page;
+		this.lang = lang;
 		this.t = lang === 'fr-CA' ? fr : en;
 
 		this.userProfileButton = page.getByRole('button', { name: 'User profile' });
@@ -78,10 +80,14 @@ export class BasePage {
 		if (lang == 'fr-CA') {
 			if (await this.headerLanguageButtonFR.isVisible()) {
 				await this.headerLanguageButtonFR.click();
+				// Wait for the button to change (meaning the language switch logic triggered)
+				await expect(this.headerLanguageButtonFR).not.toBeVisible();
 			}
 		} else {
 			if (await this.headerLanguageButtonEN.isVisible()) {
 				await this.headerLanguageButtonEN.click();
+				// Wait for the button to change (meaning the language switch logic triggered)
+				await expect(this.headerLanguageButtonEN).not.toBeVisible();
 			}
 		}
 	}
@@ -91,7 +97,7 @@ export class BasePage {
 	 */
 	async goto(path: string = '/') {
 		await this.page.goto(path);
-		await this.splashLogo.waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});
+		await this.splashLogo.waitFor({ state: 'detached', timeout: 20000 }).catch(() => { });
 		await expect(this.page.locator('body')).toBeVisible();
 	}
 

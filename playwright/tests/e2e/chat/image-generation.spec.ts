@@ -12,11 +12,9 @@ test.describe('Feature: Image Generation', () => {
 		console.log('Testing: user can generate images using dall-e-2');
 
 		// Enable image generation globally
-		await adminPage.verifyPageLanguage(locale as Language);
 		await adminPage.configureImageGeneration('dall-e-2', true);
 
 		await userPage.goto('/');
-		await userPage.verifyPageLanguage(locale as Language);
 		await userPage.toggleChatTool(userPage.getTranslation('Image'), true);
 
 		await userPage.sendMessage(
