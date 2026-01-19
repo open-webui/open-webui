@@ -135,11 +135,15 @@ postgres = [
     "psycopg2-binary==2.9.11",
     "pgvector==0.4.2",
 ]
+mariadb = [
+    "mariadb==1.1.14",
+]
 
 all = [
     "pymongo",
     "psycopg2-binary==2.9.11",
     "pgvector==0.4.2",
+    "mariadb==1.1.14",
     "moto[s3]>=5.0.26",
     "gcp-storage-emulator>=2024.8.3",
     "docker~=7.1.0",

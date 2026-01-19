@@ -115,6 +115,7 @@ psycopg2-binary==2.9.11
 pgvector==0.4.2
 
 PyMySQL==1.1.2
+mariadb==1.1.14
 boto3==1.42.21
 
 pymilvus==2.6.6
