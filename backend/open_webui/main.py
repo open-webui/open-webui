@@ -529,7 +529,6 @@ from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.redis import get_redis_connection
 
 from open_webui.tasks import (
-    redis_task_command_listener,
     list_task_ids_by_item_id,
     create_task,
     stop_task,
@@ -613,10 +612,6 @@ async def lifespan(app: FastAPI):
         async_mode=True,
     )
 
-    if app.state.redis is not None:
-        app.state.redis_task_command_listener = asyncio.create_task(
-            redis_task_command_listener(app)
-        )
 
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
@@ -646,10 +641,6 @@ async def lifespan(app: FastAPI):
         )
 
     yield
-
-    if hasattr(app.state, "redis_task_command_listener"):
-        app.state.redis_task_command_listener.cancel()
-
 
 app = FastAPI(
     title="Open WebUI",
