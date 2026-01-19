@@ -12,7 +12,6 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
 )
 
-
 if TYPE_CHECKING:
     from loguru import Record
 

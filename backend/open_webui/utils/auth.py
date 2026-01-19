@@ -29,7 +29,6 @@ from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, 
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
-
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
 log = logging.getLogger(__name__)

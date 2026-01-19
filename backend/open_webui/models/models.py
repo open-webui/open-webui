@@ -17,7 +17,6 @@ from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 from open_webui.utils.access_control import has_access
 
-
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 

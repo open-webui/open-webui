@@ -12,7 +12,6 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
 from sqlalchemy import or_
 
-
 ####################
 # User DB Schema
 ####################

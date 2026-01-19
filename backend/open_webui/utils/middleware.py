@@ -92,7 +92,6 @@ from open_webui.env import (
 )
 from open_webui.constants import TASKS
 
-
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])

@@ -9,7 +9,6 @@ from open_webui.config import BannerModel
 
 from open_webui.utils.tools import get_tool_server_data, get_tool_servers_data
 
-
 router = APIRouter()
 
 
