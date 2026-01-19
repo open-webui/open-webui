@@ -283,7 +283,6 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 	}));
 };
 
-
 // Esto define la llamada de la API
 export const getChatsByModelId = async (token: string, modelId: string) => {
 	let error = null;
@@ -312,7 +311,6 @@ export const getChatsByModelId = async (token: string, modelId: string) => {
 
 	return res;
 };
-
 
 export const getChatsByFolderId = async (token: string, folderId: string) => {
 	let error = null;

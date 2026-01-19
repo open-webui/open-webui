@@ -24,7 +24,11 @@ from pydantic import BaseModel
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import (
+    get_permissions,
+    has_permission,
+    get_chat_export_permission,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -36,24 +40,26 @@ router = APIRouter()
 # GetChatsOfAModel  - Esta es la funcion implementada
 ############################
 @router.get("/model/{model_id}/all", response_model=list[ChatExportResponse])
-async def get_all_chats_by_model(model_id: str, user=Depends(get_admin_user)):
+async def get_all_chats_by_model(
+    request: Request,
+    model_id: str,
+    user=Depends(get_verified_user),
+):
 
-    # Permite a un admin obtener todos los chats de los usuarios que usan un modelo específico.
-
-    if not ENABLE_ADMIN_CHAT_ACCESS:
+    # Permiso de exportación
+    if user.role == "user" and not get_chat_export_permission(user.id):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Acceso prohibido",
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Llama a la función que devuelve todos los chats de un modelo
     log.info(f"get_all_chats_by_model called with model_id={model_id}, user={user.id}")
+
     try:
         chats = Chats.get_chats_by_model_id(model_id)
-        log.info(f"Found {len(chats)} chats for model_id={model_id}")
         return [simplify_chat(chat) for chat in chats]
     except Exception as e:
-        log.exception(f"Error fetching chats by model_id={model_id}: {e}")
+        log.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 

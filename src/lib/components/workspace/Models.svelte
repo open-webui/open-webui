@@ -168,7 +168,7 @@
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
 
-		// Funcion que usa la llamada de API
+	// Funcion que usa la llamada de API
 	const exportModelChatsHandler = async (model) => {
 		try {
 			const chats = await getChatsByModelId(localStorage.token, model.id);
@@ -185,7 +185,6 @@
 			toast.error($i18n.t('Failed to export chats', e));
 		}
 	};
-
 
 	onMount(async () => {
 		models = await getWorkspaceModels(localStorage.token);

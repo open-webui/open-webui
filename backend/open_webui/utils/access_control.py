@@ -145,3 +145,23 @@ def get_users_with_access(
             user_ids_with_access.update(group_user_ids)
 
     return Users.get_users_by_user_ids(list(user_ids_with_access))
+
+
+def get_chat_export_permission(user_id: str) -> bool:
+    # Devuelve si el usuario tiene permiso de exportar chats según sus grupos.
+
+    user_groups = Groups.get_groups_by_member_id(user_id)
+
+    # Si el usuario no tiene grupos, asumir False
+    if not user_groups:
+        return False
+
+    # Itera todos los grupos del usuario
+    for group in user_groups:
+        chat_perms = group.permissions.get("chat", {})
+        # Si algún grupo tiene export True, devuelve True
+        if chat_perms.get("export", False):
+            return True
+
+    # Ningún grupo tiene export True
+    return False
