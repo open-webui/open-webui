@@ -2323,6 +2323,78 @@ if VECTOR_DB == "chroma":
     CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
+
+# MariaDB Vector (mariadb-vector)
+MARIADB_VECTOR_DB_URL = os.environ.get("MARIADB_VECTOR_DB_URL", "").strip()
+
+MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
+    os.environ.get("MARIADB_VECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536").strip() or "1536"
+)
+
+# Distance strategy:
+#   - cosine     => vec_distance_cosine(...)
+#   - euclidean  => vec_distance_euclidean(...)
+MARIADB_VECTOR_DISTANCE_STRATEGY = (
+    os.environ.get("MARIADB_VECTOR_DISTANCE_STRATEGY", "cosine").strip().lower()
+)
+
+# HNSW M parameter (MariaDB VECTOR INDEX ... M=<int>)
+MARIADB_VECTOR_INDEX_M = int(os.environ.get("MARIADB_VECTOR_INDEX_M", "8").strip() or "8")
+
+# Pooling (MariaDB-Vector)
+MARIADB_VECTOR_POOL_SIZE = os.environ.get("MARIADB_VECTOR_POOL_SIZE", None)
+
+if MARIADB_VECTOR_POOL_SIZE != None:
+    try:
+        MARIADB_VECTOR_POOL_SIZE = int(MARIADB_VECTOR_POOL_SIZE)
+    except Exception:
+        MARIADB_VECTOR_POOL_SIZE = None
+
+MARIADB_VECTOR_POOL_MAX_OVERFLOW = os.environ.get("MARIADB_VECTOR_POOL_MAX_OVERFLOW", 0)
+
+if MARIADB_VECTOR_POOL_MAX_OVERFLOW == "":
+    MARIADB_VECTOR_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        MARIADB_VECTOR_POOL_MAX_OVERFLOW = int(MARIADB_VECTOR_POOL_MAX_OVERFLOW)
+    except Exception:
+        MARIADB_VECTOR_POOL_MAX_OVERFLOW = 0
+
+MARIADB_VECTOR_POOL_TIMEOUT = os.environ.get("MARIADB_VECTOR_POOL_TIMEOUT", 30)
+
+if MARIADB_VECTOR_POOL_TIMEOUT == "":
+    MARIADB_VECTOR_POOL_TIMEOUT = 30
+else:
+    try:
+        MARIADB_VECTOR_POOL_TIMEOUT = int(MARIADB_VECTOR_POOL_TIMEOUT)
+    except Exception:
+        MARIADB_VECTOR_POOL_TIMEOUT = 30
+
+MARIADB_VECTOR_POOL_RECYCLE = os.environ.get("MARIADB_VECTOR_POOL_RECYCLE", 3600)
+
+if MARIADB_VECTOR_POOL_RECYCLE == "":
+    MARIADB_VECTOR_POOL_RECYCLE = 3600
+else:
+    try:
+        MARIADB_VECTOR_POOL_RECYCLE = int(MARIADB_VECTOR_POOL_RECYCLE)
+    except Exception:
+        MARIADB_VECTOR_POOL_RECYCLE = 3600
+
+ENABLE_MARIADB_VECTOR = True
+if VECTOR_DB == "mariadb-vector":
+    if not MARIADB_VECTOR_DB_URL:
+        ENABLE_MARIADB_VECTOR = False
+    else:
+        try:
+            parsed = urlparse(MARIADB_VECTOR_DB_URL)
+            scheme = (parsed.scheme or "").lower()
+            # Require official driver so VECTOR binds as float32 bytes correctly
+            if scheme != "mariadb+mariadbconnector":
+                ENABLE_MARIADB_VECTOR = False
+        except Exception:
+            ENABLE_MARIADB_VECTOR = False
+
+
 # Milvus
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 MILVUS_DB = os.environ.get("MILVUS_DB", "default")
