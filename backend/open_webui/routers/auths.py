@@ -813,6 +813,8 @@ async def signup(
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+    except HTTPException:
+        raise
     except Exception as err:
         log.error(f"Signup error: {str(err)}")
         raise HTTPException(500, detail="An internal error occurred during signup.")
@@ -954,6 +956,8 @@ async def add_user(
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+    except HTTPException:
+        raise
     except Exception as err:
         log.error(f"Add user error: {str(err)}")
         raise HTTPException(
