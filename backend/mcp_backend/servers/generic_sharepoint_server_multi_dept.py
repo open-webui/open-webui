@@ -28,6 +28,7 @@ Example usage:
 - For Finance: create server with department_prefix="FIN"
 - For IT: create server with department_prefix="IT"
 """
+
 import os
 import sys
 import asyncio

@@ -11,6 +11,7 @@ Environment variables required:
 - MPO-specific: MPO_SHP_ID_APP, MPO_SHP_ID_APP_SECRET, MPO_SHP_TENANT_ID,
   MPO_SHP_SITE_URL, MPO_SHP_ORG_NAME, MPO_SHP_DOC_LIBRARY, MPO_SHP_DEFAULT_SEARCH_FOLDERS
 """
+
 import logging
 import sys
 from pathlib import Path

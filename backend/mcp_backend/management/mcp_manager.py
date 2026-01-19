@@ -9,6 +9,7 @@ import logging
 import subprocess
 import asyncio
 import os
+import re
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 
@@ -482,47 +483,64 @@ class FastMCPManager:
         else:
             log.warning(f"News server not found at {news_server_path}")
 
+    async def initialize_sharepoint_servers(self):
+        backend_dir = Path(__file__).parent.parent.parent  # Go up to backend/ directory
+        log.info(f"Backend directory resolved to: {backend_dir}")
+
         # Add configuration for MPO SharePoint server (stdio)
-        mpo_sharepoint_server_path = (
-            backend_dir / "mcp_backend" / "servers" / "mpo_sharepoint_server.py"
+        generic_sharepoint_server_path = (
+            backend_dir / "mcp_backend" / "servers" / "generic_sharepoint_server.py"
         )
 
-        log.info(f"Looking for MPO SharePoint server at: {mpo_sharepoint_server_path}")
-        log.info(f"MPO SharePoint server exists: {mpo_sharepoint_server_path.exists()}")
+        log.info(
+            f"Looking for Generic SharePoint server at: {generic_sharepoint_server_path}"
+        )
+        log.info(
+            f"Generic SharePoint server exists: {generic_sharepoint_server_path.exists()}"
+        )
 
-        if mpo_sharepoint_server_path.exists():
-            self.add_server_config(
-                name="mpo_sharepoint_server",
-                command=["python", str(mpo_sharepoint_server_path)],
-                working_dir=str(backend_dir),
-                env=dict(os.environ),  # Pass current environment variables
-                transport="stdio",
+        if generic_sharepoint_server_path.exists():
+
+            pattern = re.compile(pattern="[A-Z]+_SHP_")
+            departments: set[str] = set()
+
+            # Extract all servers that should be instantiated based on environment variables.
+            for key, _ in os.environ.items():
+                if re.search(pattern, key):
+                    # Add deparment acronym to set
+                    departments.add(key.split("_")[0])
+
+            log.info(
+                f"Found Sharepoint MCP configs for the following departments: {departments}"
             )
 
-            # Start the MPO SharePoint server
-            log.info(f"About to start MPO SharePoint server...")
-            start_result = await self.start_server("mpo_sharepoint_server")
-            log.info(f"MPO SharePoint server start_server returned: {start_result}")
-            if start_result:
-                log.info("MPO SharePoint server started successfully")
-            else:
-                log.error("MPO SharePoint server failed to start")
+            # Add servers to config and start them.
+            for department in departments:
+
+                server_name = f"{department.lower()}_sharepoint_server"
+
+                self.add_server_config(
+                    name=server_name,
+                    command=["python", str(generic_sharepoint_server_path), department],
+                    working_dir=str(backend_dir),
+                    env=dict(os.environ),  # Pass current environment variables
+                    transport="stdio",
+                )
+
+                # Start the SharePoint server
+                log.info(f"About to start {department} SharePoint server...")
+                start_result = await self.start_server(server_name)
+                log.info(
+                    f"{department} SharePoint server start_server returned: {start_result}"
+                )
+                if start_result:
+                    log.info(f"{department} SharePoint server started successfully")
+                else:
+                    log.error(f"{department} SharePoint server failed to start")
         else:
             log.warning(
-                f"MPO SharePoint server not found at {mpo_sharepoint_server_path}"
+                f"Generic SharePoint server not found at {generic_sharepoint_server_path}"
             )
-
-        # Legacy SharePoint server (keep for backward compatibility)
-        sharepoint_server_path = (
-            backend_dir / "mcp_backend" / "servers" / "fastmcp_sharepoint_server.py"
-        )
-
-        if sharepoint_server_path.exists():
-            log.info(
-                "Legacy SharePoint server found but skipping (using MPO-specific server instead)"
-            )
-        else:
-            log.info("No legacy SharePoint server found")
 
     async def initialize_external_servers(self):
         """Initialize external MCP servers from database"""
@@ -576,6 +594,9 @@ class FastMCPManager:
         log.info(f"Calling initialize_default_servers()")
         await self.initialize_default_servers()
         log.info(f"Completed initialize_default_servers()")
+        log.info(f"Calling initialize_sharepoint_servers()")
+        await self.initialize_sharepoint_servers()
+        log.info(f"Completed initialize_sharepoint_servers()")
         log.info(f"Calling initialize_external_servers()")
         await self.initialize_external_servers()
         log.info(f"Completed initialize_external_servers()")

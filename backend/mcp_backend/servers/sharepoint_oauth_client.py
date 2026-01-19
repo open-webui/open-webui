@@ -9,6 +9,7 @@ This module handles OAuth2 authentication for SharePoint access, supporting both
 The OBO flow allows the MCP server to act on behalf of authenticated users,
 respecting their individual SharePoint permissions.
 """
+
 import os
 import asyncio
 import aiohttp

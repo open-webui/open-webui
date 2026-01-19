@@ -11,7 +11,6 @@ from open_webui.models.base import Base
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import BigInteger, Column, String, Text, JSON, or_, func
 
-
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 

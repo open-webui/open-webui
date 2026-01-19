@@ -17,7 +17,6 @@ from open_webui.utils.tools import get_tools_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
-
 router = APIRouter()
 
 ############################

@@ -30,13 +30,11 @@ def upgrade() -> None:
                 {"domain": domain, "id": user_id},
             )
     else:
-        op.execute(
-            """
+        op.execute("""
             UPDATE "user"
             SET domain = split_part(email, '@', 2)
             WHERE domain IS NULL
-            """
-        )
+            """)
 
 
 def downgrade() -> None:

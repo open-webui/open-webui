@@ -8,7 +8,6 @@ from open_webui.models.base import Base
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Integer
 
-
 ####################
 # MCP Server DB Schema
 ####################

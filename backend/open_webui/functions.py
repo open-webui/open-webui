@@ -34,7 +34,6 @@ from open_webui.utils.payload import (
     apply_model_system_prompt_to_body,
 )
 
-
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])

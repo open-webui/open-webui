@@ -11,7 +11,6 @@ import sqlalchemy as sa
 from sqlalchemy.sql import table, column
 from sqlalchemy.engine.reflection import Inspector
 
-
 revision = "1af9b942657b"
 down_revision = "242a2047eae0"
 branch_labels = None
