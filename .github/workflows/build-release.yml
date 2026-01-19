@@ -3,7 +3,8 @@ name: 🚀 CodingSoft Release
 on:
   push:
     branches:
-      - main # or whatever branch you want to use
+      - main
+  workflow_dispatch:
 
 jobs:
   release:
@@ -13,60 +14,63 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Check for changes in package.json
+      - name: Check for package.json changes
+        id: check_changes
         run: |
-          git diff --cached --diff-filter=d package.json || {
+          if ! git diff --cached --diff-filter=d --quiet package.json; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
             echo "No changes to package.json"
-            exit 1
-          }
+            exit 0
+          fi
 
-      - name: Get version number from package.json
-        id: get_version
+      - name: Get version from package.json
+        id: version
+        if: steps.check_changes.outputs.changes == 'true'
         run: |
           VERSION=$(jq -r '.version' package.json)
-          echo "::set-output name=version::$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Extract latest CHANGELOG entry
+      - name: Extract CHANGELOG entry
         id: changelog
+        if: steps.check_changes.outputs.changes == 'true'
         run: |
           CHANGELOG_CONTENT=$(awk 'BEGIN {print_section=0;} /^## \[/ {if (print_section == 0) {print_section=1;} else {exit;}} print_section {print;}' CHANGELOG.md)
-          CHANGELOG_ESCAPED=$(echo "$CHANGELOG_CONTENT" | sed ':a;N;$!ba;s/\n/%0A/g')
-          echo "Extracted latest release notes from CHANGELOG.md:" 
-          echo -e "$CHANGELOG_CONTENT" 
-          echo "::set-output name=content::$CHANGELOG_ESCAPED"
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub release
+        if: steps.check_changes.outputs.changes == 'true'
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const changelog = `${{ steps.changelog.outputs.content }}`;
-            const release = await github.rest.repos.createRelease({
+            const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${{ steps.get_version.outputs.version }}`,
-              name: `v${{ steps.get_version.outputs.version }}`,
-              body: changelog,
-            })
-            console.log(`Created release ${release.data.html_url}`)
+              tag_name: `v${{ steps.version.outputs.version }}`,
+              name: `v${{ steps.version.outputs.version }}`,
+              body: `${{ steps.changelog.outputs.content }}`,
+            });
+            core.setOutput('release_url', data.html_url);
 
-      - name: Upload package to GitHub release
-        uses: actions/upload-artifact@v4
+      - name: Upload release assets
+        if: steps.check_changes.outputs.changes == 'true'
+        uses: actions/upload-release-asset@v1
         with:
-          name: package
-          path: |
-            .
-            !.git
+          upload_url: ${{ steps.release.outputs.release_url }}
+          asset_path: .
+          asset_name: source-code.zip
+          asset_content_type: application/zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trigger Docker build workflow
-        uses: actions/github-script@v8
-        with:
-          script: |
-            github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'docker-build.yaml',
-              ref: 'v${{ steps.get_version.outputs.version }}',
-            })
+      - name: Trigger Docker build
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          curl -X POST \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/${{ github.repository }}/actions/workflows/docker-build.yaml/dispatches \
+          -d '{"ref":"v${{ steps.version.outputs.version }}"}'

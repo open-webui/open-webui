@@ -3,8 +3,9 @@ name: 📦 CodingSoft PyPI Release
 on:
   push:
     branches:
-      - main # or whatever branch you want to use
+      - main
       - pypi-release
+  workflow_dispatch:
 
 jobs:
   release:
@@ -21,13 +22,15 @@ jobs:
           fetch-depth: 0
       - name: Install Git
         run: sudo apt-get update && sudo apt-get install -y git
-      - uses: actions/setup-node@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
         with:
           node-version: 22
-      - uses: actions/setup-python@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
         with:
           python-version: 3.11
-      - name: Build
+      - name: Build package
         run: |
           python -m pip install --upgrade pip
           pip install build

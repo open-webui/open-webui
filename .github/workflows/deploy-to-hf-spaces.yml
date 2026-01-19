@@ -16,8 +16,7 @@ jobs:
       - id: check-key
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        if: "${{ env.HF_TOKEN != '' }}"
-        run: echo "defined=true" >> $GITHUB_OUTPUT
+        run: if [ -n "$HF_TOKEN" ]; then echo "defined=true" >> $GITHUB_OUTPUT; fi
 
   deploy:
     runs-on: ubuntu-latest
@@ -31,34 +30,36 @@ jobs:
         with:
           lfs: true
 
-      - name: Remove git history
-        run: rm -rf .git
-
-      - name: Prepend YAML front matter to README.md
+      - name: Prepare deployment files
         run: |
-          echo "---" > temp_readme.md
-          echo "title: Open WebUI" >> temp_readme.md
-          echo "emoji: 🐳" >> temp_readme.md
-          echo "colorFrom: purple" >> temp_readme.md
-          echo "colorTo: gray" >> temp_readme.md
-          echo "sdk: docker" >> temp_readme.md
-          echo "app_port: 8080" >> temp_readme.md
-          echo "---" >> temp_readme.md
+          rm -rf .git
+          # Create temporary README with YAML front matter
+          cat > temp_readme.md << 'EOF'
+          ---
+          title: Open WebUI
+          emoji: 🐳
+          colorFrom: purple
+          colorTo: gray
+          sdk: docker
+          app_port: 8080
+          ---
+          EOF
           cat README.md >> temp_readme.md
           mv temp_readme.md README.md
+          # Remove large files not needed for deployment
+          rm -f demo.png banner.png
 
-      - name: Configure git
+      - name: Configure Git
         run: |
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-      - name: Set up Git and push to Space
+
+      - name: Deploy to Hugging Face Spaces
         run: |
           git init --initial-branch=main
           git lfs install
           git lfs track "*.ttf"
           git lfs track "*.jpg"
-          rm demo.png
-          rm banner.png
           git add .
           git commit -m "GitHub deploy: ${{ github.sha }}"
           git push --force https://open-webui:${HF_TOKEN}@huggingface.co/spaces/open-webui/open-webui main
