@@ -743,13 +743,13 @@
 						const blob = await (await fetch(imageUrl)).blob();
 						const compressedFile = new File([blob], file.name, { type: file.type });
 
-						uploadFileHandler(compressedFile, false);
+						await uploadFileHandler(compressedFile, false);
 					}
 				};
 
 				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
-				uploadFileHandler(file);
+				await uploadFileHandler(file);
 			}
 		});
 	};
