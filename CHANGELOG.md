@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎙️ Users can now use local Whisper for speech-to-text when STT_ENGINE is left empty (the default for local mode). [#20534](https://github.com/open-webui/open-webui/pull/20534)
 - 📊 The Evaluations page now loads faster by eliminating duplicate API calls to the leaderboard and feedbacks endpoints. [Commit](https://github.com/open-webui/open-webui/commit/2dd09223f2aac301a4d5c17fb667d974c34f3ff1)
 - 🌐 Fixed missing Settings tab i18n label keys. [#20526](https://github.com/open-webui/open-webui/pull/20526)
+- 🛑 Stop task via RedisCluster now works correctly [#19840](https://github.com/open-webui/open-webui/issues/19840)
 
 ## [0.7.1] - 2026-01-09
 
