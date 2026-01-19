@@ -5,7 +5,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { user } from '$lib/stores';
+	import { user, ollamaConfigCache } from '$lib/stores';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -21,11 +21,13 @@
 
 	onMount(async () => {
 		if ($user?.role === 'admin') {
-			await Promise.all([
-				(async () => {
-					ollamaConfig = await getOllamaConfig(localStorage.token);
-				})()
-			]);
+			// Use cached config if available
+			if ($ollamaConfigCache) {
+				ollamaConfig = $ollamaConfigCache;
+			} else {
+				ollamaConfig = await getOllamaConfig(localStorage.token);
+				ollamaConfigCache.set(ollamaConfig);
+			}
 
 			if (ollamaConfig) {
 				selected = 'ollama';

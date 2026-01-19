@@ -3,7 +3,7 @@
 	import { getRAGConfig, updateRAGConfig } from '$lib/apis/retrieval';
 	import Switch from '$lib/components/common/Switch.svelte';
 
-	import { models } from '$lib/stores';
+	import { models, ragConfigCache } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -89,7 +89,14 @@
 	};
 
 	onMount(async () => {
-		const res = await getRAGConfig(localStorage.token);
+		// Use cached RAG config if available
+		let res;
+		if ($ragConfigCache) {
+			res = JSON.parse(JSON.stringify($ragConfigCache)); // Deep clone
+		} else {
+			res = await getRAGConfig(localStorage.token);
+			ragConfigCache.set(res);
+		}
 
 		if (res) {
 			webConfig = res.web;

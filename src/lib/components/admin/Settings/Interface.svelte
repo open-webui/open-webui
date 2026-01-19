@@ -9,7 +9,7 @@
 
 	import { getBackendConfig, getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
-	import { config, settings, user } from '$lib/stores';
+	import { config, settings, user, tasksConfigCache, bannersCache } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 
 	import { banners as _banners } from '$lib/stores';
@@ -54,6 +54,8 @@
 
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
+		// Update cache after saving
+		tasksConfigCache.set(taskConfig);
 
 		promptSuggestions = promptSuggestions.filter((p) => p.content !== '');
 		// @ts-ignore
@@ -64,7 +66,10 @@
 	};
 
 	const updateBanners = async () => {
-		_banners.set(await setBanners(localStorage.token, banners));
+		const updatedBanners = await setBanners(localStorage.token, banners);
+		_banners.set(updatedBanners);
+		// Update cache after saving
+		bannersCache.set(updatedBanners);
 	};
 
 	let workspaceModels: any = null;
@@ -73,9 +78,23 @@
 	let models: any = null;
 
 	const init = async () => {
-		taskConfig = await getTaskConfig(localStorage.token);
+		// Use cached taskConfig if available
+		if ($tasksConfigCache) {
+			taskConfig = JSON.parse(JSON.stringify($tasksConfigCache));
+		} else {
+			taskConfig = await getTaskConfig(localStorage.token);
+			tasksConfigCache.set(taskConfig);
+		}
+
 		promptSuggestions = $config?.default_prompt_suggestions ?? [];
-		banners = await getBanners(localStorage.token);
+
+		// Use cached banners if available
+		if ($bannersCache) {
+			banners = JSON.parse(JSON.stringify($bannersCache));
+		} else {
+			banners = await getBanners(localStorage.token);
+			bannersCache.set(banners);
+		}
 
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, false);

@@ -89,12 +89,15 @@ async def get_all_base_models(request: Request, user: UserModel = None):
 
 
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):
-    if (
-        request.app.state.MODELS
-        and request.app.state.BASE_MODELS
-        and (request.app.state.config.ENABLE_BASE_MODELS_CACHE and not refresh)
-    ):
-        base_models = request.app.state.BASE_MODELS
+    # When cache is enabled and not refreshing, use cached models if available
+    # If cache is empty, fetch models to ensure first load works correctly
+    if request.app.state.config.ENABLE_BASE_MODELS_CACHE and not refresh:
+        if request.app.state.BASE_MODELS:
+            base_models = request.app.state.BASE_MODELS
+        else:
+            # Cache enabled but no cached models yet - fetch and cache them
+            base_models = await get_all_base_models(request, user=user)
+            request.app.state.BASE_MODELS = base_models
     else:
         base_models = await get_all_base_models(request, user=user)
         request.app.state.BASE_MODELS = base_models

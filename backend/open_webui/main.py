@@ -1591,6 +1591,9 @@ async def chat_completion(
     user=Depends(get_verified_user),
 ):
     log.info(f"[DEBUG] chat_completion called, original stream={form_data.get('stream')}")
+    # Debug: Log reasoning_effort from frontend
+    if form_data.get("reasoning_effort"):
+        log.info(f"[DEBUG] reasoning_effort from frontend: {form_data.get('reasoning_effort')}")
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 

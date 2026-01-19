@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { config as backendConfig, user } from '$lib/stores';
+	import { config as backendConfig, user, imagesConfigCache } from '$lib/stores';
 
 	import { getBackendConfig } from '$lib/apis';
 	import {
@@ -213,6 +213,7 @@
 
 		const res = await updateConfigHandler();
 		if (res) {
+			imagesConfigCache.set(null);
 			dispatch('save');
 		}
 
@@ -221,13 +222,19 @@
 
 	onMount(async () => {
 		if ($user?.role === 'admin') {
-			const res = await getConfig(localStorage.token).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
+			const cached = $imagesConfigCache;
+			if (cached) {
+				config = JSON.parse(JSON.stringify(cached));
+			} else {
+				const res = await getConfig(localStorage.token).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
 
-			if (res) {
-				config = res;
+				if (res) {
+					config = res;
+					imagesConfigCache.set(JSON.parse(JSON.stringify(res)));
+				}
 			}
 
 			if (config.ENABLE_IMAGE_GENERATION) {

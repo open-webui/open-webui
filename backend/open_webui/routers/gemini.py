@@ -104,8 +104,9 @@ def _openai_chunk(
     delta: dict,
     finish_reason: Optional[str] = None,
     index: int = 0,
+    usage: Optional[dict] = None,
 ) -> dict:
-    return {
+    chunk = {
         "id": stream_id,
         "object": "chat.completion.chunk",
         "created": int(time.time()),
@@ -118,6 +119,9 @@ def _openai_chunk(
             }
         ],
     }
+    if usage:
+        chunk["usage"] = usage
+    return chunk
 
 
 def _wants_web_search(fd: dict) -> bool:
@@ -128,6 +132,57 @@ def _wants_web_search(fd: dict) -> bool:
         if isinstance(t, dict) and t.get("type") in ("web_search", "web_search_preview", "browser_search"):
             return True
     return False
+
+
+def _clean_schema_for_gemini(schema: dict) -> dict:
+    """
+    Clean OpenAPI schema to remove fields not supported by Gemini API.
+    Gemini only supports a subset of OpenAPI schema fields.
+    Every property MUST have a type field.
+    """
+    if not isinstance(schema, dict):
+        return schema
+
+    # Fields supported by Gemini API
+    supported_fields = {"type", "description", "properties", "required", "items", "enum", "format", "nullable"}
+
+    cleaned = {}
+    for key, value in schema.items():
+        if key not in supported_fields:
+            continue
+
+        if key == "properties" and isinstance(value, dict):
+            # Recursively clean nested properties
+            # Filter out properties that don't have a valid type after cleaning
+            cleaned_props = {}
+            for prop_name, prop_schema in value.items():
+                cleaned_prop = _clean_schema_for_gemini(prop_schema)
+                # Only include property if it has a type (Gemini requires type for all properties)
+                if cleaned_prop.get("type"):
+                    cleaned_props[prop_name] = cleaned_prop
+            if cleaned_props:
+                cleaned[key] = cleaned_props
+        elif key == "items" and isinstance(value, dict):
+            # Recursively clean array items schema
+            cleaned[key] = _clean_schema_for_gemini(value)
+        elif key == "required" and isinstance(value, list):
+            # Only include required if non-empty
+            if value:
+                cleaned[key] = value
+        else:
+            cleaned[key] = value
+
+    # If type is object but no properties, remove type to avoid Gemini error
+    if cleaned.get("type") == "object" and "properties" not in cleaned:
+        cleaned.pop("type", None)
+
+    # Filter required list to only include properties that exist after cleaning
+    if "required" in cleaned and "properties" in cleaned:
+        cleaned["required"] = [r for r in cleaned["required"] if r in cleaned["properties"]]
+        if not cleaned["required"]:
+            del cleaned["required"]
+
+    return cleaned
 
 
 def _convert_openai_tools_to_gemini(openai_tools: list) -> list:
@@ -192,12 +247,17 @@ def _convert_openai_tools_to_gemini(openai_tools: list) -> list:
         if not name:
             continue
 
+        # Clean parameters schema to remove unsupported fields
+        cleaned_parameters = _clean_schema_for_gemini(parameters)
+
         # Build Gemini function declaration
         gemini_function = {
             "name": name,
             "description": description,
-            "parameters": parameters
         }
+        # Only add parameters if non-empty (Gemini rejects empty parameters object)
+        if cleaned_parameters:
+            gemini_function["parameters"] = cleaned_parameters
 
         function_declarations.append(gemini_function)
 
@@ -207,34 +267,44 @@ def _convert_openai_tools_to_gemini(openai_tools: list) -> list:
     return [{"functionDeclarations": function_declarations}]
 
 
-def _extract_content(candidate: dict, starting_tool_index: int = 0) -> tuple[str, str, str, list, int]:
+def _extract_content(candidate: dict, starting_tool_index: int = 0) -> tuple[str, str, str, str, list, int]:
     """
-    Extract text + inline image markdown + grounding metadata + tool calls from a Gemini candidate.
-    Returns: (text, image_markdown, grounding_markdown, tool_calls, next_tool_index)
+    Extract text + inline image markdown + grounding metadata + thinking content + tool calls from a Gemini candidate.
+    Returns: (text, image_markdown, grounding_markdown, thinking_content, tool_calls, next_tool_index)
 
     Args:
         candidate: Gemini API response candidate
         starting_tool_index: The starting index for tool calls (for parallel tool call scenarios)
 
     Returns:
-        Tuple of (text, image_markdown, grounding_markdown, tool_calls, next_tool_index)
+        Tuple of (text, image_markdown, grounding_markdown, thinking_content, tool_calls, next_tool_index)
         next_tool_index is the index to use for the next tool call
     """
     # SAFEGUARD: Handle None or invalid candidate
     if candidate is None or not isinstance(candidate, dict):
-        return "", "", "", [], starting_tool_index
+        return "", "", "", "", [], starting_tool_index
 
     content = candidate.get("content", {}) or {}
     parts = content.get("parts", []) or []
 
     text_parts = []
+    thinking_parts = []
     image_md_parts = []
     tool_calls = []
     tool_call_index = starting_tool_index  # CRITICAL: Use starting index for parallel tool calls
 
     for part in parts:
+        # DEBUG: Log each part to see what Gemini returns
+        if part.get("thought") is True or "thought" in part:
+            log.info(f"[GEMINI THINKING DEBUG] Found thought part: thought={part.get('thought')}, keys={list(part.keys())}")
+
         if "text" in part and part["text"]:
-            text_parts.append(part["text"])
+            # Check if this is a thinking part (Gemini 3 thinking mode)
+            if part.get("thought") is True:
+                thinking_parts.append(part["text"])
+                log.info(f"[GEMINI THINKING] Extracted thinking content: {part['text'][:200]}...")
+            else:
+                text_parts.append(part["text"])
         elif "inlineData" in part:
             inline_data = part.get("inlineData", {}) or {}
             mime_type = inline_data.get("mimeType", "image/png")
@@ -296,7 +366,8 @@ def _extract_content(candidate: dict, starting_tool_index: int = 0) -> tuple[str
         if web_sources:
             grounding_md = "\n\n**Sources:**\n" + "\n".join([f"{i+1}. {s}" for i, s in enumerate(web_sources)]) + "\n"
 
-    return "".join(text_parts), "".join(image_md_parts), grounding_md, tool_calls, tool_call_index
+    thinking_content = "".join(thinking_parts)
+    return "".join(text_parts), "".join(image_md_parts), grounding_md, thinking_content, tool_calls, tool_call_index
 
 
 ##########################################
@@ -923,16 +994,35 @@ async def generate_chat_completion(
             form_data["stop"] if isinstance(form_data["stop"], list) else [form_data["stop"]]
         )
 
-    # Enable thinking mode for Gemini 3 models to get thought_signature for function calls
-    # This is required for tool calling to work properly with Gemini 3
-    if "gemini-3" in gemini_model.lower() or "gemini-2.5" in gemini_model.lower():
-        # Check if tools are being used (function calling scenario)
-        has_tools = ("tools" in form_data and form_data["tools"]) or _wants_web_search(form_data)
-        if has_tools:
-            log.info(f"[GEMINI 3] Enabling thinkingConfig for model {gemini_model} with tools")
+    # Handle reasoning_effort -> thinkingConfig
+    reasoning_effort = form_data.get("reasoning_effort")
+    if reasoning_effort is not None:
+        # Map reasoning_effort to thinkingBudget
+        # Gemini supports thinkingBudget: 0 (off), or 1-24576
+        effort_to_budget = {
+            "none": 0,
+            "minimal": 1024,
+            "low": 2048,
+            "medium": 8192,
+            "high": 16384,
+            "xhigh": 20480,
+            "max": 24576,
+        }
+        if reasoning_effort in effort_to_budget:
+            budget = effort_to_budget[reasoning_effort]
+        else:
+            # Try to parse as integer for custom values
+            try:
+                budget = int(reasoning_effort)
+            except (ValueError, TypeError):
+                budget = 8192  # Default to medium
+
+        if budget > 0:
             gemini_payload["generationConfig"]["thinkingConfig"] = {
-                "thinkingBudget": 1024  # Allow model to think before function calls
+                "thinkingBudget": budget,
+                "includeThoughts": True  # Required to get thinking content in response
             }
+            log.info(f"[GEMINI] Enabled thinkingConfig with budget {budget} for model {gemini_model}")
 
     # Handle tools: Convert OpenAI format to Gemini format
     # Priority: Google Search > Native Tools
@@ -946,7 +1036,10 @@ async def generate_chat_completion(
         if gemini_tools:
             gemini_payload["tools"] = gemini_tools
             log.info(f"Converted {len(form_data['tools'])} OpenAI tools to Gemini format for model: {gemini_model}")
-            log.debug(f"Gemini tools payload: {json.dumps(gemini_tools, ensure_ascii=False, indent=2)}")
+            # Log first tool for debugging schema cleaning
+            if gemini_tools and gemini_tools[0].get("functionDeclarations"):
+                first_func = gemini_tools[0]["functionDeclarations"][0]
+                log.info(f"[GEMINI TOOLS DEBUG] First function after cleaning: {json.dumps(first_func, ensure_ascii=False, default=str)[:500]}")
 
     # CRITICAL FIX: Gemini tool calling的消息序列规则
     # 当最后一条消息包含functionResponse时,说明我们在tool calling的第二轮
@@ -1056,6 +1149,13 @@ async def generate_chat_completion(
         log.info(f"[GEMINI PAYLOAD DEBUG] Content {i}: role={item.get('role')}, parts_count={len(item.get('parts', []))}, parts_types={[list(p.keys()) for p in item.get('parts', [])]}")
     log.info(f"[GEMINI PAYLOAD DEBUG] Complete contents array: {json.dumps(gemini_payload.get('contents', []), ensure_ascii=False, default=str)[:2000]}")
 
+    # Remove empty generationConfig to avoid potential issues
+    if "generationConfig" in gemini_payload and not gemini_payload["generationConfig"]:
+        del gemini_payload["generationConfig"]
+
+    # Log full payload for debugging 400 errors
+    log.info(f"[GEMINI PAYLOAD DEBUG] Full payload: {json.dumps(gemini_payload, ensure_ascii=False, default=str)[:5000]}")
+
     # Make request to Gemini API
     endpoint = "streamGenerateContent" if stream else "generateContent"
 
@@ -1095,7 +1195,10 @@ async def generate_chat_completion(
                                 err_text = await response.text()
                             except Exception as e:
                                 err_text = f"Failed to read error body: {e}"
-                            
+
+                            # Log full error for debugging
+                            log.error(f"[GEMINI API ERROR] Status: {response.status}, Full response: {err_text[:2000]}")
+
                             # Format understandable error message
                             msg = f"[Gemini API Error {response.status}] {err_text[:500]}"
                             try:
@@ -1177,27 +1280,44 @@ async def generate_chat_completion(
                                         # SAFEGUARD: Skip if candidate is None
                                         if c0 is None:
                                             continue
-                                        text, image_md, grounding_md, tool_calls, global_tool_call_index = _extract_content(c0, global_tool_call_index)
+                                        text, image_md, grounding_md, thinking_content, tool_calls, global_tool_call_index = _extract_content(c0, global_tool_call_index)
                                         out_text = (text or "") + (image_md or "") + (grounding_md or "")
 
-                                        # 1) yield tool calls first if present
+                                        # 1) yield thinking content first if present (reasoning_content for frontend)
+                                        if thinking_content:
+                                            thinking_chunk = _openai_chunk(stream_id, model_id, {"reasoning_content": thinking_content}, None, 0)
+                                            yield f"data: {json.dumps(thinking_chunk, ensure_ascii=False)}\n\n"
+
+                                        # 2) yield tool calls if present
                                         if tool_calls:
                                             for tool_call in tool_calls:
                                                 tool_chunk = _openai_chunk(stream_id, model_id, {"tool_calls": [tool_call]}, None, 0)
                                                 yield f"data: {json.dumps(tool_chunk, ensure_ascii=False)}\n\n"
 
-                                        # 2) yield content if present
+                                        # 3) yield content if present
                                         if out_text:
                                             chunk = _openai_chunk(stream_id, model_id, {"content": out_text}, None, 0)
                                             yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
 
-                                        # 3) then yield finish
+                                        # 4) then yield finish with usage
                                         finish = _map_finish_reason(c0.get("finishReason") if isinstance(c0, dict) else None)
                                         if finish:
                                             # If there are tool calls, override finish_reason to "tool_calls"
                                             if tool_calls:
                                                 finish = "tool_calls"
-                                            fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0)
+                                            # Extract usage from gemini response
+                                            usage_meta = gemini_obj.get("usageMetadata", {}) or {}
+                                            usage = None
+                                            if usage_meta:
+                                                usage = {
+                                                    "prompt_tokens": usage_meta.get("promptTokenCount", 0),
+                                                    "completion_tokens": usage_meta.get("candidatesTokenCount", 0),
+                                                    "total_tokens": usage_meta.get("totalTokenCount", 0),
+                                                }
+                                                # Add thinking tokens if available
+                                                if usage_meta.get("thoughtsTokenCount"):
+                                                    usage["reasoning_tokens"] = usage_meta.get("thoughtsTokenCount", 0)
+                                            fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0, usage)
                                             yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
                                             yield "data: [DONE]\n\n"
                                             return
@@ -1244,10 +1364,15 @@ async def generate_chat_completion(
                                             # SAFEGUARD: Skip if candidate is None
                                             if c0 is None or not isinstance(c0, dict):
                                                 continue
-                                            text, image_md, grounding_md, tool_calls, global_tool_call_index = _extract_content(c0, global_tool_call_index)
+                                            text, image_md, grounding_md, thinking_content, tool_calls, global_tool_call_index = _extract_content(c0, global_tool_call_index)
                                             out_text = (text or "") + (image_md or "") + (grounding_md or "")
 
-                                            # Yield tool calls first if present
+                                            # Yield thinking content first if present
+                                            if thinking_content:
+                                                thinking_chunk = _openai_chunk(stream_id, model_id, {"reasoning_content": thinking_content}, None, 0)
+                                                yield f"data: {json.dumps(thinking_chunk, ensure_ascii=False)}\n\n"
+
+                                            # Yield tool calls if present
                                             if tool_calls:
                                                 for tool_call in tool_calls:
                                                     tool_chunk = _openai_chunk(stream_id, model_id, {"tool_calls": [tool_call]}, None, 0)
@@ -1263,7 +1388,18 @@ async def generate_chat_completion(
                                                 # If there are tool calls, override finish_reason to "tool_calls"
                                                 if tool_calls:
                                                     finish = "tool_calls"
-                                                fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0)
+                                                # Extract usage from gemini response
+                                                usage_meta = gemini_obj.get("usageMetadata", {}) or {}
+                                                usage = None
+                                                if usage_meta:
+                                                    usage = {
+                                                        "prompt_tokens": usage_meta.get("promptTokenCount", 0),
+                                                        "completion_tokens": usage_meta.get("candidatesTokenCount", 0),
+                                                        "total_tokens": usage_meta.get("totalTokenCount", 0),
+                                                    }
+                                                    if usage_meta.get("thoughtsTokenCount"):
+                                                        usage["reasoning_tokens"] = usage_meta.get("thoughtsTokenCount", 0)
+                                                fin_chunk = _openai_chunk(stream_id, model_id, {}, finish, 0, usage)
                                                 yield f"data: {json.dumps(fin_chunk, ensure_ascii=False)}\n\n"
                                     except json.JSONDecodeError as e:
                                         log.warning(f"JSON decode error (flush): {e}, head={data_str[:120]}")
@@ -1323,10 +1459,14 @@ def convert_gemini_to_openai(gemini_response: dict, model_id: str) -> dict:
         # SAFEGUARD: Skip if candidate is None
         if candidate is None or not isinstance(candidate, dict):
             continue
-        text, image_md, grounding_md, tool_calls, tool_call_index = _extract_content(candidate, tool_call_index)
+        text, image_md, grounding_md, thinking_content, tool_calls, tool_call_index = _extract_content(candidate, tool_call_index)
         combined = (text or "") + (image_md or "") + (grounding_md or "")
 
         message = {"role": "assistant", "content": combined}
+
+        # Add reasoning_content if present (thinking mode)
+        if thinking_content:
+            message["reasoning_content"] = thinking_content
 
         # Add tool_calls to message if present
         if tool_calls:
@@ -1345,18 +1485,22 @@ def convert_gemini_to_openai(gemini_response: dict, model_id: str) -> dict:
             }
         )
 
-    usage = gemini_response.get("usageMetadata", {}) or {}
+    usage_meta = gemini_response.get("usageMetadata", {}) or {}
+    usage_dict = {
+        "prompt_tokens": usage_meta.get("promptTokenCount", 0),
+        "completion_tokens": usage_meta.get("candidatesTokenCount", 0),
+        "total_tokens": usage_meta.get("totalTokenCount", 0),
+    }
+    # Add thinking tokens if available
+    if usage_meta.get("thoughtsTokenCount"):
+        usage_dict["reasoning_tokens"] = usage_meta.get("thoughtsTokenCount", 0)
 
     return {
         "id": f"chatcmpl-gemini-{model_id}",
         "object": "chat.completion",
         "model": model_id,
         "choices": choices,
-        "usage": {
-            "prompt_tokens": usage.get("promptTokenCount", 0),
-            "completion_tokens": usage.get("candidatesTokenCount", 0),
-            "total_tokens": usage.get("totalTokenCount", 0),
-        },
+        "usage": usage_dict,
     }
 
 
@@ -1368,9 +1512,13 @@ def convert_gemini_to_openai_stream(gemini_chunk: dict, model_id: str) -> dict:
     tool_call_index = 0  # Track tool call index
 
     for i, candidate in enumerate(candidates):
-        text, image_md, grounding_md, tool_calls, tool_call_index = _extract_content(candidate, tool_call_index)
+        text, image_md, grounding_md, thinking_content, tool_calls, tool_call_index = _extract_content(candidate, tool_call_index)
         combined = (text or "") + (image_md or "") + (grounding_md or "")
         delta = {"content": combined} if combined else {}
+
+        # Add reasoning_content to delta if present
+        if thinking_content:
+            delta["reasoning_content"] = thinking_content
 
         # Add tool_calls to delta if present
         if tool_calls:

@@ -5,7 +5,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { models } from '$lib/stores';
+	import { models, modelsConfigCache } from '$lib/stores';
 	import { deleteAllModels } from '$lib/apis/models';
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
 
@@ -45,7 +45,13 @@
 		init();
 	}
 	const init = async () => {
-		config = await getModelsConfig(localStorage.token);
+		// Use cached config if available
+		if ($modelsConfigCache) {
+			config = JSON.parse(JSON.stringify($modelsConfigCache));
+		} else {
+			config = await getModelsConfig(localStorage.token);
+			modelsConfigCache.set(JSON.parse(JSON.stringify(config)));
+		}
 
 		if (config?.DEFAULT_MODELS) {
 			defaultModelIds = (config?.DEFAULT_MODELS).split(',').filter((id) => id);
@@ -85,6 +91,8 @@
 		});
 
 		if (res) {
+			// Clear cache after save
+			modelsConfigCache.set(null);
 			toast.success($i18n.t('Models configuration saved successfully'));
 			initHandler();
 			show = false;

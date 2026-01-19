@@ -11,6 +11,7 @@
 
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
+	import { getFunctions } from '$lib/apis/functions';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
 
@@ -28,13 +29,15 @@
 		functions,
 		tags,
 		banners,
+		bannersCache,
 		showSettings,
 		showShortcuts,
 		showChangelog,
 		temporaryChatEnabled,
 		toolServers,
 		showSearch,
-		showSidebar
+		showSidebar,
+		versionUpdatesCache
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -132,13 +135,30 @@
 	};
 
 	const setBanners = async () => {
+		// Use cached banners if available
+		if ($bannersCache) {
+			banners.set($bannersCache);
+			return;
+		}
 		const bannersData = await getBanners(localStorage.token);
 		banners.set(bannersData);
+		bannersCache.set(bannersData);
 	};
 
 	const setTools = async () => {
-		const toolsData = await getTools(localStorage.token);
-		tools.set(toolsData);
+		// Only fetch if not already cached
+		if (!$tools) {
+			const toolsData = await getTools(localStorage.token);
+			tools.set(toolsData);
+		}
+	};
+
+	const setFunctions = async () => {
+		// Only fetch if not already cached
+		if (!$functions) {
+			const functionsData = await getFunctions(localStorage.token);
+			functions.set(functionsData);
+		}
 	};
 
 	onMount(async () => {
@@ -155,6 +175,7 @@
 			checkLocalDBChats(),
 			setBanners(),
 			setTools(),
+			setFunctions(),
 			setUserSettings(async () => {
 				await Promise.all([setModels(), setToolServers()]);
 			})
@@ -292,12 +313,19 @@
 	});
 
 	const checkForVersionUpdates = async () => {
+		// Use cached version if available
+		if ($versionUpdatesCache) {
+			version = $versionUpdatesCache;
+			return;
+		}
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
 				current: WEBUI_VERSION,
 				latest: WEBUI_VERSION
 			};
 		});
+		// Cache the result
+		versionUpdatesCache.set(version);
 	};
 </script>
 

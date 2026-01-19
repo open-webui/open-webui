@@ -243,8 +243,13 @@
 	};
 
 	onMount(async () => {
-		await tools.set(await getTools(localStorage.token));
-		await functions.set(await getFunctions(localStorage.token));
+		// Only fetch if not already cached
+		if (!$tools) {
+			await tools.set(await getTools(localStorage.token));
+		}
+		if (!$functions) {
+			await functions.set(await getFunctions(localStorage.token));
+		}
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');

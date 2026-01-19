@@ -21,7 +21,8 @@
 		mobile,
 		temporaryChatEnabled,
 		settings,
-		config
+		config,
+		ollamaVersionCache
 	} from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
@@ -312,7 +313,13 @@
 	};
 
 	const setOllamaVersion = async () => {
+		// Use cached version if available
+		if ($ollamaVersionCache !== null) {
+			ollamaVersion = $ollamaVersionCache;
+			return;
+		}
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+		ollamaVersionCache.set(ollamaVersion);
 	};
 
 	onMount(async () => {
@@ -324,11 +331,9 @@
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
-	});
-
-	$: if (show) {
+		// Check Ollama version once on mount, not on every dropdown open
 		setOllamaVersion();
-	}
+	});
 
 	const cancelModelPullHandler = async (model: string) => {
 		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
@@ -385,14 +390,6 @@
 			false)
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
 				: 'placeholder-gray-400'}"
-			on:mouseenter={async () => {
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-					)
-				);
-			}}
 		>
 			{#if selectedModel}
 				{selectedModel.label}

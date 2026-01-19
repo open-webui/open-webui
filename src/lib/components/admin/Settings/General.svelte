@@ -15,7 +15,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
-	import { config, showChangelog } from '$lib/stores';
+	import { config, showChangelog, versionUpdatesCache, adminConfigCache, webhookUrlCache, groupsCache, ldapServerCache, ldapConfigCache } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -54,6 +54,12 @@
 
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
+		// Use cached version if available
+		if ($versionUpdatesCache) {
+			version = $versionUpdatesCache;
+			updateAvailable = compareVersion(version.latest, version.current);
+			return;
+		}
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
 				current: WEBUI_VERSION,
@@ -62,6 +68,8 @@
 		});
 
 		console.info(version);
+		// Cache the result
+		versionUpdatesCache.set(version);
 
 		updateAvailable = compareVersion(version.latest, version.current);
 		console.info(updateAvailable);
@@ -80,9 +88,17 @@
 
 	const updateHandler = async () => {
 		webhookUrl = await updateWebhookUrl(localStorage.token, webhookUrl);
+		webhookUrlCache.set(webhookUrl);
 		const res = await updateAdminConfig(localStorage.token, adminConfig);
+		if (res) {
+			adminConfigCache.set(adminConfig);
+		}
 		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
+		ldapConfigCache.set({ ENABLE_LDAP });
 		await updateLdapServerHandler();
+		if (LDAP_SERVER) {
+			ldapServerCache.set(LDAP_SERVER);
+		}
 
 		if (res) {
 			saveHandler();
@@ -98,22 +114,47 @@
 
 		await Promise.all([
 			(async () => {
-				adminConfig = await getAdminConfig(localStorage.token);
+				if ($adminConfigCache) {
+					adminConfig = JSON.parse(JSON.stringify($adminConfigCache));
+				} else {
+					adminConfig = await getAdminConfig(localStorage.token);
+					adminConfigCache.set(adminConfig);
+				}
 			})(),
 
 			(async () => {
-				webhookUrl = await getWebhookUrl(localStorage.token);
+				if ($webhookUrlCache !== null) {
+					webhookUrl = $webhookUrlCache;
+				} else {
+					webhookUrl = await getWebhookUrl(localStorage.token);
+					webhookUrlCache.set(webhookUrl);
+				}
 			})(),
 			(async () => {
-				LDAP_SERVER = await getLdapServer(localStorage.token);
+				if ($ldapServerCache) {
+					LDAP_SERVER = JSON.parse(JSON.stringify($ldapServerCache));
+				} else {
+					LDAP_SERVER = await getLdapServer(localStorage.token);
+					ldapServerCache.set(LDAP_SERVER);
+				}
 			})(),
 			(async () => {
-				groups = await getGroups(localStorage.token);
+				if ($groupsCache) {
+					groups = $groupsCache;
+				} else {
+					groups = await getGroups(localStorage.token);
+					groupsCache.set(groups);
+				}
 			})()
 		]);
 
-		const ldapConfig = await getLdapConfig(localStorage.token);
-		ENABLE_LDAP = ldapConfig.ENABLE_LDAP;
+		if ($ldapConfigCache !== null) {
+			ENABLE_LDAP = $ldapConfigCache.ENABLE_LDAP;
+		} else {
+			const ldapConfig = await getLdapConfig(localStorage.token);
+			ldapConfigCache.set(ldapConfig);
+			ENABLE_LDAP = ldapConfig.ENABLE_LDAP;
+		}
 	});
 </script>
 

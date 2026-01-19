@@ -10,7 +10,7 @@
 		getModels as _getModels,
 		getVoices as _getVoices
 	} from '$lib/apis/audio';
-	import { config, settings } from '$lib/stores';
+	import { config, settings, audioConfigCache, audioVoicesCache, audioModelsCache } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -64,6 +64,14 @@
 		if (TTS_ENGINE === '') {
 			models = [];
 		} else {
+			// Use cached models if available for this engine
+			const cacheKey = TTS_ENGINE;
+			const cached = $audioModelsCache;
+			if (cached && cached.engine === cacheKey) {
+				models = cached.models;
+				return;
+			}
+
 			const res = await _getModels(localStorage.token).catch((e) => {
 				toast.error(`${e}`);
 			});
@@ -71,6 +79,7 @@
 			if (res) {
 				console.log(res);
 				models = res.models;
+				audioModelsCache.set({ engine: cacheKey, models: res.models });
 			}
 		}
 	};
@@ -87,6 +96,14 @@
 				}
 			}, 100);
 		} else {
+			// Use cached voices if available for this engine
+			const cacheKey = TTS_ENGINE;
+			const cached = $audioVoicesCache;
+			if (cached && cached.engine === cacheKey) {
+				voices = cached.voices;
+				return;
+			}
+
 			const res = await _getVoices(localStorage.token).catch((e) => {
 				toast.error(`${e}`);
 			});
@@ -95,6 +112,7 @@
 				console.log(res);
 				voices = res.voices;
 				voices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
+				audioVoicesCache.set({ engine: cacheKey, voices: voices });
 			}
 		}
 	};
@@ -147,6 +165,9 @@
 		if (res) {
 			saveHandler();
 			config.set(await getBackendConfig());
+			audioConfigCache.set(null);
+			audioVoicesCache.set(null);
+			audioModelsCache.set(null);
 		}
 	};
 	// ... (omitting middle parts, focusing on chunks)
@@ -158,10 +179,51 @@
 	};
 
 	onMount(async () => {
+		const cached = $audioConfigCache;
+		if (cached) {
+			const res = cached;
+			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
+			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_OPENAI_PARAMS = JSON.stringify(res?.tts?.OPENAI_PARAMS ?? '', null, 2);
+			TTS_API_KEY = res.tts.API_KEY;
+
+			TTS_ENGINE = res.tts.ENGINE;
+			TTS_MODEL = res.tts.MODEL;
+			TTS_VOICE = res.tts.VOICE;
+
+			TTS_SPLIT_ON = res.tts.SPLIT_ON || TTS_RESPONSE_SPLIT.PUNCTUATION;
+
+			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
+			TTS_AZURE_SPEECH_BASE_URL = res.tts.AZURE_SPEECH_BASE_URL;
+			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
+
+			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
+			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
+
+			STT_ENGINE = res.stt.ENGINE;
+			STT_MODEL = res.stt.MODEL;
+			STT_SUPPORTED_CONTENT_TYPES = (res?.stt?.SUPPORTED_CONTENT_TYPES ?? []).join(',');
+			STT_WHISPER_MODEL = res.stt.WHISPER_MODEL;
+			STT_AZURE_API_KEY = res.stt.AZURE_API_KEY;
+			STT_AZURE_REGION = res.stt.AZURE_REGION;
+			STT_AZURE_LOCALES = res.stt.AZURE_LOCALES;
+			STT_AZURE_BASE_URL = res.stt.AZURE_BASE_URL;
+			STT_AZURE_MAX_SPEAKERS = res.stt.AZURE_MAX_SPEAKERS;
+			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
+			STT_MISTRAL_API_KEY = res.stt.MISTRAL_API_KEY;
+			STT_MISTRAL_API_BASE_URL = res.stt.MISTRAL_API_BASE_URL;
+			STT_MISTRAL_USE_CHAT_COMPLETIONS = res.stt.MISTRAL_USE_CHAT_COMPLETIONS;
+
+			await getVoices();
+			await getModels();
+			return;
+		}
+
 		const res = await getAudioConfig(localStorage.token);
 
 		if (res) {
 			console.log(res);
+			audioConfigCache.set(JSON.parse(JSON.stringify(res)));
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
 			TTS_OPENAI_PARAMS = JSON.stringify(res?.tts?.OPENAI_PARAMS ?? '', null, 2);

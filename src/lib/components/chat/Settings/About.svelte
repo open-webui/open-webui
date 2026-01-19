@@ -2,7 +2,7 @@
 	import { getVersionUpdates } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
-	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
+	import { WEBUI_NAME, config, showChangelog, versionUpdatesCache } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 
@@ -20,6 +20,12 @@
 
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
+		// Use cached version if available
+		if ($versionUpdatesCache) {
+			version = $versionUpdatesCache;
+			updateAvailable = compareVersion(version.latest, version.current);
+			return;
+		}
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
 				current: WEBUI_VERSION,
@@ -28,6 +34,8 @@
 		});
 
 		console.log(version);
+		// Cache the result
+		versionUpdatesCache.set(version);
 
 		updateAvailable = compareVersion(version.latest, version.current);
 		console.log(updateAvailable);

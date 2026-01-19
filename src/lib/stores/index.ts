@@ -70,6 +70,7 @@ export const functions = writable(null);
 export const toolServers = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
+export const bannersCache: Writable<Banner[] | null> = writable(null);
 
 export const settings: Writable<Settings> = writable({});
 
@@ -101,6 +102,32 @@ export const currentChatPage = writable(1);
 
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
+
+// Cached configs to avoid repeated API calls
+export const versionUpdatesCache = writable(null);
+export const ragConfigCache = writable(null);
+export const ollamaConfigCache = writable(null);
+export const openaiConfigCache = writable(null);
+export const geminiConfigCache = writable(null);
+export const adminConfigCache = writable(null);
+export const webhookUrlCache = writable(null);
+export const groupsCache = writable(null);
+export const ldapServerCache = writable(null);
+export const ldapConfigCache = writable(null);
+export const audioConfigCache = writable(null);
+export const imagesConfigCache = writable(null);
+export const evaluationsConfigCache = writable(null);
+export const codeExecutionConfigCache = writable(null);
+export const connectionsConfigCache = writable(null);
+export const toolServersConfigCache = writable(null);
+export const pipelinesListCache = writable(null);
+export const functionsListCache = writable(null);
+export const tasksConfigCache = writable(null);
+export const retrievalEmbeddingCache = writable(null);
+export const modelsConfigCache = writable(null);
+export const audioVoicesCache = writable(null);
+export const audioModelsCache = writable(null);
+export const ollamaVersionCache = writable(null);
 
 export type Model = OpenAIModel | OllamaModel;
 

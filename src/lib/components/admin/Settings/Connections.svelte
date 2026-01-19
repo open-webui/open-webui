@@ -11,7 +11,7 @@
 	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, models, settings, user, ollamaConfigCache, openaiConfigCache, geminiConfigCache, connectionsConfigCache } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -121,6 +121,7 @@
 		});
 
 		if (res) {
+			connectionsConfigCache.set(null);
 			toast.success($i18n.t('Connections settings updated'));
 			await models.set(await getModels());
 			await config.set(await getBackendConfig());
@@ -195,16 +196,40 @@
 
 			await Promise.all([
 				(async () => {
-					ollamaConfig = await getOllamaConfig(localStorage.token);
+					// Use cached config if available
+					if ($ollamaConfigCache) {
+						ollamaConfig = $ollamaConfigCache;
+					} else {
+						ollamaConfig = await getOllamaConfig(localStorage.token);
+						ollamaConfigCache.set(ollamaConfig);
+					}
 				})(),
 				(async () => {
-					openaiConfig = await getOpenAIConfig(localStorage.token);
+					// Use cached config if available
+					if ($openaiConfigCache) {
+						openaiConfig = $openaiConfigCache;
+					} else {
+						openaiConfig = await getOpenAIConfig(localStorage.token);
+						openaiConfigCache.set(openaiConfig);
+					}
 				})(),
 				(async () => {
-					geminiConfig = await getGeminiConfig(localStorage.token);
+					// Use cached config if available
+					if ($geminiConfigCache) {
+						geminiConfig = $geminiConfigCache;
+					} else {
+						geminiConfig = await getGeminiConfig(localStorage.token);
+						geminiConfigCache.set(geminiConfig);
+					}
 				})(),
 				(async () => {
-					connectionsConfig = await getConnectionsConfig(localStorage.token);
+					// Use cached config if available
+					if ($connectionsConfigCache) {
+						connectionsConfig = JSON.parse(JSON.stringify($connectionsConfigCache));
+					} else {
+						connectionsConfig = await getConnectionsConfig(localStorage.token);
+						connectionsConfigCache.set(JSON.parse(JSON.stringify(connectionsConfig)));
+					}
 				})()
 			]);
 

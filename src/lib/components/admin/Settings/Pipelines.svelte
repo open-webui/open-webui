@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { config, models, settings } from '$lib/stores';
+	import { config, models, settings, openaiConfigCache, pipelinesListCache } from '$lib/stores';
 	import { getContext, onMount, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -304,14 +304,27 @@
 
 		// Load OpenAI config for pipeline detection
 		try {
-			const openaiConfig = await getOpenAIConfig(localStorage.token);
+			let openaiConfig;
+			// Use cached config if available
+			if ($openaiConfigCache) {
+				openaiConfig = $openaiConfigCache;
+			} else {
+				openaiConfig = await getOpenAIConfig(localStorage.token);
+				openaiConfigCache.set(openaiConfig);
+			}
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS || [];
 			OPENAI_API_CONFIGS = openaiConfig.OPENAI_API_CONFIGS || {};
 		} catch (e) {
 			console.error('Failed to load OpenAI config:', e);
 		}
 
-		PIPELINES_LIST = await getPipelinesList(localStorage.token);
+		// Use cached pipelines list if available
+		if ($pipelinesListCache) {
+			PIPELINES_LIST = $pipelinesListCache;
+		} else {
+			PIPELINES_LIST = await getPipelinesList(localStorage.token);
+			pipelinesListCache.set(PIPELINES_LIST);
+		}
 		console.log(PIPELINES_LIST);
 
 		// Wait for reactive variables to update

@@ -6,11 +6,10 @@
 	import Functions from '$lib/components/admin/Functions.svelte';
 
 	onMount(async () => {
-		await Promise.all([
-			(async () => {
-				functions.set(await getFunctions(localStorage.token));
-			})()
-		]);
+		// Only fetch if not already cached
+		if (!$functions) {
+			functions.set(await getFunctions(localStorage.token));
+		}
 	});
 </script>
 

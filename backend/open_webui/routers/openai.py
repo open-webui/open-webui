@@ -2031,7 +2031,31 @@ async def generate_chat_completion(
     # Save original payload for potential retry without tools
     payload_dict = payload.copy()
     has_tools = "tools" in payload_dict or "tool_choice" in payload_dict
-    
+
+    # Debug: Log reasoning_effort in payload
+    reasoning_effort = payload_dict.get("reasoning_effort")
+    if reasoning_effort:
+        log.info(f"[DEBUG] reasoning_effort in payload: {reasoning_effort}")
+        # Add alternative parameter formats for compatibility with different proxies
+        # Some proxies use thinking_budget (Gemini native format)
+        effort_to_budget = {
+            "none": 0, "minimal": 1024, "low": 2048,
+            "medium": 8192, "high": 16384, "xhigh": 20480, "max": 24576,
+        }
+        if reasoning_effort in effort_to_budget:
+            budget = effort_to_budget[reasoning_effort]
+        else:
+            try:
+                budget = int(reasoning_effort)
+            except (ValueError, TypeError):
+                budget = 8192
+        if budget > 0:
+            # Add thinkingConfig for Gemini-compatible proxies
+            payload_dict["thinkingConfig"] = {"thinkingBudget": budget}
+            # Also add thinking_budget as a flat parameter for some proxies
+            payload_dict["thinking_budget"] = budget
+            log.info(f"[DEBUG] Added thinkingConfig and thinking_budget: {budget}")
+
     payload = json.dumps(payload_dict)
 
 

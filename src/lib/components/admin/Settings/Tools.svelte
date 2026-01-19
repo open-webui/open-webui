@@ -7,7 +7,7 @@
 	import type { Writable } from 'svelte/store';
 	const i18n: Writable<any> = getContext('i18n');
 
-	import { models, settings, user } from '$lib/stores';
+	import { models, settings, user, toolServersConfigCache } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -36,13 +36,21 @@
 		});
 
 		if (res) {
+			// Update cache after save
+			toolServersConfigCache.set({ TOOL_SERVER_CONNECTIONS: servers });
 			toast.success($i18n.t('Connections saved successfully'));
 		}
 	};
 
 	onMount(async () => {
-		const res = await getToolServerConnections(localStorage.token);
-		servers = res.TOOL_SERVER_CONNECTIONS;
+		// Use cached config if available
+		if ($toolServersConfigCache) {
+			servers = $toolServersConfigCache.TOOL_SERVER_CONNECTIONS ?? [];
+		} else {
+			const res = await getToolServerConnections(localStorage.token);
+			servers = res.TOOL_SERVER_CONNECTIONS;
+			toolServersConfigCache.set(res);
+		}
 	});
 </script>
 

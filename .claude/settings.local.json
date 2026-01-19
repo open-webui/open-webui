@@ -16,7 +16,8 @@
       "Bash(gh release create:*)",
       "Bash(where gh:*)",
       "Bash(gh:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ]
   }
 }

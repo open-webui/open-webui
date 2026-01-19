@@ -3097,6 +3097,7 @@ async def process_chat_response(
                     nonlocal content_blocks
 
                     response_tool_calls = []
+                    last_usage = None  # Track the last non-zero usage for final message
 
                     delta_count = 0
                     delta_chunk_size = max(
@@ -3179,15 +3180,9 @@ async def process_chat_response(
                                     # 17421
                                     usage = data.get("usage", {}) or {}
                                     usage.update(data.get("timings", {}))  # llama.cpp
-                                    if usage:
-                                        await event_emitter(
-                                            {
-                                                "type": "chat:completion",
-                                                "data": {
-                                                    "usage": usage,
-                                                },
-                                            }
-                                        )
+                                    # Only save non-zero usage for final message
+                                    if usage and (usage.get("prompt_tokens", 0) > 0 or usage.get("completion_tokens", 0) > 0 or usage.get("total_tokens", 0) > 0):
+                                        last_usage = usage
 
                                     # SAFEGUARD: Check choices[0] is a valid dict
                                     if not choices or choices[0] is None or not isinstance(choices[0], dict):
@@ -3242,10 +3237,31 @@ async def process_chat_response(
 
                                     delta_tool_calls = delta.get("tool_calls", None)
                                     if delta_tool_calls:
-                                        for delta_tool_call in delta_tool_calls:
+                                        for idx, delta_tool_call in enumerate(delta_tool_calls):
                                             tool_call_index = delta_tool_call.get(
                                                 "index"
                                             )
+
+                                            # Handle tool calls without index (e.g., from some proxies)
+                                            # Use position in array as index, or match by id
+                                            if tool_call_index is None:
+                                                tool_call_id = delta_tool_call.get("id")
+                                                if tool_call_id:
+                                                    # Try to find existing tool call by id
+                                                    found = False
+                                                    for existing in response_tool_calls:
+                                                        if existing.get("id") == tool_call_id:
+                                                            found = True
+                                                            break
+                                                    if not found:
+                                                        # New tool call without index - add it directly
+                                                        delta_tool_call.setdefault("index", len(response_tool_calls))
+                                                        delta_tool_call.setdefault("function", {})
+                                                        delta_tool_call["function"].setdefault("name", "")
+                                                        delta_tool_call["function"].setdefault("arguments", "")
+                                                        response_tool_calls.append(delta_tool_call)
+                                                        log.info(f"[TOOL CALL DEBUG] Added tool call without index: {delta_tool_call.get('id')}")
+                                                continue
 
                                             if tool_call_index is not None:
                                                 # Check if the tool call already exists
@@ -3343,6 +3359,7 @@ async def process_chat_response(
                                         )
 
                                     value = delta.get("content")
+                                    log.info(f"[DELTA CONTENT DEBUG] content={repr(value)[:200] if value else None}, delta_full={json.dumps(delta, ensure_ascii=False, default=str)[:500]}")
 
                                     reasoning_content = (
                                         delta.get("reasoning_content")
@@ -3372,11 +3389,15 @@ async def process_chat_response(
 
                                         reasoning_block["content"] += reasoning_content
 
-                                        data = {
-                                            "content": serialize_content_blocks(
-                                                content_blocks
-                                            )
-                                        }
+                                        # Stream reasoning content to frontend
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": {
+                                                    "content": serialize_content_blocks(content_blocks)
+                                                },
+                                            }
+                                        )
 
                                     if value:
                                         if (
@@ -3553,7 +3574,9 @@ async def process_chat_response(
                     if response.background:
                         await response.background()
 
-                await stream_body_handler(response, form_data)
+                    return last_usage  # Return the last non-zero usage
+
+                final_usage = await stream_body_handler(response, form_data)
 
                 tool_call_retries = 0
                 tool_call_sources = []  # Track citation sources from tool results
@@ -3803,7 +3826,14 @@ async def process_chat_response(
                         )
 
                         if isinstance(res, StreamingResponse):
-                            await stream_body_handler(res, new_form_data)
+                            tool_usage = await stream_body_handler(res, new_form_data)
+                            # Accumulate usage: tool calls are separate API calls to the same model
+                            if tool_usage:
+                                if final_usage:
+                                    for key in ["prompt_tokens", "completion_tokens", "total_tokens"]:
+                                        final_usage[key] = final_usage.get(key, 0) + tool_usage.get(key, 0)
+                                else:
+                                    final_usage = tool_usage
                         else:
                             # Provider may ignore stream flag and return JSON once tool_calls are handled
                             res_data = res
@@ -4039,6 +4069,10 @@ async def process_chat_response(
                     "content": serialize_content_blocks(content_blocks),
                     "title": title,
                 }
+
+                # Include final usage in the done message
+                if final_usage:
+                    data["usage"] = final_usage
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database

@@ -958,7 +958,10 @@
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
 
-		await tools.set(await getTools(localStorage.token));
+		// Only fetch tools if not already cached
+		if (!$tools) {
+			await tools.set(await getTools(localStorage.token));
+		}
 	});
 
 	onDestroy(() => {

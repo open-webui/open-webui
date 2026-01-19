@@ -30,6 +30,8 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
+	import { ragConfigCache, retrievalEmbeddingCache } from '$lib/stores';
+
 	const i18n: Writable<any> = getContext('i18n');
 
 	let updateEmbeddingModelLoading = false;
@@ -136,6 +138,8 @@
 
 		if (res) {
 			console.debug('embeddingModelUpdateHandler:', res);
+			// Clear cache after update
+			retrievalEmbeddingCache.set(null);
 		}
 	};
 
@@ -231,11 +235,20 @@
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
 					: {}
 		});
+		// Clear cache after save to ensure fresh data on next visit
+		ragConfigCache.set(null);
 		dispatch('save');
 	};
 
 	const setEmbeddingConfig = async () => {
-		const embeddingConfig = await getEmbeddingConfig(localStorage.token);
+		// Use cached embedding config if available
+		let embeddingConfig;
+		if ($retrievalEmbeddingCache) {
+			embeddingConfig = $retrievalEmbeddingCache;
+		} else {
+			embeddingConfig = await getEmbeddingConfig(localStorage.token);
+			retrievalEmbeddingCache.set(embeddingConfig);
+		}
 
 		if (embeddingConfig) {
 			RAG_EMBEDDING_ENGINE = embeddingConfig.RAG_EMBEDDING_ENGINE;
@@ -255,22 +268,43 @@
 		}
 	};
 	onMount(async () => {
-		await setEmbeddingConfig();
+		try {
+			await setEmbeddingConfig();
 
-		const config = await getRAGConfig(localStorage.token);
-		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
+			// Use cached RAG config if available
+			let config;
+			if ($ragConfigCache) {
+				config = JSON.parse(JSON.stringify($ragConfigCache)); // Deep clone
+			} else {
+				config = await getRAGConfig(localStorage.token);
+				ragConfigCache.set(JSON.parse(JSON.stringify(config)));
+			}
 
-		config.DOCLING_PARAMS =
-			typeof config.DOCLING_PARAMS === 'object'
-				? JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2)
-				: config.DOCLING_PARAMS;
+			// Ensure ALLOWED_FILE_EXTENSIONS is an array before joining
+			const extensions = Array.isArray(config?.ALLOWED_FILE_EXTENSIONS)
+				? config.ALLOWED_FILE_EXTENSIONS
+				: [];
+			config.ALLOWED_FILE_EXTENSIONS = extensions.join(', ');
 
-		config.MINERU_PARAMS =
-			typeof config.MINERU_PARAMS === 'object'
-				? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
-				: config.MINERU_PARAMS;
+			config.DOCLING_PARAMS =
+				typeof config.DOCLING_PARAMS === 'object'
+					? JSON.stringify(config.DOCLING_PARAMS ?? {}, null, 2)
+					: config.DOCLING_PARAMS;
 
-		RAGConfig = config;
+			config.MINERU_PARAMS =
+				typeof config.MINERU_PARAMS === 'object'
+					? JSON.stringify(config.MINERU_PARAMS ?? {}, null, 2)
+					: config.MINERU_PARAMS;
+
+			RAGConfig = config;
+		} catch (error) {
+			console.error('Failed to load RAG config:', error);
+			// Clear cache and show error
+			ragConfigCache.set(null);
+			toast.error($i18n.t('Failed to load document settings'));
+			// Set empty config to prevent infinite loading
+			RAGConfig = {};
+		}
 	});
 </script>
 

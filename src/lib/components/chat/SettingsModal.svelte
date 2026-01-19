@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
+	import type { Readable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { config, models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
@@ -29,7 +30,7 @@
 	import AppNotification from '../icons/AppNotification.svelte';
 	import UserBadgeCheck from '../icons/UserBadgeCheck.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Readable<any> = getContext('i18n');
 
 	export let show = false;
 
@@ -468,11 +469,11 @@
 		}
 	];
 
-	let availableSettings = [];
-	let filteredSettings = [];
+	let availableSettings: SettingsTab[] = [];
+	let filteredSettings: string[] = [];
 
 	let search = '';
-	let searchDebounceTimeout;
+	let searchDebounceTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	const getAvailableSettings = () => {
 		return allSettings.filter((tab) => {
@@ -508,7 +509,7 @@
 				return (
 					search === '' ||
 					tab.title.toLowerCase().includes(search.toLowerCase().trim()) ||
-					tab.keywords.some((keyword) => keyword.includes(search.toLowerCase().trim()))
+					tab.keywords.some((keyword: string) => keyword.includes(search.toLowerCase().trim()))
 				);
 			})
 			.map((tab) => tab.id);
@@ -528,7 +529,7 @@
 		}, 100);
 	};
 
-	const saveSettings = async (updated) => {
+	const saveSettings = async (updated: Record<string, any>) => {
 		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
 		await models.set(await getModels());
@@ -538,14 +539,14 @@
 	const getModels = async () => {
 		return await _getModels(
 			localStorage.token,
-			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 		);
 	};
 
 	let selectedTab = 'general';
 
 	// Function to handle sideways scrolling
-	const scrollHandler = (event) => {
+	const scrollHandler = (event: WheelEvent) => {
 		const settingsTabsContainer = document.getElementById('settings-tabs-container');
 		if (settingsTabsContainer) {
 			event.preventDefault(); // Prevent default vertical scrolling
@@ -945,10 +946,5 @@
 	.tabs {
 		-ms-overflow-style: none; /* IE and Edge */
 		scrollbar-width: none; /* Firefox */
-	}
-
-	input[type='number'] {
-		appearance: textfield;
-		-moz-appearance: textfield; /* Firefox */
 	}
 </style>

@@ -57,7 +57,6 @@
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { getUserSettings } from '$lib/apis/users';
 	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
 
@@ -746,14 +745,6 @@
 				$socket?.on('events', chatEventHandler);
 				$socket?.on('events:channel', channelEventHandler);
 
-				const userSettings = await getUserSettings(localStorage.token);
-				if (userSettings) {
-					settings.set(userSettings.ui);
-				} else {
-					settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-				}
-				setTextScale($settings?.textScale ?? 1);
-
 				// Set up the token expiry check (60s interval, matching TOKEN_EXPIRY_BUFFER)
 				if (tokenTimer) {
 					clearInterval(tokenTimer);
@@ -808,7 +799,7 @@
 
 					if (sessionUser) {
 						await user.set(sessionUser);
-						await config.set(await getBackendConfig());
+						// backendConfig already fetched above, no need to fetch again
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');

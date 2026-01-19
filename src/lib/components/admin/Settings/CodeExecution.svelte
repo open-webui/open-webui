@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 	import { getCodeExecutionConfig, setCodeExecutionConfig } from '$lib/apis/configs';
+	import { codeExecutionConfigCache } from '$lib/stores';
 
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
@@ -22,13 +23,23 @@
 
 	const submitHandler = async () => {
 		const res = await setCodeExecutionConfig(localStorage.token, config);
+		if (res) {
+			codeExecutionConfigCache.set(null);
+		}
 	};
 
 	onMount(async () => {
+		const cached = $codeExecutionConfigCache;
+		if (cached) {
+			config = JSON.parse(JSON.stringify(cached));
+			return;
+		}
+
 		const res = await getCodeExecutionConfig(localStorage.token);
 
 		if (res) {
 			config = res;
+			codeExecutionConfigCache.set(JSON.parse(JSON.stringify(res)));
 		}
 	});
 </script>

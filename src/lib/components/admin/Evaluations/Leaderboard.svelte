@@ -14,13 +14,20 @@
 
 	let rankedModels = [];
 	let query = '';
+	let lastQuery = '';
 	let loading = true;
 	let debounceTimer: ReturnType<typeof setTimeout>;
 	let orderBy = 'rating';
 	let direction: 'asc' | 'desc' = 'desc';
+	let initialized = false;
 
 	let showModal = false;
 	let selectedModel = null;
+
+	onMount(() => {
+		loadLeaderboard();
+		initialized = true;
+	});
 
 	const toggleSort = (key: string) => {
 		if (orderBy === key) {
@@ -79,7 +86,8 @@
 		debounceTimer = setTimeout(() => loadLeaderboard(query), 500);
 	};
 
-	$: if (query !== null) {
+	$: if (initialized && query !== lastQuery) {
+		lastQuery = query;
 		debouncedLoad();
 	}
 

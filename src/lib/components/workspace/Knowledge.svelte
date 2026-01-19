@@ -70,8 +70,9 @@
 	const getItemsPage = async () => {
 		itemsLoading = true;
 		const res = await searchKnowledgeBases(localStorage.token, query, viewOption, page).catch(
-			() => {
-				return [];
+			(error) => {
+				console.error('Failed to search knowledge bases:', error);
+				return null;
 			}
 		);
 
@@ -91,6 +92,13 @@
 			} else {
 				items = pageItems;
 			}
+		} else {
+			// API failed, set empty state to avoid infinite loading
+			if (items === null) {
+				items = [];
+				total = 0;
+			}
+			allItemsLoaded = true;
 		}
 
 		itemsLoading = false;

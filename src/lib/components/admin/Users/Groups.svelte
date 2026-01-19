@@ -7,7 +7,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { WEBUI_NAME, config, user, showSidebar, knowledge } from '$lib/stores';
+	import { WEBUI_NAME, config, user, showSidebar, knowledge, groupsCache } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -53,7 +53,12 @@
 	let showDefaultPermissionsModal = false;
 
 	const setGroups = async () => {
-		groups = await getGroups(localStorage.token);
+		if ($groupsCache) {
+			groups = $groupsCache;
+		} else {
+			groups = await getGroups(localStorage.token);
+			groupsCache.set(groups);
+		}
 	};
 
 	const addGroupHandler = async (group) => {
@@ -65,6 +70,7 @@
 		if (res) {
 			toast.success($i18n.t('Group created successfully'));
 			groups = await getGroups(localStorage.token);
+			groupsCache.set(groups);
 		}
 	};
 

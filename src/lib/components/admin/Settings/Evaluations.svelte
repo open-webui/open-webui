@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { models, settings, user, config } from '$lib/stores';
+	import { models, settings, user, config, evaluationsConfigCache } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -27,6 +27,7 @@
 
 		if (evaluationConfig) {
 			toast.success($i18n.t('Settings saved successfully!'));
+			evaluationsConfigCache.set(null);
 			models.set(
 				await getModels(
 					localStorage.token,
@@ -78,10 +79,20 @@
 
 	onMount(async () => {
 		if ($user?.role === 'admin') {
+			const cached = $evaluationsConfigCache;
+			if (cached) {
+				evaluationConfig = JSON.parse(JSON.stringify(cached));
+				return;
+			}
+
 			evaluationConfig = await getConfig(localStorage.token).catch((err) => {
 				toast.error(err);
 				return null;
 			});
+
+			if (evaluationConfig) {
+				evaluationsConfigCache.set(JSON.parse(JSON.stringify(evaluationConfig)));
+			}
 		}
 	});
 </script>
