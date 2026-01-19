@@ -1,8 +1,10 @@
 import os
 import json
 import logging
+import time
 from contextlib import contextmanager
 from typing import Any, Optional
+from pathlib import Path
 
 from open_webui.internal.wrappers import register_connection
 from open_webui.env import (
@@ -16,6 +18,8 @@ from open_webui.env import (
     DATABASE_ENABLE_SQLITE_WAL,
     DATABASE_ENABLE_SESSION_SHARING,
     ENABLE_DB_MIGRATIONS,
+    DATA_DIR,
+    VERSION,
 )
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, event, types
@@ -26,6 +30,46 @@ from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
+
+# Migration version cache file
+MIGRATION_CACHE_FILE = Path(DATA_DIR) / ".migration_version"
+
+
+def get_migration_files_hash():
+    """Get a hash of migration files to detect changes."""
+    migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
+    alembic_dir = OPEN_WEBUI_DIR / "migrations" / "versions"
+
+    files = []
+    for d in [migrate_dir, alembic_dir]:
+        if d.exists():
+            files.extend(sorted(f.name for f in d.glob("*.py") if not f.name.startswith("__")))
+
+    return f"{VERSION}:{len(files)}:{hash(tuple(files))}"
+
+
+def should_run_migrations():
+    """Check if migrations need to run based on version cache."""
+    current_hash = get_migration_files_hash()
+
+    if MIGRATION_CACHE_FILE.exists():
+        try:
+            cached_hash = MIGRATION_CACHE_FILE.read_text().strip()
+            if cached_hash == current_hash:
+                log.info(f"Migration cache valid (v{VERSION}), skipping migration check")
+                return False
+        except Exception:
+            pass
+
+    return True
+
+
+def update_migration_cache():
+    """Update the migration version cache after successful migration."""
+    try:
+        MIGRATION_CACHE_FILE.write_text(get_migration_files_hash())
+    except Exception as e:
+        log.warning(f"Failed to update migration cache: {e}")
 
 
 class JSONField(types.TypeDecorator):
@@ -55,12 +99,14 @@ class JSONField(types.TypeDecorator):
 def handle_peewee_migration(DATABASE_URL):
     # db = None
     try:
+        migration_start = time.time()
         # Replace the postgresql:// with postgres:// to handle the peewee migration
         db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
         migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()
         db.close()
+        log.info(f"Peewee migrations completed in {time.time() - migration_start:.2f}s")
 
     except Exception as e:
         log.error(f"Failed to initialize the database connection: {e}")
@@ -78,7 +124,10 @@ def handle_peewee_migration(DATABASE_URL):
 
 
 if ENABLE_DB_MIGRATIONS:
-    handle_peewee_migration(DATABASE_URL)
+    if should_run_migrations():
+        log.info("Running database migrations...")
+        handle_peewee_migration(DATABASE_URL)
+    # Note: update_migration_cache() will be called after alembic migrations in config.py
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL

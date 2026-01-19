@@ -434,6 +434,9 @@ async def update_config(
         if key in keys
     }
 
+    # Clear model cache when config changes
+    request.app.state.BASE_MODELS = None
+
     return {
         "ENABLE_GEMINI_API": request.app.state.config.ENABLE_GEMINI_API,
         "GEMINI_API_BASE_URLS": request.app.state.config.GEMINI_API_BASE_URLS,

@@ -1160,6 +1160,9 @@ async def update_config(
         if key in keys
     }
 
+    # Clear model cache when config changes
+    request.app.state.BASE_MODELS = None
+
     return {
         "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
         "OPENAI_API_BASE_URLS": request.app.state.config.OPENAI_API_BASE_URLS,

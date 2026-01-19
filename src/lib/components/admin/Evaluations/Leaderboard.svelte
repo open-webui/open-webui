@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { models } from '$lib/stores';
+	import { models, evaluationsLeaderboardCache } from '$lib/stores';
 	import { getLeaderboard } from '$lib/apis/evaluations';
 	import ModelModal from './LeaderboardModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -25,7 +25,13 @@
 	let selectedModel = null;
 
 	onMount(() => {
-		loadLeaderboard();
+		// Use cached data if available and no search query
+		if ($evaluationsLeaderboardCache && !query) {
+			rankedModels = $evaluationsLeaderboardCache;
+			loading = false;
+		} else {
+			loadLeaderboard();
+		}
 		initialized = true;
 	});
 
@@ -74,6 +80,10 @@
 					if (b.rating === '-') return -1;
 					return b.rating - a.rating;
 				});
+			// Cache the result if no search query
+			if (!searchQuery) {
+				evaluationsLeaderboardCache.set(rankedModels);
+			}
 		} catch (err) {
 			console.error('Leaderboard load failed:', err);
 		}

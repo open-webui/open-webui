@@ -33,7 +33,7 @@ from open_webui.env import (
     WEBUI_NAME,
     log,
 )
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import Base, get_db, should_run_migrations, update_migration_cache
 from open_webui.utils.redis import get_redis_connection
 
 
@@ -52,11 +52,13 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 # Function to run the alembic migrations
 def run_migrations():
-    log.info("Running migrations")
+    log.info("Running Alembic migrations")
     try:
+        import time
         from alembic import command
         from alembic.config import Config
 
+        migration_start = time.time()
         alembic_cfg = Config(OPEN_WEBUI_DIR / "alembic.ini")
 
         # Set the script location dynamically
@@ -64,12 +66,16 @@ def run_migrations():
         alembic_cfg.set_main_option("script_location", str(migrations_path))
 
         command.upgrade(alembic_cfg, "head")
+        log.info(f"Alembic migrations completed in {time.time() - migration_start:.2f}s")
     except Exception as e:
         log.exception(f"Error running migrations: {e}")
 
 
 if ENABLE_DB_MIGRATIONS:
-    run_migrations()
+    if should_run_migrations():
+        run_migrations()
+        # Update cache after all migrations complete
+        update_migration_cache()
 
 
 class Config(Base):
@@ -1149,7 +1155,7 @@ GEMINI_API_CONFIGS = PersistentConfig(
 ENABLE_BASE_MODELS_CACHE = PersistentConfig(
     "ENABLE_BASE_MODELS_CACHE",
     "models.base_models_cache",
-    os.environ.get("ENABLE_BASE_MODELS_CACHE", "False").lower() == "true",
+    os.environ.get("ENABLE_BASE_MODELS_CACHE", "True").lower() == "true",
 )
 
 

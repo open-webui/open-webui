@@ -58,7 +58,7 @@
 	let showAddGeminiConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
 
-	const updateOpenAIHandler = async () => {
+	const updateOpenAIHandler = async (refreshModels = true) => {
 		if (ENABLE_OPENAI_API !== null) {
 			// Remove trailing slashes
 			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
@@ -89,13 +89,22 @@
 			});
 
 			if (res) {
+				// Update cache with new config
+				openaiConfigCache.set({
+					ENABLE_OPENAI_API,
+					OPENAI_API_BASE_URLS,
+					OPENAI_API_KEYS,
+					OPENAI_API_CONFIGS
+				});
 				toast.success($i18n.t('OpenAI API settings updated'));
-				await models.set(await getModels());
+				if (refreshModels) {
+					await models.set(await getModels());
+				}
 			}
 		}
 	};
 
-	const updateOllamaHandler = async () => {
+	const updateOllamaHandler = async (refreshModels = true) => {
 		if (ENABLE_OLLAMA_API !== null) {
 			// Remove trailing slashes
 			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.map((url) => url.replace(/\/$/, ''));
@@ -109,8 +118,16 @@
 			});
 
 			if (res) {
+				// Update cache with new config
+				ollamaConfigCache.set({
+					ENABLE_OLLAMA_API,
+					OLLAMA_BASE_URLS,
+					OLLAMA_API_CONFIGS
+				});
 				toast.success($i18n.t('Ollama API settings updated'));
-				await models.set(await getModels());
+				if (refreshModels) {
+					await models.set(await getModels());
+				}
 			}
 		}
 	};
@@ -146,7 +163,7 @@
 		await updateOllamaHandler();
 	};
 
-	const updateGeminiHandler = async () => {
+	const updateGeminiHandler = async (refreshModels = true) => {
 		if (ENABLE_GEMINI_API !== null) {
 			// Remove trailing slashes
 			GEMINI_API_BASE_URLS = GEMINI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
@@ -174,8 +191,17 @@
 			});
 
 			if (res) {
+				// Update cache with new config
+				geminiConfigCache.set({
+					ENABLE_GEMINI_API,
+					GEMINI_API_BASE_URLS,
+					GEMINI_API_KEYS,
+					GEMINI_API_CONFIGS
+				});
 				toast.success($i18n.t('Gemini API settings updated'));
-				await models.set(await getModels());
+				if (refreshModels) {
+					await models.set(await getModels());
+				}
 			}
 		}
 	};
@@ -275,8 +301,9 @@
 	});
 
 	const submitHandler = async () => {
-		updateOpenAIHandler();
-		updateOllamaHandler();
+		// Don't refresh models on form submit - only save configs
+		updateOpenAIHandler(false);
+		updateOllamaHandler(false);
 
 		dispatch('save');
 
@@ -320,7 +347,7 @@
 							<Switch
 								bind:state={ENABLE_OPENAI_API}
 								on:change={async () => {
-									updateOpenAIHandler();
+									updateOpenAIHandler(false);
 								}}
 							/>
 						</div>
@@ -388,7 +415,7 @@
 							<Switch
 								bind:state={ENABLE_GEMINI_API}
 								on:change={async () => {
-									updateGeminiHandler();
+									updateGeminiHandler(false);
 								}}
 							/>
 						</div>
@@ -455,7 +482,7 @@
 							<Switch
 								bind:state={ENABLE_OLLAMA_API}
 								on:change={async () => {
-									updateOllamaHandler();
+									updateOllamaHandler(false);
 								}}
 							/>
 						</div>
@@ -500,6 +527,7 @@
 															OLLAMA_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
 													});
 													OLLAMA_API_CONFIGS = newConfig;
+													updateOllamaHandler();
 												}}
 											/>
 										{/each}

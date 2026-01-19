@@ -11,7 +11,7 @@
   <a href="https://github.com/open-webui/open-webui">
     <img src="https://img.shields.io/badge/Upstream-open--webui-green?style=for-the-badge&logo=github" alt="Upstream Badge"/>
   </a>
-  <img src="https://img.shields.io/badge/Version-v0.7.3--1-orange?style=for-the-badge&logo=git" alt="Version"/>
+  <img src="https://img.shields.io/badge/Version-v0.7.3--3-orange?style=for-the-badge&logo=git" alt="Version"/>
   <img src="https://img.shields.io/badge/Arch-x86__64%20%7C%20ARM64-blueviolet?style=for-the-badge&logo=docker" alt="Arch Badge"/>
 
   <br/><br/>
@@ -44,6 +44,7 @@
 
 ```bash
 docker run -d -p 3000:8080 \
+  --add-host=host.docker.internal:host-gateway \
   -v open-webui:/app/backend/data \
   --name open-webui \
   --restart always \
@@ -55,6 +56,7 @@ docker run -d -p 3000:8080 \
 
 ```bash
 docker run -d -p 3000:8080 \
+  --add-host=host.docker.internal:host-gateway \
   -v open-webui:/app/backend/data \
   --name open-webui \
   --restart always \
@@ -66,7 +68,6 @@ docker run -d -p 3000:8080 \
 创建 `docker-compose.yml` 文件：
 
 ```yaml
-version: '3.8'
 services:
   open-webui:
     # ARM64 设备请改为: ghcr.io/ztx888/openwebui:latest-arm64
@@ -76,10 +77,12 @@ services:
       - "3000:8080"
     volumes:
       - open-webui:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
 
 volumes:
-  open-webui:
+  open-webui: {}
 ```
 启动服务：`docker compose up -d`
 
@@ -194,7 +197,7 @@ volumes:
 
 ---
 
-## 📝 最新更新 (v0.7.3-1)
+## 📝 最新更新 (v0.7.3-3)
 
 ### 🚀 v0.7.3 重点功能
 * 🌳 **对话分支功能**：从任意消息节点分叉，探索不同可能性。

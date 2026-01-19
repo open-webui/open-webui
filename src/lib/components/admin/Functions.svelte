@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { WEBUI_NAME, config, functions as _functions, models, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, config, functions as _functions, models, settings, user, functionsListCache } from '$lib/stores';
 	import { onMount, getContext, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
@@ -159,6 +159,8 @@
 		if (res) {
 			toast.success($i18n.t('Function deleted successfully'));
 			functions = functions.filter((f) => f.id !== func.id);
+			// Clear cache after deletion
+			functionsListCache.set(null);
 
 			_functions.set(await getFunctions(localStorage.token));
 			models.set(
@@ -202,10 +204,16 @@
 
 	onMount(async () => {
 		viewOption = localStorage?.workspaceViewOption || '';
-		functions = await getFunctionList(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return [];
-		});
+		// Use cached data if available
+		if ($functionsListCache) {
+			functions = $functionsListCache;
+		} else {
+			functions = await getFunctionList(localStorage.token).catch((error) => {
+				toast.error(`${error}`);
+				return [];
+			});
+			functionsListCache.set(functions);
+		}
 
 		await tick();
 		loaded = true;

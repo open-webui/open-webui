@@ -299,6 +299,9 @@ async def update_config(
         if key in keys
     }
 
+    # Clear model cache when config changes
+    request.app.state.BASE_MODELS = None
+
     return {
         "ENABLE_OLLAMA_API": request.app.state.config.ENABLE_OLLAMA_API,
         "OLLAMA_BASE_URLS": request.app.state.config.OLLAMA_BASE_URLS,

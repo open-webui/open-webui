@@ -28,5 +28,24 @@ export default defineConfig({
 	},
 	esbuild: {
 		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
+	},
+	optimizeDeps: {
+		include: [
+			'svelte',
+			'@tiptap/core',
+			'@tiptap/starter-kit',
+			'chart.js',
+			'marked',
+			'highlight.js'
+		],
+		force: false
+	},
+	server: {
+		fs: {
+			strict: false
+		},
+		warmup: {
+			clientFiles: ['./src/routes/**/*.svelte', './src/lib/components/**/*.svelte']
+		}
 	}
 });

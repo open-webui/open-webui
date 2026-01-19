@@ -6,12 +6,25 @@ from importlib import util
 import types
 import tempfile
 import logging
+from importlib.metadata import distributions
 
 from open_webui.env import PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS, OFFLINE_MODE
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
 log = logging.getLogger(__name__)
+
+
+def get_installed_packages():
+    """Get a set of installed package names (lowercase)."""
+    return {dist.metadata["Name"].lower() for dist in distributions()}
+
+
+def parse_requirement_name(req: str) -> str:
+    """Extract package name from requirement string (e.g., 'requests>=2.0' -> 'requests')."""
+    # Remove version specifiers and extras
+    match = re.match(r'^([a-zA-Z0-9_-]+)', req.strip())
+    return match.group(1).lower() if match else req.strip().lower()
 
 
 def extract_frontmatter(content):
@@ -270,12 +283,24 @@ def install_frontmatter_requirements(requirements: str):
 
     if requirements:
         try:
-            req_list = [req.strip() for req in requirements.split(",")]
-            log.info(f"Installing requirements: {' '.join(req_list)}")
+            req_list = [req.strip() for req in requirements.split(",") if req.strip()]
+            if not req_list:
+                log.info("No requirements found in frontmatter.")
+                return
+
+            # Check which packages are already installed
+            installed = get_installed_packages()
+            missing = [req for req in req_list if parse_requirement_name(req) not in installed]
+
+            if not missing:
+                log.info(f"All requirements already installed: {' '.join(req_list)}")
+                return
+
+            log.info(f"Installing missing requirements: {' '.join(missing)}")
             subprocess.check_call(
                 [sys.executable, "-m", "pip", "install"]
                 + PIP_OPTIONS
-                + req_list
+                + missing
                 + PIP_PACKAGE_INDEX_OPTIONS
             )
         except Exception as e:

@@ -287,87 +287,80 @@
 								{$i18n.t('Identity & Security')}
 							</div>
 
-							<div class="flex flex-col gap-6">
-								<!-- Authentication General -->
-								<div class="space-y-4">
-									<div class="flex w-full justify-between items-center">
-										<div class="self-center text-sm font-medium">
-											{$i18n.t('Default User Role')}
-										</div>
-										<div class="flex items-center relative">
-											<select
-												class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
-												bind:value={adminConfig.DEFAULT_USER_ROLE}
-												placeholder={$i18n.t('Select a role')}
-											>
-												<option value="pending">{$i18n.t('pending')}</option>
-												<option value="user">{$i18n.t('user')}</option>
-												<option value="admin">{$i18n.t('admin')}</option>
-											</select>
-										</div>
+							<div class="flex flex-col gap-5">
+								<!-- 用户注册设置 -->
+								<div class="space-y-3">
+									<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+										{$i18n.t('User Registration')}
 									</div>
-
-									<div class="flex w-full justify-between items-center">
-										<div class="self-center text-sm font-medium">{$i18n.t('Default Group')}</div>
-										<div class="flex items-center relative">
-											<select
-												class="dark:bg-gray-900 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-transparent outline-none focus:ring-0 focus:border-gray-300 border-none text-right cursor-pointer"
-												bind:value={adminConfig.DEFAULT_GROUP_ID}
-												placeholder={$i18n.t('Select a group')}
-											>
-												<option value={''}>None</option>
-												{#each groups as group}
-													<option value={group.id}>{group.name}</option>
-												{/each}
-											</select>
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+										<div class="bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+											<div class="flex items-center justify-between">
+												<div class="text-sm font-medium">{$i18n.t('Default User Role')}</div>
+												<select
+													class="dark:bg-gray-800 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-gray-50 outline-none focus:ring-0 border border-gray-200 dark:border-gray-700 text-right cursor-pointer"
+													bind:value={adminConfig.DEFAULT_USER_ROLE}
+													placeholder={$i18n.t('Select a role')}
+												>
+													<option value="pending">{$i18n.t('pending')}</option>
+													<option value="user">{$i18n.t('user')}</option>
+													<option value="admin">{$i18n.t('admin')}</option>
+												</select>
+											</div>
 										</div>
-									</div>
-
-									<div class="flex w-full justify-between items-center">
-										<div class="self-center text-sm font-medium">
-											{$i18n.t('Enable New Sign Ups')}
+										<div class="bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+											<div class="flex items-center justify-between">
+												<div class="text-sm font-medium">{$i18n.t('Default Group')}</div>
+												<select
+													class="dark:bg-gray-800 w-fit pr-8 rounded-lg px-2 py-1 text-sm bg-gray-50 outline-none focus:ring-0 border border-gray-200 dark:border-gray-700 text-right cursor-pointer"
+													bind:value={adminConfig.DEFAULT_GROUP_ID}
+													placeholder={$i18n.t('Select a group')}
+												>
+													<option value={''}>None</option>
+													{#each groups as group}
+														<option value={group.id}>{group.name}</option>
+													{/each}
+												</select>
+											</div>
 										</div>
-										<Switch bind:state={adminConfig.ENABLE_SIGNUP} />
-									</div>
-
-									<div class="flex w-full items-center justify-between">
-										<div class="self-center text-sm font-medium">
-											{$i18n.t('Show Admin Details in Account Pending Overlay')}
+										<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+											<div class="text-sm font-medium">{$i18n.t('Enable New Sign Ups')}</div>
+											<Switch bind:state={adminConfig.ENABLE_SIGNUP} />
 										</div>
-										<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} />
+										<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+											<div class="text-sm font-medium">{$i18n.t('Show Admin Details in Account Pending Overlay')}</div>
+											<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} />
+										</div>
 									</div>
 
 									{#if adminConfig.SHOW_ADMIN_DETAILS}
-										<div class="pl-0 md:pl-2 space-y-3">
-											<div class="w-full">
-												<div class="text-xs font-medium text-gray-500 mb-1.5">
-													{$i18n.t('Admin Contact Email')}
-												</div>
-												<input
-													class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-													type="email"
-													placeholder={$i18n.t('Leave empty to use first admin user')}
-													bind:value={adminConfig.ADMIN_EMAIL}
-												/>
+										<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
+											<div class="text-xs font-medium text-gray-500 mb-1.5">
+												{$i18n.t('Admin Contact Email')}
 											</div>
+											<input
+												class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+												type="email"
+												placeholder={$i18n.t('Leave empty to use first admin user')}
+												bind:value={adminConfig.ADMIN_EMAIL}
+											/>
 										</div>
 									{/if}
 
-									<div class="space-y-3">
-										<div class="w-full">
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+										<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
 											<div class="text-xs font-medium text-gray-500 mb-1.5">
 												{$i18n.t('Pending User Overlay Title')}
 											</div>
 											<input
-												class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
+												class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
 												placeholder={$i18n.t(
 													'Enter a title for the pending user info overlay. Leave empty for default.'
 												)}
 												bind:value={adminConfig.PENDING_USER_OVERLAY_TITLE}
 											/>
 										</div>
-
-										<div class="w-full">
+										<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
 											<div class="text-xs font-medium text-gray-500 mb-1.5">
 												{$i18n.t('Pending User Overlay Content')}
 											</div>
@@ -381,97 +374,95 @@
 									</div>
 								</div>
 
-								<hr class="border-gray-100 dark:border-gray-800" />
-
-								<!-- API Key Settings -->
-								<div class="space-y-4">
-									<div class="flex w-full justify-between items-center">
-										<div class="self-center text-sm font-medium">{$i18n.t('Enable API Keys')}</div>
-										<Switch bind:state={adminConfig.ENABLE_API_KEYS} />
+								<!-- API 密钥设置 -->
+								<div class="space-y-3">
+									<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+										{$i18n.t('API Keys')}
 									</div>
-
-									{#if adminConfig?.ENABLE_API_KEYS}
-										<div class="flex w-full justify-between items-center">
-											<div class="self-center text-sm font-medium">
-												{$i18n.t('API Key Endpoint Restrictions')}
-											</div>
-											<Switch bind:state={adminConfig.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS} />
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+										<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+											<div class="text-sm font-medium">{$i18n.t('Enable API Keys')}</div>
+											<Switch bind:state={adminConfig.ENABLE_API_KEYS} />
 										</div>
-
-										{#if adminConfig?.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS}
-											<div class="pl-0 md:pl-2">
-												<div class="text-xs font-medium text-gray-500 mb-1.5">
-													{$i18n.t('Allowed Endpoints')}
-												</div>
-												<div class="flex flex-col gap-2">
-													<input
-														class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-														type="text"
-														placeholder={`e.g.) /api/v1/messages, /api/v1/channels`}
-														bind:value={adminConfig.API_KEYS_ALLOWED_ENDPOINTS}
-													/>
-													<div class="text-xs text-gray-400 dark:text-gray-500">
-														<a
-															href="https://docs.openwebui.cn/getting-started/api-endpoints"
-															target="_blank"
-															class="text-gray-500 dark:text-gray-400 font-medium underline hover:text-blue-500"
-														>
-															{$i18n.t(
-																'To learn more about available endpoints, visit our documentation.'
-															)}
-														</a>
-													</div>
-												</div>
+										{#if adminConfig?.ENABLE_API_KEYS}
+											<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+												<div class="text-sm font-medium">{$i18n.t('API Key Endpoint Restrictions')}</div>
+												<Switch bind:state={adminConfig.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS} />
 											</div>
 										{/if}
-									{/if}
-								</div>
-
-								<hr class="border-gray-100 dark:border-gray-800" />
-
-								<!-- JWT Settings -->
-								<div class="space-y-3">
-									<div class="w-full justify-between">
-										<div class="text-sm font-medium mb-1.5">{$i18n.t('JWT Expiration')}</div>
-										<div class="flex flex-col gap-2">
-											<input
-												class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-												type="text"
-												placeholder={`e.g.) "30m","1h", "10d". `}
-												bind:value={adminConfig.JWT_EXPIRES_IN}
-											/>
-											<div class="text-xs text-gray-400 dark:text-gray-500">
-												{$i18n.t('Valid time units:')}
-												<span class="text-gray-500 dark:text-gray-400 font-medium"
-													>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
-												>
-											</div>
-										</div>
 									</div>
 
-									{#if adminConfig.JWT_EXPIRES_IN === '-1'}
-										<div
-											class="bg-yellow-500/10 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3 text-xs flex items-center gap-2"
-										>
-											<span class="font-medium">{$i18n.t('Warning')}:</span>
-											<span>
+									{#if adminConfig?.ENABLE_API_KEYS && adminConfig?.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS}
+										<div class="ml-0 md:ml-4 bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
+											<div class="text-xs font-medium text-gray-500 mb-1.5">
+												{$i18n.t('Allowed Endpoints')}
+											</div>
+											<input
+												class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+												type="text"
+												placeholder={`e.g.) /api/v1/messages, /api/v1/channels`}
+												bind:value={adminConfig.API_KEYS_ALLOWED_ENDPOINTS}
+											/>
+											<div class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
 												<a
-													href="https://docs.openwebui.cn/getting-started/env-configuration#jwt_expires_in"
+													href="https://docs.openwebui.cn/getting-started/api-endpoints"
 													target="_blank"
-													class="underline hover:text-yellow-800 dark:hover:text-yellow-100"
+													class="text-gray-500 dark:text-gray-400 font-medium underline hover:text-blue-500"
 												>
-													{$i18n.t('No expiration can pose security risks.')}
+													{$i18n.t(
+														'To learn more about available endpoints, visit our documentation.'
+													)}
 												</a>
-											</span>
+											</div>
 										</div>
 									{/if}
 								</div>
 
-								<hr class="border-gray-100 dark:border-gray-800" />
+								<!-- JWT 设置 -->
+								<div class="space-y-3">
+									<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+										{$i18n.t('Session Security')}
+									</div>
+									<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
+										<div class="text-xs font-medium text-gray-500 mb-1.5">{$i18n.t('JWT Expiration')}</div>
+										<input
+											class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+											type="text"
+											placeholder={`e.g.) "30m","1h", "10d". `}
+											bind:value={adminConfig.JWT_EXPIRES_IN}
+										/>
+										<div class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+											{$i18n.t('Valid time units:')}
+											<span class="text-gray-500 dark:text-gray-400 font-medium"
+												>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
+											>
+										</div>
 
-								<!-- LDAP Settings -->
-								<div class="space-y-4">
-									<div class="flex justify-between items-center">
+										{#if adminConfig.JWT_EXPIRES_IN === '-1'}
+											<div
+												class="mt-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3 text-xs flex items-center gap-2"
+											>
+												<span class="font-medium">{$i18n.t('Warning')}:</span>
+												<span>
+													<a
+														href="https://docs.openwebui.cn/getting-started/env-configuration#jwt_expires_in"
+														target="_blank"
+														class="underline hover:text-yellow-800 dark:hover:text-yellow-100"
+													>
+														{$i18n.t('No expiration can pose security risks.')}
+													</a>
+												</span>
+											</div>
+										{/if}
+									</div>
+								</div>
+
+								<!-- LDAP 设置 -->
+								<div class="space-y-3">
+									<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+										{$i18n.t('LDAP Authentication')}
+									</div>
+									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
 										<div class="text-sm font-medium">{$i18n.t('LDAP')}</div>
 										<Switch bind:state={ENABLE_LDAP} />
 									</div>
@@ -681,88 +672,108 @@
 					>
 						<div class="text-xs font-medium text-gray-500 mb-4">{$i18n.t('App Features')}</div>
 
-						<div class="flex flex-col gap-4">
-							<div class="flex w-full items-center justify-between">
-								<div class="self-center text-sm font-medium">
-									{$i18n.t('Enable Community Sharing')}
+						<div class="flex flex-col gap-5">
+							<!-- 社区与互动 -->
+							<div class="space-y-3">
+								<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Community & Interaction')}
 								</div>
-								<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} />
-							</div>
-
-							<div class="flex w-full items-center justify-between">
-								<div class="self-center text-sm font-medium">
-									{$i18n.t('Enable Message Rating')}
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+										<div class="text-sm font-medium">{$i18n.t('Enable Community Sharing')}</div>
+										<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} />
+									</div>
+									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+										<div class="text-sm font-medium">{$i18n.t('Enable Message Rating')}</div>
+										<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
+									</div>
 								</div>
-								<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
 							</div>
 
-							<div class="flex w-full items-center justify-between">
-								<div class="self-center text-sm font-medium">{$i18n.t('Enable Folders')}</div>
-								<Switch bind:state={adminConfig.ENABLE_FOLDERS} />
-							</div>
+							<!-- 内容管理 -->
+							<div class="space-y-3">
+								<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Content Management')}
+								</div>
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+										<div class="text-sm font-medium">{$i18n.t('Enable Folders')}</div>
+										<Switch bind:state={adminConfig.ENABLE_FOLDERS} />
+									</div>
+									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+										<div class="text-sm font-medium">
+											{$i18n.t('Enable Notes')}
+											<span class="ml-1 text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">{$i18n.t('Beta')}</span>
+										</div>
+										<Switch bind:state={adminConfig.ENABLE_NOTES} />
+									</div>
+									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+										<div class="text-sm font-medium">
+											{$i18n.t('Enable Channels')}
+											<span class="ml-1 text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">{$i18n.t('Beta')}</span>
+										</div>
+										<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
+									</div>
+									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+										<div class="text-sm font-medium">
+											{$i18n.t('Enable Memories')}
+											<span class="ml-1 text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">{$i18n.t('Beta')}</span>
+										</div>
+										<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
+									</div>
+								</div>
 
-							{#if adminConfig.ENABLE_FOLDERS}
-								<div class="pl-0 md:pl-2 w-full">
-									<div class="w-full">
+								{#if adminConfig.ENABLE_FOLDERS}
+									<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
 										<div class="text-xs font-medium text-gray-500 mb-1.5">
 											{$i18n.t('Folder Max File Count')}
 										</div>
-										<div class="flex gap-2 items-center">
-											<input
-												class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-												type="number"
-												min="0"
-												placeholder={$i18n.t('Leave empty for unlimited')}
-												bind:value={adminConfig.FOLDER_MAX_FILE_COUNT}
-											/>
-										</div>
+										<input
+											class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+											type="number"
+											min="0"
+											placeholder={$i18n.t('Leave empty for unlimited')}
+											bind:value={adminConfig.FOLDER_MAX_FILE_COUNT}
+										/>
 										<div class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
 											{$i18n.t('Maximum number of files allowed per folder.')}
 										</div>
 									</div>
-								</div>
-							{/if}
-
-							<div class="flex w-full items-center justify-between">
-								<div class="self-center text-sm font-medium">
-									{$i18n.t('Enable Notes')} ({$i18n.t('Beta')})
-								</div>
-								<Switch bind:state={adminConfig.ENABLE_NOTES} />
+								{/if}
 							</div>
 
-							<div class="flex w-full items-center justify-between">
-								<div class="self-center text-sm font-medium">
-									{$i18n.t('Enable Channels')} ({$i18n.t('Beta')})
+							<!-- 用户功能 -->
+							<div class="space-y-3">
+								<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+									{$i18n.t('User Features')}
 								</div>
-								<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
-							</div>
-
-							<div class="flex w-full items-center justify-between">
-								<div class="self-center text-sm font-medium">
-									{$i18n.t('Enable Memories')} ({$i18n.t('Beta')})
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+										<div class="text-sm font-medium">{$i18n.t('Enable User Webhooks')}</div>
+										<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
+									</div>
+									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
+										<div class="text-sm font-medium">{$i18n.t('Enable User Status')}</div>
+										<Switch bind:state={adminConfig.ENABLE_USER_STATUS} />
+									</div>
 								</div>
-								<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
 							</div>
 
-							<div class="flex w-full items-center justify-between">
-								<div class="self-center text-sm font-medium">{$i18n.t('Enable User Webhooks')}</div>
-								<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
-							</div>
-
-							<div class="flex w-full items-center justify-between">
-								<div class="self-center text-sm font-medium">{$i18n.t('Enable User Status')}</div>
-								<Switch bind:state={adminConfig.ENABLE_USER_STATUS} />
-							</div>
-
-							<div class="w-full">
-								<div class="text-xs font-medium text-gray-500 mb-1.5">
-									{$i18n.t('Response Watermark')}
+							<!-- 其他设置 -->
+							<div class="space-y-3">
+								<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+									{$i18n.t('Other Settings')}
 								</div>
-								<input
-									class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 dark:text-gray-300 border border-gray-100 dark:border-gray-800 outline-none focus:border-gray-300 dark:focus:border-gray-700 transition"
-									placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
-									bind:value={adminConfig.RESPONSE_WATERMARK}
-								/>
+								<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
+									<div class="text-xs font-medium text-gray-500 mb-1.5">
+										{$i18n.t('Response Watermark')}
+									</div>
+									<input
+										class="w-full rounded-lg py-2 px-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+										placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
+										bind:value={adminConfig.RESPONSE_WATERMARK}
+									/>
+								</div>
 							</div>
 						</div>
 					</div>

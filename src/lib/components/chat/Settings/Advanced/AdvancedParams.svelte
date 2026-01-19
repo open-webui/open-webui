@@ -4,8 +4,29 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import { getContext } from 'svelte';
+	import { Select } from 'bits-ui';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import LightBulbOff from '$lib/components/icons/LightBulbOff.svelte';
+	import LightBulbMin from '$lib/components/icons/LightBulbMin.svelte';
+	import LightBulbLow from '$lib/components/icons/LightBulbLow.svelte';
+	import LightBulbMedium from '$lib/components/icons/LightBulbMedium.svelte';
+	import LightBulbHigh from '$lib/components/icons/LightBulbHigh.svelte';
+	import LightBulbMax from '$lib/components/icons/LightBulbMax.svelte';
+	import LightBulbAuto from '$lib/components/icons/LightBulbAuto.svelte';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	const i18n = getContext('i18n');
+
+	const reasoningEffortOptions = [
+		{ value: 'default', label: 'Default', cn: '默认', desc: '【模型自动】', icon: LightBulbAuto, hint: '不传递任何参数，由模型自动决定' },
+		{ value: 'none', label: 'None', cn: '关闭', desc: '【禁用推理】', icon: LightBulbOff, hint: '禁用推理思考' },
+		{ value: 'minimal', label: 'Minimal', cn: '最低', desc: '【极速思考】', icon: LightBulbMin, hint: '最小化思考，仅适用于部分OpenAI模型' },
+		{ value: 'low', label: 'Low', cn: '浮想', desc: '【轻量思考】', icon: LightBulbLow, hint: '低强度思考/低预算' },
+		{ value: 'medium', label: 'Medium', cn: '斟酌', desc: '【中度思考】', icon: LightBulbMedium, hint: '中强度思考/中预算' },
+		{ value: 'high', label: 'High', cn: '沉思', desc: '【深度思考】', icon: LightBulbHigh, hint: '高强度思考/高预算' },
+		{ value: 'xhigh', label: 'Xhigh', cn: '最高', desc: '【极致思考】', icon: LightBulbMax, hint: '最大化思考，仅适用于GPT5.1以上模型' }
+	];
 
 	export let onChange: (params: any) => void = () => {};
 
@@ -262,30 +283,113 @@
 		</Tooltip>
 
 		{#if (params?.reasoning_effort ?? null) !== null}
-			{@const presetValues = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']}
+			{@const presetValues = ['none', 'default', 'minimal', 'low', 'medium', 'high', 'xhigh']}
 			{@const isCustomValue = !presetValues.includes(params.reasoning_effort)}
 			<div class="flex mt-0.5 space-x-2">
 				<div class="flex-1">
-					<select
-						class="text-sm w-full bg-transparent outline-none"
-						value={isCustomValue ? '__custom__' : params.reasoning_effort}
-						on:change={(e) => {
-							if (e.target.value === '__custom__') {
+					<Select.Root
+						items={reasoningEffortOptions}
+						onOpenChange={() => {}}
+						selected={reasoningEffortOptions.find((o) => o.value === params.reasoning_effort) ??
+							(params.reasoning_effort === null
+								? reasoningEffortOptions.find((o) => o.value === 'default')
+								: {
+										value: '__custom__',
+										label: 'Custom',
+										cn: '自定义',
+										desc: '输入...'
+									})}
+						onSelectedChange={(v) => {
+							if (v.value === '__custom__') {
 								params.reasoning_effort = '';
+							} else if (v.value === 'default') {
+								params.reasoning_effort = null;
 							} else {
-								params.reasoning_effort = e.target.value;
+								params.reasoning_effort = v.value;
 							}
 						}}
 					>
-						<option value="none">{$i18n.t('Off')} (none)</option>
-						<option value="minimal">{$i18n.t('Minimal')} (minimal)</option>
-						<option value="low">{$i18n.t('Low')} (low)</option>
-						<option value="medium">{$i18n.t('Medium')} (medium)</option>
-						<option value="high">{$i18n.t('High')} (high)</option>
-						<option value="xhigh">{$i18n.t('XHigh')} (xhigh)</option>
-						<option value="max">{$i18n.t('Max')} (max)</option>
-						<option value="__custom__">{$i18n.t('Custom Input')}...</option>
-					</select>
+						<Select.Trigger
+							class="w-full relative select-none"
+							aria-label={$i18n.t('Reasoning Effort')}
+						>
+							<Select.Value
+								class="text-sm w-full bg-transparent outline-none flex items-center h-8"
+							>
+								{#if isCustomValue && params.reasoning_effort !== '' && params.reasoning_effort !== null}
+									自定义输入...
+								{:else}
+									{@const selected =
+										reasoningEffortOptions.find((o) => o.value === params.reasoning_effort) ??
+										reasoningEffortOptions.find((o) => o.value === 'default')}
+									{#if selected}
+										<div class="flex items-center w-full font-mono text-sm max-w-full">
+											<div
+												class="w-8 mr-1 shrink-0 flex items-center justify-center text-gray-400 dark:text-gray-500"
+											>
+												<svelte:component this={selected.icon} class="w-4 h-4" />
+											</div>
+											<span class="w-16 shrink-0">{selected.label}</span>
+											<span class="w-10 shrink-0">{selected.cn}</span>
+											<span
+												class="flex-1 text-right text-gray-600 dark:text-gray-400 opacity-80 truncate"
+												title={selected.desc}>{selected.desc}</span
+											>
+										</div>
+									{:else}
+										Select...
+									{/if}
+								{/if}
+							</Select.Value>
+							<ChevronDown
+								className="absolute end-0 top-1/2 -translate-y-1/2 size-3.5 opacity-50"
+								strokeWidth="2.5"
+							/>
+						</Select.Trigger>
+						<Select.Content
+							class="w-full rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg z-50 p-1"
+							transition={flyAndScale}
+							sideOffset={4}
+							side="bottom"
+							align="start"
+						>
+							{#each reasoningEffortOptions as option}
+								<Select.Item
+									class="flex w-full items-center rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 font-mono outline-none data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-gray-800"
+									value={option.value}
+									label={option.label}
+								>
+									<div
+										class="w-8 mr-1 shrink-0 flex items-center justify-center text-gray-400 dark:text-gray-500"
+									>
+										<svelte:component this={option.icon} class="w-4 h-4" />
+									</div>
+									<span class="w-16 shrink-0 font-medium">{option.label}</span>
+									<span class="w-10 shrink-0">{option.cn}</span><span
+										class="flex-1 text-right text-gray-600 dark:text-gray-400 opacity-80 whitespace-nowrap"
+									>{option.desc}</span>
+									<div class="ml-2 w-4 shrink-0 flex items-center justify-center">
+										{#if params.reasoning_effort === option.value || (params.reasoning_effort === null && option.value === 'default')}
+											<Check />
+										{/if}
+									</div>
+								</Select.Item>
+							{/each}
+
+							<Select.Item
+								class="flex w-full items-center rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 font-mono outline-none data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800"
+								value="__custom__"
+								label="Custom"
+							>
+								<span class="flex-1">自定义输入...</span>
+								<div class="ml-2 w-4">
+									{#if isCustomValue && params.reasoning_effort !== '' && params.reasoning_effort !== null}
+										<Check />
+									{/if}
+								</div>
+							</Select.Item>
+						</Select.Content>
+					</Select.Root>
 				</div>
 				{#if isCustomValue || params.reasoning_effort === ''}
 					<div class="flex-1">
@@ -299,6 +403,12 @@
 					</div>
 				{/if}
 			</div>
+			{@const currentHint = isCustomValue
+				? '自定义思考等级或预算，输入错误可能会导致对话报错'
+				: (reasoningEffortOptions.find((o) => o.value === params.reasoning_effort)?.hint ?? reasoningEffortOptions.find((o) => o.value === 'default')?.hint)}
+			{#if currentHint}
+				<div class="text-xs text-gray-500 dark:text-gray-400 mt-1 pl-1">{currentHint}</div>
+			{/if}
 		{/if}
 	</div>
 

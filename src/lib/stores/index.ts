@@ -117,6 +117,7 @@ export const ldapConfigCache = writable(null);
 export const audioConfigCache = writable(null);
 export const imagesConfigCache = writable(null);
 export const evaluationsConfigCache = writable(null);
+export const evaluationsLeaderboardCache = writable(null);
 export const codeExecutionConfigCache = writable(null);
 export const connectionsConfigCache = writable(null);
 export const toolServersConfigCache = writable(null);

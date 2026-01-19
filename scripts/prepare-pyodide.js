@@ -54,6 +54,29 @@ function initNetworkProxyFromEnv() {
 async function downloadPackages() {
 	console.log('Setting up pyodide + micropip');
 
+	const packageJson = JSON.parse(await readFile('package.json'));
+	const pyodideVersion = packageJson.dependencies.pyodide.replace('^', '');
+
+	// Check if cached version exists
+	try {
+		const lockFile = await readFile('static/pyodide/pyodide-lock.json', 'utf-8');
+		const pyodidePackageJson = JSON.parse(await readFile('static/pyodide/package.json'));
+		const pyodidePackageVersion = pyodidePackageJson.version.replace('^', '');
+
+		if (pyodideVersion === pyodidePackageVersion && lockFile) {
+			console.log('Pyodide packages already cached, skipping download.');
+			console.log('To force re-download, delete static/pyodide directory');
+			return;
+		}
+
+		if (pyodideVersion !== pyodidePackageVersion) {
+			console.log('Pyodide version mismatch, removing static/pyodide directory');
+			await rmdir('static/pyodide', { recursive: true });
+		}
+	} catch (err) {
+		console.log('Pyodide cache not found, proceeding with download.');
+	}
+
 	let pyodide;
 	try {
 		pyodide = await loadPyodide({
@@ -62,21 +85,6 @@ async function downloadPackages() {
 	} catch (err) {
 		console.error('Failed to load Pyodide:', err);
 		return;
-	}
-
-	const packageJson = JSON.parse(await readFile('package.json'));
-	const pyodideVersion = packageJson.dependencies.pyodide.replace('^', '');
-
-	try {
-		const pyodidePackageJson = JSON.parse(await readFile('static/pyodide/package.json'));
-		const pyodidePackageVersion = pyodidePackageJson.version.replace('^', '');
-
-		if (pyodideVersion !== pyodidePackageVersion) {
-			console.log('Pyodide version mismatch, removing static/pyodide directory');
-			await rmdir('static/pyodide', { recursive: true });
-		}
-	} catch (err) {
-		console.log('Pyodide package not found, proceeding with download.', err);
 	}
 
 	try {

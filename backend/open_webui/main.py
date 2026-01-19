@@ -590,6 +590,9 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import time
+    startup_start = time.time()
+
     app.state.instance_id = INSTANCE_ID
     start_logger()
 
@@ -607,8 +610,10 @@ async def lifespan(app: FastAPI):
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
+    dep_start = time.time()
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
+    log.info(f"Dependencies check completed in {time.time() - dep_start:.2f}s")
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -633,6 +638,8 @@ async def lifespan(app: FastAPI):
     # Removed: Startup model detection
     # Models will be fetched on-demand when user accesses the model list
     # This improves startup time and avoids connection errors for unavailable endpoints
+
+    log.info(f"Application startup completed in {time.time() - startup_start:.2f}s")
 
     yield
 
