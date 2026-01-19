@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3-4] - 2026-01-19
+
+### 性能优化
+
+- ⚡ **启动性能优化。** 添加数据库迁移版本缓存机制，避免每次启动时重复执行迁移检查，显著减少启动时间和数据库操作。
+
+### 修复
+
+- 🔧 **外部连接刷新修复。** 修复后端缓存机制可能导致外部连接（如 Ollama、OpenAI）配置变更后不刷新的问题。
+
+### 优化
+
+- 🎨 **管理员设置页面 UI 优化。** 重新设计布局结构，采用分组卡片式设计。
+
 ## [0.7.3-3] - 2026-01-19
 
 ### 新增
