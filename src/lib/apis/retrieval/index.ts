@@ -1,18 +1,14 @@
-import { RETRIEVAL_API_BASE_URL } from '$lib/constants';
+import canchatAPI from '$lib/apis/canchatAPI';
+import { RETRIEVAL_API_BASE_PATH } from '$lib/constants';
 
 export const getRAGConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/config`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -56,19 +52,12 @@ type RAGConfigForm = {
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config/update`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/config/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...payload
-		})
+		data: payload
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -86,16 +75,11 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 export const getRAGTemplate = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/template`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/template`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -113,16 +97,11 @@ export const getRAGTemplate = async (token: string) => {
 export const getQuerySettings = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/settings`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/query/settings`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -146,19 +125,12 @@ type QuerySettings = {
 export const updateQuerySettings = async (token: string, settings: QuerySettings) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/settings/update`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/query/settings/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...settings
-		})
+		data: settings
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -176,16 +148,11 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 export const getEmbeddingConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/embedding`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -215,19 +182,12 @@ type EmbeddingModelUpdateForm = {
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding/update`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/embedding/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...payload
-		})
+		data: payload
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -245,16 +205,11 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 export const getRerankingConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/reranking`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -276,19 +231,12 @@ type RerankingModelUpdateForm = {
 export const updateRerankingConfig = async (token: string, payload: RerankingModelUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking/update`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/reranking/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...payload
-		})
+		data: payload
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -316,21 +264,15 @@ export const processFile = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/file`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/process/file`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		data: {
 			file_id: file_id,
 			collection_name: collection_name ? collection_name : undefined
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -348,20 +290,14 @@ export const processFile = async (
 export const processYoutubeVideo = async (token: string, url: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/youtube`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/process/youtube`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		data: {
 			url: url
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -379,21 +315,15 @@ export const processYoutubeVideo = async (token: string, url: string) => {
 export const processWeb = async (token: string, collection_name: string, url: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/process/web`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		data: {
 			url: url,
 			collection_name: collection_name
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -415,20 +345,15 @@ export const processWebSearch = async (
 ): Promise<SearchDocument | null> => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web/search`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/process/web/search`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		data: {
 			query,
 			collection_name: collection_name ?? ''
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			console.log(err);
@@ -451,22 +376,16 @@ export const queryDoc = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/doc`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/query/doc`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		data: {
 			collection_name: collection_name,
 			query: query,
 			k: k
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -488,22 +407,16 @@ export const queryCollection = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/collection`, {
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/query/collection`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		data: {
 			collection_names: collection_names,
 			query: query,
 			k: k
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -520,16 +433,11 @@ export const queryCollection = async (
 export const resetUploadDir = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reset/uploads`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/reset/uploads`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -546,16 +454,11 @@ export const resetUploadDir = async (token: string) => {
 export const resetVectorDB = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reset/db`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${RETRIEVAL_API_BASE_PATH}/reset/db`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;

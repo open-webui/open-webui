@@ -24,7 +24,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { getToolDisplayName } from '$lib/utils/mcp-tools';
 
-	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_PATH, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
@@ -218,7 +218,7 @@
 				fileItem.id = uploadedFile.id;
 				fileItem.collection_name =
 					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
-				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+				fileItem.url = `${WEBUI_BASE_URL}${WEBUI_API_BASE_PATH}/files/${uploadedFile.id}`;
 
 				files = files;
 			} else {

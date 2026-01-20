@@ -1,22 +1,17 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import canchatAPI from '$lib/apis/canchatAPI';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const createNewGroup = async (token: string, group: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/create`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		data: {
 			...group
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -34,17 +29,11 @@ export const createNewGroup = async (token: string, group: object) => {
 export const getGroups = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -65,17 +54,11 @@ export const getGroups = async (token: string = '') => {
 export const getGroupById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/id/${id}`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -97,20 +80,14 @@ export const getGroupById = async (token: string, id: string) => {
 export const updateGroupById = async (token: string, id: string, group: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/id/${id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		data: {
 			...group
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -132,17 +109,11 @@ export const updateGroupById = async (token: string, id: string, group: object) 
 export const deleteGroupById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/groups/id/${id}/delete`, {
+		method: 'DELETE'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;

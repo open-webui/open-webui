@@ -664,7 +664,9 @@ async def analyze_all_documents_for_content(
         relevant_documents.sort(key=lambda x: x["relevance_score"], reverse=True)
 
         # Simple response size limiting (remove double truncation that causes slowdown)
-        limited_results = relevant_documents[:25]
+        limited_results = relevant_documents[
+            :25
+        ]  # Increased to 25 results to capture more documents
 
         # Light content limiting - increased preview size to capture early pages of documents
         for doc in limited_results:

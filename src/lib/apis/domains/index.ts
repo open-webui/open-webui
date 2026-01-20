@@ -1,4 +1,5 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import canchatAPI from '$lib/apis/canchatAPI';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 export const createDomain = async (
 	token: string,
@@ -6,18 +7,12 @@ export const createDomain = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/create`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(domain)
+		data: domain
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -35,17 +30,11 @@ export const createDomain = async (
 export const getDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -63,17 +52,11 @@ export const getDomains = async (token: string = '') => {
 export const getAvailableDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/available`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/available`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -95,18 +78,12 @@ export const updateDomainById = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/update`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/id/${domainId}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(domain)
+		data: domain
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;
@@ -124,17 +101,11 @@ export const updateDomainById = async (
 export const deleteDomainById = async (token: string, domainId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/domains/id/${domainId}/delete`, {
+		method: 'DELETE'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err.detail;

@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.5.7-ccv2-1.11.2",
+	"version": "0.5.7-ccv2-1.11.5",
 	"private": true,
 	"scripts": {
 		"start": "npm run backend:check && bash -c 'env $(grep -v '^#' '${ENV_FILE:-.env}'| xargs) backend/start.sh'",
@@ -86,6 +86,7 @@
 		"@tiptap/starter-kit": "^2.10.0",
 		"@xyflow/svelte": "^0.1.19",
 		"async": "^3.2.5",
+		"axios": "^1.12.2",
 		"bits-ui": "^0.19.7",
 		"chart.js": "^4.4.9",
 		"codemirror": "^6.0.1",

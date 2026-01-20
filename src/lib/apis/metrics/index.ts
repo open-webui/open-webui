@@ -1,37 +1,31 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import canchatAPI from '$lib/apis/canchatAPI';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
+import { error } from '@sveltejs/kit';
 
 export const getDomains = async (token: string): Promise<string[]> => {
 	try {
 		const [usersRes, metricsRes] = await Promise.all([
-			fetch(`${WEBUI_API_BASE_URL}/users/domains`, {
-				method: 'GET',
-				headers: {
-					Accept: 'application/json',
-					authorization: `Bearer ${token}`
-				}
+			canchatAPI(`${WEBUI_API_BASE_PATH}/users/domains`, {
+				method: 'GET'
 			}),
-			fetch(`${WEBUI_API_BASE_URL}/metrics/domains`, {
-				method: 'GET',
-				headers: {
-					Accept: 'application/json',
-					authorization: `Bearer ${token}`
-				}
+			canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/domains`, {
+				method: 'GET'
 			})
 		]);
 
-		if (!usersRes.ok) {
-			const error = await usersRes.json();
+		if (usersRes.status != 200) {
+			const error = await usersRes.data;
 			throw new Error(`Error ${usersRes.status}: ${error.detail || 'Failed to get user domains'}`);
 		}
-		if (!metricsRes.ok) {
-			const error = await metricsRes.json();
+		if (metricsRes.status != 200) {
+			const error = await metricsRes.data;
 			throw new Error(
 				`Error ${metricsRes.status}: ${error.detail || 'Failed to get metrics domains'}`
 			);
 		}
 
-		const usersData = await usersRes.json();
-		const metricsData = await metricsRes.json();
+		const usersData = await usersRes.data;
+		const metricsData = await metricsRes.data;
 
 		const allDomains = [
 			...(Array.isArray(usersData.domains) ? usersData.domains : []),
@@ -47,27 +41,27 @@ export const getDomains = async (token: string): Promise<string[]> => {
 
 export const getTotalUsers = async (token: string, domain?: string): Promise<number> => {
 	try {
-		const url = domain
-			? `${WEBUI_API_BASE_URL}/users/count?domain=${encodeURIComponent(domain)}`
-			: `${WEBUI_API_BASE_URL}/users/count`;
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/count`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data || 0;
+			})
+			.catch((err) => {
+				if (err.resposnse.status === 404) {
+					return 0;
+				}
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return 0;
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get users'}`);
-		}
-		const data = await res.json();
-		return data || 0;
+				const error = err;
+				throw new Error(
+					`Error ${error.response.status}: ${error.response.data || 'Failed to get users'}`
+				);
+			});
+
+		return res;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -75,26 +69,27 @@ export const getTotalUsers = async (token: string, domain?: string): Promise<num
 
 export const getDailyUsers = async (token: string, domain?: string): Promise<number> => {
 	try {
-		const url = domain
-			? `${WEBUI_API_BASE_URL}/users/daily/count?domain=${encodeURIComponent(domain)}`
-			: `${WEBUI_API_BASE_URL}/users/daily/count`;
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/daily/count`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data || 0;
+			})
+			.catch((err) => {
+				if (err.resposnse.status === 404) {
+					return 0;
+				}
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return 0;
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get daily users'}`);
-		}
-		const data = await res.json();
-		return data || 0;
+				const error = err;
+				throw new Error(
+					`Error ${error.response.status}: ${error.response.data || 'Failed to get daily users'}`
+				);
+			});
+
+		return res;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -106,29 +101,27 @@ export const getHistoricalUsers = async (
 	domain?: string
 ): Promise<Array<{ date: string; count: number }>> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/users/enrollment/historical?days=${days}`;
-
-		if (domain) {
-			url += `&domain=${encodeURIComponent(domain)}`;
-		}
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/users/enrollment/historical`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				days: days,
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data || [];
+			})
+			.catch((err) => {
+				if (err.resposnse.status === 404) {
+					return generateFallbackDates(days);
+				}
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return generateFallbackDates(days);
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical users'}`);
-		}
-		const data = await res.json();
-		return data.historical_users || [];
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get historical users'}`
+				);
+			});
+
+		return res;
 	} catch (err) {
 		console.error('Error fetching historical users:', err);
 		return generateFallbackDates(days);
@@ -141,31 +134,27 @@ export const getHistoricalDailyUsers = async (
 	domain?: string
 ): Promise<Array<{ date: string; count: number }>> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/metrics/historical/users/daily?days=${days}`;
-
-		if (domain) {
-			url += `&domain=${encodeURIComponent(domain)}`;
-		}
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/historical/users/daily`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				days: days,
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.historical_daily_users || [];
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return generateFallbackDates(days);
+				}
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return generateFallbackDates(days);
-			}
-			const error = await res.json();
-			throw new Error(
-				`Error ${res.status}: ${error.detail || 'Failed to get historical daily users'}`
-			);
-		}
-		const data = await res.json();
-		return data.historical_daily_users || [];
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get historical daily users'}`
+				);
+			});
+
+		return res;
 	} catch (err) {
 		console.error('Error fetching historical users:', err);
 		return generateFallbackDates(days);
@@ -174,27 +163,26 @@ export const getHistoricalDailyUsers = async (
 
 export const getTotalPrompts = async (token: string, domain?: string): Promise<number> => {
 	try {
-		const url = domain
-			? `${WEBUI_API_BASE_URL}/metrics/prompts?domain=${encodeURIComponent(domain)}`
-			: `${WEBUI_API_BASE_URL}/metrics/prompts`;
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/prompts`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.total_prompts || 0;
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return 0;
+				}
 
-		if (!res.ok) {
-			// Return 0 instead of throwing an error if we get a 404
-			if (res.status === 404) {
-				return 0;
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get prompts'}`);
-		}
-		const data = await res.json();
-		return data.total_prompts || 0; // Ensure we return 0 if null/undefined
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.detail || 'Failed to get prompts'}`
+				);
+			});
+
+		return res;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -202,26 +190,25 @@ export const getTotalPrompts = async (token: string, domain?: string): Promise<n
 
 export const getDailyPrompts = async (token: string, domain?: string): Promise<number> => {
 	try {
-		const url = domain
-			? `${WEBUI_API_BASE_URL}/metrics/daily/prompts?domain=${encodeURIComponent(domain)}`
-			: `${WEBUI_API_BASE_URL}/metrics/daily/prompts`;
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/daily/prompts`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.total_daily_prompts || 0;
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return 0;
+				}
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get Users'}`
+				);
+			});
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return 0;
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get Users'}`);
-		}
-		const data = await res.json();
-		return data.total_daily_prompts || 0;
+		return res;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -229,26 +216,25 @@ export const getDailyPrompts = async (token: string, domain?: string): Promise<n
 
 export const getTotalTokens = async (token: string, domain?: string): Promise<number> => {
 	try {
-		const url = domain
-			? `${WEBUI_API_BASE_URL}/metrics/tokens?domain=${encodeURIComponent(domain)}`
-			: `${WEBUI_API_BASE_URL}/metrics/tokens`;
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/tokens`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.total_token || 0;
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return 0;
+				}
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get tokens'}`
+				);
+			});
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return 0;
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get tokens'}`);
-		}
-		const data = await res.json();
-		return data.total_tokens || 0;
+		return res;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -256,26 +242,25 @@ export const getTotalTokens = async (token: string, domain?: string): Promise<nu
 
 export const getDailyTokens = async (token: string, domain?: string): Promise<number> => {
 	try {
-		const url = domain
-			? `${WEBUI_API_BASE_URL}/metrics/daily/tokens?domain=${encodeURIComponent(domain)}`
-			: `${WEBUI_API_BASE_URL}/metrics/daily/tokens`;
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/daily/tokens`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.total_daily_tokens || 0;
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return 0;
+				}
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get daily tokens'}`
+				);
+			});
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return 0;
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get daily tokens'}`);
-		}
-		const data = await res.json();
-		return data.total_daily_tokens || 0;
+		return res;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -287,29 +272,26 @@ export const getHistoricalPrompts = async (
 	domain?: string
 ): Promise<any[]> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/metrics/historical/prompts?days=${days}`;
-
-		if (domain !== null && domain !== undefined) {
-			url += `&domain=${encodeURIComponent(domain)}`;
-		}
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/historical/prompts`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				days: days,
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.historical_prompts || [];
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return generateFallbackDates(days);
+				}
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get historical prompts'}`
+				);
+			});
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return generateFallbackDates(days);
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical prompts'}`);
-		}
-		const data = await res.json();
-		return data.historical_prompts || [];
+		return res;
 	} catch (err) {
 		console.error('Error fetching historical prompts:', err);
 		return generateFallbackDates(days);
@@ -322,29 +304,27 @@ export const getHistoricalTokens = async (
 	domain?: string
 ): Promise<any[]> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/metrics/historical/tokens?days=${days}`;
-
-		if (domain !== null && domain !== undefined) {
-			url += `&domain=${encodeURIComponent(domain)}`;
-		}
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/historical/tokens`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				days: days,
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.historical_tokens || [];
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return generateFallbackDates(days);
+				}
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return generateFallbackDates(days);
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical tokens'}`);
-		}
-		const data = await res.json();
-		return data.historical_tokens || [];
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get historical tokens'}`
+				);
+			});
+
+		return res;
 	} catch (err) {
 		console.error('Error fetching historical tokens:', err);
 		return generateFallbackDates(days);
@@ -365,20 +345,19 @@ function generateFallbackDates(days: number = 7): Array<{ date: string; count: n
 
 export const getModels = async (token: string): Promise<string[]> => {
 	try {
-		const res = await fetch(`${WEBUI_API_BASE_URL}/metrics/models`, {
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		});
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/models`, {
+			method: 'GET'
+		})
+			.then((res) => {
+				return res.data.models;
+			})
+			.catch((err) => {
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get models'}`
+				);
+			});
 
-		if (!res.ok) {
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get models'}`);
-		}
-		const data = await res.json();
-		return data.models;
+		return res;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -390,38 +369,26 @@ export const getModelPrompts = async (
 	domain?: string
 ): Promise<number> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/metrics/models/prompts`;
-		const params = new URLSearchParams();
-
-		if (model !== null && model !== undefined) {
-			params.append('model', model);
-		}
-
-		if (domain !== null && domain !== undefined) {
-			params.append('domain', domain);
-		}
-
-		if (params.toString()) {
-			url += `?${params.toString()}`;
-		}
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/models/prompts`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				model: model,
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.total_prompts || 0;
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return 0;
+				}
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get model prompts'}`
+				);
+			});
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return 0;
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get model prompts'}`);
-		}
-		const data = await res.json();
-		return data.total_prompts || 0;
+		return res;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -433,40 +400,26 @@ export const getModelDailyPrompts = async (
 	domain?: string
 ): Promise<number> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/metrics/models/daily/prompts`;
-		const params = new URLSearchParams();
-
-		if (model !== null && model !== undefined) {
-			params.append('model', model);
-		}
-
-		if (domain !== null && domain !== undefined) {
-			params.append('domain', domain);
-		}
-
-		if (params.toString()) {
-			url += `?${params.toString()}`;
-		}
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/models/daily/prompts`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				model: model,
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.total_daily_prompts || 0;
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return 0;
+				}
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get model daily prompts'}`
+				);
+			});
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return 0;
-			}
-			const error = await res.json();
-			throw new Error(
-				`Error ${res.status}: ${error.detail || 'Failed to get model daily prompts'}`
-			);
-		}
-		const data = await res.json();
-		return data.total_daily_prompts || 0;
+		return res;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -479,35 +432,28 @@ export const getModelHistoricalPrompts = async (
 	domain?: string
 ): Promise<any[]> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/metrics/models/historical/prompts?days=${days}`;
-
-		if (model !== null && model !== undefined) {
-			url += `&model=${encodeURIComponent(model)}`;
-		}
-
-		if (domain !== null && domain !== undefined) {
-			url += `&domain=${encodeURIComponent(domain)}`;
-		}
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/models/historical/prompts`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				days: days,
+				model: model,
+				domain: domain
 			}
-		});
+		})
+			.then((res) => {
+				return res.data.historical_prompts || [];
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return generateFallbackDates(days);
+				}
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return generateFallbackDates(days);
-			}
-			const error = await res.json();
-			throw new Error(
-				`Error ${res.status}: ${error.detail || 'Failed to get model historical prompts'}`
-			);
-		}
-		const data = await res.json();
-		return data.historical_prompts || [];
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get model historical prompts'}`
+				);
+			});
+
+		return res;
 	} catch (err) {
 		console.error('Error fetching model historical prompts:', err);
 		return generateFallbackDates(days);
@@ -523,30 +469,25 @@ export const getRangeMetrics = async (
 	model?: string
 ): Promise<any> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/metrics/range/users?start_date=${startDate}&end_date=${endDate}`;
-
-		if (domain) {
-			url += `&domain=${encodeURIComponent(domain)}`;
-		}
-
-		if (model) {
-			url += `&model=${encodeURIComponent(model)}`;
-		}
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/range/users`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				startDate: startDate,
+				endDate: endDate,
+				domain: domain,
+				model: model
 			}
-		});
+		})
+			.then((res) => {
+				return res.data;
+			})
+			.catch((err) => {
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get range metrics'}`
+				);
+			});
 
-		if (!res.ok) {
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get range metrics'}`);
-		}
-
-		return await res.json();
+		return res;
 	} catch (err) {
 		console.error('Error fetching range metrics:', err);
 		throw new Error(err.message || 'An unexpected error occurred');
@@ -563,41 +504,26 @@ export const getInterPromptLatencyHistogram = async (
 	total_latencies: number;
 }> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/metrics/inter-prompt-latency`;
-		const params = new URLSearchParams();
-
-		if (domain !== null && domain !== undefined) {
-			params.append('domain', domain);
-		}
-
-		if (model !== null && model !== undefined) {
-			params.append('model', model);
-		}
-
-		if (params.toString()) {
-			url += `?${params.toString()}`;
-		}
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/inter-prompt-latency`, {
 			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
+			params: {
+				domain: domain,
+				model: model
 			}
-		});
+		})
+			.then((res) => {
+				return res.data;
+			})
+			.catch((err) => {
+				if (err.response.status === 404) {
+					return { bins: [], counts: [], total_latencies: 0 };
+				}
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get inter-prompt latency histogram'}`
+				);
+			});
 
-		if (!res.ok) {
-			if (res.status === 404) {
-				return { bins: [], counts: [], total_latencies: 0 };
-			}
-			const error = await res.json();
-			throw new Error(
-				`Error ${res.status}: ${error.detail || 'Failed to get inter-prompt latency histogram'}`
-			);
-		}
-
-		const data = await res.json();
-		return data;
+		return res;
 	} catch (err) {
 		console.error('Error fetching inter-prompt latency histogram:', err);
 		throw new Error(err.message || 'An unexpected error occurred');
@@ -611,24 +537,25 @@ export const exportMetricsData = async (
 	domain?: string
 ): Promise<Blob> => {
 	try {
-		const url = domain
-			? `${WEBUI_API_BASE_URL}/metrics/export?start_date=${startDate}&end_date=${endDate}&domain=${domain}`
-			: `${WEBUI_API_BASE_URL}/metrics/export?start_date=${startDate}&end_date=${endDate}`;
-
-		const res = await fetch(url, {
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/export`, {
 			method: 'POST',
-			headers: {
-				Accept: 'text/csv',
-				authorization: `Bearer ${token}`
-			}
-		});
+			params: {
+				startDate: startDate,
+				endDate: endDate,
+				domain: domain
+			},
+			responseType: 'blob'
+		})
+			.then((res) => {
+				return res.data;
+			})
+			.catch((err) => {
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to export metrics data'}`
+				);
+			});
 
-		if (!res.ok) {
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to export metrics data'}`);
-		}
-
-		return await res.blob();
+		return res;
 	} catch (err) {
 		console.error('Error exporting metrics data:', err);
 		throw new Error(err.message || 'An unexpected error occurred');
@@ -637,21 +564,19 @@ export const exportMetricsData = async (
 
 export const getExportLogs = async (token: string): Promise<any[]> => {
 	try {
-		const res = await fetch(`${WEBUI_API_BASE_URL}/metrics/export/logs`, {
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		});
+		const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/metrics/export/logs`, {
+			method: 'GET'
+		})
+			.then((res) => {
+				return res.data.export_logs || [];
+			})
+			.catch((err) => {
+				throw new Error(
+					`Error ${err.response.status}: ${err.response.data || 'Failed to get export logs'}`
+				);
+			});
 
-		if (!res.ok) {
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get export logs'}`);
-		}
-
-		const data = await res.json();
-		return data.export_logs || [];
+		return res;
 	} catch (err) {
 		console.error('Error fetching export logs:', err);
 		throw new Error(err.message || 'An unexpected error occurred');

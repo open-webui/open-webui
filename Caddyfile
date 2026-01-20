@@ -1,0 +1,11 @@
+{
+	http_port 8888
+	auto_https off
+}
+
+http:// {
+	reverse_proxy http://localhost:8080 {
+		header_up X-Forwarded-Email testuser@test.ca
+		header_up X-Forwarded-User Test User
+	}
+}

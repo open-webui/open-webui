@@ -1,4 +1,5 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import canchatAPI from '$lib/apis/canchatAPI';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 
 type SuggestionItem = {
 	email: string;
@@ -7,31 +8,12 @@ type SuggestionItem = {
 };
 
 export const createSuggestion = async (token: string, suggestion: SuggestionItem) => {
-	const formData = new FormData();
-
-	formData.append('email', suggestion.email);
-	formData.append('description', suggestion.description);
-
-	if (suggestion.files) {
-		Array.from(suggestion.files).forEach((file) => {
-			formData.append('files', file);
-		});
-	}
-
-	return await fetch(`${WEBUI_API_BASE_URL}/jira/task`, {
+	return await canchatAPI(`${WEBUI_API_BASE_PATH}/jira/task`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: formData
+		data: suggestion
 	})
 		.then(async (res) => {
-			if (!res.ok) {
-				const error = await res.json();
-				throw new Error(error.detail || 'Failed to create suggestion');
-			}
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			throw new Error(err.message || 'An unexpected error occurred');

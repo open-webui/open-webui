@@ -5,14 +5,14 @@ export const APP_NAME = 'Open WebUI';
 
 export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
 export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : ``;
-export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
-export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
-export const OPENAI_API_BASE_URL = `${WEBUI_BASE_URL}/openai`;
-export const MCP_API_BASE_URL = `${WEBUI_BASE_URL}/mcp`;
-export const AUDIO_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/audio`;
-export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/images`;
-export const RETRIEVAL_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/retrieval`;
+export const WEBUI_API_BASE_PATH = `/api/v1`;
+export const OLLAMA_API_BASE_PATH = `/ollama`;
+export const OPENAI_API_BASE_PATH = `/openai`;
+export const MCP_API_BASE_PATH = `/mcp`;
+export const AUDIO_API_BASE_PATH = `${WEBUI_API_BASE_PATH}/audio`;
+export const IMAGES_API_BASE_PATH = `${WEBUI_API_BASE_PATH}/images`;
+export const RETRIEVAL_API_BASE_PATH = `${WEBUI_API_BASE_PATH}/retrieval`;
 
 export const WEBUI_VERSION = APP_VERSION;
 export const WEBUI_BUILD_HASH = APP_BUILD_HASH;

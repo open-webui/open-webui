@@ -1,23 +1,16 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import canchatAPI from '$lib/apis/canchatAPI';
+import { WEBUI_API_BASE_PATH } from '$lib/constants';
 import { getTimeRange } from '$lib/utils';
 
 export const createNewChat = async (token: string, chat: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/new`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/new`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			chat: chat
-		})
+		data: { chat: chat }
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err;
@@ -41,23 +34,17 @@ export const importChat = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/import`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/import`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		data: {
 			chat: chat,
 			meta: meta ?? {},
 			pinned: pinned,
 			folder_id: folderId
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.catch((err) => {
 			error = err;
@@ -80,17 +67,11 @@ export const getChatList = async (token: string = '', page: number | null = null
 		searchParams.append('page', `${page}`);
 	}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/?${searchParams.toString()}`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -114,17 +95,11 @@ export const getChatList = async (token: string = '', page: number | null = null
 export const getChatListByUserId = async (token: string = '', userId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/list/user/${userId}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/list/user/${userId}`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -148,17 +123,11 @@ export const getChatListByUserId = async (token: string = '', userId: string) =>
 export const getArchivedChatList = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/archived`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/archived`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -179,17 +148,11 @@ export const getArchivedChatList = async (token: string = '') => {
 export const getAllChats = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/all`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -216,17 +179,11 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 	searchParams.append('text', normalizedText);
 	searchParams.append('page', `${page}`);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/search?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/search?${searchParams.toString()}`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -250,17 +207,11 @@ export const getChatListBySearchText = async (token: string, text: string, page:
 export const getChatsByFolderId = async (token: string, folderId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/folder/${folderId}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/folder/${folderId}`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -281,17 +232,11 @@ export const getChatsByFolderId = async (token: string, folderId: string) => {
 export const getAllArchivedChats = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all/archived`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/all/archived`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -312,17 +257,11 @@ export const getAllArchivedChats = async (token: string) => {
 export const getAllUserChats = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all/db`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/all/db`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -343,17 +282,11 @@ export const getAllUserChats = async (token: string) => {
 export const getAllTags = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/all/tags`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/all/tags`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -374,17 +307,11 @@ export const getAllTags = async (token: string) => {
 export const getPinnedChatList = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/pinned`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/pinned`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -408,23 +335,14 @@ export const getPinnedChatList = async (token: string = '') => {
 export const getChatListByTagName = async (token: string = '', tagName: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/tags`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/tags`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
+		data: {
 			name: tagName
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
+			return res.data;
 		})
 		.catch((err) => {
 			error = err;
@@ -436,7 +354,7 @@ export const getChatListByTagName = async (token: string = '', tagName: string) 
 		throw error;
 	}
 
-	return res.map((chat) => ({
+	return res.data.map((chat) => ({
 		...chat,
 		time_range: getTimeRange(chat.updated_at)
 	}));
@@ -445,17 +363,11 @@ export const getChatListByTagName = async (token: string = '', tagName: string) 
 export const getChatById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -477,17 +389,11 @@ export const getChatById = async (token: string, id: string) => {
 export const getChatByShareId = async (token: string, share_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/share/${share_id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/share/${share_id}`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -509,17 +415,11 @@ export const getChatByShareId = async (token: string, share_id: string) => {
 export const getChatPinnedStatusById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/pinned`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/pinned`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -547,17 +447,11 @@ export const getChatPinnedStatusById = async (token: string, id: string) => {
 export const toggleChatPinnedStatusById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/pin`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/pin`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -585,20 +479,14 @@ export const toggleChatPinnedStatusById = async (token: string, id: string) => {
 export const cloneChatById = async (token: string, id: string, title?: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/clone`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/clone`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
+		data: {
 			...(title && { title: title })
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -626,17 +514,11 @@ export const cloneChatById = async (token: string, id: string, title?: string) =
 export const cloneSharedChatById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/clone/shared`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/clone/shared`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -664,17 +546,11 @@ export const cloneSharedChatById = async (token: string, id: string) => {
 export const shareChatById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/share`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -696,20 +572,15 @@ export const shareChatById = async (token: string, id: string) => {
 export const updateChatFolderIdById = async (token: string, id: string, folderId?: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/folder`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/folder`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
+
+		data: {
 			folder_id: folderId
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -731,17 +602,11 @@ export const updateChatFolderIdById = async (token: string, id: string, folderId
 export const archiveChatById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/archive`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/archive`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -763,17 +628,11 @@ export const archiveChatById = async (token: string, id: string) => {
 export const deleteSharedChatById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/share`, {
+		method: 'DELETE'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -795,20 +654,15 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 export const updateChatById = async (token: string, id: string, chat: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
+
+		data: {
 			chat: chat
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -830,17 +684,11 @@ export const updateChatById = async (token: string, id: string, chat: object) =>
 export const deleteChatById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}`, {
+		method: 'DELETE'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -862,20 +710,14 @@ export const deleteChatById = async (token: string, id: string) => {
 export const deleteMultipleChats = async (token: string, chatIds: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/bulk`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/bulk`, {
 		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
 		body: JSON.stringify({
 			chat_ids: chatIds
 		})
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			res.data;
 		})
 		.then((json) => {
 			return json;
@@ -897,17 +739,11 @@ export const deleteMultipleChats = async (token: string, chatIds: string[]) => {
 export const getTagsById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/tags`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/tags`, {
+		method: 'GET'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -929,20 +765,15 @@ export const getTagsById = async (token: string, id: string) => {
 export const addTagById = async (token: string, id: string, tagName: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/tags`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/tags`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
+
+		data: {
 			name: tagName
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -963,20 +794,14 @@ export const addTagById = async (token: string, id: string, tagName: string) => 
 export const deleteTagById = async (token: string, id: string, tagName: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/tags`, {
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/tags`, {
 		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
+		data: {
 			name: tagName
-		})
+		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -994,20 +819,15 @@ export const deleteTagById = async (token: string, id: string, tagName: string) 
 
 	return res;
 };
+
 export const deleteTagsById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/tags/all`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/${id}/tags/all`, {
+		method: 'DELETE'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -1029,17 +849,11 @@ export const deleteTagsById = async (token: string, id: string) => {
 export const deleteAllChats = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/`, {
+		method: 'DELETE'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
@@ -1061,17 +875,11 @@ export const deleteAllChats = async (token: string) => {
 export const archiveAllChats = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/archive/all`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
+	const res = await canchatAPI(`${WEBUI_API_BASE_PATH}/chats/archive/all`, {
+		method: 'POST'
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			return res.data;
 		})
 		.then((json) => {
 			return json;
