@@ -77,6 +77,7 @@ class FunctionWithValvesModel(BaseModel):
 
 class FunctionUserResponse(FunctionModel):
     user: Optional[UserModel] = None
+    has_valves: Optional[bool] = False
 
 
 class FunctionResponse(BaseModel):
@@ -225,6 +226,61 @@ class FunctionsTable:
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
 
+            def _has_configurable_valves(content):
+                """Check if content has a Valves class with actual fields (not just pass)."""
+                if not content:
+                    return False
+                valves_start = content.find("class Valves(BaseModel):")
+                if valves_start == -1:
+                    return False
+                after_valves = content[valves_start + len("class Valves(BaseModel):") :]
+                lines = after_valves.split("\n")
+                in_docstring = False
+                for line in lines:
+                    stripped = line.strip()
+                    # Handle docstrings (both single-line and multi-line)
+                    if '"""' in stripped:
+                        if in_docstring:
+                            # Closing triple quote found
+                            in_docstring = False
+                            stripped = stripped.split('"""')[-1].strip()
+                            if not stripped or stripped.startswith("#"):
+                                continue
+                        else:
+                            # Opening triple quote found
+                            if stripped.count('"""') == 1:
+                                in_docstring = True
+                            stripped = stripped.split('"""')[0].strip()
+                            if not stripped or stripped.startswith("#"):
+                                continue
+                    elif in_docstring:
+                        # Still inside multi-line docstring
+                        continue
+                    # Skip empty lines and comments
+                    if not stripped or stripped.startswith("#"):
+                        continue
+                    if stripped == "pass":
+                        return False
+                    # Check if this is a field definition (not a function/class/decorator)
+                    # Field definitions look like: field_name: type = ...
+                    # They don't start with def, class, @, async, etc.
+                    if (
+                        stripped.startswith("def ")
+                        or stripped.startswith("class ")
+                        or stripped.startswith("@")
+                        or stripped.startswith("async ")
+                        or stripped.startswith("if ")
+                        or stripped.startswith("for ")
+                        or stripped.startswith("while ")
+                        or stripped.startswith("return ")
+                    ):
+                        return False
+                    # If it contains a colon, it's likely a field definition
+                    if ":" in stripped:
+                        return True
+                    return False
+                return False
+
             return [
                 FunctionUserResponse.model_validate(
                     {
@@ -234,6 +290,7 @@ class FunctionsTable:
                             if func.user_id in users_dict
                             else None
                         ),
+                        "has_valves": _has_configurable_valves(func.content),
                     }
                 )
                 for func in functions
