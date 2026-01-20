@@ -62,6 +62,12 @@
 				return null;
 			});
 
+			if (tool && !tool.write_access) {
+				toast.error($i18n.t('You do not have permission to edit this tool'));
+				goto('/workspace/tools');
+				return;
+			}
+
 			console.log(tool);
 		}
 	});
