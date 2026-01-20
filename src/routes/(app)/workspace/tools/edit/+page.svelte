@@ -13,6 +13,7 @@
 	const i18n = getContext('i18n');
 
 	let tool = null;
+	let isAllowed = false;
 
 	const saveHandler = async (data) => {
 		console.log(data);
@@ -63,11 +64,19 @@
 			});
 
 			console.log(tool);
+
+			if (tool && !tool.write_access) {
+				toast.error($i18n.t('You do not have permission to edit this tool'));
+				goto('/workspace/tools');
+				return;
+			}
+
+			isAllowed = true;
 		}
 	});
 </script>
 
-{#if tool}
+{#if isAllowed}
 	<ToolkitEditor
 		edit={true}
 		id={tool.id}
