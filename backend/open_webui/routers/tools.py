@@ -96,6 +96,7 @@ async def get_tools(
                     .get("access_control", None),
                     "updated_at": int(time.time()),
                     "created_at": int(time.time()),
+                    "has_user_valves": False,
                 }
             )
         )
@@ -133,6 +134,7 @@ async def get_tools(
                         ),
                         "updated_at": int(time.time()),
                         "created_at": int(time.time()),
+                        "has_user_valves": False,
                         **(
                             {
                                 "authenticated": session_token is not None,

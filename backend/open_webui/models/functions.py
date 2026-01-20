@@ -77,6 +77,8 @@ class FunctionWithValvesModel(BaseModel):
 
 class FunctionUserResponse(FunctionModel):
     user: Optional[UserModel] = None
+    has_valves: Optional[bool] = False
+    has_user_valves: Optional[bool] = False
 
 
 class FunctionResponse(BaseModel):
@@ -89,6 +91,8 @@ class FunctionResponse(BaseModel):
     is_global: bool
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
+    has_valves: Optional[bool] = False
+    has_user_valves: Optional[bool] = False
 
 
 class FunctionForm(BaseModel):
@@ -103,6 +107,119 @@ class FunctionValves(BaseModel):
 
 
 class FunctionsTable:
+
+    @staticmethod
+    def _has_configurable_valves(content):
+        """Check if content has a Valves class with actual fields (not just pass)."""
+        if not content:
+            return False
+        valves_start = content.find("class Valves(BaseModel):")
+        if valves_start == -1:
+            return False
+        after_valves = content[valves_start + len("class Valves(BaseModel):") :]
+        lines = after_valves.split("\n")
+        in_docstring = False
+        for line in lines:
+            stripped = line.strip()
+            # Handle docstrings (both single-line and multi-line)
+            if '"""' in stripped:
+                if in_docstring:
+                    # Closing triple quote found
+                    in_docstring = False
+                    stripped = stripped.split('"""')[-1].strip()
+                    if not stripped or stripped.startswith("#"):
+                        continue
+                else:
+                    # Opening triple quote found
+                    if stripped.count('"""') == 1:
+                        in_docstring = True
+                    stripped = stripped.split('"""')[0].strip()
+                    if not stripped or stripped.startswith("#"):
+                        continue
+            elif in_docstring:
+                # Still inside multi-line docstring
+                continue
+            # Skip empty lines and comments
+            if not stripped or stripped.startswith("#"):
+                continue
+            if stripped == "pass":
+                return False
+            # Check if this is a field definition (not a function/class/decorator)
+            # Field definitions look like: field_name: type = ...
+            # They don't start with def, class, @, async, etc.
+            if (
+                stripped.startswith("def ")
+                or stripped.startswith("class ")
+                or stripped.startswith("@")
+                or stripped.startswith("async ")
+                or stripped.startswith("if ")
+                or stripped.startswith("for ")
+                or stripped.startswith("while ")
+                or stripped.startswith("return ")
+            ):
+                return False
+            # If it contains a colon, it's likely a field definition
+            if ":" in stripped:
+                return True
+            return False
+        return False
+
+    @staticmethod
+    def _has_configurable_user_valves(content):
+        """Check if content has a UserValves class with actual fields (not just pass)."""
+        if not content:
+            return False
+        valves_start = content.find("class UserValves(BaseModel):")
+        if valves_start == -1:
+            return False
+        after_valves = content[valves_start + len("class UserValves(BaseModel):") :]
+        lines = after_valves.split("\n")
+        in_docstring = False
+        for line in lines:
+            stripped = line.strip()
+            # Handle docstrings (both single-line and multi-line)
+            if '"""' in stripped:
+                if in_docstring:
+                    # Closing triple quote found
+                    in_docstring = False
+                    stripped = stripped.split('"""')[-1].strip()
+                    if not stripped or stripped.startswith("#"):
+                        continue
+                else:
+                    # Opening triple quote found
+                    if stripped.count('"""') == 1:
+                        in_docstring = True
+                    stripped = stripped.split('"""')[0].strip()
+                    if not stripped or stripped.startswith("#"):
+                        continue
+            elif in_docstring:
+                # Still inside multi-line docstring
+                continue
+            # Skip empty lines and comments
+            if not stripped or stripped.startswith("#"):
+                continue
+            if stripped == "pass":
+                return False
+            # Check if this is a field definition (not a function/class/decorator)
+            # Field definitions look like: field_name: type = ...
+            # They don't start with def, class, @, async, etc.
+            if (
+                stripped.startswith("def ")
+                or stripped.startswith("class ")
+                or stripped.startswith("@")
+                or stripped.startswith("async ")
+                or stripped.startswith("if ")
+                or stripped.startswith("for ")
+                or stripped.startswith("while ")
+                or stripped.startswith("return ")
+            ):
+                return False
+            # If it contains a colon, it's likely a field definition
+            if ":" in stripped:
+                return True
+            return False
+        return False
+
     def insert_new_function(
         self,
         user_id: str,
@@ -197,7 +314,7 @@ class FunctionsTable:
 
     def get_functions(
         self, active_only=False, include_valves=False, db: Optional[Session] = None
-    ) -> list[FunctionModel | FunctionWithValvesModel]:
+    ) -> list[FunctionModel | FunctionWithValvesModel | FunctionResponse]:
         with get_db_context(db) as db:
             if active_only:
                 functions = db.query(Function).filter_by(is_active=True).all()
@@ -211,8 +328,14 @@ class FunctionsTable:
                     for function in functions
                 ]
             else:
+                # Add has_valves and has_user_valves to the response
                 return [
-                    FunctionModel.model_validate(function) for function in functions
+                    FunctionResponse.model_validate({
+                        **FunctionModel.model_validate(func).model_dump(),
+                        "has_valves": self._has_configurable_valves(func.content),
+                        "has_user_valves": self._has_configurable_user_valves(func.content),
+                    })
+                    for func in functions
                 ]
 
     def get_function_list(
@@ -234,6 +357,8 @@ class FunctionsTable:
                             if func.user_id in users_dict
                             else None
                         ),
+                        "has_valves": self._has_configurable_valves(func.content),
+                        "has_user_valves": self._has_configurable_user_valves(func.content),
                     }
                 )
                 for func in functions

@@ -172,7 +172,7 @@
 									>{$i18n.t('Select a tool')}</option
 								>
 
-								{#each $tools.filter((tool) => !tool?.id?.startsWith('server:')) as tool, toolIdx}
+								{#each $tools.filter((tool) => !tool?.id?.startsWith('server:') && tool.has_user_valves) as tool, toolIdx}
 									<option value={tool.id} class="bg-gray-100 dark:bg-gray-800">{tool.name}</option>
 								{/each}
 							{:else if tab === 'functions'}
@@ -180,7 +180,7 @@
 									>{$i18n.t('Select a function')}</option
 								>
 
-								{#each $functions as func, funcIdx}
+								{#each $functions.filter((func) => func.has_user_valves) as func, funcIdx}
 									<option value={func.id} class="bg-gray-100 dark:bg-gray-800">{func.name}</option>
 								{/each}
 							{/if}
