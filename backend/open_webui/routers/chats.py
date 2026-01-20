@@ -357,9 +357,7 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
         return None
 
 
-def calculate_chat_stats(
-    user_id, skip=0, limit=10, filter=None, db: Optional[Session] = None
-):
+def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
     if filter is None:
         filter = {}
 
@@ -368,7 +366,6 @@ def calculate_chat_stats(
         skip=skip,
         limit=limit,
         filter=filter,
-        db=db,
     )
 
     chat_stats_export_list = []
@@ -424,7 +421,6 @@ async def export_chat_stats(
     page: Optional[int] = 1,
     stream: bool = False,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
     # Check if the user has permission to share/export chats
     if (user.role != "admin") and (
@@ -455,7 +451,7 @@ async def export_chat_stats(
             skip = (page - 1) * limit
 
             chat_stats_export_list, total = await asyncio.to_thread(
-                calculate_chat_stats, user.id, skip, limit, filter, db=db
+                calculate_chat_stats, user.id, skip, limit, filter
             )
 
             return ChatStatsExportList(
