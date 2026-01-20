@@ -84,7 +84,7 @@
 	size="lg"
 	bind:show
 	title={$i18n.t('Archived Chats')}
-	returnFocusSelector={'#' + $returnFocusButtonID}
+	returnFocusSelector={$returnFocusButtonID ? `#${$returnFocusButtonID}` : ''}
 >
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
