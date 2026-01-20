@@ -167,7 +167,6 @@ export class AdminPage extends BasePage {
 	 * @param password The account password
 	 */
 	async createUser(name: string, role: string, email: string, password: string) {
-		console.log(`Creating user: ${name}`);
 		await this.addUserButton.click();
 		await this.page.getByRole('combobox').selectOption(role);
 		await this.page

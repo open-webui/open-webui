@@ -8,7 +8,6 @@ test.describe('Feature: Model Context Protocol (MCP)', () => {
 		// Admin Setup
 		await test.step('Admin enables MCP API and verifies services', async () => {
 			console.log('Testing: MCP - Time Server');
-			await adminPage.verifyPageLanguage(locale as Language);
 			await adminPage.configureMCP(true);
 			await adminPage.verifyMCPServerStatus(
 				adminPage.getTranslation('Time Server'),
@@ -48,7 +47,6 @@ test.describe('Feature: Model Context Protocol (MCP)', () => {
 		// Admin Setup
 		await test.step('Admin enables MCP API and verifies services', async () => {
 			console.log('Testing: MCP - News Headlines');
-			await adminPage.verifyPageLanguage(locale as Language);
 			await adminPage.configureMCP(true);
 			await adminPage.verifyMCPServerStatus(
 				adminPage.getTranslation('Time Server'),

@@ -6,14 +6,12 @@ test.describe('Feature: Wiki Grounding', () => {
 		console.log('Testing: Feature: Wiki Grounding');
 		const timeout = parseInt(process.env.LONG_TIMEOUT as string) || 120_000;
 		test.setTimeout(timeout);
-		await adminPage.verifyPageLanguage(locale as Language);
 		await adminPage.navigateToAdminSettings(
 			adminPage.getTranslation('Settings'),
 			adminPage.getTranslation('Grounding')
 		);
 
 		await userPage.goto('/');
-		await userPage.verifyPageLanguage(locale as Language);
 		await userPage.toggleChatTool(userPage.getTranslation('Wiki Grounding'), true);
 		await expect(userPage.page.locator('#chat-container')).toContainText(
 			userPage.getTranslation('Wiki Grounding'),

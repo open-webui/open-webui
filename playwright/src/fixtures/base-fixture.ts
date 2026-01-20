@@ -51,12 +51,12 @@ type PageFixtures = {
 export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 	// --- Admin Fixture ---
 	adminPage: async ({ browser, authFiles, locale }, use) => {
-		const context = await browser.newContext({ storageState: authFiles.admin });
+		const context = await browser.newContext({ storageState: authFiles.admin, locale: locale });
 		await setupCoverage(context);
 
 		const page = await context.newPage();
 		const adminPage = new AdminPage(page, locale as Language);
-		await adminPage.goto('/');
+		await adminPage.goto(`/?lang=${locale}`);
 
 		await use(adminPage);
 
@@ -66,12 +66,12 @@ export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 
 	// --- Standard User Fixture ---
 	userPage: async ({ browser, authFiles, locale }, use) => {
-		const context = await browser.newContext({ storageState: authFiles.user });
+		const context = await browser.newContext({ storageState: authFiles.user, locale: locale });
 		await setupCoverage(context);
 
 		const page = await context.newPage();
 		const chatPage = new ChatPage(page, locale as Language);
-		await chatPage.goto('/');
+		await chatPage.goto(`/?lang=${locale}`);
 
 		await use(chatPage);
 
@@ -81,12 +81,12 @@ export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 
 	// --- Analyst Fixture ---
 	analystPage: async ({ browser, authFiles, locale }, use) => {
-		const context = await browser.newContext({ storageState: authFiles.analyst });
+		const context = await browser.newContext({ storageState: authFiles.analyst, locale: locale });
 		await setupCoverage(context);
 
 		const page = await context.newPage();
 		const chatPage = new ChatPage(page, locale as Language);
-		await chatPage.goto('/');
+		await chatPage.goto(`/?lang=${locale}`);
 
 		await use(chatPage);
 
@@ -96,12 +96,15 @@ export const test = mergeTests(authFixture, baseTest).extend<PageFixtures>({
 
 	// --- Global Analyst Fixture ---
 	globalAnalystPage: async ({ browser, authFiles, locale }, use) => {
-		const context = await browser.newContext({ storageState: authFiles.globalAnalyst });
+		const context = await browser.newContext({
+			storageState: authFiles.globalAnalyst,
+			locale: locale
+		});
 		await setupCoverage(context);
 
 		const page = await context.newPage();
 		const chatPage = new ChatPage(page, locale as Language);
-		await chatPage.goto('/');
+		await chatPage.goto(`/?lang=${locale}`);
 
 		await use(chatPage);
 

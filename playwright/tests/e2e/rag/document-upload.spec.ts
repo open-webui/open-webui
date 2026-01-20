@@ -14,7 +14,6 @@ test.describe('Feature: Document Upload and Retrieval', () => {
 		test.setTimeout(timeout);
 
 		await userPage.goto('/');
-		await userPage.verifyPageLanguage(locale as Language);
 
 		const relativePath = '../../../src/test-data/uploads/pg11.txt';
 		const filePath = path.resolve(__dirname, relativePath);

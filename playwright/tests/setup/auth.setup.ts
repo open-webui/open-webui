@@ -76,16 +76,22 @@ async function seedUserAccounts(page: Page, adminPage: AdminPage) {
 }
 
 async function generateUserAuthFiles(page: Page, authPage: AuthPage, basePage: any) {
+	const browser = page.context().browser();
+
 	for (const user of standardUsers) {
 		console.log(`Authenticating ${user.username}...`);
 
-		await authPage.login(user.email, user.password);
-		await saveAuthState(page, `${user.username}.json`);
-		if (user.username !== 'pending') {
-			await basePage.signOut();
-		} else {
-			await authPage.signOutPendingUser();
-		}
+		// Use a fresh context for each user to prevent state leakage
+		const context = await browser!.newContext();
+		const userPage = await context.newPage();
+		const userAuthPage = new AuthPage(userPage);
+
+		await userAuthPage.goto('/auth');
+		await userAuthPage.login(user.email, user.password);
+
+		await saveAuthState(userPage, `${user.username}.json`);
+
+		await context.close();
 	}
 }
 
