@@ -100,9 +100,9 @@
 
 				<div class="flex items-center">
 					{#if model?.meta?.hidden ?? false}
-						{$i18n.t('Show Model')}
+						{$i18n.t('Show in Model Selector')}
 					{:else}
-						{$i18n.t('Hide Model')}
+						{$i18n.t('Hide from Model Selector')}
 					{/if}
 				</div>
 			</DropdownMenu.Item>
