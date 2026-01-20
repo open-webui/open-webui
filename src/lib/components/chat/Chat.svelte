@@ -53,7 +53,8 @@
 		getPromptVariables,
 		processDetails,
 		removeAllDetails,
-		getCodeBlockContents
+		getCodeBlockContents,
+		isYoutubeUrl
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 
@@ -389,6 +390,9 @@
 					if (autoScroll) {
 						scrollToBottom('smooth');
 					}
+				} else if (type === 'chat:message:favorite') {
+					// Update message favorite status
+					message.favorite = data.favorite;
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
@@ -758,7 +762,7 @@
 			fileItem.id = uploadedFile.id;
 			fileItem.size = file.size;
 			fileItem.collection_name = uploadedFile?.meta?.collection_name;
-			fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+			fileItem.url = `${uploadedFile.id}`;
 
 			files = files;
 			toast.success($i18n.t('File uploaded successfully'));
@@ -773,69 +777,55 @@
 		}
 	};
 
-	const uploadWeb = async (url) => {
-		console.log(url);
-
-		const fileItem = {
-			type: 'text',
-			name: url,
-			collection_name: '',
-			status: 'uploading',
-			url: url,
-			error: ''
-		};
-
-		try {
-			files = [...files, fileItem];
-			const res = await processWeb(localStorage.token, '', url);
-
-			if (res) {
-				fileItem.status = 'uploaded';
-				fileItem.collection_name = res.collection_name;
-				fileItem.file = {
-					...res.file,
-					...fileItem.file
-				};
-
-				files = files;
-			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(JSON.stringify(e));
+	const uploadWeb = async (urls) => {
+		if (!Array.isArray(urls)) {
+			urls = [urls];
 		}
-	};
 
-	const uploadYoutubeTranscription = async (url) => {
-		console.log(url);
-
-		const fileItem = {
+		// Create file items first
+		const fileItems = urls.map((url) => ({
 			type: 'text',
 			name: url,
 			collection_name: '',
 			status: 'uploading',
 			context: 'full',
-			url: url,
+			url,
 			error: ''
-		};
+		}));
 
-		try {
-			files = [...files, fileItem];
-			const res = await processYoutubeVideo(localStorage.token, url);
+		// Display all items at once
+		files = [...files, ...fileItems];
 
-			if (res) {
-				fileItem.status = 'uploaded';
-				fileItem.collection_name = res.collection_name;
-				fileItem.file = {
-					...res.file,
-					...fileItem.file
-				};
-				files = files;
+		for (const fileItem of fileItems) {
+			try {
+				const res = isYoutubeUrl(fileItem.url)
+					? await processYoutubeVideo(localStorage.token, fileItem.url)
+					: await processWeb(localStorage.token, '', fileItem.url);
+
+				if (res) {
+					fileItem.status = 'uploaded';
+					fileItem.collection_name = res.collection_name;
+					fileItem.file = {
+						...res.file,
+						...fileItem.file
+					};
+				}
+
+				files = [...files];
+			} catch (e) {
+				files = files.filter((f) => f.name !== url);
+				toast.error(`${e}`);
 			}
-		} catch (e) {
-			// Remove the failed doc from the files array
-			files = files.filter((f) => f.name !== url);
-			toast.error(`${e}`);
+		}
+	};
+
+	const onUpload = async (event) => {
+		const { type, data } = event;
+
+		if (type === 'google-drive') {
+			await uploadGoogleDriveFile(data);
+		} else if (type === 'web') {
+			await uploadWeb(data);
 		}
 	};
 
@@ -915,9 +905,15 @@
 			}
 		}
 
+		if ($user?.role !== 'admin' && !$user?.permissions?.chat?.temporary) {
+			await temporaryChatEnabled.set(false);
+		}
+
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
+
+		const defaultModels = $config?.default_models ? $config?.default_models.split(',') : [];
 
 		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
 			const urlModels = (
@@ -927,8 +923,8 @@
 			)?.split(',');
 
 			if (urlModels.length === 1) {
-				const m = $models.find((m) => m.id === urlModels[0]);
-				if (!m) {
+				if (!$models.find((m) => m.id === urlModels[0])) {
+					// Model not found; open model selector and prefill
 					const modelSelectorButton = document.getElementById('model-selector-0-button');
 					if (modelSelectorButton) {
 						modelSelectorButton.click();
@@ -942,37 +938,51 @@
 						}
 					}
 				} else {
+					// Model found; set it as selected
 					selectedModels = urlModels;
 				}
 			} else {
+				// Multiple models; set as selected
 				selectedModels = urlModels;
 			}
 
+			// Unavailable models filtering
 			selectedModels = selectedModels.filter((modelId) =>
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
 			if ($selectedFolder?.data?.model_ids) {
+				// Set from folder model IDs
 				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
 				if (sessionStorage.selectedModels) {
+					// Set from session storage (temporary selection)
 					selectedModels = JSON.parse(sessionStorage.selectedModels);
 					sessionStorage.removeItem('selectedModels');
 				} else {
 					if ($settings?.models) {
+						// Set from user settings
 						selectedModels = $settings?.models;
-					} else if ($config?.default_models) {
-						console.log($config?.default_models.split(',') ?? '');
-						selectedModels = $config?.default_models.split(',');
+					} else if (defaultModels && defaultModels.length > 0) {
+						// Set from default models
+						selectedModels = defaultModels;
 					}
 				}
 			}
 
+			// Unavailable & hidden models filtering
 			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
 		}
 
+		// Ensure at least one model is selected
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
 			if (availableModels.length > 0) {
+				if (defaultModels && defaultModels.length > 0) {
+					// Set from default models
+					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
+				}
+
+				// Set to first available model
 				selectedModels = [availableModels?.at(0) ?? ''];
 			} else {
 				selectedModels = [''];
@@ -1003,9 +1013,7 @@
 		params = {};
 
 		if ($page.url.searchParams.get('youtube')) {
-			uploadYoutubeTranscription(
-				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
-			);
+			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
 		}
 
 		if ($page.url.searchParams.get('load-url')) {
@@ -1111,7 +1119,7 @@
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message.role === 'assistant') {
+						if (message && message.role === 'assistant') {
 							message.done = true;
 						}
 					}
@@ -1609,8 +1617,10 @@
 		const _files = JSON.parse(JSON.stringify(files));
 
 		chatFiles.push(
-			..._files.filter((item) =>
-				['doc', 'text', 'file', 'note', 'chat', 'folder', 'collection'].includes(item.type)
+			..._files.filter(
+				(item) =>
+					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
+					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
 			)
 		);
 		chatFiles = chatFiles.filter(
@@ -1737,11 +1747,18 @@
 
 				if (model) {
 					// If there are image files, check if model is vision capable
+					// Skip this check if image generation is enabled, as images may be for editing or are generated outputs in the history
 					const hasImages = createMessagesList(_history, parentId).some((message) =>
-						message.files?.some((file) => file.type === 'image')
+						message.files?.some(
+							(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+						)
 					);
 
-					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
+					if (
+						hasImages &&
+						!(model.info?.meta?.capabilities?.vision ?? true) &&
+						!imageGenerationEnabled
+					) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
 								modelName: model.name ?? model.id
@@ -1832,8 +1849,10 @@
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		files.push(
-			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'text', 'file', 'note', 'chat', 'collection'].includes(item.type)
+			...(userMessage?.files ?? []).filter(
+				(item) =>
+					['doc', 'text', 'note', 'chat', 'collection'].includes(item.type) ||
+					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
 			)
 		);
 		// Remove duplicates
@@ -1880,30 +1899,33 @@
 		].filter((message) => message);
 
 		messages = messages
-			.map((message, idx, arr) => ({
-				role: message.role,
-				...((message.files?.filter((file) => file.type === 'image').length > 0 ?? false) &&
-				message.role === 'user'
-					? {
-							content: [
-								{
-									type: 'text',
-									text: message?.merged?.content ?? message.content
-								},
-								...message.files
-									.filter((file) => file.type === 'image')
-									.map((file) => ({
+			.map((message, idx, arr) => {
+				const imageFiles = (message?.files ?? []).filter(
+					(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
+				);
+
+				return {
+					role: message.role,
+					...(message.role === 'user' && imageFiles.length > 0
+						? {
+								content: [
+									{
+										type: 'text',
+										text: message?.merged?.content ?? message.content
+									},
+									...imageFiles.map((file) => ({
 										type: 'image_url',
 										image_url: {
 											url: file.url
 										}
 									}))
-							]
-						}
-					: {
-							content: message?.merged?.content ?? message.content
-						})
-			}))
+								]
+							}
+						: {
+								content: message?.merged?.content ?? message.content
+							})
+				};
+			})
 			.filter((message) => message?.role === 'user' || message?.content?.trim());
 
 		const toolIds = [];
@@ -1958,6 +1980,7 @@
 
 				id: responseMessageId,
 				parent_id: userMessage?.id ?? null,
+				parent_message: userMessage,
 
 				background_tasks: {
 					...(!$temporaryChatEnabled &&
@@ -2081,8 +2104,10 @@
 
 			const responseMessage = history.messages[history.currentId];
 			// Set all response messages to done
-			for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
-				history.messages[messageId].done = true;
+			if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
+				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+					history.messages[messageId].done = true;
+				}
 			}
 
 			history.messages[history.currentId] = responseMessage;
@@ -2137,6 +2162,11 @@
 
 		if (history.currentId) {
 			let userMessage = history.messages[message.parentId];
+
+			if (!userMessage) {
+				toast.error($i18n.t('Parent message not found'));
+				return;
+			}
 
 			if (autoScroll) {
 				scrollToBottom();
@@ -2204,14 +2234,17 @@
 			generating = true;
 			const [res, controller] = await generateMoACompletion(
 				localStorage.token,
-				message.model,
-				history.messages[message.parentId].content,
+				message.model ?? '',
+				message.parentId ? history.messages[message.parentId].content : '',
 				responses
 			);
 
 			if (res && res.ok && res.body && generating) {
-				generationController = controller;
-				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
+				generationController = controller as AbortController;
+				const textStream = await createOpenAITextStream(
+					res.body,
+					Boolean($settings?.splitLargeChunks ?? false)
+				);
 				for await (const update of textStream) {
 					const { value, done, sources, error, usage } = update;
 					if (error || done) {
@@ -2298,7 +2331,7 @@
 	};
 
 	const MAX_DRAFT_LENGTH = 5000;
-	let saveDraftTimeout = null;
+	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	const saveDraft = async (draft, chatId = null) => {
 		if (saveDraftTimeout) {
@@ -2377,7 +2410,7 @@
 
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-		? '  md:max-w-[calc(100%-260px)]'
+		? '  md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ' '} w-full max-w-full flex flex-col"
 	id="chat-container"
 >
@@ -2522,20 +2555,10 @@
 									{generating}
 									{stopResponse}
 									{createMessagePair}
+									{onUpload}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data, $chatId);
-										}
-									}}
-									on:upload={async (e) => {
-										const { type, data } = e.detail;
-
-										if (type === 'web') {
-											await uploadWeb(data);
-										} else if (type === 'youtube') {
-											await uploadYoutubeTranscription(data);
-										} else if (type === 'google-drive') {
-											await uploadGoogleDriveFile(data);
 										}
 									}}
 									on:submit={async (e) => {
@@ -2574,18 +2597,10 @@
 									{stopResponse}
 									{createMessagePair}
 									{onSelect}
+									{onUpload}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data);
-										}
-									}}
-									on:upload={async (e) => {
-										const { type, data } = e.detail;
-
-										if (type === 'web') {
-											await uploadWeb(data);
-										} else if (type === 'youtube') {
-											await uploadYoutubeTranscription(data);
 										}
 									}}
 									on:submit={async (e) => {

@@ -4,13 +4,12 @@ from typing import Optional, List, Tuple
 from urllib.parse import quote
 
 
-from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
+from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, REQUESTS_VERIFY
 from open_webui.retrieval.models.base_reranker import BaseReranker
 from open_webui.utils.headers import include_user_info_headers
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class ExternalReranker(BaseReranker):
@@ -19,10 +18,12 @@ class ExternalReranker(BaseReranker):
         api_key: str,
         url: str = "http://localhost:8080/v1/rerank",
         model: str = "reranker",
+        timeout: Optional[int] = None,
     ):
         self.api_key = api_key
         self.url = url
         self.model = model
+        self.timeout = timeout
 
     def predict(
         self, sentences: List[Tuple[str, str]], user=None
@@ -53,6 +54,8 @@ class ExternalReranker(BaseReranker):
                 f"{self.url}",
                 headers=headers,
                 json=payload,
+                timeout=self.timeout,
+                verify=REQUESTS_VERIFY,
             )
 
             r.raise_for_status()

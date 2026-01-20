@@ -33,13 +33,18 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 
+from open_webui.utils.misc import strict_match_mime_type
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.config import (
     WHISPER_MODEL_AUTO_UPDATE,
+    WHISPER_COMPUTE_TYPE,
     WHISPER_MODEL_DIR,
+    WHISPER_VAD_FILTER,
     CACHE_DIR,
     WHISPER_LANGUAGE,
+    WHISPER_MULTILINGUAL,
     ELEVENLABS_API_BASE_URL,
 )
 
@@ -48,7 +53,6 @@ from open_webui.env import (
     ENV,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
-    SRC_LOG_LEVELS,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
 )
@@ -63,7 +67,6 @@ AZURE_MAX_FILE_SIZE_MB = 200
 AZURE_MAX_FILE_SIZE = AZURE_MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["AUDIO"])
 
 SPEECH_CACHE_DIR = CACHE_DIR / "audio" / "speech"
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -130,7 +133,7 @@ def set_faster_whisper_model(model: str, auto_update: bool = False):
         faster_whisper_kwargs = {
             "model_size_or_path": model,
             "device": DEVICE_TYPE if DEVICE_TYPE and DEVICE_TYPE == "cuda" else "cpu",
-            "compute_type": "int8",
+            "compute_type": WHISPER_COMPUTE_TYPE,
             "download_root": WHISPER_MODEL_DIR,
             "local_files_only": not auto_update,
         }
@@ -329,6 +332,20 @@ def load_speech_pipeline(request):
 
 @router.post("/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
+    if request.app.state.config.TTS_ENGINE == "":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if user.role != "admin" and not has_permission(
+        user.id, "chat.tts", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     body = await request.body()
     name = hashlib.sha256(
         body
@@ -586,8 +603,9 @@ def transcription_handler(request, file_path, metadata, user=None):
         segments, info = model.transcribe(
             file_path,
             beam_size=5,
-            vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
+            vad_filter=WHISPER_VAD_FILTER,
             language=languages[0],
+            multilingual=WHISPER_MULTILINGUAL,
         )
         log.info(
             "Detected language '%s' with probability %f"
@@ -1151,21 +1169,19 @@ def transcription(
     language: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
+    if user.role != "admin" and not has_permission(
+        user.id, "chat.stt", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
     log.info(f"file.content_type: {file.content_type}")
-
     stt_supported_content_types = getattr(
         request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
     )
 
-    if not any(
-        fnmatch(file.content_type, content_type)
-        for content_type in (
-            stt_supported_content_types
-            if stt_supported_content_types
-            and any(t.strip() for t in stt_supported_content_types)
-            else ["audio/*", "video/webm"]
-        )
-    ):
+    if not strict_match_mime_type(stt_supported_content_types, file.content_type):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED,

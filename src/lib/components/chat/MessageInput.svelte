@@ -1,14 +1,22 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
-	import { marked } from 'marked';
-
 	import { toast } from 'svelte-sonner';
 
+	import { marked } from 'marked';
 	import { v4 as uuidv4 } from 'uuid';
-	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
-	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
+	import dayjs from '$lib/dayjs';
+	import duration from 'dayjs/plugin/duration';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+
+	dayjs.extend(duration);
+	dayjs.extend(relativeTime);
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
+
+	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
+	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
+	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -49,6 +57,9 @@
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
+	import { createNoteHandler } from '../notes/utils';
+	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
+
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
@@ -60,11 +71,9 @@
 	import Image from '../common/Image.svelte';
 
 	import XMark from '../icons/XMark.svelte';
-	import Headphone from '../icons/Headphone.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
-	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
@@ -74,16 +83,19 @@
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 
-	import { KokoroWorker } from '$lib/workers/KokoroWorker';
-
-	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
+	import PageEdit from '../icons/PageEdit.svelte';
+	import { goto } from '$app/navigation';
+	import InputModal from '../common/InputModal.svelte';
+	import Expand from '../icons/Expand.svelte';
 
 	const i18n = getContext('i18n');
 
+	export let onUpload: Function = (e) => {};
 	export let onChange: Function = () => {};
+
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
@@ -108,6 +120,8 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	let inputContent = null;
 
 	let showInputVariablesModal = false;
 	let inputVariablesModalCallback = (variableValues) => {};
@@ -177,22 +191,16 @@
 				for (const type of item.types) {
 					if (type.startsWith('image/')) {
 						const blob = await item.getType(type);
-						const reader = new FileReader();
-						reader.onload = (event) => {
-							files = [
-								...files,
-								{
-									type: 'image',
-									url: event.target.result as string
-								}
-							];
-						};
-						reader.readAsDataURL(blob);
+						const file = new File([blob], `clipboard-image.${type.split('/')[1]}`, {
+							type: type
+						});
+
+						inputFilesHandler([file]);
 					}
 				}
 			}
 
-			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
+			text = text.replaceAll('{{CLIPBOARD}}', clipboardText.replaceAll('\r\n', '\n'));
 		}
 
 		if (text.includes('{{USER_LOCATION}}')) {
@@ -410,6 +418,8 @@
 
 	let inputFiles;
 
+	let showInputModal = false;
+
 	let dragged = false;
 	let shiftKey = false;
 
@@ -511,8 +521,9 @@
 
 			// Convert the canvas to a Base64 image URL
 			const imageUrl = canvas.toDataURL('image/png');
-			// Add the captured image to the files array to render it
-			files = [...files, { type: 'image', url: imageUrl }];
+			const blob = await (await fetch(imageUrl)).blob();
+			const file = new File([blob], `screen-capture-${Date.now()}.png`, { type: 'image/png' });
+			inputFilesHandler([file]);
 			// Clean memory: Clear video srcObject
 			video.srcObject = null;
 		} catch (error) {
@@ -521,7 +532,7 @@
 		}
 	};
 
-	const uploadFileHandler = async (file, fullContext: boolean = false) => {
+	const uploadFileHandler = async (file, process = true, itemData = {}) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
 			return null;
@@ -544,7 +555,7 @@
 			size: file.size,
 			error: '',
 			itemId: tempItemId,
-			...(fullContext ? { context: 'full' } : {})
+			...itemData
 		};
 
 		if (fileItem.size == 0) {
@@ -568,7 +579,7 @@
 				}
 
 				// During the file upload, file content is automatically extracted.
-				const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+				const uploadedFile = await uploadFile(localStorage.token, file, metadata, process);
 
 				if (uploadedFile) {
 					console.log('File upload completed:', {
@@ -587,7 +598,8 @@
 					fileItem.id = uploadedFile.id;
 					fileItem.collection_name =
 						uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
-					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+					fileItem.content_type = uploadedFile.meta?.content_type || uploadedFile.content_type;
+					fileItem.url = `${uploadedFile.id}`;
 
 					files = files;
 				} else {
@@ -710,24 +722,55 @@
 				};
 
 				let reader = new FileReader();
+
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
-					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
+					// Compress the image if settings or config require it
+					if ($settings?.imageCompression && $settings?.imageCompressionInChannels) {
+						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
+					}
 
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${imageUrl}`
-						}
-					];
+					if ($temporaryChatEnabled) {
+						files = [
+							...files,
+							{
+								type: 'image',
+								url: imageUrl
+							}
+						];
+					} else {
+						const blob = await (await fetch(imageUrl)).blob();
+						const compressedFile = new File([blob], file.name, { type: file.type });
+
+						uploadFileHandler(compressedFile, false);
+					}
 				};
+
 				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
 				uploadFileHandler(file);
 			}
 		});
+	};
+
+	const createNote = async () => {
+		if (inputContent?.md.trim() === '' && inputContent?.html.trim() === '') {
+			toast.error($i18n.t('Cannot create an empty note.'));
+			return;
+		}
+
+		const res = await createNoteHandler(
+			dayjs().format('YYYY-MM-DD'),
+			inputContent?.md,
+			inputContent?.html
+		);
+
+		if (res) {
+			// Clear the input content saved in session storage.
+			sessionStorage.removeItem('chat-input');
+			goto(`/notes/${res.id}`);
+		}
 	};
 
 	const onDragOver = (e) => {
@@ -815,7 +858,7 @@
 								}
 							];
 						} else {
-							dispatch('upload', e);
+							onUpload(e);
 						}
 					}
 				})
@@ -850,7 +893,7 @@
 								}
 							];
 						} else {
-							dispatch('upload', e);
+							onUpload(e);
 						}
 					}
 				})
@@ -885,7 +928,7 @@
 								}
 							];
 						} else {
-							dispatch('upload', e);
+							onUpload(e);
 						}
 					}
 				})
@@ -952,6 +995,20 @@
 	}}
 	on:close={() => {
 		integrationsMenuCloseOnOutsideClick = true;
+	}}
+/>
+
+<InputModal
+	bind:show={showInputModal}
+	bind:value={prompt}
+	bind:inputContent
+	onChange={(content) => {
+		console.log(content);
+		chatInputElement?.setContent(content?.json ?? null);
+	}}
+	onClose={async () => {
+		await tick();
+		chatInputElement?.focus();
 	}}
 />
 
@@ -1092,13 +1149,20 @@
 							{/if}
 
 							{#if files.length > 0}
-								<div class="mx-2 mt-2.5 pb-1.5 flex items-center flex-wrap gap-2">
+								<div
+									class="mx-2 mt-2.5 pb-1.5 flex items-center flex-wrap gap-2"
+									dir={$settings?.chatDirection ?? 'auto'}
+								>
 									{#each files as file, fileIdx}
-										{#if file.type === 'image'}
+										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+											{@const fileUrl =
+												file.url.startsWith('data') || file.url.startsWith('http')
+													? file.url
+													: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 											<div class=" relative group">
 												<div class="relative flex items-center">
 													<Image
-														src={file.url}
+														src={fileUrl}
 														alt=""
 														imageClassName=" size-10 rounded-xl object-cover"
 													/>
@@ -1189,14 +1253,33 @@
 										: ''}"
 									id="chat-input-container"
 								>
+									{#if prompt.split('\n').length > 2}
+										<div class="fixed top-0 right-0 z-20">
+											<div class="mt-2.5 mr-3">
+												<button
+													type="button"
+													class="p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+													aria-label="Expand input"
+													on:click={async () => {
+														showInputModal = true;
+													}}
+												>
+													<Expand />
+												</button>
+											</div>
+										</div>
+									{/if}
+
 									{#if suggestions}
 										{#key $settings?.richTextInput ?? true}
 											{#key $settings?.showFormattingToolbar ?? false}
 												<RichTextInput
 													bind:this={chatInputElement}
 													id="chat-input"
-													onChange={(e) => {
-														prompt = e.md;
+													editable={!showInputModal}
+													onChange={(content) => {
+														prompt = content.md;
+														inputContent = content;
 														command = getCommand();
 													}}
 													json={true}
@@ -1321,29 +1404,7 @@
 
 														if (clipboardData && clipboardData.items) {
 															for (const item of clipboardData.items) {
-																if (item.type.indexOf('image') !== -1) {
-																	const blob = item.getAsFile();
-																	const reader = new FileReader();
-
-																	reader.onload = function (e) {
-																		files = [
-																			...files,
-																			{
-																				type: 'image',
-																				url: `${e.target.result}`
-																			}
-																		];
-																	};
-
-																	reader.readAsDataURL(blob);
-																} else if (item?.kind === 'file') {
-																	const file = item.getAsFile();
-																	if (file) {
-																		const _files = [file];
-																		await inputFilesHandler(_files);
-																		e.preventDefault();
-																	}
-																} else if (item.type === 'text/plain') {
+																if (item.type === 'text/plain') {
 																	if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																		const text = clipboardData.getData('text/plain');
 
@@ -1358,8 +1419,14 @@
 																				}
 																			);
 
-																			await uploadFileHandler(file, true);
+																			await uploadFileHandler(file, true, { context: 'full' });
 																		}
+																	}
+																} else {
+																	const file = item.getAsFile();
+																	if (file) {
+																		await inputFilesHandler([file]);
+																		e.preventDefault();
 																	}
 																}
 															}
@@ -1418,9 +1485,7 @@
 												console.error('OneDrive Error:', error);
 											}
 										}}
-										onUpload={async (e) => {
-											dispatch('upload', e);
-										}}
+										{onUpload}
 										onClose={async () => {
 											await tick();
 
@@ -1620,57 +1685,7 @@
 									</div>
 								</div>
 
-								<div class="self-end flex space-x-1 mr-1 shrink-0">
-									{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
-										<!-- {$i18n.t('Record voice')} -->
-										<Tooltip content={$i18n.t('Dictate')}>
-											<button
-												id="voice-input-button"
-												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
-												type="button"
-												on:click={async () => {
-													try {
-														let stream = await navigator.mediaDevices
-															.getUserMedia({ audio: true })
-															.catch(function (err) {
-																toast.error(
-																	$i18n.t(
-																		`Permission denied when accessing microphone: {{error}}`,
-																		{
-																			error: err
-																		}
-																	)
-																);
-																return null;
-															});
-
-														if (stream) {
-															recording = true;
-															const tracks = stream.getTracks();
-															tracks.forEach((track) => track.stop());
-														}
-														stream = null;
-													} catch {
-														toast.error($i18n.t('Permission denied when accessing microphone'));
-													}
-												}}
-												aria-label="Voice Input"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-5 h-5 translate-y-[0.5px]"
-												>
-													<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-													<path
-														d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
-									{/if}
-
+								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
 									{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
@@ -1695,95 +1710,164 @@
 												</button>
 											</Tooltip>
 										</div>
-									{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
-										<div class=" flex items-center">
-											<!-- {$i18n.t('Call')} -->
-											<Tooltip content={$i18n.t('Voice mode')}>
+									{:else}
+										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false) && ($_user?.role === 'admin' || ($_user?.permissions?.features?.notes ?? true))}
+											<!-- {$i18n.t('Create Note')}  -->
+											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
-													class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
+													id="send-message-button"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
+													type="button"
+													disabled={prompt === '' && files.length === 0}
+													on:click={() => {
+														createNote();
+													}}
+												>
+													<PageEdit className="size-4.5 translate-y-[0.5px]" />
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+											<!-- {$i18n.t('Record voice')} -->
+											<Tooltip content={$i18n.t('Dictate')}>
+												<button
+													id="voice-input-button"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
 													type="button"
 													on:click={async () => {
-														if (selectedModels.length > 1) {
-															toast.error($i18n.t('Select only one model to call'));
-
-															return;
-														}
-
-														if ($config.audio.stt.engine === 'web') {
-															toast.error(
-																$i18n.t('Call feature is not supported when using Web STT engine')
-															);
-
-															return;
-														}
-														// check if user has access to getUserMedia
 														try {
-															let stream = await navigator.mediaDevices.getUserMedia({
-																audio: true
-															});
-															// If the user grants the permission, proceed to show the call overlay
+															let stream = await navigator.mediaDevices
+																.getUserMedia({ audio: true })
+																.catch(function (err) {
+																	toast.error(
+																		$i18n.t(
+																			`Permission denied when accessing microphone: {{error}}`,
+																			{
+																				error: err
+																			}
+																		)
+																	);
+																	return null;
+																});
 
 															if (stream) {
+																recording = true;
 																const tracks = stream.getTracks();
 																tracks.forEach((track) => track.stop());
 															}
-
 															stream = null;
-
-															if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-																// If the user has not initialized the TTS worker, initialize it
-																if (!$TTSWorker) {
-																	await TTSWorker.set(
-																		new KokoroWorker({
-																			dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-																		})
-																	);
-
-																	await $TTSWorker.init();
-																}
-															}
-
-															showCallOverlay.set(true);
-															showControls.set(true);
-														} catch (err) {
-															// If the user denies the permission or an error occurs, show an error message
-															toast.error(
-																$i18n.t('Permission denied when accessing media devices')
-															);
+														} catch {
+															toast.error($i18n.t('Permission denied when accessing microphone'));
 														}
 													}}
-													aria-label={$i18n.t('Voice mode')}
-												>
-													<Voice className="size-5" strokeWidth="2.5" />
-												</button>
-											</Tooltip>
-										</div>
-									{:else}
-										<div class=" flex items-center">
-											<Tooltip content={$i18n.t('Send message')}>
-												<button
-													id="send-message-button"
-													class="{!(prompt === '' && files.length === 0)
-														? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-														: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-													type="submit"
-													disabled={prompt === '' && files.length === 0}
+													aria-label="Voice Input"
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
+														viewBox="0 0 20 20"
 														fill="currentColor"
-														class="size-5"
+														class="size-5 translate-y-[0.5px]"
 													>
+														<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
 														<path
-															fill-rule="evenodd"
-															d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-															clip-rule="evenodd"
+															d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
 														/>
 													</svg>
 												</button>
 											</Tooltip>
-										</div>
+										{/if}
+
+										{#if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+											<div class=" flex items-center">
+												<!-- {$i18n.t('Call')} -->
+												<Tooltip content={$i18n.t('Voice mode')}>
+													<button
+														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
+														type="button"
+														on:click={async () => {
+															if (selectedModels.length > 1) {
+																toast.error($i18n.t('Select only one model to call'));
+
+																return;
+															}
+
+															if ($config.audio.stt.engine === 'web') {
+																toast.error(
+																	$i18n.t('Call feature is not supported when using Web STT engine')
+																);
+
+																return;
+															}
+															// check if user has access to getUserMedia
+															try {
+																let stream = await navigator.mediaDevices.getUserMedia({
+																	audio: true
+																});
+																// If the user grants the permission, proceed to show the call overlay
+
+																if (stream) {
+																	const tracks = stream.getTracks();
+																	tracks.forEach((track) => track.stop());
+																}
+
+																stream = null;
+
+																if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+																	// If the user has not initialized the TTS worker, initialize it
+																	if (!$TTSWorker) {
+																		await TTSWorker.set(
+																			new KokoroWorker({
+																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																			})
+																		);
+
+																		await $TTSWorker.init();
+																	}
+																}
+
+																showCallOverlay.set(true);
+																showControls.set(true);
+															} catch (err) {
+																// If the user denies the permission or an error occurs, show an error message
+																toast.error(
+																	$i18n.t('Permission denied when accessing media devices')
+																);
+															}
+														}}
+														aria-label={$i18n.t('Voice mode')}
+													>
+														<Voice className="size-5" strokeWidth="2.5" />
+													</button>
+												</Tooltip>
+											</div>
+										{:else}
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Send message')}>
+													<button
+														id="send-message-button"
+														class="{!(prompt === '' && files.length === 0)
+															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+														type="submit"
+														disabled={prompt === '' && files.length === 0}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="size-5"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
 									{/if}
 								</div>
 							</div>

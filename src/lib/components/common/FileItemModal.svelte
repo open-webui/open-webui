@@ -1,35 +1,74 @@
 <script lang="ts">
+	import type { WorkBook } from 'xlsx';
+
 	import { getContext, onMount, tick } from 'svelte';
+
 	import { formatFileSize, getLineCount } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
+	import { getFileById, getFileContentById } from '$lib/apis/files';
+
+	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
+	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 
 	const i18n = getContext('i18n');
 
 	import Modal from './Modal.svelte';
 	import XMark from '../icons/XMark.svelte';
-	import Info from '../icons/Info.svelte';
 	import Switch from './Switch.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
-	import { getFileById } from '$lib/apis/files';
 
 	export let item;
 	export let show = false;
 	export let edit = false;
 
 	let enableFullContent = false;
-
-	let isPdf = false;
-	let isAudio = false;
 	let loading = false;
 
+	let isPDF = false;
+	let isAudio = false;
+	let isExcel = false;
+
 	let selectedTab = '';
+	let excelWorkbook: WorkBook | null = null;
+	let excelSheetNames: string[] = [];
+	let selectedSheet = '';
+	let excelHtml = '';
+	let excelError = '';
+	let rowCount = 0;
 
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
 		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
+
+	$: isMarkdown =
+		item?.meta?.content_type === 'text/markdown' ||
+		(item?.name && item?.name.toLowerCase().endsWith('.md'));
+
+	$: isCode =
+		item?.name &&
+		(item.name.toLowerCase().endsWith('.py') ||
+			item.name.toLowerCase().endsWith('.js') ||
+			item.name.toLowerCase().endsWith('.ts') ||
+			item.name.toLowerCase().endsWith('.java') ||
+			item.name.toLowerCase().endsWith('.html') ||
+			item.name.toLowerCase().endsWith('.css') ||
+			item.name.toLowerCase().endsWith('.json') ||
+			item.name.toLowerCase().endsWith('.cpp') ||
+			item.name.toLowerCase().endsWith('.c') ||
+			item.name.toLowerCase().endsWith('.h') ||
+			item.name.toLowerCase().endsWith('.sh') ||
+			item.name.toLowerCase().endsWith('.bash') ||
+			item.name.toLowerCase().endsWith('.yaml') ||
+			item.name.toLowerCase().endsWith('.yml') ||
+			item.name.toLowerCase().endsWith('.xml') ||
+			item.name.toLowerCase().endsWith('.sql') ||
+			item.name.toLowerCase().endsWith('.go') ||
+			item.name.toLowerCase().endsWith('.rs') ||
+			item.name.toLowerCase().endsWith('.php') ||
+			item.name.toLowerCase().endsWith('.rb'));
 
 	$: isAudio =
 		(item?.meta?.content_type ?? '').startsWith('audio/') ||
@@ -39,7 +78,59 @@
 		(item?.name && item?.name.toLowerCase().endsWith('.m4a')) ||
 		(item?.name && item?.name.toLowerCase().endsWith('.webm'));
 
+	$: isExcel =
+		item?.meta?.content_type === 'application/vnd.ms-excel' ||
+		item?.meta?.content_type ===
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+		item?.meta?.content_type === 'text/csv' ||
+		item?.meta?.content_type === 'application/csv' ||
+		(item?.name &&
+			(item.name.toLowerCase().endsWith('.xls') ||
+				item.name.toLowerCase().endsWith('.xlsx') ||
+				item.name.toLowerCase().endsWith('.csv')));
+
+	const loadExcelContent = async () => {
+		try {
+			excelError = '';
+			const [arrayBuffer, { read }] = await Promise.all([
+				getFileContentById(item.id),
+				import('xlsx')
+			]);
+			excelWorkbook = read(arrayBuffer, { type: 'array' });
+			excelSheetNames = excelWorkbook.SheetNames;
+
+			if (excelSheetNames.length > 0) {
+				selectedSheet = excelSheetNames[0];
+				await renderExcelSheet();
+			}
+		} catch (error) {
+			console.error('Error loading Excel/CSV file:', error);
+			excelError = $i18n.t('Failed to load Excel/CSV file. Please try downloading it instead.');
+		}
+	};
+
+	const renderExcelSheet = async () => {
+		if (!excelWorkbook || !selectedSheet) return;
+
+		const worksheet = excelWorkbook.Sheets[selectedSheet];
+		// Calculate row count
+		const XLSX = await import('xlsx');
+		const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
+		rowCount = range.e.r - range.s.r + 1;
+
+		excelHtml = XLSX.utils.sheet_to_html(worksheet, {
+			id: 'excel-table',
+			editable: false,
+			header: ''
+		});
+	};
+
+	$: if (selectedSheet && excelWorkbook) {
+		renderExcelSheet();
+	}
+
 	const loadContent = async () => {
+		selectedTab = '';
 		if (item?.type === 'collection') {
 			loading = true;
 
@@ -63,6 +154,12 @@
 			if (file) {
 				item.file = file || {};
 			}
+
+			// Load Excel content if it's an Excel file
+			if (isExcel) {
+				await loadExcelContent();
+			}
+
 			loading = false;
 		}
 
@@ -93,7 +190,11 @@
 							on:click|preventDefault={() => {
 								if (!isPDF && item.url) {
 									window.open(
-										item.type === 'file' ? `${item.url}/content` : `${item.url}`,
+										item.type === 'file'
+											? item?.url?.startsWith('http')
+												? item.url
+												: `${WEBUI_API_BASE_URL}/files/${item.url}/content`
+											: item.url,
 										'_blank'
 									);
 								}
@@ -143,9 +244,15 @@
 
 						{#if item?.file?.data?.content}
 							<div class="capitalize shrink-0">
-								{$i18n.t('{{COUNT}} extracted lines', {
-									COUNT: getLineCount(item?.file?.data?.content ?? '')
-								})}
+								{#if isExcel && rowCount > 0 && selectedTab === 'preview'}
+									{$i18n.t('{{COUNT}} Rows', {
+										COUNT: rowCount
+									})}
+								{:else}
+									{$i18n.t('{{COUNT}} extracted lines', {
+										COUNT: getLineCount(item?.file?.data?.content ?? '')
+									})}
+								{/if}
 							</div>
 
 							<div class="flex items-center gap-1 shrink-0">
@@ -203,7 +310,9 @@
 							</div>
 						{/each}
 					</div>
-				{:else if isPDF}
+				{/if}
+
+				{#if isAudio || isPDF || isExcel || isCode || isMarkdown}
 					<div
 						class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
 					>
@@ -227,19 +336,19 @@
 							}}>{$i18n.t('Preview')}</button
 						>
 					</div>
+				{/if}
 
-					{#if selectedTab === 'preview'}
-						<iframe
-							title={item?.name}
-							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-							class="w-full h-[70vh] border-0 rounded-lg"
-						/>
-					{:else}
+				{#if selectedTab === ''}
+					{#if item?.file?.data}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
 							{(item?.file?.data?.content ?? '').trim() || 'No content'}
 						</div>
+					{:else if item?.content}
+						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+							{(item?.content ?? '').trim() || 'No content'}
+						</div>
 					{/if}
-				{:else}
+				{:else if selectedTab === 'preview'}
 					{#if isAudio}
 						<audio
 							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
@@ -247,9 +356,62 @@
 							controls
 							playsinline
 						/>
-					{/if}
+					{:else if isPDF}
+						<iframe
+							title={item?.name}
+							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+							class="w-full h-[70vh] border-0 rounded-lg"
+						/>
+					{:else if isExcel}
+						{#if excelError}
+							<div class="text-red-500 text-sm p-4">
+								{excelError}
+							</div>
+						{:else}
+							{#if excelSheetNames.length > 1}
+								<div
+									class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-medium bg-transparent dark:text-gray-200"
+								>
+									{#each excelSheetNames as sheetName}
+										<button
+											class="min-w-fit py-1.5 px-4 border-b {selectedSheet === sheetName
+												? ' '
+												: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+											type="button"
+											on:click={() => {
+												selectedSheet = sheetName;
+											}}>{sheetName}</button
+										>
+									{/each}
+								</div>
+							{/if}
 
-					{#if item?.file?.data}
+							{#if excelHtml}
+								<div class="excel-table-container overflow-auto max-h-[60vh]">
+									{@html excelHtml}
+								</div>
+							{:else}
+								<div class="text-gray-500 text-sm p-4">No content available</div>
+							{/if}
+						{/if}
+					{:else if isCode}
+						<div class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm relative">
+							<CodeBlock
+								code={item.file.data.content}
+								lang={item.name.split('.').pop()}
+								token={null}
+								edit={false}
+								run={false}
+								save={false}
+							/>
+						</div>
+					{:else if isMarkdown}
+						<div
+							class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full"
+						>
+							<Markdown content={item.file.data.content} id="markdown-viewer" />
+						</div>
+					{:else}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
 							{(item?.file?.data?.content ?? '').trim() || 'No content'}
 						</div>
@@ -263,3 +425,52 @@
 		</div>
 	</div>
 </Modal>
+
+<style>
+	:global(.excel-table-container table) {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+	}
+
+	:global(.excel-table-container table td),
+	:global(.excel-table-container table th) {
+		border-width: 1px;
+		border-style: solid;
+		border-color: var(--color-gray-300, #cdcdcd);
+		padding: 0.5rem 0.75rem;
+		text-align: left;
+	}
+
+	:global(.dark .excel-table-container table td),
+	:global(.dark .excel-table-container table th) {
+		border-color: var(--color-gray-600, #676767);
+	}
+
+	:global(.excel-table-container table th) {
+		background-color: var(--color-gray-100, #ececec);
+		font-weight: 600;
+	}
+
+	:global(.dark .excel-table-container table th) {
+		background-color: var(--color-gray-800, #333);
+		color: var(--color-gray-100, #ececec);
+	}
+
+	:global(.excel-table-container table tr:nth-child(even)) {
+		background-color: var(--color-gray-50, #f9f9f9);
+	}
+
+	:global(.dark .excel-table-container table tr:nth-child(even)) {
+		background-color: rgba(38, 38, 38, 0.5);
+	}
+
+	:global(.excel-table-container table tr:hover) {
+		background-color: var(--color-gray-100, #ececec);
+	}
+
+	:global(.dark .excel-table-container table tr:hover) {
+		background-color: rgba(51, 51, 51, 0.5);
+	}
+</style>

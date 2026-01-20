@@ -12,7 +12,6 @@ from open_webui.config import (
     MILVUS_HNSW_EFCONSTRUCTION,
     MILVUS_IVF_FLAT_NLIST,
 )
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.vector.main import (
     GetResult,
     SearchResult,
@@ -29,7 +28,6 @@ from pymilvus import (
 )
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 RESOURCE_ID_FIELD = "resource_id"
 
@@ -159,7 +157,11 @@ class MilvusClient(VectorDBBase):
         collection.insert(entities)
 
     def search(
-        self, collection_name: str, vectors: List[List[float]], limit: int
+        self,
+        collection_name: str,
+        vectors: List[List[float]],
+        filter: Optional[Dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         if not vectors:
             return None

@@ -628,7 +628,7 @@ input[type='number'] {
 
 /* Table styling for tiptap editors */
 .tiptap table {
-	@apply w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full;
+	@apply w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full;
 }
 
 .tiptap thead {
@@ -641,7 +641,7 @@ input[type='number'] {
 }
 
 .tiptap th {
-	@apply cursor-pointer text-left text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
+	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
 }
 
 .tiptap td {
@@ -802,4 +802,8 @@ body {
 .pm-li-drop-outdent {
 	position: relative;
 	z-index: 0;
+}
+
+#note-content-container .ProseMirror {
+	padding-bottom: 2rem; /* space for the bottom toolbar */
 }

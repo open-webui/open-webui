@@ -2,12 +2,11 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { models, tools, functions, user } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -93,6 +92,7 @@
 	let defaultFilterIds = [];
 
 	let capabilities = {
+		file_context: true,
 		vision: true,
 		file_upload: true,
 		web_search: true,
@@ -100,25 +100,14 @@
 		code_interpreter: true,
 		citations: true,
 		status_updates: true,
-		usage: undefined
+		usage: undefined,
+		builtin_tools: true
 	};
 	let defaultFeatureIds = [];
 
 	let actionIds = [];
 	let accessControl = {};
-
-	const addUsage = (base_model_id) => {
-		const baseModel = $models.find((m) => m.id === base_model_id);
-
-		if (baseModel) {
-			if (baseModel.owned_by === 'openai') {
-				capabilities.usage = baseModel?.meta?.capabilities?.usage ?? false;
-			} else {
-				delete capabilities.usage;
-			}
-			capabilities = capabilities;
-		}
-	};
+	let tts = { voice: '' };
 
 	const submitHandler = async () => {
 		loading = true;
@@ -206,6 +195,18 @@
 			}
 		}
 
+		if (tts.voice !== '') {
+			if (!info.meta.tts) info.meta.tts = {};
+			info.meta.tts.voice = tts.voice;
+		} else {
+			if (info.meta.tts?.voice) {
+				delete info.meta.tts.voice;
+				if (Object.keys(info.meta.tts).length === 0) {
+					delete info.meta.tts;
+				}
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
@@ -223,7 +224,6 @@
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
-		await knowledgeCollections.set([...(await getKnowledgeBases(localStorage.token))]);
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -288,6 +288,7 @@
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
+			tts = { voice: model?.meta?.tts?.voice ?? '' };
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;
@@ -363,7 +364,16 @@
 			on:change={() => {
 				let reader = new FileReader();
 				reader.onload = (event) => {
-					let originalImageUrl = `${event.target.result}`;
+					let originalImageUrl = `${event.target?.result}`;
+
+					// For animated formats (gif, webp), skip resizing to preserve animation
+					const fileType = (inputFiles[0] as any)?.['type'];
+					if (fileType === 'image/gif' || fileType === 'image/webp') {
+						info.meta.profile_image_url = originalImageUrl;
+						inputFiles = null;
+						filesInputElement.value = '';
+						return;
+					}
 
 					const img = new Image();
 					img.src = originalImageUrl;
@@ -397,7 +407,7 @@
 						ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
 
 						// Get the base64 representation of the compressed image
-						const compressedSrc = canvas.toDataURL();
+						const compressedSrc = canvas.toDataURL('image/webp', 0.8);
 
 						// Display the compressed image
 						info.meta.profile_image_url = compressedSrc;
@@ -411,12 +421,12 @@
 					inputFiles &&
 					inputFiles.length > 0 &&
 					['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(
-						inputFiles[0]['type']
+						(inputFiles[0] as any)?.['type']
 					)
 				) {
 					reader.readAsDataURL(inputFiles[0]);
 				} else {
-					console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
+					console.log(`Unsupported File Type '${(inputFiles[0] as any)?.['type']}'.`);
 					inputFiles = null;
 				}
 			}}
@@ -429,198 +439,195 @@
 					submitHandler();
 				}}
 			>
-				<div class="self-center md:self-start flex justify-center my-2 shrink-0">
-					<div class="self-center">
-						<button
-							class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
-							`${WEBUI_BASE_URL}/static/favicon.png`
-								? 'bg-transparent'
-								: 'bg-white'} shadow-xl group relative"
-							type="button"
-							on:click={() => {
-								filesInputElement.click();
-							}}
-						>
-							{#if info.meta.profile_image_url}
-								<img
-									src={info.meta.profile_image_url}
-									alt="model profile"
-									class="rounded-xl sm:size-60 size-max object-cover shrink-0"
-								/>
-							{:else}
-								<img
-									src="{WEBUI_BASE_URL}/static/favicon.png"
-									alt="model profile"
-									class=" rounded-xl sm:size-60 size-max object-cover shrink-0"
-								/>
-							{/if}
+				<div class="w-full px-1">
+					<div class="flex flex-col md:flex-row gap-4 w-full">
+						<div class="self-center md:self-start flex justify-center my-2 shrink-0">
+							<div class="self-center">
+								<button
+									class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
+									`${WEBUI_BASE_URL}/static/favicon.png`
+										? 'bg-transparent'
+										: 'bg-white'} shadow-xl group relative"
+									type="button"
+									on:click={() => {
+										filesInputElement.click();
+									}}
+								>
+									{#if info.meta.profile_image_url}
+										<img
+											src={info.meta.profile_image_url}
+											alt="model profile"
+											class="rounded-xl size-60 object-cover shrink-0"
+										/>
+									{:else}
+										<img
+											src="{WEBUI_BASE_URL}/static/favicon.png"
+											alt="model profile"
+											class=" rounded-xl size-60 object-cover shrink-0"
+										/>
+									{/if}
 
-							<div class="absolute bottom-0 right-0 z-10">
-								<div class="m-1.5">
-									<div
-										class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="size-5"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-												clip-rule="evenodd"
-											/>
-										</svg>
+									<div class="absolute bottom-0 right-0 z-10">
+										<div class="m-1.5">
+											<div
+												class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="size-5"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</div>
+										</div>
 									</div>
+
+									<div
+										class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
+									></div>
+								</button>
+
+								<div class="flex w-full mt-1 justify-end">
+									<button
+										class="px-2 py-1 text-gray-500 rounded-lg text-xs"
+										on:click={() => {
+											info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
+										}}
+										type="button"
+									>
+										{$i18n.t('Reset Image')}</button
+									>
 								</div>
 							</div>
-
-							<div
-								class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
-							></div>
-						</button>
-
-						<div class="flex w-full mt-1 justify-end">
-							<button
-								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
-								on:click={() => {
-									info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
-								}}
-								type="button"
-							>
-								{$i18n.t('Reset Image')}</button
-							>
 						</div>
-					</div>
-				</div>
 
-				<div class="w-full">
-					<div class="flex flex-col">
-						<div class="flex justify-between items-start my-2">
-							<div class=" flex flex-col w-full">
-								<div class="flex-1 w-full">
-									<input
-										class="text-4xl font-medium w-full bg-transparent outline-hidden"
-										placeholder={$i18n.t('Model Name')}
-										bind:value={name}
-										required
-									/>
-								</div>
-
-								<div class="flex-1 w-full">
-									<div>
+						<div class="flex flex-col w-full flex-1">
+							<div class="flex justify-between items-start my-2">
+								<div class=" flex flex-col w-full">
+									<div class="flex-1 w-full">
 										<input
-											class="text-xs w-full bg-transparent outline-hidden"
-											placeholder={$i18n.t('Model ID')}
-											bind:value={id}
-											disabled={edit}
+											class="text-4xl font-medium w-full bg-transparent outline-hidden"
+											placeholder={$i18n.t('Model Name')}
+											bind:value={name}
 											required
 										/>
 									</div>
-								</div>
-							</div>
 
-							<div>
-								<button
-									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-									type="button"
-									on:click={() => {
-										showAccessControlModal = true;
-									}}
-								>
-									<LockClosed strokeWidth="2.5" className="size-3.5" />
-
-									<div class="text-sm font-medium shrink-0">
-										{$i18n.t('Access')}
+									<div class="flex-1 w-full">
+										<div>
+											<input
+												class="text-xs w-full bg-transparent outline-hidden"
+												placeholder={$i18n.t('Model ID')}
+												bind:value={id}
+												disabled={edit}
+												required
+											/>
+										</div>
 									</div>
-								</button>
-							</div>
-						</div>
-
-						{#if preset}
-							<div class="mb-1">
-								<div class=" text-xs font-medium mb-1 text-gray-500">
-									{$i18n.t('Base Model (From)')}
 								</div>
 
-								<div>
-									<select
-										class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
-										placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
-										bind:value={info.base_model_id}
-										on:change={(e) => {
-											addUsage(e.target.value);
+								<div class="shrink-0">
+									<button
+										class="bg-gray-50 shrink-0 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+										type="button"
+										on:click={() => {
+											showAccessControlModal = true;
 										}}
-										required
 									>
-										<option value={null} class=" text-gray-900"
-											>{$i18n.t('Select a base model')}</option
+										<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
+
+										<div class="text-sm font-medium shrink-0">
+											{$i18n.t('Access')}
+										</div>
+									</button>
+								</div>
+							</div>
+
+							{#if preset}
+								<div class="mb-1">
+									<div class=" text-xs font-medium mb-1 text-gray-500">
+										{$i18n.t('Base Model (From)')}
+									</div>
+
+									<div>
+										<select
+											class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
+											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
+											bind:value={info.base_model_id}
+											required
 										>
-										{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
-											<option value={model.id} class=" text-gray-900">{model.name}</option>
-										{/each}
-									</select>
+											<option value={null} class=" text-gray-900"
+												>{$i18n.t('Select a base model')}</option
+											>
+											{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
+												<option value={model.id} class=" text-gray-900">{model.name}</option>
+											{/each}
+										</select>
+									</div>
 								</div>
-							</div>
-						{/if}
-
-						<div class="mb-1">
-							<div class="mb-1 flex w-full justify-between items-center">
-								<div class=" self-center text-xs font-medium text-gray-500">
-									{$i18n.t('Description')}
-								</div>
-
-								<button
-									class="p-1 text-xs flex rounded-sm transition"
-									type="button"
-									aria-pressed={enableDescription ? 'true' : 'false'}
-									aria-label={enableDescription
-										? $i18n.t('Custom description enabled')
-										: $i18n.t('Default description enabled')}
-									on:click={() => {
-										enableDescription = !enableDescription;
-									}}
-								>
-									{#if !enableDescription}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-									{/if}
-								</button>
-							</div>
-
-							{#if enableDescription}
-								<Textarea
-									className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-									placeholder={$i18n.t('Add a short description about what this model does')}
-									bind:value={info.meta.description}
-								/>
 							{/if}
-						</div>
 
-						<div class="w-full mb-1 max-w-full">
-							<div class="">
-								<Tags
-									tags={info?.meta?.tags ?? []}
-									on:delete={(e) => {
-										const tagName = e.detail;
-										info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-									}}
-									on:add={(e) => {
-										const tagName = e.detail;
-										if (!(info?.meta?.tags ?? null)) {
-											info.meta.tags = [{ name: tagName }];
-										} else {
-											info.meta.tags = [...info.meta.tags, { name: tagName }];
-										}
-									}}
-								/>
+							<div class="mb-1">
+								<div class="mb-1 flex w-full justify-between items-center">
+									<div class=" self-center text-xs font-medium text-gray-500">
+										{$i18n.t('Description')}
+									</div>
+
+									<button
+										class="p-1 text-xs flex rounded-sm transition"
+										type="button"
+										aria-pressed={enableDescription ? 'true' : 'false'}
+										aria-label={enableDescription
+											? $i18n.t('Custom description enabled')
+											: $i18n.t('Default description enabled')}
+										on:click={() => {
+											enableDescription = !enableDescription;
+										}}
+									>
+										{#if !enableDescription}
+											<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+										{:else}
+											<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+										{/if}
+									</button>
+								</div>
+
+								{#if enableDescription}
+									<Textarea
+										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+										placeholder={$i18n.t('Add a short description about what this model does')}
+										bind:value={info.meta.description}
+									/>
+								{/if}
+							</div>
+
+							<div class="w-full mb-1 max-w-full">
+								<div class="">
+									<Tags
+										tags={info?.meta?.tags ?? []}
+										on:delete={(e) => {
+											const tagName = e.detail;
+											info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+										}}
+										on:add={(e) => {
+											const tagName = e.detail;
+											if (!(info?.meta?.tags ?? null)) {
+												info.meta.tags = [{ name: tagName }];
+											} else {
+												info.meta.tags = [...info.meta.tags, { name: tagName }];
+											}
+										}}
+									/>
+								</div>
 							</div>
 						</div>
 					</div>
-
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
@@ -706,53 +713,47 @@
 						{/if}
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
 					<div class="my-2">
 						<Knowledge bind:selectedItems={knowledge} />
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
 					<div class="my-2">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
+						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 					</div>
 
-					{#if $functions.filter((func) => func.type === 'filter').length > 0 || $functions.filter((func) => func.type === 'action').length > 0}
+					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
 						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
-						{#if $functions.filter((func) => func.type === 'filter').length > 0}
+						{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
 							<div class="my-2">
 								<FiltersSelector
 									bind:selectedFilterIds={filterIds}
-									filters={$functions.filter((func) => func.type === 'filter')}
+									filters={($functions ?? []).filter((func) => func.type === 'filter')}
 								/>
 							</div>
 
-							{#if filterIds.length > 0}
-								{@const toggleableFilters = $functions.filter(
-									(func) =>
-										func.type === 'filter' &&
-										(filterIds.includes(func.id) || func?.is_global) &&
-										func?.meta?.toggle
-								)}
+							{@const toggleableFilters = $functions.filter(
+								(func) =>
+									func.type === 'filter' &&
+									(filterIds.includes(func.id) || func?.is_global) &&
+									func?.meta?.toggle
+							)}
 
-								{#if toggleableFilters.length > 0}
-									<div class="my-2">
-										<DefaultFiltersSelector
-											bind:selectedFilterIds={defaultFilterIds}
-											filters={toggleableFilters}
-										/>
-									</div>
-								{/if}
+							{#if toggleableFilters.length > 0}
+								<div class="my-2">
+									<DefaultFiltersSelector
+										bind:selectedFilterIds={defaultFilterIds}
+										filters={toggleableFilters}
+									/>
+								</div>
 							{/if}
 						{/if}
 
-						{#if $functions.filter((func) => func.type === 'action').length > 0}
+						{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
 							<div class="my-2">
 								<ActionsSelector
 									bind:selectedActionIds={actionIds}
-									actions={$functions.filter((func) => func.type === 'action')}
+									actions={($functions ?? []).filter((func) => func.type === 'action')}
 								/>
 							</div>
 						{/if}
@@ -778,6 +779,20 @@
 							</div>
 						{/if}
 					{/if}
+
+					<div class="my-2">
+						<div class="flex w-full justify-between mb-1">
+							<div class="self-center text-xs font-medium text-gray-500">
+								{$i18n.t('TTS Voice')}
+							</div>
+						</div>
+						<input
+							class="w-full text-sm bg-transparent outline-hidden"
+							type="text"
+							bind:value={tts.voice}
+							placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
+						/>
+					</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 

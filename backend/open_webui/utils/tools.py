@@ -37,18 +37,46 @@ from langchain_core.utils.function_calling import (
 from open_webui.utils.misc import is_string_allowed
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
+from open_webui.models.groups import Groups
 from open_webui.utils.plugin import load_tool_module_by_id
+from open_webui.utils.access_control import has_access
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
-    SRC_LOG_LEVELS,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+)
+from open_webui.tools.builtin import (
+    search_web,
+    fetch_url,
+    generate_image,
+    edit_image,
+    search_memories,
+    add_memory,
+    replace_memory_content,
+    get_current_timestamp,
+    calculate_timestamp,
+    search_notes,
+    search_chats,
+    search_channels,
+    search_channel_messages,
+    view_note,
+    view_chat,
+    view_channel_message,
+    view_channel_thread,
+    replace_note_content,
+    write_note,
+    list_knowledge_bases,
+    search_knowledge_bases,
+    query_knowledge_bases,
+    search_knowledge_files,
+    query_knowledge_files,
+    view_knowledge_file,
 )
 
 import copy
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 def get_async_tool_function_and_apply_extra_params(
@@ -106,15 +134,114 @@ def get_updated_tool_function(function: Callable, extra_params: dict):
     return function
 
 
+def has_tool_server_access(
+    user: UserModel, server_connection: dict, user_group_ids: set = None
+) -> bool:
+    """Check if user has access to a tool server (MCP or OpenAPI)."""
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        return True
+
+    if user_group_ids is None:
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
+
+    access_control = server_connection.get("config", {}).get("access_control", None)
+    return has_access(user.id, "read", access_control, user_group_ids)
+
+
 async def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
+    """Load tools for the given tool_ids, checking access control."""
     tools_dict = {}
+
+    # Get user's group memberships for access control checks
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
     for tool_id in tool_ids:
         tool = Tools.get_tool_by_id(tool_id)
-        if tool is None:
+        if tool:
+            # Check access control for local tools
+            if (
+                not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                and tool.user_id != user.id
+                and not has_access(user.id, "read", tool.access_control, user_group_ids)
+            ):
+                log.warning(f"Access denied to tool {tool_id} for user {user.id}")
+                continue
 
+            module = request.app.state.TOOLS.get(tool_id, None)
+            if module is None:
+                module, _ = load_tool_module_by_id(tool_id)
+                request.app.state.TOOLS[tool_id] = module
+
+            __user__ = {
+                **extra_params["__user__"],
+            }
+
+            # Set valves for the tool
+            if hasattr(module, "valves") and hasattr(module, "Valves"):
+                valves = Tools.get_tool_valves_by_id(tool_id) or {}
+                module.valves = module.Valves(**valves)
+            if hasattr(module, "UserValves"):
+                __user__["valves"] = module.UserValves(  # type: ignore
+                    **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
+                )
+
+            for spec in tool.specs:
+                # TODO: Fix hack for OpenAI API
+                # Some times breaks OpenAI but others don't. Leaving the comment
+                for val in spec.get("parameters", {}).get("properties", {}).values():
+                    if val.get("type") == "str":
+                        val["type"] = "string"
+
+                # Remove internal reserved parameters (e.g. __id__, __user__)
+                spec["parameters"]["properties"] = {
+                    key: val
+                    for key, val in spec["parameters"]["properties"].items()
+                    if not key.startswith("__")
+                }
+
+                # convert to function that takes only model params and inserts custom params
+                function_name = spec["name"]
+                tool_function = getattr(module, function_name)
+                callable = get_async_tool_function_and_apply_extra_params(
+                    tool_function,
+                    {
+                        **extra_params,
+                        "__id__": tool_id,
+                        "__user__": __user__,
+                    },
+                )
+
+                # TODO: Support Pydantic models as parameters
+                if callable.__doc__ and callable.__doc__.strip() != "":
+                    s = re.split(":(param|return)", callable.__doc__, 1)
+                    spec["description"] = s[0]
+                else:
+                    spec["description"] = function_name
+
+                tool_dict = {
+                    "tool_id": tool_id,
+                    "callable": callable,
+                    "spec": spec,
+                    # Misc info
+                    "metadata": {
+                        "file_handler": hasattr(module, "file_handler")
+                        and module.file_handler,
+                        "citation": hasattr(module, "citation") and module.citation,
+                    },
+                }
+
+                # Handle function name collisions
+                while function_name in tools_dict:
+                    log.warning(
+                        f"Tool {function_name} already exists in another tools!"
+                    )
+                    # Prepend tool ID to function name
+                    function_name = f"{tool_id}_{function_name}"
+
+                tools_dict[function_name] = tool_dict
+        else:
             if tool_id.startswith("server:"):
                 splits = tool_id.split(":")
 
@@ -148,6 +275,15 @@ async def get_tools(
                             tool_server_idx
                         ]
                     )
+
+                    # Check access control for tool server
+                    if not has_tool_server_access(
+                        user, tool_server_connection, user_group_ids
+                    ):
+                        log.warning(
+                            f"Access denied to tool server {server_id} for user {user.id}"
+                        )
+                        continue
 
                     specs = tool_server_data.get("specs", [])
                     function_name_filter_list = tool_server_connection.get(
@@ -243,81 +379,116 @@ async def get_tools(
                 else:
                     continue
 
-            else:
-                continue
-        else:
-            module = request.app.state.TOOLS.get(tool_id, None)
-            if module is None:
-                module, _ = load_tool_module_by_id(tool_id)
-                request.app.state.TOOLS[tool_id] = module
+    return tools_dict
 
-            __user__ = {
-                **extra_params["__user__"],
-            }
 
-            # Set valves for the tool
-            if hasattr(module, "valves") and hasattr(module, "Valves"):
-                valves = Tools.get_tool_valves_by_id(tool_id) or {}
-                module.valves = module.Valves(**valves)
-            if hasattr(module, "UserValves"):
-                __user__["valves"] = module.UserValves(  # type: ignore
-                    **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
-                )
+def get_builtin_tools(
+    request: Request, extra_params: dict, features: dict = None, model: dict = None
+) -> dict[str, dict]:
+    """
+    Get built-in tools for native function calling.
+    Only returns tools when BOTH the global config is enabled AND the model capability allows it.
+    """
+    tools_dict = {}
+    builtin_functions = []
+    features = features or {}
+    model = model or {}
 
-            for spec in tool.specs:
-                # TODO: Fix hack for OpenAI API
-                # Some times breaks OpenAI but others don't. Leaving the comment
-                for val in spec.get("parameters", {}).get("properties", {}).values():
-                    if val.get("type") == "str":
-                        val["type"] = "string"
+    # Helper to get model capabilities (defaults to True if not specified)
+    def get_model_capability(name: str, default: bool = True) -> bool:
+        return (
+            model.get("info", {})
+            .get("meta", {})
+            .get("capabilities", {})
+            .get(name, default)
+        )
 
-                # Remove internal reserved parameters (e.g. __id__, __user__)
-                spec["parameters"]["properties"] = {
-                    key: val
-                    for key, val in spec["parameters"]["properties"].items()
-                    if not key.startswith("__")
-                }
+    # Time utilities - always available for date calculations
+    builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
-                # convert to function that takes only model params and inserts custom params
-                function_name = spec["name"]
-                tool_function = getattr(module, function_name)
-                callable = get_async_tool_function_and_apply_extra_params(
-                    tool_function,
-                    {
-                        **extra_params,
-                        "__id__": tool_id,
-                        "__user__": __user__,
-                    },
-                )
+    # Knowledge base tools - conditional injection based on model knowledge
+    # If model has attached knowledge (any type), only provide query_knowledge_files
+    # Otherwise, provide all KB browsing tools
+    model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
+    if model_knowledge:
+        # Model has attached knowledge - only allow semantic search within it
+        builtin_functions.append(query_knowledge_files)
+    else:
+        # No model knowledge - allow full KB browsing
+        builtin_functions.extend(
+            [
+                list_knowledge_bases,
+                search_knowledge_bases,
+                query_knowledge_bases,
+                search_knowledge_files,
+                query_knowledge_files,
+                view_knowledge_file,
+            ]
+        )
 
-                # TODO: Support Pydantic models as parameters
-                if callable.__doc__ and callable.__doc__.strip() != "":
-                    s = re.split(":(param|return)", callable.__doc__, 1)
-                    spec["description"] = s[0]
-                else:
-                    spec["description"] = function_name
+    # Chats tools - search and fetch user's chat history
+    builtin_functions.extend([search_chats, view_chat])
 
-                tool_dict = {
-                    "tool_id": tool_id,
-                    "callable": callable,
-                    "spec": spec,
-                    # Misc info
-                    "metadata": {
-                        "file_handler": hasattr(module, "file_handler")
-                        and module.file_handler,
-                        "citation": hasattr(module, "citation") and module.citation,
-                    },
-                }
+    # Add memory tools if enabled for this chat
+    if features.get("memory"):
+        builtin_functions.extend([search_memories, add_memory, replace_memory_content])
 
-                # Handle function name collisions
-                while function_name in tools_dict:
-                    log.warning(
-                        f"Tool {function_name} already exists in another tools!"
-                    )
-                    # Prepend tool ID to function name
-                    function_name = f"{tool_id}_{function_name}"
+    # Add web search tools if enabled globally AND model has web_search capability
+    if getattr(
+        request.app.state.config, "ENABLE_WEB_SEARCH", False
+    ) and get_model_capability("web_search"):
+        builtin_functions.extend([search_web, fetch_url])
 
-                tools_dict[function_name] = tool_dict
+    # Add image generation/edit tools if enabled globally AND model has image_generation capability
+    if getattr(
+        request.app.state.config, "ENABLE_IMAGE_GENERATION", False
+    ) and get_model_capability("image_generation"):
+        builtin_functions.append(generate_image)
+    if getattr(
+        request.app.state.config, "ENABLE_IMAGE_EDIT", False
+    ) and get_model_capability("image_generation"):
+        builtin_functions.append(edit_image)
+
+    # Notes tools - search, view, create, and update user's notes (if notes enabled globally)
+    if getattr(request.app.state.config, "ENABLE_NOTES", False):
+        builtin_functions.extend(
+            [search_notes, view_note, write_note, replace_note_content]
+        )
+
+    # Channels tools - search channels and messages (if channels enabled globally)
+    if getattr(request.app.state.config, "ENABLE_CHANNELS", False):
+        builtin_functions.extend(
+            [
+                search_channels,
+                search_channel_messages,
+                view_channel_thread,
+                view_channel_message,
+            ]
+        )
+
+    for func in builtin_functions:
+        callable = get_async_tool_function_and_apply_extra_params(
+            func,
+            {
+                "__request__": request,
+                "__user__": extra_params.get("__user__", {}),
+                "__event_emitter__": extra_params.get("__event_emitter__"),
+                "__chat_id__": extra_params.get("__chat_id__"),
+                "__message_id__": extra_params.get("__message_id__"),
+                "__model_knowledge__": model_knowledge,
+            },
+        )
+
+        # Generate spec from function
+        pydantic_model = convert_function_to_pydantic_model(func)
+        spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
+
+        tools_dict[func.__name__] = {
+            "tool_id": f"builtin:{func.__name__}",
+            "callable": callable,
+            "spec": spec,
+            "type": "builtin",
+        }
 
     return tools_dict
 

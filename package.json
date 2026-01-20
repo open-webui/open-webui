@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.6.41",
+	"version": "0.7.2",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -47,7 +47,7 @@
 		"tailwindcss": "^4.0.0",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
-		"vite": "^5.4.14",
+		"vite": "^5.4.21",
 		"vitest": "^1.6.1"
 	},
 	"type": "module",
@@ -106,11 +106,12 @@
 		"i18next-resources-to-backend": "^1.2.0",
 		"idb": "^7.1.1",
 		"js-sha256": "^0.10.1",
-		"jspdf": "^3.0.0",
+		"jspdf": "^4.0.0",
 		"katex": "^0.16.22",
 		"kokoro-js": "^1.1.1",
 		"leaflet": "^1.9.4",
 		"lowlight": "^3.3.0",
+		"mammoth": "^1.11.0",
 		"marked": "^9.1.0",
 		"mermaid": "^11.10.1",
 		"paneforge": "^0.0.6",
@@ -140,7 +141,9 @@
 		"vega": "^6.2.0",
 		"vega-lite": "^6.4.1",
 		"vite-plugin-static-copy": "^2.2.0",
+		"xlsx": "^0.18.5",
 		"y-prosemirror": "^1.3.7",
+		"y-protocols": "^1.0.7",
 		"yaml": "^2.7.1",
 		"yjs": "^13.6.27"
 	},

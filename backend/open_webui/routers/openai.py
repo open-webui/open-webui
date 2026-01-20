@@ -19,6 +19,9 @@ from fastapi.responses import (
 )
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
+from sqlalchemy.orm import Session
+
+from open_webui.internal.db import get_session
 
 from open_webui.models.models import Models
 from open_webui.config import (
@@ -35,7 +38,6 @@ from open_webui.env import (
 from open_webui.models.users import UserModel
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
 
 
 from open_webui.utils.payload import (
@@ -53,7 +55,6 @@ from open_webui.utils.headers import include_user_info_headers
 
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
 
 ##########################################
@@ -455,14 +456,14 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
     return responses
 
 
-async def get_filtered_models(models, user):
+async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("data", []):
-        model_info = Models.get_model_by_id(model["id"])
+        model_info = Models.get_model_by_id(model["id"], db=db)
         if model_info:
             if user.id == model_info.user_id or has_access(
-                user.id, type="read", access_control=model_info.access_control
+                user.id, type="read", access_control=model_info.access_control, db=db
             ):
                 filtered_models.append(model)
     return filtered_models
@@ -799,6 +800,8 @@ async def generate_chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
+    bypass_system_prompt: bool = False,
+    db: Session = Depends(get_session),
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
@@ -809,13 +812,18 @@ async def generate_chat_completion(
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id)
+    model_info = Models.get_model_by_id(model_id, db=db)
 
     # Check model info and override the payload
     if model_info:
         if model_info.base_model_id:
-            payload["model"] = model_info.base_model_id
-            model_id = model_info.base_model_id
+            base_model_id = (
+                request.base_model_id
+                if hasattr(request, "base_model_id")
+                else model_info.base_model_id
+            )  # Use request's base_model_id if available
+            payload["model"] = base_model_id
+            model_id = base_model_id
 
         params = model_info.params.model_dump()
 
@@ -823,14 +831,18 @@ async def generate_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+            if not bypass_system_prompt:
+                payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
             if not (
                 user.id == model_info.user_id
                 or has_access(
-                    user.id, type="read", access_control=model_info.access_control
+                    user.id,
+                    type="read",
+                    access_control=model_info.access_control,
+                    db=db,
                 )
             ):
                 raise HTTPException(
@@ -891,10 +903,11 @@ async def generate_chat_completion(
         del payload["max_tokens"]
 
     # Convert the modified body back to JSON
-    if "logit_bias" in payload:
-        payload["logit_bias"] = json.loads(
-            convert_logit_bias_input_to_json(payload["logit_bias"])
-        )
+    if "logit_bias" in payload and payload["logit_bias"]:
+        logit_bias = convert_logit_bias_input_to_json(payload["logit_bias"])
+
+        if logit_bias:
+            payload["logit_bias"] = json.loads(logit_bias)
 
     headers, cookies = await get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user

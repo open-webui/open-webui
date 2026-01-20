@@ -170,7 +170,6 @@
 	let speakingIdx: number | undefined;
 
 	let loadingSpeech = false;
-	let generatingImage = false;
 
 	let showRateComment = false;
 
@@ -208,6 +207,19 @@
 		speaking = true;
 		const content = removeAllDetails(message.content);
 
+		// Get voice: model-specific > user settings > config default
+		const getVoiceId = () => {
+			// Check for model-specific TTS voice first
+			if (model?.info?.meta?.tts?.voice) {
+				return model.info.meta.tts.voice;
+			}
+			// Fall back to user settings or config default
+			if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+				return $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice;
+			}
+			return $config?.audio?.tts?.voice;
+		};
+
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
@@ -215,12 +227,8 @@
 				if (voices.length > 0) {
 					clearInterval(getVoicesLoop);
 
-					const voice =
-						voices
-							?.filter(
-								(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							)
-							?.at(0) ?? undefined;
+					const voiceId = getVoiceId();
+					const voice = voices?.filter((v) => v.voiceURI === voiceId)?.at(0) ?? undefined;
 
 					console.log(voice);
 
@@ -266,7 +274,9 @@
 				return;
 			}
 
-			console.debug('Prepared message content for TTS', messageContentParts);
+			const voiceId = getVoiceId();
+			console.debug('Prepared message content for TTS', messageContentParts, 'voice:', voiceId);
+
 			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
 				if (!$TTSWorker) {
 					await TTSWorker.set(
@@ -282,7 +292,7 @@
 					const url = await $TTSWorker
 						.generate({
 							text: sentence,
-							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+							voice: voiceId
 						})
 						.catch((error) => {
 							console.error(error);
@@ -299,19 +309,15 @@
 				}
 			} else {
 				for (const [idx, sentence] of messageContentParts.entries()) {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							: $config?.audio?.tts?.voice,
-						sentence
-					).catch((error) => {
-						console.error(error);
-						toast.error(`${error}`);
+					const res = await synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch(
+						(error) => {
+							console.error(error);
+							toast.error(`${error}`);
 
-						speaking = false;
-						loadingSpeech = false;
-					});
+							speaking = false;
+							loadingSpeech = false;
+						}
+					);
 
 					if (res && speaking) {
 						const blob = await res.blob();
@@ -388,28 +394,6 @@
 		edit = false;
 		editedContent = '';
 		await tick();
-	};
-
-	const generateImage = async (message: MessageType) => {
-		generatingImage = true;
-		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
-			toast.error(`${error}`);
-		});
-		console.log(res);
-
-		if (res) {
-			const files = res.map((image) => ({
-				type: 'image',
-				url: `${image.url}`
-			}));
-
-			saveMessage(message.id, {
-				...message,
-				files: files
-			});
-		}
-
-		generatingImage = false;
 	};
 
 	let feedbackLoading = false;
@@ -666,10 +650,13 @@
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
-							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+							<div
+								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
+								dir={$settings?.chatDirection ?? 'auto'}
+							>
 								{#each message.files as file}
 									<div>
-										{#if file.type === 'image'}
+										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
 											<Image src={file.url} alt={message.content} />
 										{:else}
 											<FileItem
@@ -694,7 +681,7 @@
 											src={embed}
 											allowScripts={true}
 											allowForms={true}
-											allowSameOrigin={true}
+											allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
 											allowPopups={true}
 										/>
 									</div>
@@ -824,6 +811,7 @@
 								<Citations
 									bind:this={citationsElement}
 									id={message?.id}
+									{chatId}
 									sources={message?.sources ?? message?.citations}
 									{readOnly}
 								/>
@@ -1081,73 +1069,6 @@
 														stroke-linecap="round"
 														stroke-linejoin="round"
 														d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
-													/>
-												</svg>
-											{/if}
-										</button>
-									</Tooltip>
-								{/if}
-
-								{#if $config?.features.enable_image_generation && ($user?.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
-									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
-										<button
-											aria-label={$i18n.t('Generate Image')}
-											class="{isLastMessage || ($settings?.highContrastMode ?? false)
-												? 'visible'
-												: 'invisible group-hover:visible'}  p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												if (!generatingImage) {
-													generateImage(message);
-												}
-											}}
-										>
-											{#if generatingImage}
-												<svg
-													aria-hidden="true"
-													class=" w-4 h-4"
-													fill="currentColor"
-													viewBox="0 0 24 24"
-													xmlns="http://www.w3.org/2000/svg"
-												>
-													<style>
-														.spinner_S1WN {
-															animation: spinner_MGfb 0.8s linear infinite;
-															animation-delay: -0.8s;
-														}
-
-														.spinner_Km9P {
-															animation-delay: -0.65s;
-														}
-
-														.spinner_JApP {
-															animation-delay: -0.5s;
-														}
-
-														@keyframes spinner_MGfb {
-															93.75%,
-															100% {
-																opacity: 0.2;
-															}
-														}
-													</style>
-													<circle class="spinner_S1WN" cx="4" cy="12" r="3" />
-													<circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3" />
-													<circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" />
-												</svg>
-											{:else}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													aria-hidden="true"
-													viewBox="0 0 24 24"
-													stroke-width="2.3"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
 													/>
 												</svg>
 											{/if}
@@ -1460,37 +1381,35 @@
 										{/if}
 									{/if}
 
-									{#if isLastMessage}
-										{#each model?.actions ?? [] as action}
-											<Tooltip content={action.name} placement="bottom">
-												<button
-													type="button"
-													aria-label={action.name}
-													class="{isLastMessage || ($settings?.highContrastMode ?? false)
-														? 'visible'
-														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														actionMessage(action.id, message);
-													}}
-												>
-													{#if action?.icon}
-														<div class="size-4">
-															<img
-																src={action.icon}
-																class="w-4 h-4 {action.icon.includes('svg')
-																	? 'dark:invert-[80%]'
-																	: ''}"
-																style="fill: currentColor;"
-																alt={action.name}
-															/>
-														</div>
-													{:else}
-														<Sparkles strokeWidth="2.1" className="size-4" />
-													{/if}
-												</button>
-											</Tooltip>
-										{/each}
-									{/if}
+									{#each model?.actions ?? [] as action}
+										<Tooltip content={action.name} placement="bottom">
+											<button
+												type="button"
+												aria-label={action.name}
+												class="{isLastMessage || ($settings?.highContrastMode ?? false)
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													actionMessage(action.id, message);
+												}}
+											>
+												{#if action?.icon}
+													<div class="size-4">
+														<img
+															src={action.icon}
+															class="w-4 h-4 {action.icon.includes('svg')
+																? 'dark:invert-[80%]'
+																: ''}"
+															style="fill: currentColor;"
+															alt={action.name}
+														/>
+													</div>
+												{:else}
+													<Sparkles strokeWidth="2.1" className="size-4" />
+												{/if}
+											</button>
+										</Tooltip>
+									{/each}
 								{/if}
 							{/if}
 						{/if}

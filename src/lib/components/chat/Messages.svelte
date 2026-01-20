@@ -77,7 +77,15 @@
 		let _messages = [];
 
 		let message = history.messages[history.currentId];
+		const visitedMessageIds = new Set();
+
 		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
+			if (visitedMessageIds.has(message.id)) {
+				console.warn('Circular dependency detected in message history', message.id);
+				break;
+			}
+			visitedMessageIds.add(message.id);
+
 			_messages.unshift({ ...message });
 			message = message.parentId !== null ? history.messages[message.parentId] : null;
 		}
@@ -346,6 +354,10 @@
 	};
 
 	const saveMessage = async (messageId, message) => {
+		if (!history.messages?.[messageId]) {
+			return;
+		}
+
 		history.messages[messageId] = message;
 		await updateChat();
 	};

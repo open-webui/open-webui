@@ -6,112 +6,114 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "fastapi==0.123.0",
-    "uvicorn[standard]==0.37.0",
+    "fastapi==0.128.0",
+    "uvicorn[standard]==0.40.0",
     "pydantic==2.12.5",
-    "python-multipart==0.0.20",
+    "python-multipart==0.0.21",
     "itsdangerous==2.2.0",
 
-    "python-socketio==5.15.0",
+    "python-socketio==5.16.0",
     "python-jose==3.5.0",
     "cryptography",
     "bcrypt==5.0.0",
     "argon2-cffi==25.1.0",
     "PyJWT[crypto]==2.10.1",
-    "authlib==1.6.5",
+    "authlib==1.6.6",
 
     "requests==2.32.5",
-    "aiohttp==3.12.15",
+    "aiohttp==3.13.2",
     "async-timeout",
     "aiocache",
     "aiofiles",
     "starlette-compress==1.6.1",
     "httpx[socks,http2,zstd,cli,brotli]==0.28.1",
     "starsessions[redis]==2.2.1",
+    "python-mimeparse==2.0.0",
 
-    "sqlalchemy==2.0.38",
+    "sqlalchemy==2.0.45",
     "alembic==1.17.2",
     "peewee==3.18.3",
     "peewee-migrate==1.14.3",
 
-    "pycrdt==0.12.25",
+    "pycrdt==0.12.44",
     "redis",
 
-    "APScheduler==3.10.4",
-    "RestrictedPython==8.0",
+    "APScheduler==3.11.2",
+    "RestrictedPython==8.1",
 
     "loguru==0.7.3",
     "asgiref==3.11.0",
 
     "tiktoken",
-    "mcp==1.22.0",
+    "mcp==1.25.0",
 
     "openai",
     "anthropic",
-    "google-genai==1.52.0",
-    "google-generativeai==0.8.5",
+    "google-genai==1.56.0",
 
-    "langchain==0.3.27",
-    "langchain-community==0.3.29",
+    "langchain==1.2.0",
+    "langchain-community==0.4.1",
+    "langchain-classic==1.0.1",
+    "langchain-text-splitters==1.1.0",
 
     "fake-useragent==2.2.0",
-    "chromadb==1.0.20",
-    "opensearch-py==2.8.0",
-    "PyMySQL==1.1.1",
-    "boto3==1.41.5",
+    "chromadb==1.4.0",
+    "opensearch-py==3.1.0",
+    "PyMySQL==1.1.2",
+    "boto3==1.42.21",
     
     "transformers==4.57.3",
-    "sentence-transformers==5.1.2",
+    "sentence-transformers==5.2.0",
     "accelerate",
-    "pyarrow==20.0.0",
+    "pyarrow==20.0.0", # fix: pin pyarrow version to 20 for rpi compatibility #15897
     "einops==0.8.1",
 
     "ftfy==6.3.1",
     "chardet==5.2.0",
-    "pypdf==6.4.0",
-    "fpdf2==2.8.2",
-    "pymdown-extensions==10.17.2",
-    "docx2txt==0.8",
+    "pypdf==6.5.0",
+    "fpdf2==2.8.5",
+    "pymdown-extensions==10.20",
+    "docx2txt==0.9",
     "python-pptx==1.0.2",
-    "unstructured==0.18.21",
+    "unstructured==0.18.24",
     "msoffcrypto-tool==5.4.2",
-    "nltk==3.9.1",
+    "nltk==3.9.2",
     "Markdown==3.10",
     "pypandoc==1.16.2",
-    "pandas==2.2.3",
+    "pandas==2.3.3",
     "openpyxl==3.1.5",
     "pyxlsb==1.0.10",
-    "xlrd==2.0.1",
+    "xlrd==2.0.2",
     "validators==0.35.0",
     "psutil",
     "sentencepiece",
     "soundfile==0.13.1",
     "azure-ai-documentintelligence==1.0.2",
 
-    "pillow==11.3.0",
-    "opencv-python-headless==4.11.0.86",
+    "pillow==12.1.0",
+    "opencv-python-headless==4.12.0.88",
     "rapidocr-onnxruntime==1.4.4",
     "rank-bm25==0.2.2",
 
-    "onnxruntime==1.20.1",
-    "faster-whisper==1.1.1",
+    "onnxruntime==1.23.2",
+    "faster-whisper==1.2.1",
 
-    "black==25.11.0",
-    "youtube-transcript-api==1.2.2",
+    "black==25.12.0",
+    "youtube-transcript-api==1.2.3",
     "pytube==15.0.0",
 
     "pydub",
-    "ddgs==9.9.2",
+    "ddgs==9.10.0",
 
     "google-api-python-client",
     "google-auth-httplib2",
     "google-auth-oauthlib",
 
     "googleapis-common-protos==1.72.0",
-    "google-cloud-storage==2.19.0",
+    "google-cloud-storage==3.7.0",
 
-    "azure-identity==1.25.0",
-    "azure-storage-blob==12.24.1",
+    "azure-identity==1.25.1",
+    "azure-storage-blob==12.27.1",
 
     "ldap3==2.9.1",
 ]
@@ -130,30 +132,31 @@ classifiers = [
 
 [project.optional-dependencies]
 postgres = [
-    "psycopg2-binary==2.9.10",
-    "pgvector==0.4.1",
+    "psycopg2-binary==2.9.11",
+    "pgvector==0.4.2",
 ]
 
 all = [
     "pymongo",
-    "psycopg2-binary==2.9.9",
-    "pgvector==0.4.0",
+    "psycopg2-binary==2.9.11",
+    "pgvector==0.4.2",
     "moto[s3]>=5.0.26",
     "gcp-storage-emulator>=2024.8.3",
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.2.5",
-    "playwright==1.56.0",
-    "elasticsearch==9.1.0",
+    "playwright==1.57.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
+    "elasticsearch==9.2.1",
 
-    "qdrant-client==1.14.3",
-    "weaviate-client==4.17.0",
-    "pymilvus==2.6.4",
+    "qdrant-client==1.16.2",
+    
+    "weaviate-client==4.19.2",
+    "pymilvus==2.6.6",
     "pinecone==6.0.2",
-    "oracledb==3.2.0",
-    "colbert-ai==0.2.21",
+    "oracledb==3.4.1",
+    "colbert-ai==0.2.22",
 
-    "firecrawl-py==4.10.0",
+    "firecrawl-py==4.12.0",
     "azure-search-documents==11.6.0",
 ]
 

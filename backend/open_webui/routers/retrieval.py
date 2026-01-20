@@ -14,6 +14,7 @@ from typing import Iterator, List, Optional, Sequence, Union
 from fastapi import (
     Depends,
     FastAPI,
+    Query,
     File,
     Form,
     HTTPException,
@@ -28,13 +29,18 @@ from pydantic import BaseModel
 import tiktoken
 
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
-from langchain_text_splitters import MarkdownHeaderTextSplitter
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter,
+    TokenTextSplitter,
+    MarkdownHeaderTextSplitter,
+)
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, FileUpdateForm, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
+from open_webui.internal.db import get_session
+from sqlalchemy.orm import Session
 
 
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
@@ -84,8 +90,10 @@ from open_webui.retrieval.utils import (
 from open_webui.retrieval.vector.utils import filter_metadata
 from open_webui.utils.misc import (
     calculate_sha256_string,
+    sanitize_text_for_db,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission
 
 from open_webui.config import (
     ENV,
@@ -99,19 +107,18 @@ from open_webui.config import (
     RAG_EMBEDDING_QUERY_PREFIX,
 )
 from open_webui.env import (
-    SRC_LOG_LEVELS,
     DEVICE_TYPE,
     DOCKER,
     SENTENCE_TRANSFORMERS_BACKEND,
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION,
 )
 
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 ##########################################
 #
@@ -148,9 +155,14 @@ def get_rf(
     reranking_model: Optional[str] = None,
     external_reranker_url: str = "",
     external_reranker_api_key: str = "",
+    external_reranker_timeout: str = "",
     auto_update: bool = RAG_RERANKING_MODEL_AUTO_UPDATE,
 ):
     rf = None
+    # Convert timeout string to int or None (system default)
+    timeout_value = (
+        int(external_reranker_timeout) if external_reranker_timeout else None
+    )
     if reranking_model:
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
             try:
@@ -173,12 +185,14 @@ def get_rf(
                         url=external_reranker_url,
                         api_key=external_reranker_api_key,
                         model=reranking_model,
+                        timeout=timeout_value,
                     )
                 except Exception as e:
                     log.error(f"ExternalReranking: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT(e))
             else:
                 import sentence_transformers
+                import torch
 
                 try:
                     rf = sentence_transformers.CrossEncoder(
@@ -187,6 +201,11 @@ def get_rf(
                         trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                         backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
                         model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
+                        activation_fn=(
+                            torch.nn.Sigmoid()
+                            if SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION
+                            else None
+                        ),
                     )
                 except Exception as e:
                     log.error(f"CrossEncoder: {e}")
@@ -475,15 +494,19 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
         "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_API_TIMEOUT": request.app.state.config.MINERU_API_TIMEOUT,
         "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
         "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+        "RAG_EXTERNAL_RERANKER_TIMEOUT": request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
+        "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
+        "CHUNK_MIN_SIZE_TARGET": request.app.state.config.CHUNK_MIN_SIZE_TARGET,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
@@ -507,6 +530,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
             "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
+            "SEARXNG_LANGUAGE": request.app.state.config.SEARXNG_LANGUAGE,
             "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
             "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
             "YACY_PASSWORD": request.app.state.config.YACY_PASSWORD,
@@ -520,12 +544,14 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "SERPSTACK_HTTPS": request.app.state.config.SERPSTACK_HTTPS,
             "SERPER_API_KEY": request.app.state.config.SERPER_API_KEY,
             "SERPLY_API_KEY": request.app.state.config.SERPLY_API_KEY,
+            "DDGS_BACKEND": request.app.state.config.DDGS_BACKEND,
             "TAVILY_API_KEY": request.app.state.config.TAVILY_API_KEY,
             "SEARCHAPI_API_KEY": request.app.state.config.SEARCHAPI_API_KEY,
             "SEARCHAPI_ENGINE": request.app.state.config.SEARCHAPI_ENGINE,
             "SERPAPI_API_KEY": request.app.state.config.SERPAPI_API_KEY,
             "SERPAPI_ENGINE": request.app.state.config.SERPAPI_ENGINE,
             "JINA_API_KEY": request.app.state.config.JINA_API_KEY,
+            "JINA_API_BASE_URL": request.app.state.config.JINA_API_BASE_URL,
             "BING_SEARCH_V7_ENDPOINT": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
@@ -536,11 +562,13 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
+            "WEB_LOADER_TIMEOUT": request.app.state.config.WEB_LOADER_TIMEOUT,
             "ENABLE_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             "PLAYWRIGHT_WS_URL": request.app.state.config.PLAYWRIGHT_WS_URL,
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,
             "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
             "FIRECRAWL_API_BASE_URL": request.app.state.config.FIRECRAWL_API_BASE_URL,
+            "FIRECRAWL_TIMEOUT": request.app.state.config.FIRECRAWL_TIMEOUT,
             "TAVILY_EXTRACT_DEPTH": request.app.state.config.TAVILY_EXTRACT_DEPTH,
             "EXTERNAL_WEB_SEARCH_URL": request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             "EXTERNAL_WEB_SEARCH_API_KEY": request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -565,6 +593,7 @@ class WebConfig(BaseModel):
     BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
     OLLAMA_CLOUD_WEB_SEARCH_API_KEY: Optional[str] = None
     SEARXNG_QUERY_URL: Optional[str] = None
+    SEARXNG_LANGUAGE: Optional[str] = None
     YACY_QUERY_URL: Optional[str] = None
     YACY_USERNAME: Optional[str] = None
     YACY_PASSWORD: Optional[str] = None
@@ -578,12 +607,14 @@ class WebConfig(BaseModel):
     SERPSTACK_HTTPS: Optional[bool] = None
     SERPER_API_KEY: Optional[str] = None
     SERPLY_API_KEY: Optional[str] = None
+    DDGS_BACKEND: Optional[str] = None
     TAVILY_API_KEY: Optional[str] = None
     SEARCHAPI_API_KEY: Optional[str] = None
     SEARCHAPI_ENGINE: Optional[str] = None
     SERPAPI_API_KEY: Optional[str] = None
     SERPAPI_ENGINE: Optional[str] = None
     JINA_API_KEY: Optional[str] = None
+    JINA_API_BASE_URL: Optional[str] = None
     BING_SEARCH_V7_ENDPOINT: Optional[str] = None
     BING_SEARCH_V7_SUBSCRIPTION_KEY: Optional[str] = None
     EXA_API_KEY: Optional[str] = None
@@ -594,11 +625,13 @@ class WebConfig(BaseModel):
     SOUGOU_API_SID: Optional[str] = None
     SOUGOU_API_SK: Optional[str] = None
     WEB_LOADER_ENGINE: Optional[str] = None
+    WEB_LOADER_TIMEOUT: Optional[str] = None
     ENABLE_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
     PLAYWRIGHT_WS_URL: Optional[str] = None
     PLAYWRIGHT_TIMEOUT: Optional[int] = None
     FIRECRAWL_API_KEY: Optional[str] = None
     FIRECRAWL_API_BASE_URL: Optional[str] = None
+    FIRECRAWL_TIMEOUT: Optional[str] = None
     TAVILY_EXTRACT_DEPTH: Optional[str] = None
     EXTERNAL_WEB_SEARCH_URL: Optional[str] = None
     EXTERNAL_WEB_SEARCH_API_KEY: Optional[str] = None
@@ -656,6 +689,7 @@ class ConfigForm(BaseModel):
     MINERU_API_MODE: Optional[str] = None
     MINERU_API_URL: Optional[str] = None
     MINERU_API_KEY: Optional[str] = None
+    MINERU_API_TIMEOUT: Optional[str] = None
     MINERU_PARAMS: Optional[dict] = None
 
     # Reranking settings
@@ -663,10 +697,13 @@ class ConfigForm(BaseModel):
     RAG_RERANKING_ENGINE: Optional[str] = None
     RAG_EXTERNAL_RERANKER_URL: Optional[str] = None
     RAG_EXTERNAL_RERANKER_API_KEY: Optional[str] = None
+    RAG_EXTERNAL_RERANKER_TIMEOUT: Optional[str] = None
 
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
+    ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER: Optional[bool] = None
     CHUNK_SIZE: Optional[int] = None
+    CHUNK_MIN_SIZE_TARGET: Optional[int] = None
     CHUNK_OVERLAP: Optional[int] = None
 
     # File upload settings
@@ -877,6 +914,11 @@ async def update_rag_config(
         if form_data.MINERU_API_KEY is not None
         else request.app.state.config.MINERU_API_KEY
     )
+    request.app.state.config.MINERU_API_TIMEOUT = (
+        form_data.MINERU_API_TIMEOUT
+        if form_data.MINERU_API_TIMEOUT is not None
+        else request.app.state.config.MINERU_API_TIMEOUT
+    )
     request.app.state.config.MINERU_PARAMS = (
         form_data.MINERU_PARAMS
         if form_data.MINERU_PARAMS is not None
@@ -914,6 +956,12 @@ async def update_rag_config(
         else request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY
     )
 
+    request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT = (
+        form_data.RAG_EXTERNAL_RERANKER_TIMEOUT
+        if form_data.RAG_EXTERNAL_RERANKER_TIMEOUT is not None
+        else request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT
+    )
+
     log.info(
         f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
     )
@@ -934,6 +982,7 @@ async def update_rag_config(
                     request.app.state.config.RAG_RERANKING_MODEL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
                     request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+                    request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
                 )
 
                 request.app.state.RERANKING_FUNCTION = get_reranking_function(
@@ -961,6 +1010,11 @@ async def update_rag_config(
         form_data.CHUNK_SIZE
         if form_data.CHUNK_SIZE is not None
         else request.app.state.config.CHUNK_SIZE
+    )
+    request.app.state.config.CHUNK_MIN_SIZE_TARGET = (
+        form_data.CHUNK_MIN_SIZE_TARGET
+        if form_data.CHUNK_MIN_SIZE_TARGET is not None
+        else request.app.state.config.CHUNK_MIN_SIZE_TARGET
     )
     request.app.state.config.CHUNK_OVERLAP = (
         form_data.CHUNK_OVERLAP
@@ -1024,6 +1078,7 @@ async def update_rag_config(
             form_data.web.OLLAMA_CLOUD_WEB_SEARCH_API_KEY
         )
         request.app.state.config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
+        request.app.state.config.SEARXNG_LANGUAGE = form_data.web.SEARXNG_LANGUAGE
         request.app.state.config.YACY_QUERY_URL = form_data.web.YACY_QUERY_URL
         request.app.state.config.YACY_USERNAME = form_data.web.YACY_USERNAME
         request.app.state.config.YACY_PASSWORD = form_data.web.YACY_PASSWORD
@@ -1045,12 +1100,14 @@ async def update_rag_config(
         request.app.state.config.SERPSTACK_HTTPS = form_data.web.SERPSTACK_HTTPS
         request.app.state.config.SERPER_API_KEY = form_data.web.SERPER_API_KEY
         request.app.state.config.SERPLY_API_KEY = form_data.web.SERPLY_API_KEY
+        request.app.state.config.DDGS_BACKEND = form_data.web.DDGS_BACKEND
         request.app.state.config.TAVILY_API_KEY = form_data.web.TAVILY_API_KEY
         request.app.state.config.SEARCHAPI_API_KEY = form_data.web.SEARCHAPI_API_KEY
         request.app.state.config.SEARCHAPI_ENGINE = form_data.web.SEARCHAPI_ENGINE
         request.app.state.config.SERPAPI_API_KEY = form_data.web.SERPAPI_API_KEY
         request.app.state.config.SERPAPI_ENGINE = form_data.web.SERPAPI_ENGINE
         request.app.state.config.JINA_API_KEY = form_data.web.JINA_API_KEY
+        request.app.state.config.JINA_API_BASE_URL = form_data.web.JINA_API_BASE_URL
         request.app.state.config.BING_SEARCH_V7_ENDPOINT = (
             form_data.web.BING_SEARCH_V7_ENDPOINT
         )
@@ -1071,6 +1128,8 @@ async def update_rag_config(
 
         # Web loader settings
         request.app.state.config.WEB_LOADER_ENGINE = form_data.web.WEB_LOADER_ENGINE
+        request.app.state.config.WEB_LOADER_TIMEOUT = form_data.web.WEB_LOADER_TIMEOUT
+
         request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION = (
             form_data.web.ENABLE_WEB_LOADER_SSL_VERIFICATION
         )
@@ -1080,6 +1139,7 @@ async def update_rag_config(
         request.app.state.config.FIRECRAWL_API_BASE_URL = (
             form_data.web.FIRECRAWL_API_BASE_URL
         )
+        request.app.state.config.FIRECRAWL_TIMEOUT = form_data.web.FIRECRAWL_TIMEOUT
         request.app.state.config.EXTERNAL_WEB_SEARCH_URL = (
             form_data.web.EXTERNAL_WEB_SEARCH_URL
         )
@@ -1145,15 +1205,19 @@ async def update_rag_config(
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
         "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_API_TIMEOUT": request.app.state.config.MINERU_API_TIMEOUT,
         "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
         "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
         "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+        "RAG_EXTERNAL_RERANKER_TIMEOUT": request.app.state.config.RAG_EXTERNAL_RERANKER_TIMEOUT,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
+        "CHUNK_MIN_SIZE_TARGET": request.app.state.config.CHUNK_MIN_SIZE_TARGET,
+        "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER": request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
         "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
@@ -1177,6 +1241,7 @@ async def update_rag_config(
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
             "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
+            "SEARXNG_LANGUAGE": request.app.state.config.SEARXNG_LANGUAGE,
             "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
             "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
             "YACY_PASSWORD": request.app.state.config.YACY_PASSWORD,
@@ -1196,6 +1261,7 @@ async def update_rag_config(
             "SERPAPI_API_KEY": request.app.state.config.SERPAPI_API_KEY,
             "SERPAPI_ENGINE": request.app.state.config.SERPAPI_ENGINE,
             "JINA_API_KEY": request.app.state.config.JINA_API_KEY,
+            "JINA_API_BASE_URL": request.app.state.config.JINA_API_BASE_URL,
             "BING_SEARCH_V7_ENDPOINT": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
             "BING_SEARCH_V7_SUBSCRIPTION_KEY": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
             "EXA_API_KEY": request.app.state.config.EXA_API_KEY,
@@ -1206,11 +1272,13 @@ async def update_rag_config(
             "SOUGOU_API_SID": request.app.state.config.SOUGOU_API_SID,
             "SOUGOU_API_SK": request.app.state.config.SOUGOU_API_SK,
             "WEB_LOADER_ENGINE": request.app.state.config.WEB_LOADER_ENGINE,
+            "WEB_LOADER_TIMEOUT": request.app.state.config.WEB_LOADER_TIMEOUT,
             "ENABLE_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             "PLAYWRIGHT_WS_URL": request.app.state.config.PLAYWRIGHT_WS_URL,
             "PLAYWRIGHT_TIMEOUT": request.app.state.config.PLAYWRIGHT_TIMEOUT,
             "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
             "FIRECRAWL_API_BASE_URL": request.app.state.config.FIRECRAWL_API_BASE_URL,
+            "FIRECRAWL_TIMEOUT": request.app.state.config.FIRECRAWL_TIMEOUT,
             "TAVILY_EXTRACT_DEPTH": request.app.state.config.TAVILY_EXTRACT_DEPTH,
             "EXTERNAL_WEB_SEARCH_URL": request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             "EXTERNAL_WEB_SEARCH_API_KEY": request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -1228,6 +1296,85 @@ async def update_rag_config(
 # Document process and retrieval
 #
 ####################################
+
+
+def can_merge_chunks(a: Document, b: Document) -> bool:
+    if a.metadata.get("source") != b.metadata.get("source"):
+        return False
+
+    a_file_id = a.metadata.get("file_id")
+    b_file_id = b.metadata.get("file_id")
+
+    if a_file_id is not None and b_file_id is not None:
+        return a_file_id == b_file_id
+
+    return True
+
+
+def merge_docs_to_target_size(
+    request: Request,
+    chunks: list[Document],
+) -> list[Document]:
+    """
+    Best-effort normalization of chunk sizes.
+
+    Attempts to grow small chunks up to a desired minimum size,
+    without exceeding the maximum size or crossing source/file
+    boundaries.
+    """
+    min_chunk_size_target = request.app.state.config.CHUNK_MIN_SIZE_TARGET
+    max_chunk_size = request.app.state.config.CHUNK_SIZE
+
+    if min_chunk_size_target <= 0:
+        return chunks
+
+    measure_chunk_size = len
+    if request.app.state.config.TEXT_SPLITTER == "token":
+        encoding = tiktoken.get_encoding(
+            str(request.app.state.config.TIKTOKEN_ENCODING_NAME)
+        )
+        measure_chunk_size = lambda text: len(encoding.encode(text))
+
+    processed_chunks: list[Document] = []
+
+    current_chunk: Document | None = None
+    current_content: str = ""
+
+    for next_chunk in chunks:
+        if current_chunk is None:
+            current_chunk = next_chunk
+            current_content = next_chunk.page_content
+            continue  # First chunk initialization
+
+        proposed_content = f"{current_content}\n\n{next_chunk.page_content}"
+
+        can_merge = (
+            can_merge_chunks(current_chunk, next_chunk)
+            and measure_chunk_size(current_content) < min_chunk_size_target
+            and measure_chunk_size(proposed_content) <= max_chunk_size
+        )
+
+        if can_merge:
+            current_content = proposed_content
+        else:
+            processed_chunks.append(
+                Document(
+                    page_content=current_content,
+                    metadata={**current_chunk.metadata},
+                )
+            )
+            current_chunk = next_chunk
+            current_content = next_chunk.page_content
+
+    if current_chunk is not None:
+        processed_chunks.append(
+            Document(
+                page_content=current_content,
+                metadata={**current_chunk.metadata},
+            )
+        )
+
+    return processed_chunks
 
 
 def save_docs_to_vector_db(
@@ -1267,13 +1414,46 @@ def save_docs_to_vector_db(
             filter={"hash": metadata["hash"]},
         )
 
-        if result is not None:
+        if result is not None and result.ids and len(result.ids) > 0:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
                 log.info(f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
+        if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
+            log.info("Using markdown header text splitter")
+            # Define headers to split on - covering most common markdown header levels
+            markdown_splitter = MarkdownHeaderTextSplitter(
+                headers_to_split_on=[
+                    ("#", "Header 1"),
+                    ("##", "Header 2"),
+                    ("###", "Header 3"),
+                    ("####", "Header 4"),
+                    ("#####", "Header 5"),
+                    ("######", "Header 6"),
+                ],
+                strip_headers=False,  # Keep headers in content for context
+            )
+
+            split_docs = []
+            for doc in docs:
+                split_docs.extend(
+                    [
+                        Document(
+                            page_content=split_chunk.page_content,
+                            metadata={**doc.metadata},
+                        )
+                        for split_chunk in markdown_splitter.split_text(
+                            doc.page_content
+                        )
+                    ]
+                )
+
+            docs = split_docs
+            if request.app.state.config.CHUNK_MIN_SIZE_TARGET > 0:
+                docs = merge_docs_to_target_size(request, docs)
+
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE,
@@ -1294,59 +1474,13 @@ def save_docs_to_vector_db(
                 add_start_index=True,
             )
             docs = text_splitter.split_documents(docs)
-        elif request.app.state.config.TEXT_SPLITTER == "markdown_header":
-            log.info("Using markdown header text splitter")
-
-            # Define headers to split on - covering most common markdown header levels
-            headers_to_split_on = [
-                ("#", "Header 1"),
-                ("##", "Header 2"),
-                ("###", "Header 3"),
-                ("####", "Header 4"),
-                ("#####", "Header 5"),
-                ("######", "Header 6"),
-            ]
-
-            markdown_splitter = MarkdownHeaderTextSplitter(
-                headers_to_split_on=headers_to_split_on,
-                strip_headers=False,  # Keep headers in content for context
-            )
-
-            md_split_docs = []
-            for doc in docs:
-                md_header_splits = markdown_splitter.split_text(doc.page_content)
-                text_splitter = RecursiveCharacterTextSplitter(
-                    chunk_size=request.app.state.config.CHUNK_SIZE,
-                    chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                    add_start_index=True,
-                )
-                md_header_splits = text_splitter.split_documents(md_header_splits)
-
-                # Convert back to Document objects, preserving original metadata
-                for split_chunk in md_header_splits:
-                    headings_list = []
-                    # Extract header values in order based on headers_to_split_on
-                    for _, header_meta_key_name in headers_to_split_on:
-                        if header_meta_key_name in split_chunk.metadata:
-                            headings_list.append(
-                                split_chunk.metadata[header_meta_key_name]
-                            )
-
-                    md_split_docs.append(
-                        Document(
-                            page_content=split_chunk.page_content,
-                            metadata={**doc.metadata, "headings": headings_list},
-                        )
-                    )
-
-            docs = md_split_docs
         else:
             raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-    texts = [doc.page_content for doc in docs]
+    texts = [sanitize_text_for_db(doc.page_content) for doc in docs]
     metadatas = [
         {
             **doc.metadata,
@@ -1401,6 +1535,7 @@ def save_docs_to_vector_db(
                 if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
                 else None
             ),
+            enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
         )
 
         # Run async embedding in sync context
@@ -1447,14 +1582,15 @@ def process_file(
     request: Request,
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
     """
     Process a file and save its content to the vector database.
     """
     if user.role == "admin":
-        file = Files.get_file_by_id(form_data.file_id)
+        file = Files.get_file_by_id(form_data.file_id, db=db)
     else:
-        file = Files.get_file_by_id_and_user_id(form_data.file_id, user.id)
+        file = Files.get_file_by_id_and_user_id(form_data.file_id, user.id, db=db)
 
     if file:
         try:
@@ -1557,6 +1693,7 @@ def process_file(
                         MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
                         MINERU_API_URL=request.app.state.config.MINERU_API_URL,
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
+                        MINERU_API_TIMEOUT=request.app.state.config.MINERU_API_TIMEOUT,
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
                     docs = loader.load(
@@ -1595,12 +1732,13 @@ def process_file(
             Files.update_file_data_by_id(
                 file.id,
                 {"content": text_content},
+                db=db,
             )
             hash = calculate_sha256_string(text_content)
-            Files.update_file_hash_by_id(file.id, hash)
 
             if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
-                Files.update_file_data_by_id(file.id, {"status": "completed"})
+                Files.update_file_data_by_id(file.id, {"status": "completed"}, db=db)
+                Files.update_file_hash_by_id(file.id, hash, db=db)
                 return {
                     "status": True,
                     "collection_name": None,
@@ -1629,12 +1767,15 @@ def process_file(
                             {
                                 "collection_name": collection_name,
                             },
+                            db=db,
                         )
 
                         Files.update_file_data_by_id(
                             file.id,
                             {"status": "completed"},
+                            db=db,
                         )
+                        Files.update_file_hash_by_id(file.id, hash, db=db)
 
                         return {
                             "status": True,
@@ -1652,7 +1793,10 @@ def process_file(
             Files.update_file_data_by_id(
                 file.id,
                 {"status": "failed"},
+                db=db,
             )
+            # Clear the hash so the file can be re-uploaded after fixing the issue
+            Files.update_file_hash_by_id(file.id, None, db=db)
 
             if "No pandoc was found" in str(e):
                 raise HTTPException(
@@ -1715,44 +1859,53 @@ async def process_text(
 @router.post("/process/youtube")
 @router.post("/process/web")
 async def process_web(
-    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
+    request: Request,
+    form_data: ProcessUrlForm,
+    process: bool = Query(True, description="Whether to process and save the content"),
+    user=Depends(get_verified_user),
 ):
     try:
-        collection_name = form_data.collection_name
-        if not collection_name:
-            collection_name = calculate_sha256_string(form_data.url)[:63]
-
         content, docs = await run_in_threadpool(
             get_content_from_url, request, form_data.url
         )
         log.debug(f"text_content: {content}")
 
-        if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
-        else:
-            collection_name = None
+        if process:
+            collection_name = form_data.collection_name
+            if not collection_name:
+                collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filename": form_data.url,
-            "file": {
-                "data": {
-                    "content": content,
+            if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    docs,
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
+            else:
+                collection_name = None
+
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filename": form_data.url,
+                "file": {
+                    "data": {
+                        "content": content,
+                    },
+                    "meta": {
+                        "name": form_data.url,
+                        "source": form_data.url,
+                    },
                 },
-                "meta": {
-                    "name": form_data.url,
-                    "source": form_data.url,
-                },
-            },
-        }
+            }
+        else:
+            return {
+                "status": True,
+                "content": content,
+            }
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -1809,11 +1962,13 @@ def search_web(
             raise Exception("No PERPLEXITY_API_KEY found in environment variables")
     elif engine == "searxng":
         if request.app.state.config.SEARXNG_QUERY_URL:
+            searxng_kwargs = {"language": request.app.state.config.SEARXNG_LANGUAGE}
             return search_searxng(
                 request.app.state.config.SEARXNG_QUERY_URL,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
                 request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                **searxng_kwargs,
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -1923,6 +2078,7 @@ def search_web(
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             concurrent_requests=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
+            backend=request.app.state.config.DDGS_BACKEND,
         )
     elif engine == "tavily":
         if request.app.state.config.TAVILY_API_KEY:
@@ -1971,6 +2127,7 @@ def search_web(
             request.app.state.config.JINA_API_KEY,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.JINA_API_BASE_URL,
         )
     elif engine == "bing":
         return search_bing(
@@ -2057,6 +2214,19 @@ def search_web(
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
+    if not request.app.state.config.ENABLE_WEB_SEARCH:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if user.role != "admin" and not has_permission(
+        user.id, "features.web_search", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
     urls = []
     result_items = []
@@ -2066,16 +2236,38 @@ async def process_web_search(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
 
-        search_tasks = [
-            run_in_threadpool(
-                search_web,
-                request,
-                request.app.state.config.WEB_SEARCH_ENGINE,
-                query,
-                user,
-            )
-            for query in form_data.queries
-        ]
+        # Use semaphore to limit concurrent requests based on WEB_SEARCH_CONCURRENT_REQUESTS
+        # 0 or None = unlimited (previous behavior), positive number = limited concurrency
+        # Set to 1 for sequential execution (rate-limited APIs like Brave free tier)
+        concurrent_limit = request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS
+
+        if concurrent_limit:
+            # Limited concurrency with semaphore
+            semaphore = asyncio.Semaphore(concurrent_limit)
+
+            async def search_with_limit(query):
+                async with semaphore:
+                    return await run_in_threadpool(
+                        search_web,
+                        request,
+                        request.app.state.config.WEB_SEARCH_ENGINE,
+                        query,
+                        user,
+                    )
+
+            search_tasks = [search_with_limit(query) for query in form_data.queries]
+        else:
+            # Unlimited parallel execution (previous behavior)
+            search_tasks = [
+                run_in_threadpool(
+                    search_web,
+                    request,
+                    request.app.state.config.WEB_SEARCH_ENGINE,
+                    query,
+                    user,
+                )
+                for query in form_data.queries
+            ]
 
         search_results = await asyncio.gather(*search_tasks)
 
@@ -2346,10 +2538,19 @@ class DeleteForm(BaseModel):
 
 
 @router.post("/delete")
-def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin_user)):
+def delete_entries_from_collection(
+    form_data: DeleteForm,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
-            file = Files.get_file_by_id(form_data.file_id)
+            file = Files.get_file_by_id(form_data.file_id, db=db)
+            if not file:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
             hash = file.hash
 
             VECTOR_DB_CLIENT.delete(
@@ -2365,9 +2566,9 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 
 
 @router.post("/reset/db")
-def reset_vector_db(user=Depends(get_admin_user)):
+def reset_vector_db(user=Depends(get_admin_user), db: Session = Depends(get_session)):
     VECTOR_DB_CLIENT.reset()
-    Knowledges.delete_all_knowledge()
+    Knowledges.delete_all_knowledge(db=db)
 
 
 @router.post("/reset/uploads")
@@ -2425,6 +2626,7 @@ async def process_files_batch(
     request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ) -> BatchProcessFilesResponse:
     """
     Process a batch of files and save them to the vector database.
@@ -2487,7 +2689,9 @@ async def process_files_batch(
 
             # Update all files with collection name
             for file_update, file_result in zip(file_updates, file_results):
-                Files.update_file_by_id(id=file_result.file_id, form_data=file_update)
+                Files.update_file_by_id(
+                    id=file_result.file_id, form_data=file_update, db=db
+                )
                 file_result.status = "completed"
 
         except Exception as e:

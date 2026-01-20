@@ -136,11 +136,11 @@
 				class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1 pr-1 flex items-center gap-2.5"
 			>
 				{#if channel?.name}
-					<span>
+					<span class="line-clamp-1">
 						{channel.name}
 					</span>
 				{:else}
-					<span class="shrink-0">
+					<span class="shrink-0 line-clamp-1">
 						{channel?.users
 							?.filter((u) => u.id !== $user?.id)
 							.map((u) => u.name)
@@ -151,7 +151,7 @@
 						{@const dmUser = channel.users.find((u) => u.id !== $user?.id)}
 
 						{#if dmUser?.status_emoji || dmUser?.status_message}
-							<span class="flex gap-1.5">
+							<span class="flex gap-1.5 line-clamp-1">
 								{#if dmUser?.status_emoji}
 									<div class=" self-center shrink-0">
 										<Emoji className="size-3.5" shortCode={dmUser?.status_emoji} />
@@ -171,7 +171,7 @@
 		<div class="flex items-center">
 			{#if channel?.unread_count > 0}
 				<div
-					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-medium"
+					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-medium whitespace-nowrap"
 				>
 					{new Intl.NumberFormat($i18n.locale, {
 						notation: 'compact',

@@ -39,37 +39,45 @@
 	};
 </script>
 
-{#if (token?.ids ?? []).length == 1}
-	<Source id={token.ids[0] - 1} title={sourceIds[token.ids[0] - 1]} {onClick} />
-{:else}
-	<LinkPreview.Root openDelay={0} bind:open={openPreview}>
-		<LinkPreview.Trigger>
-			<button
-				class="text-[10px] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl"
-				on:click={() => {
-					openPreview = !openPreview;
-				}}
+{#if sourceIds}
+	{#if (token?.ids ?? []).length == 1}
+		{@const id = token.ids[0]}
+		{@const identifier = token.citationIdentifiers ? token.citationIdentifiers[0] : id - 1}
+		<Source id={identifier} title={sourceIds[id - 1]} {onClick} />
+	{:else}
+		<LinkPreview.Root openDelay={0} bind:open={openPreview}>
+			<LinkPreview.Trigger>
+				<button
+					class="text-[10px] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl"
+					on:click={() => {
+						openPreview = !openPreview;
+					}}
+				>
+					<span class="line-clamp-1">
+						{getDisplayTitle(formattedTitle(decodeString(sourceIds[token.ids[0] - 1])))}
+						<span class="dark:text-white/50 text-black/50">+{(token?.ids ?? []).length - 1}</span>
+					</span>
+				</button>
+			</LinkPreview.Trigger>
+			<LinkPreview.Content
+				class="z-[999]"
+				align="start"
+				strategy="fixed"
+				sideOffset={6}
+				el={containerElement}
 			>
-				<span class="line-clamp-1">
-					{getDisplayTitle(formattedTitle(decodeString(sourceIds[token.ids[0] - 1])))}
-					<span class="dark:text-white/50 text-black/50">+{(token?.ids ?? []).length - 1}</span>
-				</span>
-			</button>
-		</LinkPreview.Trigger>
-		<LinkPreview.Content
-			class="z-[999]"
-			align="start"
-			strategy="fixed"
-			sideOffset={6}
-			el={containerElement}
-		>
-			<div class="bg-gray-50 dark:bg-gray-850 rounded-xl p-1 cursor-pointer">
-				{#each token.ids as sourceId}
-					<div class="">
-						<Source id={sourceId - 1} title={sourceIds[sourceId - 1]} {onClick} />
-					</div>
-				{/each}
-			</div>
-		</LinkPreview.Content>
-	</LinkPreview.Root>
+				<div class="bg-gray-50 dark:bg-gray-850 rounded-xl p-1 cursor-pointer">
+					{#each token.citationIdentifiers ?? token.ids as identifier}
+						{@const id =
+							typeof identifier === 'string' ? parseInt(identifier.split('#')[0]) : identifier}
+						<div class="">
+							<Source id={identifier} title={sourceIds[id - 1]} {onClick} />
+						</div>
+					{/each}
+				</div>
+			</LinkPreview.Content>
+		</LinkPreview.Root>
+	{/if}
+{:else}
+	<span>{token.raw}</span>
 {/if}

@@ -6,6 +6,7 @@ from open_webui.utils.misc import (
 )
 
 from typing import Callable, Optional
+import copy
 import json
 
 
@@ -286,6 +287,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Returns:
         dict: A modified payload compatible with the Ollama API.
     """
+    openai_payload = copy.deepcopy(openai_payload)
     ollama_payload = {}
 
     # Mapping basic model and message details

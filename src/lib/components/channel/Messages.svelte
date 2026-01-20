@@ -126,12 +126,14 @@
 		{#each messageList as message, messageIdx (id ? `${id}-${message.id}` : message.id)}
 			<Message
 				{message}
+				{channel}
 				{thread}
 				replyToMessage={replyToMessage?.id === message.id}
 				disabled={!channel?.write_access || message?.temp_id}
 				pending={!!message?.temp_id}
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id ||
+					messageList.at(messageIdx - 1)?.user?.id !== message.user?.id ||
 					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id ||
 					message?.reply_to_message !== null}
 				onDelete={() => {
