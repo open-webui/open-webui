@@ -172,6 +172,12 @@ class Loader:
                 log.info(f"[LOADER] PDF_INFO | file={filename} | size={file_size}B")
             return PyPDFLoader(file_path, extract_images=extract_images)
         
+        # Check if Document Intelligence is configured
+        use_doc_intel = (
+            self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT") 
+            and self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY")
+        )
+        
         # For non-PDF files, use original engine logic (Tika/DocIntel available for other file types)
         if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if file_ext in known_source_ext or (
