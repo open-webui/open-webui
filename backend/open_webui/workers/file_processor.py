@@ -401,8 +401,8 @@ def _create_fallback_config():
     return _FallbackConfig()
 
 
-# DEBUG: Print when module is fully loaded (after all imports and class definitions)
-print("[DEBUG] file_processor.py module loaded successfully", flush=True)
+# Log when module is fully loaded (after all imports and class definitions)
+log.debug("file_processor.py module loaded successfully")
 
 
 def process_file_job(
@@ -429,16 +429,16 @@ def process_file_job(
     Returns:
         Dictionary with processing result
     """
-    # DEBUG: Print at the very start of job processing
-    print("=" * 80, flush=True)
-    print(f"[DEBUG] process_file_job ENTERED", flush=True)
-    print(f"[DEBUG]   file_id: {file_id}", flush=True)
-    print(f"[DEBUG]   user_id: {user_id}", flush=True)
-    print(f"[DEBUG]   knowledge_id: {knowledge_id}", flush=True)
-    print(f"[DEBUG]   collection_name: {collection_name}", flush=True)
-    print(f"[DEBUG]   content provided: {bool(content)}", flush=True)
-    print(f"[DEBUG]   embedding_api_key provided: {bool(embedding_api_key)}", flush=True)
-    print("=" * 80, flush=True)
+    # Log at the very start of job processing
+    log.debug("=" * 80)
+    log.debug("process_file_job ENTERED")
+    log.debug(f"  file_id: {file_id}")
+    log.debug(f"  user_id: {user_id}")
+    log.debug(f"  knowledge_id: {knowledge_id}")
+    log.debug(f"  collection_name: {collection_name}")
+    log.debug(f"  content provided: {bool(content)}")
+    log.debug(f"  embedding_api_key provided: {bool(embedding_api_key)}")
+    log.debug("=" * 80)
     
     log.info(f"[JOB] START | file_id={file_id} | user_id={user_id} | knowledge_id={knowledge_id}")
     start_time = time.time()
@@ -853,14 +853,14 @@ def process_file_job(
                                             total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
                                             non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
                                             log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
-                                            print(f"[DEBUG] EXTRACT SUCCESS | docs={len(docs) if docs else 0} | chars={total_chars}", flush=True)
+                                            log.debug(f"EXTRACT SUCCESS | docs={len(docs) if docs else 0} | chars={total_chars}")
                                             safe_add_span_event("job.file.extracted", {"content_length": total_chars, "document.count": len(docs)})
                                             docs = [Document(page_content=doc.page_content, metadata={**doc.metadata, "name": file.filename, "created_by": file.user_id, "file_id": file.id, "source": file.filename}) for doc in docs]
                                             text_content = " ".join([doc.page_content for doc in docs])
-                                            print(f"[DEBUG] After metadata addition | docs={len(docs)} | text_content_len={len(text_content)}", flush=True)
+                                            log.debug(f"After metadata addition | docs={len(docs)} | text_content_len={len(text_content)}")
                                         except Exception as load_error:
                                             log.error(f"[EXTRACT] FAILED | file_id={file.id} | error={type(load_error).__name__}: {load_error}", exc_info=True)
-                                            print(f"[DEBUG] EXTRACT FAILED | error={load_error}", flush=True)
+                                            log.debug(f"EXTRACT FAILED | error={load_error}")
                                             docs = []
                                     else:
                                         log.error(f"[JOB] FILE_NOT_FOUND | file_id={file.id} | resolved_path={file_path} | file does not exist")
@@ -880,7 +880,7 @@ def process_file_job(
                         else:
                             # Use content from file.data
                             log.info(f"[JOB] USING_FILE_DATA | file_id={file.id} | content_length={len(file_content)}")
-                            print(f"[DEBUG] USING_FILE_DATA branch | file_content_len={len(file_content)}", flush=True)
+                            log.debug(f"USING_FILE_DATA branch | file_content_len={len(file_content)}")
                             docs = [
                                 Document(
                                     page_content=file_content,
@@ -894,13 +894,13 @@ def process_file_job(
                                 )
                             ]
                             text_content = file_content
-                            print(f"[DEBUG] After USING_FILE_DATA | docs={len(docs)} | text_content_len={len(text_content)}", flush=True)
+                            log.debug(f"After USING_FILE_DATA | docs={len(docs)} | text_content_len={len(text_content)}")
 
-                    # DEBUG: Print state after if/else block
-                    print(f"[DEBUG] After REGULAR_UPLOAD if/else block:", flush=True)
-                    print(f"[DEBUG]   'docs' in locals: {'docs' in locals()}", flush=True)
-                    print(f"[DEBUG]   docs count: {len(docs) if 'docs' in locals() and docs else 'UNDEFINED or None'}", flush=True)
-                    print(f"[DEBUG]   'text_content' in locals: {'text_content' in locals()}", flush=True)
+                    # Log state after if/else block
+                    log.debug("After REGULAR_UPLOAD if/else block:")
+                    log.debug(f"  'docs' in locals: {'docs' in locals()}")
+                    log.debug(f"  docs count: {len(docs) if 'docs' in locals() and docs else 'UNDEFINED or None'}")
+                    log.debug(f"  'text_content' in locals: {'text_content' in locals()}")
                     
                     # Ensure text_content is defined (defensive check)
                     if 'text_content' not in locals() or text_content is None:
@@ -942,21 +942,21 @@ def process_file_job(
                 # Validate that we have content to process
                 from open_webui.constants import ERROR_MESSAGES
                 
-                # DEBUG: Print docs state before validation
-                print(f"[DEBUG] PRE-VALIDATION | file_id={file.id}", flush=True)
-                print(f"[DEBUG]   'docs' defined: {'docs' in dir()}", flush=True)
+                # Log docs state before validation
+                log.debug(f"PRE-VALIDATION | file_id={file.id}")
+                log.debug(f"  'docs' defined: {'docs' in dir()}")
                 try:
-                    print(f"[DEBUG]   docs type: {type(docs)}", flush=True)
-                    print(f"[DEBUG]   docs length: {len(docs) if docs else 'None/empty'}", flush=True)
+                    log.debug(f"  docs type: {type(docs)}")
+                    log.debug(f"  docs length: {len(docs) if docs else 'None/empty'}")
                     if docs and len(docs) > 0:
-                        print(f"[DEBUG]   first doc page_content length: {len(docs[0].page_content) if docs[0].page_content else 0}", flush=True)
+                        log.debug(f"  first doc page_content length: {len(docs[0].page_content) if docs[0].page_content else 0}")
                 except Exception as debug_error:
-                    print(f"[DEBUG]   ERROR accessing docs: {debug_error}", flush=True)
+                    log.debug(f"  ERROR accessing docs: {debug_error}")
                 
                 total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
                 non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
                 log.info(f"[VALIDATE] START | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
-                print(f"[DEBUG] VALIDATION | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}", flush=True)
+                log.debug(f"VALIDATION | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
                 
                 if not docs or len(docs) == 0:
                     error_msg = ERROR_MESSAGES.EMPTY_CONTENT
