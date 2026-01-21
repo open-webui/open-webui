@@ -1385,7 +1385,6 @@ def save_docs_to_vector_db(
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
-    skip_duplicate_check: bool = False,
     user=None,
 ) -> bool:
     def _get_docs_info(docs: list[Document]) -> str:
@@ -1409,7 +1408,7 @@ def save_docs_to_vector_db(
     )
 
     # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and "hash" in metadata and not skip_duplicate_check:
+    if metadata and "hash" in metadata:
         result = VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
@@ -1418,8 +1417,16 @@ def save_docs_to_vector_db(
         if result is not None and result.ids and len(result.ids) > 0:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
-                log.info(f"Document with hash {metadata['hash']} already exists")
-                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+                # Check if the existing document belongs to the same file
+                # If same file_id, this is a re-add/reindex - allow it
+                # If different file_id, this is a duplicate - block it
+                existing_file_id = None
+                if result.metadatas and result.metadatas[0]:
+                    existing_file_id = result.metadatas[0][0].get("file_id")
+                
+                if existing_file_id != metadata.get("file_id"):
+                    log.info(f"Document with hash {metadata['hash']} already exists")
+                    raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
         if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
@@ -1576,7 +1583,6 @@ class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
     collection_name: Optional[str] = None
-    skip_duplicate_check: bool = False
 
 
 @router.post("/process/file")
@@ -1759,7 +1765,6 @@ def process_file(
                             "hash": hash,
                         },
                         add=(True if form_data.collection_name else False),
-                        skip_duplicate_check=form_data.skip_duplicate_check,
                         user=user,
                     )
                     log.info(f"added {len(docs)} items to collection {collection_name}")
