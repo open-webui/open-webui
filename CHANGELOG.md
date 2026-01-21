@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.3] - 2026-01-20
+## [0.7.3] - 2026-01-22
 
 ### Added
 
@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔍 Web search operations no longer block other tasks, allowing the application to remain responsive while searches are in progress. [#20630](https://github.com/open-webui/open-webui/pull/20630)
 - 🗄️ Administrators can now connect to self-hosted Weaviate deployments with separate HTTP and gRPC endpoints via new environment variables. [#20620](https://github.com/open-webui/open-webui/pull/20620)
 - 🔐 Administrators can now provide custom password requirement hints to users via the "PASSWORD_VALIDATION_HINT" environment variable, making it clearer what password criteria must be met during signup or password changes. [#20647](https://github.com/open-webui/open-webui/issues/20647), [#20650](https://github.com/open-webui/open-webui/pull/20650)
+- 📄 Administrators can now choose between "page" and "single" PDF loading modes, allowing documents to be processed as individual pages or as complete documents for better chunking across page boundaries. [Commit](https://github.com/open-webui/open-webui/commit/ecbdef732bc71a07c21bbb679edb420f26eac181)
 - 💻 MATLAB code blocks now display with proper syntax highlighting in chat messages. [#20719](https://github.com/open-webui/open-webui/issues/20719), [#20773](https://github.com/open-webui/open-webui/pull/20773)
 - 🧠 Knowledge base queries now handle LLM tool call parameter formatting variations automatically, preventing intermittent failures when models send parameters as strings instead of their expected types. [#20705](https://github.com/open-webui/open-webui/pull/20705)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
@@ -24,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔑 Docling API key authentication now works correctly by using the proper "X-Api-Key" header format instead of the incorrect "Bearer" authorization prefix. [#20652](https://github.com/open-webui/open-webui/pull/20652)
 - 📊 Exporting tables to CSV now properly decodes HTML entities, ensuring special characters display correctly in the exported file. [#20688](https://github.com/open-webui/open-webui/pull/20688)
 - 🔧 The "WEBSOCKET_SERVER_ENGINEIO_LOGGING" environment variable now works correctly, allowing administrators to configure Engine.IO logging independently from general websocket logging. [#20727](https://github.com/open-webui/open-webui/pull/20727), [Commit](https://github.com/open-webui/open-webui/commit/5cfb7a08cbde5d39aaf4097b849a80da87c30d66)
+- 🔌 MCP OAuth 2.1 authentication now works correctly, resolving connection verification failures and 401 errors during the authorization callback. [#20808](https://github.com/open-webui/open-webui/issues/20808), [#20828](https://github.com/open-webui/open-webui/issues/20828), [Commit](https://github.com/open-webui/open-webui/commit/8eebc2aea63b7045e61c9689a65a2dfa9c797bcb)
+- 📚 Paginating through knowledge base files no longer shows duplicates or skips files when multiple documents share the same update timestamp. [#20846](https://github.com/open-webui/open-webui/issues/20846), [Commit](https://github.com/open-webui/open-webui/commit/a9a0ce6beaa286cc18eff24b518a6f3d7a560e2f)
 - 🔒 Users without write permissions are now properly prevented from editing tools, with a clear error message displayed when attempting unauthorized edits. [Commit](https://github.com/open-webui/open-webui/commit/85e92fe3b062ae669985c09495f6ff1baf8176ab), [Commit](https://github.com/open-webui/open-webui/commit/91faa9fd5a1cfc5d3ab531d2d91d28db52bcc702)
 - 🎨 Long model names and IDs in the admin panel now truncate properly to prevent visual overflow, with full names visible on hover. [#20696](https://github.com/open-webui/open-webui/pull/20696)
 - 👥 Filtering users in the admin panel now automatically resets to page 1, preventing empty results when searching from pages beyond the first. [#20723](https://github.com/open-webui/open-webui/pull/20723), [Commit](https://github.com/open-webui/open-webui/commit/be75bc506adb048ef11b1612c0e3662511c920d0)
