@@ -119,6 +119,7 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
+	export let nativeWebSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
 	export let contextBreakEnabled = false;
@@ -1521,6 +1522,7 @@
 											bind:selectedToolIds
 											bind:selectedFilterIds
 											bind:webSearchEnabled
+											bind:nativeWebSearchEnabled
 											bind:imageGenerationEnabled
 											bind:codeInterpreterEnabled
 											closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
@@ -1647,6 +1649,20 @@
 											</Tooltip>
 										{/if}
 
+										{#if nativeWebSearchEnabled}
+											<Tooltip content={$i18n.t('Native Web Search')} placement="top">
+												<button
+													on:click|preventDefault={() => (nativeWebSearchEnabled = !nativeWebSearchEnabled)}
+													type="button"
+													class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden text-emerald-500 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-400/10 dark:hover:bg-emerald-600/10 border border-emerald-200/40 dark:border-emerald-500/20"
+												>
+													<GlobeAlt className="size-4" strokeWidth="1.75" />
+													<div class="hidden group-hover:block">
+														<XMark className="size-4" strokeWidth="1.75" />
+													</div>
+												</button>
+											</Tooltip>
+										{/if}
 										{#if imageGenerationEnabled}
 											<Tooltip content={$i18n.t('Image')} placement="top">
 												<button

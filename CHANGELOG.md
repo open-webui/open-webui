@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3-5] - 2026-01-22
+
+### 新增
+
+- 🌐 **原生网页搜索支持。** 新增 `native_web_search` 选项，用户可以使用模型内置的联网搜索功能（如 Gemini 的 Google Search），无需依赖外部搜索 API。
+- 🔄 **Function Calling 智能降级。** 当模型不支持 Function Calling 时，系统会自动识别错误并降级重试，避免用户手动切换设置。
+- 🎯 **模型选择器组件。** 新增 `ModelSelectorModal` 组件，支持从服务器实时获取可用模型列表，支持搜索过滤和批量选择。
+- 📦 **折叠面板组件。** 新增 `CollapsibleSection` 通用组件，用于分组展示配置项。
+
+### 优化
+
+- 🎨 **管理员连接设置 UI 重构。** OpenAI/Gemini/Ollama 连接设置采用全新卡片式布局，添加品牌图标，视觉层次更清晰。Ollama 多连接时采用两列网格布局。
+- ⚙️ **连接配置弹窗优化。** 采用折叠面板重构，启用/禁用开关移至标题栏，新增分组标签功能方便模型分类管理。保存时如未选择模型会弹出确认提示。
+- 🔤 **代码编辑器字体升级。** 新增 JetBrains Mono 和 Fira Code 等宽字体，代码显示更专业。
+- 🌈 **浅色模式代码高亮优化。** 采用 VS Code Light 风格的语法高亮配色，CodeMirror 编辑器使用 GitHub Light 风格。
+- 📍 **Toast 提示样式优化。** 响应式设计，浅色/深色主题完整适配，位置跟随侧边栏宽度动态调整。
+- 🗂️ **侧边栏 UI 优化。** 新建对话、搜索、笔记、工作区按钮采用圆角图标背景样式，用户菜单区域改进。
+- 📋 **设置页面 UI 优化。** 账户设置、界面设置、通用设置页面采用卡片式布局重构。
+
+### 修复
+
+- 🐛 **错误消息显示优化。** HTML 错误页面自动提取关键信息（状态码、标题），不再显示完整 HTML 代码，提供友好的错误摘要。
+- 🔧 **Gemini API 兼容性改进。** 自动处理不支持 tools/thinkingConfig/responseModalities 的模型，避免 400 错误。
+- 📝 **Gemini 错误消息解析。** 改进 Gemini API 错误消息解析逻辑，提供更友好的错误提示。
+
+### 技术改进
+
+- 🔧 **TypeScript 迁移。** `AutoCompletion.js` 和 `listDragHandlePlugin.js` 迁移为 TypeScript。
+- 📦 **新增工具模块。** 添加 `model-capabilities.ts` 模型能力检测工具。
+- 🔧 **代码质量。** 修复多处类型定义问题，优化 sha256 导入方式，统一使用 CSS 变量管理字体。
+
+### 中文翻译
+
+- 新增模型管理相关翻译（模型选择器、分组标签、URL 格式提示等）
+- 新增 "原生网页搜索" / "模型内置联网" 翻译
+- 新增 "思考"/"推理" 翻译
+
 ## [0.7.3-4] - 2026-01-19
 
 ### 性能优化

@@ -917,6 +917,6 @@
 				: 'light'
 			: 'light'}
 	richColors
-	position="top-right"
-	closeButton
+	position="bottom-center"
+	duration={3000}
 />

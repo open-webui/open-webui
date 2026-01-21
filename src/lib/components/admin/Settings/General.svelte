@@ -283,14 +283,21 @@
 						<div
 							class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 						>
-							<div class="text-xs font-medium text-gray-500 mb-4">
-								{$i18n.t('Identity & Security')}
+							<div class="flex items-center gap-2.5 mb-5">
+								<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-blue-600 dark:text-blue-400">
+										<path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clip-rule="evenodd" />
+									</svg>
+								</div>
+								<div class="text-base font-semibold text-gray-800 dark:text-gray-100">
+									{$i18n.t('Identity & Security')}
+								</div>
 							</div>
 
 							<div class="flex flex-col gap-5">
 								<!-- 用户注册设置 -->
 								<div class="space-y-3">
-									<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+									<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 										{$i18n.t('User Registration')}
 									</div>
 									<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -376,7 +383,7 @@
 
 								<!-- API 密钥设置 -->
 								<div class="space-y-3">
-									<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+									<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 										{$i18n.t('API Keys')}
 									</div>
 									<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -420,7 +427,7 @@
 
 								<!-- JWT 设置 -->
 								<div class="space-y-3">
-									<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+									<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 										{$i18n.t('Session Security')}
 									</div>
 									<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
@@ -459,7 +466,7 @@
 
 								<!-- LDAP 设置 -->
 								<div class="space-y-3">
-									<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+									<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 										{$i18n.t('LDAP Authentication')}
 									</div>
 									<div class="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800">
@@ -670,12 +677,21 @@
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="text-xs font-medium text-gray-500 mb-4">{$i18n.t('App Features')}</div>
+						<div class="flex items-center gap-2.5 mb-5">
+							<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-purple-600 dark:text-purple-400">
+									<path fill-rule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 010 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 01-1.456 0l-.258-1.036a2.625 2.625 0 00-1.91-1.91l-1.036-.258a.75.75 0 010-1.456l1.036-.258a2.625 2.625 0 001.91-1.91l.258-1.036A.75.75 0 0118 1.5zM16.5 15a.75.75 0 01.712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 010 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 01-1.422 0l-.395-1.183a1.5 1.5 0 00-.948-.948l-1.183-.395a.75.75 0 010-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0116.5 15z" clip-rule="evenodd" />
+								</svg>
+							</div>
+							<div class="text-base font-semibold text-gray-800 dark:text-gray-100">
+								{$i18n.t('App Features')}
+							</div>
+						</div>
 
 						<div class="flex flex-col gap-5">
 							<!-- 社区与互动 -->
 							<div class="space-y-3">
-								<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+								<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 									{$i18n.t('Community & Interaction')}
 								</div>
 								<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -692,7 +708,7 @@
 
 							<!-- 内容管理 -->
 							<div class="space-y-3">
-								<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+								<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 									{$i18n.t('Content Management')}
 								</div>
 								<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -744,7 +760,7 @@
 
 							<!-- 用户功能 -->
 							<div class="space-y-3">
-								<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+								<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 									{$i18n.t('User Features')}
 								</div>
 								<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -761,7 +777,7 @@
 
 							<!-- 其他设置 -->
 							<div class="space-y-3">
-								<div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+								<div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
 									{$i18n.t('Other Settings')}
 								</div>
 								<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
@@ -784,8 +800,15 @@
 					<div
 						class="bg-gray-50 dark:bg-gray-850 rounded-lg p-5 border border-gray-100 dark:border-gray-800"
 					>
-						<div class="text-xs font-medium text-gray-500 mb-4">
-							{$i18n.t('System Connections')}
+						<div class="flex items-center gap-2.5 mb-5">
+							<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-green-600 dark:text-green-400">
+									<path fill-rule="evenodd" d="M2.25 6a3 3 0 013-3h13.5a3 3 0 013 3v12a3 3 0 01-3 3H5.25a3 3 0 01-3-3V6zm3.97.97a.75.75 0 011.06 0l2.25 2.25a.75.75 0 010 1.06l-2.25 2.25a.75.75 0 01-1.06-1.06l1.72-1.72-1.72-1.72a.75.75 0 010-1.06zm4.28 4.28a.75.75 0 000 1.5h3a.75.75 0 000-1.5h-3z" clip-rule="evenodd" />
+								</svg>
+							</div>
+							<div class="text-base font-semibold text-gray-800 dark:text-gray-100">
+								{$i18n.t('System Connections')}
+							</div>
 						</div>
 
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">

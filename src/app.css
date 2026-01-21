@@ -30,9 +30,68 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'JetBrains Mono';
+	src: url('/assets/fonts/JetBrainsMono-400.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'JetBrains Mono';
+	src: url('/assets/fonts/JetBrainsMono-500.woff2') format('woff2');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'JetBrains Mono';
+	src: url('/assets/fonts/JetBrainsMono-600.woff2') format('woff2');
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'JetBrains Mono';
+	src: url('/assets/fonts/JetBrainsMono-700.woff2') format('woff2');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Fira Code';
+	src: url('/assets/fonts/FiraCode-400.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Fira Code';
+	src: url('/assets/fonts/FiraCode-500.woff2') format('woff2');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Fira Code';
+	src: url('/assets/fonts/FiraCode-600.woff2') format('woff2');
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+
 /* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
 :root {
 	--app-text-scale: 1;
+	--font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+		'Liberation Mono', 'Courier New', monospace;
+	--default-mono-font-family: var(--font-mono);
 }
 
 html {
@@ -65,6 +124,30 @@ code {
 	width: auto;
 }
 
+code,
+pre,
+kbd,
+samp,
+.cm-editor,
+.hljs {
+	font-family: var(--font-mono);
+	font-feature-settings: 'calt' 1, 'liga' 1;
+}
+
+.font-mono {
+	font-family: var(--font-mono);
+}
+
+.cm-editor,
+.cm-editor .cm-scroller,
+.cm-editor .cm-content,
+.cm-editor .cm-line,
+.cm-editor .cm-gutters,
+.cm-editor .cm-gutterElement {
+	font-family: var(--font-mono) !important;
+	font-feature-settings: 'calt' 1, 'liga' 1;
+}
+
 .editor-selection {
 	background: rgba(180, 213, 255, 0.5);
 	border-radius: 2px;
@@ -84,6 +167,74 @@ math {
 
 .hljs {
 	@apply rounded-lg;
+}
+
+/* Highlight.js 浅色模式样式覆盖 (VS Code Light 风格) */
+:not(.dark) .hljs {
+	background: #f6f8fa;
+	color: #24292e;
+	line-height: 1.6;
+}
+
+:not(.dark) .hljs-comment,
+:not(.dark) .hljs-quote {
+	color: #6a737d;
+	font-style: italic;
+}
+
+:not(.dark) .hljs-keyword,
+:not(.dark) .hljs-selector-tag,
+:not(.dark) .hljs-deletion {
+	color: #0070c1;
+}
+
+:not(.dark) .hljs-string,
+:not(.dark) .hljs-doctag,
+:not(.dark) .hljs-regexp,
+:not(.dark) .hljs-addition {
+	color: #a31515;
+}
+
+:not(.dark) .hljs-number,
+:not(.dark) .hljs-literal,
+:not(.dark) .hljs-built_in,
+:not(.dark) .hljs-type {
+	color: #098658;
+}
+
+:not(.dark) .hljs-function .hljs-title,
+:not(.dark) .hljs-title.function_,
+:not(.dark) .hljs-attr,
+:not(.dark) .hljs-attribute {
+	color: #795e26;
+}
+
+:not(.dark) .hljs-variable,
+:not(.dark) .hljs-template-variable,
+:not(.dark) .hljs-property {
+	color: #001080;
+}
+
+:not(.dark) .hljs-class .hljs-title,
+:not(.dark) .hljs-title.class_ {
+	color: #267f99;
+}
+
+:not(.dark) .hljs-tag,
+:not(.dark) .hljs-name {
+	color: #800000;
+}
+
+:not(.dark) .hljs-meta,
+:not(.dark) .hljs-symbol {
+	color: #af00db;
+}
+
+:not(.dark) .hljs-section,
+:not(.dark) .hljs-selector-id,
+:not(.dark) .hljs-selector-class {
+	color: #800000;
+	font-weight: bold;
 }
 
 input::placeholder {
@@ -316,12 +467,30 @@ input[type='number'] {
 }
 
 .cm-gutters {
-	@apply !bg-white dark:!bg-black !border-none;
+	@apply !bg-gray-50 dark:!bg-gray-950 !border-none;
 }
 
 .cm-editor {
-	@apply bg-white dark:bg-black;
+	@apply bg-gray-50 dark:bg-gray-950;
+	line-height: 1.6;
 }
+
+/* CodeMirror 浅色主题语法高亮 (GitHub Light 风格) */
+/* 注意：CodeMirror 6 使用 Unicode 前缀 ͼ (U+037C) 的压缩类名 */
+.cm-editor span.ͼb { color: #d73a49 !important; }  /* 关键字 - 红色 */
+.cm-editor span.ͼc { color: #22863a !important; }  /* 字符串 - 绿色 */
+.cm-editor span.ͼd { color: #005cc5 !important; }  /* 数字 - 蓝色 */
+.cm-editor span.ͼe { color: #e36209 !important; }  /* 变量/属性 - 橙色 */
+.cm-editor span.ͼf { color: #032f62 !important; }  /* 字符串2 - 深蓝 */
+.cm-editor span.ͼg { color: #6f42c1 !important; }  /* 函数名 - 紫色 */
+.cm-editor span.ͼh { color: #22863a !important; }  /* 标签 - 绿色 */
+.cm-editor span.ͼi { color: #005cc5 !important; }  /* 类型 - 蓝色 */
+.cm-editor span.ͼj { color: #6f42c1 !important; }  /* 类名 - 紫色 */
+.cm-editor span.ͼk { color: #005cc5 !important; }  /* 常量 - 蓝色 */
+.cm-editor span.ͼl { color: #d73a49 !important; }  /* 操作符 - 红色 */
+.cm-editor span.ͼm { color: #6a737d !important; font-style: italic; }  /* 注释 - 灰色 */
+.cm-editor span.ͼn { color: #22863a !important; }  /* 元信息 - 绿色 */
+.cm-editor span.ͼo { color: #e36209 !important; }  /* 特殊 - 橙色 */
 
 .tippy-box[data-theme~='dark'] {
 	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
@@ -370,7 +539,7 @@ input[type='number'] {
 	float: left;
 	/* Below color is from tailwind, and has the proper contrast
 	text-gray-600 from: https://tailwindcss.com/docs/color */
-	color: #676767;
+	color: #52525b;
 	pointer-events: none;
 
 	@apply line-clamp-1 absolute;
@@ -537,7 +706,7 @@ input[type='number'] {
 
 @media (prefers-color-scheme: dark) {
 	.ProseMirror p.is-editor-empty:first-child::before {
-		color: #757575;
+		color: #a1a1aa;
 	}
 }
 
@@ -558,7 +727,7 @@ input[type='number'] {
 
 .tiptap pre {
 	border-radius: 0.5rem;
-	font-family: 'JetBrainsMono', monospace;
+	font-family: var(--font-mono);
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
 
@@ -572,58 +741,6 @@ input[type='number'] {
 	font-size: 0.8em;
 	font-weight: 600;
 	@apply rounded-md dark:bg-gray-800 bg-gray-50 mx-0.5;
-}
-
-/* Code styling */
-.hljs-comment,
-.hljs-quote {
-	color: #616161;
-}
-
-.hljs-variable,
-.hljs-template-variable,
-.hljs-attribute,
-.hljs-tag,
-.hljs-regexp,
-.hljs-link,
-.hljs-name,
-.hljs-selector-id,
-.hljs-selector-class {
-	color: #f98181;
-}
-
-.hljs-number,
-.hljs-meta,
-.hljs-built_in,
-.hljs-builtin-name,
-.hljs-literal,
-.hljs-type,
-.hljs-params {
-	color: #fbbc88;
-}
-
-.hljs-string,
-.hljs-symbol,
-.hljs-bullet {
-	color: #b9f18d;
-}
-
-.hljs-title,
-.hljs-section {
-	color: #faf594;
-}
-
-.hljs-keyword,
-.hljs-selector-tag {
-	color: #70cff8;
-}
-
-.hljs-emphasis {
-	font-style: italic;
-}
-
-.hljs-strong {
-	font-weight: 700;
 }
 
 /* Table styling for tiptap editors */
@@ -806,4 +923,134 @@ body {
 
 #note-content-container .ProseMirror {
 	padding-bottom: 2rem; /* space for the bottom toolbar */
+}
+
+/* Toast 提示样式优化 */
+:root {
+	--toast-offset-x: 0px;
+	--toast-offset-y: 24px;
+}
+
+[data-sonner-toaster] {
+	--width: min(320px, calc(100vw - 32px)) !important;
+	--border-radius: 12px;
+	max-width: calc(100vw - 32px) !important;
+	font-family: inherit;
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+	width: var(--width) !important;
+	max-width: calc(100vw - 32px) !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+	padding: 12px 16px;
+	border-radius: var(--border-radius);
+	box-shadow:
+		0 8px 20px rgba(15, 23, 42, 0.08),
+		0 2px 6px rgba(15, 23, 42, 0.06);
+	font-size: 0.875rem;
+	line-height: 1.4;
+	gap: 10px;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-title] {
+	font-weight: 500;
+	line-height: 1.35;
+	text-wrap: balance;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-content] {
+	min-width: 0;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-description] {
+	font-size: 0.8125rem;
+	color: inherit;
+	opacity: 0.85;
+}
+
+[data-sonner-toaster][data-theme='light'] {
+	--normal-bg: #ffffff;
+	--normal-border: #e5e7eb;
+	--normal-text: #111827;
+	--success-bg: #ecfdf3;
+	--success-border: #bbf7d0;
+	--success-text: #047857;
+	--info-bg: #eff6ff;
+	--info-border: #bfdbfe;
+	--info-text: #1d4ed8;
+	--warning-bg: #fffbeb;
+	--warning-border: #fde68a;
+	--warning-text: #b45309;
+	--error-bg: #fff5f5;
+	--error-border: #fee2e2;
+	--error-text: #b42318;
+}
+
+[data-sonner-toaster][data-theme='dark'] {
+	--normal-bg: #111827;
+	--normal-border: #1f2937;
+	--normal-text: #e5e7eb;
+	--success-bg: #062e1a;
+	--success-border: #14532d;
+	--success-text: #6ee7b7;
+	--info-bg: #0b1f3a;
+	--info-border: #1e3a8a;
+	--info-text: #93c5fd;
+	--warning-bg: #2f2404;
+	--warning-border: #92400e;
+	--warning-text: #fcd34d;
+	--error-bg: #2a0d0d;
+	--error-border: #7f1d1d;
+	--error-text: #fca5a5;
+}
+
+[data-sonner-toaster][data-theme='light']
+	[data-sonner-toast][data-type='error'][data-styled='true']
+	[data-icon] {
+	color: #dc2626;
+}
+
+[data-sonner-toaster][data-theme='dark']
+	[data-sonner-toast][data-type='error'][data-styled='true']
+	[data-icon] {
+	color: #f87171;
+}
+
+[data-sonner-toaster][data-theme='light']
+	[data-sonner-toast][data-type='default'][data-styled='true']
+	[data-description] {
+	color: #4b5563;
+	opacity: 1;
+}
+
+[data-sonner-toaster][data-theme='dark']
+	[data-sonner-toast][data-type='default'][data-styled='true']
+	[data-description] {
+	color: #9ca3af;
+	opacity: 1;
+}
+
+[data-sonner-toaster][data-x-position="center"] {
+	left: calc(50% + var(--toast-offset-x)) !important;
+	transform: translateX(-50%) !important;
+}
+
+[data-sonner-toaster][data-y-position="bottom"] {
+	bottom: max(var(--toast-offset-y), env(safe-area-inset-bottom)) !important;
+	top: auto !important;
+}
+
+/* 移动端 Toast 居中显示 */
+@media (max-width: 768px) {
+	:root {
+		--toast-offset-x: 0px;
+		--toast-offset-y: 16px;
+	}
+
+	[data-sonner-toaster][data-x-position="center"] {
+		left: 50% !important;
+		transform: translateX(-50%) !important;
+	}
 }

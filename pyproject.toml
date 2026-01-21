@@ -1,8 +1,8 @@
 [project]
-name = "open-webui"
-description = "Open WebUI"
+name = "open-webui-leon"
+description = "Open WebUI (Leon's Fork)"
 authors = [
-    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
+    { name = "Leon", email = "ztx756744596@gmail.com" }
 ]
 license = { file = "LICENSE" }
 dependencies = [
@@ -162,6 +162,7 @@ all = [
 
 [project.scripts]
 open-webui = "open_webui:app"
+open-webui-leon = "open_webui:app"
 
 [build-system]
 requires = ["hatchling"]

@@ -132,10 +132,10 @@ export const Image = Node.create<ImageOptions>({
 
 			img.classList.add('rounded-md', 'max-h-72', 'w-fit', 'object-contain');
 
-			const editorFiles = editor.storage?.files || [];
+			const editorFiles = (editor.storage as { files?: Array<{ id: string; url?: string }> })?.files || [];
 
 			if (editorFiles && node.attrs.src.startsWith('data://')) {
-				const file = editorFiles.find((f) => f.id === fileId);
+				const file = editorFiles.find((f: { id: string; url?: string }) => f.id === fileId);
 				if (file) {
 					img.setAttribute('src', file.url || '');
 				} else {
@@ -148,10 +148,11 @@ export const Image = Node.create<ImageOptions>({
 			img.setAttribute('alt', node.attrs.alt || '');
 			img.setAttribute('title', node.attrs.title || '');
 
-			img.addEventListener('data', (e) => {
-				const files = e?.files || [];
+			img.addEventListener('data', (e: Event) => {
+				const customEvent = e as CustomEvent<{ files?: Array<{ id: string; url?: string }> }>;
+				const files = customEvent.detail?.files || [];
 				if (files && node.attrs.src.startsWith('data://')) {
-					const file = editorFiles.find((f) => f.id === fileId);
+					const file = files.find((f: { id: string; url?: string }) => f.id === fileId);
 					if (file) {
 						img.setAttribute('src', file.url || '');
 					} else {

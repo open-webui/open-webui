@@ -137,6 +137,7 @@
 	let selectedFilterIds = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
+	let nativeWebSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 
 	// Context break: message IDs after which to start sending context
@@ -162,6 +163,42 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
+	const functionCallingFallbackByModel = new Set<string>();
+
+	const normalizeFunctionCalling = (value) => {
+		if (value === 'native') return 'native';
+		if (value === 'default') return 'default';
+		if (value === null) return 'default';
+		if (value === undefined) return 'native';
+		return 'default';
+	};
+
+	const extractErrorMessage = (error) => {
+		if (!error) return '';
+		if (typeof error === 'string') return error;
+		if (error?.error?.message) return error.error.message;
+		if (error?.message) return error.message;
+		if (error?.detail) return error.detail;
+		return '';
+	};
+
+	const isFunctionCallingUnsupported = (error) => {
+		const message = extractErrorMessage(error).toLowerCase();
+		if (!message) return false;
+		const keywords = [
+			'function calling is disabled',
+			'function calling',
+			'tools are not supported',
+			'tool calling is disabled',
+			'tool definitions',
+			'tool-related content',
+			'functions are not supported',
+			'remove \'tools\'',
+			'remove \'tool_choice\'',
+			'tool_choice'
+		];
+		return keywords.some((keyword) => message.includes(keyword));
+	};
 
 	$: if (chatIdProp) {
 		navigateHandler();
@@ -1830,7 +1867,8 @@
 					$config?.features?.enable_web_search &&
 					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 						? webSearchEnabled
-						: false
+						: false,
+				native_web_search: nativeWebSearchEnabled
 			};
 
 		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
@@ -1963,75 +2001,131 @@
 			}
 		}
 
-		const res = await generateOpenAIChatCompletion(
-			localStorage.token,
-			{
-				stream: stream,
-				model: model.id,
-				messages: messages,
-				params: {
-					...$settings?.params,
-					...params,
-					stop:
-						(params?.stop ?? $settings?.params?.stop ?? undefined)
-							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
-									(str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"'))
-								)
-							: undefined
-				},
+		const stopValue = params?.stop ?? $settings?.params?.stop ?? undefined;
+		const stopTokens =
+			typeof stopValue === 'string'
+				? stopValue.split(',').map((token) => token.trim()).filter(Boolean)
+				: Array.isArray(stopValue)
+					? stopValue
+					: undefined;
+		const stop = stopTokens
+			? stopTokens.map((str) => decodeURIComponent(JSON.parse('"' + str.replace(/\"/g, '\\"') + '"')))
+			: undefined;
 
-				files: (files?.length ?? 0) > 0 ? files : undefined,
+		const baseParams = { ...$settings?.params, ...params };
+		const normalizedFunctionCalling = normalizeFunctionCalling(baseParams.function_calling);
+		const requestedFunctionCalling =
+			baseParams.function_calling === undefined && functionCallingFallbackByModel.has(model.id)
+				? 'default'
+				: normalizedFunctionCalling;
 
-				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
-				tool_ids: toolIds.length > 0 ? toolIds : undefined,
-				tool_servers: ($toolServers ?? []).filter(
-					(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
-				),
-				features: getFeatures(),
-				variables: {
-					...getPromptVariables($user?.name, $settings?.userLocation ? userLocation : undefined)
-				},
-				model_item: $models.find((m) => m.id === model.id),
-
-				session_id: $socket?.id,
-				chat_id: $chatId,
-
-				id: responseMessageId,
-				parent_id: userMessage?.id ?? null,
-				parent_message: userMessage,
-
-				background_tasks: {
-					...(!$temporaryChatEnabled &&
-					(messages.length == 1 ||
-						(messages.length == 2 &&
-							messages.at(0)?.role === 'system' &&
-							messages.at(1)?.role === 'user')) &&
-					(selectedModels[0] === model.id || atSelectedModel !== undefined)
-						? {
-								title_generation: $settings?.title?.auto ?? true,
-								tags_generation: $settings?.autoTags ?? true
-							}
-						: {}),
-					follow_up_generation: $settings?.autoFollowUps ?? true
-				},
-
-				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
-					? {
-							stream_options: {
-								include_usage: true
-							}
-						}
-					: {})
+		const buildRequestBody = (functionCallingOverride = null) => ({
+			stream: stream,
+			model: model.id,
+			messages: messages,
+			params: {
+				...baseParams,
+				function_calling: functionCallingOverride ?? requestedFunctionCalling,
+				stop: stop
 			},
-			`${WEBUI_BASE_URL}/api`
-		).catch(async (error) => {
-			console.log(error);
 
-			let errorMessage = error;
-			if (error?.error?.message) {
-				errorMessage = error.error.message;
-			} else if (error?.message) {
-				errorMessage = error.message;
+			files: (files?.length ?? 0) > 0 ? files : undefined,
+
+			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
+			tool_ids: toolIds.length > 0 ? toolIds : undefined,
+			tool_servers: ($toolServers ?? []).filter(
+				(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
+			),
+			features: getFeatures(),
+			variables: {
+				...getPromptVariables($user?.name, $settings?.userLocation ? userLocation : undefined)
+			},
+			model_item: $models.find((m) => m.id === model.id),
+
+			session_id: $socket?.id,
+			chat_id: $chatId,
+
+			id: responseMessageId,
+			parent_id: userMessage?.id ?? null,
+			parent_message: userMessage,
+
+			background_tasks: {
+				...(!$temporaryChatEnabled &&
+				(messages.length == 1 ||
+					(messages.length == 2 &&
+						messages.at(0)?.role === 'system' &&
+						messages.at(1)?.role === 'user')) &&
+				(selectedModels[0] === model.id || atSelectedModel !== undefined)
+					? {
+							title_generation: $settings?.title?.auto ?? true,
+							tags_generation: $settings?.autoTags ?? true
+						}
+					: {}),
+				follow_up_generation: $settings?.autoFollowUps ?? true
+			},
+
+			...(stream && (model.info?.meta?.capabilities?.usage ?? false)
+				? {
+						stream_options: {
+							include_usage: true
+						}
+					}
+				: {})
+		});
+
+		const requestCompletion = async (functionCallingOverride = null) => {
+			return await generateOpenAIChatCompletion(
+				localStorage.token,
+				buildRequestBody(functionCallingOverride),
+				`${WEBUI_BASE_URL}/api`
+			);
+		};
+
+		let res = null;
+		let requestError = null;
+
+		try {
+			res = await requestCompletion();
+		} catch (error) {
+			requestError = error;
+		}
+
+		if (
+			requestError &&
+			requestedFunctionCalling === 'native' &&
+			isFunctionCallingUnsupported(requestError)
+		) {
+			functionCallingFallbackByModel.add(model.id);
+			requestError = null;
+			try {
+				res = await requestCompletion('default');
+			} catch (error) {
+				requestError = error;
+			}
+		}
+
+		if (
+			res?.error &&
+			requestedFunctionCalling === 'native' &&
+			isFunctionCallingUnsupported(res.error)
+		) {
+			functionCallingFallbackByModel.add(model.id);
+			requestError = null;
+			try {
+				res = await requestCompletion('default');
+			} catch (error) {
+				requestError = error;
+			}
+		}
+
+		if (requestError) {
+			console.log(requestError);
+
+			let errorMessage = requestError;
+			if (requestError?.error?.message) {
+				errorMessage = requestError.error.message;
+			} else if (requestError?.message) {
+				errorMessage = requestError.message;
 			}
 
 			if (typeof errorMessage === 'object') {
@@ -2040,7 +2134,7 @@
 
 			toast.error(`${errorMessage}`);
 			responseMessage.error = {
-				content: error
+				content: requestError
 			};
 
 			responseMessage.done = true;
@@ -2049,7 +2143,7 @@
 			history.currentId = responseMessageId;
 
 			return null;
-		});
+		}
 
 		if (res) {
 			if (res.error) {
@@ -2571,6 +2665,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:nativeWebSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
@@ -2621,6 +2716,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:nativeWebSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}

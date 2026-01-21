@@ -7,6 +7,7 @@ and converts responses into OpenAI-compatible format for the Open WebUI frontend
 """
 
 import asyncio
+import copy
 import codecs
 import json
 import logging
@@ -98,6 +99,43 @@ def _map_finish_reason(fr: Optional[str]) -> Optional[str]:
     return "stop"
 
 
+def _parse_gemini_error_message(error_text: str) -> str:
+    if not error_text:
+        return "Gemini API Error"
+    try:
+        err_json = json.loads(error_text)
+    except Exception:
+        return error_text[:500]
+    if isinstance(err_json, dict):
+        err = err_json.get("error")
+        if isinstance(err, dict):
+            message = err.get("message")
+            if message:
+                return message
+    return error_text[:500]
+
+
+def _build_compat_payload(
+    gemini_payload: dict,
+    *,
+    drop_tools: bool = False,
+    drop_thinking: bool = False,
+    drop_response_modalities: bool = False,
+) -> dict:
+    compat_payload = copy.deepcopy(gemini_payload)
+    if drop_tools:
+        compat_payload.pop("tools", None)
+    generation_config = compat_payload.get("generationConfig")
+    if isinstance(generation_config, dict):
+        if drop_thinking:
+            generation_config.pop("thinkingConfig", None)
+        if drop_response_modalities:
+            generation_config.pop("responseModalities", None)
+        if not generation_config:
+            compat_payload.pop("generationConfig", None)
+    return compat_payload
+
+
 def _openai_chunk(
     stream_id: str,
     model_id: str,
@@ -126,6 +164,8 @@ def _openai_chunk(
 
 def _wants_web_search(fd: dict) -> bool:
     if fd.get("web_search") is True:
+        return True
+    if fd.get("native_web_search") is True:
         return True
     tools = fd.get("tools") or []
     for t in tools:
@@ -468,13 +508,8 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
         if enable:
             if len(model_ids) == 0:
-                request_tasks.append(
-                    send_get_request(
-                        f"{url}/models",
-                        request.app.state.config.GEMINI_API_KEYS[idx],
-                        api_config,
-                    )
-                )
+                # No models specified, skip fetching (user should add models manually)
+                request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
             else:
                 model_list = {
                     "models": [
@@ -975,7 +1010,8 @@ async def generate_chat_completion(
 
     # Enable image output for image-capable models
     image_keywords = ["image", "draw", "paint", "picture", "art", "create-preview"]
-    if any(keyword in gemini_model.lower() for keyword in image_keywords):
+    is_image_model = any(keyword in gemini_model.lower() for keyword in image_keywords)
+    if is_image_model:
         log.info(f"Detected image generation model: {gemini_model}")
         gemini_payload["generationConfig"]["responseModalities"] = ["TEXT", "IMAGE"]
         if stream:
@@ -1431,14 +1467,65 @@ async def generate_chat_completion(
             async with session.post(gemini_url, json=gemini_payload, headers=headers) as response:
                 log.info(f"Gemini Chat Response Status: {response.status}")
                 if response.status != 200:
-                    try:
-                        error_data = await response.json(content_type=None)
-                    except Exception:
-                        error_text = await response.text()
-                        error_data = {"error": {"message": f"Gemini API Error: {error_text}"}}
+                    error_text = await response.text()
+                    error_message = _parse_gemini_error_message(error_text)
+                    if response.status == 400:
+                        compat_payload = _build_compat_payload(
+                            gemini_payload,
+                            drop_tools=True,
+                        )
+                        if compat_payload != gemini_payload:
+                            log.info("[GEMINI COMPAT] Retrying with tools/web_search stripped")
+                            async with session.post(
+                                gemini_url, json=compat_payload, headers=headers
+                            ) as retry_response:
+                                log.info(f"Gemini Chat Retry Response Status: {retry_response.status}")
+                                if retry_response.status == 200:
+                                    gemini_response = await retry_response.json(content_type=None)
+                                    openai_response = convert_gemini_to_openai(gemini_response, model_id)
+                                    return JSONResponse(content=openai_response)
+                                retry_text = await retry_response.text()
+                                error_message = _parse_gemini_error_message(retry_text)
+
+                        compat_payload = _build_compat_payload(
+                            gemini_payload,
+                            drop_tools=True,
+                            drop_thinking=True,
+                        )
+                        if compat_payload != gemini_payload:
+                            log.info("[GEMINI COMPAT] Retrying with tools/web_search + thinkingConfig stripped")
+                            async with session.post(
+                                gemini_url, json=compat_payload, headers=headers
+                            ) as retry_response:
+                                log.info(f"Gemini Chat Retry Response Status: {retry_response.status}")
+                                if retry_response.status == 200:
+                                    gemini_response = await retry_response.json(content_type=None)
+                                    openai_response = convert_gemini_to_openai(gemini_response, model_id)
+                                    return JSONResponse(content=openai_response)
+                                retry_text = await retry_response.text()
+                                error_message = _parse_gemini_error_message(retry_text)
+
+                        compat_payload = _build_compat_payload(
+                            gemini_payload,
+                            drop_tools=True,
+                            drop_thinking=True,
+                            drop_response_modalities=True,
+                        )
+                        if compat_payload != gemini_payload:
+                            log.info("[GEMINI COMPAT] Retrying with tools/web_search + thinkingConfig + responseModalities stripped")
+                            async with session.post(
+                                gemini_url, json=compat_payload, headers=headers
+                            ) as retry_response:
+                                log.info(f"Gemini Chat Retry Response Status: {retry_response.status}")
+                                if retry_response.status == 200:
+                                    gemini_response = await retry_response.json(content_type=None)
+                                    openai_response = convert_gemini_to_openai(gemini_response, model_id)
+                                    return JSONResponse(content=openai_response)
+                                retry_text = await retry_response.text()
+                                error_message = _parse_gemini_error_message(retry_text)
                     raise HTTPException(
                         status_code=response.status,
-                        detail=error_data.get("error", {}).get("message", "Gemini API Error"),
+                        detail=error_message or "Gemini API Error",
                     )
 
                 gemini_response = await response.json(content_type=None)

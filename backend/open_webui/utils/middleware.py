@@ -132,6 +132,50 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+HTML_ERROR_SENTINELS = ("<!doctype", "<html", "<head", "<body", "<title")
+
+
+def _summarize_html_error_message(message: str) -> str:
+    lower_message = message.lower()
+    if not any(tag in lower_message for tag in HTML_ERROR_SENTINELS):
+        return message
+
+    title_match = re.search(r"<title>(.*?)</title>", message, re.IGNORECASE | re.DOTALL)
+    title = html.unescape(title_match.group(1)).strip() if title_match else ""
+    code_match = re.search(r"\b([45]\d{2})\b", title or message)
+    code = code_match.group(1) if code_match else ""
+
+    if code and title:
+        return f"Upstream error {code}. {title}"
+    if code:
+        return f"Upstream error {code}. The proxy returned an HTML error page."
+    if title:
+        return f"Upstream error. {title}"
+    return "Upstream error. The proxy returned an HTML error page."
+
+
+def _sanitize_error_payload(error: Any) -> Any:
+    if not error:
+        return error
+
+    if isinstance(error, dict):
+        message = error.get("message") or error.get("detail")
+        if isinstance(message, str):
+            cleaned = _summarize_html_error_message(message)
+            if cleaned != message:
+                sanitized = dict(error)
+                sanitized["message"] = cleaned
+                if isinstance(sanitized.get("detail"), str):
+                    sanitized["detail"] = cleaned
+                return sanitized
+        return error
+
+    if isinstance(error, str):
+        return _summarize_html_error_message(error)
+
+    return error
+
+
 DEFAULT_REASONING_TAGS = [
     ("<think>", "</think>"),
     ("<thinking>", "</thinking>"),
@@ -1417,6 +1461,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
+    disable_tools = bool(form_data.pop("disable_tools", False))
+    empty_response_retry = bool(form_data.pop("empty_response_retry", False))
+    if disable_tools:
+        metadata["disable_tools"] = True
+    if empty_response_retry:
+        metadata["empty_response_retry"] = True
+
     # Handle max_context_count - limit the number of messages sent to the model
     if max_context_count is not None and isinstance(max_context_count, int) and max_context_count >= 0:
         messages = form_data.get("messages", [])
@@ -1632,6 +1683,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     request, form_data, extra_params, user
                 )
 
+        # Pass native_web_search flag to router for model built-in web search
+        if "native_web_search" in features and features["native_web_search"]:
+            form_data["native_web_search"] = True
+
         if "image_generation" in features and features["image_generation"]:
             # Skip forced image generation when native FC is enabled - model can use generate_image tool
             if metadata.get("params", {}).get("function_calling") != "native":
@@ -1648,6 +1703,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 ),
                 form_data["messages"],
             )
+
+    if disable_tools:
+        form_data.pop("tools", None)
+        form_data.pop("tool_choice", None)
+        form_data.pop("functions", None)
 
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
@@ -1688,6 +1748,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Client side tools
     direct_tool_servers = metadata.get("tool_servers", None)
 
+    if disable_tools:
+        tool_ids = None
+        direct_tool_servers = None
+
     log.debug(f"{tool_ids=}")
     log.debug(f"{direct_tool_servers=}")
 
@@ -1696,7 +1760,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     mcp_clients = {}
     mcp_tools_dict = {}
 
-    if tool_ids:
+    if not disable_tools and tool_ids:
         for tool_id in tool_ids:
             if tool_id.startswith("server:mcp:"):
                 try:
@@ -1841,7 +1905,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if mcp_tools_dict:
             tools_dict = {**tools_dict, **mcp_tools_dict}
 
-    if direct_tool_servers:
+    if not disable_tools and direct_tool_servers:
         for tool_server in direct_tool_servers:
             tool_specs = tool_server.pop("specs", [])
 
@@ -1861,7 +1925,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         ((model.get("info") or {}).get("meta") or {}).get("capabilities") or {}
     ).get("builtin_tools", True)
     if (
-        metadata.get("params", {}).get("function_calling") == "native"
+        not disable_tools
+        and metadata.get("params", {}).get("function_calling") == "native"
         and builtin_tools_enabled
     ):
         # Add file context to user messages
@@ -1882,7 +1947,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if name not in tools_dict:
                 tools_dict[name] = tool_dict
 
-    if tools_dict:
+    if not disable_tools and tools_dict:
         if metadata.get("params", {}).get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
             metadata["tools"] = tools_dict
@@ -1955,6 +2020,57 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
+    def _extract_reasoning_content(message: dict) -> str:
+        if not isinstance(message, dict):
+            return ""
+        return (
+            message.get("reasoning_content")
+            or message.get("reasoning")
+            or message.get("thinking")
+            or message.get("thinking_content")
+            or message.get("thought")
+            or message.get("thought_content")
+            or ""
+        )
+
+    def _format_reasoning_details(reasoning_text: str, duration: int = 0) -> str:
+        if not reasoning_text:
+            return ""
+        reasoning_display_content = html.escape(
+            "\n".join(
+                (f"> {line}" if not line.startswith(">") else line)
+                for line in reasoning_text.splitlines()
+            )
+        )
+        return (
+            f'<details type="reasoning" done="true" duration="{duration}">\n'
+            f"<summary>Thought for {duration} seconds</summary>\n"
+            f"{reasoning_display_content}\n"
+            "</details>\n"
+        )
+
+    def _build_reasoning_content_blocks(reasoning_text: str, text: str):
+        blocks = []
+        if reasoning_text:
+            now = time.time()
+            blocks.append(
+                {
+                    "type": "reasoning",
+                    "start_tag": "<think>",
+                    "end_tag": "</think>",
+                    "attributes": {"type": "reasoning_content"},
+                    "content": reasoning_text,
+                    "started_at": now,
+                    "ended_at": now,
+                    "duration": 0,
+                }
+            )
+        if text:
+            blocks.append({"type": "text", "content": text})
+        if not blocks:
+            blocks.append({"type": "text", "content": ""})
+        return blocks
+
     async def background_tasks_handler():
         message = None
         messages = []
@@ -2218,6 +2334,7 @@ async def process_chat_response(
 
                     if "error" in response_data:
                         error = response_data.get("error")
+                        error = _sanitize_error_payload(error)
 
                         if isinstance(error, dict):
                             error = error.get("detail", error)
@@ -2255,9 +2372,11 @@ async def process_chat_response(
                         if isinstance(message, dict):
                             content = message.get("content", "") or ""
                             tool_calls = message.get("tool_calls") or []
+                            reasoning_content = _extract_reasoning_content(message)
                         else:
                             content = ""
                             tool_calls = []
+                            reasoning_content = ""
 
                         # DEBUG: Log what we extracted from the response
                         log.info(f"[DEBUG NON-STREAM] message keys: {list(message.keys()) if isinstance(message, dict) else 'not dict'}")
@@ -2271,12 +2390,27 @@ async def process_chat_response(
                             }
                         )
 
-                        if content:
+                        display_content = content
+                        if reasoning_content:
+                            reasoning_details = _format_reasoning_details(
+                                reasoning_content, duration=0
+                            )
+                            display_content = (
+                                f"{reasoning_details}{content}"
+                                if content
+                                else reasoning_details
+                            )
+
+                        has_reasoning_only = (
+                            bool(reasoning_content) and not content and not tool_calls
+                        )
+
+                        if content or has_reasoning_only:
                             title = Chats.get_chat_title_by_id(metadata["chat_id"])
 
                             done_data = {
                                 "done": True,
-                                "content": content,
+                                "content": display_content,
                                 "title": title,
                             }
 
@@ -2297,7 +2431,7 @@ async def process_chat_response(
                                 metadata["message_id"],
                                 {
                                     "role": "assistant",
-                                    "content": content,
+                                    "content": display_content,
                                 },
                             )
 
@@ -2305,13 +2439,14 @@ async def process_chat_response(
                             if not Users.is_user_active(user.id):
                                 webhook_url = Users.get_user_webhook_url_by_id(user.id)
                                 if webhook_url:
+                                    webhook_content = content or display_content
                                     await post_webhook(
                                         request.app.state.WEBUI_NAME,
                                         webhook_url,
-                                        f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                                        f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{webhook_content}",
                                         {
                                             "action": "chat",
-                                            "message": content,
+                                            "message": webhook_content,
                                             "title": title,
                                                 "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
                                         },
@@ -3056,6 +3191,8 @@ async def process_chat_response(
                 }
             ]
 
+            stream_error_received = False  # Track if error was received in stream
+
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
             DETECT_CODE_INTERPRETER = metadata.get("features", {}).get(
@@ -3095,6 +3232,7 @@ async def process_chat_response(
                 async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal content_blocks
+                    nonlocal stream_error_received
 
                     response_tool_calls = []
                     last_usage = None  # Track the last non-zero usage for final message
@@ -3123,11 +3261,19 @@ async def process_chat_response(
                             delta_count = 0
                             last_delta_data = None
 
+                    line_count = 0
+                    log.debug("[STREAM BODY DEBUG] Starting to iterate response.body_iterator")
                     async for line in response.body_iterator:
+                        line_count += 1
                         line = (
                             line.decode("utf-8", "replace")
                             if isinstance(line, bytes)
                             else line
+                        )
+                        log.debug(
+                            "[STREAM BODY DEBUG] Received line #%s: %s",
+                            line_count,
+                            line[:200] if line else "empty",
                         )
                         data = line
 
@@ -3144,6 +3290,14 @@ async def process_chat_response(
 
                         try:
                             data = json.loads(data)
+
+                            # Debug: Log full chunk structure for reasoning analysis (first few chunks only)
+                            if line_count <= 5:
+                                log.debug(
+                                    "[CHUNK DEBUG #%s] Full chunk structure: %s",
+                                    line_count,
+                                    json.dumps(data, ensure_ascii=False, default=str)[:1000],
+                                )
 
                             data, _ = await process_filter_functions(
                                 request=request,
@@ -3182,12 +3336,15 @@ async def process_chat_response(
                                     usage.update(data.get("timings", {}))  # llama.cpp
                                     # Only save non-zero usage for final message
                                     if usage and (usage.get("prompt_tokens", 0) > 0 or usage.get("completion_tokens", 0) > 0 or usage.get("total_tokens", 0) > 0):
+                                        log.debug("[USAGE DEBUG] Received usage: %s", usage)
                                         last_usage = usage
 
                                     # SAFEGUARD: Check choices[0] is a valid dict
                                     if not choices or choices[0] is None or not isinstance(choices[0], dict):
                                         error = data.get("error", {})
+                                        error = _sanitize_error_payload(error)
                                         if error:
+                                            stream_error_received = True  # Mark that we received an error
                                             await event_emitter(
                                                 {
                                                     "type": "chat:completion",
@@ -3199,7 +3356,25 @@ async def process_chat_response(
                                         continue
 
                                     delta = choices[0].get("delta", {}) or {}
-                                    log.info(f"[DELTA DEBUG] Received delta keys: {list(delta.keys())}")
+                                    message = choices[0].get("message")
+                                    if (
+                                        (not delta or (isinstance(delta, dict) and not delta))
+                                        and isinstance(message, dict)
+                                    ):
+                                        message_content = message.get("content")
+                                        message_reasoning = _extract_reasoning_content(message)
+                                        message_tool_calls = message.get("tool_calls")
+                                        delta = {}
+                                        if message_content is not None:
+                                            delta["content"] = message_content
+                                        if message_reasoning:
+                                            delta["reasoning_content"] = message_reasoning
+                                        if message_tool_calls:
+                                            delta["tool_calls"] = message_tool_calls
+                                    log.debug(
+                                        "[DELTA DEBUG] Received delta keys: %s",
+                                        list(delta.keys()),
+                                    )
 
                                     # Handle delta annotations
                                     annotations = delta.get("annotations")
@@ -3260,7 +3435,10 @@ async def process_chat_response(
                                                         delta_tool_call["function"].setdefault("name", "")
                                                         delta_tool_call["function"].setdefault("arguments", "")
                                                         response_tool_calls.append(delta_tool_call)
-                                                        log.info(f"[TOOL CALL DEBUG] Added tool call without index: {delta_tool_call.get('id')}")
+                                                        log.debug(
+                                                            "[TOOL CALL DEBUG] Added tool call without index: %s",
+                                                            delta_tool_call.get("id"),
+                                                        )
                                                 continue
 
                                             if tool_call_index is not None:
@@ -3359,16 +3537,44 @@ async def process_chat_response(
                                         )
 
                                     value = delta.get("content")
-                                    log.info(f"[DELTA CONTENT DEBUG] content={repr(value)[:200] if value else None}, delta_full={json.dumps(delta, ensure_ascii=False, default=str)[:500]}")
+                                    log.debug(
+                                        "[DELTA CONTENT DEBUG] content=%s, delta_full=%s",
+                                        repr(value)[:200] if value else None,
+                                        json.dumps(delta, ensure_ascii=False, default=str)[:500],
+                                    )
 
+                                    # Extended reasoning field compatibility for various API proxies
+                                    # Support: reasoning_content, reasoning, thinking, thinking_content, thought, thought_content
                                     reasoning_content = (
                                         delta.get("reasoning_content")
                                         or delta.get("reasoning")
                                         or delta.get("thinking")
+                                        or delta.get("thinking_content")
+                                        or delta.get("thought")
+                                        or delta.get("thought_content")
                                     )
-                                    log.info(f"[REASONING DEBUG] reasoning_content={repr(reasoning_content)}, type={type(reasoning_content)}, truthyness={bool(reasoning_content)}")
+
+                                    # Also check choices[0] level for reasoning fields (some proxies put it there)
+                                    if not reasoning_content:
+                                        choice = choices[0]
+                                        reasoning_content = (
+                                            choice.get("reasoning_content")
+                                            or choice.get("reasoning")
+                                            or choice.get("thinking")
+                                            or choice.get("thinking_content")
+                                        )
+
+                                    log.debug(
+                                        "[REASONING DEBUG] reasoning_content=%s, type=%s, truthyness=%s",
+                                        repr(reasoning_content),
+                                        type(reasoning_content),
+                                        bool(reasoning_content),
+                                    )
                                     if reasoning_content:
-                                        log.info(f"[REASONING DEBUG MIDDLEWARE] Found reasoning_content: {reasoning_content[:100]}")
+                                        log.debug(
+                                            "[REASONING DEBUG MIDDLEWARE] Found reasoning_content: %s",
+                                            reasoning_content[:100],
+                                        )
                                         if (
                                             not content_blocks
                                             or content_blocks[-1]["type"] != "reasoning"
@@ -3577,6 +3783,91 @@ async def process_chat_response(
                     return last_usage  # Return the last non-zero usage
 
                 final_usage = await stream_body_handler(response, form_data)
+
+                content_text = content if isinstance(content, str) else ""
+                has_tooling = bool(
+                    form_data.get("tools")
+                    or form_data.get("tool_choice")
+                    or form_data.get("native_web_search")
+                    or metadata.get("tools")
+                )
+
+                # Log if error was received to help with debugging
+                if stream_error_received:
+                    log.info("[STREAM ERROR] Error response received, skipping empty response retry logic")
+
+                # Only retry if no content/tool calls AND has tooling AND no error was received
+                # If an error was received (e.g., auth error), don't retry as it won't help
+                if (
+                    not content_text.strip()
+                    and not tool_calls
+                    and has_tooling
+                    and not metadata.get("empty_response_retry")
+                    and not stream_error_received
+                ):
+                    log.warning(
+                        "[STREAM EMPTY] No content/tool calls received; retrying once without tools."
+                    )
+                    retry_form_data = {
+                        **form_data,
+                        "stream": True,
+                        "disable_tools": True,
+                        "native_web_search": False,
+                        "empty_response_retry": True,
+                    }
+                    retry_form_data.pop("tools", None)
+                    retry_form_data.pop("tool_choice", None)
+                    retry_form_data.pop("functions", None)
+                    try:
+                        retry_response = await generate_chat_completion(
+                            request,
+                            retry_form_data,
+                            user,
+                            bypass_system_prompt=True,
+                        )
+
+                        if isinstance(retry_response, StreamingResponse):
+                            content = ""
+                            content_blocks = [{"type": "text", "content": ""}]
+                            tool_calls.clear()
+                            retry_usage = await stream_body_handler(
+                                retry_response, retry_form_data
+                            )
+                            if retry_usage:
+                                final_usage = retry_usage
+                        else:
+                            retry_data = retry_response
+                            if isinstance(retry_response, JSONResponse):
+                                try:
+                                    retry_data = json.loads(
+                                        retry_response.body.decode("utf-8", "replace")
+                                    )
+                                except Exception:
+                                    retry_data = {}
+
+                            if isinstance(retry_data, dict):
+                                retry_choices = retry_data.get("choices", [])
+                                if retry_choices and isinstance(
+                                    retry_choices[0], dict
+                                ):
+                                    retry_msg = (
+                                        retry_choices[0].get("message", {}) or {}
+                                    )
+                                    retry_reasoning = _extract_reasoning_content(
+                                        retry_msg
+                                    )
+                                    retry_content = retry_msg.get("content") or ""
+                                    if retry_reasoning or retry_content:
+                                        content = retry_content
+                                        content_blocks = _build_reasoning_content_blocks(
+                                            retry_reasoning, retry_content
+                                        )
+
+                                retry_usage = retry_data.get("usage")
+                                if retry_usage:
+                                    final_usage = retry_usage
+                    except Exception as e:
+                        log.warning(f"[STREAM EMPTY] Retry without tools failed: {e}")
 
                 tool_call_retries = 0
                 tool_call_sources = []  # Track citation sources from tool results
@@ -3825,8 +4116,14 @@ async def process_chat_response(
                             bypass_system_prompt=True,
                         )
 
+                        log.info(f"[TOOL CALL DEBUG] Second generate_chat_completion returned: type={type(res).__name__}")
                         if isinstance(res, StreamingResponse):
+                            log.debug("[TOOL CALL DEBUG] Calling stream_body_handler for tool call response")
                             tool_usage = await stream_body_handler(res, new_form_data)
+                            log.debug(
+                                "[TOOL CALL DEBUG] stream_body_handler returned: %s",
+                                tool_usage,
+                            )
                             # Accumulate usage: tool calls are separate API calls to the same model
                             if tool_usage:
                                 if final_usage:

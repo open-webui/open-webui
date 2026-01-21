@@ -1,14 +1,12 @@
 <script lang="ts">
-	import { getContext, tick } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import ManageOllamaModal from './ManageOllamaModal.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
@@ -22,6 +20,10 @@
 	let showManageModal = false;
 	let showConfigModal = false;
 	let showDeleteConfirmDialog = false;
+
+	$: isEnabled = config?.enable ?? true;
+	$: displayName = config?.remark || url;
+	$: tags = config?.tags ?? [];
 </script>
 
 <AddConnectionModal
@@ -53,50 +55,49 @@
 
 <ManageOllamaModal bind:show={showManageModal} urlIdx={idx} />
 
-<div class="flex gap-1.5">
-	<Tooltip
-		className="w-full relative"
-		content={$i18n.t(`WebUI will make requests to "{{url}}/api/chat"`, {
-			url
-		})}
-		placement="top-start"
-	>
-		<input
-			class="w-full text-sm bg-transparent outline-hidden cursor-pointer {!(config?.enable ?? true)
-				? 'opacity-50'
-				: ''}"
-			placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
-			value={config.remark ? config.remark : url}
-			readonly={true}
-			on:click={() => {
-				showConfigModal = true;
-			}}
-		/>
-	</Tooltip>
-
-	<div class="flex gap-1">
-		<Tooltip content={$i18n.t('Manage')} className="self-start">
-			<button
-				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-				on:click={() => {
-					showManageModal = true;
-				}}
-				type="button"
-			>
-				<Download />
-			</button>
-		</Tooltip>
-
-		<Tooltip content={$i18n.t('Configure')} className="self-start">
-			<button
-				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-				on:click={() => {
-					showConfigModal = true;
-				}}
-				type="button"
-			>
-				<Cog6 />
-			</button>
-		</Tooltip>
+<button
+	type="button"
+	class="w-full bg-white dark:bg-gray-900 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 transition cursor-pointer text-left {!isEnabled ? 'opacity-60' : ''}"
+	on:click={() => {
+		showConfigModal = true;
+	}}
+>
+	<div class="flex items-center justify-between gap-3">
+		<div class="flex-1 min-w-0">
+			<div class="flex items-center gap-2 flex-wrap">
+				<div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+					{displayName}
+				</div>
+				{#if !isEnabled}
+					<span class="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded">
+						{$i18n.t('Disabled')}
+					</span>
+				{/if}
+				{#each tags as tag}
+					<span class="text-xs px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded">
+						{tag.name}
+					</span>
+				{/each}
+			</div>
+			{#if config?.remark && url}
+				<div class="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
+					{url}
+				</div>
+			{/if}
+		</div>
+		<div class="flex-shrink-0 flex items-center gap-1">
+			<Tooltip content={$i18n.t('Manage Models')}>
+				<button
+					class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+					on:click|stopPropagation={() => {
+						showManageModal = true;
+					}}
+					type="button"
+				>
+					<Download className="size-4 text-gray-400 dark:text-gray-500" />
+				</button>
+			</Tooltip>
+			<Cog6 className="size-4 text-gray-400 dark:text-gray-500" />
+		</div>
 	</div>
-</div>
+</button>

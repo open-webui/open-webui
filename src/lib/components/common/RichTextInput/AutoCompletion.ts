@@ -13,6 +13,7 @@ Intelligently reset suggestions on new input.
 
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
+import type { EditorView } from 'prosemirror-view';
 
 export const AIAutocompletion = Extension.create({
 	name: 'aiAutocompletion',
@@ -59,7 +60,7 @@ export const AIAutocompletion = Extension.create({
 	},
 
 	addProseMirrorPlugins() {
-		let debounceTimer = null;
+		let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 		let loading = false;
 
 		let touchStartX = 0;
@@ -67,7 +68,7 @@ export const AIAutocompletion = Extension.create({
 
 		let isComposing = false;
 
-		const handleAICompletion = (view) => {
+		const handleAICompletion = (view: EditorView) => {
 			const { state, dispatch } = view;
 			const { selection } = state;
 			const { $head } = selection;
@@ -76,7 +77,7 @@ export const AIAutocompletion = Extension.create({
 			if (selection.empty && $head.pos === $head.end()) {
 				// Set up debounce for AI generation
 				if (this.options.debounceTime !== null) {
-					clearTimeout(debounceTimer);
+					if (debounceTimer) clearTimeout(debounceTimer);
 
 					// Capture current position
 					const currentPos = $head.before();
@@ -102,7 +103,7 @@ export const AIAutocompletion = Extension.create({
 								loading = true;
 								this.options
 									.generateCompletion(prompt)
-									.then((suggestion) => {
+									.then((suggestion: string) => {
 										if (suggestion && suggestion.trim() !== '') {
 											if (view.state.selection.$head.pos === view.state.selection.$head.end()) {
 												if (view.state === newState) {
@@ -268,7 +269,7 @@ export const AIAutocompletion = Extension.create({
 							const { state, dispatch } = view;
 
 							// Reset debounce timer on mouse click
-							clearTimeout(debounceTimer);
+							if (debounceTimer) clearTimeout(debounceTimer);
 
 							// Iterate over all nodes in the document
 							const tr = state.tr;

@@ -1,6 +1,34 @@
 import CRC32 from 'crc-32';
 
-export const parseFile = async (file) => {
+interface PngChunk {
+	type: string;
+	data: Uint8Array;
+	crc: number;
+}
+
+interface TextChunkEntry {
+	keyword: string;
+	text: string;
+}
+
+interface Character {
+	name: string | undefined;
+	summary: string | undefined;
+	personality: string | undefined;
+	scenario: string | undefined;
+	greeting: string | undefined;
+	examples: string | undefined;
+}
+
+interface ParsedFile {
+	file: File;
+	json: Record<string, unknown>;
+	image?: string;
+	formats: string[];
+	character: Character;
+}
+
+export const parseFile = async (file: File): Promise<ParsedFile> => {
 	if (file.type === 'application/json') {
 		return await parseJsonFile(file);
 	} else if (file.type === 'image/png') {
@@ -10,7 +38,7 @@ export const parseFile = async (file) => {
 	}
 };
 
-const parseJsonFile = async (file) => {
+const parseJsonFile = async (file: File): Promise<ParsedFile> => {
 	const text = await file.text();
 	const json = JSON.parse(text);
 
@@ -24,7 +52,7 @@ const parseJsonFile = async (file) => {
 	};
 };
 
-const parsePngFile = async (file) => {
+const parsePngFile = async (file: File): Promise<ParsedFile> => {
 	const arrayBuffer = await file.arrayBuffer();
 	const text = parsePngText(arrayBuffer);
 	const json = JSON.parse(text);
@@ -41,14 +69,14 @@ const parsePngFile = async (file) => {
 	};
 };
 
-const parsePngText = (arrayBuffer) => {
+const parsePngText = (arrayBuffer: ArrayBuffer): string => {
 	const textChunkKeyword = 'chara';
 	const chunks = readPngChunks(new Uint8Array(arrayBuffer));
 
 	const textChunk = chunks
-		.filter((chunk) => chunk.type === 'tEXt')
-		.map((chunk) => decodeTextChunk(chunk.data))
-		.find((entry) => entry.keyword === textChunkKeyword);
+		.filter((chunk: PngChunk) => chunk.type === 'tEXt')
+		.map((chunk: PngChunk) => decodeTextChunk(chunk.data))
+		.find((entry: TextChunkEntry) => entry.keyword === textChunkKeyword);
 
 	if (!textChunk) {
 		throw new Error(`No PNG text chunk named "${textChunkKeyword}" found`);
@@ -57,11 +85,11 @@ const parsePngText = (arrayBuffer) => {
 	try {
 		return new TextDecoder().decode(Uint8Array.from(atob(textChunk.text), (c) => c.charCodeAt(0)));
 	} catch (e) {
-		throw new Error('Unable to parse "chara" field as base64', e);
+		throw new Error('Unable to parse "chara" field as base64', { cause: e });
 	}
 };
 
-const readPngChunks = (data) => {
+const readPngChunks = (data: Uint8Array): PngChunk[] => {
 	const isValidPng =
 		data[0] === 0x89 &&
 		data[1] === 0x50 &&
@@ -74,13 +102,13 @@ const readPngChunks = (data) => {
 
 	if (!isValidPng) throw new Error('Invalid PNG file');
 
-	const chunks = [];
+	const chunks: PngChunk[] = [];
 	let offset = 8; // Skip PNG signature
 
 	while (offset < data.length) {
 		const length =
 			(data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
-		const type = String.fromCharCode.apply(null, data.slice(offset + 4, offset + 8));
+		const type = String.fromCharCode.apply(null, Array.from(data.slice(offset + 4, offset + 8)));
 		const chunkData = data.slice(offset + 8, offset + 8 + length);
 		const crc =
 			(data[offset + 8 + length] << 24) |
@@ -99,10 +127,10 @@ const readPngChunks = (data) => {
 	return chunks;
 };
 
-const decodeTextChunk = (data) => {
+const decodeTextChunk = (data: Uint8Array): TextChunkEntry => {
 	let i = 0;
-	const keyword = [];
-	const text = [];
+	const keyword: string[] = [];
+	const text: string[] = [];
 
 	for (; i < data.length && data[i] !== 0; i++) {
 		keyword.push(String.fromCharCode(data[i]));
@@ -115,23 +143,26 @@ const decodeTextChunk = (data) => {
 	return { keyword: keyword.join(''), text: text.join('') };
 };
 
-const extractCharacter = (json) => {
-	function getTrimmedValue(json, keys) {
+const extractCharacter = (json: Record<string, unknown>): Character => {
+	function getTrimmedValue(
+		json: Record<string, unknown>,
+		keys: string[]
+	): string | undefined {
 		return keys
-			.map((key) => {
+			.map((key: string) => {
 				const keyParts = key.split('.');
-				let value = json;
+				let value: unknown = json;
 				for (const part of keyParts) {
-					if (value && value[part] != null) {
-						value = value[part];
+					if (value && typeof value === 'object' && (value as Record<string, unknown>)[part] != null) {
+						value = (value as Record<string, unknown>)[part];
 					} else {
 						value = null;
 						break;
 					}
 				}
-				return value && value.trim();
+				return typeof value === 'string' ? value.trim() : undefined;
 			})
-			.find((value) => value);
+			.find((value: string | undefined) => value);
 	}
 
 	const name = getTrimmedValue(json, ['char_name', 'name', 'data.name']);
@@ -154,8 +185,8 @@ const extractCharacter = (json) => {
 	return { name, summary, personality, scenario, greeting, examples };
 };
 
-const detectFormats = (json) => {
-	const formats = [];
+const detectFormats = (json: Record<string, unknown>): string[] => {
+	const formats: string[] = [];
 
 	if (
 		json.char_name &&
@@ -174,22 +205,25 @@ const detectFormats = (json) => {
 		json.mes_example
 	)
 		formats.push('TavernAI Character');
+	const character = json.character as Record<string, unknown> | undefined;
 	if (
-		json.character &&
-		json.character.name &&
-		json.character.title &&
-		json.character.description &&
-		json.character.greeting &&
-		json.character.definition
+		character &&
+		character.name &&
+		character.title &&
+		character.description &&
+		character.greeting &&
+		character.definition
 	)
 		formats.push('CharacterAI Character');
+	const info = json.info as Record<string, unknown> | undefined;
+	const infoCharacter = info?.character as Record<string, unknown> | undefined;
 	if (
-		json.info &&
-		json.info.character &&
-		json.info.character.name &&
-		json.info.character.title &&
-		json.info.character.description &&
-		json.info.character.greeting
+		info &&
+		infoCharacter &&
+		infoCharacter.name &&
+		infoCharacter.title &&
+		infoCharacter.description &&
+		infoCharacter.greeting
 	)
 		formats.push('CharacterAI History');
 

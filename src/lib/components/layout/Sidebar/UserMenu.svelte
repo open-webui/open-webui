@@ -16,11 +16,9 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
-	import Map from '$lib/components/icons/Map.svelte';
 	import Keyboard from '$lib/components/icons/Keyboard.svelte';
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import Settings from '$lib/components/icons/Settings.svelte';
-	import Code from '$lib/components/icons/Code.svelte';
 	import UserGroup from '$lib/components/icons/UserGroup.svelte';
 	import SignOut from '$lib/components/icons/SignOut.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
@@ -85,56 +83,50 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className}  rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-sm"
+			class="w-full {className} rounded-2xl px-1.5 py-1.5 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-xl text-sm"
 			sideOffset={4}
 			side="top"
 			align="end"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			{#if profile}
-				<div class=" flex gap-3.5 w-full p-2.5 items-center">
-					<div class=" items-center flex shrink-0">
+				<div class="flex gap-3 w-full px-2.5 py-3 items-center">
+					<div class="items-center flex shrink-0">
 						<img
 							src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-							class=" size-10 object-cover rounded-full"
+							class="size-11 object-cover rounded-full ring-2 ring-gray-100 dark:ring-gray-700"
 							alt="profile"
 						/>
 					</div>
 
-					<div class=" flex flex-col w-full flex-1">
-						<div class="font-medium line-clamp-1 pr-2">
+					<div class="flex flex-col w-full flex-1 min-w-0">
+						<div class="font-semibold text-base line-clamp-1 pr-2 text-gray-900 dark:text-white">
 							{$user.name}
 						</div>
 
-						<div class=" flex items-center gap-2">
+						<div class="flex items-center gap-1.5 mt-0.5">
 							{#if $user?.is_active ?? true}
-								<div>
-									<span class="relative flex size-2">
-										<span
-											class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-										/>
-										<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-									</span>
-								</div>
-
-								<span class="text-xs"> {$i18n.t('Active')} </span>
+								<span class="relative flex size-2">
+									<span
+										class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+									/>
+									<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+								</span>
+								<span class="text-xs text-gray-500 dark:text-gray-400">{$i18n.t('Active')}</span>
 							{:else}
-								<div>
-									<span class="relative flex size-2">
-										<span class="relative inline-flex rounded-full size-2 bg-gray-500" />
-									</span>
-								</div>
-
-								<span class="text-xs"> {$i18n.t('Away')} </span>
+								<span class="relative flex size-2">
+									<span class="relative inline-flex rounded-full size-2 bg-gray-400" />
+								</span>
+								<span class="text-xs text-gray-500 dark:text-gray-400">{$i18n.t('Away')}</span>
 							{/if}
 						</div>
 					</div>
 				</div>
 
 				{#if $user?.status_emoji || $user?.status_message}
-					<div class="mx-1">
+					<div class="mx-1.5 mb-1">
 						<button
-							class="mb-1 w-full gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center"
+							class="w-full gap-2.5 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-xs flex items-center"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -142,22 +134,23 @@
 							}}
 						>
 							{#if $user?.status_emoji}
-								<div class=" self-center shrink-0">
+								<div class="self-center shrink-0">
 									<Emoji className="size-4" shortCode={$user?.status_emoji} />
 								</div>
 							{/if}
 
 							<Tooltip
 								content={$user?.status_message}
-								className=" self-center line-clamp-2 flex-1 text-left"
+								className="self-center line-clamp-2 flex-1 text-left"
 							>
 								{$user?.status_message}
 							</Tooltip>
 
-							<div class="self-start">
+							<div class="self-center">
 								<Tooltip content={$i18n.t('Clear status')}>
 									<button
 										type="button"
+										class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
 										on:click={async (e) => {
 											e.preventDefault();
 											e.stopPropagation();
@@ -176,35 +169,33 @@
 											}
 										}}
 									>
-										<XMark className="size-4 opacity-50" strokeWidth="2" />
+										<XMark className="size-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" strokeWidth="2" />
 									</button>
 								</Tooltip>
 							</div>
 						</button>
 					</div>
 				{:else}
-					<div class="mx-1">
+					<div class="mx-1.5 mb-1">
 						<button
-							class="mb-1 w-full px-3 py-1.5 gap-1 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center justify-center"
+							class="w-full px-3 py-2 gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition text-xs flex items-center justify-center"
 							type="button"
 							on:click={() => {
 								show = false;
 								showUserStatusModal = true;
 							}}
 						>
-							<div class=" self-center">
-								<FaceSmile className="size-4" strokeWidth="1.5" />
-							</div>
-							<div class=" self-center truncate">{$i18n.t('Update your status')}</div>
+							<FaceSmile className="size-4" strokeWidth="1.5" />
+							<span class="truncate">{$i18n.t('Update your status')}</span>
 						</button>
 					</div>
 				{/if}
 
-				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1.5 p-0" />
+				<hr class="border-gray-100 dark:border-gray-800 mx-2 my-1.5" />
 			{/if}
 
 			<DropdownMenu.Item
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
+				class="flex items-center gap-3 rounded-xl py-2 px-2.5 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
 					show = false;
 
@@ -216,14 +207,14 @@
 					}
 				}}
 			>
-				<div class=" self-center mr-3">
-					<Settings className="w-5 h-5" strokeWidth="1.5" />
+				<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700">
+					<Settings className="size-4 text-gray-600 dark:text-gray-300" strokeWidth="1.5" />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
+				<div class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Settings')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
+				class="flex items-center gap-3 rounded-xl py-2 px-2.5 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
 					show = false;
 
@@ -236,34 +227,17 @@
 					}
 				}}
 			>
-				<div class=" self-center mr-3">
-					<ArchiveBox className="size-5" strokeWidth="1.5" />
+				<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700">
+					<ArchiveBox className="size-4 text-gray-600 dark:text-gray-300" strokeWidth="1.5" />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
+				<div class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
 
 			{#if role === 'admin'}
 				<DropdownMenu.Item
 					as="a"
-					href="/playground"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-					on:click={async () => {
-						show = false;
-						if ($mobile) {
-							await tick();
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class=" self-center mr-3">
-						<Code className="size-5" strokeWidth="1.5" />
-					</div>
-					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</DropdownMenu.Item>
-				<DropdownMenu.Item
-					as="a"
 					href="/admin"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					class="flex items-center gap-3 rounded-xl py-2 px-2.5 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
 					on:click={async () => {
 						show = false;
 						if ($mobile) {
@@ -272,52 +246,36 @@
 						}
 					}}
 				>
-					<div class=" self-center mr-3">
-						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
+					<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700">
+						<UserGroup className="size-4 text-gray-600 dark:text-gray-300" strokeWidth="1.5" />
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+					<div class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Admin Panel')}</div>
 				</DropdownMenu.Item>
 			{/if}
 
 			{#if help}
-				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
-
-				<!-- {$i18n.t('Help')} -->
+				<hr class="border-gray-100 dark:border-gray-800 mx-2 my-1.5" />
 
 				{#if $user?.role === 'admin'}
 					<DropdownMenu.Item
 						as="a"
 						target="_blank"
-						class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
-						id="chat-share-button"
+						class="flex items-center gap-3 rounded-xl py-2 px-2.5 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none cursor-pointer"
 						on:click={() => {
 							show = false;
 						}}
 						href="https://docs.openwebui.cn"
 					>
-						<QuestionMarkCircle className="size-5" />
-						<div class="flex items-center">{$i18n.t('Documentation')}</div>
+						<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700">
+							<QuestionMarkCircle className="size-4 text-gray-600 dark:text-gray-300" />
+						</div>
+						<div class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Documentation')}</div>
 					</DropdownMenu.Item>
 
-					<!-- Releases -->
-					<DropdownMenu.Item
-						as="a"
-						target="_blank"
-						class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
-						id="chat-share-button"
-						on:click={() => {
-							show = false;
-						}}
-						href="https://github.com/open-webui/open-webui/releases"
-					>
-						<Map className="size-5" />
-						<div class="flex items-center">{$i18n.t('Releases')}</div>
-					</DropdownMenu.Item>
 				{/if}
 
 				<DropdownMenu.Item
-					class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full  hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer"
-					id="chat-share-button"
+					class="flex items-center gap-3 rounded-xl py-2 px-2.5 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none cursor-pointer"
 					on:click={async () => {
 						show = false;
 						showShortcuts.set(!$showShortcuts);
@@ -328,15 +286,17 @@
 						}
 					}}
 				>
-					<Keyboard className="size-5" />
-					<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
+					<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700">
+						<Keyboard className="size-4 text-gray-600 dark:text-gray-300" />
+					</div>
+					<div class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Keyboard shortcuts')}</div>
 				</DropdownMenu.Item>
 			{/if}
 
-			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
+			<hr class="border-gray-100 dark:border-gray-800 mx-2 my-1.5" />
 
 			<DropdownMenu.Item
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex items-center gap-3 rounded-xl py-2 px-2.5 w-full hover:bg-red-50 dark:hover:bg-red-900/20 transition cursor-pointer group"
 				on:click={async () => {
 					const res = await userSignOut();
 					user.set(null);
@@ -346,15 +306,15 @@
 					show = false;
 				}}
 			>
-				<div class=" self-center mr-3">
-					<SignOut className="w-5 h-5" strokeWidth="1.5" />
+				<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition">
+					<SignOut className="size-4 text-gray-600 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition" strokeWidth="1.5" />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
+				<div class="text-sm font-medium text-gray-700 dark:text-gray-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition">{$i18n.t('Sign Out')}</div>
 			</DropdownMenu.Item>
 
 			{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage}
 				{#if usage?.user_count}
-					<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
+					<hr class="border-gray-100 dark:border-gray-800 mx-2 my-1.5" />
 
 					<Tooltip
 						content={usage?.model_ids && usage?.model_ids.length > 0
@@ -362,29 +322,25 @@
 							: ''}
 					>
 						<div
-							class="flex rounded-xl py-1 px-3 text-xs gap-2.5 items-center"
+							class="flex items-center gap-2.5 rounded-xl py-2 px-2.5 mx-0.5 bg-gray-50/50 dark:bg-gray-800/30"
 							on:mouseenter={() => {
 								if ($config?.features?.enable_public_active_users_count || role === 'admin') {
 									getUsageInfo();
 								}
 							}}
 						>
-							<div class=" flex items-center">
+							<div class="flex items-center">
 								<span class="relative flex size-2">
 									<span
 										class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-									/>
-									<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+									></span>
+									<span class="relative inline-flex rounded-full size-2 bg-green-500"></span>
 								</span>
 							</div>
 
-							<div class=" ">
-								<span class="">
-									{$i18n.t('Active Users')}:
-								</span>
-								<span class=" font-semibold">
-									{usage?.user_count}
-								</span>
+							<div class="text-xs text-gray-600 dark:text-gray-400">
+								<span>{$i18n.t('Active Users')}:</span>
+								<span class="font-semibold text-gray-800 dark:text-gray-200 ml-1">{usage?.user_count}</span>
 							</div>
 						</div>
 					</Tooltip>

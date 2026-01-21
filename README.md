@@ -11,11 +11,14 @@
   <a href="https://github.com/open-webui/open-webui">
     <img src="https://img.shields.io/badge/Upstream-open--webui-green?style=for-the-badge&logo=github" alt="Upstream Badge"/>
   </a>
-  <img src="https://img.shields.io/badge/Version-v0.7.3--3-orange?style=for-the-badge&logo=git" alt="Version"/>
+  <a href="https://pypi.org/project/open-webui-leon/">
+    <img src="https://img.shields.io/pypi/v/open-webui-leon?style=for-the-badge&logo=pypi&logoColor=white&label=PyPI" alt="PyPI"/>
+  </a>
+  <img src="https://img.shields.io/badge/Version-v0.7.3--4-orange?style=for-the-badge&logo=git" alt="Version"/>
   <img src="https://img.shields.io/badge/Arch-x86__64%20%7C%20ARM64-blueviolet?style=for-the-badge&logo=docker" alt="Arch Badge"/>
 
   <br/><br/>
-  <h3>功能增强 · 深度汉化 · 多架构支持</h3>
+  <h3>🚀 功能增强 · 🌏 深度汉化 · 🏗️ 多架构支持</h3>
   <p>基于 Open WebUI 构建，提供更强的模型集成、精细的运营控制及流畅的中文体验。</p>
 </div>
 
@@ -27,6 +30,7 @@
 
 | 您的需求 / 痛点 | 本版本解决方案 |
 | :--- | :--- |
+| **想用 pip 安装？** | ✅ **PyPI 发布**：`pip install open-webui-leon`，支持 PM2 进程管理。 |
 | **想用 OpenAI 新版 Responses API？** | ✅ **首发支持**：完整兼容 `/v1/responses`，实时流式展示思考过程。 |
 | **Gemini 丢失原生特性？** | ✅ **原生直连**：基于官方 SDK 开发，支持 `thinking_budget` 及原生工具调用。 |
 | **需要精确控制 Token 成本？** | ✅ **精细计费**：支持按次/Token 计费，区分输入输出价格，实时统计。 |
@@ -36,6 +40,27 @@
 ---
 
 ## 🚀 快速开始
+
+<table>
+<tr>
+<td width="50%">
+
+### 🐳 方式一：Docker 部署
+
+> 推荐大多数用户使用，开箱即用
+
+</td>
+<td width="50%">
+
+### 📦 方式二：pip 部署
+
+> 适合需要深度定制或无法使用 Docker 的场景
+
+</td>
+</tr>
+</table>
+
+---
 
 ### 🐳 Docker 一键部署
 
@@ -85,6 +110,74 @@ volumes:
   open-webui: {}
 ```
 启动服务：`docker compose up -d`
+
+---
+
+### 📦 pip + PM2 部署
+
+> 💡 适用于无法使用 Docker、需要深度定制、或希望与现有 Python 环境集成的用户。
+
+#### 前置要求
+
+| 依赖 | 版本要求 | 说明 |
+|:---|:---|:---|
+| Python | 3.11+ | 推荐使用 pyenv 或 conda 管理 |
+| Node.js | 18+ | 用于 PM2 进程管理 |
+| PM2 | 最新版 | `npm install -g pm2` |
+
+#### 1. 安装 Open WebUI
+
+```bash
+# 创建虚拟环境（推荐）
+python -m venv open-webui-env
+source open-webui-env/bin/activate  # Linux/macOS
+# open-webui-env\Scripts\activate   # Windows
+
+# 安装本定制版
+pip install open-webui-leon
+```
+
+> ⚠️ **命令兼容性说明**
+> - 本定制版包名为 `open-webui-leon`，同时提供 `open-webui` 和 `open-webui-leon` 两个命令
+> - 如果系统中已安装官方 `open-webui`，请先卸载以避免冲突：`pip uninstall open-webui`
+
+#### 2. 使用 PM2 管理服务
+
+```bash
+# 安装 PM2（如未安装）
+npm install -g pm2
+
+# 启动服务
+pm2 start "open-webui serve" --name open-webui
+
+# 常用 PM2 命令
+pm2 status          # 查看状态
+pm2 logs open-webui # 查看日志
+pm2 restart open-webui  # 重启服务
+pm2 stop open-webui     # 停止服务
+
+# 设置开机自启
+pm2 startup
+pm2 save
+```
+
+#### 3. 环境变量配置（可选）
+
+```bash
+# 自定义端口和数据目录
+export PORT=8080
+export DATA_DIR=/path/to/data
+
+# 然后启动
+pm2 start "open-webui serve" --name open-webui
+```
+
+#### 4. 从 GitHub Release 安装（离线场景）
+
+```bash
+# 下载 .whl 文件后
+pip install open_webui_leon-x.x.x-py3-none-any.whl
+```
 
 ---
 
@@ -187,6 +280,7 @@ volumes:
 
 | 特性 | 官方原版 (Upstream) | 本定制版 (Custom) | 差异核心 |
 | :--- | :---: | :---: | :--- |
+| **部署方式** | Docker only | ✅ **Docker + pip** | 支持 PyPI 安装 |
 | **API 协议** | Chat Completions | ✅ **Responses API + Chat** | 支持新版流式思考输出 |
 | **Gemini 支持** | OpenAI 兼容层 | ✅ **原生 SDK** | 完整支持原生参数与工具 |
 | **推理控制** | 基础 | ✅ **Reasoning Effort** | 可调节推理强度 |
@@ -197,7 +291,13 @@ volumes:
 
 ---
 
-## 📝 最新更新 (v0.7.3-3)
+## 📝 最新更新 (v0.7.3-4)
+
+### 🆕 v0.7.3-4 新增
+* 📦 **PyPI 发布**：支持 `pip install open-webui-leon` 直接安装。
+* 🔧 **GitHub Actions**：自动构建 wheel 包并发布到 Release。
+* ⚡ **启动性能优化**：Lazy Loading 策略与智能缓存机制。
+* 🔄 **外部连接刷新修复**：修复管理员设置页面的连接刷新问题。
 
 ### 🚀 v0.7.3 重点功能
 * 🌳 **对话分支功能**：从任意消息节点分叉，探索不同可能性。

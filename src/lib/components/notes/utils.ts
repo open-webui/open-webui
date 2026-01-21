@@ -3,7 +3,16 @@ import { toast } from 'svelte-sonner';
 
 import { createNewNote } from '$lib/apis/notes';
 
-export const downloadPdf = async (note) => {
+interface Note {
+	title: string;
+	data?: {
+		content?: {
+			html?: string;
+		};
+	};
+}
+
+export const downloadPdf = async (note: Note) => {
 	const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
 		import('jspdf'),
 		import('html2canvas-pro')
@@ -17,8 +26,8 @@ export const downloadPdf = async (note) => {
 	const html = DOMPurify.sanitize(note.data?.content?.html ?? '');
 	const isDarkMode = document.documentElement.classList.contains('dark');
 
-	let node;
-	if (html instanceof HTMLElement) {
+	let node: HTMLElement;
+	if (typeof html !== 'string') {
 		node = html;
 	} else {
 		const virtualWidth = 800; // px, fixed width for cloned element
@@ -64,7 +73,7 @@ export const downloadPdf = async (note) => {
 	});
 
 	// Remove hidden node if needed
-	if (!(html instanceof HTMLElement)) {
+	if (typeof html === 'string') {
 		document.body.removeChild(node);
 	}
 

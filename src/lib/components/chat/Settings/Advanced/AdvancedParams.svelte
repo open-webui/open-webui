@@ -15,18 +15,21 @@
 	import LightBulbMax from '$lib/components/icons/LightBulbMax.svelte';
 	import LightBulbAuto from '$lib/components/icons/LightBulbAuto.svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import { mobile } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
 	const reasoningEffortOptions = [
-		{ value: 'default', label: 'Default', cn: '默认', desc: '【模型自动】', icon: LightBulbAuto, hint: '不传递任何参数，由模型自动决定' },
-		{ value: 'none', label: 'None', cn: '关闭', desc: '【禁用推理】', icon: LightBulbOff, hint: '禁用推理思考' },
-		{ value: 'minimal', label: 'Minimal', cn: '最低', desc: '【极速思考】', icon: LightBulbMin, hint: '最小化思考，仅适用于部分OpenAI模型' },
-		{ value: 'low', label: 'Low', cn: '浮想', desc: '【轻量思考】', icon: LightBulbLow, hint: '低强度思考/低预算' },
-		{ value: 'medium', label: 'Medium', cn: '斟酌', desc: '【中度思考】', icon: LightBulbMedium, hint: '中强度思考/中预算' },
-		{ value: 'high', label: 'High', cn: '沉思', desc: '【深度思考】', icon: LightBulbHigh, hint: '高强度思考/高预算' },
-		{ value: 'xhigh', label: 'Xhigh', cn: '最高', desc: '【极致思考】', icon: LightBulbMax, hint: '最大化思考，仅适用于GPT5.1以上模型' }
+		{ value: 'default', label: 'Default', cn: '默认', desc: '【模型自动】', icon: LightBulbAuto, hint: '不传递任何参数，由模型自动决定', color: 'text-blue-500' },
+		{ value: 'none', label: 'None', cn: '关闭', desc: '【禁用推理】', icon: LightBulbOff, hint: '禁用推理思考', color: 'text-gray-400' },
+		{ value: 'minimal', label: 'Minimal', cn: '最低', desc: '【极速思考】', icon: LightBulbMin, hint: '极速思考/1024 Token预算', color: 'text-blue-500' },
+		{ value: 'low', label: 'Low', cn: '浮想', desc: '【轻量思考】', icon: LightBulbLow, hint: '轻量思考/2048 Token预算', color: 'text-blue-500' },
+		{ value: 'medium', label: 'Medium', cn: '斟酌', desc: '【中度思考】', icon: LightBulbMedium, hint: '中度思考/8192 Token预算', color: 'text-blue-500' },
+		{ value: 'high', label: 'High', cn: '沉思', desc: '【深度思考】', icon: LightBulbHigh, hint: '深度思考/16384 Token预算', color: 'text-blue-500' },
+		{ value: 'xhigh', label: 'Xhigh', cn: '最高', desc: '【极致思考】', icon: LightBulbMax, hint: '极致思考/20480~24576 Token预算', color: 'text-blue-500' }
 	];
+
+	const isFunctionCallingNative = (value) => value === 'native' || value === undefined;
 
 	export let onChange: (params: any) => void = () => {};
 
@@ -38,7 +41,7 @@
 		max_context_count: null, // Set the maximum context message count for the model
 		stream_response: null, // Set stream responses for this model individually
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
-		function_calling: null,
+		function_calling: 'native',
 		reasoning_tags: null,
 		seed: null,
 		stop: null,
@@ -76,62 +79,7 @@
 </script>
 
 <div class=" space-y-1 text-xs pb-safe-bottom">
-	<!-- Context Count Setting -->
-	<div class=" py-0.5 w-full justify-between">
-		<Tooltip
-			content={$i18n.t(
-				'Sets the maximum number of previous messages (context) to include when sending requests to the model. 0 means only the current message is sent, higher values include more conversation history.'
-			)}
-			placement="top-start"
-			className="inline-tooltip"
-		>
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Context Count')}
-				</div>
-				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
-					type="button"
-					on:click={() => {
-						params.max_context_count = (params?.max_context_count ?? null) === null ? 5 : null;
-					}}
-				>
-					{#if (params?.max_context_count ?? null) === null}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-					{/if}
-				</button>
-			</div>
-		</Tooltip>
-
-		{#if (params?.max_context_count ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="context-count-range"
-						type="range"
-						min="0"
-						max="20"
-						step="1"
-						bind:value={params.max_context_count}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div class="flex items-center">
-					<input
-						bind:value={params.max_context_count}
-						type="number"
-						class="bg-transparent text-center w-14"
-						min="0"
-						step="1"
-					/>
-					<span class="text-xs text-gray-500 ml-1">{$i18n.t('messages')}</span>
-				</div>
-			</div>
-		{/if}
-	</div>
-
+	<!-- 1. Stream Chat Response (流式输出) -->
 	<div>
 		<Tooltip
 			content={$i18n.t(
@@ -168,6 +116,7 @@
 		</Tooltip>
 	</div>
 
+	<!-- 2. Stream Delta Chunk Size (流分块大小) [admin only] -->
 	{#if admin}
 		<div>
 			<Tooltip
@@ -225,6 +174,7 @@
 		</div>
 	{/if}
 
+	<!-- 3. Function Calling (函数调用) -->
 	<div>
 		<Tooltip
 			content={$i18n.t(
@@ -240,20 +190,77 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
-						params.function_calling = (params?.function_calling ?? null) === null ? 'native' : null;
+						params.function_calling = isFunctionCallingNative(params?.function_calling) ? null : 'native';
 					}}
 					type="button"
 				>
-					{#if params.function_calling === 'native'}
-						<span class="ml-2 self-center">{$i18n.t('Native')}</span>
+					{#if isFunctionCallingNative(params?.function_calling)}
+						<span class="ml-2 self-center">原生</span>
 					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						<span class="ml-2 self-center">兼容</span>
 					{/if}
 				</button>
 			</div>
 		</Tooltip>
 	</div>
 
+	<!-- 4. Context Count (上下文条数) -->
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Sets the maximum number of previous messages (context) to include when sending requests to the model. 0 means only the current message is sent, higher values include more conversation history.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Context Count')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.max_context_count = (params?.max_context_count ?? null) === null ? 5 : null;
+					}}
+				>
+					{#if (params?.max_context_count ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.max_context_count ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="context-count-range"
+						type="range"
+						min="0"
+						max="20"
+						step="1"
+						bind:value={params.max_context_count}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div class="flex items-center">
+					<input
+						bind:value={params.max_context_count}
+						type="number"
+						class="bg-transparent text-center w-14"
+						min="0"
+						step="1"
+					/>
+					<span class="text-xs text-gray-500 ml-1">{$i18n.t('messages')}</span>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- 5. Reasoning Effort (推理强度) -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -287,6 +294,28 @@
 			{@const isCustomValue = !presetValues.includes(params.reasoning_effort)}
 			<div class="flex mt-0.5 space-x-2">
 				<div class="flex-1">
+					{#if $mobile}
+						<!-- 移动端使用原生 select 元素 -->
+						<select
+							class="w-full h-8 text-sm bg-transparent outline-none border border-gray-200 dark:border-gray-700 rounded-lg px-2"
+							value={isCustomValue ? '__custom__' : (params.reasoning_effort ?? 'default')}
+							on:change={(e) => {
+								const value = e.target.value;
+								if (value === '__custom__') {
+									params.reasoning_effort = '';
+								} else if (value === 'default') {
+									params.reasoning_effort = null;
+								} else {
+									params.reasoning_effort = value;
+								}
+							}}
+						>
+							{#each reasoningEffortOptions as option}
+								<option value={option.value}>{option.cn} - {option.desc}</option>
+							{/each}
+							<option value="__custom__">自定义输入...</option>
+						</select>
+					{:else}
 					<Select.Root
 						items={reasoningEffortOptions}
 						onOpenChange={() => {}}
@@ -310,7 +339,7 @@
 						}}
 					>
 						<Select.Trigger
-							class="w-full relative select-none"
+							class="w-full relative select-none touch-manipulation"
 							aria-label={$i18n.t('Reasoning Effort')}
 						>
 							<Select.Value
@@ -323,9 +352,9 @@
 										reasoningEffortOptions.find((o) => o.value === params.reasoning_effort) ??
 										reasoningEffortOptions.find((o) => o.value === 'default')}
 									{#if selected}
-										<div class="flex items-center w-full font-mono text-sm max-w-full">
+										<div class="flex items-center w-full text-sm max-w-full">
 											<div
-												class="w-8 mr-1 shrink-0 flex items-center justify-center text-gray-400 dark:text-gray-500"
+												class="w-8 mr-1 shrink-0 flex items-center justify-center {selected.color}"
 											>
 												<svelte:component this={selected.icon} class="w-4 h-4" />
 											</div>
@@ -347,7 +376,7 @@
 							/>
 						</Select.Trigger>
 						<Select.Content
-							class="w-full rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg z-50 p-1"
+							class="w-full rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 shadow-lg z-[9999] p-1"
 							transition={flyAndScale}
 							sideOffset={4}
 							side="bottom"
@@ -355,12 +384,12 @@
 						>
 							{#each reasoningEffortOptions as option}
 								<Select.Item
-									class="flex w-full items-center rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 font-mono outline-none data-[highlighted]:bg-gray-50 dark:data-[highlighted]:bg-gray-800"
+									class="flex w-full items-center rounded-lg px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-850 outline-none transition-all duration-75 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-850"
 									value={option.value}
 									label={option.label}
 								>
 									<div
-										class="w-8 mr-1 shrink-0 flex items-center justify-center text-gray-400 dark:text-gray-500"
+										class="w-8 mr-1 shrink-0 flex items-center justify-center {option.color}"
 									>
 										<svelte:component this={option.icon} class="w-4 h-4" />
 									</div>
@@ -377,7 +406,7 @@
 							{/each}
 
 							<Select.Item
-								class="flex w-full items-center rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 font-mono outline-none data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-800"
+								class="flex w-full items-center rounded-lg px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-850 outline-none transition-all duration-75 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-gray-850"
 								value="__custom__"
 								label="Custom"
 							>
@@ -390,6 +419,7 @@
 							</Select.Item>
 						</Select.Content>
 					</Select.Root>
+					{/if}
 				</div>
 				{#if isCustomValue || params.reasoning_effort === ''}
 					<div class="flex-1">
@@ -412,6 +442,232 @@
 		{/if}
 	</div>
 
+	<!-- 6. Temperature (采样温度) -->
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'The temperature of the model. Increasing the temperature will make the model answer more creatively.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Temperature')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.temperature = (params?.temperature ?? null) === null ? 0.8 : null;
+					}}
+				>
+					{#if (params?.temperature ?? null) === null}
+						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+					{:else}
+						<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.temperature ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="0"
+						max="2"
+						step="0.05"
+						bind:value={params.temperature}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.temperature}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="0"
+						max="2"
+						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- 7. top_p (核采样率) -->
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('top_p')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.top_p = (params?.top_p ?? null) === null ? 0.9 : null;
+					}}
+				>
+					{#if (params?.top_p ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.top_p ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="0"
+						max="1"
+						step="0.05"
+						bind:value={params.top_p}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.top_p}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="0"
+						max="1"
+						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- 8. top_k (候选词数量) -->
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('top_k')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
+					}}
+				>
+					{#if (params?.top_k ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.top_k ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="0"
+						max="1000"
+						step="0.5"
+						bind:value={params.top_k}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.top_k}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="0"
+						max="100"
+						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- 9. max_tokens (最大生成Token数) -->
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('max_tokens')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null;
+					}}
+				>
+					{#if (params?.max_tokens ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.max_tokens ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="-2"
+						max="131072"
+						step="1"
+						bind:value={params.max_tokens}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.max_tokens}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="-2"
+						step="1"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- 10. Seed (随机种子) -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -457,6 +713,7 @@
 		{/if}
 	</div>
 
+	<!-- 11. Stop Sequence (停止序列) -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -501,6 +758,7 @@
 		{/if}
 	</div>
 
+	<!-- 12. Reasoning Tags (推理标签) -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -566,61 +824,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
-		<Tooltip
-			content={$i18n.t(
-				'The temperature of the model. Increasing the temperature will make the model answer more creatively.'
-			)}
-			placement="top-start"
-			className="inline-tooltip"
-		>
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Temperature')}
-				</div>
-				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
-					type="button"
-					on:click={() => {
-						params.temperature = (params?.temperature ?? null) === null ? 0.8 : null;
-					}}
-				>
-					{#if (params?.temperature ?? null) === null}
-						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-					{:else}
-						<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
-					{/if}
-				</button>
-			</div>
-		</Tooltip>
-
-		{#if (params?.temperature ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="2"
-						step="0.05"
-						bind:value={params.temperature}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.temperature}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="2"
-						step="any"
-					/>
-				</div>
-			</div>
-		{/if}
-	</div>
-
+	<!-- 13. logit_bias -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -666,172 +870,7 @@
 		{/if}
 	</div>
 
-	<div class=" py-0.5 w-full justify-between">
-		<Tooltip
-			content={$i18n.t(
-				'This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.'
-			)}
-			placement="top-start"
-			className="inline-tooltip"
-		>
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('max_tokens')}
-				</div>
-
-				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
-					type="button"
-					on:click={() => {
-						params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null;
-					}}
-				>
-					{#if (params?.max_tokens ?? null) === null}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-					{/if}
-				</button>
-			</div>
-		</Tooltip>
-
-		{#if (params?.max_tokens ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="-2"
-						max="131072"
-						step="1"
-						bind:value={params.max_tokens}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.max_tokens}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="-2"
-						step="1"
-					/>
-				</div>
-			</div>
-		{/if}
-	</div>
-
-	<div class=" py-0.5 w-full justify-between">
-		<Tooltip
-			content={$i18n.t(
-				'Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative.'
-			)}
-			placement="top-start"
-			className="inline-tooltip"
-		>
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('top_k')}
-				</div>
-				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
-					type="button"
-					on:click={() => {
-						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
-					}}
-				>
-					{#if (params?.top_k ?? null) === null}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-					{/if}
-				</button>
-			</div>
-		</Tooltip>
-
-		{#if (params?.top_k ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="1000"
-						step="0.5"
-						bind:value={params.top_k}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.top_k}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="100"
-						step="any"
-					/>
-				</div>
-			</div>
-		{/if}
-	</div>
-
-	<div class=" py-0.5 w-full justify-between">
-		<Tooltip
-			content={$i18n.t(
-				'Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text.'
-			)}
-			placement="top-start"
-			className="inline-tooltip"
-		>
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('top_p')}
-				</div>
-
-				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
-					type="button"
-					on:click={() => {
-						params.top_p = (params?.top_p ?? null) === null ? 0.9 : null;
-					}}
-				>
-					{#if (params?.top_p ?? null) === null}
-						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-					{:else}
-						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-					{/if}
-				</button>
-			</div>
-		</Tooltip>
-
-		{#if (params?.top_p ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="1"
-						step="0.05"
-						bind:value={params.top_p}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.top_p}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="1"
-						step="any"
-					/>
-				</div>
-			</div>
-		{/if}
-	</div>
-
+	<!-- 14. min_p -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -887,6 +926,7 @@
 		{/if}
 	</div>
 
+	<!-- 15. frequency_penalty -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -943,6 +983,7 @@
 		{/if}
 	</div>
 
+	<!-- 16. presence_penalty -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -999,6 +1040,7 @@
 		{/if}
 	</div>
 
+	<!-- 17. mirostat -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t('Enable Mirostat sampling for controlling perplexity.')}
@@ -1052,6 +1094,7 @@
 		{/if}
 	</div>
 
+	<!-- 18. mirostat_eta -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -1107,6 +1150,7 @@
 		{/if}
 	</div>
 
+	<!-- 19. mirostat_tau -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -1163,6 +1207,7 @@
 		{/if}
 	</div>
 
+	<!-- 20. repeat_last_n -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t('Sets how far back for the model to look back to prevent repetition.')}
@@ -1217,6 +1262,7 @@
 		{/if}
 	</div>
 
+	<!-- 21. tfs_z -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -1273,6 +1319,7 @@
 		{/if}
 	</div>
 
+	<!-- 22. repeat_penalty -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -1329,6 +1376,7 @@
 		{/if}
 	</div>
 
+	<!-- 23-24. use_mmap & use_mlock [admin only] -->
 	{#if admin}
 		<div class=" py-0.5 w-full justify-between">
 			<Tooltip
@@ -1413,6 +1461,7 @@
 		</div>
 	{/if}
 
+	<!-- 25. think (Ollama) -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -1444,6 +1493,7 @@
 		</Tooltip>
 	</div>
 
+	<!-- 26. format (Ollama) -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t('The format to return a response in. Format can be json or a JSON schema.')}
@@ -1481,6 +1531,7 @@
 		{/if}
 	</div>
 
+	<!-- 27. num_keep (Ollama) -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -1536,6 +1587,7 @@
 		{/if}
 	</div>
 
+	<!-- 28. num_ctx (Ollama) -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t('Sets the size of the context window used to generate the next token.')}
@@ -1589,6 +1641,7 @@
 		{/if}
 	</div>
 
+	<!-- 29. num_batch (Ollama) -->
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
@@ -1644,6 +1697,7 @@
 		{/if}
 	</div>
 
+	<!-- 30-33. Ollama admin settings -->
 	{#if admin}
 		<div class=" py-0.5 w-full justify-between">
 			<Tooltip

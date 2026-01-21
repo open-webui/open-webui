@@ -1,6 +1,12 @@
+interface TokenizerContext {
+	lexer: {
+		inlineTokens: (text: string) => unknown[];
+	};
+}
+
 export const disableSingleTilde = {
 	tokenizer: {
-		del(src) {
+		del(this: TokenizerContext, src: string) {
 			// 1. First check for the REAL strikethrough: ~~text~~
 			const doubleMatch = /^~~(?=\S)([\s\S]*?\S)~~/.exec(src);
 			if (doubleMatch) {

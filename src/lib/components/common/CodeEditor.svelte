@@ -6,10 +6,47 @@
 	import { acceptCompletion } from '@codemirror/autocomplete';
 	import { indentWithTab } from '@codemirror/commands';
 
-	import { indentUnit, LanguageDescription } from '@codemirror/language';
+	import { indentUnit, LanguageDescription, HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
+	import { tags } from '@lezer/highlight';
 
 	import { oneDark } from '@codemirror/theme-one-dark';
+
+	// GitHub Light 风格的浅色主题 (VS Code 风格优化)
+	const githubLightHighlight = HighlightStyle.define([
+		{ tag: tags.keyword, color: '#0070c1' },
+		{ tag: tags.controlKeyword, color: '#af00db' },
+		{ tag: tags.operatorKeyword, color: '#0070c1' },
+		{ tag: tags.definitionKeyword, color: '#0070c1' },
+		{ tag: tags.moduleKeyword, color: '#af00db' },
+		{ tag: tags.comment, color: '#6a737d', fontStyle: 'italic' },
+		{ tag: tags.string, color: '#a31515' },
+		{ tag: tags.number, color: '#098658' },
+		{ tag: tags.bool, color: '#0070c1' },
+		{ tag: tags.null, color: '#0070c1' },
+		{ tag: tags.function(tags.variableName), color: '#795e26' },
+		{ tag: tags.function(tags.propertyName), color: '#795e26' },
+		{ tag: tags.definition(tags.variableName), color: '#001080' },
+		{ tag: tags.definition(tags.propertyName), color: '#001080' },
+		{ tag: tags.variableName, color: '#001080' },
+		{ tag: tags.propertyName, color: '#001080' },
+		{ tag: tags.className, color: '#267f99' },
+		{ tag: tags.typeName, color: '#267f99' },
+		{ tag: tags.tagName, color: '#800000' },
+		{ tag: tags.attributeName, color: '#e50000' },
+		{ tag: tags.operator, color: '#000000' },
+		{ tag: tags.punctuation, color: '#000000' },
+		{ tag: tags.bracket, color: '#000000' },
+		{ tag: tags.meta, color: '#af00db' },
+		{ tag: tags.atom, color: '#0070c1' },
+		{ tag: tags.self, color: '#0070c1' },
+		{ tag: tags.special(tags.variableName), color: '#af00db' },
+		{ tag: tags.regexp, color: '#811f3f' },
+		{ tag: tags.escape, color: '#ee0000' },
+		{ tag: tags.link, color: '#0070c1', textDecoration: 'underline' },
+		{ tag: tags.heading, color: '#800000', fontWeight: 'bold' },
+	]);
+	const githubLight = [syntaxHighlighting(githubLightHighlight)];
 
 	import { onMount, createEventDispatcher, getContext, tick, onDestroy } from 'svelte';
 
@@ -272,6 +309,10 @@ print("${endTag}")
 			codeEditor.dispatch({
 				effects: editorTheme.reconfigure(oneDark)
 			});
+		} else {
+			codeEditor.dispatch({
+				effects: editorTheme.reconfigure(githubLight)
+			});
 		}
 
 		// listen to html class changes this should fire only when dark mode is toggled
@@ -288,7 +329,7 @@ print("${endTag}")
 							});
 						} else {
 							codeEditor.dispatch({
-								effects: editorTheme.reconfigure()
+								effects: editorTheme.reconfigure(githubLight)
 							});
 						}
 					}

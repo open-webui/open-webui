@@ -241,6 +241,7 @@ async def verify_connection(
             if ENABLE_FORWARD_USER_INFO_HEADERS and user:
                 headers = include_user_info_headers(headers, user)
 
+            # First verify connection with version endpoint
             async with session.get(
                 f"{url}/api/version",
                 headers=headers,
@@ -254,6 +255,14 @@ async def verify_connection(
                         detail = f"External Error: {res['error']}"
                     raise Exception(detail)
 
+            # Then fetch models list
+            async with session.get(
+                f"{url}/api/tags",
+                headers=headers,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                if r.status != 200:
+                    return {"models": []}
                 data = await r.json()
                 return data
         except aiohttp.ClientError as e:
@@ -375,7 +384,10 @@ async def get_all_models(request: Request, user: UserModel = None):
                 tags = api_config.get("tags", [])
                 model_ids = api_config.get("model_ids", [])
 
-                if len(model_ids) != 0 and "models" in response:
+                if len(model_ids) == 0:
+                    # No models specified, skip this connection (user should add models manually)
+                    response["models"] = []
+                elif "models" in response:
                     response["models"] = list(
                         filter(
                             lambda model: model["model"] in model_ids,

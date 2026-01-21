@@ -197,6 +197,7 @@
 
 			// Check modifiers
 			if (needShift && !event.shiftKey) return false;
+			if (!needShift && event.shiftKey) return false;
 
 			if (needCtrl && !(event.ctrlKey || event.metaKey)) return false;
 			if (!needCtrl && (event.ctrlKey || event.metaKey)) return false;

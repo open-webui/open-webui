@@ -1,11 +1,28 @@
 import { mount, unmount } from 'svelte';
 import { createClassComponent } from 'svelte/legacy';
 
-import tippy from 'tippy.js';
+import tippy, { type Instance as TippyInstance } from 'tippy.js';
 
-export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
+interface SuggestionItem {
+	id: string;
+	label: string;
+}
+
+interface ComponentPropsWithI18n {
+	i18n?: unknown;
+	[key: string]: unknown;
+}
+
+interface SvelteClassComponent {
+	$set: (props: Record<string, unknown>) => void;
+	$destroy: () => void;
+	_onKeyDown?: (event: KeyboardEvent) => boolean;
+}
+
+export function getSuggestionRenderer(Component: unknown, ComponentProps: ComponentPropsWithI18n = {}) {
 	return function suggestionRenderer() {
-		let component = null;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		let component: any = null;
 		let container: HTMLDivElement | null = null;
 
 		let popup: TippyInstance | null = null;
@@ -19,17 +36,18 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 
 				// mount Svelte component
 				component = createClassComponent({
-					component: Component,
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					component: Component as any,
 					target: container,
 					props: {
 						char: props?.text,
 						query: props?.query,
-						command: (item) => {
+						command: (item: SuggestionItem) => {
 							props.command({ id: item.id, label: item.label });
 						},
 						...ComponentProps
 					},
-					context: new Map<string, any>([['i18n', ComponentProps?.i18n]])
+					context: new Map<string, unknown>([['i18n', ComponentProps?.i18n]])
 				});
 
 				// Create a tiny reference element so outside taps are truly "outside"
@@ -87,7 +105,7 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 
 				component.$set({
 					query: props.query,
-					command: (item) => {
+					command: (item: SuggestionItem) => {
 						props.command({ id: item.id, label: item.label });
 					}
 				});

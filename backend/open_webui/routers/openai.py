@@ -1,10 +1,12 @@
 import asyncio
+import copy
 import hashlib
 import json
 import logging
 import uuid
 import time
 from typing import Optional
+from urllib.parse import urlparse
 
 import aiohttp
 from aiocache import cached
@@ -82,6 +84,169 @@ async def error_stream_generator(model_id, error_msg):
     }
     yield f"data: {json.dumps(error_chunk)}\n\n"
     yield "data: [DONE]\n\n"
+
+
+def _get_upstream_host(request_url: str) -> str:
+    try:
+        return urlparse(request_url).hostname or ""
+    except Exception:
+        return ""
+
+
+def _format_upstream_timeout_message(request_url: str) -> str:
+    host = _get_upstream_host(request_url)
+    upstream_info = (
+        f"Upstream error 524. {host} | 524: A timeout occurred"
+        if host
+        else "Upstream error 524. 524: A timeout occurred"
+    )
+    return (
+        "\u554a\u54e6\uff01\u56de\u7b54\u6709\u95ee\u9898 "
+        + upstream_info
+        + " \u4e0a\u6e38\u54cd\u5e94\u592a\u6162/\u88ab\u7f51\u5173\u65ad\u5f00\u3002"
+    )
+
+
+def _build_upstream_error_message(status: int, response, request_url: str) -> str:
+    if status == 524:
+        return _format_upstream_timeout_message(request_url)
+
+    error_msg = f"HTTP Error {status}"
+    if isinstance(response, dict) and "error" in response:
+        err = response["error"]
+        if isinstance(err, dict):
+            error_msg = f"{err.get('message', str(err))} (Code: {status})"
+        else:
+            error_msg = f"{str(err)} (Code: {status})"
+    elif isinstance(response, str):
+        error_msg = f"{response} (Code: {status})"
+    return error_msg
+
+
+def _build_upstream_error_payload(status: int, response, request_url: str) -> dict:
+    error_msg = _build_upstream_error_message(status, response, request_url)
+    code = "upstream_timeout" if status == 524 else "upstream_error"
+    return {
+        "error": {
+            "message": error_msg,
+            "type": "api_error",
+            "code": code,
+        }
+    }
+
+
+WEB_SEARCH_TOOL_TYPES = ("web_search", "web_search_preview", "browser_search")
+
+
+def _find_web_search_tool_type(tools):
+    if not isinstance(tools, list):
+        return None
+    for tool in tools:
+        if isinstance(tool, dict) and tool.get("type") in WEB_SEARCH_TOOL_TYPES:
+            return tool.get("type")
+    return None
+
+
+def _has_native_web_search_tool(payload: dict) -> bool:
+    tools = payload.get("tools")
+    if not isinstance(tools, list):
+        return False
+    for tool in tools:
+        if not isinstance(tool, dict):
+            continue
+        if tool.get("type") in WEB_SEARCH_TOOL_TYPES:
+            return True
+        if "googleSearch" in tool:
+            return True
+    return False
+
+
+def _set_web_search_tool_type(payload: dict, tool_type: str) -> None:
+    tools = payload.get("tools")
+    if not isinstance(tools, list):
+        tools = []
+        payload["tools"] = tools
+
+    filtered = []
+    for tool in tools:
+        if isinstance(tool, dict) and tool.get("type") in WEB_SEARCH_TOOL_TYPES:
+            continue
+        filtered.append(tool)
+
+    filtered.append({"type": tool_type})
+    payload["tools"] = filtered
+
+
+def _remove_native_web_search_tools(payload: dict) -> None:
+    tools = payload.get("tools")
+    if not isinstance(tools, list):
+        return
+
+    filtered = []
+    for tool in tools:
+        if not isinstance(tool, dict):
+            filtered.append(tool)
+            continue
+        if tool.get("type") in WEB_SEARCH_TOOL_TYPES:
+            continue
+        if "googleSearch" in tool:
+            continue
+        filtered.append(tool)
+
+    if filtered:
+        payload["tools"] = filtered
+    else:
+        payload.pop("tools", None)
+
+
+def _error_text_from_response(response) -> str:
+    if isinstance(response, str):
+        return response
+    if isinstance(response, dict):
+        error = response.get("error", response)
+        if isinstance(error, dict):
+            return str(error.get("message") or error)
+        return str(error)
+    return ""
+
+
+def _is_native_web_search_unsupported_error(response) -> bool:
+    text = _error_text_from_response(response).lower()
+    if not text:
+        return False
+
+    if "tools[0].type" in text and "invalid value" in text:
+        return True
+
+    if "function_declarations" in text and "invalid function name" in text:
+        return True
+
+    for token in ("web_search", "web_search_preview", "browser_search", "googlesearch"):
+        if token in text and any(
+            phrase in text
+            for phrase in ("not supported", "unsupported", "invalid", "not allowed")
+        ):
+            return True
+
+    return False
+
+
+def _get_native_web_search_tool_types(api_config: dict, base_url: str) -> list[str]:
+    config = api_config or {}
+    tool_types = config.get("native_web_search_tool_types")
+    if isinstance(tool_types, list):
+        normalized = [str(t) for t in tool_types if t]
+        if normalized:
+            return normalized
+
+    tool_type = config.get("native_web_search_tool")
+    if tool_type:
+        return [str(tool_type)]
+
+    if "api.openai.com" in (base_url or ""):
+        return ["web_search_preview", "web_search"]
+
+    return ["web_search", "web_search_preview", "browser_search"]
 
 
 def convert_tools_to_responses_format(tools):
@@ -519,10 +684,14 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
         return tool_call
 
     try:
+        chunk_count = 0
         async for chunk in response.content.iter_any():
+            chunk_count += 1
             if not chunk:
+                log.info(f"[RESPONSES STREAM DEBUG] Received empty chunk #{chunk_count}")
                 continue
-            
+
+            log.info(f"[RESPONSES STREAM DEBUG] Received chunk #{chunk_count}, size={len(chunk)}")
             buffer += chunk.decode("utf-8", errors="replace")
             
             # Process SSE events
@@ -1289,14 +1458,8 @@ async def get_all_models_responses(request: Request, user: UserModel, timeout_se
 
             if enable:
                 if len(model_ids) == 0:
-                    request_tasks.append(
-                        send_get_request(
-                            f"{url}/models",
-                            request.app.state.config.OPENAI_API_KEYS[idx],
-                            user=user,
-                            timeout_seconds=timeout_seconds,
-                        )
-                    )
+                    # No models specified, skip fetching (user should add models manually)
+                    request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
                 else:
                     model_list = {
                         "object": "list",
@@ -1719,6 +1882,8 @@ async def generate_chat_completion(
     idx = 0
 
     payload = {**form_data}
+    disable_tools = payload.pop("disable_tools", False)
+    payload.pop("empty_response_retry", False)
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
@@ -1818,6 +1983,51 @@ async def generate_chat_completion(
 
         if logit_bias:
             payload["logit_bias"] = json.loads(logit_bias)
+
+    if disable_tools:
+        payload.pop("tools", None)
+        payload.pop("tool_choice", None)
+
+    # Handle native web search - add appropriate tool based on model type
+    native_web_search = payload.pop("native_web_search", False)
+    if disable_tools:
+        native_web_search = False
+    native_web_search_tool_types = []
+    if native_web_search:
+        log.info(f"[NATIVE WEB SEARCH] Enabling model built-in web search for model: {model_id}")
+        # Check if this is a Gemini model (needs googleSearch grounding instead of web_search_preview)
+        is_gemini = "gemini" in model_id.lower()
+        if is_gemini:
+            # For Gemini models, use googleSearch grounding
+            if "tools" not in payload:
+                payload["tools"] = []
+            has_google_search = any(
+                isinstance(t, dict) and "googleSearch" in t
+                for t in payload.get("tools", [])
+            )
+            if not has_google_search:
+                payload["tools"].append({"googleSearch": {}})
+                log.info(f"[NATIVE WEB SEARCH] Added googleSearch grounding for Gemini model")
+        else:
+            # For OpenAI and other models, use the configured web search tool type
+            existing_web_search = _find_web_search_tool_type(payload.get("tools"))
+            if existing_web_search:
+                native_web_search_tool_types = [existing_web_search]
+                log.info(
+                    f"[NATIVE WEB SEARCH] Using existing web search tool type: {existing_web_search}"
+                )
+            else:
+                native_web_search_tool_types = _get_native_web_search_tool_types(
+                    api_config, url
+                )
+                if native_web_search_tool_types:
+                    _set_web_search_tool_type(
+                        payload, native_web_search_tool_types[0]
+                    )
+                    log.info(
+                        "[NATIVE WEB SEARCH] Added %s tool to payload",
+                        native_web_search_tool_types[0],
+                    )
 
     headers, cookies = await get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user
@@ -2033,18 +2243,20 @@ async def generate_chat_completion(
 
     # Save original payload for potential retry without tools
     payload_dict = payload.copy()
+    payload_dict_base = copy.deepcopy(payload_dict)
     has_tools = "tools" in payload_dict or "tool_choice" in payload_dict
 
-    # Debug: Log reasoning_effort in payload
+    # Add thinking parameters for Gemini models via OpenAI-compatible proxies
+    # Keep all params for maximum compatibility with different proxies
+    has_thinking_params = False
+
+    # Calculate thinking budget from reasoning_effort
     reasoning_effort = payload_dict.get("reasoning_effort")
+    effort_to_budget = {
+        "none": 0, "minimal": 1024, "low": 2048,
+        "medium": 8192, "high": 16384, "xhigh": 24576,
+    }
     if reasoning_effort:
-        log.info(f"[DEBUG] reasoning_effort in payload: {reasoning_effort}")
-        # Add alternative parameter formats for compatibility with different proxies
-        # Some proxies use thinking_budget (Gemini native format)
-        effort_to_budget = {
-            "none": 0, "minimal": 1024, "low": 2048,
-            "medium": 8192, "high": 16384, "xhigh": 20480, "max": 24576,
-        }
         if reasoning_effort in effort_to_budget:
             budget = effort_to_budget[reasoning_effort]
         else:
@@ -2052,16 +2264,104 @@ async def generate_chat_completion(
                 budget = int(reasoning_effort)
             except (ValueError, TypeError):
                 budget = 8192
-        if budget > 0:
-            # Add thinkingConfig for Gemini-compatible proxies
-            payload_dict["thinkingConfig"] = {"thinkingBudget": budget}
-            # Also add thinking_budget as a flat parameter for some proxies
-            payload_dict["thinking_budget"] = budget
-            log.info(f"[DEBUG] Added thinkingConfig and thinking_budget: {budget}")
+    else:
+        budget = 8192
+
+    model_name = str(payload_dict.get("model", "")).lower()
+    use_gemini_thinking = "gemini" in model_name
+
+    if use_gemini_thinking:
+        log.info("[DEBUG] Gemini-style thinking detected; skipping OpenAI reasoning flags")
+    else:
+        # Enable all possible thinking parameter variants for maximum compatibility
+        payload_dict["enable_thinking"] = True
+        payload_dict["include_reasoning"] = True
+        payload_dict["return_reasoning"] = True
+        payload_dict["show_thinking"] = True
+        has_thinking_params = True
+    # Add Google/Gemini format thinking config (used by various proxies)
+    if budget > 0 and use_gemini_thinking:
+        thinking_config = {
+            "thinking_budget": budget,
+            "include_thoughts": True,
+        }
+
+        google_config = payload_dict.get("google")
+        if not isinstance(google_config, dict):
+            google_config = {}
+            payload_dict["google"] = google_config
+        google_thinking = google_config.get("thinking_config")
+        if not isinstance(google_thinking, dict):
+            google_thinking = {}
+            google_config["thinking_config"] = google_thinking
+        google_thinking.setdefault("thinking_budget", thinking_config["thinking_budget"])
+        google_thinking.setdefault("include_thoughts", thinking_config["include_thoughts"])
+
+        extra_body = payload_dict.get("extra_body")
+        if extra_body is None:
+            extra_body = {}
+            payload_dict["extra_body"] = extra_body
+        if isinstance(extra_body, dict):
+            extra_google = extra_body.get("google")
+            if not isinstance(extra_google, dict):
+                extra_google = {}
+                extra_body["google"] = extra_google
+            extra_google_thinking = extra_google.get("thinking_config")
+            if not isinstance(extra_google_thinking, dict):
+                extra_google_thinking = {}
+                extra_google["thinking_config"] = extra_google_thinking
+            extra_google_thinking.setdefault(
+                "thinking_budget", thinking_config["thinking_budget"]
+            )
+            extra_google_thinking.setdefault(
+                "include_thoughts", thinking_config["include_thoughts"]
+            )
+        else:
+            log.info(
+                "[DEBUG] extra_body is not a dict; skipping extra_body.google.thinking_config"
+            )
+
+        payload_dict["thinkingConfig"] = {"thinkingBudget": budget}
+        payload_dict["thinking_budget"] = budget
+        log.info(f"[DEBUG] Added thinking params with budget={budget}")
+        has_thinking_params = True
+    elif budget > 0:
+        log.info("[DEBUG] Non-Gemini model detected; skipping google.thinking_config")
+    else:
+        log.info(f"[DEBUG] Thinking disabled (budget=0)")
+
+    # Add stream_options with reasoning flags if streaming
+    if payload_dict.get("stream") and not use_gemini_thinking:
+        stream_opts = payload_dict.get("stream_options", {}) or {}
+        stream_opts["include_reasoning"] = True
+        stream_opts["include_thinking"] = True
+        payload_dict["stream_options"] = stream_opts
+
+    # Optional: inject compat reasoning params for specific proxies/endpoints
+    # Enabled per-connection via OPENAI_API_CONFIGS[*].reasoning_compat
+    reasoning_compat = api_config.get("reasoning_compat")
+    if reasoning_effort and reasoning_compat:
+        compat_modes = []
+        if reasoning_compat is True:
+            compat_modes = ["reasoning"]
+        elif isinstance(reasoning_compat, str):
+            compat_modes = [reasoning_compat]
+        elif isinstance(reasoning_compat, list):
+            compat_modes = reasoning_compat
+        elif isinstance(reasoning_compat, dict):
+            compat_modes = reasoning_compat.get("modes", ["reasoning"])
+
+        effort_value = reasoning_effort.lower() if isinstance(reasoning_effort, str) else reasoning_effort
+        if "reasoning" in compat_modes:
+            payload_dict["reasoning"] = {"effort": effort_value}
+        if "thinking" in compat_modes:
+            payload_dict["thinking"] = {"effort": effort_value}
+        log.debug("[DEBUG] Added reasoning compat modes: %s", compat_modes)
 
     payload = json.dumps(payload_dict)
 
-
+    # Debug: print full payload being sent
+    log.info(f"[DEBUG] Full payload being sent: {payload[:2000]}...")  # First 2000 chars
 
     r = None
     session = None
@@ -2091,9 +2391,123 @@ async def generate_chat_completion(
             except Exception as e:
                 log.error(f"Error parsing error response: {e}")
                 response = await r.text()
-            
+
+            # Auto-retry without thinking params if proxy doesn't support them (400 error)
+            if has_thinking_params and r.status == 400:
+                log.info("Proxy may not support thinking params, retrying without them...")
+                await cleanup_response(r, session)
+
+                payload_dict = copy.deepcopy(payload_dict_base)
+                has_thinking_params = False
+                retry_payload = json.dumps(payload_dict)
+
+                session = aiohttp.ClientSession(
+                    trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+                )
+                r = await session.request(
+                    method="POST",
+                    url=request_url,
+                    data=retry_payload,
+                    headers=headers,
+                    cookies=cookies,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
+
+                if r.status >= 400:
+                    try:
+                        response = await r.json()
+                    except Exception as e:
+                        log.error(f"Error parsing retry error response: {e}")
+                        response = await r.text()
+                else:
+                    # Retry succeeded, clear the error response from first attempt
+                    response = None
+
+            # Retry with alternate web search tool types if native web search is enabled
+            if (
+                response is not None
+                and native_web_search_tool_types
+                and r.status == 400
+                and len(native_web_search_tool_types) > 1
+            ):
+                for tool_type in native_web_search_tool_types[1:]:
+                    log.info(
+                        "[NATIVE WEB SEARCH] Tool type %s failed; retrying with %s",
+                        native_web_search_tool_types[0],
+                        tool_type,
+                    )
+                    await cleanup_response(r, session)
+                    payload_dict = copy.deepcopy(payload_dict_base)
+                    _set_web_search_tool_type(payload_dict, tool_type)
+                    retry_payload = json.dumps(payload_dict)
+
+                    session = aiohttp.ClientSession(
+                        trust_env=True,
+                        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+                    )
+                    r = await session.request(
+                        method="POST",
+                        url=request_url,
+                        data=retry_payload,
+                        headers=headers,
+                        cookies=cookies,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    )
+
+                    if r.status >= 400:
+                        try:
+                            response = await r.json()
+                        except Exception as e:
+                            log.error(f"Error parsing retry error response: {e}")
+                            response = await r.text()
+                        continue
+
+                    response = None
+                    break
+
+            # Retry without native web search if upstream rejects the tool(s)
+            if (
+                response is not None
+                and native_web_search
+                and r.status == 400
+                and _has_native_web_search_tool(payload_dict_base)
+                and _is_native_web_search_unsupported_error(response)
+            ):
+                log.info(
+                    "[NATIVE WEB SEARCH] Upstream rejected native web search; retrying without it..."
+                )
+                await cleanup_response(r, session)
+                payload_dict = copy.deepcopy(payload_dict_base)
+                _remove_native_web_search_tools(payload_dict)
+                retry_payload = json.dumps(payload_dict)
+
+                session = aiohttp.ClientSession(
+                    trust_env=True,
+                    timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+                )
+                r = await session.request(
+                    method="POST",
+                    url=request_url,
+                    data=retry_payload,
+                    headers=headers,
+                    cookies=cookies,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
+
+                if r.status >= 400:
+                    try:
+                        response = await r.json()
+                    except Exception as e:
+                        log.error(f"Error parsing retry error response: {e}")
+                        response = await r.text()
+                else:
+                    response = None
+
             # Check if this is a "tool calling disabled" error and we can retry
-            if has_tools and is_tool_calling_disabled_error(response):
+            # Also skip if response is None (retry succeeded)
+            if response is None:
+                pass  # Retry succeeded, skip error handling
+            elif response and has_tools and is_tool_calling_disabled_error(response):
                 log.info("Tool calling disabled by API, retrying without tools...")
                 retry_without_tools = True
                 await cleanup_response(r, session)
@@ -2124,51 +2538,53 @@ async def generate_chat_completion(
                         response = await r.text()
                     
                     await cleanup_response(r, session)
-                    
+
                     if form_data.get("stream"):
-                        error_msg = f"HTTP Error {r.status}"
-                        if isinstance(response, dict) and "error" in response:
-                            err = response["error"]
-                            if isinstance(err, dict):
-                                error_msg = f"{err.get('message', str(err))} (Code: {r.status})"
-                            else:
-                                error_msg = f"{str(err)} (Code: {r.status})"
-                        elif isinstance(response, str):
-                            error_msg = f"{response} (Code: {r.status})"
-                        
+                        error_msg = _build_upstream_error_message(
+                            r.status, response, request_url
+                        )
+
                         return StreamingResponse(
                             error_stream_generator(model_id, error_msg),
                             media_type="text/event-stream"
                         )
-                    
+
+                    if r.status == 524:
+                        return JSONResponse(
+                            status_code=r.status,
+                            content=_build_upstream_error_payload(
+                                r.status, response, request_url
+                            ),
+                        )
+
                     if isinstance(response, (dict, list)):
                         return JSONResponse(status_code=r.status, content=response)
                     else:
                         return PlainTextResponse(status_code=r.status, content=response)
-            else:
+            elif response:
                 # Not a tool calling error or no tools in payload, handle normally
                 await cleanup_response(r, session)
-                
+
                 # IMPROVEMENT: Stream error to frontend if streaming was requested
                 # This ensures the error is visible in the chat UI instead of a generic failure
                 if form_data.get("stream"):
-                    error_msg = f"HTTP Error {r.status}"
-                    if isinstance(response, dict) and "error" in response:
-                        # Extract message from OpenAI error format
-                         err = response["error"]
-                         if isinstance(err, dict):
-                             error_msg = f"{err.get('message', str(err))} (Code: {r.status})"
-                         else:
-                             error_msg = f"{str(err)} (Code: {r.status})"
-                    elif isinstance(response, str):
-                         error_msg = f"{response} (Code: {r.status})"
-                    
+                    error_msg = _build_upstream_error_message(
+                        r.status, response, request_url
+                    )
+
                     return StreamingResponse(
                         error_stream_generator(model_id, error_msg),
                         media_type="text/event-stream"
                     )
 
                 # Fallback to standard JSON/Text response for non-stream requests
+                if r.status == 524:
+                    return JSONResponse(
+                        status_code=r.status,
+                        content=_build_upstream_error_payload(
+                            r.status, response, request_url
+                        ),
+                    )
                 if isinstance(response, (dict, list)):
                     return JSONResponse(status_code=r.status, content=response)
                 else:
@@ -2220,6 +2636,13 @@ async def generate_chat_completion(
                 log.info(f"[DEBUG] Fallback to text response, length={len(response)}")
 
             if r.status >= 400:
+                if r.status == 524:
+                    return JSONResponse(
+                        status_code=r.status,
+                        content=_build_upstream_error_payload(
+                            r.status, response, request_url
+                        ),
+                    )
                 if isinstance(response, (dict, list)):
                     return JSONResponse(status_code=r.status, content=response)
                 else:
@@ -2438,3 +2861,4 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     finally:
         if not streaming:
             await cleanup_response(r, session)
+

@@ -1,6 +1,6 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
 
-export const verifyOllamaConnection = async (token: string = '', connection: dict = {}) => {
+export const verifyOllamaConnection = async (token: string = '', connection: Record<string, unknown> = {}) => {
 	let error = null;
 
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/verify`, {
@@ -232,8 +232,8 @@ export const getOllamaModels = async (token: string = '', urlIdx: null | number 
 	}
 
 	return (res?.models ?? [])
-		.map((model) => ({ id: model.model, name: model.name ?? model.model, ...model }))
-		.sort((a, b) => {
+		.map((model: { model: string; name?: string }) => ({ id: model.model, name: model.name ?? model.model, ...model }))
+		.sort((a: { name?: string; id?: string }, b: { name?: string; id?: string }) => {
 			return (a?.name ?? a?.id ?? '').localeCompare(b?.name ?? b?.id ?? '');
 		});
 };

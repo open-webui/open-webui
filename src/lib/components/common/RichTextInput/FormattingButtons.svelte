@@ -1,8 +1,12 @@
-<script>
+<script lang="ts">
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	import type { Editor } from '@tiptap/core';
 
-	export let editor = null;
+	const i18n: Writable<i18nType> = getContext('i18n');
+
+	export let editor: Editor | null = null;
 
 	import Bold from '$lib/components/icons/Bold.svelte';
 	import CodeBracket from '$lib/components/icons/CodeBracket.svelte';

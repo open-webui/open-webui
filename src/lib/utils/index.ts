@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
-import sha256 from 'js-sha256';
+import sha256Lib from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
+
+const sha256 = sha256Lib.sha256;
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -32,38 +34,37 @@ function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export const replaceTokens = (content, char, user) => {
+const processOutsideCodeBlocks = (text: string, replacementFn: (segment: string) => string) => {
+	return text
+		.split(/(```[\s\S]*?```|`[\s\S]*?`)/)
+		.map((segment: string) => {
+			return segment.startsWith('```') || segment.startsWith('`')
+				? segment
+				: replacementFn(segment);
+		})
+		.join('');
+};
+
+export const replaceTokens = (content: string, char: string, user: string) => {
 	const tokens = [
 		{ regex: /{{char}}/gi, replacement: char },
 		{ regex: /{{user}}/gi, replacement: user },
 		{
 			regex: /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi,
-			replacement: (_, fileId) =>
+			replacement: (_: string, fileId: string) =>
 				`<video src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content" controls></video>`
 		},
 		{
 			regex: /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi,
-			replacement: (_, fileId) => `<file type="html" id="${fileId}" />`
+			replacement: (_: string, fileId: string) => `<file type="html" id="${fileId}" />`
 		}
 	];
 
-	// Replace tokens outside code blocks only
-	const processOutsideCodeBlocks = (text, replacementFn) => {
-		return text
-			.split(/(```[\s\S]*?```|`[\s\S]*?`)/)
-			.map((segment) => {
-				return segment.startsWith('```') || segment.startsWith('`')
-					? segment
-					: replacementFn(segment);
-			})
-			.join('');
-	};
-
 	// Apply replacements
-	content = processOutsideCodeBlocks(content, (segment) => {
+	content = processOutsideCodeBlocks(content, (segment: string) => {
 		tokens.forEach(({ regex, replacement }) => {
 			if (replacement !== undefined && replacement !== null) {
-				segment = segment.replace(regex, replacement);
+				segment = segment.replace(regex, replacement as string);
 			}
 		});
 
@@ -71,6 +72,21 @@ export const replaceTokens = (content, char, user) => {
 	});
 
 	return content;
+};
+
+const convertBoxTags = (content: string) => {
+	const boxRegex = /<\|?begin_of_box\|?>([\s\S]*?)<\|?end_of_box\|?>/gi;
+	return processOutsideCodeBlocks(content, (segment: string) => {
+		return segment.replace(boxRegex, (_match: string, inner: string) => {
+			const trimmed = inner.trim();
+			if (!trimmed) return '';
+			const lines = trimmed.split(/\r?\n/);
+			const quoted = lines
+				.map((line: string) => (line.trim() === '' ? '>' : `> ${line}`))
+				.join('\n');
+			return `\n> [!NOTE]\n${quoted}\n`;
+		});
+	});
 };
 
 export const sanitizeResponseContent = (content: string) => {
@@ -85,6 +101,7 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
+	content = convertBoxTags(content);
 	content = processChineseContent(content);
 	return content.trim();
 };
@@ -164,11 +181,11 @@ export function unescapeHtml(html: string) {
 	return doc.documentElement.textContent;
 }
 
-export const capitalizeFirstLetter = (string) => {
+export const capitalizeFirstLetter = (string: string) => {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 };
 
-export const splitStream = (splitOn) => {
+export const splitStream = (splitOn: string) => {
 	let buffer = '';
 	return new TransformStream({
 		transform(chunk, controller) {
@@ -183,14 +200,26 @@ export const splitStream = (splitOn) => {
 	});
 };
 
-export const convertMessagesToHistory = (messages) => {
-	const history = {
+interface HistoryMessage {
+	id: string;
+	parentId: string | null;
+	childrenIds: string[];
+	[key: string]: unknown;
+}
+
+interface History {
+	messages: Record<string, HistoryMessage>;
+	currentId: string | null;
+}
+
+export const convertMessagesToHistory = (messages: Record<string, unknown>[]) => {
+	const history: History = {
 		messages: {},
 		currentId: null
 	};
 
-	let parentMessageId = null;
-	let messageId = null;
+	let parentMessageId: string | null = null;
+	let messageId: string | null = null;
 
 	for (const message of messages) {
 		messageId = uuidv4();
@@ -216,7 +245,7 @@ export const convertMessagesToHistory = (messages) => {
 	return history;
 };
 
-export const getGravatarURL = (email) => {
+export const getGravatarURL = (email: string) => {
 	// Trim leading and trailing whitespace from
 	// an email address and force all characters
 	// to lower case
@@ -234,6 +263,7 @@ export const canvasPixelTest = () => {
 	// Inspiration: https://github.com/kkapsner/CanvasBlocker/blob/master/test/detectionTest.js
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
+	if (!ctx) return false;
 	canvas.height = 1;
 	canvas.width = 1;
 	const imageData = new ImageData(canvas.width, canvas.height);
@@ -270,7 +300,7 @@ export const canvasPixelTest = () => {
 	return true;
 };
 
-export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
+export const compressImage = async (imageUrl: string, maxWidth: number, maxHeight: number) => {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.onload = () => {
@@ -321,6 +351,10 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 			canvas.height = height;
 
 			const context = canvas.getContext('2d');
+			if (!context) {
+				reject(new Error('Failed to get canvas context'));
+				return;
+			}
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
@@ -332,7 +366,7 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 		img.src = imageUrl;
 	});
 };
-export const generateInitialsImage = (name) => {
+export const generateInitialsImage = (name: string) => {
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
 	canvas.width = 100;
@@ -344,6 +378,8 @@ export const generateInitialsImage = (name) => {
 		);
 		return `${WEBUI_BASE_URL}/user.png`;
 	}
+
+	if (!ctx) return `${WEBUI_BASE_URL}/user.png`;
 
 	ctx.fillStyle = '#F39C12';
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -367,7 +403,7 @@ export const generateInitialsImage = (name) => {
 	return canvas.toDataURL();
 };
 
-export const formatDate = (inputDate) => {
+export const formatDate = (inputDate: string | number | Date) => {
 	const date = dayjs(inputDate);
 
 	if (date.isToday()) {
@@ -379,19 +415,21 @@ export const formatDate = (inputDate) => {
 	}
 };
 
-export const copyToClipboard = async (text, html = null, formatted = false) => {
+export const copyToClipboard = async (text: string, html: string | null = null, formatted = false): Promise<boolean> => {
 	if (formatted) {
 		let styledHtml = '';
 		if (!html) {
 			const options = {
 				throwOnError: false,
-				highlight: function (code, lang) {
+				highlight: function (code: string, lang: string) {
 					const language = hljs.getLanguage(lang) ? lang : 'plaintext';
 					return hljs.highlight(code, { language }).value;
 				}
 			};
-			marked.use(markedKatexExtension(options));
-			marked.use(markedExtension(options));
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			marked.use(markedKatexExtension(options) as any);
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			marked.use(markedExtension() as any);
 			// DEVELOPER NOTE: Go to `$lib/components/chat/Messages/Markdown.svelte` to add extra markdown extensions for rendering.
 
 			const htmlContent = marked.parse(text);
@@ -511,7 +549,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 	}
 };
 
-export const compareVersion = (latest, current) => {
+export const compareVersion = (latest: string, current: string) => {
 	return current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
@@ -521,9 +559,9 @@ export const compareVersion = (latest, current) => {
 			}) < 0;
 };
 
-export const extractCurlyBraceWords = (text) => {
+export const extractCurlyBraceWords = (text: string) => {
 	const regex = /\{\{([^}]+)\}\}/g;
-	const matches = [];
+	const matches: { word: string; startIndex: number; endIndex: number }[] = [];
 	let match;
 
 	while ((match = regex.exec(text)) !== null) {
@@ -537,13 +575,13 @@ export const extractCurlyBraceWords = (text) => {
 	return matches;
 };
 
-export const removeLastWordFromString = (inputString, wordString) => {
+export const removeLastWordFromString = (inputString: string, wordString: string) => {
 	console.log('inputString', inputString);
 	// Split the string by newline characters to handle lines separately
 	const lines = inputString.split('\n');
 
 	// Take the last line to operate only on it
-	const lastLine = lines.pop();
+	const lastLine = lines.pop() ?? '';
 
 	// Split the last line into an array of words
 	const words = lastLine.split(' ');
@@ -570,12 +608,12 @@ export const removeLastWordFromString = (inputString, wordString) => {
 	return resultString;
 };
 
-export const removeFirstHashWord = (inputString) => {
+export const removeFirstHashWord = (inputString: string) => {
 	// Split the string into an array of words
 	const words = inputString.split(' ');
 
 	// Find the index of the first word that starts with #
-	const index = words.findIndex((word) => word.startsWith('#'));
+	const index = words.findIndex((word: string) => word.startsWith('#'));
 
 	// Remove the first word with #
 	if (index !== -1) {
@@ -588,7 +626,7 @@ export const removeFirstHashWord = (inputString) => {
 	return resultString;
 };
 
-export const transformFileName = (fileName) => {
+export const transformFileName = (fileName: string) => {
 	// Convert to lowercase
 	const lowerCaseFileName = fileName.toLowerCase();
 
@@ -601,7 +639,7 @@ export const transformFileName = (fileName) => {
 	return finalFileName;
 };
 
-export const calculateSHA256 = async (file) => {
+export const calculateSHA256 = async (file: File) => {
 	// Create a FileReader to read the file asynchronously
 	const reader = new FileReader();
 
@@ -619,7 +657,7 @@ export const calculateSHA256 = async (file) => {
 		const buffer = await readFile;
 
 		// Convert the ArrayBuffer to a Uint8Array
-		const uint8Array = new Uint8Array(buffer);
+		const uint8Array = new Uint8Array(buffer as ArrayBuffer);
 
 		// Calculate the SHA-256 hash using Web Crypto API
 		const hashBuffer = await crypto.subtle.digest('SHA-256', uint8Array);
@@ -635,7 +673,7 @@ export const calculateSHA256 = async (file) => {
 	}
 };
 
-export const getImportOrigin = (_chats) => {
+export const getImportOrigin = (_chats: Record<string, unknown>[]) => {
 	// Check what external service chat imports are from
 	if ('mapping' in _chats[0]) {
 		return 'openai';
@@ -645,7 +683,7 @@ export const getImportOrigin = (_chats) => {
 
 export const getUserPosition = async (raw = false) => {
 	// Get the user's location using the Geolocation API
-	const position = await new Promise((resolve, reject) => {
+	const position = await new Promise<GeolocationPosition>((resolve, reject) => {
 		navigator.geolocation.getCurrentPosition(resolve, reject);
 	}).catch((error) => {
 		console.error('Error getting user location:', error);
@@ -666,35 +704,48 @@ export const getUserPosition = async (raw = false) => {
 	}
 };
 
-const convertOpenAIMessages = (convo) => {
+const convertOpenAIMessages = (convo: Record<string, unknown>) => {
 	// Parse OpenAI chat messages and create chat dictionary for creating new chats
-	const mapping = convo['mapping'];
-	const messages = [];
+	const mapping = convo['mapping'] as Record<string, Record<string, unknown>>;
+	const messages: {
+		id: string;
+		parentId: string | null;
+		childrenIds: string[];
+		role: string;
+		content: string;
+		model: string;
+		done: boolean;
+		context: null;
+	}[] = [];
 	let currentId = '';
 	let lastId = null;
 
 	for (const message_id in mapping) {
-		const message = mapping[message_id];
+		const message = mapping[message_id] as Record<string, unknown>;
 		currentId = message_id;
 		try {
+			const msgContent = message['message'] as Record<string, unknown> | null;
 			if (
 				messages.length == 0 &&
-				(message['message'] == null ||
-					(message['message']['content']['parts']?.[0] == '' &&
-						message['message']['content']['text'] == null))
+				(msgContent == null ||
+					(((msgContent['content'] as Record<string, unknown>)?.['parts'] as unknown[])?.[0] == '' &&
+						(msgContent['content'] as Record<string, unknown>)?.['text'] == null))
 			) {
 				// Skip chat messages with no content
 				continue;
 			} else {
+				const msgAuthor = msgContent?.['author'] as Record<string, unknown> | undefined;
+				const msgContentData = msgContent?.['content'] as Record<string, unknown> | undefined;
 				const new_chat = {
 					id: message_id,
 					parentId: lastId,
-					childrenIds: message['children'] || [],
-					role: message['message']?.['author']?.['role'] !== 'user' ? 'assistant' : 'user',
-					content:
-						message['message']?.['content']?.['parts']?.[0] ||
-						message['message']?.['content']?.['text'] ||
-						'',
+					childrenIds: (message['children'] as string[]) || [],
+					role: msgAuthor?.['role'] !== 'user' ? 'assistant' : 'user',
+					content: String(
+						(msgContentData?.['parts'] as unknown[])?.[0] ||
+						msgContentData?.['text'] ||
+						''
+					),
 					model: 'gpt-3.5-turbo',
 					done: true,
 					context: null
@@ -719,12 +770,35 @@ const convertOpenAIMessages = (convo) => {
 		messages: messages,
 		options: {},
 		timestamp: convo['create_time'],
-		title: convo['title'] ?? 'New Chat'
+		title: String(convo['title'] ?? 'New Chat')
 	};
 	return chat;
 };
 
-const validateChat = (chat) => {
+interface ChatMessage {
+	id: string;
+	parentId: string | null;
+	childrenIds: string[];
+	role: string;
+	content: string;
+	model: string;
+	done: boolean;
+	context: null;
+}
+
+interface Chat {
+	messages: ChatMessage[];
+	history: {
+		currentId: string;
+		messages: Record<string, ChatMessage>;
+	};
+	models: string[];
+	options: Record<string, unknown>;
+	timestamp: unknown;
+	title: string;
+}
+
+const validateChat = (chat: Chat) => {
 	// Because ChatGPT sometimes has features we can't use like DALL-E or might have corrupted messages, need to validate
 	const messages = chat.messages;
 
@@ -755,7 +829,7 @@ const validateChat = (chat) => {
 	return true;
 };
 
-export const convertOpenAIChats = (_chats) => {
+export const convertOpenAIChats = (_chats: Record<string, unknown>[]) => {
 	// Create a list of dictionaries with each conversation from import
 	const chats = [];
 	let failed = 0;
@@ -840,7 +914,7 @@ export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
-export const removeDetails = (content, types) => {
+export const removeDetails = (content: string, types: string[]) => {
 	for (const type of types) {
 		content = content.replace(
 			new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
@@ -851,12 +925,12 @@ export const removeDetails = (content, types) => {
 	return content;
 };
 
-export const removeAllDetails = (content) => {
+export const removeAllDetails = (content: string) => {
 	content = content.replace(/<details[^>]*>.*?<\/details>/gis, '');
 	return content;
 };
 
-export const processDetails = (content) => {
+export const processDetails = (content: string) => {
 	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 
 	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to a string
@@ -865,7 +939,7 @@ export const processDetails = (content) => {
 	if (matches) {
 		for (const match of matches) {
 			const attributesRegex = /(\w+)="([^"]*)"/g;
-			const attributes = {};
+			const attributes: Record<string, string> = {};
 			let attributeMatch;
 			while ((attributeMatch = attributesRegex.exec(match)) !== null) {
 				attributes[attributeMatch[1]] = attributeMatch[2];
@@ -967,13 +1041,13 @@ export const getMessageContentParts = (content: string, splitOn: string = 'punct
 	return messageContentParts;
 };
 
-export const blobToFile = (blob, fileName) => {
+export const blobToFile = (blob: Blob, fileName: string) => {
 	// Create a new File object from the Blob
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
 };
 
-export const getPromptVariables = (user_name, user_location) => {
+export const getPromptVariables = (user_name: string, user_location: string) => {
 	return {
 		'{{USER_NAME}}': user_name,
 		'{{USER_LOCATION}}': user_location || 'Unknown',
@@ -1045,7 +1119,7 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 	return results.reverse().join(' ');
 };
 
-export const getTimeRange = (timestamp) => {
+export const getTimeRange = (timestamp: number) => {
 	const now = new Date();
 	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
 
@@ -1081,8 +1155,8 @@ export const getTimeRange = (timestamp) => {
  * @param content {string} - The content string with potential frontmatter.
  * @returns {Object} - The extracted frontmatter as a dictionary.
  */
-export const extractFrontmatter = (content) => {
-	const frontmatter = {};
+export const extractFrontmatter = (content: string) => {
+	const frontmatter: Record<string, string> = {};
 	let frontmatterStarted = false;
 	let frontmatterEnded = false;
 	const frontmatterPattern = /^\s*([a-z_]+):\s*(.*)\s*$/i;
@@ -1120,11 +1194,11 @@ export const extractFrontmatter = (content) => {
 };
 
 // Function to determine the best matching language
-export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, defaultLocale) => {
-	const languages = supportedLanguages.map((lang) => lang.code);
+export const bestMatchingLanguage = (supportedLanguages: { code: string }[], preferredLanguages: string[], defaultLocale: string) => {
+	const languages = supportedLanguages.map((lang: { code: string }) => lang.code);
 
 	const match = preferredLanguages
-		.map((prefLang) => languages.find((lang) => lang.startsWith(prefLang)))
+		.map((prefLang: string) => languages.find((lang: string) => lang.startsWith(prefLang)))
 		.find(Boolean);
 
 	return match || defaultLocale;
@@ -1162,7 +1236,11 @@ export const getWeekday = () => {
 	return weekdays[date.getDay()];
 };
 
-export const createMessagesList = (history, messageId) => {
+interface HistoryData {
+	messages: Record<string, { parentId?: string | null; [key: string]: unknown }>;
+}
+
+export const createMessagesList = (history: HistoryData, messageId: string | null): unknown[] => {
 	if (messageId === null) {
 		return [];
 	}
@@ -1178,7 +1256,7 @@ export const createMessagesList = (history, messageId) => {
 	}
 };
 
-export const formatFileSize = (size) => {
+export const formatFileSize = (size: number | null) => {
 	if (size == null) return 'Unknown size';
 	if (typeof size !== 'number' || size < 0) return 'Invalid size';
 	if (size === 0) return '0 B';
@@ -1192,18 +1270,39 @@ export const formatFileSize = (size) => {
 	return `${size.toFixed(1)} ${units[unitIndex]}`;
 };
 
-export const getLineCount = (text) => {
+export const getLineCount = (text: string) => {
 	console.log(typeof text);
 	return text ? text.split('\n').length : 0;
 };
 
+interface SchemaRef {
+	$ref?: string;
+	type?: string;
+	description?: string;
+	properties?: Record<string, SchemaRef>;
+	required?: string[];
+	items?: SchemaRef;
+}
+
+interface Components {
+	schemas: Record<string, SchemaRef>;
+}
+
+interface ResolvedSchema {
+	type: string;
+	description?: string;
+	properties?: Record<string, ResolvedSchema>;
+	required?: string[];
+	items?: ResolvedSchema;
+}
+
 // Helper function to recursively resolve OpenAPI schema into JSON schema format
-function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
+function resolveSchema(schemaRef: SchemaRef | undefined, components: Components, resolvedSchemas = new Set<string>()): ResolvedSchema | Record<string, never> {
 	if (!schemaRef) return {};
 
 	if (schemaRef['$ref']) {
 		const refPath = schemaRef['$ref'];
-		const schemaName = refPath.split('/').pop();
+		const schemaName = refPath.split('/').pop() as string;
 
 		if (resolvedSchemas.has(schemaName)) {
 			// Avoid infinite recursion on circular references
@@ -1215,7 +1314,7 @@ function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
 	}
 
 	if (schemaRef.type) {
-		const schemaObj = { type: schemaRef.type };
+		const schemaObj: ResolvedSchema = { type: schemaRef.type };
 
 		if (schemaRef.description) {
 			schemaObj.description = schemaRef.description;
@@ -1226,12 +1325,18 @@ function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
 				schemaObj.properties = {};
 				schemaObj.required = schemaRef.required || [];
 				for (const [propName, propSchema] of Object.entries(schemaRef.properties || {})) {
-					schemaObj.properties[propName] = resolveSchema(propSchema, components);
+					const resolved = resolveSchema(propSchema, components);
+					if ('type' in resolved) {
+						schemaObj.properties[propName] = resolved as ResolvedSchema;
+					}
 				}
 				break;
 
 			case 'array':
-				schemaObj.items = resolveSchema(schemaRef.items, components);
+				const itemsResolved = resolveSchema(schemaRef.items, components);
+				if ('type' in itemsResolved) {
+					schemaObj.items = itemsResolved as ResolvedSchema;
+				}
 				break;
 
 			default:
@@ -1246,20 +1351,31 @@ function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
 }
 
 // Main conversion function
-export const convertOpenApiToToolPayload = (openApiSpec) => {
-	const toolPayload = [];
+export const convertOpenApiToToolPayload = (openApiSpec: Record<string, unknown>) => {
+	const toolPayload: Record<string, unknown>[] = [];
 
 	// Guard against invalid or non-OpenAPI specs (e.g., MCP-style configs)
 	if (!openApiSpec || !openApiSpec.paths) {
 		return toolPayload;
 	}
 
-	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
+	const paths = openApiSpec.paths as Record<string, Record<string, Record<string, unknown>>>;
+	const components = (openApiSpec.components || { schemas: {} }) as Components;
+
+	for (const [path, methods] of Object.entries(paths)) {
 		for (const [method, operation] of Object.entries(methods)) {
 			if (operation?.operationId) {
-				const tool = {
-					name: operation.operationId,
-					description: operation.description || operation.summary || 'No description available.',
+				const tool: {
+					name: string;
+					description: string;
+					parameters: {
+						type: string;
+						properties: Record<string, unknown>;
+						required: string[];
+					};
+				} = {
+					name: operation.operationId as string,
+					description: (operation.description || operation.summary || 'No description available.') as string,
 					parameters: {
 						type: 'object',
 						properties: {},
@@ -1269,30 +1385,32 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 
 				// Extract path and query parameters
 				if (operation.parameters) {
-					operation.parameters.forEach((param) => {
-						let description = param.schema.description || param.description || '';
-						if (param.schema.enum && Array.isArray(param.schema.enum)) {
-							description += `. Possible values: ${param.schema.enum.join(', ')}`;
+					(operation.parameters as Record<string, unknown>[]).forEach((param: Record<string, unknown>) => {
+						const paramSchema = param.schema as Record<string, unknown> | undefined;
+						let description = (paramSchema?.description || param.description || '') as string;
+						if (paramSchema?.enum && Array.isArray(paramSchema.enum)) {
+							description += `. Possible values: ${paramSchema.enum.join(', ')}`;
 						}
-						tool.parameters.properties[param.name] = {
-							type: param.schema.type,
+						tool.parameters.properties[param.name as string] = {
+							type: paramSchema?.type,
 							description: description
 						};
 
 						if (param.required) {
-							tool.parameters.required.push(param.name);
+							tool.parameters.required.push(param.name as string);
 						}
 					});
 				}
 
 				// Extract and recursively resolve requestBody if available
 				if (operation.requestBody) {
-					const content = operation.requestBody.content;
+					const requestBody = operation.requestBody as Record<string, unknown>;
+					const content = requestBody.content as Record<string, Record<string, unknown>> | undefined;
 					if (content && content['application/json']) {
-						const requestSchema = content['application/json'].schema;
-						const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
+						const requestSchema = content['application/json'].schema as SchemaRef;
+						const resolvedRequestSchema = resolveSchema(requestSchema, components);
 
-						if (resolvedRequestSchema.properties) {
+						if ('properties' in resolvedRequestSchema && resolvedRequestSchema.properties) {
 							tool.parameters.properties = {
 								...tool.parameters.properties,
 								...resolvedRequestSchema.properties
@@ -1303,8 +1421,8 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 									...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
 								];
 							}
-						} else if (resolvedRequestSchema.type === 'array') {
-							tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+						} else if ('type' in resolvedRequestSchema && resolvedRequestSchema.type === 'array') {
+							(tool as Record<string, unknown>).parameters = resolvedRequestSchema; // special case when root schema is an array
 						}
 					}
 				}
@@ -1562,7 +1680,7 @@ export const extractContentFromFile = async (file: File) => {
 	}
 };
 
-export const getAge = (birthDate) => {
+export const getAge = (birthDate: string | Date) => {
 	const today = new Date();
 	const bDate = new Date(birthDate);
 	let age = today.getFullYear() - bDate.getFullYear();
@@ -1604,7 +1722,7 @@ export const initMermaid = async () => {
 	return mermaid;
 };
 
-export const renderMermaidDiagram = async (mermaid, code: string) => {
+export const renderMermaidDiagram = async (mermaid: { parse: (code: string, options: { suppressErrors: boolean }) => Promise<unknown>; render: (id: string, code: string) => Promise<{ svg: string }> }, code: string) => {
 	const parseResult = await mermaid.parse(code, { suppressErrors: false });
 	if (parseResult) {
 		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
@@ -1629,7 +1747,7 @@ export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 export const getCodeBlockContents = (content: string): object => {
 	const codeBlockContents = content.match(/```[\s\S]*?```/g);
 
-	let codeBlocks = [];
+	let codeBlocks: { lang: string; code: string }[] = [];
 
 	let htmlContent = '';
 	let cssContent = '';

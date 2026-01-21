@@ -115,10 +115,10 @@ export const searchKnowledgeBases = async (
 
 export const searchKnowledgeFiles = async (
 	token: string,
-	query?: string | null = null,
-	viewOption?: string | null = null,
-	orderBy?: string | null = null,
-	direction?: string | null = null,
+	query: string | null = null,
+	viewOption: string | null = null,
+	orderBy: string | null = null,
+	direction: string | null = null,
 	page: number = 1
 ) => {
 	let error = null;
@@ -197,10 +197,10 @@ export const getKnowledgeById = async (token: string, id: string) => {
 export const searchKnowledgeFilesById = async (
 	token: string,
 	id: string,
-	query?: string | null = null,
-	viewOption?: string | null = null,
-	orderBy?: string | null = null,
-	direction?: string | null = null,
+	query: string | null = null,
+	viewOption: string | null = null,
+	orderBy: string | null = null,
+	direction: string | null = null,
 	page: number = 1
 ) => {
 	let error = null;

@@ -386,6 +386,22 @@
 	let startWidth = 0;
 	let startClientX = 0;
 
+	const COLLAPSED_SIDEBAR_WIDTH = 49;
+
+	const updateToastOffset = (
+		sidebarVisible = $showSidebar,
+		isMobileView = $mobile,
+		width = $sidebarWidth ?? 260
+	) => {
+		if (typeof document === 'undefined') return;
+		const offset = isMobileView
+			? 0
+			: sidebarVisible
+				? width / 2
+				: COLLAPSED_SIDEBAR_WIDTH / 2;
+		document.documentElement.style.setProperty('--toast-offset-x', `${offset}px`);
+	};
+
 	const resizeStartHandler = (e: MouseEvent) => {
 		if ($mobile) return;
 		isResizing = true;
@@ -423,11 +439,14 @@
 		} catch {}
 
 		document.documentElement.style.setProperty('--sidebar-width', `${$sidebarWidth}px`);
+		updateToastOffset();
 		sidebarWidth.subscribe((w) => {
 			document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
+			updateToastOffset($showSidebar, $mobile, w);
 		});
 
 		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+		updateToastOffset();
 
 		unsubscribers = [
 			mobile.subscribe((value) => {
@@ -441,6 +460,8 @@
 						navElement.style['-webkit-app-region'] = 'drag';
 					}
 				}
+
+				updateToastOffset($showSidebar, value, $sidebarWidth ?? 260);
 			}),
 			showSidebar.subscribe(async (value) => {
 				localStorage.sidebar = value;
@@ -470,6 +491,8 @@
 					}
 					await initChatList();
 				}
+
+				updateToastOffset(value, $mobile, $sidebarWidth ?? 260);
 			}),
 			settings.subscribe((value) => {
 				if (pinnedModels != value?.pinnedModels ?? []) {
@@ -922,18 +945,18 @@
 					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 						<a
 							id="sidebar-new-chat-button"
-							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition outline-none"
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
 							aria-label={$i18n.t('New Chat')}
 						>
-							<div class="self-center">
-								<PencilSquare className=" size-4.5" strokeWidth="2" />
+							<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700">
+								<PencilSquare className="size-3.5 text-gray-600 dark:text-gray-300" strokeWidth="2" />
 							</div>
 
-							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
+							<div class="flex flex-1 self-center">
+								<div class="self-center text-sm font-medium">{$i18n.t('New Chat')}</div>
 							</div>
 
 							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
@@ -943,19 +966,19 @@
 					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 						<button
 							id="sidebar-search-button"
-							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition outline-none"
 							on:click={() => {
 								showSearch.set(true);
 							}}
 							draggable="false"
 							aria-label={$i18n.t('Search')}
 						>
-							<div class="self-center">
-								<Search strokeWidth="2" className="size-4.5" />
+							<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700">
+								<Search strokeWidth="2" className="size-3.5 text-gray-600 dark:text-gray-300" />
 							</div>
 
-							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
+							<div class="flex flex-1 self-center">
+								<div class="self-center text-sm font-medium">{$i18n.t('Search')}</div>
 							</div>
 							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
@@ -965,18 +988,18 @@
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-notes-button"
-								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								class="grow flex items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 								href="/notes"
 								on:click={itemClickHandler}
 								draggable="false"
 								aria-label={$i18n.t('Notes')}
 							>
-								<div class="self-center">
-									<Note className="size-4.5" strokeWidth="2" />
+								<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700">
+									<Note className="size-3.5 text-gray-600 dark:text-gray-300" strokeWidth="2" />
 								</div>
 
-								<div class="flex self-center translate-y-[0.5px]">
-									<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
+								<div class="flex self-center">
+									<div class="self-center text-sm font-medium">{$i18n.t('Notes')}</div>
 								</div>
 							</a>
 						</div>
@@ -986,20 +1009,20 @@
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-workspace-button"
-								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								class="grow flex items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 								href="/workspace"
 								on:click={itemClickHandler}
 								draggable="false"
 								aria-label={$i18n.t('Workspace')}
 							>
-								<div class="self-center">
+								<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										fill="none"
 										viewBox="0 0 24 24"
 										stroke-width="2"
 										stroke="currentColor"
-										class="size-4.5"
+										class="size-3.5 text-gray-600 dark:text-gray-300"
 									>
 										<path
 											stroke-linecap="round"
@@ -1009,8 +1032,8 @@
 									</svg>
 								</div>
 
-								<div class="flex self-center translate-y-[0.5px]">
-									<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
+								<div class="flex self-center">
+									<div class="self-center text-sm font-medium">{$i18n.t('Workspace')}</div>
 								</div>
 							</a>
 						</div>
@@ -1371,12 +1394,12 @@
 							}}
 						>
 							<div
-								class=" flex items-center rounded-2xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+								class="flex items-center gap-3 rounded-xl py-2 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							>
-								<div class=" self-center mr-3 relative">
+								<div class="self-center relative">
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-										class=" size-7 object-cover rounded-full"
+										class="size-7 object-cover rounded-full"
 										alt={$i18n.t('Open User Profile Menu')}
 										aria-label={$i18n.t('Open User Profile Menu')}
 									/>
@@ -1396,7 +1419,7 @@
 										</div>
 									{/if}
 								</div>
-								<div class=" self-center font-medium">{$user?.name}</div>
+								<div class="self-center text-sm font-medium">{$user?.name}</div>
 							</div>
 						</UserMenu>
 					{/if}

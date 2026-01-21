@@ -1,10 +1,85 @@
-import { Plugin, PluginKey, NodeSelection } from 'prosemirror-state';
-import { Decoration, DecorationSet } from 'prosemirror-view';
-import { Fragment } from 'prosemirror-model';
+import { Plugin, PluginKey, NodeSelection, EditorState, Transaction } from 'prosemirror-state';
+import { Decoration, DecorationSet, EditorView } from 'prosemirror-view';
+import { Fragment, Node as ProseMirrorNode, NodeType, Schema, Mark, ResolvedPos } from 'prosemirror-model';
+
+interface TiptapEditor {
+	commands: {
+		setNodeSelection: (pos: number) => boolean;
+	};
+	chain: () => {
+		focus: () => {
+			sinkListItem: (typeName: string) => { run: () => void };
+			run: () => void;
+		};
+	};
+	can: () => {
+		sinkListItem?: (typeName: string) => boolean;
+	};
+}
+
+interface PluginOptions {
+	itemTypeNames?: string[];
+	getEditor?: (() => TiptapEditor | null) | null;
+	handleTitle?: string;
+	handleInnerHTML?: string;
+	classItemWithHandle?: string;
+	classHandle?: string;
+	classDropBefore?: string;
+	classDropAfter?: string;
+	classDropInto?: string;
+	classDropOutdent?: string;
+	classDraggingGhost?: string;
+	dragThresholdPx?: number;
+	intoThresholdX?: number;
+	outdentThresholdX?: number;
+}
+
+interface DragState {
+	fromStart: number;
+	startMouse: { x: number; y: number };
+	ghostEl: HTMLElement;
+	active: boolean;
+}
+
+interface DropTarget {
+	start: number;
+	end: number;
+	mode: string;
+	toPos: number;
+}
+
+interface PluginState {
+	decorations: DecorationSet;
+	dragging: DragState | null;
+	dropTarget: DropTarget | null;
+}
+
+interface ListItemInfo {
+	depth: number;
+	node: ProseMirrorNode;
+	start: number;
+	end: number;
+}
+
+interface ListInfo {
+	node: ProseMirrorNode;
+	depth: number;
+	start: number;
+	end: number;
+}
+
+interface CoordsInfo extends ListItemInfo {
+	dom: Element;
+	mode: string;
+}
+
+interface HandleElement extends HTMLSpanElement {
+	pmGetPos?: () => number;
+}
 
 export const listPointerDragKey = new PluginKey('listPointerDrag');
 
-export function listDragHandlePlugin(options = {}) {
+export function listDragHandlePlugin(options: PluginOptions = {}) {
 	const {
 		itemTypeNames = ['listItem', 'taskItem', 'list_item'],
 
@@ -29,7 +104,7 @@ export function listDragHandlePlugin(options = {}) {
 	} = options;
 
 	const itemTypesSet = new Set(itemTypeNames);
-	const isListItem = (node) => node && itemTypesSet.has(node.type.name);
+	const isListItem = (node: ProseMirrorNode | null) => node && itemTypesSet.has(node.type.name);
 
 	const listTypeNames = new Set([
 		'bulletList',
@@ -39,9 +114,9 @@ export function listDragHandlePlugin(options = {}) {
 		'ordered_list'
 	]);
 
-	const isListNode = (node) => node && listTypeNames.has(node.type.name);
+	const isListNode = (node: ProseMirrorNode | null) => node && listTypeNames.has(node.type.name);
 
-	function listTypeToItemTypeName(listNode) {
+	function listTypeToItemTypeName(listNode: ProseMirrorNode | null): string | null {
 		const name = listNode?.type?.name;
 		if (!name) return null;
 
@@ -67,7 +142,7 @@ export function listDragHandlePlugin(options = {}) {
 	}
 
 	// Find the nearest enclosing list container at/around a pos
-	function getEnclosingListAt(doc, pos) {
+	function getEnclosingListAt(doc: ProseMirrorNode, pos: number) {
 		const $pos = doc.resolve(Math.max(1, Math.min(pos, doc.content.size - 1)));
 		for (let d = $pos.depth; d >= 0; d--) {
 			const n = $pos.node(d);
@@ -79,24 +154,33 @@ export function listDragHandlePlugin(options = {}) {
 		return null;
 	}
 
-	function normalizeItemForList(state, itemNode, targetListNodeOrType) {
+	function normalizeItemForList(
+		state: EditorState,
+		itemNode: ProseMirrorNode,
+		targetListNodeOrType: ProseMirrorNode | NodeType | string
+	): ProseMirrorNode {
 		const schema = state.schema;
 
 		const targetListNode = targetListNodeOrType;
 		const wantedItemTypeName =
 			typeof targetListNode === 'string'
 				? targetListNode // allow passing type name directly
-				: listTypeToItemTypeName(targetListNode);
+				: listTypeToItemTypeName(targetListNode as ProseMirrorNode);
 
 		if (!wantedItemTypeName) return itemNode;
 		const wantedType = schema.nodes[wantedItemTypeName];
 		if (!wantedType) return itemNode;
 
-		const wantedListType = schema.nodes[targetListNode.type.name];
+		const targetListNodeTyped = targetListNode as ProseMirrorNode;
+		if (!targetListNodeTyped.type) return itemNode;
+		const wantedListType = schema.nodes[targetListNodeTyped.type.name];
 		if (!wantedListType) return itemNode;
 
 		// Deep‑normalize children recursively
-		const normalizeNode = (node, parentTargetListNode) => {
+		const normalizeNode = (
+			node: ProseMirrorNode,
+			parentTargetListNode: ProseMirrorNode
+		): ProseMirrorNode => {
 			console.log(
 				'Normalizing node',
 				node.type.name,
@@ -105,8 +189,8 @@ export function listDragHandlePlugin(options = {}) {
 			);
 			if (isListNode(node)) {
 				// Normalize each list item inside
-				const normalizedItems = [];
-				node.content.forEach((li) => {
+				const normalizedItems: ProseMirrorNode[] = [];
+				node.content.forEach((li: ProseMirrorNode) => {
 					normalizedItems.push(normalizeItemForList(state, li, parentTargetListNode));
 				});
 				return wantedListType.create(node.attrs, Fragment.from(normalizedItems), node.marks);
@@ -114,8 +198,8 @@ export function listDragHandlePlugin(options = {}) {
 
 			// Not a list node → but may contain lists deeper
 			if (node.content && node.content.size > 0) {
-				const nChildren = [];
-				node.content.forEach((ch) => {
+				const nChildren: ProseMirrorNode[] = [];
+				node.content.forEach((ch: ProseMirrorNode) => {
 					nChildren.push(normalizeNode(ch, parentTargetListNode));
 				});
 				return node.type.create(node.attrs, Fragment.from(nChildren), node.marks);
@@ -125,18 +209,18 @@ export function listDragHandlePlugin(options = {}) {
 			return node;
 		};
 
-		const normalizedContent = [];
-		itemNode.content.forEach((child) => {
-			normalizedContent.push(normalizeNode(child, targetListNode));
+		const normalizedContent: ProseMirrorNode[] = [];
+		itemNode.content.forEach((child: ProseMirrorNode) => {
+			normalizedContent.push(normalizeNode(child, targetListNodeTyped));
 		});
 
-		const newAttrs = {};
-		if (wantedType.attrs) {
-			for (const key in wantedType.attrs) {
+		const newAttrs: Record<string, unknown> = {};
+		if (wantedType.spec.attrs) {
+			for (const key in wantedType.spec.attrs) {
 				if (Object.prototype.hasOwnProperty.call(itemNode.attrs || {}, key)) {
 					newAttrs[key] = itemNode.attrs[key];
 				} else {
-					const spec = wantedType.attrs[key];
+					const spec = wantedType.spec.attrs[key] as { default?: unknown };
 					newAttrs[key] = typeof spec?.default !== 'undefined' ? spec.default : null;
 				}
 			}
@@ -145,7 +229,9 @@ export function listDragHandlePlugin(options = {}) {
 		if (wantedItemTypeName !== itemNode.type.name) {
 			// If changing type, ensure no disallowed marks are kept
 			const allowed = wantedType.spec?.marks;
-			const marks = allowed ? itemNode.marks.filter((m) => allowed.includes(m.type.name)) : [];
+			const marks = allowed
+				? itemNode.marks.filter((m: Mark) => (allowed as string).includes(m.type.name))
+				: [];
 
 			console.log(normalizedContent);
 			return wantedType.create(newAttrs, Fragment.from(normalizedContent), marks);
@@ -168,23 +254,23 @@ export function listDragHandlePlugin(options = {}) {
 		return wantedType.create(newAttrs, Fragment.from(normalizedContent), itemNode.marks);
 	}
 	// ---------- decorations ----------
-	function buildHandleDecos(doc) {
-		const decos = [];
-		doc.descendants((node, pos) => {
+	function buildHandleDecos(doc: ProseMirrorNode): DecorationSet {
+		const decos: Decoration[] = [];
+		doc.descendants((node: ProseMirrorNode, pos: number) => {
 			if (!isListItem(node)) return;
 			decos.push(Decoration.node(pos, pos + node.nodeSize, { class: classItemWithHandle }));
 			decos.push(
 				Decoration.widget(
 					pos + 1,
-					(view, getPos) => {
-						const el = document.createElement('span');
+					() => {
+						const el = document.createElement('span') as HandleElement;
 						el.className = classHandle;
 						el.setAttribute('title', handleTitle);
 						el.setAttribute('role', 'button');
 						el.setAttribute('aria-label', 'Drag list item');
 						el.contentEditable = 'false';
 						el.innerHTML = handleInnerHTML;
-						el.pmGetPos = getPos;
+						el.pmGetPos = () => pos + 1;
 						return el;
 					},
 					{ side: -1, ignoreSelection: true }
@@ -194,7 +280,7 @@ export function listDragHandlePlugin(options = {}) {
 		return DecorationSet.create(doc, decos);
 	}
 
-	function findListItemAround($pos) {
+	function findListItemAround($pos: ResolvedPos): ListItemInfo | null {
 		for (let d = $pos.depth; d > 0; d--) {
 			const node = $pos.node(d);
 			if (isListItem(node)) {
@@ -205,7 +291,7 @@ export function listDragHandlePlugin(options = {}) {
 		return null;
 	}
 
-	function infoFromCoords(view, clientX, clientY) {
+	function infoFromCoords(view: EditorView, clientX: number, clientY: number): CoordsInfo | null {
 		const result = view.posAtCoords({ left: clientX, top: clientY });
 		if (!result) return null;
 		const $pos = view.state.doc.resolve(result.pos);
@@ -233,18 +319,22 @@ export function listDragHandlePlugin(options = {}) {
 	}
 
 	// ---------- state ----------
-	const init = (state) => ({
+	const init = (state: EditorState): PluginState => ({
 		decorations: buildHandleDecos(state.doc),
 		dragging: null, // {fromStart, startMouse:{x,y}, ghostEl, active}
 		dropTarget: null // {start, end, mode, toPos}
 	});
 
-	const apply = (tr, prev) => {
+	const apply = (tr: Transaction, prev: PluginState): PluginState => {
 		let decorations = tr.docChanged
 			? buildHandleDecos(tr.doc)
 			: prev.decorations.map(tr.mapping, tr.doc);
-		let next = { ...prev, decorations };
-		const meta = tr.getMeta(listPointerDragKey);
+		let next: PluginState = { ...prev, decorations };
+		const meta = tr.getMeta(listPointerDragKey) as
+			| { type: 'set-drag'; dragging: DragState }
+			| { type: 'set-drop'; drop: DropTarget }
+			| { type: 'clear' }
+			| undefined;
 		if (meta) {
 			if (meta.type === 'set-drag') next = { ...next, dragging: meta.dragging };
 			if (meta.type === 'set-drop') next = { ...next, dropTarget: meta.drop };
@@ -253,8 +343,8 @@ export function listDragHandlePlugin(options = {}) {
 		return next;
 	};
 
-	const decorationsProp = (state) => {
-		const ps = listPointerDragKey.getState(state);
+	const decorationsProp = (state: EditorState): DecorationSet | null => {
+		const ps = listPointerDragKey.getState(state) as PluginState | undefined;
 		if (!ps) return null;
 		let deco = ps.decorations;
 		if (ps.dropTarget) {
@@ -273,14 +363,18 @@ export function listDragHandlePlugin(options = {}) {
 	};
 
 	// ---------- helpers ----------
-	const setDrag = (view, dragging) =>
+	const setDrag = (view: EditorView, dragging: DragState) =>
 		view.dispatch(view.state.tr.setMeta(listPointerDragKey, { type: 'set-drag', dragging }));
-	const setDrop = (view, drop) =>
+	const setDrop = (view: EditorView, drop: DropTarget | null) =>
 		view.dispatch(view.state.tr.setMeta(listPointerDragKey, { type: 'set-drop', drop }));
-	const clearAll = (view) =>
+	const clearAll = (view: EditorView) =>
 		view.dispatch(view.state.tr.setMeta(listPointerDragKey, { type: 'clear' }));
 
-	function moveItem(view, fromStart, toPos) {
+	function moveItem(
+		view: EditorView,
+		fromStart: number,
+		toPos: number
+	): { ok: boolean; newStart?: number } {
 		const { state, dispatch } = view;
 		const { doc } = state;
 		const orig = doc.nodeAt(fromStart);
@@ -361,10 +455,10 @@ export function listDragHandlePlugin(options = {}) {
 		return { ok: true, newStart: mappedTo };
 	}
 
-	function ensureGhost(view, fromStart) {
+	function ensureGhost(view: EditorView, fromStart: number): HTMLElement {
 		const el = document.createElement('div');
 		el.className = classDraggingGhost;
-		const dom = /** @type {Element} */ (view.nodeDOM(fromStart));
+		const dom = view.nodeDOM(fromStart) as Element | null;
 		const rect = dom instanceof Element ? dom.getBoundingClientRect() : null;
 		if (rect) {
 			el.style.position = 'fixed';
@@ -373,12 +467,12 @@ export function listDragHandlePlugin(options = {}) {
 			el.style.width = rect.width + 'px';
 			el.style.pointerEvents = 'none';
 			el.style.opacity = '0.75';
-			el.textContent = dom.textContent?.trim().slice(0, 80) || '…';
+			el.textContent = dom?.textContent?.trim().slice(0, 80) || '…';
 		}
 		document.body.appendChild(el);
 		return el;
 	}
-	const updateGhost = (ghost, dx, dy) => {
+	const updateGhost = (ghost: HTMLElement | null, dx: number, dy: number) => {
 		if (ghost) ghost.style.transform = `translate(${Math.round(dx)}px, ${Math.round(dy)}px)`;
 	};
 
@@ -389,9 +483,10 @@ export function listDragHandlePlugin(options = {}) {
 		props: {
 			decorations: decorationsProp,
 			handleDOMEvents: {
-				mousedown(view, event) {
-					const t = /** @type {HTMLElement} */ (event.target);
-					const handle = t.closest?.(`.${classHandle}`);
+				mousedown(view: EditorView, event: MouseEvent) {
+					const t = event.target as HTMLElement | null;
+					if (!t) return false;
+					const handle = t.closest?.(`.${classHandle}`) as HandleElement | null;
 					if (!handle) return false;
 					event.preventDefault();
 
@@ -411,8 +506,8 @@ export function listDragHandlePlugin(options = {}) {
 					const ghostEl = ensureGhost(view, fromStart);
 					setDrag(view, { fromStart, startMouse, ghostEl, active: false });
 
-					const onMove = (e) => {
-						const ps = listPointerDragKey.getState(view.state);
+					const onMove = (e: MouseEvent) => {
+						const ps = listPointerDragKey.getState(view.state) as PluginState | undefined;
 						if (!ps?.dragging) return;
 
 						const dx = e.clientX - ps.dragging.startMouse.x;
@@ -431,7 +526,8 @@ export function listDragHandlePlugin(options = {}) {
 						const toPos =
 							info.mode === 'before' ? info.start : info.mode === 'after' ? info.end : info.end; // into/outdent insert after target
 
-						const prev = listPointerDragKey.getState(view.state)?.dropTarget;
+						const prev = (listPointerDragKey.getState(view.state) as PluginState | undefined)
+							?.dropTarget;
 						if (
 							!prev ||
 							prev.start !== info.start ||
@@ -446,11 +542,11 @@ export function listDragHandlePlugin(options = {}) {
 						window.removeEventListener('mousemove', onMove, true);
 						window.removeEventListener('mouseup', endDrag, true);
 
-						const ps = listPointerDragKey.getState(view.state);
+						const ps = listPointerDragKey.getState(view.state) as PluginState | undefined;
 						if (ps?.dragging?.ghostEl) ps.dragging.ghostEl.remove();
 
 						// Helper: figure out the list item node type name at/around a pos
-						const getListItemTypeNameAt = (doc, pos) => {
+						const getListItemTypeNameAt = (doc: ProseMirrorNode, pos: number): string => {
 							const direct = doc.nodeAt(pos);
 							if (direct && isListItem(direct)) return direct.type.name;
 
@@ -498,9 +594,9 @@ export function listDragHandlePlugin(options = {}) {
 					return true;
 				},
 
-				keydown(view, event) {
+				keydown(view: EditorView, event: KeyboardEvent) {
 					if (event.key === 'Escape') {
-						const ps = listPointerDragKey.getState(view.state);
+						const ps = listPointerDragKey.getState(view.state) as PluginState | undefined;
 						if (ps?.dragging?.ghostEl) ps.dragging.ghostEl.remove();
 						clearAll(view);
 						return true;

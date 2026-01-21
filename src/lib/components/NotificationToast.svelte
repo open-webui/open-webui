@@ -71,7 +71,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-	class="flex gap-2.5 text-left min-w-[var(--width)] w-full dark:bg-gray-850 dark:text-white bg-white text-black border border-gray-100 dark:border-gray-800 rounded-3xl px-4 py-3.5 cursor-pointer select-none"
+	class="flex gap-3 text-left w-full max-w-full bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 border border-gray-100 dark:border-gray-800 rounded-xl px-3.5 py-2.5 shadow-sm cursor-pointer select-none"
 	on:dragstart|preventDefault
 	on:pointerdown={onPointerDown}
 	on:pointermove={onPointerMove}
@@ -84,16 +84,16 @@
 		}
 	}}
 >
-	<div class="shrink-0 self-top -translate-y-0.5">
-		<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="favicon" class="size-6 rounded-full" />
+	<div class="shrink-0 mt-0.5">
+		<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="favicon" class="size-5 rounded-full" />
 	</div>
 
-	<div>
+	<div class="min-w-0">
 		{#if title}
-			<div class=" text-[13px] font-medium mb-0.5 line-clamp-1">{title}</div>
+			<div class="text-sm font-semibold mb-0.5 leading-5 line-clamp-1">{title}</div>
 		{/if}
 
-		<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">
+		<div class="line-clamp-2 text-xs leading-4 text-gray-600 dark:text-gray-300 font-normal">
 			{@html DOMPurify.sanitize(marked(content))}
 		</div>
 	</div>

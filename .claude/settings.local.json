@@ -17,7 +17,18 @@
       "Bash(where gh:*)",
       "Bash(gh:*)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(du:*)",
+      "Bash(npm run check:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(node:*)",
+      "Bash(where:*)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npm install --save-dev @types/uuid)",
+      "Bash(npm i --save-dev @types/turndown)",
+      "Bash(npx svelte-check:*)",
+      "Bash(del:*)",
+      "Bash(grep:*)"
     ]
   }
 }

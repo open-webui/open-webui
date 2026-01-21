@@ -1,4 +1,58 @@
 // Google Drive Picker API configuration
+
+// Declare global types for Google APIs
+declare const gapi: {
+	load: (api: string, callback: () => void) => void;
+};
+
+declare const google: {
+	accounts: {
+		oauth2: {
+			initTokenClient: (config: {
+				client_id: string;
+				scope: string;
+				callback: (response: { access_token?: string }) => void;
+				error_callback: (error: { message?: string }) => void;
+			}) => {
+				requestAccessToken: () => void;
+			};
+		};
+	};
+	picker: {
+		PickerBuilder: new () => {
+			enableFeature: (feature: unknown) => unknown;
+			addView: (view: unknown) => unknown;
+			setOAuthToken: (token: string) => unknown;
+			setDeveloperKey: (key: string) => unknown;
+			setCallback: (callback: (data: Record<string, unknown>) => void) => unknown;
+			build: () => { setVisible: (visible: boolean) => void };
+		};
+		DocsView: new () => {
+			setIncludeFolders: (include: boolean) => unknown;
+			setSelectFolderEnabled: (enabled: boolean) => unknown;
+			setMimeTypes: (types: string) => unknown;
+		};
+		Feature: {
+			NAV_HIDDEN: unknown;
+			MULTISELECT_ENABLED: unknown;
+		};
+		Response: {
+			ACTION: string;
+			DOCUMENTS: string;
+		};
+		Action: {
+			PICKED: string;
+			CANCEL: string;
+		};
+		Document: {
+			ID: string;
+			NAME: string;
+			URL: string;
+			MIME_TYPE: string;
+		};
+	};
+};
+
 let API_KEY = '';
 let CLIENT_ID = '';
 
@@ -37,11 +91,14 @@ let initialized = false;
 
 export const loadGoogleDriveApi = () => {
 	return new Promise((resolve, reject) => {
-		if (typeof gapi === 'undefined') {
+		// Check if gapi is available in window
+		const windowGapi = (window as unknown as { gapi?: typeof gapi }).gapi;
+		if (!windowGapi) {
 			const script = document.createElement('script');
 			script.src = 'https://apis.google.com/js/api.js';
 			script.onload = () => {
-				gapi.load('picker', () => {
+				const loadedGapi = (window as unknown as { gapi: typeof gapi }).gapi;
+				loadedGapi.load('picker', () => {
 					pickerApiLoaded = true;
 					resolve(true);
 				});
@@ -49,7 +106,7 @@ export const loadGoogleDriveApi = () => {
 			script.onerror = reject;
 			document.body.appendChild(script);
 		} else {
-			gapi.load('picker', () => {
+			windowGapi.load('picker', () => {
 				pickerApiLoaded = true;
 				resolve(true);
 			});
@@ -117,20 +174,24 @@ export const createPicker = () => {
 			}
 			console.log('Auth token obtained successfully');
 
-			const picker = new google.picker.PickerBuilder()
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const pickerBuilder = new google.picker.PickerBuilder() as any;
+			const picker = pickerBuilder
 				.enableFeature(google.picker.Feature.NAV_HIDDEN)
 				.enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
 				.addView(
-					new google.picker.DocsView()
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					(new google.picker.DocsView() as any)
 						.setIncludeFolders(false)
 						.setSelectFolderEnabled(false)
 						.setMimeTypes(
 							'application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet,application/vnd.google-apps.presentation'
 						)
 				)
-				.setOAuthToken(token)
+				.setOAuthToken(token as string)
 				.setDeveloperKey(API_KEY)
 				// Remove app ID setting as it's not needed and can cause 404 errors
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				.setCallback(async (data: any) => {
 					if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
 						try {

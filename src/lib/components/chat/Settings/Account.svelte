@@ -126,221 +126,168 @@
 </script>
 
 <div id="tab-account" class="flex flex-col h-full justify-between text-sm">
-	<div class=" overflow-y-scroll max-h-[28rem] md:max-h-full">
-		<div class="space-y-1">
-			<div>
-				<div class="text-base font-medium">{$i18n.t('Your Account')}</div>
-
-				<div class="text-xs text-gray-500 mt-0.5">
-					{$i18n.t('Manage your account information.')}
-				</div>
+	<div class="space-y-4 overflow-y-scroll scrollbar-hidden h-full pr-1">
+		<!-- 个人信息卡片 -->
+		<div class="bg-gray-50 dark:bg-gray-850 rounded-xl p-5 border border-gray-100 dark:border-gray-800">
+			<div class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
+				{$i18n.t('Your Account')}
 			</div>
 
-			<!-- <div class=" text-sm font-medium">{$i18n.t('Account')}</div> -->
+			<div class="space-y-4">
+				<!-- 头像和名称 -->
+				<div class="flex gap-5">
+					<UserProfileImage bind:profileImageUrl user={$user} />
 
-			<div class="flex space-x-5 my-4">
-				<UserProfileImage bind:profileImageUrl user={$user} />
-
-				<div class="flex flex-1 flex-col">
-					<div class=" flex-1">
-						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
-
-							<div class="flex-1">
-								<input
-									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
-									type="text"
-									bind:value={name}
-									required
-									placeholder={$i18n.t('Enter your name')}
-								/>
-							</div>
+					<div class="flex flex-1 flex-col gap-3">
+						<!-- 姓名 -->
+						<div>
+							<label class="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5 block">
+								{$i18n.t('Name')}
+							</label>
+							<input
+								class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+								type="text"
+								bind:value={name}
+								required
+								placeholder={$i18n.t('Enter your name')}
+							/>
 						</div>
 
-						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Bio')}</div>
-
-							<div class="flex-1">
-								<Textarea
-									className="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
-									minSize={60}
-									bind:value={bio}
-									placeholder={$i18n.t('Share your background and interests')}
-								/>
-							</div>
-						</div>
-
-						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Gender')}</div>
-
-							<div class="flex-1">
-								<select
-									class="dark:bg-gray-900 w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
-									bind:value={_gender}
-									on:change={(e) => {
-										console.log(_gender);
-
-										if (_gender === 'custom') {
-											// Handle custom gender input
-											gender = '';
-										} else {
-											gender = _gender;
-										}
-									}}
-								>
-									<option value="" selected>{$i18n.t('Prefer not to say')}</option>
-									<option value="male">{$i18n.t('Male')}</option>
-									<option value="female">{$i18n.t('Female')}</option>
-									<option value="custom">{$i18n.t('Custom')}</option>
-								</select>
-							</div>
-
-							{#if _gender === 'custom'}
-								<input
-									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden mt-1"
-									type="text"
-									required
-									placeholder={$i18n.t('Enter your gender')}
-									bind:value={gender}
-								/>
-							{/if}
-						</div>
-
-						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Birth Date')}</div>
-
-							<div class="flex-1">
-								<input
-									class="w-full text-sm dark:text-gray-300 dark:placeholder:text-gray-300 bg-transparent outline-hidden"
-									type="date"
-									bind:value={dateOfBirth}
-									required
-								/>
-							</div>
+						<!-- 简介 -->
+						<div>
+							<label class="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5 block">
+								{$i18n.t('Bio')}
+							</label>
+							<Textarea
+								className="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition resize-vertical"
+								minSize={60}
+								bind:value={bio}
+								placeholder={$i18n.t('Share your background and interests')}
+							/>
 						</div>
 					</div>
 				</div>
-			</div>
-		</div>
 
-		{#if $config?.features?.enable_user_webhooks}
-			<div class="mt-2">
-				<div class="flex flex-col w-full">
-					<div class=" mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>
+				<!-- 性别和出生日期 -->
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+					<!-- 性别 -->
+					<div>
+						<label class="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5 block">
+							{$i18n.t('Gender')}
+						</label>
+						<select
+							class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition cursor-pointer"
+							bind:value={_gender}
+							on:change={(e) => {
+								console.log(_gender);
 
-					<div class="flex-1">
+								if (_gender === 'custom') {
+									// Handle custom gender input
+									gender = '';
+								} else {
+									gender = _gender;
+								}
+							}}
+						>
+							<option value="" selected>{$i18n.t('Prefer not to say')}</option>
+							<option value="male">{$i18n.t('Male')}</option>
+							<option value="female">{$i18n.t('Female')}</option>
+							<option value="custom">{$i18n.t('Custom')}</option>
+						</select>
+
+						{#if _gender === 'custom'}
+							<input
+								class="w-full mt-2 rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+								type="text"
+								required
+								placeholder={$i18n.t('Enter your gender')}
+								bind:value={gender}
+							/>
+						{/if}
+					</div>
+
+					<!-- 出生日期 -->
+					<div>
+						<label class="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5 block">
+							{$i18n.t('Birth Date')}
+						</label>
 						<input
-							class="w-full text-sm outline-hidden"
-							type="url"
-							placeholder={$i18n.t('Enter your webhook URL')}
-							bind:value={webhookUrl}
+							class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+							type="date"
+							bind:value={dateOfBirth}
 							required
 						/>
 					</div>
 				</div>
 			</div>
+		</div>
+
+		<!-- Webhook 通知卡片 -->
+		{#if $config?.features?.enable_user_webhooks}
+			<div class="bg-gray-50 dark:bg-gray-850 rounded-xl p-5 border border-gray-100 dark:border-gray-800">
+				<div class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4">
+					{$i18n.t('Notification Webhook')}
+				</div>
+
+				<div>
+					<input
+						class="w-full rounded-lg py-2 px-3 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-600 transition"
+						type="url"
+						placeholder={$i18n.t('Enter your webhook URL')}
+						bind:value={webhookUrl}
+						required
+					/>
+				</div>
+			</div>
 		{/if}
 
-		<hr class="border-gray-50 dark:border-gray-850/30 my-4" />
-
+		<!-- 密码更新卡片 -->
 		{#if $config?.features.enable_login_form}
-			<div class="mt-2">
+			<div class="bg-gray-50 dark:bg-gray-850 rounded-xl p-5 border border-gray-100 dark:border-gray-800">
 				<UpdatePassword />
 			</div>
 		{/if}
 
+		<!-- API 密钥卡片 -->
 		{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
-			<div class="flex justify-between items-center text-sm mt-2">
-				<div class="  font-medium">{$i18n.t('API keys')}</div>
-				<button
-					class=" text-xs font-medium text-gray-500"
-					type="button"
-					on:click={() => {
-						showAPIKeys = !showAPIKeys;
-					}}>{showAPIKeys ? $i18n.t('Hide') : $i18n.t('Show')}</button
-				>
-			</div>
+			<div class="bg-gray-50 dark:bg-gray-850 rounded-xl p-5 border border-gray-100 dark:border-gray-800">
+				<div class="flex justify-between items-center mb-4">
+					<div class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+						{$i18n.t('API keys')}
+					</div>
+					<button
+						class="text-xs font-medium px-3 py-1.5 rounded-lg transition {showAPIKeys
+							? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+							: 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700'}"
+						type="button"
+						on:click={() => {
+							showAPIKeys = !showAPIKeys;
+						}}>{showAPIKeys ? $i18n.t('Hide') : $i18n.t('Show')}</button
+					>
+				</div>
 
-			{#if showAPIKeys}
-				<div class="flex flex-col">
-					{#if $user?.role === 'admin'}
-						<div class="justify-between w-full mt-2">
-							<div class="flex justify-between w-full">
-								<div class="self-center text-xs font-medium mb-1">{$i18n.t('JWT Token')}</div>
-							</div>
-
-							<div class="flex">
-								<SensitiveInput value={localStorage.token} readOnly={true} />
-
-								<button
-									class="ml-1.5 px-1.5 py-1 dark:hover:bg-gray-850 transition rounded-lg"
-									on:click={() => {
-										copyToClipboard(localStorage.token);
-										JWTTokenCopied = true;
-										setTimeout(() => {
-											JWTTokenCopied = false;
-										}, 2000);
-									}}
-								>
-									{#if JWTTokenCopied}
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									{:else}
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
-												clip-rule="evenodd"
-											/>
-											<path
-												fill-rule="evenodd"
-												d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									{/if}
-								</button>
-							</div>
-						</div>
-					{/if}
-
-					{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
-						<div class="justify-between w-full mt-2">
-							{#if $user?.role === 'admin'}
-								<div class="flex justify-between w-full">
-									<div class="self-center text-xs font-medium mb-1">{$i18n.t('API Key')}</div>
+				{#if showAPIKeys}
+					<div class="space-y-3">
+						<!-- JWT Token (仅管理员) -->
+						{#if $user?.role === 'admin'}
+							<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
+								<div class="text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">
+									{$i18n.t('JWT Token')}
 								</div>
-							{/if}
-							<div class="flex">
-								{#if APIKey}
-									<SensitiveInput value={APIKey} readOnly={true} />
+								<div class="flex gap-2">
+									<SensitiveInput value={localStorage.token} readOnly={true} />
 
 									<button
-										class="ml-1.5 px-1.5 py-1 dark:hover:bg-gray-850 transition rounded-lg"
+										class="px-2 py-1.5 rounded-lg transition hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
 										on:click={() => {
-											copyToClipboard(APIKey);
-											APIKeyCopied = true;
+											copyToClipboard(localStorage.token);
+											JWTTokenCopied = true;
 											setTimeout(() => {
-												APIKeyCopied = false;
+												JWTTokenCopied = false;
 											}, 2000);
 										}}
 									>
-										{#if APIKeyCopied}
+										{#if JWTTokenCopied}
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
 												viewBox="0 0 20 20"
@@ -373,53 +320,112 @@
 											</svg>
 										{/if}
 									</button>
+								</div>
+							</div>
+						{/if}
 
-									<Tooltip content={$i18n.t('Create new key')}>
+						<!-- API Key -->
+						{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
+							<div class="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
+								{#if $user?.role === 'admin'}
+									<div class="text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">
+										{$i18n.t('API Key')}
+									</div>
+								{/if}
+								<div class="flex gap-2">
+									{#if APIKey}
+										<SensitiveInput value={APIKey} readOnly={true} />
+
 										<button
-											class=" px-1.5 py-1 dark:hover:bg-gray-850transition rounded-lg"
+											class="px-2 py-1.5 rounded-lg transition hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
+											on:click={() => {
+												copyToClipboard(APIKey);
+												APIKeyCopied = true;
+												setTimeout(() => {
+													APIKeyCopied = false;
+												}, 2000);
+											}}
+										>
+											{#if APIKeyCopied}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M11.986 3H12a2 2 0 0 1 2 2v6a2 2 0 0 1-1.5 1.937V7A2.5 2.5 0 0 0 10 4.5H4.063A2 2 0 0 1 6 3h.014A2.25 2.25 0 0 1 8.25 1h1.5a2.25 2.25 0 0 1 2.236 2ZM10.5 4v-.75a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V4h3Z"
+														clip-rule="evenodd"
+													/>
+													<path
+														fill-rule="evenodd"
+														d="M3 6a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1.75 2.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5ZM4 11.75a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											{/if}
+										</button>
+
+										<Tooltip content={$i18n.t('Create new key')}>
+											<button
+												class="px-2 py-1.5 rounded-lg transition hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
+												on:click={() => {
+													createAPIKeyHandler();
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2"
+													stroke="currentColor"
+													class="size-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
+									{:else}
+										<button
+											class="flex gap-1.5 items-center font-medium px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition text-gray-700 dark:text-gray-200"
 											on:click={() => {
 												createAPIKeyHandler();
 											}}
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="2"
-												stroke="currentColor"
-												class="size-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-												/>
-											</svg>
+											<Plus strokeWidth="2" className="size-3.5" />
+											{$i18n.t('Create new secret key')}
 										</button>
-									</Tooltip>
-								{:else}
-									<button
-										class="flex gap-1.5 items-center font-medium px-3.5 py-1.5 rounded-lg bg-gray-100/70 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-850 transition"
-										on:click={() => {
-											createAPIKeyHandler();
-										}}
-									>
-										<Plus strokeWidth="2" className=" size-3.5" />
-
-										{$i18n.t('Create new secret key')}</button
-									>
-								{/if}
+									{/if}
+								</div>
 							</div>
-						</div>
-					{/if}
-				</div>
-			{/if}
+						{/if}
+					</div>
+				{/if}
+			</div>
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-4 text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			on:click={async () => {
 				const res = await submitHandler();
 

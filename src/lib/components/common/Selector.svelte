@@ -2,6 +2,7 @@
 	import { Select } from 'bits-ui';
 
 	import { flyAndScale } from '$lib/utils/transitions';
+	import i18n from '$lib/i18n';
 
 	import { createEventDispatcher } from 'svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
@@ -37,7 +38,7 @@
 	}}
 	selected={items.find((item) => item.value === value)}
 	onSelectedChange={(selectedItem) => {
-		value = selectedItem.value;
+		if (selectedItem) value = selectedItem.value;
 	}}
 >
 	<Select.Trigger class="relative w-full" aria-label={placeholder}>
