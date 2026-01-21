@@ -2809,6 +2809,12 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
     os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true",
 )
 
+PDF_LOADER_MODE = PersistentConfig(
+    "PDF_LOADER_MODE",
+    "rag.pdf_loader_mode",
+    os.environ.get("PDF_LOADER_MODE", "page"),
+)
+
 RAG_EMBEDDING_MODEL = PersistentConfig(
     "RAG_EMBEDDING_MODEL",
     "rag.embedding_model",

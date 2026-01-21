@@ -361,7 +361,9 @@ class Loader:
         else:
             if file_ext == "pdf":
                 loader = PyPDFLoader(
-                    file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
+                    file_path,
+                    extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
+                    mode=self.kwargs.get("PDF_LOADER_MODE", "page"),
                 )
             elif file_ext == "csv":
                 loader = CSVLoader(file_path, autodetect_encoding=True)
