@@ -1385,6 +1385,7 @@ def save_docs_to_vector_db(
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
+    skip_duplicate_check: bool = False,
     user=None,
 ) -> bool:
     def _get_docs_info(docs: list[Document]) -> str:
@@ -1408,7 +1409,7 @@ def save_docs_to_vector_db(
     )
 
     # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and "hash" in metadata:
+    if metadata and "hash" in metadata and not skip_duplicate_check:
         result = VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
@@ -1575,6 +1576,7 @@ class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
     collection_name: Optional[str] = None
+    skip_duplicate_check: bool = False
 
 
 @router.post("/process/file")
@@ -1757,6 +1759,7 @@ def process_file(
                             "hash": hash,
                         },
                         add=(True if form_data.collection_name else False),
+                        skip_duplicate_check=form_data.skip_duplicate_check,
                         user=user,
                     )
                     log.info(f"added {len(docs)} items to collection {collection_name}")
