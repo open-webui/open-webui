@@ -724,12 +724,32 @@ async def get_groups(
     startIndex: int = Query(1, ge=1),
     count: int = Query(20, ge=1, le=100),
     filter: Optional[str] = None,
+    excludedAttributes: Optional[str] = None,
     _: bool = Depends(get_scim_auth),
     db: Session = Depends(get_session),
 ):
     """List SCIM Groups"""
-    # Get all groups
-    groups_list = Groups.get_all_groups(db=db)
+    # Get groups from database
+    # Simple filter parsing - supports displayName eq "name"
+    # Similar to `get_users`
+    if filter:
+        if "displayName eq" in filter:
+            # Expect: displayName eq "Some Group"
+            try:
+                display_name = filter.split('"')[1]
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid filter format. Expected: displayName eq \"<name>\"",
+                )
+
+            groups_list = [
+                g for g in (Groups.get_all_groups(db=db) or []) if g.name == display_name
+            ]
+        else:
+            groups_list = Groups.get_all_groups(db=db)
+    else:
+        groups_list = Groups.get_all_groups(db=db)
 
     # Apply pagination
     total = len(groups_list)
@@ -739,6 +759,15 @@ async def get_groups(
 
     # Convert to SCIM format
     scim_groups = [group_to_scim(group, request, db=db) for group in paginated_groups]
+
+    # Apply excludedAttributes handling – currently only supports excluding "members"
+    # Often used if an external system just wants to check if a group exists without fetching all members
+    if excludedAttributes:
+        # SCIM spec can contain a comma‑separated list
+        excluded = [attr.strip() for attr in excludedAttributes.split(",")]
+        if "members" in excluded:
+            for grp in scim_groups:
+                grp.members = None
 
     return SCIMListResponse(
         totalResults=total,
