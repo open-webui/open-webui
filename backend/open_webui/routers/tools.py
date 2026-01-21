@@ -25,6 +25,7 @@ from open_webui.utils.plugin import (
     load_tool_module_by_id,
     replace_imports,
     get_tool_module_from_cache,
+    resolve_valves_schema_options,
 )
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -553,7 +554,10 @@ async def get_tools_valves_spec_by_id(
 
         if hasattr(tools_module, "Valves"):
             Valves = tools_module.Valves
-            return Valves.schema()
+            schema = Valves.schema()
+            # Resolve dynamic options for select dropdowns
+            schema = resolve_valves_schema_options(Valves, schema, user)
+            return schema
         return None
     else:
         raise HTTPException(
@@ -662,7 +666,10 @@ async def get_tools_user_valves_spec_by_id(
 
         if hasattr(tools_module, "UserValves"):
             UserValves = tools_module.UserValves
-            return UserValves.schema()
+            schema = UserValves.schema()
+            # Resolve dynamic options for select dropdowns
+            schema = resolve_valves_schema_options(UserValves, schema, user)
+            return schema
         return None
     else:
         raise HTTPException(
