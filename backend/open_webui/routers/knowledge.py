@@ -310,9 +310,7 @@ async def reindex_knowledge_files(
                         process_file,
                         request,
                         ProcessFileForm(
-                            file_id=file.id,
-                            collection_name=knowledge_base.id,
-                            skip_duplicate_check=True,
+                            file_id=file.id, collection_name=knowledge_base.id
                         ),
                         user=user,
                         db=db,
