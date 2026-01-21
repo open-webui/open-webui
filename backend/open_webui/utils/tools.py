@@ -387,7 +387,11 @@ def get_builtin_tools(
 ) -> dict[str, dict]:
     """
     Get built-in tools for native function calling.
-    Only returns tools when BOTH the global config is enabled AND the model capability allows it.
+
+    Returns tools only when all of the following conditions are met:
+    - Global configuration is enabled
+    - Model supports the capability
+    - Feature is enabled for this chat
     """
     tools_dict = {}
     builtin_functions = []
@@ -433,20 +437,26 @@ def get_builtin_tools(
     if features.get("memory"):
         builtin_functions.extend([search_memories, add_memory, replace_memory_content])
 
-    # Add web search tools if enabled globally AND model has web_search capability
-    if getattr(
-        request.app.state.config, "ENABLE_WEB_SEARCH", False
-    ) and get_model_capability("web_search"):
+    # Add web search tools if enabled globally AND model has web_search capability AND feature is enabled for this chat
+    if (
+        getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False)
+        and get_model_capability("web_search")
+        and features.get("web_search")
+    ):
         builtin_functions.extend([search_web, fetch_url])
 
-    # Add image generation/edit tools if enabled globally AND model has image_generation capability
-    if getattr(
-        request.app.state.config, "ENABLE_IMAGE_GENERATION", False
-    ) and get_model_capability("image_generation"):
+    # Add image generation/edit tools if enabled globally AND model has image_generation capability AND feature is enabled for this chat
+    if (
+        getattr(request.app.state.config, "ENABLE_IMAGE_GENERATION", False)
+        and get_model_capability("image_generation")
+        and features.get("image_generation")
+    ):
         builtin_functions.append(generate_image)
-    if getattr(
-        request.app.state.config, "ENABLE_IMAGE_EDIT", False
-    ) and get_model_capability("image_generation"):
+    if (
+        getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False)
+        and get_model_capability("image_generation")
+        and features.get("image_generation")
+    ):
         builtin_functions.append(edit_image)
 
     # Notes tools - search, view, create, and update user's notes (if notes enabled globally)
