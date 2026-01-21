@@ -24,7 +24,7 @@
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
-		"@sveltejs/kit": "^2.5.27",
+		"@sveltejs/kit": "^2.50.0",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0",
 		"@tailwindcss/container-queries": "^0.1.1",
 		"@tailwindcss/postcss": "^4.0.0",
@@ -136,7 +136,7 @@
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
 		"turndown-plugin-gfm": "^1.0.2",
-		"undici": "^7.3.0",
+		"undici": "^7.19.0",
 		"uuid": "^9.0.1",
 		"vega": "^6.2.0",
 		"vega-lite": "^6.4.1",
