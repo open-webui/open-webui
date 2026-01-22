@@ -491,6 +491,7 @@ from open_webui.env import (
     WEBUI_ADMIN_EMAIL,
     WEBUI_ADMIN_PASSWORD,
     WEBUI_ADMIN_NAME,
+    ENABLE_EASTER_EGGS,
 )
 
 
@@ -1932,6 +1933,7 @@ async def get_app_config(request: Request):
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
             "enable_public_active_users_count": ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
+            "enable_easter_eggs": ENABLE_EASTER_EGGS,
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
