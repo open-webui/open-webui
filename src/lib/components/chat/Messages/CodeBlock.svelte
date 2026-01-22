@@ -61,6 +61,8 @@
 	let renderError = null;
 
 	let highlightedCode = null;
+	let isHighlighting = false;
+	let highlightTimeoutId = null;
 	let executing = false;
 
 	let stdout = null;
@@ -432,11 +434,54 @@
 		if (token) {
 			onUpdate(token);
 		}
+		// Trigger initial highlight with delay
+		scheduleHighlight();
 	});
+
+	// Delayed syntax highlighting to avoid blocking the main thread
+	const scheduleHighlight = () => {
+		if (highlightTimeoutId) {
+			clearTimeout(highlightTimeoutId);
+		}
+		// Use requestIdleCallback if available, otherwise setTimeout
+		if (typeof requestIdleCallback !== 'undefined') {
+			highlightTimeoutId = requestIdleCallback(() => {
+				performHighlight();
+			}, { timeout: 100 });
+		} else {
+			highlightTimeoutId = setTimeout(() => {
+				performHighlight();
+			}, 50);
+		}
+	};
+
+	const performHighlight = () => {
+		if (!code || isHighlighting) return;
+		isHighlighting = true;
+		try {
+			const result = hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases);
+			highlightedCode = result.value;
+		} catch (e) {
+			highlightedCode = code;
+		}
+		isHighlighting = false;
+	};
+
+	// Re-highlight when code changes
+	$: if (code && !collapsed && !edit) {
+		scheduleHighlight();
+	}
 
 	onDestroy(() => {
 		if (pyodideWorker) {
 			pyodideWorker.terminate();
+		}
+		if (highlightTimeoutId) {
+			if (typeof cancelIdleCallback !== 'undefined') {
+				cancelIdleCallback(highlightTimeoutId);
+			} else {
+				clearTimeout(highlightTimeoutId);
+			}
 		}
 	});
 </script>
@@ -674,8 +719,7 @@
 						<pre
 							class="hljs p-4 px-5 overflow-x-auto bg-gray-50 dark:bg-gray-950 text-sm leading-7"
 							style="border-radius: 0; margin: 0;"><code class="language-{lang} whitespace-pre"
-								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
-									code}</code
+								>{@html highlightedCode || code}</code
 							></pre>
 					{/if}
 				{:else}

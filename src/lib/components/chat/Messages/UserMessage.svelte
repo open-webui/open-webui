@@ -15,6 +15,7 @@
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import LazyContent from '$lib/components/common/LazyContent.svelte';
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
@@ -51,10 +52,17 @@
 
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 
-	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
-	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	// Use a more efficient shallow comparison for message updates
+	let message = history.messages[messageId];
+	let lastMessageRef = history.messages[messageId];
+
+	$: if (history.messages && history.messages[messageId]) {
+		const currentMessage = history.messages[messageId];
+		// Only update if the reference changed or key properties changed
+		if (currentMessage !== lastMessageRef ||
+			currentMessage.content !== message.content) {
+			message = currentMessage;
+			lastMessageRef = currentMessage;
 		}
 	}
 
@@ -355,12 +363,14 @@
 								: ' w-full'}"
 						>
 							{#if message.content}
-								<Markdown
-									id={`${chatId}-${message.id}`}
-									content={message.content}
-									{editCodeBlock}
-									{topPadding}
-								/>
+								<LazyContent minHeight="24px" rootMargin="300px 0px">
+									<Markdown
+										id={`${chatId}-${message.id}`}
+										content={message.content}
+										{editCodeBlock}
+										{topPadding}
+									/>
+								</LazyContent>
 							{/if}
 						</div>
 					</div>

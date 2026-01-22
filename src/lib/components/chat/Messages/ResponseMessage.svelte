@@ -67,6 +67,7 @@
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
+	import LazyContent from '$lib/components/common/LazyContent.svelte';
 
 	interface MessageType {
 		id: string;
@@ -124,10 +125,20 @@
 	export let messageId;
 	export let selectedModels = [];
 
-	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
-	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	// Use a more efficient shallow comparison for message updates
+	// Only deep clone when necessary (for editing)
+	let message: MessageType = history.messages[messageId];
+	let lastMessageRef = history.messages[messageId];
+
+	$: if (history.messages && history.messages[messageId]) {
+		const currentMessage = history.messages[messageId];
+		// Only update if the reference changed or key properties changed
+		if (currentMessage !== lastMessageRef ||
+			currentMessage.content !== message.content ||
+			currentMessage.done !== message.done ||
+			currentMessage.error !== message.error) {
+			message = currentMessage;
+			lastMessageRef = currentMessage;
 		}
 	}
 
@@ -851,45 +862,51 @@
 							{:else if message.content && message.error !== true}
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-								<ContentRenderer
-									id={`${chatId}-${message.id}`}
-									messageId={message.id}
-									{history}
-									{selectedModels}
-									content={message.content}
-									sources={message.sources}
-									floatingButtons={message?.done &&
-										!readOnly &&
-										($settings?.showFloatingActionButtons ?? true)}
-									save={!readOnly}
-									preview={!readOnly}
-									{editCodeBlock}
-									{topPadding}
-									done={($settings?.chatFadeStreamingText ?? true)
-										? (message?.done ?? false)
-										: true}
-									{model}
-									onTaskClick={async (e) => {
-										console.log(e);
-									}}
-									onSourceClick={async (id) => {
-										console.log(id);
+								<LazyContent
+									forceVisible={!message.done}
+									minHeight="60px"
+									rootMargin="300px 0px"
+								>
+									<ContentRenderer
+										id={`${chatId}-${message.id}`}
+										messageId={message.id}
+										{history}
+										{selectedModels}
+										content={message.content}
+										sources={message.sources}
+										floatingButtons={message?.done &&
+											!readOnly &&
+											($settings?.showFloatingActionButtons ?? true)}
+										save={!readOnly}
+										preview={!readOnly}
+										{editCodeBlock}
+										{topPadding}
+										done={($settings?.chatFadeStreamingText ?? true)
+											? (message?.done ?? false)
+											: true}
+										{model}
+										onTaskClick={async (e) => {
+											console.log(e);
+										}}
+										onSourceClick={async (id) => {
+											console.log(id);
 
-										if (citationsElement) {
-											citationsElement?.showSourceModal(id);
-										}
-									}}
-									onAddMessages={({ modelId, parentId, messages }) => {
-										addMessages({ modelId, parentId, messages });
-									}}
-									onSave={({ raw, oldContent, newContent }) => {
-										history.messages[message.id].content = history.messages[
-											message.id
-										].content.replace(raw, raw.replace(oldContent, newContent));
+											if (citationsElement) {
+												citationsElement?.showSourceModal(id);
+											}
+										}}
+										onAddMessages={({ modelId, parentId, messages }) => {
+											addMessages({ modelId, parentId, messages });
+										}}
+										onSave={({ raw, oldContent, newContent }) => {
+											history.messages[message.id].content = history.messages[
+												message.id
+											].content.replace(raw, raw.replace(oldContent, newContent));
 
-										updateChat();
-									}}
-								/>
+											updateChat();
+										}}
+									/>
+								</LazyContent>
 							{/if}
 
 							{#if message?.error}

@@ -2,6 +2,7 @@
 	import { marked } from 'marked';
 	import { replaceTokens, processResponseContent } from '$lib/utils';
 	import { user } from '$lib/stores';
+	import { getCachedTokens } from '$lib/utils/markdownCache';
 
 	import markedExtension from '$lib/utils/marked/extension';
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
@@ -49,11 +50,26 @@
 		extensions: [mentionExtension({ triggerChar: '@' }), mentionExtension({ triggerChar: '#' })]
 	});
 
+	// Parser function for caching
+	const parseMarkdown = (processedContent) => {
+		return marked.lexer(processedContent);
+	};
+
 	$: (async () => {
 		if (content) {
-			tokens = marked.lexer(
-				replaceTokens(processResponseContent(content), model?.name, $user?.name)
-			);
+			const processedContent = replaceTokens(processResponseContent(content), model?.name, $user?.name);
+			// Use cache for completed messages, skip cache for streaming (done=false)
+			if (done) {
+				tokens = getCachedTokens(
+					processedContent,
+					model?.name,
+					$user?.name,
+					parseMarkdown
+				);
+			} else {
+				// For streaming messages, parse directly without caching
+				tokens = parseMarkdown(processedContent);
+			}
 		}
 	})();
 </script>
