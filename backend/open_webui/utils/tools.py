@@ -398,9 +398,7 @@ def get_builtin_tools(
     # Helper to get model capabilities (defaults to True if not specified)
     def get_model_capability(name: str, default: bool = True) -> bool:
         return (
-            model.get("info", {})
-            .get("meta", {})
-            .get("capabilities", {})
+            (model.get("info", {}).get("meta", {}).get("capabilities") or {})
             .get(name, default)
         )
 

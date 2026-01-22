@@ -1808,9 +1808,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Inject builtin tools for native function calling based on enabled features and model capability
     # Check if builtin_tools capability is enabled for this model (defaults to True if not specified)
     builtin_tools_enabled = (
-        model.get("info", {})
-        .get("meta", {})
-        .get("capabilities", {})
+        (model.get("info", {}).get("meta", {}).get("capabilities") or {})
         .get("builtin_tools", True)
     )
     if (
@@ -1856,9 +1854,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Check if file context extraction is enabled for this model (default True)
     file_context_enabled = (
-        model.get("info", {})
-        .get("meta", {})
-        .get("capabilities", {})
+        (model.get("info", {}).get("meta", {}).get("capabilities") or {})
         .get("file_context", True)
     )
 
