@@ -441,26 +441,32 @@ def get_builtin_tools(
     if is_builtin_tool_enabled("memory") and features.get("memory"):
         builtin_functions.extend([search_memories, add_memory, replace_memory_content])
 
-    # Add web search tools if enabled globally AND model has web_search capability
-    if getattr(
-        request.app.state.config, "ENABLE_WEB_SEARCH", False
-    ) and get_model_capability("web_search"):
+    # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
+    if (
+        is_builtin_tool_enabled("web_search")
+        and getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False)
+        and get_model_capability("web_search")
+    ):
         builtin_functions.extend([search_web, fetch_url])
 
-    # Add image generation/edit tools if enabled globally AND model has image_generation capability
-    if getattr(
-        request.app.state.config, "ENABLE_IMAGE_GENERATION", False
-    ) and get_model_capability("image_generation"):
+    # Add image generation/edit tools if builtin category enabled AND enabled globally AND model has image_generation capability
+    if (
+        is_builtin_tool_enabled("image_generation")
+        and getattr(request.app.state.config, "ENABLE_IMAGE_GENERATION", False)
+        and get_model_capability("image_generation")
+    ):
         builtin_functions.append(generate_image)
-    if getattr(
-        request.app.state.config, "ENABLE_IMAGE_EDIT", False
-    ) and get_model_capability("image_generation"):
+    if (
+        is_builtin_tool_enabled("image_generation")
+        and getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False)
+        and get_model_capability("image_generation")
+    ):
         builtin_functions.append(edit_image)
 
-    # Add code interpreter tool if enabled globally AND model has code_interpreter capability
-    # Supports both pyodide (via frontend event call) and jupyter engines
+    # Add code interpreter tool if builtin category enabled AND enabled globally AND model has code_interpreter capability
     if (
-        getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", True)
+        is_builtin_tool_enabled("code_interpreter")
+        and getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", True)
         and get_model_capability("code_interpreter")
     ):
         builtin_functions.append(execute_code)
