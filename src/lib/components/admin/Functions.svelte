@@ -23,6 +23,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import { getModels } from '$lib/apis';
+	import { getSessionUser } from '$lib/apis/auths';
 	import FunctionMenu from './Functions/FunctionMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import Switch from '../common/Switch.svelte';
@@ -202,9 +203,25 @@
 
 	onMount(async () => {
 		viewOption = localStorage?.workspaceViewOption || '';
-		functions = await getFunctionList(localStorage.token).catch((error) => {
+
+		// First attempt to load functions
+		functions = await getFunctionList(localStorage.token).catch(async (error) => {
+			// If unauthorized, try to refresh session and retry once
+			if (error?.toString().includes('401') || error?.toString().includes('Unauthorized')) {
+				try {
+					// Validate/refresh session
+					await getSessionUser(localStorage.token);
+					// Retry loading functions with same token
+					return await getFunctionList(localStorage.token);
+				} catch (refreshError) {
+					// Session refresh failed - redirect to login will be handled by layout
+					console.log('Session validation failed:', refreshError);
+					return null;
+				}
+			}
+			// Non-401 error - show it to user
 			toast.error(`${error}`);
-			return [];
+			return null;
 		});
 
 		await tick();
@@ -404,7 +421,7 @@
 				</div>
 			</div>
 
-			{#if (filteredItems ?? []).length !== 0}
+			{#if loaded && functions && (filteredItems ?? []).length !== 0}
 				<div class="px-3 my-2 gap-1 lg:gap-2 grid lg:grid-cols-2">
 					{#each filteredItems as func (func.id)}
 						<div
@@ -573,7 +590,7 @@
 						</div>
 					{/each}
 				</div>
-			{:else}
+			{:else if loaded && functions}
 				<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 					<div class="max-w-md text-center">
 						<div class=" text-3xl mb-3">😕</div>
