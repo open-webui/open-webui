@@ -858,8 +858,13 @@ async def generate_chat_completion(
                 detail="Model not found",
             )
 
-    await get_all_models(request, user=user)
-    model = request.app.state.OPENAI_MODELS.get(model_id)
+    # Check if model is already in app state cache to avoid expensive get_all_models() call
+    # This significantly reduces TTFT when models are already cached
+    model = request.app.state.OPENAI_MODELS.get(model_id) if request.app.state.OPENAI_MODELS else None
+    if not model:
+        await get_all_models(request, user=user)
+        model = request.app.state.OPENAI_MODELS.get(model_id)
+
     if model:
         idx = model["urlIdx"]
     else:
@@ -1003,9 +1008,12 @@ async def embeddings(request: Request, form_data: dict, user):
     # Prepare payload/body
     body = json.dumps(form_data)
     # Find correct backend url/key based on model
-    await get_all_models(request, user=user)
     model_id = form_data.get("model")
+    # Check if model is already in app state cache to avoid expensive get_all_models() call
     models = request.app.state.OPENAI_MODELS
+    if not models or model_id not in models:
+        await get_all_models(request, user=user)
+        models = request.app.state.OPENAI_MODELS
     if model_id in models:
         idx = models[model_id]["urlIdx"]
 

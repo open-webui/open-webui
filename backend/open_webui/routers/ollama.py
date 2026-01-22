@@ -997,13 +997,16 @@ async def embed(
     log.info(f"generate_ollama_batch_embeddings {form_data}")
 
     if url_idx is None:
-        await get_all_models(request, user=user)
-        models = request.app.state.OLLAMA_MODELS
-
         model = form_data.model
 
         if ":" not in model:
             model = f"{model}:latest"
+
+        # Check if model is already in app state cache to avoid expensive get_all_models() call
+        models = request.app.state.OLLAMA_MODELS
+        if not models or model not in models:
+            await get_all_models(request, user=user)
+            models = request.app.state.OLLAMA_MODELS
 
         if model in models:
             url_idx = random.choice(models[model]["urls"])
@@ -1079,13 +1082,16 @@ async def embeddings(
     log.info(f"generate_ollama_embeddings {form_data}")
 
     if url_idx is None:
-        await get_all_models(request, user=user)
-        models = request.app.state.OLLAMA_MODELS
-
         model = form_data.model
 
         if ":" not in model:
             model = f"{model}:latest"
+
+        # Check if model is already in app state cache to avoid expensive get_all_models() call
+        models = request.app.state.OLLAMA_MODELS
+        if not models or model not in models:
+            await get_all_models(request, user=user)
+            models = request.app.state.OLLAMA_MODELS
 
         if model in models:
             url_idx = random.choice(models[model]["urls"])
