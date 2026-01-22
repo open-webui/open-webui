@@ -330,16 +330,12 @@ class UsersTable:
         filter: Optional[dict] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
-        defer_profile_image: bool = False,
         db: Optional[Session] = None,
     ) -> dict:
         with get_db_context(db) as db:
-            # Join GroupMember so we can order by group_id when requested
-            query = db.query(User)
-
             # Defer loading of profile_image_url to avoid fetching large base64 data
-            if defer_profile_image:
-                query = query.options(defer(User.profile_image_url))
+            # List endpoints use URL paths instead; actual images are served via /{user_id}/profile/image
+            query = db.query(User).options(defer(User.profile_image_url))
 
             if filter:
                 query_key = filter.get("query")
@@ -463,8 +459,14 @@ class UsersTable:
                 query = query.limit(limit)
 
             users = query.all()
+            user_models = [UserModel.model_validate(user) for user in users]
+
+            # Substitute with URL path since base64 data was deferred
+            for user in user_models:
+                user.profile_image_url = f"/api/v1/users/{user.id}/profile/image"
+
             return {
-                "users": [UserModel.model_validate(user) for user in users],
+                "users": user_models,
                 "total": total,
             }
 
