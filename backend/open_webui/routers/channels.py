@@ -81,14 +81,14 @@ router = APIRouter()
 ############################
 
 
-def check_channels_access(request: Request, user=Optional[UserModel] = None):
+def check_channels_access(request: Request, user: Optional[UserModel] = None):
     """Dependency to ensure channels are globally enabled."""
     if not request.app.state.config.ENABLE_CHANNELS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Channels are not enabled",
         )
-    
+
     if user:
         if user.role != "admin" and not has_permission(
             user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
