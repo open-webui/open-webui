@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💻 MATLAB code blocks now display with proper syntax highlighting in chat messages. [#20719](https://github.com/open-webui/open-webui/issues/20719), [#20773](https://github.com/open-webui/open-webui/pull/20773)
 - 🧠 Knowledge base queries now handle LLM tool call parameter formatting variations automatically, preventing intermittent failures when models send parameters as strings instead of their expected types. [#20705](https://github.com/open-webui/open-webui/pull/20705)
 - 🔤 Tools and Functions in the Chat Controls sidebar now appear in alphabetical order, making it easier to locate specific tools when working with multiple integrations. [#20871](https://github.com/open-webui/open-webui/pull/20871)
+- 🔐 Administrators can now connect to MCP servers with self-signed or custom SSL certificates via the "AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL" environment variable. [#20875](https://github.com/open-webui/open-webui/issues/20875), [Commit](https://github.com/open-webui/open-webui/commit/c7f996d593e4bb48103b91316204fe7e50e25b35)
+- 🎁 Administrators can now control the visibility of easter egg features via the "ENABLE_EASTER_EGGS" environment variable. [Commit](https://github.com/open-webui/open-webui/commit/907dba4517903e5646e40223a0edca26a7107bc8)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Catalan, Finnish, German, Japanese, Polish, Portuguese (Brazil), Simplified Chinese, Spanish, and Traditional Chinese were enhanced and expanded.
 
