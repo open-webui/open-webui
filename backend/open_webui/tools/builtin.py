@@ -892,6 +892,7 @@ async def search_chats(
     end_timestamp: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
+    __chat_id__: str = None,
 ) -> str:
     """
     Search the user's previous chat conversations by title and message content.
@@ -921,6 +922,10 @@ async def search_chats(
 
         results = []
         for chat in chats:
+            # Skip the current chat to avoid showing it in search results
+            if __chat_id__ and chat.id == __chat_id__:
+                continue
+
             # Apply date filters (updated_at is in seconds)
             if start_timestamp and chat.updated_at < start_timestamp:
                 continue
