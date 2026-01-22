@@ -52,6 +52,7 @@
 		createMessagesList,
 		getPromptVariables,
 		processDetails,
+		removeDetails,
 		removeAllDetails,
 		getCodeBlockContents,
 		isYoutubeUrl
@@ -845,7 +846,7 @@
 					html: htmlContent,
 					css: cssContent,
 					js: jsContent
-				} = getCodeBlockContents(message.content);
+				} = getCodeBlockContents(removeDetails(message.content, ['reasoning']));
 
 				if (htmlContent || cssContent || jsContent) {
 					const renderedContent = `
