@@ -7,6 +7,7 @@
 	const i18n = getContext('i18n');
 
 	import { getPromptByCommand, getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
+	import { getSessionUser } from '$lib/apis/auths';
 	import { page } from '$app/stores';
 
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
@@ -31,10 +32,26 @@
 	onMount(async () => {
 		const command = $page.url.searchParams.get('command');
 		if (command) {
+			// First attempt to load prompt
 			const _prompt = await getPromptByCommand(
 				localStorage.token,
 				command.replace(/\//g, '')
-			).catch((error) => {
+			).catch(async (error) => {
+				// If unauthorized, try to refresh session and retry once
+				if (error?.toString().includes('401') || error?.toString().includes('Unauthorized')) {
+					try {
+						// Validate/refresh session
+						await getSessionUser(localStorage.token);
+						// Retry loading prompt
+						return await getPromptByCommand(localStorage.token, command.replace(/\//g, ''));
+					} catch (refreshError) {
+						// Session refresh failed - redirect will be handled by layout
+						console.log('Session validation failed:', refreshError);
+						return null;
+					}
+				}
+				// Non-401 error or retry failed
+				console.error('Failed to load prompt:', error);
 				toast.error(`${error}`);
 				return null;
 			});

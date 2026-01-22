@@ -26,6 +26,11 @@ import hljs from 'highlight.js';
 // Helper functions
 //////////////////////////
 
+export const isDev = () => {
+	if (typeof window === 'undefined') return false;
+	return window.location.hostname === 'localhost' || window.location.hostname.startsWith('127.');
+};
+
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function escapeRegExp(string: string): string {

@@ -6,6 +6,7 @@
 	import { page } from '$app/stores';
 	import { config, functions, models, settings } from '$lib/stores';
 	import { updateFunctionById, getFunctions, getFunctionById } from '$lib/apis/functions';
+	import { getSessionUser } from '$lib/apis/auths';
 
 	import FunctionEditor from '$lib/components/admin/Functions/FunctionEditor.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -64,7 +65,23 @@
 		const id = $page.url.searchParams.get('id');
 
 		if (id) {
-			func = await getFunctionById(localStorage.token, id).catch((error) => {
+			// First attempt to load function
+			func = await getFunctionById(localStorage.token, id).catch(async (error) => {
+				// If unauthorized, try to refresh session and retry once
+				if (error?.toString().includes('401') || error?.toString().includes('Unauthorized')) {
+					try {
+						// Validate/refresh session
+						await getSessionUser(localStorage.token);
+						// Retry loading function
+						return await getFunctionById(localStorage.token, id);
+					} catch (refreshError) {
+						// Session refresh failed - redirect will be handled by layout
+						console.log('Session validation failed:', refreshError);
+						return null;
+					}
+				}
+				// Non-401 error or retry failed
+				console.error('Failed to load function:', error);
 				toast.error(`${error}`);
 				goto('/admin/functions');
 				return null;

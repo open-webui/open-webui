@@ -1,13 +1,19 @@
 import { APP_NAME } from '$lib/constants';
-import { type Writable, writable } from 'svelte/store';
+import { type Writable, writable, derived } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
+import { isDev } from '$lib/utils';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
 // Backend
-export const WEBUI_NAME = writable(APP_NAME);
+const _WEBUI_NAME = writable(APP_NAME);
+
+// Add [DEV] prefix in dev mode
+export const WEBUI_NAME = derived(_WEBUI_NAME, ($name) => (isDev() ? `[DEV] ${$name}` : $name));
+// Export writable version for setting the name
+export const setWebUIName = (name: string) => _WEBUI_NAME.set(name);
 
 export const WEBUI_VERSION = writable(null);
 export const WEBUI_DEPLOYMENT_ID = writable(null);

@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { getToolById, getTools, updateToolById } from '$lib/apis/tools';
+	import { getSessionUser } from '$lib/apis/auths';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
 	import { WEBUI_VERSION } from '$lib/constants';
@@ -56,7 +57,23 @@
 		const id = $page.url.searchParams.get('id');
 
 		if (id) {
-			tool = await getToolById(localStorage.token, id).catch((error) => {
+			// First attempt to load tool
+			tool = await getToolById(localStorage.token, id).catch(async (error) => {
+				// If unauthorized, try to refresh session and retry once
+				if (error?.toString().includes('401') || error?.toString().includes('Unauthorized')) {
+					try {
+						// Validate/refresh session
+						await getSessionUser(localStorage.token);
+						// Retry loading tool
+						return await getToolById(localStorage.token, id);
+					} catch (refreshError) {
+						// Session refresh failed - redirect will be handled by layout
+						console.log('Session validation failed:', refreshError);
+						return null;
+					}
+				}
+				// Non-401 error or retry failed
+				console.error('Failed to load tool:', error);
 				toast.error(`${error}`);
 				goto('/workspace/tools');
 				return null;

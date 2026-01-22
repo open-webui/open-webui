@@ -9,6 +9,7 @@
 	import { config, models, settings } from '$lib/stores';
 
 	import { getModelById, updateModelById } from '$lib/apis/models';
+	import { getSessionUser } from '$lib/apis/auths';
 
 	import { getModels } from '$lib/apis';
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
@@ -18,7 +19,23 @@
 	onMount(async () => {
 		const _id = $page.url.searchParams.get('id');
 		if (_id) {
-			model = await getModelById(localStorage.token, _id).catch((e) => {
+			// First attempt to load model
+			model = await getModelById(localStorage.token, _id).catch(async (error) => {
+				// If unauthorized, try to refresh session and retry once
+				if (error?.toString().includes('401') || error?.toString().includes('Unauthorized')) {
+					try {
+						// Validate/refresh session
+						await getSessionUser(localStorage.token);
+						// Retry loading model
+						return await getModelById(localStorage.token, _id);
+					} catch (refreshError) {
+						// Session refresh failed - redirect will be handled by layout
+						console.log('Session validation failed:', refreshError);
+						return null;
+					}
+				}
+				// Non-401 error or retry failed
+				console.error('Failed to load model:', error);
 				return null;
 			});
 
