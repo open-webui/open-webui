@@ -3291,6 +3291,19 @@ async def process_chat_response(
                         try:
                             data = json.loads(data)
 
+                            # Check for param fallback marker (thinking/reasoning params were disabled)
+                            if data.get("__param_fallback"):
+                                log.info("[PARAM FALLBACK] Detected __param_fallback marker in stream")
+                                await event_emitter(
+                                    {
+                                        "type": "chat:param_fallback",
+                                        "data": {
+                                            "message": "当前模型不支持设置参数，已跳过参数并重试。"
+                                        },
+                                    }
+                                )
+                                continue
+
                             # Debug: Log full chunk structure for reasoning analysis (first few chunks only)
                             if line_count <= 5:
                                 log.debug(

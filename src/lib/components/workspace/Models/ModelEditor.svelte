@@ -25,6 +25,7 @@
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import CollapsibleSection from '$lib/components/common/CollapsibleSection.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -471,257 +472,213 @@
 				}}
 			>
 				<div class="w-full px-1">
-					<div class="flex flex-col md:flex-row gap-4 w-full">
-						<div class="self-center md:self-start flex justify-center my-2 shrink-0">
-							<div class="self-center">
-								<button
-									class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
-									`${WEBUI_BASE_URL}/static/favicon.png`
-										? 'bg-transparent'
-										: 'bg-white'} shadow-xl group relative"
-									type="button"
-									on:click={() => {
-										filesInputElement.click();
-									}}
-								>
-									{#if info.meta.profile_image_url && !info.meta.profile_image_url.includes('/static/favicon')}
-										<img
-											src={info.meta.profile_image_url}
-											alt="model profile"
-											class="rounded-xl size-60 object-cover shrink-0"
-										/>
-									{:else}
-										<!-- Custom: Use API to get auto-matched brand logo -->
-										<img
-											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${encodeURIComponent(info.id || id)}`}
-											alt="model profile"
-											class=" rounded-xl size-60 object-cover shrink-0"
-										/>
-									{/if}
+					<div class="flex flex-col md:flex-row gap-6 w-full">
+						<!-- 头像区域 -->
+						<div class="self-center md:self-start flex flex-col items-center shrink-0">
+							<button
+								class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
+								`${WEBUI_BASE_URL}/static/favicon.png`
+									? 'bg-transparent'
+									: 'bg-white'} shadow-lg group relative overflow-hidden"
+								type="button"
+								on:click={() => {
+									filesInputElement.click();
+								}}
+							>
+								{#if info.meta.profile_image_url && !info.meta.profile_image_url.includes('/static/favicon')}
+									<img
+										src={info.meta.profile_image_url}
+										alt="model profile"
+										class="rounded-xl size-40 object-cover shrink-0"
+									/>
+								{:else}
+									<!-- Custom: Use API to get auto-matched brand logo -->
+									<img
+										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${encodeURIComponent(info.id || id)}`}
+										alt="model profile"
+										class="rounded-xl size-40 object-cover shrink-0"
+									/>
+								{/if}
 
-									<div class="absolute bottom-0 right-0 z-10">
-										<div class="m-1.5">
-											<div
-												class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
+								<div class="absolute bottom-0 right-0 z-10">
+									<div class="m-1.5">
+										<div
+											class="shadow-lg p-1.5 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 16 16"
+												fill="currentColor"
+												class="size-4"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 16 16"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														fill-rule="evenodd"
-														d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-														clip-rule="evenodd"
-													/>
-												</svg>
-											</div>
+												<path
+													fill-rule="evenodd"
+													d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+													clip-rule="evenodd"
+												/>
+											</svg>
 										</div>
 									</div>
-
-									<div
-										class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
-									></div>
-								</button>
-
-								<div class="flex w-full mt-1 justify-end">
-									<button
-										class="px-2 py-1 text-gray-500 rounded-lg text-xs"
-										on:click={() => {
-											info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
-										}}
-										type="button"
-									>
-										{$i18n.t('Reset Image')}</button
-									>
 								</div>
-							</div>
+
+								<div
+									class="absolute inset-0 bg-white dark:bg-black rounded-xl opacity-0 group-hover:opacity-20 transition"
+								></div>
+							</button>
+
+							<button
+								class="mt-2 px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
+								on:click={() => {
+									info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
+								}}
+								type="button"
+							>
+								{$i18n.t('Reset Image')}
+							</button>
 						</div>
 
-						<div class="flex flex-col w-full flex-1">
-							<div class="flex justify-between items-start my-2">
-								<div class=" flex flex-col w-full">
-									<div class="flex-1 w-full">
-										<input
-											class="text-4xl font-medium w-full bg-transparent outline-hidden"
-											placeholder={$i18n.t('Model Name')}
-											bind:value={name}
-											required
-										/>
-									</div>
-
-									<div class="flex-1 w-full">
-										<div>
-											<input
-												class="text-xs w-full bg-transparent outline-hidden"
-												placeholder={$i18n.t('Model ID')}
-												bind:value={id}
-												disabled={edit}
-												required
-											/>
-										</div>
-									</div>
+						<!-- 基本信息区域 -->
+						<div class="flex flex-col w-full flex-1 gap-4">
+							<!-- 名称和访问控制 -->
+							<div class="flex justify-between items-start gap-3">
+								<div class="flex flex-col w-full gap-1">
+									<input
+										class="text-3xl font-semibold w-full bg-transparent outline-hidden"
+										placeholder={$i18n.t('Model Name')}
+										bind:value={name}
+										required
+									/>
+									<input
+										class="text-sm text-gray-500 w-full bg-transparent outline-hidden"
+										placeholder={$i18n.t('Model ID')}
+										bind:value={id}
+										disabled={edit}
+										required
+									/>
 								</div>
 
-								<div class="shrink-0">
-									<button
-										class="bg-gray-50 shrink-0 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-										type="button"
-										on:click={() => {
-											showAccessControlModal = true;
-										}}
-									>
-										<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
-
-										<div class="text-sm font-medium shrink-0">
-											{$i18n.t('Access')}
-										</div>
-									</button>
-								</div>
+								<button
+									class="shrink-0 px-3 py-1.5 text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition flex items-center gap-1.5"
+									type="button"
+									on:click={() => {
+										showAccessControlModal = true;
+									}}
+								>
+									<LockClosed strokeWidth="2.5" className="size-3.5" />
+									{$i18n.t('Access')}
+								</button>
 							</div>
 
 							{#if preset}
-								<div class="mb-1">
-									<div class=" text-xs font-medium mb-1 text-gray-500">
-										{$i18n.t('Base Model (From)')}
-									</div>
-
-									<div>
-										<select
-											class="dark:bg-gray-900 text-sm w-full bg-transparent outline-hidden"
-											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
-											bind:value={info.base_model_id}
-											required
-										>
-											<option value={null} class=" text-gray-900"
-												>{$i18n.t('Select a base model')}</option
-											>
-											{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
-												<option value={model.id} class=" text-gray-900">{model.name}</option>
-											{/each}
-										</select>
-									</div>
+								<!-- 基础模型选择 -->
+								<div class="flex flex-col">
+									<label class="text-xs text-gray-500 mb-1">{$i18n.t('Base Model (From)')}</label>
+									<select
+										class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none"
+										bind:value={info.base_model_id}
+										required
+									>
+										<option value={null}>{$i18n.t('Select a base model')}</option>
+										{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
+											<option value={model.id}>{model.name}</option>
+										{/each}
+									</select>
 								</div>
 							{/if}
 
-							<div class="mb-1">
-								<div class="mb-1 flex w-full justify-between items-center">
-									<div class=" self-center text-xs font-medium text-gray-500">
-										{$i18n.t('Description')}
-									</div>
-
+							<!-- 描述 -->
+							<div class="flex flex-col">
+								<div class="flex items-center justify-between mb-1">
+									<label class="text-xs text-gray-500">{$i18n.t('Description')}</label>
 									<button
-										class="p-1 text-xs flex rounded-sm transition"
+										class="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition"
 										type="button"
-										aria-pressed={enableDescription ? 'true' : 'false'}
-										aria-label={enableDescription
-											? $i18n.t('Custom description enabled')
-											: $i18n.t('Default description enabled')}
 										on:click={() => {
 											enableDescription = !enableDescription;
 										}}
 									>
-										{#if !enableDescription}
-											<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-										{:else}
-											<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-										{/if}
+										{enableDescription ? $i18n.t('Custom') : $i18n.t('Default')}
 									</button>
 								</div>
-
 								{#if enableDescription}
 									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+										className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none"
 										placeholder={$i18n.t('Add a short description about what this model does')}
 										bind:value={info.meta.description}
 									/>
 								{/if}
 							</div>
 
-							<div class="w-full mb-1 max-w-full">
-								<div class="">
-									<Tags
-										tags={info?.meta?.tags ?? []}
-										on:delete={(e) => {
-											const tagName = e.detail;
-											info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-										}}
-										on:add={(e) => {
-											const tagName = e.detail;
-											if (!(info?.meta?.tags ?? null)) {
-												info.meta.tags = [{ name: tagName }];
-											} else {
-												info.meta.tags = [...info.meta.tags, { name: tagName }];
-											}
-										}}
-									/>
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<div class="my-2">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium text-gray-500">
-								{$i18n.t('Model Params')}
-							</div>
-						</div>
-
-						<div class="mt-2">
-							<div class="my-1">
-								<div class=" text-xs font-medium mb-2">{$i18n.t('System Prompt')}</div>
-								<div>
-									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-										placeholder={$i18n.t(
-											'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
-										)}
-										rows={4}
-										bind:value={system}
-									/>
-								</div>
-							</div>
-
-							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
-									{$i18n.t('Advanced Params')}
-								</div>
-
-								<button
-									class="p-1 px-3 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										showAdvanced = !showAdvanced;
+							<!-- 标签 -->
+							<div class="flex flex-col">
+								<label class="text-xs text-gray-500 mb-1">{$i18n.t('Tags')}</label>
+								<Tags
+									tags={info?.meta?.tags ?? []}
+									on:delete={(e) => {
+										const tagName = e.detail;
+										info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
 									}}
-								>
-									{#if showAdvanced}
-										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
-									{/if}
-								</button>
+									on:add={(e) => {
+										const tagName = e.detail;
+										if (!(info?.meta?.tags ?? null)) {
+											info.meta.tags = [{ name: tagName }];
+										} else {
+											info.meta.tags = [...info.meta.tags, { name: tagName }];
+										}
+									}}
+								/>
 							</div>
-
-							{#if showAdvanced}
-								<div class="my-2">
-									<AdvancedParams admin={true} custom={true} bind:params />
-								</div>
-							{/if}
 						</div>
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<!-- 模型参数 -->
+					<CollapsibleSection title={$i18n.t('Model Params')} open={true} className="mt-4">
+						<div class="flex flex-col gap-3">
+							<!-- 系统提示词 -->
+							<div class="flex flex-col">
+								<label class="text-xs text-gray-500 mb-1">{$i18n.t('System Prompt')}</label>
+								<Textarea
+									className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none"
+									placeholder={$i18n.t(
+										'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+									)}
+									rows={4}
+									bind:value={system}
+								/>
+							</div>
 
-					<div class="my-2">
-						<div class="flex w-full justify-between items-center">
-							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-xs font-medium text-gray-500">
-									{$i18n.t('Prompts')}
+							<!-- 高级参数 -->
+							<div class="flex flex-col">
+								<div class="flex items-center justify-between mb-2">
+									<span class="text-xs text-gray-500">{$i18n.t('Advanced Params')}</span>
+									<button
+										class="px-3 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
+										type="button"
+										on:click={() => {
+											showAdvanced = !showAdvanced;
+										}}
+									>
+										{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}
+									</button>
 								</div>
+								{#if showAdvanced}
+									<div class="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
+										<AdvancedParams admin={true} custom={true} bind:params />
+									</div>
+								{/if}
+							</div>
+						</div>
+					</CollapsibleSection>
 
+					<!-- 提示词建议 -->
+					<CollapsibleSection title={$i18n.t('Prompts')} open={false} className="mt-3">
+						<div class="flex flex-col gap-3">
+							<div class="flex items-center justify-between">
+								<span class="text-sm text-gray-600 dark:text-gray-400">
+									{(info?.meta?.suggestion_prompts ?? null) === null ? $i18n.t('Using default prompts') : $i18n.t('Using custom prompts')}
+								</span>
 								<button
-									class="p-1 text-xs flex rounded-sm transition"
+									class="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition"
 									type="button"
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
@@ -731,164 +688,124 @@
 										}
 									}}
 								>
-									{#if (info?.meta?.suggestion_prompts ?? null) === null}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-									{/if}
+									{(info?.meta?.suggestion_prompts ?? null) === null ? $i18n.t('Customize') : $i18n.t('Reset to Default')}
 								</button>
 							</div>
-						</div>
-
-						{#if info?.meta?.suggestion_prompts}
-							<PromptSuggestions bind:promptSuggestions={info.meta.suggestion_prompts} />
-						{/if}
-					</div>
-
-					<div class="my-2">
-						<Knowledge bind:selectedItems={knowledge} />
-					</div>
-
-					<div class="my-2">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
-					</div>
-
-					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-						{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
-							<div class="my-2">
-								<FiltersSelector
-									bind:selectedFilterIds={filterIds}
-									filters={($functions ?? []).filter((func) => func.type === 'filter')}
-								/>
-							</div>
-
-							{@const toggleableFilters = $functions.filter(
-								(func) =>
-									func.type === 'filter' &&
-									(filterIds.includes(func.id) || func?.is_global) &&
-									func?.meta?.toggle
-							)}
-
-							{#if toggleableFilters.length > 0}
-								<div class="my-2">
-									<DefaultFiltersSelector
-										bind:selectedFilterIds={defaultFilterIds}
-										filters={toggleableFilters}
-									/>
-								</div>
+							{#if info?.meta?.suggestion_prompts}
+								<PromptSuggestions bind:promptSuggestions={info.meta.suggestion_prompts} />
 							{/if}
-						{/if}
+						</div>
+					</CollapsibleSection>
 
-						{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-							<div class="my-2">
-								<ActionsSelector
-									bind:selectedActionIds={actionIds}
-									actions={($functions ?? []).filter((func) => func.type === 'action')}
+					<!-- 知识库和工具 -->
+					<CollapsibleSection title={$i18n.t('Knowledge & Tools')} open={true} className="mt-3">
+						<div class="flex flex-col gap-4">
+							<Knowledge bind:selectedItems={knowledge} />
+							<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
+						</div>
+					</CollapsibleSection>
+
+					<!-- 过滤器和动作 -->
+					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
+						<CollapsibleSection title={$i18n.t('Filters & Actions')} open={false} className="mt-3">
+							<div class="flex flex-col gap-4">
+								{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
+									<FiltersSelector
+										bind:selectedFilterIds={filterIds}
+										filters={($functions ?? []).filter((func) => func.type === 'filter')}
+									/>
+
+									{@const toggleableFilters = $functions.filter(
+										(func) =>
+											func.type === 'filter' &&
+											(filterIds.includes(func.id) || func?.is_global) &&
+											func?.meta?.toggle
+									)}
+
+									{#if toggleableFilters.length > 0}
+										<DefaultFiltersSelector
+											bind:selectedFilterIds={defaultFilterIds}
+											filters={toggleableFilters}
+										/>
+									{/if}
+								{/if}
+
+								{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
+									<ActionsSelector
+										bind:selectedActionIds={actionIds}
+										actions={($functions ?? []).filter((func) => func.type === 'action')}
+									/>
+								{/if}
+							</div>
+						</CollapsibleSection>
+					{/if}
+
+					<!-- 能力设置 -->
+					<CollapsibleSection title={$i18n.t('Capabilities')} open={true} className="mt-3">
+						<div class="flex flex-col gap-4">
+							<Capabilities bind:capabilities />
+
+							{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}
+								{@const availableFeatures = Object.entries(capabilities)
+									.filter(
+										([key, value]) =>
+											value && ['web_search', 'code_interpreter', 'image_generation'].includes(key)
+									)
+									.map(([key, value]) => key)}
+
+								{#if availableFeatures.length > 0}
+									<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
+								{/if}
+							{/if}
+
+							<!-- TTS Voice -->
+							<div class="flex flex-col">
+								<label class="text-xs text-gray-500 mb-1">{$i18n.t('TTS Voice')}</label>
+								<input
+									class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none"
+									type="text"
+									bind:value={tts.voice}
+									placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
 								/>
 							</div>
-						{/if}
-					{/if}
-
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-					<div class="my-2">
-						<Capabilities bind:capabilities />
-					</div>
-
-					{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}
-						{@const availableFeatures = Object.entries(capabilities)
-							.filter(
-								([key, value]) =>
-									value && ['web_search', 'code_interpreter', 'image_generation'].includes(key)
-							)
-							.map(([key, value]) => key)}
-
-						{#if availableFeatures.length > 0}
-							<div class="my-2">
-								<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
-							</div>
-						{/if}
-					{/if}
-
-					<div class="my-2">
-						<div class="flex w-full justify-between mb-1">
-							<div class="self-center text-xs font-medium text-gray-500">
-								{$i18n.t('TTS Voice')}
-							</div>
 						</div>
-						<input
-							class="w-full text-sm bg-transparent outline-hidden"
-							type="text"
-							bind:value={tts.voice}
-							placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
-						/>
-					</div>
+					</CollapsibleSection>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-					<div class="my-2">
+					<!-- 计费设置 -->
+					<CollapsibleSection title={$i18n.t('Billing Settings')} open={false} className="mt-3">
 						<BillingSettings bind:billing />
-					</div>
+					</CollapsibleSection>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-					<div class="my-2 flex justify-end">
+					<!-- 保存按钮 -->
+					<div class="mt-6 flex justify-end">
 						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+							class="px-6 py-2.5 text-sm font-medium bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 rounded-full transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>
-							<div class=" self-center font-medium">
-								{#if edit}
-									{$i18n.t('Save & Update')}
-								{:else}
-									{$i18n.t('Save & Create')}
-								{/if}
-							</div>
-
+							{#if edit}
+								{$i18n.t('Save & Update')}
+							{:else}
+								{$i18n.t('Save & Create')}
+							{/if}
 							{#if loading}
-								<div class="ml-1.5 self-center">
-									<Spinner />
-								</div>
+								<Spinner className="size-4" />
 							{/if}
 						</button>
 					</div>
 
-					<div class="my-2 text-gray-300 dark:text-gray-700 pb-20">
-						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-medium">{$i18n.t('JSON Preview')}</div>
-
-							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									showPreview = !showPreview;
-								}}
-							>
-								{#if showPreview}
-									<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Show')}</span>
-								{/if}
-							</button>
+					<!-- JSON 预览 -->
+					<CollapsibleSection title={$i18n.t('JSON Preview')} open={false} className="mt-3 mb-20">
+						<div class="p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
+							<textarea
+								class="text-xs w-full bg-transparent outline-hidden resize-none font-mono"
+								rows="12"
+								value={JSON.stringify(info, null, 2)}
+								disabled
+								readonly
+							/>
 						</div>
-
-						{#if showPreview}
-							<div>
-								<textarea
-									class="text-sm w-full bg-transparent outline-hidden resize-none"
-									rows="10"
-									value={JSON.stringify(info, null, 2)}
-									disabled
-									readonly
-								/>
-							</div>
-						{/if}
-					</div>
+					</CollapsibleSection>
 				</div>
 			</form>
 		{/if}

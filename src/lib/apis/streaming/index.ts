@@ -10,6 +10,8 @@ type TextStreamUpdate = {
 	selectedModelId?: any;
 	error?: any;
 	usage?: ResponseUsage;
+	paramFallback?: boolean;
+	reasoningContent?: string;
 };
 
 type ResponseUsage = {
@@ -82,15 +84,48 @@ async function* openAIStreamToIterator(
 				continue;
 			}
 
+			// Handle param fallback notification (model doesn't support some parameters)
+			if (parsedData.__param_fallback) {
+				console.log('⚠️ Param fallback - model does not support some parameters');
+				yield { done: false, value: '', paramFallback: true };
+				continue;
+			}
+
 			// Handle heartbeat events (model is still thinking)
 			if (parsedData.type === 'heartbeat') {
 				console.log('💭 心跳信号 - 模型正在思考中...', parsedData.status);
 				continue; // Skip heartbeat, just keep connection alive
 			}
 
+			// Extract content and reasoning from either streaming (delta) or non-streaming (message) format
+			const choice = parsedData.choices?.[0];
+			const delta = choice?.delta;
+			const message = choice?.message;
+
+			// Get content: prefer delta.content (streaming) over message.content (non-streaming)
+			const content = delta?.content ?? message?.content ?? '';
+
+			// Get reasoning content from various possible field names
+			// Support: reasoning_content, reasoning, thinking, thinking_content, thought, thought_content
+			const reasoningContent =
+				delta?.reasoning_content ??
+				delta?.reasoning ??
+				delta?.thinking ??
+				delta?.thinking_content ??
+				delta?.thought ??
+				delta?.thought_content ??
+				message?.reasoning_content ??
+				message?.reasoning ??
+				message?.thinking ??
+				message?.thinking_content ??
+				message?.thought ??
+				message?.thought_content ??
+				'';
+
 			yield {
 				done: false,
-				value: parsedData.choices?.[0]?.delta?.content ?? ''
+				value: content,
+				reasoningContent: reasoningContent || undefined
 			};
 		} catch (e) {
 			console.error('Error extracting delta from SSE event:', e);
@@ -125,16 +160,26 @@ async function* streamLargeDeltasAsRandomChunks(
 			yield textStreamUpdate;
 			continue;
 		}
+		if (textStreamUpdate.paramFallback) {
+			yield textStreamUpdate;
+			continue;
+		}
+
+		// If there's reasoning content, yield it first (only on first chunk)
+		const reasoningContent = textStreamUpdate.reasoningContent;
 
 		let content = textStreamUpdate.value;
 		if (content.length < 5) {
-			yield { done: false, value: content };
+			yield { done: false, value: content, reasoningContent };
 			continue;
 		}
+		let isFirstChunk = true;
 		while (content != '') {
 			const chunkSize = Math.min(Math.floor(Math.random() * 3) + 1, content.length);
 			const chunk = content.slice(0, chunkSize);
-			yield { done: false, value: chunk };
+			// Only include reasoningContent in the first chunk
+			yield { done: false, value: chunk, reasoningContent: isFirstChunk ? reasoningContent : undefined };
+			isFirstChunk = false;
 			// Do not sleep if the tab is hidden
 			// Timers are throttled to 1s in hidden tabs
 			if (document?.visibilityState !== 'hidden') {

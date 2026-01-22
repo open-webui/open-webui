@@ -6,7 +6,6 @@
 
 	const i18n = getContext('i18n') as Writable<i18nType>;
 
-	import { settings } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
 	import { verifyGeminiConnection } from '$lib/apis/gemini';
@@ -35,6 +34,7 @@
 		azure?: boolean;
 		api_version?: string;
 		use_responses_api?: boolean;
+		responses_api_exclude_patterns?: string[];
 	}
 
 	interface Connection {
@@ -76,16 +76,83 @@
 	let modelIds: string[] = [];
 
 	let useResponsesApi = false;
+	let responsesApiExcludePatterns: Array<{ name: string }> = [{ name: 'gemini' }];
 
 	let loading = false;
 	let showModelSelector = false;
 	let showNoModelsConfirm = false;
 
+	// 检测是否为强制模式（URL 以 # 结尾）
+	$: isForceMode = url.trim().endsWith('#');
+
+	// 智能规范化 URL，确保以正确的版本路径结尾
+	const normalizeUrl = (inputUrl: string, versionPath: string): string => {
+		if (!inputUrl) return '';
+
+		let normalized = inputUrl.trim();
+
+		// 如果以 # 结尾，移除 # 并跳过自动规范化
+		if (normalized.endsWith('#')) {
+			return normalized.slice(0, -1).replace(/\/+$/, '');
+		}
+
+		// 移除末尾的斜杠
+		normalized = normalized.replace(/\/+$/, '');
+
+		// 移除可能存在的 chat/completions 等路径
+		normalized = normalized.replace(/\/chat\/completions$/, '');
+		normalized = normalized.replace(/\/models$/, '');
+		normalized = normalized.replace(/\/completions$/, '');
+		normalized = normalized.replace(/\/+$/, '');
+
+		// 检查是否已经以版本路径结尾
+		if (!normalized.endsWith(versionPath)) {
+			// 如果以部分版本路径结尾（如 /v1/ 变成了 /v1），不需要再添加
+			// 检查是否有重复的版本路径
+			const versionRegex = new RegExp(`${versionPath.replace('/', '\\/')}$`);
+			if (!versionRegex.test(normalized)) {
+				// 移除可能存在的不完整版本路径
+				normalized = normalized.replace(/\/v1beta$/, '');
+				normalized = normalized.replace(/\/v1$/, '');
+				normalized = normalized.replace(/\/+$/, '');
+				// 添加版本路径
+				normalized = normalized + versionPath;
+			}
+		}
+
+		return normalized;
+	};
+
+	// 获取规范化后的 URL
+	$: normalizedUrl = gemini
+		? normalizeUrl(url, '/v1beta')
+		: ollama
+			? url.trim().endsWith('#')
+				? url.trim().slice(0, -1).replace(/\/+$/, '')
+				: url.replace(/\/+$/, '')
+			: normalizeUrl(url, '/v1');
+
+	// 预览完整的 API 端点
+	$: previewEndpoint = (() => {
+		if (!url) return '';
+		if (isForceMode) {
+			// 强制模式下直接显示用户输入（去掉 #）
+			return url.trim().slice(0, -1).replace(/\/+$/, '');
+		}
+		if (gemini) {
+			return `${normalizedUrl}/models`;
+		} else if (ollama) {
+			return `${normalizedUrl}/api/chat`;
+		} else {
+			return `${normalizedUrl}/chat/completions`;
+		}
+	})();
+
 	const verifyOllamaHandler = async () => {
-		url = url.replace(/\/$/, '');
+		const verifyUrl = normalizedUrl;
 
 		const res = await verifyOllamaConnection(localStorage.token, {
-			url,
+			url: verifyUrl,
 			key
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -97,7 +164,7 @@
 	};
 
 	const verifyOpenAIHandler = async () => {
-		url = url.replace(/\/$/, '');
+		const verifyUrl = normalizedUrl;
 
 		let _headers = null;
 
@@ -118,7 +185,7 @@
 		const res = await verifyOpenAIConnection(
 			localStorage.token,
 			{
-				url,
+				url: verifyUrl,
 				key,
 				config: {
 					auth_type,
@@ -138,10 +205,10 @@
 	};
 
 	const verifyGeminiHandler = async () => {
-		url = url.replace(/\/$/, '');
+		const verifyUrl = normalizedUrl;
 
 		const res = await verifyGeminiConnection(localStorage.token, {
-			url,
+			url: verifyUrl,
 			key
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -217,10 +284,11 @@
 			}
 		}
 
-		url = url.replace(/\/$/, '');
+		// 使用规范化后的 URL
+		const submitUrl = normalizedUrl;
 
 		const connection = {
-			url,
+			url: submitUrl,
 			key,
 			config: {
 				enable: enable,
@@ -232,7 +300,10 @@
 				auth_type,
 				headers: headers ? JSON.parse(headers) : undefined,
 				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {}),
-				...(!ollama && !gemini && useResponsesApi ? { use_responses_api: true } : {})
+				...(!ollama && !gemini && useResponsesApi ? {
+					use_responses_api: true,
+					responses_api_exclude_patterns: responsesApiExcludePatterns.map(p => p.name).filter(p => p.trim())
+				} : {})
 			}
 		};
 
@@ -249,6 +320,7 @@
 		tags = [];
 		modelIds = [];
 		useResponsesApi = false;
+		responsesApiExcludePatterns = [{ name: 'gemini' }];
 	};
 
 	const init = () => {
@@ -274,6 +346,7 @@
 				azure = connection.config?.azure ?? false;
 				apiVersion = connection.config?.api_version ?? '';
 				useResponsesApi = connection.config?.use_responses_api ?? false;
+				responsesApiExcludePatterns = (connection.config?.responses_api_exclude_patterns ?? ['gemini']).map(p => ({ name: p }));
 			}
 		}
 	};
@@ -304,7 +377,7 @@
 	on:confirm={doSubmit}
 />
 
-<Modal size="sm" bind:show>
+<Modal size="sm" bind:show dismissible={false}>
 	<div class="select-text">
 		<div class="flex items-center justify-between dark:text-gray-100 px-5 pt-4 pb-3">
 			<div class="flex items-center gap-3">
@@ -320,6 +393,14 @@
 					<span class="text-xs font-medium {enable ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500'}">{enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}</span>
 					<Switch bind:state={enable} />
 				</div>
+				<!-- Responses API 状态指示器 -->
+				{#if !ollama && !gemini && !direct && !azure}
+					<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full {useResponsesApi ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-800'}">
+						<span class="text-xs font-medium {useResponsesApi ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'}">
+							Responses API {useResponsesApi ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+						</span>
+					</div>
+				{/if}
 			</div>
 			<button
 				class="self-center p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
@@ -340,125 +421,103 @@
 					submitHandler();
 				}}
 			>
-				<!-- 基础信息 -->
-				<CollapsibleSection title={$i18n.t('Basic Info')} open={true}>
+				<!-- 基础设置 -->
+				<CollapsibleSection title={$i18n.t('Basic Settings')} open={true}>
 					<div class="flex flex-col gap-3">
-						<!-- 备注名称 -->
+						<!-- API 地址 -->
 						<div class="flex flex-col">
-							<label for="remark-input" class="text-xs text-gray-500 mb-1">
-								{$i18n.t('Remark Name')}
-							</label>
-							<input
-								id="remark-input"
-								class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none"
-								type="text"
-								bind:value={remark}
-								placeholder={$i18n.t('e.g. Claude API, GPT-4 Official')}
-								autocomplete="off"
-							/>
-						</div>
-
-						<!-- 分组标签 -->
-						<div class="flex flex-col">
-							<label class="text-xs text-gray-500 mb-1">{$i18n.t('Group Tag')}</label>
-							<Tags
-								bind:tags
-								placeholder={$i18n.t('Add tags for model classification')}
-								on:add={(e) => {
-									tags = [...tags, { name: e.detail }];
-								}}
-								on:delete={(e) => {
-									tags = tags.filter((tag) => tag.name !== e.detail);
-								}}
-							/>
-						</div>
-
-						<!-- URL -->
-						<div class="flex flex-col">
-							<label for="url-input" class="text-xs text-gray-500 mb-1">
-								{$i18n.t('URL')}
-							</label>
+							<div class="flex items-center gap-1 mb-1">
+								<label for="url-input" class="text-xs text-gray-500">
+									{$i18n.t('API Address')}
+								</label>
+								<Tooltip content={$i18n.t('URL will be auto-normalized (e.g. auto-append /v1). Add # at the end to disable auto-normalization and use exact URL.')}>
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3.5 text-gray-400 hover:text-gray-500 cursor-help">
+										<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+									</svg>
+								</Tooltip>
+								{#if isForceMode}
+									<span class="text-xs text-amber-600 dark:text-amber-400 ml-1">({$i18n.t('Force mode')})</span>
+								{/if}
+							</div>
 							<div class="flex gap-2">
 								<input
 									id="url-input"
 									class="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none"
 									type="text"
 									bind:value={url}
-									placeholder={$i18n.t('API Base URL')}
+									placeholder={$i18n.t('Enter API address')}
 									autocomplete="off"
 									required
 								/>
-								<Tooltip content={$i18n.t('Verify Connection')}>
+								<Tooltip content={$i18n.t('Test Connection')}>
 									<button
 										type="button"
 										class="p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
 										on:click={verifyHandler}
-										aria-label={$i18n.t('Verify Connection')}
+										aria-label={$i18n.t('Test Connection')}
 									>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
-											<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+										<!-- 心跳/脉冲检测图标 -->
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4">
+											<path d="M22 12h-4l-3 9L9 3l-3 9H2" />
 										</svg>
 									</button>
 								</Tooltip>
 							</div>
 							<div class="text-xs text-gray-400 mt-1">
-								{#if gemini}
-									{$i18n.t('URL must end with /v1beta, e.g. https://generativelanguage.googleapis.com/v1beta')}
+								<span class="text-gray-500">{$i18n.t('Preview')}:</span>
+								{#if url && previewEndpoint}
+									<span class="text-gray-600 dark:text-gray-300 break-all">{previewEndpoint}</span>
+								{:else if gemini}
+									<span class="break-all">https://generativelanguage.googleapis.com/v1beta/models</span>
 								{:else if ollama}
-									{$i18n.t('e.g. http://localhost:11434')}
+									<span class="break-all">http://localhost:11434/api/chat</span>
 								{:else}
-									{$i18n.t('URL must end with /v1, e.g. https://api.openai.com/v1')}
+									<span class="break-all">https://api.openai.com/v1/chat/completions</span>
 								{/if}
 							</div>
 						</div>
 
-						<!-- 认证 -->
+						<!-- API Key -->
 						<div class="flex flex-col">
-							<label for="auth-select" class="text-xs text-gray-500 mb-1">
-								{$i18n.t('Authentication')}
+							<label for="api-key-input" class="text-xs text-gray-500 mb-1">
+								{$i18n.t('API Key')}
 							</label>
-							<div class="flex gap-2">
-								<select
-									id="auth-select"
-									class="px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none"
-									bind:value={auth_type}
-								>
-									<option value="none">{$i18n.t('None')}</option>
-									<option value="bearer">{$i18n.t('Bearer')}</option>
-									{#if !ollama}
-										<option value="session">{$i18n.t('Session')}</option>
-										{#if !direct}
-											<option value="system_oauth">{$i18n.t('OAuth')}</option>
-											{#if azure}
-												<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
-											{/if}
-										{/if}
-									{/if}
-								</select>
+							<SensitiveInput
+								bind:value={key}
+								placeholder={$i18n.t('Enter API key, usually starts with sk')}
+								required={false}
+								outerClassName="flex flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg"
+								inputClassName="w-full text-sm bg-transparent outline-none"
+							/>
+						</div>
 
-								{#if auth_type === 'bearer'}
-									<div class="flex-1">
-										<SensitiveInput
-											bind:value={key}
-											placeholder={$i18n.t('API Key')}
-											required={false}
-											outerClassName="flex flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg"
-											inputClassName="w-full text-sm bg-transparent outline-none"
-										/>
-									</div>
-								{:else}
-									<div class="flex-1 px-3 py-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
-										{#if auth_type === 'none'}
-											{$i18n.t('No authentication')}
-										{:else if auth_type === 'session'}
-											{$i18n.t('Uses session credentials')}
-										{:else if auth_type === 'system_oauth'}
-											{$i18n.t('Uses OAuth token')}
-										{:else if ['azure_ad', 'microsoft_entra_id'].includes(auth_type)}
-											{$i18n.t('Uses Azure credentials')}
-										{/if}
-									</div>
-								{/if}
+						<!-- 备注名称和分组标签（同一行） -->
+						<div class="flex gap-3">
+							<div class="flex flex-col flex-1">
+								<label for="remark-input" class="text-xs text-gray-500 mb-1">
+									{$i18n.t('Remark Name')}
+								</label>
+								<input
+									id="remark-input"
+									class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none"
+									type="text"
+									bind:value={remark}
+									placeholder={$i18n.t('e.g. Claude API')}
+									autocomplete="off"
+								/>
+							</div>
+							<div class="flex flex-col flex-1">
+								<span class="text-xs text-gray-500 mb-1">{$i18n.t('Group Tag')}</span>
+								<Tags
+									bind:tags
+									placeholder={$i18n.t('Add tags for model classification')}
+									on:add={(e) => {
+										tags = [...tags, { name: e.detail }];
+									}}
+									on:delete={(e) => {
+										tags = tags.filter((tag) => tag.name !== e.detail);
+									}}
+								/>
 							</div>
 						</div>
 					</div>
@@ -555,16 +614,40 @@
 
 						{#if !ollama && !direct && !gemini && !azure}
 							<!-- Use Responses API -->
-							<div class="flex items-center justify-between">
-								<div>
-									<span class="text-sm">{$i18n.t('Use Responses API')}</span>
-									{#if useResponsesApi}
-										<div class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-											{$i18n.t('Ensure the API supports Responses format')}
-										</div>
-									{/if}
+							<div class="flex flex-col gap-2">
+								<div class="flex items-center justify-between">
+									<div>
+										<span class="text-sm">{$i18n.t('Use Responses API')}</span>
+										{#if useResponsesApi}
+											<div class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+												{$i18n.t('Ensure the API supports Responses format')}
+											</div>
+										{/if}
+									</div>
+									<Switch bind:state={useResponsesApi} />
 								</div>
-								<Switch bind:state={useResponsesApi} />
+
+								{#if useResponsesApi}
+									<!-- Responses API Exclude Patterns -->
+									<div class="flex flex-col mt-1">
+										<label for="responses-exclude" class="text-xs text-gray-500 mb-1">
+											{$i18n.t('Exclude Models')}
+										</label>
+										<Tags
+											bind:tags={responsesApiExcludePatterns}
+											placeholder={$i18n.t('Add model keyword to exclude')}
+											on:add={(e) => {
+												responsesApiExcludePatterns = [...responsesApiExcludePatterns, { name: e.detail }];
+											}}
+											on:delete={(e) => {
+												responsesApiExcludePatterns = responsesApiExcludePatterns.filter((p) => p.name !== e.detail);
+											}}
+										/>
+										<div class="text-xs text-gray-400 mt-1">
+											{$i18n.t('Models containing these keywords will use Chat Completions API instead')}
+										</div>
+									</div>
+								{/if}
 							</div>
 						{/if}
 
@@ -605,7 +688,7 @@
 					{#if edit}
 						<button
 							type="button"
-							class="px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition"
+							class="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-full transition"
 							on:click={() => {
 								onDelete();
 								show = false;

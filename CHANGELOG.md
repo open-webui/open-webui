@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3-6] - 2026-01-23
+
+### 修复
+
+- 🔧 **Wheel 构建配置修复。** 修复 `pyproject.toml` 中的 wheel 构建配置，确保 Python 源代码被正确打包到 wheel 文件中。添加显式 `packages` 配置，排除 `.venv`、`venv`、`data` 等目录避免干扰包发现。修复用户安装时遇到的 `ImportError: cannot import name 'app' from 'open_webui' (unknown location)` 错误。
+- 📊 **思考 Token 显示优化。** 修复思考 Token（reasoning_tokens）为 0 时不显示的问题。现在即使 reasoning_tokens 为 0，也会包含 `completion_tokens_details` 字段，前端可以显示 "未报告" 提示信息。
+
+### 新增
+
+- 🔄 **思考/推理不支持错误检测。** 新增对思考/推理功能不支持错误的自动检测（如 "thinking level is not supported"、"reasoning_effort" 等关键词），当检测到此类错误时自动移除思考相关参数并重试。
+- 🛡️ **Function Calling 智能降级增强。** 增强 Function Calling 降级机制，支持更多错误场景的自动检测和重试，包括 SSE 流式错误的解析和处理。
+- 🎨 **模型品牌 Logo 自动匹配。** 模型编辑器现在使用 API 端点 `/models/model/profile/image` 自动匹配模型品牌 logo，无需手动上传图片。
+
+### 优化
+
+- ⚙️ **连接配置弹窗改进。** 优化 AddConnectionModal 组件，改进模型选择器交互体验，支持更灵活的模型配置。
+- 🎯 **模型选择器优化。** 改进 ModelSelector 组件的搜索和过滤逻辑，提升用户体验。
+- 📝 **中文翻译更新。** 新增和优化多处中文翻译，包括模型配置、错误提示等。
+
+### 技术改进
+
+- 🔧 **代码质量提升。** 优化 TypeScript 类型定义，改进错误处理逻辑，清理冗余代码。
+- 📦 **依赖配置优化。** 更新 pyproject.toml 排除规则，避免打包不必要的文件。
+
 ## [0.7.3-5] - 2026-01-22
 
 ### 新增

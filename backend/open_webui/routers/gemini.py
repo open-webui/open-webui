@@ -162,6 +162,30 @@ def _openai_chunk(
     return chunk
 
 
+# Maximum chunk size for streaming content (32KB to be safe with various proxies/browsers)
+MAX_STREAM_CHUNK_SIZE = 32 * 1024
+
+
+def _yield_content_chunks(content: str, stream_id: str, model_id: str):
+    """
+    Generator that yields content in chunks to avoid "Chunk too big" errors.
+    Large content (especially base64 images) is split into smaller SSE events.
+    """
+    if len(content) <= MAX_STREAM_CHUNK_SIZE:
+        # Small content, yield as single chunk
+        chunk = _openai_chunk(stream_id, model_id, {"content": content}, None, 0)
+        yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+    else:
+        # Large content, split into multiple chunks
+        log.info(f"[GEMINI STREAM] Splitting large content ({len(content)} bytes) into chunks")
+        offset = 0
+        while offset < len(content):
+            chunk_content = content[offset:offset + MAX_STREAM_CHUNK_SIZE]
+            chunk = _openai_chunk(stream_id, model_id, {"content": chunk_content}, None, 0)
+            yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+            offset += MAX_STREAM_CHUNK_SIZE
+
+
 def _wants_web_search(fd: dict) -> bool:
     if fd.get("web_search") is True:
         return True
@@ -1333,10 +1357,10 @@ async def generate_chat_completion(
                                                 tool_chunk = _openai_chunk(stream_id, model_id, {"tool_calls": [tool_call]}, None, 0)
                                                 yield f"data: {json.dumps(tool_chunk, ensure_ascii=False)}\n\n"
 
-                                        # 3) yield content if present
+                                        # 3) yield content if present (with chunking for large content like images)
                                         if out_text:
-                                            chunk = _openai_chunk(stream_id, model_id, {"content": out_text}, None, 0)
-                                            yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                                            for content_chunk in _yield_content_chunks(out_text, stream_id, model_id):
+                                                yield content_chunk
 
                                         # 4) then yield finish with usage
                                         finish = _map_finish_reason(c0.get("finishReason") if isinstance(c0, dict) else None)
@@ -1417,10 +1441,10 @@ async def generate_chat_completion(
                                                     tool_chunk = _openai_chunk(stream_id, model_id, {"tool_calls": [tool_call]}, None, 0)
                                                     yield f"data: {json.dumps(tool_chunk, ensure_ascii=False)}\n\n"
 
-                                            # Then yield content if present
+                                            # Then yield content if present (with chunking for large content)
                                             if out_text:
-                                                chunk = _openai_chunk(stream_id, model_id, {"content": out_text}, None, 0)
-                                                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                                                for content_chunk in _yield_content_chunks(out_text, stream_id, model_id):
+                                                    yield content_chunk
 
                                             finish = _map_finish_reason(c0.get("finishReason") if isinstance(c0, dict) else None)
                                             if finish:

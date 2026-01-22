@@ -817,8 +817,8 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                                 output_details = usage.get("output_tokens_details", {})
                                 if isinstance(output_details, dict):
                                     reasoning_tokens = output_details.get("reasoning_tokens", 0)
-                                    if reasoning_tokens:
-                                        usage_data["completion_tokens_details"] = {"reasoning_tokens": reasoning_tokens}
+                                    # Always include completion_tokens_details so frontend can show "not reported" message
+                                    usage_data["completion_tokens_details"] = {"reasoning_tokens": reasoning_tokens}
 
                                 # Extract cached_tokens and put in prompt_tokens_details (frontend expects this structure)
                                 input_details = usage.get("input_tokens_details", {})
@@ -1164,6 +1164,222 @@ def is_tool_calling_disabled_error(response) -> bool:
             return True
     
     return False
+
+
+COMPAT_STREAM_RETRY_ERROR_KEYWORDS = (
+    "status code 403",
+    "status code 400",
+    "permission",
+    "not allowed",
+    "not supported",
+    "invalid value",
+    "unknown field",
+    "unrecognized",
+    "bad request",
+)
+
+COMPAT_STREAM_RETRY_AUTH_KEYWORDS = (
+    "invalid api key",
+    "unauthorized",
+    "authentication",
+    "no api key",
+)
+
+# Keywords that indicate thinking/reasoning is not supported by the model
+THINKING_NOT_SUPPORTED_KEYWORDS = (
+    "thinking level is not supported",
+    "thinking is not supported",
+    "thinking_budget",
+    "thinking_config",
+    "thinkingconfig",
+    "reasoning is not supported",
+    "reasoning_effort",
+    "enable_thinking",
+)
+
+
+def _is_thinking_not_supported_error(response) -> bool:
+    """Check if the error response indicates thinking/reasoning is not supported."""
+    error_text = _error_text_from_response(response).lower()
+    if not error_text:
+        return False
+    return any(keyword in error_text for keyword in THINKING_NOT_SUPPORTED_KEYWORDS)
+
+
+def _extract_sse_error_message(line: bytes) -> Optional[str]:
+    if not line:
+        return None
+    if isinstance(line, bytes):
+        text = line.decode("utf-8", "replace").strip()
+    else:
+        text = str(line).strip()
+    if not text.startswith("data:"):
+        return None
+
+    payload = text[len("data:") :].strip()
+    if not payload or payload == "[DONE]":
+        return None
+
+    try:
+        data = json.loads(payload)
+    except Exception:
+        return None
+
+    if isinstance(data, dict) and "error" in data:
+        return _error_text_from_response(data)
+    return None
+
+
+def _should_compat_retry_stream_error(error_msg: str) -> bool:
+    if not error_msg:
+        return False
+    lowered = error_msg.lower()
+    if any(token in lowered for token in COMPAT_STREAM_RETRY_AUTH_KEYWORDS):
+        return False
+    return any(token in lowered for token in COMPAT_STREAM_RETRY_ERROR_KEYWORDS)
+
+
+def _compact_thinking_params(payload: dict, budget: int) -> None:
+    payload.pop("reasoning_effort", None)
+    for key in (
+        "enable_thinking",
+        "include_reasoning",
+        "return_reasoning",
+        "show_thinking",
+        "thinkingConfig",
+        "thinking_budget",
+        "thinking",  # CherryStudio 格式
+        "providerOptions",  # 反代格式
+    ):
+        payload.pop(key, None)
+
+    stream_opts = payload.get("stream_options")
+    if isinstance(stream_opts, dict):
+        stream_opts.pop("include_reasoning", None)
+        stream_opts.pop("include_thinking", None)
+        if not stream_opts:
+            payload.pop("stream_options", None)
+
+    extra_body = payload.get("extra_body")
+    if isinstance(extra_body, dict):
+        extra_google = extra_body.get("google")
+        if isinstance(extra_google, dict):
+            extra_google.pop("thinking_config", None)
+            if not extra_google:
+                extra_body.pop("google", None)
+        if not extra_body:
+            payload.pop("extra_body", None)
+
+    google = payload.get("google")
+    if not isinstance(google, dict):
+        google = {}
+    google["thinking_config"] = {
+        "thinking_budget": budget,
+        "include_thoughts": True,
+    }
+    payload["google"] = google
+
+    # 重新添加 CherryStudio 兼容格式
+    payload["thinking"] = {
+        "type": "enabled",
+        "budget_tokens": budget,
+    }
+    payload["providerOptions"] = {
+        "thinking": {
+            "type": "enabled",
+            "budget_tokens": budget,
+        }
+    }
+
+
+def _drop_thinking_params(payload: dict) -> None:
+    payload.pop("reasoning_effort", None)
+    for key in (
+        "enable_thinking",
+        "include_reasoning",
+        "return_reasoning",
+        "show_thinking",
+        "thinkingConfig",
+        "thinking_budget",
+        "thinking",  # CherryStudio 格式
+        "providerOptions",  # 反代格式
+    ):
+        payload.pop(key, None)
+
+    stream_opts = payload.get("stream_options")
+    if isinstance(stream_opts, dict):
+        stream_opts.pop("include_reasoning", None)
+        stream_opts.pop("include_thinking", None)
+        if not stream_opts:
+            payload.pop("stream_options", None)
+
+    google = payload.get("google")
+    if isinstance(google, dict):
+        google.pop("thinking_config", None)
+        if not google:
+            payload.pop("google", None)
+
+    extra_body = payload.get("extra_body")
+    if isinstance(extra_body, dict):
+        extra_google = extra_body.get("google")
+        if isinstance(extra_google, dict):
+            extra_google.pop("thinking_config", None)
+            if not extra_google:
+                extra_body.pop("google", None)
+        if not extra_body:
+            payload.pop("extra_body", None)
+
+
+def _apply_compat_step(payload: dict, step: str, budget: int) -> dict:
+    if step == "compact_thinking":
+        _compact_thinking_params(payload, budget)
+    elif step == "drop_thinking":
+        _drop_thinking_params(payload)
+    elif step == "drop_stream_options":
+        payload.pop("stream_options", None)
+    elif step == "drop_tools":
+        payload.pop("tools", None)
+        payload.pop("tool_choice", None)
+        payload.pop("functions", None)
+    return payload
+
+
+def _get_compat_retry_steps(api_config: dict) -> list[str]:
+    steps = api_config.get("compat_retry_steps")
+    if isinstance(steps, list):
+        normalized = [str(step) for step in steps if step]
+        if normalized:
+            return normalized
+    # 先调整 thinking 参数，drop_tools 作为最后手段
+    return ["compact_thinking", "drop_thinking", "drop_stream_options", "drop_tools"]
+
+
+async def _probe_stream_for_error(stream_iter, max_lines: int) -> tuple[list[bytes], Optional[str]]:
+    buffered = []
+    error_msg = None
+
+    # 获取异步迭代器 - 处理不同类型的 stream
+    if hasattr(stream_iter, '__anext__'):
+        # 已经是异步迭代器
+        it = stream_iter
+    elif hasattr(stream_iter, '__aiter__'):
+        # 可异步迭代对象
+        it = stream_iter.__aiter__()
+    else:
+        # 不支持的类型，返回空结果
+        log.warning(f"[COMPAT RETRY] Unsupported stream type: {type(stream_iter)}")
+        return buffered, error_msg
+
+    for _ in range(max_lines):
+        try:
+            line = await it.__anext__()
+        except StopAsyncIteration:
+            break
+        buffered.append(line)
+        error_msg = _extract_sse_error_message(line)
+        if error_msg:
+            break
+    return buffered, error_msg
 
 
 def openai_reasoning_model_handler(payload):
@@ -2051,6 +2267,16 @@ async def generate_chat_completion(
         # Check if Responses API is enabled for this connection
         use_responses_api = api_config.get("use_responses_api", False)
         if use_responses_api:
+            # Check if model matches any exclude pattern
+            exclude_patterns = api_config.get("responses_api_exclude_patterns", [])
+            model_lower = model_id.lower()
+            is_excluded = any(pattern.lower() in model_lower for pattern in exclude_patterns if pattern)
+
+            if is_excluded:
+                log.info(f"Model {model_id} matches Responses API exclude pattern, using Chat Completions API")
+                use_responses_api = False
+
+        if use_responses_api:
             request_url = f"{url}/responses"
             # Convert Chat Completions format to Responses API format
             payload = convert_to_responses_payload(payload)
@@ -2066,17 +2292,20 @@ async def generate_chat_completion(
         else:
             request_url = f"{url}/chat/completions"
 
-    # Force stream=False for image generation models to prevent "Chunk too big" errors
-    # These models return large base64 image data that can't be streamed properly
-    image_edit_keywords = ["image-preview", "image-edit", "imagen"]
-    image_gen_keywords = ["image", "draw", "paint", "picture", "art", "create-preview"]
-    is_image_edit_model = any(keyword in model_id.lower() for keyword in image_edit_keywords)
-    is_image_gen_model = any(keyword in model_id.lower() for keyword in image_gen_keywords)
-    
-    if is_image_gen_model:
-        log.info(f"Detected image generation model in OpenAI router: {model_id}, forcing stream=False")
-        payload["stream"] = False
-    
+    # Image model detection for context optimization (message trimming only)
+    # Stream control is handled by fallback mechanism when streaming fails
+    image_keywords = [
+        "image",  # Covers most: gemini-*-image-*, image-generation, image-preview, etc.
+        "dall-e", "dalle",  # OpenAI DALL-E
+        "midjourney", "mj-",  # Midjourney
+        "stable-diffusion", "sdxl",  # Stable Diffusion
+        "flux",  # Flux models
+        "ideogram",  # Ideogram
+        "playground",  # Playground AI
+    ]
+    model_lower = model_id.lower()
+    is_image_edit_model = any(keyword in model_lower for keyword in image_keywords)
+
     # For image editing models, only use the last user message to save tokens
     # Image editing is a single-shot operation that doesn't need conversation history
     if is_image_edit_model and "messages" in payload:
@@ -2251,6 +2480,8 @@ async def generate_chat_completion(
     has_thinking_params = False
 
     # Calculate thinking budget from reasoning_effort
+    # IMPORTANT: Default to 0 (no thinking) when reasoning_effort is not set
+    # This ensures thinking is only enabled when explicitly requested
     reasoning_effort = payload_dict.get("reasoning_effort")
     effort_to_budget = {
         "none": 0, "minimal": 1024, "low": 2048,
@@ -2263,15 +2494,18 @@ async def generate_chat_completion(
             try:
                 budget = int(reasoning_effort)
             except (ValueError, TypeError):
-                budget = 8192
+                budget = 0  # Default to 0 if parsing fails
     else:
-        budget = 8192
+        budget = 0  # No reasoning_effort means no thinking
 
     model_name = str(payload_dict.get("model", "")).lower()
     use_gemini_thinking = "gemini" in model_name
 
     if use_gemini_thinking:
         log.info("[DEBUG] Gemini-style thinking detected; skipping OpenAI reasoning flags")
+    elif use_responses_api:
+        # Responses API uses reasoning object format, these params cause errors on some proxies
+        log.info("[DEBUG] Responses API detected; skipping thinking flags (uses reasoning object instead)")
     else:
         # Enable all possible thinking parameter variants for maximum compatibility
         payload_dict["enable_thinking"] = True
@@ -2323,6 +2557,22 @@ async def generate_chat_completion(
 
         payload_dict["thinkingConfig"] = {"thinkingBudget": budget}
         payload_dict["thinking_budget"] = budget
+
+        # CherryStudio/通用反代兼容格式
+        payload_dict["thinking"] = {
+            "type": "enabled",
+            "budget_tokens": budget,
+        }
+
+        # providerOptions 格式（某些反代使用此格式）
+        if "providerOptions" not in payload_dict:
+            payload_dict["providerOptions"] = {}
+        if isinstance(payload_dict["providerOptions"], dict):
+            payload_dict["providerOptions"]["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": budget,
+            }
+
         log.info(f"[DEBUG] Added thinking params with budget={budget}")
         has_thinking_params = True
     elif budget > 0:
@@ -2331,7 +2581,8 @@ async def generate_chat_completion(
         log.info(f"[DEBUG] Thinking disabled (budget=0)")
 
     # Add stream_options with reasoning flags if streaming
-    if payload_dict.get("stream") and not use_gemini_thinking:
+    # Skip for Responses API as it doesn't support stream_options parameter
+    if payload_dict.get("stream") and not use_gemini_thinking and not use_responses_api:
         stream_opts = payload_dict.get("stream_options", {}) or {}
         stream_opts["include_reasoning"] = True
         stream_opts["include_thinking"] = True
@@ -2368,6 +2619,7 @@ async def generate_chat_completion(
     streaming = False
     response = None
     retry_without_tools = False
+    thinking_fallback_triggered = False  # Track if thinking was disabled during retry
 
     try:
         session = aiohttp.ClientSession(
@@ -2383,6 +2635,8 @@ async def generate_chat_completion(
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
+        log.info(f"[DEBUG RESPONSE] r.status={r.status}, Content-Type={r.headers.get('Content-Type', '')}")
+
         # Check if response is an error first (even for SSE responses)
         # Some upstream APIs return error status codes with non-SSE content types
         if r.status >= 400:
@@ -2392,13 +2646,20 @@ async def generate_chat_completion(
                 log.error(f"Error parsing error response: {e}")
                 response = await r.text()
 
-            # Auto-retry without thinking params if proxy doesn't support them (400 error)
-            if has_thinking_params and r.status == 400:
-                log.info("Proxy may not support thinking params, retrying without them...")
+            # Auto-retry without thinking params if proxy doesn't support them (400/429 error)
+            # Check both status code and error message to be more precise
+            if has_thinking_params and r.status in (400, 429) and _is_thinking_not_supported_error(response):
+                log.warning(
+                    "[THINKING FALLBACK] Thinking not supported (status=%s), retrying without thinking params. Error: %s",
+                    r.status,
+                    _error_text_from_response(response)[:200],
+                )
                 await cleanup_response(r, session)
 
                 payload_dict = copy.deepcopy(payload_dict_base)
+                _drop_thinking_params(payload_dict)
                 has_thinking_params = False
+                thinking_fallback_triggered = True  # Mark that thinking was disabled
                 retry_payload = json.dumps(payload_dict)
 
                 session = aiohttp.ClientSession(
@@ -2422,6 +2683,7 @@ async def generate_chat_completion(
                 else:
                     # Retry succeeded, clear the error response from first attempt
                     response = None
+                    log.info("[THINKING FALLBACK] Retry succeeded, thinking_fallback_triggered=True")
 
             # Retry with alternate web search tool types if native web search is enabled
             if (
@@ -2594,8 +2856,102 @@ async def generate_chat_completion(
         content_type = r.headers.get("Content-Type", "")
         log.info(f"[DEBUG] Response status={r.status}, Content-Type={content_type}, stream_requested={form_data.get('stream', False)}")
 
+        is_stream = "text/event-stream" in content_type
+        buffered_lines: list[bytes] = []
+        stream_iter = None
+
+        if is_stream and not use_responses_api:
+            compat_stream_retry = api_config.get("compat_stream_retry")
+            if compat_stream_retry is None:
+                compat_stream_retry = "api.openai.com" not in (url or "")
+            compat_steps = _get_compat_retry_steps(api_config)
+            probe_lines = api_config.get("compat_probe_lines", 8)  # 增加默认值
+            try:
+                probe_lines = max(1, int(probe_lines))
+            except (TypeError, ValueError):
+                probe_lines = 8
+
+            # 从原始 payload 获取 budget，而不是使用固定值
+            compat_budget = payload_dict.get("thinking_budget") or payload_dict.get("budget") or api_config.get("compat_thinking_budget", 8192)
+            try:
+                compat_budget = int(compat_budget)
+            except (TypeError, ValueError):
+                compat_budget = 8192
+
+            stream_iter = stream_chunks_handler(HeartbeatStreamWrapper(r.content))
+            thinking_fallback_applied = False  # Track if thinking was disabled during retry
+            log.info(f"[DEBUG STREAM RETRY] compat_stream_retry={compat_stream_retry}, compat_steps={compat_steps}")
+            if compat_stream_retry and compat_steps:
+                buffered_lines, error_msg = await _probe_stream_for_error(
+                    stream_iter, probe_lines
+                )
+                log.info(f"[DEBUG STREAM RETRY] error_msg={error_msg[:200] if error_msg else None}")
+                if error_msg and _should_compat_retry_stream_error(error_msg):
+                    log.warning(
+                        "[COMPAT RETRY] Stream error detected; retrying with compat steps. Error: %s",
+                        error_msg,
+                    )
+                    current_payload = copy.deepcopy(payload_dict)
+                    for step in compat_steps:
+                        retry_payload_dict = copy.deepcopy(current_payload)
+                        _apply_compat_step(
+                            retry_payload_dict, step, compat_budget
+                        )
+                        if retry_payload_dict == current_payload:
+                            continue
+                        current_payload = retry_payload_dict
+
+                        # Track if drop_thinking step was applied
+                        if step == "drop_thinking":
+                            thinking_fallback_applied = True
+
+                        await cleanup_response(r, session)
+                        retry_payload = json.dumps(current_payload)
+
+                        log.info(
+                            "[COMPAT RETRY] Applying step '%s' with budget=%s",
+                            step,
+                            compat_budget,
+                        )
+                        session = aiohttp.ClientSession(
+                            trust_env=True,
+                            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+                        )
+                        r = await session.request(
+                            method="POST",
+                            url=request_url,
+                            data=retry_payload,
+                            headers=headers,
+                            cookies=cookies,
+                            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        )
+                        content_type = r.headers.get("Content-Type", "")
+                        is_stream = "text/event-stream" in content_type
+                        log.info(
+                            "[COMPAT RETRY] Response status=%s, Content-Type=%s",
+                            r.status,
+                            content_type,
+                        )
+
+                        if not is_stream:
+                            stream_iter = None
+                            buffered_lines = []
+                            break
+
+                        stream_iter = stream_chunks_handler(
+                            HeartbeatStreamWrapper(r.content)
+                        )
+                        buffered_lines, error_msg = await _probe_stream_for_error(
+                            stream_iter, probe_lines
+                        )
+                        if not (
+                            error_msg
+                            and _should_compat_retry_stream_error(error_msg)
+                        ):
+                            break
+
         # Check if response is SSE
-        if "text/event-stream" in content_type:
+        if is_stream:
             streaming = True
             log.info(f"[DEBUG] Streaming response detected, use_responses_api={use_responses_api}")
 
@@ -2609,15 +2965,48 @@ async def generate_chat_completion(
                         cleanup_response, response=r, session=session
                     ),
                 )
-            else:
-                return StreamingResponse(
-                    stream_chunks_handler(HeartbeatStreamWrapper(r.content)),
-                    status_code=r.status,
-                    headers=dict(r.headers),
-                    background=BackgroundTask(
-                        cleanup_response, response=r, session=session
-                    ),
+
+            if stream_iter is None:
+                stream_iter = stream_chunks_handler(
+                    HeartbeatStreamWrapper(r.content)
                 )
+
+            async def combined_stream():
+                # If thinking was disabled during retry, inject a marker event first
+                if thinking_fallback_applied or thinking_fallback_triggered:
+                    log.info("[PARAM FALLBACK] Streaming: Injecting __param_fallback marker")
+                    fallback_event = json.dumps({"__param_fallback": True})
+                    yield f"data: {fallback_event}\n\n".encode("utf-8")
+
+                # Debug: count lines from buffered and stream
+                buffered_count = len(buffered_lines)
+                stream_count = 0
+
+                # Debug: log buffered lines content
+                for i, line in enumerate(buffered_lines):
+                    line_preview = line[:500] if isinstance(line, bytes) else str(line)[:500]
+                    log.info(f"[STREAM DEBUG] Buffered line #{i}: {line_preview}")
+
+                for line in buffered_lines:
+                    yield line
+                async for line in stream_iter:
+                    stream_count += 1
+                    # Log first few stream lines for debugging
+                    if stream_count <= 5:
+                        line_preview = line[:200] if isinstance(line, bytes) else str(line)[:200]
+                        log.info(f"[STREAM DEBUG] Line #{stream_count}: {line_preview}")
+                    yield line
+
+                log.info(f"[STREAM DEBUG] Stream ended. Buffered lines: {buffered_count}, Stream lines: {stream_count}")
+
+            return StreamingResponse(
+                combined_stream(),
+                status_code=r.status,
+                headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
         else:
             # Non-streaming response (JSON)
             log.info(f"[DEBUG] Non-streaming response, attempting to parse JSON")
@@ -2630,6 +3019,14 @@ async def generate_chat_completion(
                     if choices and len(choices) > 0:
                         import json as json_mod
                         log.info(f"[DEBUG] choices[0] FULL: {json_mod.dumps(choices[0], ensure_ascii=False, default=str)[:1000]}")
+                        # Log message keys to check for reasoning fields
+                        message = choices[0].get("message", {})
+                        if isinstance(message, dict):
+                            log.info(f"[DEBUG] message keys: {list(message.keys())}")
+                            # Check for any reasoning-related fields
+                            for key in ["reasoning_content", "reasoning", "thinking", "thinking_content", "thought", "thought_content"]:
+                                if key in message:
+                                    log.info(f"[DEBUG] Found reasoning field '{key}': {str(message[key])[:200]}")
             except Exception as e:
                 log.error(e)
                 response = await r.text()
@@ -2643,10 +3040,62 @@ async def generate_chat_completion(
                             r.status, response, request_url
                         ),
                     )
-                if isinstance(response, (dict, list)):
-                    return JSONResponse(status_code=r.status, content=response)
+
+                # Check if error is due to thinking not being supported
+                # If so, retry without thinking parameters (align with streaming retry logic)
+                if has_thinking_params and _is_thinking_not_supported_error(response):
+                    log.warning(
+                        "[THINKING FALLBACK] Non-streaming: Thinking not supported, retrying without thinking params. Error: %s",
+                        _error_text_from_response(response)[:200],
+                    )
+                    # Clean up current response and session
+                    await cleanup_response(r, session)
+
+                    # Remove thinking parameters from payload
+                    retry_payload_dict = copy.deepcopy(payload_dict_base)
+                    _drop_thinking_params(retry_payload_dict)
+                    retry_payload = json.dumps(retry_payload_dict)
+
+                    # Create new session and retry
+                    session = aiohttp.ClientSession(
+                        trust_env=True,
+                        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+                    )
+                    r = await session.request(
+                        method="POST",
+                        url=request_url,
+                        data=retry_payload,
+                        headers=headers,
+                        cookies=cookies,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    )
+
+                    log.info(
+                        "[THINKING FALLBACK] Retry response status=%s",
+                        r.status,
+                    )
+
+                    # Parse retry response
+                    try:
+                        response = await r.json()
+                    except Exception:
+                        response = await r.text()
+
+                    # If retry still fails, return the error
+                    if r.status >= 400:
+                        if isinstance(response, (dict, list)):
+                            return JSONResponse(status_code=r.status, content=response)
+                        else:
+                            return PlainTextResponse(status_code=r.status, content=response)
+
+                    # Retry succeeded - set flag for header
+                    thinking_fallback_triggered = True
+                    log.info("[THINKING FALLBACK] Retry succeeded, will add X-Param-Fallback header")
                 else:
-                    return PlainTextResponse(status_code=r.status, content=response)
+                    if isinstance(response, (dict, list)):
+                        return JSONResponse(status_code=r.status, content=response)
+                    else:
+                        return PlainTextResponse(status_code=r.status, content=response)
 
             # Convert Responses API format to Chat Completions format if needed
             if use_responses_api and isinstance(response, dict):
@@ -2662,6 +3111,11 @@ async def generate_chat_completion(
 
                 async def json_to_sse_stream():
                     """Convert a JSON chat completion response to SSE stream format."""
+                    # If thinking fallback was triggered, send marker first
+                    if thinking_fallback_triggered:
+                        log.info("[PARAM FALLBACK] Non-streaming: Injecting __param_fallback marker")
+                        fallback_event = json.dumps({"__param_fallback": True})
+                        yield f"data: {fallback_event}\n\n"
                     # Send the response as a single chunk
                     yield f"data: {json.dumps(response)}\n\n"
                     yield "data: [DONE]\n\n"

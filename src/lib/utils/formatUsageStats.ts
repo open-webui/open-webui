@@ -80,6 +80,9 @@ export function formatUsageStats(
     const reasoningTokens = usage.completion_tokens_details?.reasoning_tokens ?? 0;
     if (reasoningTokens > 0) {
         lines.push(`${t('Reasoning Tokens')}: ${reasoningTokens.toLocaleString()}`);
+    } else if (usage.completion_tokens_details?.reasoning_tokens === 0) {
+        // Model returned reasoning_tokens as 0 explicitly (some proxies don't report this correctly)
+        lines.push(`${t('Reasoning Tokens')}: ${t('Not reported by model')}`);
     }
 
     // Total tokens

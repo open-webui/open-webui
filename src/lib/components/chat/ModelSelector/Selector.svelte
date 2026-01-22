@@ -490,21 +490,6 @@
 								</button>
 							{/if}
 
-							{#if items.find((item) => item.model?.connection_type === 'external')}
-								<button
-									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'external'
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									aria-pressed={selectedConnectionType === 'external'}
-									on:click={() => {
-										selectedTag = '';
-										selectedConnectionType = 'external';
-									}}
-								>
-									{$i18n.t('External')}
-								</button>
-							{/if}
-
 							{#if items.find((item) => item.model?.direct)}
 								<button
 									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'direct'
@@ -564,26 +549,6 @@
 						</div>
 					</div>
 				{/each}
-
-				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
-					<Tooltip
-						content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
-							searchValue: searchValue
-						})}
-						placement="top-start"
-					>
-						<button
-							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted"
-							on:click={() => {
-								pullModelHandler();
-							}}
-						>
-							<div class=" truncate">
-								{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
-							</div>
-						</button>
-					</Tooltip>
-				{/if}
 
 				{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
 					<div

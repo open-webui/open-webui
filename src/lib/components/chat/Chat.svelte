@@ -169,7 +169,7 @@
 		if (value === 'native') return 'native';
 		if (value === 'default') return 'default';
 		if (value === null) return 'default';
-		if (value === undefined) return 'native';
+		if (value === undefined) return 'default';
 		return 'default';
 	};
 
@@ -407,6 +407,9 @@
 					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
+				} else if (type === 'chat:param_fallback') {
+					// Show toast when model doesn't support certain parameters
+					toast.warning(data?.message || $i18n.t('Model does not support certain parameters. Request has been retried with adjusted settings.'));
 				} else if (type === 'chat:tasks:cancel') {
 					taskIds = null;
 					const responseMessage = history.messages[history.currentId];
@@ -2358,11 +2361,17 @@
 					Boolean($settings?.splitLargeChunks ?? false)
 				);
 				for await (const update of textStream) {
-					const { value, done, sources, error, usage } = update;
+					const { value, done, sources, error, usage, paramFallback } = update;
 					if (error || done) {
 						generating = false;
 						generationController = null;
 						break;
+					}
+
+					// Handle param fallback notification
+					if (paramFallback) {
+						toast.warning($i18n.t('This model does not support some parameters. Parameters have been adjusted and request retried.'));
+						continue;
 					}
 
 					if (mergedResponse.content == '' && value == '\n') {

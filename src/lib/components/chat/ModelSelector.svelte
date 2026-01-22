@@ -70,12 +70,10 @@
 
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true)}
 				{#if selectedModelIdx === 0}
-					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
-					>
+					<div class="flex items-center gap-1 self-center ml-1">
 						<Tooltip content={$i18n.t('Add Model')}>
 							<button
-								class=" "
+								class="p-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed"
 								{disabled}
 								on:click={() => {
 									selectedModels = [...selectedModels, ''];
@@ -94,13 +92,21 @@
 								</svg>
 							</button>
 						</Tooltip>
+
+						{#if showSetDefault}
+							<button
+								class="px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition whitespace-nowrap"
+								on:click={saveDefaultModel}
+							>
+								{$i18n.t('Set as default')}
+							</button>
+						{/if}
 					</div>
 				{:else}
-					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
-					>
+					<div class="self-center ml-1">
 						<Tooltip content={$i18n.t('Remove Model')}>
 							<button
+								class="p-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed"
 								{disabled}
 								on:click={() => {
 									selectedModels.splice(selectedModelIdx, 1);
@@ -114,7 +120,7 @@
 									viewBox="0 0 24 24"
 									stroke-width="2"
 									stroke="currentColor"
-									class="size-3"
+									class="size-3.5"
 								>
 									<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
 								</svg>
@@ -126,11 +132,3 @@
 		</div>
 	{/each}
 </div>
-
-{#if showSetDefault}
-	<div
-		class="relative text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
-	>
-		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
-	</div>
-{/if}

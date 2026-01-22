@@ -183,16 +183,27 @@ pattern = '"version":\s*"(?P<version>[^"]+)"'
 
 [tool.hatch.build.targets.wheel]
 sources = ["backend"]
+packages = ["backend/open_webui"]
 exclude = [
     ".dockerignore",
     ".gitignore",
     ".webui_secret_key",
     "dev.sh",
     "requirements.txt",
+    "requirements-min.txt",
     "start.sh",
     "start_windows.bat",
     "webui.db",
     "chroma.sqlite3",
+    ".venv",
+    ".venv/**",
+    "venv",
+    "venv/**",
+    "data",
+    "data/**",
+    "__pycache__",
+    "**/__pycache__",
+    "*.pyc",
 ]
 force-include = { "CHANGELOG.md" = "open_webui/CHANGELOG.md", build = "open_webui/frontend" }
 

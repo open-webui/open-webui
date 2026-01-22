@@ -29,7 +29,7 @@
 		{ value: 'xhigh', label: 'Xhigh', cn: '最高', desc: '【极致思考】', icon: LightBulbMax, hint: '极致思考/20480~24576 Token预算', color: 'text-blue-500' }
 	];
 
-	const isFunctionCallingNative = (value) => value === 'native' || value === undefined;
+	const isFunctionCallingNative = (value) => value === 'native';
 
 	export let onChange: (params: any) => void = () => {};
 
@@ -41,7 +41,7 @@
 		max_context_count: null, // Set the maximum context message count for the model
 		stream_response: null, // Set stream responses for this model individually
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
-		function_calling: 'native',
+		function_calling: null,
 		reasoning_tags: null,
 		seed: null,
 		stop: null,

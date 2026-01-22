@@ -28,7 +28,19 @@
       "Bash(npm i --save-dev @types/turndown)",
       "Bash(npx svelte-check:*)",
       "Bash(del:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Bash(py -3.11 -c:*)",
+      "Bash(py -3.11 -m pip download:*)",
+      "Bash(unzip:*)",
+      "Bash(py -3.11 -m hatchling build:*)",
+      "Bash(py -3.11 -m build:*)",
+      "Bash(pip download:*)",
+      "Bash(git checkout:*)",
+      "Bash(/c/Windows/py:*)",
+      "Bash(git grep -n \"DEFAULT_ARENA_MODEL\" --no-color)",
+      "Bash(git grep -n \"DEFAULT_ARENA_MODEL\")",
+      "Bash(docker manifest inspect:*)"
     ]
   }
 }

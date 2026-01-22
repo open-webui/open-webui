@@ -1649,10 +1649,10 @@ EVALUATION_ARENA_MODELS = PersistentConfig(
 
 DEFAULT_ARENA_MODEL = {
     "id": "arena-model",
-    "name": "Arena Model",
+    "name": "竞技场模型",
     "meta": {
         "profile_image_url": "/favicon.png",
-        "description": "Submit your questions to anonymous AI chatbots and vote on the best response.",
+        "description": "向匿名 AI 聊天机器人提交问题，并投票选出最佳回答。",
         "model_ids": None,
     },
 }
