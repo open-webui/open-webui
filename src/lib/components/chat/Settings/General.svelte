@@ -112,6 +112,10 @@
 
 		languages = await getLanguages();
 
+		if (!$config?.features?.enable_easter_eggs) {
+			languages = languages.filter((l) => l.code !== 'dg-DG');
+		}
+
 		notificationEnabled = $settings.notificationEnabled ?? false;
 		system = $settings.system ?? '';
 
