@@ -178,7 +178,7 @@
 										</div>
 									</div>
 
-									{#if filter?.has_user_valves}
+									{#if filter?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
 										<div class=" shrink-0">
 											<Tooltip content={$i18n.t('Valves')}>
 												<button
@@ -371,7 +371,7 @@
 								</div>
 							</div>
 
-							{#if tools[toolId]?.has_user_valves}
+							{#if tools[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
 								<div class=" shrink-0">
 									<Tooltip content={$i18n.t('Valves')}>
 										<button
