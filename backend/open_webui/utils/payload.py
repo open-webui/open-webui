@@ -287,7 +287,11 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Returns:
         dict: A modified payload compatible with the Ollama API.
     """
-    openai_payload = copy.deepcopy(openai_payload)
+    # Shallow copy metadata separately (may contain non-picklable objects)
+    metadata = openai_payload.get("metadata")
+    openai_payload = copy.deepcopy({k: v for k, v in openai_payload.items() if k != "metadata"})
+    if metadata is not None:
+        openai_payload["metadata"] = dict(metadata)
     ollama_payload = {}
 
     # Mapping basic model and message details
