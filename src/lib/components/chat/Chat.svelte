@@ -551,6 +551,18 @@
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
+		// get initMessage from url
+		const urlParams = new URLSearchParams(window.location.search);
+		const initMessage = urlParams.get('initMessage');
+		if (initMessage) {
+			window.postMessage(
+				{
+					type: 'input:prompt:submit',
+					text: initMessage
+				},
+				window.origin
+			);
+		}
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 
