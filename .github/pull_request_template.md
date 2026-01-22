@@ -21,7 +21,6 @@ This is to ensure large feature PRs are discussed with the community first, befo
 - [ ] **Agentic AI Code:** Confirm this Pull Request is **not written by any AI Agent** or has at least **gone through additional human review AND manual testing**. If any AI Agent is the co-author of this PR, it may lead to immediate closure of the PR.
 - [ ] **Code review:** Have you performed a self-review of your code, addressing any coding standard issues and ensuring adherence to the project's coding standards?
 - [ ] **Design & Architecture:** Prefer smart defaults over adding new settings; use local state for ephemeral UI logic. Open a Discussion for major architectural or UX changes.
-- [ ] **Repro & Tests:** For bug fixes, include reproducible steps and, when possible, a failing test that reproduces the issue before your fix (especially for race conditions).
 - [ ] **Git Hygiene:** Keep PRs atomic (one logical change per PR) and push updates to this branch instead of closing and reopening PRs.
 - [ ] **Title Prefix:** To clearly categorize this pull request, prefix the pull request title using one of the following:
   - **BREAKING CHANGE**: Significant changes that may affect compatibility
