@@ -5,9 +5,11 @@
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import { user } from '$lib/stores';
-	import { slugify, formatDate } from '$lib/utils';
+	import { slugify, formatDate, copyToClipboard } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -49,6 +51,7 @@
 	let selectedHistoryEntry: any = null;
 	let historyOffset = 0;
 	let historyHasMore = true;
+	let contentCopied = false;
 	const HISTORY_PAGE_SIZE = 20;
 
 	$: if (!edit && !hasManualEdit) {
@@ -140,6 +143,17 @@
 		const nearBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 50;
 		if (nearBottom && historyHasMore && !historyLoading) {
 			loadHistory(false);
+		}
+	};
+
+	const copyContent = async () => {
+		const textToCopy = selectedHistoryEntry?.snapshot?.content || content;
+		const success = await copyToClipboard(textToCopy);
+		if (success) {
+			contentCopied = true;
+			setTimeout(() => {
+				contentCopied = false;
+			}, 2000);
 		}
 	};
 
@@ -364,9 +378,19 @@
 						{/if}
 					</div>
 					<div
-						class="bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-100 dark:border-gray-800"
+						class="relative bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-100 dark:border-gray-800"
 					>
-						<pre class="text-sm whitespace-pre-wrap font-mono">{selectedHistoryEntry?.snapshot
+						<button
+							class="absolute top-2 right-2 p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+							on:click={copyContent}
+						>
+							{#if contentCopied}
+								<Check className="size-4 text-green-500" />
+							{:else}
+								<Clipboard className="size-4 text-gray-500" />
+							{/if}
+						</button>
+						<pre class="text-sm whitespace-pre-wrap font-mono pr-8">{selectedHistoryEntry?.snapshot
 								?.content || content}</pre>
 					</div>
 				</div>
