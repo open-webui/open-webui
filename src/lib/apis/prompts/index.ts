@@ -312,13 +312,12 @@ export const deletePromptById = async (token: string, promptId: string) => {
 export const getPromptHistory = async (
 	token: string,
 	promptId: string,
-	limit: number = 50,
-	offset: number = 0
+	page: number = 0
 ): Promise<PromptHistoryItem[]> => {
 	let error = null;
 
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history?limit=${limit}&offset=${offset}`,
+		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history?page=${page}`,
 		{
 			method: 'GET',
 			headers: {

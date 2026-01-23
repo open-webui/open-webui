@@ -49,10 +49,9 @@
 	let history: any[] = [];
 	let historyLoading = false;
 	let selectedHistoryEntry: any = null;
-	let historyOffset = 0;
+	let historyPage = 0;
 	let historyHasMore = true;
 	let contentCopied = false;
-	const HISTORY_PAGE_SIZE = 20;
 
 	$: if (!edit && !hasManualEdit) {
 		command = name !== '' ? slugify(name) : '';
@@ -109,17 +108,12 @@
 		historyLoading = true;
 
 		if (reset) {
-			historyOffset = 0;
+			historyPage = 0;
 			historyHasMore = true;
 		}
 
 		try {
-			const newEntries = await getPromptHistory(
-				localStorage.token,
-				prompt.id,
-				HISTORY_PAGE_SIZE,
-				historyOffset
-			);
+			const newEntries = await getPromptHistory(localStorage.token, prompt.id, historyPage);
 
 			if (reset) {
 				history = newEntries;
@@ -127,8 +121,8 @@
 				history = [...history, ...newEntries];
 			}
 
-			historyHasMore = newEntries.length === HISTORY_PAGE_SIZE;
-			historyOffset += newEntries.length;
+			historyHasMore = newEntries.length > 0;
+			historyPage = historyPage + 1;
 		} catch (error) {
 			console.error('Failed to load history:', error);
 			if (reset) {

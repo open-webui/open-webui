@@ -297,12 +297,13 @@ async def delete_prompt_by_id(
 @router.get("/id/{prompt_id}/history", response_model=list[PromptHistoryResponse])
 async def get_prompt_history(
     prompt_id: str,
-    limit: int = 50,
-    offset: int = 0,
+    page: int = 0,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
     """Get version history for a prompt."""
+    PAGE_SIZE = 20
+    
     prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
@@ -323,7 +324,7 @@ async def get_prompt_history(
         )
 
     history = PromptHistories.get_history_by_prompt_id(
-        prompt.id, limit=limit, offset=offset, db=db
+        prompt.id, limit=PAGE_SIZE, offset=page * PAGE_SIZE, db=db
     )
     return history
 
