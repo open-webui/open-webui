@@ -47,6 +47,9 @@
 	let history: any[] = [];
 	let historyLoading = false;
 	let selectedHistoryEntry: any = null;
+	let historyOffset = 0;
+	let historyHasMore = true;
+	const HISTORY_PAGE_SIZE = 20;
 
 	$: if (!edit && !hasManualEdit) {
 		command = name !== '' ? slugify(name) : '';
@@ -76,7 +79,7 @@
 			showEditModal = false;
 			commitMessage = '';
 			isProduction = true;
-			await loadHistory();
+			await loadHistory(true); // Reset and reload
 			// Select the newest version after saving
 			if (history.length > 0) {
 				selectedHistoryEntry = history[0];
@@ -95,16 +98,49 @@
 		return regex.test(inputString);
 	};
 
-	const loadHistory = async () => {
-		if (!prompt?.command || !edit) return;
+	const loadHistory = async (reset = false) => {
+		if (!prompt?.id || !edit) return;
+		if (historyLoading) return;
+		if (!reset && !historyHasMore) return;
+
 		historyLoading = true;
+
+		if (reset) {
+			historyOffset = 0;
+			historyHasMore = true;
+		}
+
 		try {
-			history = await getPromptHistory(localStorage.token, prompt.id);
+			const newEntries = await getPromptHistory(
+				localStorage.token,
+				prompt.id,
+				HISTORY_PAGE_SIZE,
+				historyOffset
+			);
+
+			if (reset) {
+				history = newEntries;
+			} else {
+				history = [...history, ...newEntries];
+			}
+
+			historyHasMore = newEntries.length === HISTORY_PAGE_SIZE;
+			historyOffset += newEntries.length;
 		} catch (error) {
 			console.error('Failed to load history:', error);
-			history = [];
+			if (reset) {
+				history = [];
+			}
 		}
 		historyLoading = false;
+	};
+
+	const handleHistoryScroll = (e: Event) => {
+		const target = e.target as HTMLElement;
+		const nearBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 50;
+		if (nearBottom && historyHasMore && !historyLoading) {
+			loadHistory(false);
+		}
 	};
 
 	const setAsProduction = async (historyEntry: any) => {
@@ -224,23 +260,25 @@
 						bind:checked={isProduction}
 						class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
 					/>
-					<span class="text-sm text-gray-700 dark:text-gray-300">{$i18n.t('Set as Production')}</span>
+					<span class="text-sm text-gray-700 dark:text-gray-300"
+						>{$i18n.t('Set as Production')}</span
+					>
 				</label>
 				<div>
-				<button
-					class="text-sm px-4 py-2 transition rounded-full {loading
-						? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-						: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex justify-center"
-					type="submit"
-					disabled={loading}
-				>
-					<div class="font-medium">{$i18n.t('Save')}</div>
-					{#if loading}
-						<div class="ml-1.5">
-							<Spinner />
-						</div>
-					{/if}
-				</button>
+					<button
+						class="text-sm px-4 py-2 transition rounded-full {loading
+							? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+							: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex justify-center"
+						type="submit"
+						disabled={loading}
+					>
+						<div class="font-medium">{$i18n.t('Save')}</div>
+						{#if loading}
+							<div class="ml-1.5">
+								<Spinner />
+							</div>
+						{/if}
+					</button>
 				</div>
 			</div>
 		</form>
@@ -281,7 +319,7 @@
 				</div>
 			</div>
 
-			<div class="flex flex-col lg:flex-row gap-6">
+			<div class="flex flex-col lg:flex-row gap-4">
 				<!-- Desktop History Sidebar -->
 				<div class="hidden lg:block w-72 shrink-0 mt-1 mb-2">
 					<div class="sticky">
@@ -430,7 +468,7 @@
 		</div>
 
 		{#if history.length > 0}
-			<div class="space-y-0">
+			<div class="space-y-0 max-h-96 overflow-y-auto" on:scroll={handleHistoryScroll}>
 				{#each history as entry, index}
 					<div class="flex">
 						<!-- Content -->
@@ -468,6 +506,12 @@
 						</button>
 					</div>
 				{/each}
+
+				{#if historyHasMore && historyLoading}
+					<div class="flex justify-center py-2">
+						<Spinner className="size-3" />
+					</div>
+				{/if}
 			</div>
 		{:else if !historyLoading}
 			<div class="text-xs text-gray-400 text-center py-6 italic">
