@@ -89,11 +89,10 @@ class AuthsTable:
         role: str = "pending",
         oauth: Optional[dict] = None,
         db: Optional[Session] = None,
+        id: Optional[str] = str(uuid.uuid4()),
     ) -> Optional[UserModel]:
         with get_db_context(db) as db:
             log.info("insert_new_auth")
-
-            id = str(uuid.uuid4())
 
             auth = AuthModel(
                 **{"id": id, "email": email, "password": password, "active": True}

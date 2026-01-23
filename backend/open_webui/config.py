@@ -4004,6 +4004,10 @@ LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
 
+LDAP_USE_AD_SID = PersistentConfig(
+    "LDAP_USE_AD_SID", "ldap.server.use_ad_sid", os.environ.get("LDAP_USE_AD_SID", "False").lower() == "true"
+)
+
 # For LDAP Group Management
 ENABLE_LDAP_GROUP_MANAGEMENT = PersistentConfig(
     "ENABLE_LDAP_GROUP_MANAGEMENT",

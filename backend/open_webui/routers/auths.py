@@ -249,6 +249,58 @@ async def update_password(
 
 
 ############################
+# LDAP Helper Functions
+############################
+
+
+def convert_ad_sid_to_string(sid_bytes):
+    """
+    Convert Active Directory binary SID to string format.
+
+    Args:
+        sid_bytes: Binary SID from AD (objectSid attribute)
+
+    Returns:
+        String representation like "S-1-5-21-3396494274-2626632863-120886085-599475"
+        or None if conversion fails
+    """
+    if not sid_bytes or not isinstance(sid_bytes, bytes):
+        return None
+
+    try:
+        # SID structure: S-Revision-IdentifierAuthority-SubAuthority1-SubAuthority2-...
+        # Revision (1 byte)
+        revision = sid_bytes[0]
+
+        # Number of SubAuthorities (1 byte)
+        sub_auth_count = sid_bytes[1]
+
+        # IdentifierAuthority (6 bytes, big-endian)
+        identifier_authority = int.from_bytes(sid_bytes[2:8], byteorder='big')
+
+        # SubAuthorities (4 bytes each, little-endian)
+        sub_authorities = []
+        for i in range(sub_auth_count):
+            offset = 8 + (i * 4)
+            sub_auth = int.from_bytes(
+                sid_bytes[offset:offset + 4],
+                byteorder='little'
+            )
+            sub_authorities.append(str(sub_auth))
+
+        # Construct SID string
+        sid_string = f"S-{revision}-{identifier_authority}"
+        if sub_authorities:
+            sid_string += "-" + "-".join(sub_authorities)
+
+        return sid_string
+
+    except Exception as e:
+        log.error(f"Failed to convert AD SID to string: {str(e)}")
+        return None
+
+
+############################
 # LDAP Authentication
 ############################
 @router.post("/ldap", response_model=SessionUserResponse)
@@ -288,7 +340,7 @@ async def ldap_auth(
         if request.app.state.config.LDAP_CIPHERS
         else "ALL"
     )
-
+    LDAP_USE_AD_SID = request.app.state.config.LDAP_USE_AD_SID
     try:
         tls = Tls(
             validate=LDAP_VALIDATE_CERT,
@@ -334,6 +386,9 @@ async def ldap_auth(
             log.info(
                 f"LDAP Group Management enabled. Adding {LDAP_ATTRIBUTE_FOR_GROUPS} to search attributes"
             )
+        if LDAP_USE_AD_SID:
+            search_attributes.append("objectSid")
+            log.info("LDAP AD SID usage enabled. Adding objectSid to search attributes")
         log.info(f"LDAP search attributes: {search_attributes}")
 
         search_success = connection_app.search(
@@ -368,6 +423,22 @@ async def ldap_auth(
 
         cn = str(entry["cn"])  # common name
         user_dn = entry.entry_dn  # user distinguished name
+
+        # Extract and convert AD SID if enabled
+        user_id = None
+        if LDAP_USE_AD_SID and "objectSid" in entry:
+            try:
+                sid_bytes = entry["objectSid"].value
+                if sid_bytes:
+                    user_id = convert_ad_sid_to_string(sid_bytes)
+                    if user_id:
+                        log.info(f"Successfully extracted AD SID for user {username_list}: {user_id}")
+                    else:
+                        log.warning(f"Failed to convert AD SID for user {username_list}, will use UUID fallback")
+            except Exception as e:
+                log.warning(f"Error extracting AD SID for user {username_list}: {str(e)}, will use UUID fallback")
+        elif LDAP_USE_AD_SID:
+            log.warning(f"LDAP_USE_AD_SID enabled but objectSid not found for user {username_list}, will use UUID fallback")
 
         user_groups = []
         if ENABLE_LDAP_GROUP_MANAGEMENT and LDAP_ATTRIBUTE_FOR_GROUPS in entry:
@@ -452,12 +523,18 @@ async def ldap_auth(
                         else request.app.state.config.DEFAULT_USER_ROLE
                     )
 
+                    kwargs = {}
+                    if user_id:
+                        log.info(f"Creating LDAP user with AD SID as ID: {user_id}")
+                        kwargs["id"] = user_id
+
                     user = Auths.insert_new_auth(
                         email=email,
                         password=str(uuid.uuid4()),
                         name=cn,
                         role=role,
                         db=db,
+                        **kwargs,
                     )
 
                     if not user:

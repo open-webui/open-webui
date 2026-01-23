@@ -409,6 +409,7 @@ from open_webui.config import (
     LDAP_CA_CERT_FILE,
     LDAP_VALIDATE_CERT,
     LDAP_CIPHERS,
+    LDAP_USE_AD_SID,
     # LDAP Group Management
     ENABLE_LDAP_GROUP_MANAGEMENT,
     ENABLE_LDAP_GROUP_CREATION,
@@ -829,6 +830,7 @@ app.state.config.LDAP_USE_TLS = LDAP_USE_TLS
 app.state.config.LDAP_CA_CERT_FILE = LDAP_CA_CERT_FILE
 app.state.config.LDAP_VALIDATE_CERT = LDAP_VALIDATE_CERT
 app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
+app.state.config.LDAP_USE_AD_SID = LDAP_USE_AD_SID
 
 # For LDAP Group Management
 app.state.config.ENABLE_LDAP_GROUP_MANAGEMENT = ENABLE_LDAP_GROUP_MANAGEMENT
