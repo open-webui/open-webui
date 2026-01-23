@@ -1,6 +1,7 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 type PromptItem = {
+	id?: string;  // Prompt ID
 	command: string;
 	name: string;  // Changed from title
 	content: string;
@@ -9,6 +10,7 @@ type PromptItem = {
 	access_control?: null | object;
 	version_id?: string | null;  // Active version
 	commit_message?: string | null;  // For history tracking
+	is_production?: boolean;  // Whether to set new version as production
 };
 
 type PromptHistoryItem = {
@@ -203,22 +205,17 @@ export const getPromptById = async (token: string, promptId: string) => {
 	return res;
 };
 
-export const updatePromptByCommand = async (token: string, prompt: PromptItem) => {
+export const updatePromptById = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
-	const command = prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${prompt.id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			...prompt,
-			command: command
-		})
+		body: JSON.stringify(prompt)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -243,12 +240,12 @@ export const updatePromptByCommand = async (token: string, prompt: PromptItem) =
 
 export const setProductionPromptVersion = async (
 	token: string,
-	command: string,
+	promptId: string,
 	version_id: string
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}/set/version`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/set/version`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -276,12 +273,10 @@ export const setProductionPromptVersion = async (
 	return res;
 };
 
-export const deletePromptByCommand = async (token: string, command: string) => {
+export const deletePromptById = async (token: string, promptId: string) => {
 	let error = null;
 
-	command = command.charAt(0) === '/' ? command.slice(1) : command;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}/delete`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -316,16 +311,14 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 
 export const getPromptHistory = async (
 	token: string,
-	command: string,
+	promptId: string,
 	limit: number = 50,
 	offset: number = 0
 ): Promise<PromptHistoryItem[]> => {
 	let error = null;
 
-	command = command.charAt(0) === '/' ? command.slice(1) : command;
-
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/command/${command}/history?limit=${limit}&offset=${offset}`,
+		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history?limit=${limit}&offset=${offset}`,
 		{
 			method: 'GET',
 			headers: {
@@ -354,15 +347,13 @@ export const getPromptHistory = async (
 
 export const deletePromptHistoryVersion = async (
 	token: string,
-	command: string,
+	promptId: string,
 	historyId: string
 ): Promise<boolean> => {
 	let error = null;
 
-	command = command.charAt(0) === '/' ? command.slice(1) : command;
-
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/command/${command}/history/${historyId}`,
+		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`,
 		{
 			method: 'DELETE',
 			headers: {
@@ -391,15 +382,13 @@ export const deletePromptHistoryVersion = async (
 
 export const getPromptHistoryEntry = async (
 	token: string,
-	command: string,
+	promptId: string,
 	historyId: string
 ): Promise<PromptHistoryItem> => {
 	let error = null;
 
-	command = command.charAt(0) === '/' ? command.slice(1) : command;
-
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/command/${command}/history/${historyId}`,
+		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`,
 		{
 			method: 'GET',
 			headers: {
@@ -428,16 +417,14 @@ export const getPromptHistoryEntry = async (
 
 export const restorePromptFromHistory = async (
 	token: string,
-	command: string,
+	promptId: string,
 	historyId: string,
 	commitMessage?: string
 ) => {
 	let error = null;
 
-	command = command.charAt(0) === '/' ? command.slice(1) : command;
-
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/command/${command}/history/${historyId}/restore`,
+		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}/restore`,
 		{
 			method: 'POST',
 			headers: {
@@ -469,16 +456,14 @@ export const restorePromptFromHistory = async (
 
 export const getPromptDiff = async (
 	token: string,
-	command: string,
+	promptId: string,
 	fromId: string,
 	toId: string
 ): Promise<PromptDiff> => {
 	let error = null;
 
-	command = command.charAt(0) === '/' ? command.slice(1) : command;
-
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/command/${command}/history/diff?from_id=${fromId}&to_id=${toId}`,
+		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/diff?from_id=${fromId}&to_id=${toId}`,
 		{
 			method: 'GET',
 			headers: {
@@ -504,5 +489,4 @@ export const getPromptDiff = async (
 
 	return res;
 };
-
 

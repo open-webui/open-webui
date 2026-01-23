@@ -6,11 +6,14 @@ from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
+from open_webui.models.prompt_history import PromptHistories
+
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 
 from open_webui.utils.access_control import has_access
+
 
 ####################
 # Prompts DB Schema
@@ -63,7 +66,7 @@ class PromptModel(BaseModel):
     created_at: Optional[int] = None
     updated_at: Optional[int] = None
     access_control: Optional[dict] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -98,7 +101,7 @@ class PromptsTable:
     ) -> Optional[PromptModel]:
         now = int(time.time())
         prompt_id = str(uuid.uuid4())
-        
+
         prompt = PromptModel(
             id=prompt_id,
             user_id=user_id,
@@ -119,11 +122,8 @@ class PromptsTable:
                 db.add(result)
                 db.commit()
                 db.refresh(result)
-                
+
                 if result:
-                    # Create initial history entry
-                    from open_webui.models.prompt_history import PromptHistories
-                    
                     snapshot = {
                         "name": form_data.name,
                         "content": form_data.content,
@@ -132,7 +132,7 @@ class PromptsTable:
                         "meta": form_data.meta or {},
                         "access_control": form_data.access_control,
                     }
-                    
+
                     history_entry = PromptHistories.create_history_entry(
                         prompt_id=prompt_id,
                         snapshot=snapshot,
@@ -141,13 +141,13 @@ class PromptsTable:
                         commit_message=form_data.commit_message or "Initial version",
                         db=db,
                     )
-                    
+
                     # Set the initial version as the production version
                     if history_entry:
                         result.version_id = history_entry.id
                         db.commit()
                         db.refresh(result)
-                    
+
                     return PromptModel.model_validate(result)
                 else:
                     return None
@@ -223,28 +223,28 @@ class PromptsTable:
         ]
 
     def update_prompt_by_command(
-        self, 
-        command: str, 
-        form_data: PromptForm, 
+        self,
+        command: str,
+        form_data: PromptForm,
         user_id: str,
-        db: Optional[Session] = None
+        db: Optional[Session] = None,
     ) -> Optional[PromptModel]:
         try:
             with get_db_context(db) as db:
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 if not prompt:
                     return None
-                
-                # Get the latest history entry for parent_id
-                from open_webui.models.prompt_history import PromptHistories
-                latest_history = PromptHistories.get_latest_history_entry(prompt.id, db=db)
+
+                latest_history = PromptHistories.get_latest_history_entry(
+                    prompt.id, db=db
+                )
                 parent_id = latest_history.id if latest_history else None
-                
+
                 # Check if content changed to decide on history creation
                 content_changed = (
-                    prompt.name != form_data.name or
-                    prompt.content != form_data.content or
-                    prompt.access_control != form_data.access_control
+                    prompt.name != form_data.name
+                    or prompt.content != form_data.content
+                    or prompt.access_control != form_data.access_control
                 )
 
                 # Update prompt fields
@@ -254,9 +254,9 @@ class PromptsTable:
                 prompt.meta = form_data.meta or prompt.meta
                 prompt.access_control = form_data.access_control
                 prompt.updated_at = int(time.time())
-                
+
                 db.commit()
-                
+
                 # Create history entry only if content changed
                 if content_changed:
                     snapshot = {
@@ -267,7 +267,7 @@ class PromptsTable:
                         "meta": form_data.meta or {},
                         "access_control": form_data.access_control,
                     }
-                    
+
                     history_entry = PromptHistories.create_history_entry(
                         prompt_id=prompt.id,
                         snapshot=snapshot,
@@ -276,38 +276,100 @@ class PromptsTable:
                         commit_message=form_data.commit_message,
                         db=db,
                     )
-                    
+
                     # Set as production if flag is True (default)
                     if form_data.is_production and history_entry:
                         prompt.version_id = history_entry.id
                         db.commit()
-                
+
                 return PromptModel.model_validate(prompt)
         except Exception:
             return None
 
+    def update_prompt_by_id(
+        self,
+        prompt_id: str,
+        form_data: PromptForm,
+        user_id: str,
+        db: Optional[Session] = None,
+    ) -> Optional[PromptModel]:
+        try:
+            with get_db_context(db) as db:
+                prompt = db.query(Prompt).filter_by(id=prompt_id).first()
+                if not prompt:
+                    return None
 
+                latest_history = PromptHistories.get_latest_history_entry(
+                    prompt.id, db=db
+                )
+                parent_id = latest_history.id if latest_history else None
+
+                # Check if content changed to decide on history creation
+                content_changed = (
+                    prompt.name != form_data.name
+                    or prompt.content != form_data.content
+                    or prompt.access_control != form_data.access_control
+                )
+
+                # Update prompt fields
+                prompt.name = form_data.name
+                prompt.content = form_data.content
+                prompt.data = form_data.data or prompt.data
+                prompt.meta = form_data.meta or prompt.meta
+                prompt.access_control = form_data.access_control
+                prompt.updated_at = int(time.time())
+
+                db.commit()
+
+                # Create history entry only if content changed
+                if content_changed:
+                    snapshot = {
+                        "name": form_data.name,
+                        "content": form_data.content,
+                        "command": prompt.command,
+                        "data": form_data.data or {},
+                        "meta": form_data.meta or {},
+                        "access_control": form_data.access_control,
+                    }
+
+                    history_entry = PromptHistories.create_history_entry(
+                        prompt_id=prompt.id,
+                        snapshot=snapshot,
+                        user_id=user_id,
+                        parent_id=parent_id,
+                        commit_message=form_data.commit_message,
+                        db=db,
+                    )
+
+                    # Set as production if flag is True (default)
+                    if form_data.is_production and history_entry:
+                        prompt.version_id = history_entry.id
+                        db.commit()
+
+                return PromptModel.model_validate(prompt)
+        except Exception:
+            return None
 
     def update_prompt_version(
         self,
-        command: str,
+        prompt_id: str,
         version_id: str,
         db: Optional[Session] = None,
     ) -> Optional[PromptModel]:
         """Set the active version of a prompt and restore content from that version's snapshot."""
         try:
             with get_db_context(db) as db:
-                prompt = db.query(Prompt).filter_by(command=command).first()
+                prompt = db.query(Prompt).filter_by(id=prompt_id).first()
                 if not prompt:
                     return None
-                
-                # Get the history entry to restore content from
-                from open_webui.models.prompt_history import PromptHistories
-                history_entry = PromptHistories.get_history_entry_by_id(version_id, db=db)
-                
+
+                history_entry = PromptHistories.get_history_entry_by_id(
+                    version_id, db=db
+                )
+
                 if not history_entry:
                     return None
-                
+
                 # Restore prompt content from the snapshot
                 snapshot = history_entry.snapshot
                 if snapshot:
@@ -316,11 +378,11 @@ class PromptsTable:
                     prompt.data = snapshot.get("data", prompt.data)
                     prompt.meta = snapshot.get("meta", prompt.meta)
                     # Note: command and access_control are not restored from snapshot
-                
+
                 prompt.version_id = version_id
                 prompt.updated_at = int(time.time())
                 db.commit()
-                
+
                 return PromptModel.model_validate(prompt)
         except Exception:
             return None
@@ -333,8 +395,22 @@ class PromptsTable:
             with get_db_context(db) as db:
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 if prompt:
-                    # Delete history first (Requirement: entire history should be deleted)
-                    from open_webui.models.prompt_history import PromptHistories
+                    PromptHistories.delete_history_by_prompt_id(prompt.id, db=db)
+
+                    prompt.is_active = False
+                    prompt.updated_at = int(time.time())
+                    db.commit()
+                    return True
+                return False
+        except Exception:
+            return False
+
+    def delete_prompt_by_id(self, prompt_id: str, db: Optional[Session] = None) -> bool:
+        """Soft delete a prompt by setting is_active to False."""
+        try:
+            with get_db_context(db) as db:
+                prompt = db.query(Prompt).filter_by(id=prompt_id).first()
+                if prompt:
                     PromptHistories.delete_history_by_prompt_id(prompt.id, db=db)
 
                     prompt.is_active = False
@@ -353,10 +429,8 @@ class PromptsTable:
             with get_db_context(db) as db:
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 if prompt:
-                    # Delete history first
-                    from open_webui.models.prompt_history import PromptHistories
                     PromptHistories.delete_history_by_prompt_id(prompt.id, db=db)
-                    
+
                     # Delete prompt
                     db.query(Prompt).filter_by(command=command).delete()
                     db.commit()

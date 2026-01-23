@@ -9,7 +9,7 @@
 
 	import {
 		createNewPrompt,
-		deletePromptByCommand,
+		deletePromptById,
 		getPrompts,
 		getPromptList
 	} from '$lib/apis/prompts';
@@ -121,7 +121,7 @@
 	const deleteHandler = async (prompt) => {
 		const command = prompt.command;
 
-		const res = await deletePromptByCommand(localStorage.token, command).catch((err) => {
+		const res = await deletePromptById(localStorage.token, prompt.id).catch((err) => {
 			toast.error(err);
 			return null;
 		});

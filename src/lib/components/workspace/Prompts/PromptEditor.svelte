@@ -13,7 +13,6 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import {
 		getPromptHistory,
-		updatePromptByCommand,
 		setProductionPromptVersion,
 		deletePromptHistoryVersion
 	} from '$lib/apis/prompts';
@@ -66,6 +65,7 @@
 
 		if (validateCommandString(command)) {
 			await onSubmit({
+				id: prompt?.id,
 				name,
 				command,
 				content,
@@ -95,7 +95,7 @@
 		if (!prompt?.command || !edit) return;
 		historyLoading = true;
 		try {
-			history = await getPromptHistory(localStorage.token, prompt.command);
+			history = await getPromptHistory(localStorage.token, prompt.id);
 		} catch (error) {
 			console.error('Failed to load history:', error);
 			history = [];
@@ -110,7 +110,7 @@
 		}
 
 		try {
-			await setProductionPromptVersion(localStorage.token, prompt.command, historyEntry.id);
+			await setProductionPromptVersion(localStorage.token, prompt.id, historyEntry.id);
 			// Update local prompt object to trigger reactivity
 			prompt = { ...prompt, version_id: historyEntry.id };
 			toast.success($i18n.t('Production version updated'));
@@ -123,7 +123,7 @@
 		if (disabled) return;
 
 		try {
-			await deletePromptHistoryVersion(localStorage.token, prompt.command, historyId);
+			await deletePromptHistoryVersion(localStorage.token, prompt.id, historyId);
 			toast.success($i18n.t('Version deleted'));
 			// Reload history
 			await loadHistory();

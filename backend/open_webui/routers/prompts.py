@@ -179,18 +179,18 @@ async def get_prompt_by_id(
 
 
 ############################
-# UpdatePromptByCommand
+# UpdatePromptById
 ############################
 
 
-@router.post("/command/{command}/update", response_model=Optional[PromptModel])
-async def update_prompt_by_command(
-    command: str,
+@router.post("/id/{prompt_id}/update", response_model=Optional[PromptModel])
+async def update_prompt_by_id(
+    prompt_id: str,
     form_data: PromptForm,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    prompt = Prompts.get_prompt_by_command(command, db=db)
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
         raise HTTPException(
@@ -209,9 +209,9 @@ async def update_prompt_by_command(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Use the command from the found prompt
-    updated_prompt = Prompts.update_prompt_by_command(
-        prompt.command, form_data, user.id, db=db
+    # Use the ID from the found prompt
+    updated_prompt = Prompts.update_prompt_by_id(
+        prompt.id, form_data, user.id, db=db
     )
     if updated_prompt:
         return updated_prompt
@@ -222,14 +222,14 @@ async def update_prompt_by_command(
         )
 
 
-@router.post("/command/{command}/set/version", response_model=Optional[PromptModel])
+@router.post("/id/{prompt_id}/set/version", response_model=Optional[PromptModel])
 async def set_prompt_version(
-    command: str,
+    prompt_id: str,
     form_data: PromptVersionUpdateForm,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    prompt = Prompts.get_prompt_by_command(command, db=db)
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -247,7 +247,7 @@ async def set_prompt_version(
         )
 
     updated_prompt = Prompts.update_prompt_version(
-        prompt.command, form_data.version_id, db=db
+        prompt.id, form_data.version_id, db=db
     )
     if updated_prompt:
         return updated_prompt
@@ -259,15 +259,15 @@ async def set_prompt_version(
 
 
 ############################
-# DeletePromptByCommand
+# DeletePromptById
 ############################
 
 
-@router.delete("/command/{command}/delete", response_model=bool)
-async def delete_prompt_by_command(
-    command: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+@router.delete("/id/{prompt_id}/delete", response_model=bool)
+async def delete_prompt_by_id(
+    prompt_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
-    prompt = Prompts.get_prompt_by_command(command, db=db)
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
         raise HTTPException(
@@ -285,7 +285,7 @@ async def delete_prompt_by_command(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    result = Prompts.delete_prompt_by_command(prompt.command, db=db)
+    result = Prompts.delete_prompt_by_id(prompt.id, db=db)
     return result
 
 
@@ -294,16 +294,16 @@ async def delete_prompt_by_command(
 ############################
 
 
-@router.get("/command/{command}/history", response_model=list[PromptHistoryResponse])
+@router.get("/id/{prompt_id}/history", response_model=list[PromptHistoryResponse])
 async def get_prompt_history(
-    command: str,
+    prompt_id: str,
     limit: int = 50,
     offset: int = 0,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
     """Get version history for a prompt."""
-    prompt = Prompts.get_prompt_by_command(command, db=db)
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
         raise HTTPException(
@@ -329,16 +329,16 @@ async def get_prompt_history(
 
 
 @router.get(
-    "/command/{command}/history/{history_id}", response_model=PromptHistoryModel
+    "/id/{prompt_id}/history/{history_id}", response_model=PromptHistoryModel
 )
 async def get_prompt_history_entry(
-    command: str,
+    prompt_id: str,
     history_id: str,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
     """Get a specific version from history."""
-    prompt = Prompts.get_prompt_by_command(command, db=db)
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
         raise HTTPException(
@@ -368,16 +368,16 @@ async def get_prompt_history_entry(
 
 
 @router.delete(
-    "/command/{command}/history/{history_id}", response_model=bool
+    "/id/{prompt_id}/history/{history_id}", response_model=bool
 )
 async def delete_prompt_history_entry(
-    command: str,
+    prompt_id: str,
     history_id: str,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
     """Delete a history entry. Cannot delete the active production version."""
-    prompt = Prompts.get_prompt_by_command(command, db=db)
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
         raise HTTPException(
@@ -413,16 +413,16 @@ async def delete_prompt_history_entry(
     return success
 
 
-@router.get("/command/{command}/history/diff")
+@router.get("/id/{prompt_id}/history/diff")
 async def get_prompt_diff(
-    command: str,
+    prompt_id: str,
     from_id: str,
     to_id: str,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
     """Get diff between two versions."""
-    prompt = Prompts.get_prompt_by_command(command, db=db)
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
         raise HTTPException(

@@ -6,7 +6,7 @@
 
 	const i18n = getContext('i18n');
 
-	import { getPromptById, getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
+	import { getPromptById, getPrompts, updatePromptById } from '$lib/apis/prompts';
 	import { page } from '$app/stores';
 
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
@@ -19,7 +19,7 @@
 
 	const onSubmit = async (_prompt) => {
 		console.log(_prompt);
-		const updatedPrompt = await updatePromptByCommand(localStorage.token, _prompt).catch((error) => {
+		const updatedPrompt = await updatePromptById(localStorage.token, _prompt).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
