@@ -1077,7 +1077,26 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     body = await request.body()
 
+    payload = None
+    if body:
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            payload = None
+
+    model = payload.get("model") if isinstance(payload, dict) else None
+
     idx = 0
+    if model:
+        await get_all_models(request, user=user)
+        model_entry = request.app.state.OPENAI_MODELS.get(model)
+        if not model_entry:
+            raise HTTPException(
+                status_code=404,
+                detail="Model not found",
+            )
+        idx = model_entry["urlIdx"]
+
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
     api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
@@ -1106,7 +1125,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
             headers["api-version"] = api_version
 
-            payload = json.loads(body)
+            if payload is None:
+                payload = json.loads(body)
             url, payload = convert_to_azure_payload(url, payload, api_version)
             body = json.dumps(payload).encode()
 
