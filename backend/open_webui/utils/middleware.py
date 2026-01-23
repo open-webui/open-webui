@@ -2551,22 +2551,21 @@ async def process_chat_response(
                 See: https://openresponses.org/specification
                 """
                 output_items = []
-                item_counter = 0
 
                 def next_id(prefix):
-                    nonlocal item_counter
-                    item_counter += 1
-                    return f"{prefix}_{item_counter}"
+                    return f"{prefix}_{uuid4().hex[:24]}"
 
                 for block in content_blocks:
                     block_type = block.get("type", "")
+                    # Use backend-provided ID if available, fallback to generated
+                    block_id = block.get("id")
 
                     if block_type == "text":
                         text_content = block.get("content", "").strip()
                         if text_content:
                             output_items.append({
                                 "type": "message",
-                                "id": next_id("msg"),
+                                "id": block_id or next_id("msg"),
                                 "status": "completed",
                                 "role": "assistant",
                                 "content": [{"type": "output_text", "text": text_content}],
@@ -2582,7 +2581,7 @@ async def process_chat_response(
                             func = tool_call.get("function", {})
                             output_items.append({
                                 "type": "function_call",
-                                "id": next_id("fc"),
+                                "id": call_id or next_id("fc"),  # Use call_id as item id if available
                                 "call_id": call_id,
                                 "name": func.get("name", ""),
                                 "arguments": func.get("arguments", "{}"),
@@ -2593,7 +2592,7 @@ async def process_chat_response(
                         for result in results:
                             output_items.append({
                                 "type": "function_call_output",
-                                "id": next_id("fco"),
+                                "id": result.get("id") or next_id("fco"),
                                 "call_id": result.get("tool_call_id", ""),
                                 "output": [{"type": "input_text", "text": result.get("content", "")}],
                                 "status": "completed",
@@ -2606,7 +2605,7 @@ async def process_chat_response(
                         duration = block.get("duration")
                         output_items.append({
                             "type": "reasoning",
-                            "id": next_id("r"),
+                            "id": block_id or next_id("r"),
                             "status": "completed" if duration is not None else "in_progress",
                             "content": [{"type": "output_text", "text": reasoning_content}] if reasoning_content else None,
                             "summary": None,
@@ -2618,7 +2617,7 @@ async def process_chat_response(
                         attrs = block.get("attributes", {})
                         output_items.append({
                             "type": "open_webui:code_interpreter",
-                            "id": next_id("ci"),
+                            "id": block_id or next_id("ci"),
                             "status": "completed" if output_val is not None else "in_progress",
                             "lang": attrs.get("lang", ""),
                             "code": code,
