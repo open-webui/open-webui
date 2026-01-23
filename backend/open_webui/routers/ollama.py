@@ -37,7 +37,6 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, validator
-from starlette.background import BackgroundTask
 from sqlalchemy.orm import Session
 
 from open_webui.internal.db import get_session
@@ -113,6 +112,18 @@ async def cleanup_response(
         await session.close()
 
 
+async def stream_wrapper(stream, response, session):
+    """
+    Wrap a stream to ensure cleanup happens even if streaming is interrupted.
+    This is more reliable than BackgroundTask which may not run if client disconnects.
+    """
+    try:
+        async for chunk in stream:
+            yield chunk
+    finally:
+        await cleanup_response(response, session)
+
+
 async def send_post_request(
     url: str,
     payload: Union[str, bytes],
@@ -124,6 +135,8 @@ async def send_post_request(
 ):
 
     r = None
+    session = None
+    streaming = False
     try:
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
@@ -168,13 +181,11 @@ async def send_post_request(
             if content_type:
                 response_headers["Content-Type"] = content_type
 
+            streaming = True
             return StreamingResponse(
-                r.content,
+                stream_wrapper(r.content, r, session),
                 status_code=r.status,
                 headers=response_headers,
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
             )
         else:
             res = await r.json()
@@ -190,7 +201,7 @@ async def send_post_request(
             detail=detail if e else "Open WebUI: Server Connection Error",
         )
     finally:
-        if not stream:
+        if not streaming:
             await cleanup_response(r, session)
 
 

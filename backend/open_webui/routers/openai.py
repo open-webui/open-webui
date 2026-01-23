@@ -18,7 +18,6 @@ from fastapi.responses import (
     PlainTextResponse,
 )
 from pydantic import BaseModel
-from starlette.background import BackgroundTask
 from sqlalchemy.orm import Session
 
 from open_webui.internal.db import get_session
@@ -95,6 +94,18 @@ async def cleanup_response(
         response.close()
     if session:
         await session.close()
+
+
+async def stream_wrapper(stream, response, session):
+    """
+    Wrap a stream to ensure cleanup happens even if streaming is interrupted.
+    This is more reliable than BackgroundTask which may not run if client disconnects.
+    """
+    try:
+        async for chunk in stream:
+            yield chunk
+    finally:
+        await cleanup_response(response, session)
 
 
 def openai_reasoning_model_handler(payload):
@@ -954,12 +965,9 @@ async def generate_chat_completion(
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
-                stream_chunks_handler(r.content),
+                stream_wrapper(stream_chunks_handler(r.content), r, session),
                 status_code=r.status,
                 headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
             )
         else:
             try:
@@ -1036,12 +1044,9 @@ async def embeddings(request: Request, form_data: dict, user):
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
-                r.content,
+                stream_wrapper(r.content, r, session),
                 status_code=r.status,
                 headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
             )
         else:
             try:
@@ -1128,12 +1133,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
-                r.content,
+                stream_wrapper(r.content, r, session),
                 status_code=r.status,
                 headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
             )
         else:
             try:
