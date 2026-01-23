@@ -204,6 +204,8 @@ type Settings = {
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
 
+	defaultUploadContext?: 'full' | 'focused';
+
 	system?: string;
 	seed?: number;
 	temperature?: string;

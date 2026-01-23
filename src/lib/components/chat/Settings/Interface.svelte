@@ -88,6 +88,9 @@
 	let showUpdateToast = true;
 	let showChangelog = true;
 
+	// File
+	let defaultUploadContext: 'full' | 'focused' = 'focused';
+
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
 	let hapticFeedback = false;
@@ -269,6 +272,8 @@
 		webSearch = $settings?.webSearch ?? null;
 
 		textScale = $settings?.textScale ?? null;
+
+		defaultUploadContext = $settings?.defaultUploadContext ?? 'focused';
 	});
 </script>
 
@@ -1277,6 +1282,30 @@
 			</div>
 
 			<div class=" my-2 text-sm font-medium">{$i18n.t('File')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="default-upload-mode-label" class=" self-center text-xs">
+						{$i18n.t('Default Upload Mode')}
+					</div>
+
+					<button
+						aria-labelledby="default-upload-mode-label default-upload-mode-state"
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							defaultUploadContext = defaultUploadContext === 'full' ? 'focused' : 'full';
+							saveSettings({ defaultUploadContext });
+						}}
+						type="button"
+					>
+						<span class="ml-2 self-center" id="default-upload-mode-state"
+							>{defaultUploadContext === 'full'
+								? $i18n.t('Using Entire Document')
+								: $i18n.t('Using Focused Retrieval')}</span
+						>
+					</button>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

@@ -5,6 +5,7 @@
 
 	import { formatFileSize, getLineCount } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { settings } from '$lib/stores';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
 	import { getFileById, getFileContentById } from '$lib/apis/files';
 
@@ -173,6 +174,8 @@
 	onMount(() => {
 		console.log(item);
 		if (item?.context === 'full') {
+			enableFullContent = true;
+		} else if (item?.context === undefined && $settings?.defaultUploadContext === 'full') {
 			enableFullContent = true;
 		}
 	});
