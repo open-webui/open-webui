@@ -46,7 +46,7 @@
 
 			clone = true;
 			prompt = {
-				title: _prompt.title,
+				name: _prompt.name || _prompt.title || 'Prompt',
 				command: _prompt.command,
 				content: _prompt.content,
 				access_control: _prompt.access_control !== undefined ? _prompt.access_control : {}
@@ -65,7 +65,7 @@
 
 			clone = true;
 			prompt = {
-				title: _prompt.title,
+				name: _prompt.name || _prompt.title || 'Prompt',
 				command: _prompt.command,
 				content: _prompt.content,
 				access_control: _prompt.access_control !== undefined ? _prompt.access_control : {}
