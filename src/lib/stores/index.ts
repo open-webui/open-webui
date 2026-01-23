@@ -258,6 +258,8 @@ type Settings = {
 	pinnedMenuItems?: string[];
 	pinnedNotesOrder?: string[];
 
+	defaultUploadContext?: 'full' | 'focused';
+
 	system?: string;
 	seed?: number;
 	temperature?: string;
