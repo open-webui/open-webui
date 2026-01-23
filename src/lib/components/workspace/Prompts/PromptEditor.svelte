@@ -77,6 +77,10 @@
 			commitMessage = '';
 			isProduction = true;
 			await loadHistory();
+			// Select the newest version after saving
+			if (history.length > 0) {
+				selectedHistoryEntry = history[0];
+			}
 		} else {
 			toast.error(
 				$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
