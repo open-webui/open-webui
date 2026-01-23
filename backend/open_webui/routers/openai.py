@@ -1088,8 +1088,12 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     idx = 0
     if model:
-        await get_all_models(request, user=user)
+        # First try to use an existing model mapping to avoid unnecessary
+        # calls to get_all_models on every proxy request.
         model_entry = request.app.state.OPENAI_MODELS.get(model)
+        if not model_entry:
+            await get_all_models(request, user=user)
+            model_entry = request.app.state.OPENAI_MODELS.get(model)
         if model_entry:
             idx = model_entry["urlIdx"]
 
