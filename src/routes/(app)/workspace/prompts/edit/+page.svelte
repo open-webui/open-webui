@@ -16,15 +16,22 @@
 
 	const onSubmit = async (_prompt) => {
 		console.log(_prompt);
-		const prompt = await updatePromptByCommand(localStorage.token, _prompt).catch((error) => {
+		const updatedPrompt = await updatePromptByCommand(localStorage.token, _prompt).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
-		if (prompt) {
+		if (updatedPrompt) {
 			toast.success($i18n.t('Prompt updated successfully'));
 			await prompts.set(await getPrompts(localStorage.token));
-			await goto('/workspace/prompts');
+			// Update local prompt state to reflect the new version
+			prompt = {
+				name: updatedPrompt.name,
+				command: updatedPrompt.command,
+				content: updatedPrompt.content,
+				version_id: updatedPrompt.version_id,
+				access_control: updatedPrompt?.access_control === undefined ? {} : updatedPrompt?.access_control
+			};
 		}
 	};
 
@@ -42,9 +49,10 @@
 			if (_prompt) {
 				disabled = !_prompt.write_access ?? true;
 				prompt = {
-					title: _prompt.title,
+					name: _prompt.name,
 					command: _prompt.command,
 					content: _prompt.content,
+					version_id: _prompt.version_id,
 					access_control: _prompt?.access_control === undefined ? {} : _prompt?.access_control
 				};
 			} else {

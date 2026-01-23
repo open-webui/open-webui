@@ -14,7 +14,7 @@
 
 	$: filteredItems = prompts
 		.filter((p) => p.command.toLowerCase().includes(query.toLowerCase()))
-		.sort((a, b) => a.title.localeCompare(b.title));
+		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: if (query) {
 		selectedPromptIdx = 0;
@@ -42,7 +42,7 @@
 {#if filteredItems.length > 0}
 	<div class=" space-y-0.5 scrollbar-hidden">
 		{#each filteredItems as promptItem, promptIdx}
-			<Tooltip content={promptItem.title} placement="top-start">
+			<Tooltip content={promptItem.name} placement="top-start">
 				<button
 					class=" px-3 py-1 rounded-xl w-full text-left {promptIdx === selectedPromptIdx
 						? '  bg-gray-50 dark:bg-gray-800 selected-command-option-button'
@@ -62,7 +62,7 @@
 					</span>
 
 					<span class=" text-xs text-gray-600 dark:text-gray-100">
-						{promptItem.title}
+						{promptItem.name}
 					</span>
 				</button>
 			</Tooltip>
