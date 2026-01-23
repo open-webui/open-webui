@@ -89,6 +89,7 @@ class PromptForm(BaseModel):
     access_control: Optional[dict] = None
     version_id: Optional[str] = None  # Active version
     commit_message: Optional[str] = None  # For history tracking
+    is_production: Optional[bool] = True  # Whether to set new version as production
 
 
 class PromptsTable:
@@ -252,8 +253,6 @@ class PromptsTable:
                 prompt.data = form_data.data or prompt.data
                 prompt.meta = form_data.meta or prompt.meta
                 prompt.access_control = form_data.access_control
-                if form_data.version_id is not None:
-                    prompt.version_id = form_data.version_id
                 prompt.updated_at = int(time.time())
                 
                 db.commit()
@@ -269,7 +268,7 @@ class PromptsTable:
                         "access_control": form_data.access_control,
                     }
                     
-                    PromptHistories.create_history_entry(
+                    history_entry = PromptHistories.create_history_entry(
                         prompt_id=prompt.id,
                         snapshot=snapshot,
                         user_id=user_id,
@@ -277,6 +276,11 @@ class PromptsTable:
                         commit_message=form_data.commit_message,
                         db=db,
                     )
+                    
+                    # Set as production if flag is True (default)
+                    if form_data.is_production and history_entry:
+                        prompt.version_id = history_entry.id
+                        db.commit()
                 
                 return PromptModel.model_validate(prompt)
         except Exception:

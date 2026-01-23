@@ -39,6 +39,7 @@
 	let command = '';
 	let content = '';
 	let commitMessage = '';
+	let isProduction = true;
 
 	let accessControl = {};
 	let showAccessControlModal = false;
@@ -69,10 +70,12 @@
 				command,
 				content,
 				access_control: accessControl,
-				commit_message: commitMessage || undefined
+				commit_message: commitMessage || undefined,
+				is_production: isProduction
 			});
 			showEditModal = false;
 			commitMessage = '';
+			isProduction = true;
 			await loadHistory();
 		} else {
 			toast.error(
@@ -184,35 +187,6 @@
 
 		<form on:submit|preventDefault={submitHandler}>
 			<div class="my-2">
-				<Tooltip
-					content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t('Activate this command by typing "/{{COMMAND}}" to chat input.', { COMMAND: command })}`}
-					placement="bottom-start"
-				>
-					<div class="flex flex-col w-full">
-						<div class="flex items-center">
-							<input
-								class="text-2xl font-medium w-full bg-transparent outline-hidden"
-								placeholder={$i18n.t('Name')}
-								bind:value={name}
-								required
-							/>
-						</div>
-						<div class="flex gap-0.5 items-center text-xs text-gray-500">
-							<div>/</div>
-							<input
-								class="w-full bg-transparent outline-hidden"
-								placeholder={$i18n.t('Command')}
-								bind:value={command}
-								on:input={handleCommandInput}
-								required
-								disabled
-							/>
-						</div>
-					</div>
-				</Tooltip>
-			</div>
-
-			<div class="my-2">
 				<div class="flex w-full justify-between">
 					<div class="text-gray-500 text-xs">{$i18n.t('Prompt Content')}</div>
 				</div>
@@ -225,27 +199,30 @@
 						rows={6}
 						required
 					/>
-
-					<div class="text-xs text-gray-400 dark:text-gray-500">
-						ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
-							class="text-gray-600 dark:text-gray-300 font-medium"
-							>{'{{'}{$i18n.t('variable')}{'}}'}</span
-						>.
-						{$i18n.t('Make sure to enclose them with')}
-						<span class="text-gray-600 dark:text-gray-300 font-medium">{'{{'}</span>
-						{$i18n.t('and')}
-						<span class="text-gray-600 dark:text-gray-300 font-medium">{'}}'}</span>.
-					</div>
-
-					<div class="text-xs text-gray-400 dark:text-gray-500 underline">
-						<a href="https://docs.openwebui.com/features/workspace/prompts" target="_blank">
-							{$i18n.t('To learn more about powerful prompt variables, click here')}
-						</a>
-					</div>
 				</div>
 			</div>
 
-			<div class="mt-4 flex justify-end">
+			<div class="my-2">
+				<div class="text-gray-500 text-xs">{$i18n.t('Commit Message')} ({$i18n.t('optional')})</div>
+				<div class="mt-1">
+					<input
+						class="text-sm w-full bg-transparent outline-hidden"
+						placeholder={$i18n.t('Describe what changed...')}
+						bind:value={commitMessage}
+					/>
+				</div>
+			</div>
+
+			<div class="mt-4 flex items-center justify-between">
+				<label class="flex items-center gap-2 cursor-pointer">
+					<input
+						type="checkbox"
+						bind:checked={isProduction}
+						class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+					/>
+					<span class="text-sm text-gray-700 dark:text-gray-300">{$i18n.t('Set as Production')}</span>
+				</label>
+				<div>
 				<button
 					class="text-sm px-4 py-2 transition rounded-full {loading
 						? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
@@ -260,6 +237,7 @@
 						</div>
 					{/if}
 				</button>
+				</div>
 			</div>
 		</form>
 	</div>
