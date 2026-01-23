@@ -231,6 +231,7 @@ type Settings = {
 	splitLargeDeltas?: boolean;
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
+	tagOrder?: string[];
 
 	system?: string;
 	seed?: number;

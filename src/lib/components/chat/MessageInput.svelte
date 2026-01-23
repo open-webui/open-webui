@@ -156,6 +156,7 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
+		nativeWebSearchEnabled,
 		codeInterpreterEnabled
 	});
 

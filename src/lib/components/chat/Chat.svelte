@@ -215,6 +215,7 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
+		nativeWebSearchEnabled = false;
 
 		const storageChatInput = sessionStorage.getItem(
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
@@ -238,6 +239,7 @@
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
+						nativeWebSearchEnabled = input.nativeWebSearchEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
 				} catch (e) {}
@@ -298,6 +300,7 @@
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
+		nativeWebSearchEnabled = false;
 		codeInterpreterEnabled = false;
 
 		if (selectedModelIds.filter((id) => id).length > 0) {
@@ -346,6 +349,18 @@
 
 				if (model.info?.meta?.capabilities?.['code_interpreter']) {
 					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
+				}
+
+				// Native web search is always available (not dependent on capabilities)
+				nativeWebSearchEnabled = model.info.meta.defaultFeatureIds.includes('native_web_search');
+
+				// Mutual exclusion: if native web search is enabled by default, disable web search
+				if (nativeWebSearchEnabled) {
+					webSearchEnabled = false;
+				}
+				// Mutual exclusion: if web search is enabled by default, disable native web search
+				if (webSearchEnabled) {
+					nativeWebSearchEnabled = false;
 				}
 			}
 		}
@@ -626,6 +641,7 @@
 			selectedFilterIds = [];
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
+			nativeWebSearchEnabled = false;
 			codeInterpreterEnabled = false;
 
 			try {
@@ -638,6 +654,7 @@
 					selectedFilterIds = input.selectedFilterIds;
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
+					nativeWebSearchEnabled = input.nativeWebSearchEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
 				}
 			} catch (e) {}
@@ -2417,6 +2434,22 @@
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
+
+			// Save feature toggle states to the new chat's draft for persistence across page refresh
+			// Use sessionStorage directly to ensure immediate save (saveDraft has 500ms delay)
+			sessionStorage.setItem(
+				`chat-input-${_chatId}`,
+				JSON.stringify({
+					prompt: '',
+					files: [],
+					selectedToolIds,
+					selectedFilterIds,
+					webSearchEnabled,
+					imageGenerationEnabled,
+					nativeWebSearchEnabled,
+					codeInterpreterEnabled
+				})
+			);
 
 			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 

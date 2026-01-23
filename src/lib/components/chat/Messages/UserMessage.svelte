@@ -52,17 +52,10 @@
 
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 
-	// Use a more efficient shallow comparison for message updates
-	let message = history.messages[messageId];
-	let lastMessageRef = history.messages[messageId];
-
-	$: if (history.messages && history.messages[messageId]) {
-		const currentMessage = history.messages[messageId];
-		// Only update if the reference changed or key properties changed
-		if (currentMessage !== lastMessageRef ||
-			currentMessage.content !== message.content) {
-			message = currentMessage;
-			lastMessageRef = currentMessage;
+	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	$: if (history.messages) {
+		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
+			message = JSON.parse(JSON.stringify(history.messages[messageId]));
 		}
 	}
 

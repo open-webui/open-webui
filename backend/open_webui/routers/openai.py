@@ -64,6 +64,20 @@ log = logging.getLogger(__name__)
 
 ##########################################
 #
+# RESPONSES API - store: false 默认启用
+# 经测试发现 store: false 是让思考链正常显示的关键参数
+# 已移除前端调试开关，直接在代码中设置默认值
+#
+##########################################
+
+# store: False - 默认设置为 False，这是让思考链正常显示的关键
+RESPONSES_DEFAULT_STORE = False
+
+##########################################
+
+
+##########################################
+#
 # Utility functions
 #
 ##########################################
@@ -262,6 +276,12 @@ def convert_tools_to_responses_format(tools):
         tool_type = tool.get("type", "function")
         function_spec = tool.get("function")
 
+        # Native web_search tools: pass through as-is for maximum compatibility
+        # Don't add default search_context_size to avoid schema errors with proxies that don't support it
+        if tool_type == "web_search":
+            converted.append(dict(tool))
+            continue
+
         # Already in Responses format; drop nested function if present.
         if "name" in tool:
             converted_tool = {k: v for k, v in tool.items() if k != "function"}
@@ -369,33 +389,33 @@ def _stringify_tool_call_args(arguments):
 def convert_to_responses_payload(chat_payload: dict) -> dict:
     """
     Convert Chat Completions API format to Responses API format.
-    
+
     Chat Completions:
         {"messages": [...], "model": "...", "stream": true, ...}
-    
+
     Responses API:
         {"input": [...], "model": "...", "stream": true, ...}
-    
+
     Uses EasyInputMessageParam format which supports all roles (user, assistant, system, developer)
     and allows simple string content for easier compatibility.
     """
     responses_payload = {}
-    
+
     # Model is the same
     if "model" in chat_payload:
         responses_payload["model"] = chat_payload["model"]
-    
+
     # Convert messages to input items using EasyInputMessageParam format
     messages = chat_payload.get("messages", [])
     input_items = []
-    
+
     for msg in messages:
         role = msg.get("role", "user")
         content = msg.get("content", "")
-        
+
         # DEBUG: Log each message being processed
         log.info(f"[DEBUG RESPONSES PAYLOAD] Processing message role={role}, has_content={bool(content)}, has_tool_calls={bool(msg.get('tool_calls'))}, tool_call_id={msg.get('tool_call_id')}")
-        
+
         if role == "system":
             # System messages become instructions in Responses API
             responses_payload["instructions"] = content if isinstance(content, str) else str(content)
@@ -422,16 +442,23 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
         else:
             # Map role: assistant -> assistant, user -> user, anything else -> user
             mapped_role = role if role in ["user", "assistant"] else "user"
-            
+
             # Build the message item using EasyInputMessageParam format
-            # All roles (including assistant) can use simple string content
             if isinstance(content, str):
-                # Simple text content - use direct string
-                item = {
-                    "type": "message",
-                    "role": mapped_role,
-                    "content": content
-                }
+                # User messages: use input_text structure (most proxies expect this format)
+                if mapped_role == "user":
+                    item = {
+                        "type": "message",
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": content}]
+                    }
+                else:
+                    # Assistant messages: use simple string content
+                    item = {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": content
+                    }
             elif isinstance(content, list):
                 # Multimodal content - need to build content array
                 # For user messages, use input_text and input_image types
@@ -514,7 +541,7 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
                     )
     
     responses_payload["input"] = input_items
-    
+
     # Copy other common parameters
     if "stream" in chat_payload:
         responses_payload["stream"] = chat_payload["stream"]
@@ -524,42 +551,56 @@ def convert_to_responses_payload(chat_payload: dict) -> dict:
         responses_payload["temperature"] = chat_payload["temperature"]
     if "top_p" in chat_payload:
         responses_payload["top_p"] = chat_payload["top_p"]
-    
+
+    # 设置 store 参数 - 默认为 False（让思考链正常显示的关键参数）
+    # 但允许用户通过高级参数覆盖（只接受 bool 类型，避免发送 null）
+    store_value = chat_payload.get("store")
+    responses_payload["store"] = store_value if isinstance(store_value, bool) else RESPONSES_DEFAULT_STORE
+    log.info(f"[RESPONSES API] store = {responses_payload['store']}")
+
     # Handle reasoning parameters - convert reasoning_effort to Responses API format
     reasoning_effort = chat_payload.get("reasoning_effort") or chat_payload.get("reasoning", {}).get("effort")
+    reasoning_summary = chat_payload.get("reasoning", {}).get("summary") or "auto"  # None/空字符串回退到 "auto"
     model_name = chat_payload.get("model", "")
     is_reasoning_model = is_openai_reasoning_model(model_name)
 
     if reasoning_effort:
         # Responses API format: reasoning.effort and reasoning.summary are inside the same object
-        responses_payload["reasoning"] = {
-            "effort": reasoning_effort.lower(),
-            "summary": "detailed"  # Options: 'concise', 'detailed', 'auto'
-        }
+        reasoning_obj = {"effort": reasoning_effort.lower(), "summary": reasoning_summary}
+        responses_payload["reasoning"] = reasoning_obj
+        log.info(f"[RESPONSES API] reasoning.effort = {reasoning_effort}, reasoning.summary = {reasoning_summary}")
+
     elif is_reasoning_model:
-        # For reasoning models without explicit reasoning_effort, still enable summary to show thinking
-        responses_payload["reasoning"] = {
-            "summary": "detailed"  # Options: 'concise', 'detailed', 'auto'
-        }
-        log.info(f"[RESPONSES API] Auto-enabled reasoning.summary for reasoning model: {model_name}")
-    
+        # For reasoning models without explicit reasoning_effort, still send summary
+        reasoning_obj = {"summary": reasoning_summary}
+        responses_payload["reasoning"] = reasoning_obj
+        log.info(f"[RESPONSES API] Auto-enabled reasoning for reasoning model: {model_name}, summary = {reasoning_summary}")
+
     # Convert tools/tool_choice from Chat Completions format to Responses format.
     if "tools" in chat_payload:
-        responses_payload["tools"] = convert_tools_to_responses_format(
-            chat_payload["tools"]
-        )
+        tools = convert_tools_to_responses_format(chat_payload["tools"])
+        responses_payload["tools"] = tools
+
+    # Handle tool_choice
     if "tool_choice" in chat_payload:
         responses_payload["tool_choice"] = convert_tool_choice_to_responses_format(
             chat_payload["tool_choice"]
         )
-    
+    elif isinstance(responses_payload.get("tools"), list):
+        has_web_search = any(
+            isinstance(tool, dict) and tool.get("type") == "web_search"
+            for tool in responses_payload["tools"]
+        )
+        if has_web_search:
+            responses_payload["tool_choice"] = "auto"
+
     # DEBUG: Log the last few input items to see function_call and function_call_output
     if len(input_items) > 5:
         last_items = input_items[-5:]
     else:
         last_items = input_items
     log.info(f"[DEBUG RESPONSES PAYLOAD] Last {len(last_items)} input items: {json.dumps(last_items, ensure_ascii=False, default=str)[:1500]}")
-    
+
     log.info(f"Responses API payload: {json.dumps(responses_payload, ensure_ascii=False, default=str)[:2000]}")
     return responses_payload
 
@@ -615,6 +656,7 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
     tool_call_has_delta = set()
     content_started = False
     reasoning_source = None
+    reasoning_streamed = False  # Track if reasoning was already streamed via delta events
 
     def get_tool_call_index(tool_call_id, provided_index=None):
         nonlocal next_tool_call_index
@@ -716,6 +758,10 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                         # Debug: log event types
                         log.info(f"Responses API event: type={event_type}")
 
+                        # Debug: log all reasoning-related events
+                        if "reasoning" in event_type.lower():
+                            log.info(f"[REASONING EVENT DEBUG] Full event: {json.dumps(event, default=str)[:500]}")
+
                         # Handle text delta (main response content)
                         if event_type == "response.output_text.delta":
                             delta_text = event.get("delta", "")
@@ -725,20 +771,36 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                         
                         # Handle reasoning/thinking delta - just forward as reasoning_content
                         # middleware.py will handle the <details> tag wrapping
-                        elif event_type in ("response.reasoning_summary_text.delta", "response.reasoning.delta"):
+                        elif event_type in ("response.reasoning_summary_text.delta", "response.reasoning.delta", "response.reasoning_summary_part.delta"):
                             reasoning_text = event.get("delta", "")
-                            log.info(f"[REASONING DEBUG] Received reasoning delta: type={event_type}, text={reasoning_text[:100]}")
-                            if reasoning_text and not content_started:
+                            # Also try to get text from nested structure
+                            if not reasoning_text and isinstance(event.get("delta"), dict):
+                                reasoning_text = event.get("delta", {}).get("text", "")
+                            log.info(f"[REASONING DEBUG] Received reasoning delta: type={event_type}, text={reasoning_text[:100] if reasoning_text else 'empty'}")
+                            if reasoning_text:
+                                reasoning_streamed = True  # Mark that we've streamed reasoning via delta events
                                 event_source = (
                                     "summary"
-                                    if event_type == "response.reasoning_summary_text.delta"
+                                    if event_type in ("response.reasoning_summary_text.delta", "response.reasoning_summary_part.delta")
                                     else "reasoning"
                                 )
                                 if reasoning_source is None:
                                     reasoning_source = event_source
+                                # Only skip if we already have a different reasoning source
+                                # (e.g., don't mix summary and full reasoning)
                                 if reasoning_source != event_source:
                                     continue
                                 yield f"data: {json.dumps(create_chunk(reasoning_content=reasoning_text))}\n\n"
+
+                        # Handle reasoning summary part added - some APIs send this instead of delta
+                        elif event_type == "response.reasoning_summary_part.added":
+                            part = event.get("part", {})
+                            if isinstance(part, dict):
+                                reasoning_text = part.get("text", "")
+                                if reasoning_text:
+                                    log.info(f"[REASONING DEBUG] Received reasoning_summary_part.added: text={reasoning_text[:100]}")
+                                    reasoning_streamed = True
+                                    yield f"data: {json.dumps(create_chunk(reasoning_content=reasoning_text))}\n\n"
 
                         elif event_type == "response.output_item.added":
                             item = event.get("item", {}) or {}
@@ -774,6 +836,61 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                                 item = {}
                             # Debug: log the full item to see its structure
                             log.info(f"[TOOL DEBUG] output_item.done - item: {json.dumps(item, default=str)[:1000]}")
+
+                            # Handle reasoning items - fallback for APIs that don't stream reasoning_summary_text.delta
+                            item_type = item.get("type", "")
+                            if item_type == "reasoning":
+                                # Only emit reasoning from here if we didn't already stream it via delta events
+                                if not reasoning_streamed:
+                                    # Try multiple possible fields for reasoning content
+                                    reasoning_emitted = False
+
+                                    # Try summary field first (standard OpenAI format)
+                                    summary_list = item.get("summary", [])
+                                    if isinstance(summary_list, list) and summary_list:
+                                        log.info(f"[REASONING DEBUG] Fallback: Found reasoning summary in output_item.done: {len(summary_list)} items")
+                                        for summary_item in summary_list:
+                                            if isinstance(summary_item, dict):
+                                                summary_text = summary_item.get("text", "")
+                                                if summary_text:
+                                                    log.info(f"[REASONING DEBUG] Fallback: Emitting reasoning from summary: {summary_text[:100]}")
+                                                    yield f"data: {json.dumps(create_chunk(reasoning_content=summary_text))}\n\n"
+                                                    reasoning_emitted = True
+                                            elif isinstance(summary_item, str) and summary_item:
+                                                log.info(f"[REASONING DEBUG] Fallback: Emitting reasoning from summary (str): {summary_item[:100]}")
+                                                yield f"data: {json.dumps(create_chunk(reasoning_content=summary_item))}\n\n"
+                                                reasoning_emitted = True
+
+                                    # Try content field (some APIs use this)
+                                    if not reasoning_emitted:
+                                        content_list = item.get("content", [])
+                                        if isinstance(content_list, list) and content_list:
+                                            log.info(f"[REASONING DEBUG] Fallback: Found reasoning content in output_item.done: {len(content_list)} items")
+                                            for content_item in content_list:
+                                                if isinstance(content_item, dict):
+                                                    content_text = content_item.get("text", "") or content_item.get("content", "")
+                                                    if content_text:
+                                                        log.info(f"[REASONING DEBUG] Fallback: Emitting reasoning from content: {content_text[:100]}")
+                                                        yield f"data: {json.dumps(create_chunk(reasoning_content=content_text))}\n\n"
+                                                        reasoning_emitted = True
+                                                elif isinstance(content_item, str) and content_item:
+                                                    log.info(f"[REASONING DEBUG] Fallback: Emitting reasoning from content (str): {content_item[:100]}")
+                                                    yield f"data: {json.dumps(create_chunk(reasoning_content=content_item))}\n\n"
+                                                    reasoning_emitted = True
+                                        elif isinstance(content_list, str) and content_list:
+                                            log.info(f"[REASONING DEBUG] Fallback: Emitting reasoning from content string: {content_list[:100]}")
+                                            yield f"data: {json.dumps(create_chunk(reasoning_content=content_list))}\n\n"
+                                            reasoning_emitted = True
+
+                                    # Try text field directly (some APIs put it here)
+                                    if not reasoning_emitted:
+                                        text_field = item.get("text", "")
+                                        if text_field:
+                                            log.info(f"[REASONING DEBUG] Fallback: Emitting reasoning from text field: {text_field[:100]}")
+                                            yield f"data: {json.dumps(create_chunk(reasoning_content=text_field))}\n\n"
+                                            reasoning_emitted = True
+                                continue
+
                             tool_call_id = _tool_call_id_from_item(item, event)
                             if tool_call_id and tool_call_id in tool_call_has_delta:
                                 continue
@@ -791,12 +908,50 @@ async def responses_stream_to_chat_completions_stream(response: aiohttp.ClientRe
                         # Handle completion (OpenAI uses "response.completed", not "response.done")
                         elif event_type in ("response.completed", "response.done"):
                             # Log full event for debugging
-                            log.info(f"Completion event received: {json.dumps(event, default=str)[:1000]}")
+                            log.info(f"Completion event received: {json.dumps(event, default=str)[:2000]}")
 
                             # Extract usage info from completion event
                             response_data = event.get("response", {}) or {}
                             if not isinstance(response_data, dict):
                                 response_data = {}
+
+                            # Last chance fallback: try to extract reasoning from output array if not already streamed
+                            if not reasoning_streamed:
+                                output_array = response_data.get("output", [])
+                                if isinstance(output_array, list):
+                                    for output_item in output_array:
+                                        if isinstance(output_item, dict) and output_item.get("type") == "reasoning":
+                                            log.info(f"[REASONING DEBUG] Final fallback: Found reasoning in response.completed output: {json.dumps(output_item, default=str)[:500]}")
+                                            # Try summary field
+                                            summary_list = output_item.get("summary", [])
+                                            if isinstance(summary_list, list) and summary_list:
+                                                for summary_item in summary_list:
+                                                    if isinstance(summary_item, dict):
+                                                        summary_text = summary_item.get("text", "")
+                                                        if summary_text:
+                                                            log.info(f"[REASONING DEBUG] Final fallback: Emitting reasoning: {summary_text[:100]}")
+                                                            yield f"data: {json.dumps(create_chunk(reasoning_content=summary_text))}\n\n"
+                                                    elif isinstance(summary_item, str) and summary_item:
+                                                        yield f"data: {json.dumps(create_chunk(reasoning_content=summary_item))}\n\n"
+                                            # Try content field
+                                            content_list = output_item.get("content", [])
+                                            if isinstance(content_list, list) and content_list:
+                                                for content_item in content_list:
+                                                    if isinstance(content_item, dict):
+                                                        content_text = content_item.get("text", "") or content_item.get("content", "")
+                                                        if content_text:
+                                                            log.info(f"[REASONING DEBUG] Final fallback: Emitting reasoning from content: {content_text[:100]}")
+                                                            yield f"data: {json.dumps(create_chunk(reasoning_content=content_text))}\n\n"
+                                                    elif isinstance(content_item, str) and content_item:
+                                                        yield f"data: {json.dumps(create_chunk(reasoning_content=content_item))}\n\n"
+                                            elif isinstance(content_list, str) and content_list:
+                                                yield f"data: {json.dumps(create_chunk(reasoning_content=content_list))}\n\n"
+                                            # Try text field
+                                            text_field = output_item.get("text", "")
+                                            if text_field:
+                                                log.info(f"[REASONING DEBUG] Final fallback: Emitting reasoning from text: {text_field[:100]}")
+                                                yield f"data: {json.dumps(create_chunk(reasoning_content=text_field))}\n\n"
+
                             usage = response_data.get("usage", {})
 
                             # Also try to get usage directly from event (some APIs put it there)
@@ -1097,6 +1252,137 @@ async def send_get_request(url, key=None, user: UserModel = None, timeout_second
         return None
 
 
+def _generate_model_list_urls(base_url: str) -> list[str]:
+    """
+    Generate a list of possible model list endpoint URLs based on the base URL.
+    Different API providers use different endpoint patterns:
+    - Standard OpenAI: /v1/models
+    - Some providers: /models (without version prefix)
+    - Google AI Studio: /v1beta/models
+    - Some proxies: base_url already includes /v1, so just append /models
+
+    Args:
+        base_url: The base URL configured for the API endpoint
+
+    Returns:
+        List of URLs to try, in order of preference
+    """
+    urls = []
+    base_url = base_url.rstrip("/")
+
+    # Primary: append /models to the configured base URL
+    urls.append(f"{base_url}/models")
+
+    # Parse the URL to understand its structure
+    parsed = urlparse(base_url)
+    path = parsed.path.rstrip("/")
+
+    # If the path ends with a version prefix (v1, v1beta, etc.),
+    # also try without the version prefix and with different versions
+    if path.endswith("/v1") or path == "/v1":
+        # Try /v1beta/models for Google AI Studio compatibility
+        base_without_version = base_url.rsplit("/v1", 1)[0]
+        urls.append(f"{base_without_version}/v1beta/models")
+        # Try without version prefix
+        urls.append(f"{base_without_version}/models")
+    elif path.endswith("/v1beta") or path == "/v1beta":
+        # Try /v1/models as fallback
+        base_without_version = base_url.rsplit("/v1beta", 1)[0]
+        urls.append(f"{base_without_version}/v1/models")
+        urls.append(f"{base_without_version}/models")
+    elif not any(path.endswith(v) for v in ["/v1", "/v1beta", "/v2"]):
+        # No version in path, try adding version prefixes
+        urls.append(f"{base_url}/v1/models")
+        urls.append(f"{base_url}/v1beta/models")
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_urls = []
+    for url in urls:
+        if url not in seen:
+            seen.add(url)
+            unique_urls.append(url)
+
+    return unique_urls
+
+
+async def send_get_request_with_fallback(
+    base_url: str,
+    key: str = None,
+    user: UserModel = None,
+    timeout_seconds: float = None
+) -> dict | None:
+    """
+    Try to fetch model list from multiple possible endpoints.
+    This improves compatibility with different API providers that may use
+    different endpoint patterns for their model list API.
+
+    Args:
+        base_url: The base URL configured for the API endpoint
+        key: API key for authentication
+        user: User model for forwarding user info headers
+        timeout_seconds: Request timeout in seconds
+
+    Returns:
+        The model list response dict, or None if all endpoints fail
+    """
+    urls_to_try = _generate_model_list_urls(base_url)
+    timeout = aiohttp.ClientTimeout(total=timeout_seconds or AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+
+    last_error = None
+    tried_urls = []
+
+    try:
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            headers = {
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+            }
+
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                headers = include_user_info_headers(headers, user)
+
+            for url in urls_to_try:
+                tried_urls.append(url)
+                try:
+                    async with session.get(
+                        url,
+                        headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as response:
+                        if response.status == 200:
+                            result = await _safe_response_json(response)
+                            if result is not None:
+                                # Validate that we got a valid model list response
+                                if isinstance(result, dict) and "data" in result:
+                                    log.debug(f"Successfully fetched models from {url}")
+                                    return result
+                                elif isinstance(result, list):
+                                    # Some APIs return a list directly
+                                    log.debug(f"Successfully fetched models (list format) from {url}")
+                                    return {"data": result, "object": "list"}
+                                elif isinstance(result, dict) and "models" in result:
+                                    # Some APIs use "models" key instead of "data"
+                                    log.debug(f"Successfully fetched models (models key) from {url}")
+                                    return {"data": result["models"], "object": "list"}
+                            log.debug(f"Invalid response format from {url}: {type(result)}")
+                        else:
+                            log.debug(f"Model list request to {url} returned HTTP {response.status}")
+                except asyncio.TimeoutError:
+                    log.debug(f"Timeout fetching models from {url}")
+                    last_error = "timeout"
+                except Exception as e:
+                    log.debug(f"Error fetching models from {url}: {e}")
+                    last_error = str(e)
+
+    except Exception as e:
+        log.error(f"Session error while fetching models from {base_url}: {e}")
+        return None
+
+    # All URLs failed
+    log.warning(f"Failed to fetch models from {base_url}. Tried URLs: {tried_urls}. Last error: {last_error}")
+    return None
+
+
 async def cleanup_response(
     response: Optional[aiohttp.ClientResponse],
     session: Optional[aiohttp.ClientSession],
@@ -1197,6 +1483,17 @@ THINKING_NOT_SUPPORTED_KEYWORDS = (
     "enable_thinking",
 )
 
+ENABLE_THINKING_SCHEMA_KEYWORDS = (
+    "schema",
+    "unknown field",
+    "unrecognized",
+    "unexpected",
+    "invalid request",
+    "invalid value",
+    "extra fields",
+    "not allowed",
+)
+
 
 def _is_thinking_not_supported_error(response) -> bool:
     """Check if the error response indicates thinking/reasoning is not supported."""
@@ -1204,6 +1501,18 @@ def _is_thinking_not_supported_error(response) -> bool:
     if not error_text:
         return False
     return any(keyword in error_text for keyword in THINKING_NOT_SUPPORTED_KEYWORDS)
+
+
+def _is_enable_thinking_schema_error(response) -> bool:
+    """Check if the error response looks like a schema error tied to enable_thinking."""
+    error_text = _error_text_from_response(response).lower()
+    if not error_text:
+        return False
+    if "enable_thinking" in error_text:
+        return True
+    if any(keyword in error_text for keyword in ENABLE_THINKING_SCHEMA_KEYWORDS):
+        return True
+    return False
 
 
 def _extract_sse_error_message(line: bytes) -> Optional[str]:
@@ -1653,9 +1962,10 @@ async def get_all_models_responses(request: Request, user: UserModel, timeout_se
         if (str(idx) not in request.app.state.config.OPENAI_API_CONFIGS) and (
             url not in request.app.state.config.OPENAI_API_CONFIGS  # Legacy support
         ):
+            # Use fallback mechanism to try multiple endpoint patterns
             request_tasks.append(
-                send_get_request(
-                    f"{url}/models",
+                send_get_request_with_fallback(
+                    url,
                     request.app.state.config.OPENAI_API_KEYS[idx],
                     user=user,
                     timeout_seconds=timeout_seconds,
@@ -1674,8 +1984,15 @@ async def get_all_models_responses(request: Request, user: UserModel, timeout_se
 
             if enable:
                 if len(model_ids) == 0:
-                    # No models specified, skip fetching (user should add models manually)
-                    request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
+                    # No models specified, try to fetch from API with fallback mechanism
+                    request_tasks.append(
+                        send_get_request_with_fallback(
+                            url,
+                            request.app.state.config.OPENAI_API_KEYS[idx],
+                            user=user,
+                            timeout_seconds=timeout_seconds,
+                        )
+                    )
                 else:
                     model_list = {
                         "object": "list",
@@ -1968,28 +2285,154 @@ async def verify_connection(
 
                     return response_data
             else:
-                async with session.get(
-                    f"{url}/models",
-                    headers=headers,
-                    cookies=cookies,
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as r:
+                # Use fallback mechanism to try multiple endpoint patterns
+                urls_to_try = _generate_model_list_urls(url)
+                last_error = None
+                last_status = None
+                last_response = None
+
+                for model_url in urls_to_try:
                     try:
-                        response_data = await r.json()
-                    except Exception:
-                        response_data = await r.text()
+                        async with session.get(
+                            model_url,
+                            headers=headers,
+                            cookies=cookies,
+                            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                        ) as r:
+                            try:
+                                response_data = await r.json()
+                            except Exception:
+                                response_data = await r.text()
 
-                    if r.status != 200:
-                        if isinstance(response_data, (dict, list)):
-                            return JSONResponse(
-                                status_code=r.status, content=response_data
-                            )
-                        else:
-                            return PlainTextResponse(
-                                status_code=r.status, content=response_data
+                            if r.status == 200:
+                                # Validate response format
+                                if isinstance(response_data, dict) and "data" in response_data:
+                                    log.debug(f"Successfully verified connection via {model_url}")
+                                    return response_data
+                                elif isinstance(response_data, list):
+                                    log.debug(f"Successfully verified connection (list format) via {model_url}")
+                                    return {"data": response_data, "object": "list"}
+                                elif isinstance(response_data, dict) and "models" in response_data:
+                                    log.debug(f"Successfully verified connection (models key) via {model_url}")
+                                    return {"data": response_data["models"], "object": "list"}
+                                # If response format is unexpected, continue to next URL
+                                log.debug(f"Unexpected response format from {model_url}")
+                            else:
+                                log.debug(f"Verify request to {model_url} returned HTTP {r.status}")
+                                last_status = r.status
+                                last_response = response_data
+                    except Exception as e:
+                        log.debug(f"Error verifying connection via {model_url}: {e}")
+                        last_error = str(e)
+
+                # All /models endpoints failed, try chat/completions as fallback
+                # Many API providers only implement chat endpoints without /models
+                log.debug("All /models endpoints failed, trying chat/completions fallback")
+                try:
+                    chat_url = f"{url.rstrip('/')}/chat/completions"
+                    test_payload = {
+                        "model": "gpt-3.5-turbo",  # Use a common model name as placeholder
+                        "messages": [{"role": "user", "content": "hi"}],
+                        "max_tokens": 1,
+                        "stream": False,
+                    }
+                    async with session.post(
+                        chat_url,
+                        headers=headers,
+                        cookies=cookies,
+                        json=test_payload,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as r:
+                        try:
+                            response_data = await r.json()
+                        except Exception:
+                            response_data = await r.text()
+
+                        # Check if the response indicates the API is working
+                        # Even error responses like "model not found" mean the API is reachable
+                        if r.status == 200:
+                            # Some APIs return HTTP 200 even for errors, with custom error format
+                            # e.g., {"code": -1, "msg": "apikey error"} or {"error": {...}}
+                            # If we got a JSON response, the API is reachable
+                            if isinstance(response_data, dict):
+                                # Check for non-standard error formats (code != 0, or has error/msg field)
+                                has_error_code = response_data.get("code") is not None and response_data.get("code") != 0
+                                has_error_field = "error" in response_data or "msg" in response_data
+                                has_choices = "choices" in response_data  # Standard success response
+
+                                if has_choices or has_error_code or has_error_field or response_data:
+                                    log.debug(f"Successfully verified connection via chat/completions (got JSON response)")
+                                    return {
+                                        "data": [],
+                                        "object": "list",
+                                        "verified_via": "chat_completions",
+                                        "message": "Connection verified via chat/completions. Please add model IDs manually."
+                                    }
+                            else:
+                                # Got some response, API is reachable
+                                log.debug(f"Successfully verified connection via chat/completions")
+                                return {
+                                    "data": [],
+                                    "object": "list",
+                                    "verified_via": "chat_completions",
+                                    "message": "Connection verified via chat/completions. Please add model IDs manually."
+                                }
+                        elif r.status in (400, 401, 403, 404, 422):
+                            # These status codes indicate the API is reachable but:
+                            # 400/422: Bad request (model not found, invalid params, etc.)
+                            # 401/403: Auth issues (but API is reachable)
+                            # 404: Model not found (API is working)
+                            error_msg = ""
+                            if isinstance(response_data, dict):
+                                error_msg = response_data.get("error", {})
+                                if isinstance(error_msg, dict):
+                                    error_msg = error_msg.get("message", "")
+                                elif not isinstance(error_msg, str):
+                                    error_msg = str(error_msg)
+
+                            # Check if it's a "model not found" type error - this means API works!
+                            model_not_found_keywords = [
+                                "model", "not found", "does not exist", "invalid",
+                                "unknown", "unsupported", "no such"
+                            ]
+                            is_model_error = any(
+                                kw in error_msg.lower() for kw in model_not_found_keywords
                             )
 
-                    return response_data
+                            if is_model_error or r.status in (400, 404, 422):
+                                log.debug(f"Connection verified via chat/completions (model error response)")
+                                return {
+                                    "data": [],
+                                    "object": "list",
+                                    "verified_via": "chat_completions",
+                                    "message": "Connection verified. The /models endpoint is not available, please add model IDs manually."
+                                }
+                            elif r.status in (401, 403):
+                                # Auth error - return the original error
+                                log.debug(f"Auth error from chat/completions: {r.status}")
+                                if isinstance(response_data, (dict, list)):
+                                    return JSONResponse(status_code=r.status, content=response_data)
+                                else:
+                                    return PlainTextResponse(status_code=r.status, content=str(response_data))
+                except Exception as e:
+                    log.debug(f"Error verifying connection via chat/completions: {e}")
+
+                # All methods failed, return the last error from /models attempts
+                if last_status and last_response:
+                    if isinstance(last_response, (dict, list)):
+                        return JSONResponse(
+                            status_code=last_status, content=last_response
+                        )
+                    else:
+                        return PlainTextResponse(
+                            status_code=last_status, content=last_response
+                        )
+
+                # No response at all
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to verify connection. Last error: {last_error or 'Unknown'}"
+                )
 
         except aiohttp.ClientError as e:
             # ClientError covers all aiohttp requests issues
@@ -2620,6 +3063,8 @@ async def generate_chat_completion(
     response = None
     retry_without_tools = False
     thinking_fallback_triggered = False  # Track if thinking was disabled during retry
+    responses_thinking_fallback_triggered = False  # Track if enable_thinking was removed during retry
+    responses_enable_thinking_injected = use_responses_api and payload_dict.get("enable_thinking") is True
 
     try:
         session = aiohttp.ClientSession(
@@ -2684,6 +3129,48 @@ async def generate_chat_completion(
                     # Retry succeeded, clear the error response from first attempt
                     response = None
                     log.info("[THINKING FALLBACK] Retry succeeded, thinking_fallback_triggered=True")
+
+            # Responses API fallback: retry without enable_thinking if schema-style error occurs
+            if (
+                response is not None
+                and responses_enable_thinking_injected
+                and r.status in (400, 422)
+                and _is_enable_thinking_schema_error(response)
+            ):
+                log.warning(
+                    "[RESPONSES THINKING FALLBACK] Schema error (status=%s), retrying without enable_thinking. Error: %s",
+                    r.status,
+                    _error_text_from_response(response)[:200],
+                )
+                await cleanup_response(r, session)
+
+                payload_dict = copy.deepcopy(payload_dict_base)
+                payload_dict.pop("enable_thinking", None)
+                responses_enable_thinking_injected = False
+                responses_thinking_fallback_triggered = True
+                retry_payload = json.dumps(payload_dict)
+
+                session = aiohttp.ClientSession(
+                    trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+                )
+                r = await session.request(
+                    method="POST",
+                    url=request_url,
+                    data=retry_payload,
+                    headers=headers,
+                    cookies=cookies,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
+
+                if r.status >= 400:
+                    try:
+                        response = await r.json()
+                    except Exception as e:
+                        log.error(f"Error parsing retry error response: {e}")
+                        response = await r.text()
+                else:
+                    response = None
+                    log.info("[RESPONSES THINKING FALLBACK] Retry succeeded, responses_thinking_fallback_triggered=True")
 
             # Retry with alternate web search tool types if native web search is enabled
             if (

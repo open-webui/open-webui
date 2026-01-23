@@ -70,6 +70,13 @@
 		num_batch: null,
 		num_thread: null,
 		num_gpu: null
+		// Responses API Debug Switches - 已注释，store: false 已设为默认
+		// responses_enable_thinking: null,
+		// responses_reasoning_summary: null,
+		// responses_store: null,
+		// responses_tool_choice: null,
+		// responses_search_context_size: null,
+		// responses_input_structure: null
 	};
 
 	export let params = defaultParams;
@@ -1460,6 +1467,8 @@
 			{/if}
 		</div>
 	{/if}
+
+	<!-- Responses API Debug Switches 已移除 - store: false 已在后端设为默认值 -->
 
 	<!-- 25. think (Ollama) -->
 	<div class=" py-0.5 w-full justify-between">

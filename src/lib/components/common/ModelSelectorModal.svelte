@@ -46,6 +46,7 @@
 	let activeTag: FilterTag = 'all';
 	const filterTags: { key: FilterTag; label: string }[] = [
 		{ key: 'all', label: '全部' },
+		{ key: 'selected', label: '已选' },
 		{ key: 'reasoning', label: '推理' },
 		{ key: 'vision', label: '视觉' },
 		{ key: 'webSearch', label: '联网' },
@@ -53,8 +54,7 @@
 		{ key: 'free', label: '免费' },
 		{ key: 'imageGen', label: '生图' },
 		{ key: 'embedding', label: '嵌入' },
-		{ key: 'rerank', label: '重排' },
-		{ key: 'selected', label: '已选' }
+		{ key: 'rerank', label: '重排' }
 	];
 
 	$: if (show) {

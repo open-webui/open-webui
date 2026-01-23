@@ -952,6 +952,7 @@ body {
 	font-size: 0.875rem;
 	line-height: 1.4;
 	gap: 10px;
+	justify-content: center;
 }
 
 [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-title] {
@@ -962,6 +963,7 @@ body {
 
 [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-content] {
 	min-width: 0;
+	text-align: center;
 }
 
 [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-description] {

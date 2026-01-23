@@ -53,6 +53,7 @@
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
+	export let nativeWebSearchEnabled = false;
 
 	export let onUpload: Function = (e) => {};
 	export let onSelect = (e) => {};
@@ -210,6 +211,7 @@
 					bind:imageGenerationEnabled
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
+					bind:nativeWebSearchEnabled
 					bind:atSelectedModel
 					bind:showCommands
 					{toolServers}

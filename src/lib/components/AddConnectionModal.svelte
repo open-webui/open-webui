@@ -567,20 +567,6 @@
 				<!-- 高级设置 -->
 				<CollapsibleSection title={$i18n.t('Advanced Settings')} open={false}>
 					<div class="flex flex-col gap-3">
-						{#if !direct}
-							<!-- 连接类型 -->
-							<div class="flex items-center justify-between">
-								<span class="text-sm">{$i18n.t('Connection Type')}</span>
-								<button
-									type="button"
-									class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg"
-									on:click={() => (connectionType = connectionType === 'local' ? 'external' : 'local')}
-								>
-									{connectionType === 'local' ? $i18n.t('Local') : $i18n.t('External')}
-								</button>
-							</div>
-						{/if}
-
 						{#if !ollama && !direct}
 							<!-- Provider Type -->
 							<div class="flex items-center justify-between">
@@ -620,7 +606,7 @@
 										<span class="text-sm">{$i18n.t('Use Responses API')}</span>
 										{#if useResponsesApi}
 											<div class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-												{$i18n.t('Ensure the API supports Responses format')}
+												{$i18n.t('Ensure current API endpoint supports Responses format requests')}
 											</div>
 										{/if}
 									</div>
@@ -643,8 +629,8 @@
 												responsesApiExcludePatterns = responsesApiExcludePatterns.filter((p) => p.name !== e.detail);
 											}}
 										/>
-										<div class="text-xs text-gray-400 mt-1">
-											{$i18n.t('Models containing these keywords will use Chat Completions API instead')}
+										<div class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+											{$i18n.t('Models containing these keywords will keep using Chat Completions API')}
 										</div>
 									</div>
 								{/if}

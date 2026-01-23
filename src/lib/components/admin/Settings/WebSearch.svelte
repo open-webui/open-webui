@@ -79,6 +79,9 @@
 			web: webConfig
 		} as any);
 
+		// Clear cache after save to ensure fresh data on next visit
+		ragConfigCache.set(null);
+
 		// Convert arrays back to strings for display
 		if (Array.isArray(webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST)) {
 			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');

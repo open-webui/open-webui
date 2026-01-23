@@ -745,17 +745,18 @@
 						<div class="flex flex-col gap-4">
 							<Capabilities bind:capabilities />
 
-							{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}
-								{@const availableFeatures = Object.entries(capabilities)
-									.filter(
-										([key, value]) =>
-											value && ['web_search', 'code_interpreter', 'image_generation'].includes(key)
-									)
-									.map(([key, value]) => key)}
+							{#if true}
+								{@const availableFeatures = [
+									...Object.entries(capabilities)
+										.filter(
+											([key, value]) =>
+												value && ['web_search', 'code_interpreter', 'image_generation'].includes(key)
+										)
+										.map(([key, value]) => key),
+									'native_web_search'
+								]}
 
-								{#if availableFeatures.length > 0}
-									<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
-								{/if}
+								<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
 							{/if}
 
 							<!-- TTS Voice -->

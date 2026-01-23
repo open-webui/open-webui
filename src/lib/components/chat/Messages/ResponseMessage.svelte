@@ -68,6 +68,7 @@
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import LazyContent from '$lib/components/common/LazyContent.svelte';
+	import { katexReplaceWithTex, closestKatex } from '$lib/utils/katexCopy';
 
 	interface MessageType {
 		id: string;
@@ -125,20 +126,10 @@
 	export let messageId;
 	export let selectedModels = [];
 
-	// Use a more efficient shallow comparison for message updates
-	// Only deep clone when necessary (for editing)
-	let message: MessageType = history.messages[messageId];
-	let lastMessageRef = history.messages[messageId];
-
-	$: if (history.messages && history.messages[messageId]) {
-		const currentMessage = history.messages[messageId];
-		// Only update if the reference changed or key properties changed
-		if (currentMessage !== lastMessageRef ||
-			currentMessage.content !== message.content ||
-			currentMessage.done !== message.done ||
-			currentMessage.error !== message.error) {
-			message = currentMessage;
-			lastMessageRef = currentMessage;
+	let message: MessageType = JSON.parse(JSON.stringify(history.messages[messageId]));
+	$: if (history.messages) {
+		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
+			message = JSON.parse(JSON.stringify(history.messages[messageId]));
 		}
 	}
 
@@ -644,15 +635,28 @@
 
 	const contentCopyHandler = (e) => {
 		if (contentContainerElement) {
-			e.preventDefault();
-			// Get the selected HTML
 			const selection = window.getSelection();
-			const range = selection.getRangeAt(0);
-			const tempDiv = document.createElement('div');
+			if (!selection || selection.isCollapsed || !e.clipboardData) {
+				return; // default action OK if selection is empty or unchangeable
+			}
 
-			// Remove background, color, and font styles
+			e.preventDefault();
+			const range = selection.getRangeAt(0);
+
+			// Expand selection to include entire KaTeX formula if selection starts/ends within one
+			const startKatex = closestKatex(range.startContainer);
+			if (startKatex) {
+				range.setStartBefore(startKatex);
+			}
+			const endKatex = closestKatex(range.endContainer);
+			if (endKatex) {
+				range.setEndAfter(endKatex);
+			}
+
+			const tempDiv = document.createElement('div');
 			tempDiv.appendChild(range.cloneContents());
 
+			// Style tables for better paste experience
 			tempDiv.querySelectorAll('table').forEach((table) => {
 				table.style.borderCollapse = 'collapse';
 				table.style.width = 'auto';
@@ -664,9 +668,19 @@
 				th.style.padding = '4px 8px';
 			});
 
-			// Put cleaned HTML + plain text into clipboard
+			// Put cleaned HTML into clipboard
 			e.clipboardData.setData('text/html', tempDiv.innerHTML);
-			e.clipboardData.setData('text/plain', selection.toString());
+
+			// Handle LaTeX formulas: convert KaTeX rendered HTML back to LaTeX source
+			const fragment = range.cloneContents();
+			if (fragment.querySelector('.katex-mathml')) {
+				// Use katexReplaceWithTex to replace rendered formulas with LaTeX source
+				// This outputs $...$ for inline and $$...$$ for display math
+				katexReplaceWithTex(fragment);
+				e.clipboardData.setData('text/plain', fragment.textContent);
+			} else {
+				e.clipboardData.setData('text/plain', selection.toString());
+			}
 		}
 	};
 
@@ -863,7 +877,7 @@
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<LazyContent
-									forceVisible={!message.done}
+									forceVisible={!message.done || isLastMessage}
 									minHeight="60px"
 									rootMargin="300px 0px"
 								>

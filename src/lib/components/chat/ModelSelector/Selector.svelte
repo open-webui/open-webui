@@ -36,6 +36,7 @@
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 
 	import ModelItem from './ModelItem.svelte';
+	import TagSortModal from './TagSortModal.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -62,6 +63,7 @@
 	let tagsContainerElement;
 
 	let show = false;
+	let showTagSortModal = false;
 	let tags = [];
 
 	let selectedModel = '';
@@ -328,8 +330,18 @@
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
 				.flatMap((item) => item.model?.tags ?? [])
 				.map((tag) => tag.name.toLowerCase());
-			// Remove duplicates and sort
-			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
+			// Remove duplicates
+			tags = Array.from(new Set(tags));
+			// Apply saved order if exists, otherwise sort alphabetically
+			const savedOrder = $settings?.tagOrder ?? [];
+			tags = tags.sort((a, b) => {
+				const aIndex = savedOrder.indexOf(a);
+				const bIndex = savedOrder.indexOf(b);
+				if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
+				if (aIndex === -1) return 1;
+				if (bIndex === -1) return -1;
+				return aIndex - bIndex;
+			});
 		}
 		// Check Ollama version once on mount, not on every dropdown open
 		setOllamaVersion();
@@ -521,6 +533,33 @@
 									</button>
 								</Tooltip>
 							{/each}
+
+							{#if tags.length > 0}
+								<Tooltip content={$i18n.t('标签排序')}>
+									<button
+										class="min-w-fit outline-none px-1 py-0.5 text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white transition"
+										on:click={(e) => {
+											e.stopPropagation();
+											showTagSortModal = true;
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="1.5"
+											stroke="currentColor"
+											class="size-3.5"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							{/if}
 						</div>
 					</div>
 				{/if}
@@ -619,3 +658,11 @@
 		</slot>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
+
+<TagSortModal
+	bind:show={showTagSortModal}
+	{tags}
+	on:save={(e) => {
+		tags = e.detail.tagOrder;
+	}}
+/>

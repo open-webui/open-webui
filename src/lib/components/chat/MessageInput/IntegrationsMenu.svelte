@@ -224,6 +224,10 @@
 								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
 								on:click={() => {
 									webSearchEnabled = !webSearchEnabled;
+									// Mutual exclusion: disable native web search when enabling web search
+									if (webSearchEnabled) {
+										nativeWebSearchEnabled = false;
+									}
 								}}
 							>
 								<div class="flex-1 truncate">
@@ -247,35 +251,39 @@
 								</div>
 							</button>
 						</Tooltip>
-
-						<Tooltip content={$i18n.t('Use model built-in web search')} placement="top-start">
-							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-								on:click={() => {
-									nativeWebSearchEnabled = !nativeWebSearchEnabled;
-								}}
-							>
-								<div class="flex-1 truncate">
-									<div class="flex flex-1 gap-2 items-center">
-										<div class="shrink-0">
-											<GlobeAlt />
-										</div>
-
-										<div class=" truncate">{$i18n.t('Native Web Search')}</div>
-									</div>
-								</div>
-
-								<div class=" shrink-0">
-									<Switch
-										state={nativeWebSearchEnabled}
-										on:change={async (e) => {
-											await tick();
-										}}
-									/>
-								</div>
-							</button>
-						</Tooltip>
 					{/if}
+
+					<Tooltip content={$i18n.t('Use model built-in web search')} placement="top-start">
+						<button
+							class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+							on:click={() => {
+								nativeWebSearchEnabled = !nativeWebSearchEnabled;
+								// Mutual exclusion: disable web search when enabling native web search
+								if (nativeWebSearchEnabled) {
+									webSearchEnabled = false;
+								}
+							}}
+						>
+							<div class="flex-1 truncate">
+								<div class="flex flex-1 gap-2 items-center">
+									<div class="shrink-0">
+										<GlobeAlt />
+									</div>
+
+									<div class=" truncate">{$i18n.t('Native Web Search')}</div>
+								</div>
+							</div>
+
+							<div class=" shrink-0">
+								<Switch
+									state={nativeWebSearchEnabled}
+									on:change={async (e) => {
+										await tick();
+									}}
+								/>
+							</div>
+						</button>
+					</Tooltip>
 
 					{#if showImageGenerationButton}
 						<Tooltip content={$i18n.t('Generate an image')} placement="top-start">
