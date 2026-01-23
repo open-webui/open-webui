@@ -2597,6 +2597,8 @@ async def process_chat_response(
                                 "call_id": result.get("tool_call_id", ""),
                                 "output": [{"type": "input_text", "text": result.get("content", "")}],
                                 "status": "completed",
+                                **({"files": result.get("files")} if result.get("files") else {}),
+                                **({"embeds": result.get("embeds")} if result.get("embeds") else {}),
                             })
 
                     elif block_type == "reasoning":
