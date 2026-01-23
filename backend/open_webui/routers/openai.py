@@ -1133,9 +1133,10 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                         status_code=400,
                         detail="Invalid JSON payload",
                     )
-            url, payload = convert_to_azure_payload(url, payload, api_version)
-            body = json.dumps(payload).encode()
 
+            if payload is not None:
+                url, payload = convert_to_azure_payload(url, payload, api_version)
+                body = json.dumps(payload).encode()
             request_url = f"{url}/{path}?api-version={api_version}"
         else:
             request_url = f"{url}/{path}"
