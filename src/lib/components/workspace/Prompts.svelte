@@ -13,10 +13,12 @@
 		getPrompts,
 		getPromptList
 	} from '$lib/apis/prompts';
-	import { capitalizeFirstLetter, slugify } from '$lib/utils';
+	import { capitalizeFirstLetter, slugify, copyToClipboard } from '$lib/utils';
 
 	import PromptMenu from './Prompts/PromptMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import Clipboard from '../icons/Clipboard.svelte';
+	import Check from '../icons/Check.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
@@ -44,6 +46,7 @@
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
+	let copiedId: string | null = null;
 
 	let filteredItems = [];
 
@@ -103,6 +106,16 @@
 			type: 'application/json'
 		});
 		saveAs(blob, `prompt-export-${Date.now()}.json`);
+	};
+
+	const copyHandler = async (prompt) => {
+		const res = await copyToClipboard(prompt.content);
+		if (res) {
+			copiedId = prompt.command;
+			setTimeout(() => {
+				copiedId = null;
+			}, 2000);
+		}
 	};
 
 	const deleteHandler = async (prompt) => {
@@ -370,6 +383,23 @@
 									</button>
 								</Tooltip>
 							{:else}
+								<Tooltip content={$i18n.t('Copy Prompt')}>
+									<button
+										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										type="button"
+										on:click={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											copyHandler(prompt);
+										}}
+									>
+										{#if copiedId === prompt.command}
+											<Check className="size-4" strokeWidth="1.5" />
+										{:else}
+											<Clipboard className="size-4" strokeWidth="1.5" />
+										{/if}
+									</button>
+								</Tooltip>
 								<PromptMenu
 									shareHandler={() => {
 										shareHandler(prompt);
