@@ -2563,19 +2563,49 @@ def process_file(
     print(f"  user.email: {user.email}", flush=True)
     print(f"  user.id: {user.id}", flush=True)
     print(f"  user.role: {user.role}", flush=True)
+    print(f"  knowledge_id: {knowledge_id}", flush=True)
     log.info("=" * 80)
     log.info("[PROCESS FILE] Starting file processing request")
-    log.info(f"  file_id: {form_data.file_id}, user.email: {user.email}, user.id: {user.id}, user.role: {user.role}")
+    log.info(f"  file_id: {form_data.file_id}, user.email: {user.email}, user.id: {user.id}, user.role: {user.role}, knowledge_id: {knowledge_id}")
+    
+    # CRITICAL FIX: Determine the correct email to use for API key retrieval
+    # If uploading to a knowledge base, use the knowledge base OWNER's API key
+    # This ensures that when super admin uploads files to admin's knowledge base,
+    # the admin's API key is used (not super admin's)
+    api_key_owner_email = user.email  # Default to requesting user
+    
+    if knowledge_id:
+        try:
+            knowledge = Knowledges.get_knowledge_by_id(knowledge_id)
+            if knowledge and knowledge.user_id:
+                # Get the knowledge base owner's email
+                owner = Users.get_user_by_id(knowledge.user_id)
+                if owner and owner.email:
+                    api_key_owner_email = owner.email
+                    if api_key_owner_email != user.email:
+                        log.info(
+                            f"  [API KEY RBAC] Using knowledge base owner's API key: "
+                            f"owner={api_key_owner_email} (not uploader={user.email})"
+                        )
+                        print(
+                            f"  [API KEY RBAC] Using knowledge base owner's API key: "
+                            f"owner={api_key_owner_email} (not uploader={user.email})",
+                            flush=True
+                        )
+        except Exception as e:
+            log.warning(f"Failed to retrieve knowledge base owner, using uploader's email: {e}")
+            # Fall back to requesting user's email if anything fails
+            api_key_owner_email = user.email
     
     embedding_api_key = None
     print(f"  [STEP 1] Checking embedding engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}", flush=True)
     log.info(f"  [STEP 1] Checking embedding engine: {request.app.state.config.RAG_EMBEDDING_ENGINE}")
     
     if request.app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "portkey"]:
-        print(f"  [STEP 1.1] Engine is OpenAI/Portkey, retrieving API key...", flush=True)
-        log.info(f"  [STEP 1.1] Engine is OpenAI/Portkey, retrieving API key...")
+        print(f"  [STEP 1.1] Engine is OpenAI/Portkey, retrieving API key for {api_key_owner_email}...", flush=True)
+        log.info(f"  [STEP 1.1] Engine is OpenAI/Portkey, retrieving API key for {api_key_owner_email}...")
         
-        embedding_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(user.email)
+        embedding_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(api_key_owner_email)
         
         print(f"  [STEP 1.2] API key retrieval result:", flush=True)
         print(f"    embedding_api_key is None: {embedding_api_key is None}", flush=True)
@@ -2590,11 +2620,13 @@ def process_file(
         log.info(f"    embedding_api_key length: {len(embedding_api_key) if embedding_api_key else 0}")
         
         if not embedding_api_key or not embedding_api_key.strip():
+            # Use api_key_owner_email to show which admin needs to configure the key
+            owner_info = f"knowledge base owner {api_key_owner_email}" if knowledge_id and api_key_owner_email != user.email else f"user {api_key_owner_email}"
             error_msg = (
-                f"❌ CRITICAL BUG: No embedding API key configured for user {user.email}. "
+                f"❌ No embedding API key configured for {owner_info}. "
                 f"File processing will fail without an API key. "
-                f"Please configure the embedding API key in Settings > Documents > Embedding Model Engine. "
-                f"If user is not admin, ensure user is in a group created by an admin who has configured the API key."
+                f"Please ensure the admin ({api_key_owner_email}) configures the embedding API key in Settings > Documents. "
+                f"If {api_key_owner_email} is not admin, ensure they are in a group created by an admin who has configured the API key."
             )
             print(f"  [STEP 1.3] ❌ {error_msg}", flush=True)
             log.error(f"  [STEP 1.3] ❌ {error_msg}")

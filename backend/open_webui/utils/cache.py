@@ -517,17 +517,35 @@ class CacheManager:
         Uses Redis pipeline for batch operations to minimize round trips and improve performance.
         Collects all data first, then builds pipeline to avoid nested Redis calls.
         
-        Note: Uses cached group members list. If group members changed, caller should
-        invalidate group members cache first to ensure fresh data. If cache is stale,
-        worst case is harmless (invalidating cache for removed members) or missing
-        newly added members (will be invalidated on next group update).
+        CRITICAL: Falls back to database if cache is empty to ensure cache invalidation
+        always works. This is essential for RBAC - when an admin updates their API key,
+        all group members' cached API keys MUST be invalidated to prevent stale key usage.
         """
         if not self._check_redis_available():
             return 0
         
         members = self.get_group_members(group_id)
+        
+        # CRITICAL FIX: If cache is empty, fall back to database query
+        # This ensures cache invalidation works even if group members cache is stale/empty
+        # Without this fallback, users may continue using old API keys after admin updates
         if members is None or not members:
-            return 0
+            try:
+                from open_webui.models.groups import Groups
+                db_members = Groups.get_group_user_ids_by_id(group_id)
+                if db_members and isinstance(db_members, list):
+                    members = db_members
+                    log.info(
+                        f"Cache fallback: Retrieved {len(members)} group members from database "
+                        f"for group {group_id} (cache was empty)"
+                    )
+                else:
+                    # No members found in database either - group may be empty or deleted
+                    log.debug(f"No group members found for group {group_id} in cache or database")
+                    return 0
+            except Exception as e:
+                log.warning(f"Failed to retrieve group members from database for group {group_id}: {e}")
+                return 0
         
         try:
             # Collect all data first (before building pipeline) to avoid nested Redis calls
