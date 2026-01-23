@@ -147,6 +147,38 @@ async def get_prompt_by_command(
 
 
 ############################
+# GetPromptById
+############################
+
+
+@router.get("/id/{prompt_id}", response_model=Optional[PromptAccessResponse])
+async def get_prompt_by_id(
+    prompt_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
+
+    if prompt:
+        if (
+            user.role == "admin"
+            or prompt.user_id == user.id
+            or has_access(user.id, "read", prompt.access_control, db=db)
+        ):
+            return PromptAccessResponse(
+                **prompt.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == prompt.user_id
+                    or has_access(user.id, "write", prompt.access_control, db=db)
+                ),
+            )
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=ERROR_MESSAGES.NOT_FOUND,
+    )
+
+
+############################
 # UpdatePromptByCommand
 ############################
 

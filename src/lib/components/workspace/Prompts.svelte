@@ -338,7 +338,7 @@
 				{#each filteredItems as prompt}
 					<a
 						class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
-						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+						href={`/workspace/prompts/${prompt.id}`}
 					>
 						<div class=" flex flex-col flex-1 space-x-4 cursor-pointer w-full pl-1">
 							<div class="flex items-center justify-between w-full">
