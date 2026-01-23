@@ -97,7 +97,7 @@
 					{$i18n.t('groups')}
 				</div>
 				<div class="flex gap-1 flex-wrap">
-					{#each groupIds as id}
+					{#each groupIds as id (id)}
 						{#if selectedGroup[id]}
 							<button
 								type="button"
@@ -129,7 +129,7 @@
 					{$i18n.t('users')}
 				</div>
 				<div class="flex gap-1 flex-wrap">
-					{#each userIds as id}
+					{#each userIds as id (id)}
 						{#if selectedUsers[id]}
 							<button
 								type="button"

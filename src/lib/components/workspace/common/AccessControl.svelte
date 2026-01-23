@@ -160,7 +160,7 @@
 
 					{#if accessGroups.length > 0}
 						<div class="flex flex-col gap-1.5 mb-2 px-0.5 mx-0.5">
-							{#each accessGroups as group}
+							{#each accessGroups as group (group.id)}
 								<div class="flex items-center gap-3 justify-between text-sm w-full transition">
 									<div class="flex items-center gap-1.5 w-full">
 										<div>
@@ -246,7 +246,7 @@
 										<option class=" text-gray-700" value="" disabled selected
 											>{$i18n.t('Select a group')}</option
 										>
-										{#each groups.filter((group) => !(accessControl?.read?.group_ids ?? []).includes(group.id)) as group}
+										{#each groups.filter((group) => !(accessControl?.read?.group_ids ?? []).includes(group.id)) as group (group.id)}
 											<option class=" text-gray-700" value={group.id}>{group.name}</option>
 										{/each}
 									</select>

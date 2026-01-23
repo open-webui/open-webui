@@ -355,7 +355,7 @@
 
 		{#if (filteredItems ?? []).length !== 0}
 			<div class=" my-2 gap-2 grid px-3 lg:grid-cols-2">
-				{#each filteredItems as tool}
+				{#each filteredItems as tool (tool.id)}
 					<Tooltip content={tool?.meta?.description ?? tool?.id}>
 						<div
 							class=" flex space-x-4 text-left w-full px-3 py-2.5 transition rounded-2xl {tool.write_access

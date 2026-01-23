@@ -335,7 +335,7 @@
 		{#if (filteredItems ?? []).length !== 0}
 			<!-- Before they call, I will answer; while they are yet speaking, I will hear. -->
 			<div class="gap-2 grid my-2 px-3 lg:grid-cols-2">
-				{#each filteredItems as prompt}
+				{#each filteredItems as prompt (prompt.command)}
 					<a
 						class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
 						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
