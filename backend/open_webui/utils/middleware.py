@@ -92,6 +92,7 @@ from open_webui.utils.misc import (
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
     get_content_from_message,
+    convert_output_to_messages,
 )
 from open_webui.utils.tools import (
     get_tools,
@@ -1399,6 +1400,30 @@ async def convert_url_images_to_base64(form_data):
     return form_data
 
 
+def process_messages_with_output(messages: list[dict]) -> list[dict]:
+    """
+    Process messages with OR-aligned output items for LLM consumption.
+    
+    For assistant messages with 'output' field, produces properly formatted
+    OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
+    """
+    processed = []
+    
+    for message in messages:
+        if message.get("role") == "assistant" and message.get("output"):
+            # Use output items for clean OpenAI-format messages
+            output_messages = convert_output_to_messages(message["output"])
+            if output_messages:
+                processed.extend(output_messages)
+                continue
+        
+        # Strip 'output' field before adding (LLM shouldn't see it)
+        clean_message = {k: v for k, v in message.items() if k != "output"}
+        processed.append(clean_message)
+    
+    return processed
+
+
 async def process_chat_payload(request, form_data, user, metadata, model):
     # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
@@ -1406,6 +1431,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
+
+    # Process messages with OR-aligned output items for clean LLM messages
+    form_data["messages"] = process_messages_with_output(form_data.get("messages", []))
 
     system_message = get_system_message(form_data.get("messages", []))
     if system_message:  # Chat Controls/User Settings
@@ -2517,6 +2545,86 @@ async def process_chat_response(
 
                 return messages
 
+            def convert_content_blocks_to_output(content_blocks):
+                """
+                Convert content_blocks to Open Responses-aligned output items.
+                See: https://openresponses.org/specification
+                """
+                output_items = []
+                item_counter = 0
+
+                def next_id(prefix):
+                    nonlocal item_counter
+                    item_counter += 1
+                    return f"{prefix}_{item_counter}"
+
+                for block in content_blocks:
+                    block_type = block.get("type", "")
+
+                    if block_type == "text":
+                        text_content = block.get("content", "").strip()
+                        if text_content:
+                            output_items.append({
+                                "type": "message",
+                                "id": next_id("msg"),
+                                "status": "completed",
+                                "role": "assistant",
+                                "content": [{"type": "output_text", "text": text_content}],
+                            })
+
+                    elif block_type == "tool_calls":
+                        tool_calls = block.get("content", [])
+                        results = block.get("results", [])
+
+                        # Emit function_call items
+                        for tool_call in tool_calls:
+                            call_id = tool_call.get("id", "")
+                            func = tool_call.get("function", {})
+                            output_items.append({
+                                "type": "function_call",
+                                "id": next_id("fc"),
+                                "call_id": call_id,
+                                "name": func.get("name", ""),
+                                "arguments": func.get("arguments", "{}"),
+                                "status": "completed" if results else "in_progress",
+                            })
+
+                        # Emit function_call_output items
+                        for result in results:
+                            output_items.append({
+                                "type": "function_call_output",
+                                "id": next_id("fco"),
+                                "call_id": result.get("tool_call_id", ""),
+                                "output": [{"type": "input_text", "text": result.get("content", "")}],
+                                "status": "completed",
+                            })
+
+                    elif block_type == "reasoning":
+                        reasoning_content = block.get("content", "").strip()
+                        duration = block.get("duration")
+                        output_items.append({
+                            "type": "reasoning",
+                            "id": next_id("r"),
+                            "status": "completed" if duration is not None else "in_progress",
+                            "content": [{"type": "output_text", "text": reasoning_content}] if reasoning_content else None,
+                            "summary": None,
+                        })
+
+                    elif block_type == "code_interpreter":
+                        code = block.get("content", "")
+                        output_val = block.get("output")
+                        attrs = block.get("attributes", {})
+                        output_items.append({
+                            "type": "open_webui:code_interpreter",
+                            "id": next_id("ci"),
+                            "status": "completed" if output_val is not None else "in_progress",
+                            "lang": attrs.get("lang", ""),
+                            "code": code,
+                            "output": output_val,
+                        })
+
+                return output_items
+
             def tag_content_handler(content_type, tags, content, content_blocks):
                 end_flag = False
 
@@ -3132,6 +3240,9 @@ async def process_chat_response(
                                                     "content": serialize_content_blocks(
                                                         content_blocks
                                                     ),
+                                                    "output": convert_content_blocks_to_output(
+                                                        content_blocks
+                                                    ),
                                                 },
                                             )
                                         else:
@@ -3221,6 +3332,7 @@ async def process_chat_response(
                             "type": "chat:completion",
                             "data": {
                                 "content": serialize_content_blocks(content_blocks),
+                                "output": convert_content_blocks_to_output(content_blocks),
                             },
                         }
                     )
@@ -3400,6 +3512,7 @@ async def process_chat_response(
                             "type": "chat:completion",
                             "data": {
                                 "content": serialize_content_blocks(content_blocks),
+                                "output": convert_content_blocks_to_output(content_blocks),
                             },
                         }
                     )
@@ -3446,6 +3559,7 @@ async def process_chat_response(
                                 "type": "chat:completion",
                                 "data": {
                                     "content": serialize_content_blocks(content_blocks),
+                                    "output": convert_content_blocks_to_output(content_blocks),
                                 },
                             }
                         )
@@ -3577,6 +3691,7 @@ async def process_chat_response(
                                 "type": "chat:completion",
                                 "data": {
                                     "content": serialize_content_blocks(content_blocks),
+                                    "output": convert_content_blocks_to_output(content_blocks),
                                 },
                             }
                         )
@@ -3616,6 +3731,7 @@ async def process_chat_response(
                 data = {
                     "done": True,
                     "content": serialize_content_blocks(content_blocks),
+                    "output": convert_content_blocks_to_output(content_blocks),
                     "title": title,
                 }
 
@@ -3626,6 +3742,7 @@ async def process_chat_response(
                         metadata["message_id"],
                         {
                             "content": serialize_content_blocks(content_blocks),
+                            "output": convert_content_blocks_to_output(content_blocks),
                         },
                     )
 
@@ -3664,6 +3781,7 @@ async def process_chat_response(
                         metadata["message_id"],
                         {
                             "content": serialize_content_blocks(content_blocks),
+                            "output": convert_content_blocks_to_output(content_blocks),
                         },
                     )
 
