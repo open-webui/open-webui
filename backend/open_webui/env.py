@@ -360,7 +360,7 @@ ENABLE_REALTIME_CHAT_SAVE = (
 )
 
 ENABLE_SERVER_SIDE_ORCHESTRATION = (
-    os.environ.get("ENABLE_SERVER_SIDE_ORCHESTRATION", "False").lower() == "true"
+    os.environ.get("ENABLE_SERVER_SIDE_ORCHESTRATION", "True").lower() == "true"
 )
 
 ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"
@@ -697,12 +697,12 @@ REQUESTS_VERIFY = os.environ.get("REQUESTS_VERIFY", "True").lower() == "true"
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
 if AIOHTTP_CLIENT_TIMEOUT == "":
-    AIOHTTP_CLIENT_TIMEOUT = None
+    AIOHTTP_CLIENT_TIMEOUT = 3000
 else:
     try:
         AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
     except Exception:
-        AIOHTTP_CLIENT_TIMEOUT = 300
+        AIOHTTP_CLIENT_TIMEOUT = 3000
 
 
 AIOHTTP_CLIENT_SESSION_SSL = (

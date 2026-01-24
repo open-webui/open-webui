@@ -122,76 +122,98 @@ async def send_post_request(
     user: UserModel = None,
     metadata: Optional[dict] = None,
 ):
-
     r = None
-    try:
-        session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-        )
+    session = None
+    
+    RETRIES = 4
+    DELAY = 5
 
-        headers = {
-            "Content-Type": "application/json",
-            **({"Authorization": f"Bearer {key}"} if key else {}),
-        }
+    for attempt in range(RETRIES):
+        try:
+            if session:
+                await session.close()
 
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
-            if metadata and metadata.get("chat_id"):
-                headers["X-OpenWebUI-Chat-Id"] = metadata.get("chat_id")
+            session = aiohttp.ClientSession(
+                trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            )
 
-        r = await session.post(
-            url,
-            data=payload,
-            headers=headers,
-            ssl=AIOHTTP_CLIENT_SESSION_SSL,
-        )
+            headers = {
+                "Content-Type": "application/json",
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+            }
 
-        if r.ok is False:
-            try:
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                headers = include_user_info_headers(headers, user)
+                if metadata and metadata.get("chat_id"):
+                    headers["X-OpenWebUI-Chat-Id"] = metadata.get("chat_id")
+
+            r = await session.post(
+                url,
+                data=payload,
+                headers=headers,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            )
+
+            if r.status >= 400:
+                 if attempt < RETRIES - 1:
+                     await cleanup_response(r, session)
+                     log.warning(f"Ollama Request failed with status {r.status}, retrying in {DELAY}s...")
+                     await asyncio.sleep(DELAY)
+                     continue
+
+            if r.ok is False:
+                try:
+                    res = await r.json()
+                    await cleanup_response(r, session)
+                    if "error" in res:
+                        raise HTTPException(status_code=r.status, detail=res["error"])
+                except HTTPException as e:
+                    raise e  # Re-raise HTTPException to be handled by FastAPI
+                except Exception as e:
+                    log.error(f"Failed to parse error response: {e}")
+                    raise HTTPException(
+                        status_code=r.status,
+                        detail=f"Open WebUI: Server Connection Error",
+                    )
+
+            r.raise_for_status()  # Raises an error for bad responses (4xx, 5xx)
+            if stream:
+                response_headers = dict(r.headers)
+
+                if content_type:
+                    response_headers["Content-Type"] = content_type
+
+                return StreamingResponse(
+                    r.content,
+                    status_code=r.status,
+                    headers=response_headers,
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
+            else:
                 res = await r.json()
                 await cleanup_response(r, session)
-                if "error" in res:
-                    raise HTTPException(status_code=r.status, detail=res["error"])
-            except HTTPException as e:
-                raise e  # Re-raise HTTPException to be handled by FastAPI
-            except Exception as e:
-                log.error(f"Failed to parse error response: {e}")
-                raise HTTPException(
-                    status_code=r.status,
-                    detail=f"Open WebUI: Server Connection Error",
-                )
+                return res
 
-        r.raise_for_status()  # Raises an error for bad responses (4xx, 5xx)
-        if stream:
-            response_headers = dict(r.headers)
+        except HTTPException as e:
+            raise e  # Re-raise HTTPException to be handled by FastAPI
+        except Exception as e:
+            if session:
+                await cleanup_response(r, session)
+                session = None
 
-            if content_type:
-                response_headers["Content-Type"] = content_type
+            if attempt < RETRIES - 1:
+                log.warning(f"Ollama request failed with exception {e}, retrying in {DELAY}s...")
+                await asyncio.sleep(DELAY)
+                continue
 
-            return StreamingResponse(
-                r.content,
-                status_code=r.status,
-                headers=response_headers,
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
+            detail = f"Ollama: {e}"
+
+            raise HTTPException(
+                status_code=r.status if r else 500,
+                detail=detail if e else "Open WebUI: Server Connection Error",
             )
-        else:
-            res = await r.json()
-            return res
-
-    except HTTPException as e:
-        raise e  # Re-raise HTTPException to be handled by FastAPI
-    except Exception as e:
-        detail = f"Ollama: {e}"
-
-        raise HTTPException(
-            status_code=r.status if r else 500,
-            detail=detail if e else "Open WebUI: Server Connection Error",
-        )
-    finally:
-        if not stream:
-            await cleanup_response(r, session)
 
 
 def get_api_key(idx, url, configs):

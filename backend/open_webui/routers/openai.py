@@ -934,55 +934,76 @@ async def generate_chat_completion(
     streaming = False
     response = None
 
-    try:
-        session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-        )
+    RETRIES = 4
+    DELAY = 5
 
-        r = await session.request(
-            method="POST",
-            url=request_url,
-            data=payload,
-            headers=headers,
-            cookies=cookies,
-            ssl=AIOHTTP_CLIENT_SESSION_SSL,
-        )
-
-        # Check if response is SSE
-        if "text/event-stream" in r.headers.get("Content-Type", ""):
-            streaming = True
-            return StreamingResponse(
-                stream_chunks_handler(r.content),
-                status_code=r.status,
-                headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
+    for attempt in range(RETRIES):
+        try:
+            if session:
+                await session.close()
+            
+            session = aiohttp.ClientSession(
+                trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
             )
-        else:
-            try:
-                response = await r.json()
-            except Exception as e:
-                log.error(e)
-                response = await r.text()
 
-            if r.status >= 400:
-                if isinstance(response, (dict, list)):
-                    return JSONResponse(status_code=r.status, content=response)
-                else:
-                    return PlainTextResponse(status_code=r.status, content=response)
+            r = await session.request(
+                method="POST",
+                url=request_url,
+                data=payload,
+                headers=headers,
+                cookies=cookies,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            )
 
-            return response
-    except Exception as e:
-        log.exception(e)
+            # Check if response is SSE
+            if "text/event-stream" in r.headers.get("Content-Type", ""):
+                streaming = True
+                return StreamingResponse(
+                    stream_chunks_handler(r.content),
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
+            else:
+                try:
+                    response = await r.json()
+                except Exception as e:
+                    log.error(e)
+                    response = await r.text()
 
-        raise HTTPException(
-            status_code=r.status if r else 500,
-            detail="Open WebUI: Server Connection Error",
-        )
-    finally:
-        if not streaming:
-            await cleanup_response(r, session)
+                if r.status >= 400:
+                     if attempt < RETRIES - 1:
+                        log.warning(f"Request failed with status {r.status}, retrying in {DELAY}s...")
+                        await asyncio.sleep(DELAY)
+                        continue
+
+                if r.status >= 400:
+                    await cleanup_response(r, session)
+                    if isinstance(response, (dict, list)):
+                        return JSONResponse(status_code=r.status, content=response)
+                    else:
+                        return PlainTextResponse(status_code=r.status, content=response)
+
+                await cleanup_response(r, session)
+                return response
+        except Exception as e:
+            log.exception(e)
+            
+            if session:
+                await cleanup_response(r, session)
+                session = None
+
+            if attempt < RETRIES - 1:
+                log.warning(f"Request failed with exception {e}, retrying in {DELAY}s...")
+                await asyncio.sleep(DELAY)
+                continue
+
+            raise HTTPException(
+                status_code=r.status if r else 500,
+                detail="Open WebUI: Server Connection Error",
+            )
 
 
 async def embeddings(request: Request, form_data: dict, user):
