@@ -539,9 +539,6 @@
 	<div class="flex flex-col h-full">
 		<div class="flex items-center justify-between mb-2 shrink-0">
 			<div class="text-gray-500 text-xs">{$i18n.t('History')}</div>
-			{#if historyLoading}
-				<Spinner className="size-3" />
-			{/if}
 		</div>
 
 		{#if history.length > 0}
@@ -550,7 +547,7 @@
 					<div class="flex">
 						<!-- Content -->
 						<button
-							class="flex-1 text-left px-3.5 py-2 mb-1 rounded-2xl transition group
+							class="flex-1 text-left px-3.5 py-2 mb-1 rounded-xl transition group
 								{selectedHistoryEntry?.id === entry.id
 								? 'bg-gray-50 dark:bg-gray-850'
 								: 'hover:bg-gray-50 dark:hover:bg-gray-850'}"
@@ -584,7 +581,7 @@
 					</div>
 				{/each}
 
-				{#if historyHasMore && historyLoading}
+				{#if historyLoading}
 					<div class="flex justify-center py-2">
 						<Spinner className="size-3" />
 					</div>
