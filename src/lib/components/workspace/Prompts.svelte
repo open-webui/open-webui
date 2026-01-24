@@ -7,12 +7,7 @@
 	import { onMount, getContext, tick } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
-	import {
-		createNewPrompt,
-		deletePromptById,
-		getPrompts,
-		getPromptList
-	} from '$lib/apis/prompts';
+	import { createNewPrompt, deletePromptById, getPrompts, getPromptList } from '$lib/apis/prompts';
 	import { capitalizeFirstLetter, slugify, copyToClipboard } from '$lib/utils';
 
 	import PromptMenu from './Prompts/PromptMenu.svelte';
@@ -29,7 +24,6 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
-
 	let shiftKey = false;
 
 	const i18n = getContext('i18n');
@@ -341,11 +335,11 @@
 						href={`/workspace/prompts/${prompt.id}`}
 					>
 						<div class=" flex flex-col flex-1 space-x-4 cursor-pointer w-full pl-1">
-							<div class="flex items-center justify-between w-full">
+							<div class="flex items-center justify-between w-full mb-0.5">
 								<div class="flex items-center gap-2">
 									<div class="font-medium line-clamp-1 capitalize">{prompt.name}</div>
 									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-										{prompt.command}
+										/{prompt.command}
 									</div>
 								</div>
 								{#if !prompt.write_access}
@@ -353,7 +347,7 @@
 								{/if}
 							</div>
 
-							<div class=" text-xs">
+							<div class="flex gap-1 text-xs">
 								<Tooltip
 									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
 									className="flex shrink-0"
@@ -367,6 +361,16 @@
 										})}
 									</div>
 								</Tooltip>
+
+								<div>·</div>
+
+								{#if prompt.content}
+									<Tooltip content={prompt.content} placement="top">
+										<div class="line-clamp-1">
+											{prompt.content}
+										</div>
+									</Tooltip>
+								{/if}
 							</div>
 						</div>
 						<div class="flex flex-row gap-0.5 self-center">
