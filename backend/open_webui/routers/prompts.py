@@ -25,6 +25,12 @@ from pydantic import BaseModel
 class PromptVersionUpdateForm(BaseModel):
     version_id: str
 
+
+class PromptMetadataForm(BaseModel):
+    name: str
+    command: str
+
+
 router = APIRouter()
 
 
@@ -209,6 +215,15 @@ async def update_prompt_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    # Check for command collision if command is being changed
+    if form_data.command != prompt.command:
+        existing_prompt = Prompts.get_prompt_by_command(form_data.command, db=db)
+        if existing_prompt and existing_prompt.id != prompt.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Command '/{form_data.command}' is already in use by another prompt",
+            )
+
     # Use the ID from the found prompt
     updated_prompt = Prompts.update_prompt_by_id(
         prompt.id, form_data, user.id, db=db
@@ -222,7 +237,59 @@ async def update_prompt_by_id(
         )
 
 
-@router.post("/id/{prompt_id}/set/version", response_model=Optional[PromptModel])
+############################
+# UpdatePromptMetadata
+############################
+
+
+@router.post("/id/{prompt_id}/update/meta", response_model=Optional[PromptModel])
+async def update_prompt_metadata(
+    prompt_id: str,
+    form_data: PromptMetadataForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """Update prompt name and command only (no history created)."""
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
+
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        prompt.user_id != user.id
+        and not has_access(user.id, "write", prompt.access_control, db=db)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    # Check for command collision if command is being changed
+    if form_data.command != prompt.command:
+        existing_prompt = Prompts.get_prompt_by_command(form_data.command, db=db)
+        if existing_prompt and existing_prompt.id != prompt.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Command '/{form_data.command}' is already in use",
+            )
+
+    updated_prompt = Prompts.update_prompt_metadata(
+        prompt.id, form_data.name, form_data.command, db=db
+    )
+    if updated_prompt:
+        return updated_prompt
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+
+@router.post("/id/{prompt_id}/update/version", response_model=Optional[PromptModel])
 async def set_prompt_version(
     prompt_id: str,
     form_data: PromptVersionUpdateForm,

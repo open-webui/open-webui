@@ -238,6 +238,40 @@ export const updatePromptById = async (token: string, prompt: PromptItem) => {
 	return res;
 };
 
+export const updatePromptMetadata = async (
+	token: string,
+	promptId: string,
+	name: string,
+	command: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/update/meta`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ name, command })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const setProductionPromptVersion = async (
 	token: string,
 	promptId: string,
@@ -245,7 +279,7 @@ export const setProductionPromptVersion = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/set/version`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/update/version`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

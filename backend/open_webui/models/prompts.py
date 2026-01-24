@@ -307,12 +307,14 @@ class PromptsTable:
                 # Check if content changed to decide on history creation
                 content_changed = (
                     prompt.name != form_data.name
+                    or prompt.command != form_data.command
                     or prompt.content != form_data.content
                     or prompt.access_control != form_data.access_control
                 )
 
                 # Update prompt fields
                 prompt.name = form_data.name
+                prompt.command = form_data.command
                 prompt.content = form_data.content
                 prompt.data = form_data.data or prompt.data
                 prompt.meta = form_data.meta or prompt.meta
@@ -346,6 +348,29 @@ class PromptsTable:
                         prompt.version_id = history_entry.id
                         db.commit()
 
+                return PromptModel.model_validate(prompt)
+        except Exception:
+            return None
+
+    def update_prompt_metadata(
+        self,
+        prompt_id: str,
+        name: str,
+        command: str,
+        db: Optional[Session] = None,
+    ) -> Optional[PromptModel]:
+        """Update only name and command (no history created)."""
+        try:
+            with get_db_context(db) as db:
+                prompt = db.query(Prompt).filter_by(id=prompt_id).first()
+                if not prompt:
+                    return None
+                
+                prompt.name = name
+                prompt.command = command
+                prompt.updated_at = int(time.time())
+                db.commit()
+                
                 return PromptModel.model_validate(prompt)
         except Exception:
             return None
