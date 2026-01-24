@@ -179,8 +179,8 @@
 		try {
 			await deletePromptHistoryVersion(localStorage.token, prompt.id, historyId);
 			toast.success($i18n.t('Version deleted'));
-			// Reload history
-			await loadHistory();
+			// Reload history from scratch
+			await loadHistory(true);
 			// Reset selection if deleted entry was selected
 			if (selectedHistoryEntry?.id === historyId) {
 				selectedHistoryEntry = history.length > 0 ? history[0] : null;
