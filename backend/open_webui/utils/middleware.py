@@ -21,10 +21,13 @@ import atexit
 
 from fastapi import Request
 
+from open_webui.env import RAG_THREAD_POOL_SIZE
+
 # Module-level ThreadPoolExecutor for RAG operations
 # This avoids creating a new thread pool for each request (expensive)
-# Max workers set to 10 to balance parallelism vs resource usage
-_RAG_EXECUTOR = ThreadPoolExecutor(max_workers=10, thread_name_prefix="rag_worker")
+# Max workers is configurable via RAG_THREAD_POOL_SIZE environment variable
+# Default: 50 threads per pod (supports ~50 concurrent RAG queries per pod)
+_RAG_EXECUTOR = ThreadPoolExecutor(max_workers=RAG_THREAD_POOL_SIZE, thread_name_prefix="rag_worker")
 
 # Ensure executor is properly cleaned up on shutdown
 atexit.register(_RAG_EXECUTOR.shutdown, wait=False)

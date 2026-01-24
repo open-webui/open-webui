@@ -29,7 +29,15 @@ log = logging.getLogger(__name__)
 from rq import Worker, Queue, Connection
 from redis import Redis
 from redis.connection import ConnectionPool
-from open_webui.env import REDIS_URL, SRC_LOG_LEVELS, ENABLE_JOB_QUEUE
+from redis.sentinel import Sentinel
+from open_webui.env import (
+    REDIS_URL, 
+    SRC_LOG_LEVELS, 
+    ENABLE_JOB_QUEUE,
+    REDIS_USE_SENTINEL,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_SERVICE_NAME,
+)
 from open_webui.utils.job_queue import FILE_PROCESSING_QUEUE_NAME
 
 # Set log level from environment
@@ -104,27 +112,85 @@ def start_worker():
         
         log.info(f"REDIS_URL configured: {REDIS_URL.split('@')[0]}@...")  # Hide password in logs
         
-        # Get Redis connection pool
+        # Get Redis connection
         log.info("Connecting to Redis...")
         try:
-            # For RQ workers, we need a connection with NO timeout for blocking operations
-            # RQ uses BRPOP which blocks indefinitely waiting for jobs
-            # CRITICAL: decode_responses=False because RQ stores binary job data (pickled)
-            # Using socket_timeout=None allows blocking operations to work properly
-            worker_pool = ConnectionPool.from_url(
-                REDIS_URL,
-                decode_responses=False,  # CRITICAL: RQ stores binary pickled job data
-                max_connections=10,  # Workers need fewer connections
-                retry_on_timeout=True,
-                socket_connect_timeout=10,  # Longer connect timeout
-                socket_timeout=None,  # CRITICAL: No timeout for blocking operations (BRPOP)
-                health_check_interval=30,
-            )
-            redis_conn = Redis(connection_pool=worker_pool)
-            
-            # Test Redis connection (ping works with decode_responses=False)
-            redis_conn.ping()
-            log.info("Redis connection established successfully")
+            # Check if Sentinel is configured
+            if REDIS_USE_SENTINEL and REDIS_SENTINEL_HOSTS:
+                log.info("Using Redis Sentinel for high availability")
+                log.info(f"Sentinel hosts: {REDIS_SENTINEL_HOSTS}")
+                log.info(f"Sentinel service name: {REDIS_SENTINEL_SERVICE_NAME}")
+                
+                # Parse Sentinel hosts (comma-separated list)
+                sentinel_hosts = []
+                for host_port in REDIS_SENTINEL_HOSTS.split(','):
+                    host_port = host_port.strip()
+                    if ':' in host_port:
+                        host, port = host_port.rsplit(':', 1)
+                        sentinel_hosts.append((host.strip(), int(port.strip())))
+                    else:
+                        # Default port 26379
+                        sentinel_hosts.append((host_port.strip(), 26379))
+                
+                # Extract password from REDIS_URL if present
+                redis_password = None
+                if REDIS_URL and '@' in REDIS_URL:
+                    try:
+                        from urllib.parse import urlparse
+                        parsed = urlparse(REDIS_URL)
+                        if parsed.password:
+                            redis_password = parsed.password
+                    except Exception:
+                        pass
+                
+                # Create Sentinel connection
+                sentinel = Sentinel(
+                    sentinel_hosts,
+                    socket_timeout=5,
+                    socket_connect_timeout=10,
+                )
+                
+                # Get master connection from Sentinel
+                # CRITICAL: decode_responses=False because RQ stores binary job data (pickled)
+                # CRITICAL: socket_timeout=None for blocking operations (BRPOP)
+                master_kwargs = {
+                    'socket_timeout': None,  # CRITICAL: No timeout for blocking operations (BRPOP)
+                    'socket_connect_timeout': 10,
+                    'decode_responses': False,  # CRITICAL: RQ stores binary pickled job data
+                }
+                if redis_password:
+                    master_kwargs['password'] = redis_password
+                
+                redis_conn = sentinel.master_for(
+                    REDIS_SENTINEL_SERVICE_NAME,
+                    **master_kwargs
+                )
+                
+                # Test connection
+                redis_conn.ping()
+                log.info(f"Redis Sentinel connection established successfully (master: {REDIS_SENTINEL_SERVICE_NAME})")
+            else:
+                # Fallback to direct connection (for local development or non-Sentinel setups)
+                log.info("Using direct Redis connection (Sentinel not configured)")
+                
+                # For RQ workers, we need a connection with NO timeout for blocking operations
+                # RQ uses BRPOP which blocks indefinitely waiting for jobs
+                # CRITICAL: decode_responses=False because RQ stores binary job data (pickled)
+                # Using socket_timeout=None allows blocking operations to work properly
+                worker_pool = ConnectionPool.from_url(
+                    REDIS_URL,
+                    decode_responses=False,  # CRITICAL: RQ stores binary pickled job data
+                    max_connections=10,  # Workers need fewer connections
+                    retry_on_timeout=True,
+                    socket_connect_timeout=10,  # Longer connect timeout
+                    socket_timeout=None,  # CRITICAL: No timeout for blocking operations (BRPOP)
+                    health_check_interval=30,
+                )
+                redis_conn = Redis(connection_pool=worker_pool)
+                
+                # Test Redis connection (ping works with decode_responses=False)
+                redis_conn.ping()
+                log.info("Redis connection established successfully")
             
             # Test queue access (RQ handles binary data correctly)
             test_queue = Queue(FILE_PROCESSING_QUEUE_NAME, connection=redis_conn)

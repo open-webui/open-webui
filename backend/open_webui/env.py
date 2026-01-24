@@ -378,6 +378,21 @@ REDIS_SENTINEL_PASSWORD = os.environ.get("REDIS_SENTINEL_PASSWORD", None)
 REDIS_MAX_CONNECTIONS = _safe_int_env("REDIS_MAX_CONNECTIONS", 100, min_value=10, max_value=500)
 
 ####################################
+# RAG THREAD POOL
+####################################
+
+# Thread pool size for RAG (Retrieval Augmented Generation) operations
+# RAG operations include: embedding queries, vector search, context retrieval
+# Each thread can handle one RAG operation at a time
+# Higher values allow more concurrent RAG queries but use more memory/CPU
+# Default: 50 threads per pod (supports ~50 concurrent RAG queries per pod)
+# For 200 users across 4 pods: 50 × 4 = 200 concurrent RAG operations
+# Note: Threads compete for CPU cores, so setting this higher than 2× CPU count
+# provides diminishing returns and increases context switching overhead
+# Recommended: 50-100 for 4 CPU pods, can go higher with PgBouncer for connection pooling
+RAG_THREAD_POOL_SIZE = _safe_int_env("RAG_THREAD_POOL_SIZE", 50, min_value=5, max_value=200)
+
+####################################
 # JOB QUEUE (RQ - Redis Queue)
 ####################################
 
