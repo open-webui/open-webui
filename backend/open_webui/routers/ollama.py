@@ -155,9 +155,18 @@ async def send_post_request(
             )
 
             if r.status >= 400:
+                 # Do not retry on client errors that won't change
+                 if r.status in [401, 403, 404, 422]:
+                     try:
+                         res = await r.json()
+                     except:
+                         res = await r.text()
+                     await cleanup_response(r, session)
+                     raise HTTPException(status_code=r.status, detail=str(res.get("error") if isinstance(res, dict) else res))
+
                  if attempt < RETRIES - 1:
                      await cleanup_response(r, session)
-                     log.warning(f"Ollama Request failed with status {r.status}, retrying in {DELAY}s...")
+                     log.warning(f"Ollama Request failed with status {r.status}, retrying in {DELAY}s... (Attempt {attempt+1}/{RETRIES})")
                      await asyncio.sleep(DELAY)
                      continue
 

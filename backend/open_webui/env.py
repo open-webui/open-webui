@@ -360,7 +360,7 @@ ENABLE_REALTIME_CHAT_SAVE = (
 )
 
 ENABLE_SERVER_SIDE_ORCHESTRATION = (
-    os.environ.get("ENABLE_SERVER_SIDE_ORCHESTRATION", "True").lower() == "true"
+    os.environ.get("ENABLE_SERVER_SIDE_ORCHESTRATION", "False").lower() == "true"
 )
 
 ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"

@@ -955,6 +955,25 @@ async def generate_chat_completion(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             )
 
+            if r.status >= 400:
+                # Do not retry on client errors that won't change (Unauthorized, Not Found, etc.)
+                if r.status in [401, 403, 404, 422]:
+                    try:
+                        response = await r.json()
+                    except:
+                        response = await r.text()
+                    await cleanup_response(r, session)
+                    if isinstance(response, (dict, list)):
+                        return JSONResponse(status_code=r.status, content=response)
+                    else:
+                        return PlainTextResponse(status_code=r.status, content=response)
+                
+                if attempt < RETRIES - 1:
+                    await cleanup_response(r, session)
+                    log.warning(f"Request failed with status {r.status}, retrying in {DELAY}s... (Attempt {attempt+1}/{RETRIES})")
+                    await asyncio.sleep(DELAY)
+                    continue
+
             # Check if response is SSE
             if "text/event-stream" in r.headers.get("Content-Type", ""):
                 streaming = True
@@ -973,19 +992,6 @@ async def generate_chat_completion(
                     log.error(e)
                     response = await r.text()
 
-                if r.status >= 400:
-                     if attempt < RETRIES - 1:
-                        log.warning(f"Request failed with status {r.status}, retrying in {DELAY}s...")
-                        await asyncio.sleep(DELAY)
-                        continue
-
-                if r.status >= 400:
-                    await cleanup_response(r, session)
-                    if isinstance(response, (dict, list)):
-                        return JSONResponse(status_code=r.status, content=response)
-                    else:
-                        return PlainTextResponse(status_code=r.status, content=response)
-
                 await cleanup_response(r, session)
                 return response
         except Exception as e:
@@ -996,12 +1002,12 @@ async def generate_chat_completion(
                 session = None
 
             if attempt < RETRIES - 1:
-                log.warning(f"Request failed with exception {e}, retrying in {DELAY}s...")
+                log.warning(f"Request failed with exception {e}, retrying in {DELAY}s... (Attempt {attempt+1}/{RETRIES})")
                 await asyncio.sleep(DELAY)
                 continue
 
             raise HTTPException(
-                status_code=r.status if r else 500,
+                status_code=r.status if r else status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Open WebUI: Server Connection Error",
             )
 
