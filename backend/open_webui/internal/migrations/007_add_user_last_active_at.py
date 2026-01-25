@@ -33,6 +33,14 @@ with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
 
+def _user_ident(database: pw.Database) -> str:
+    # Postgres: "user" (identifier quoting)
+    # MariaDB/MySQL: `user` (identifier quoting)
+    mod = database.__class__.__module__.lower()
+    name = database.__class__.__name__.lower()
+    return '`user`' if ('mysql' in mod or 'pymysql' in mod or 'mysql' in name or 'mariadb' in name) else '"user"'
+
+
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
@@ -45,8 +53,9 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     )
 
     # Populate the new fields from an existing 'timestamp' field
+    user_tbl = _user_ident(database)
     migrator.sql(
-        'UPDATE "user" SET created_at = timestamp, updated_at = timestamp, last_active_at = timestamp WHERE timestamp IS NOT NULL'
+        f'UPDATE {user_tbl} SET created_at = timestamp, updated_at = timestamp, last_active_at = timestamp WHERE timestamp IS NOT NULL'
     )
 
     # Now that the data has been copied, remove the original 'timestamp' field
@@ -69,7 +78,8 @@ def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
 
     # Copy the earliest created_at date back into the new timestamp field
     # This assumes created_at was originally a copy of timestamp
-    migrator.sql('UPDATE "user" SET timestamp = created_at')
+    user_tbl = _user_ident(database)
+    migrator.sql(f'UPDATE {user_tbl} SET timestamp = created_at')
 
     # Remove the created_at and updated_at fields
     migrator.remove_fields('user', 'created_at', 'updated_at', 'last_active_at')

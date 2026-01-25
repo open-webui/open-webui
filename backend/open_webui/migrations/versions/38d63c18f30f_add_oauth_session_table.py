@@ -10,6 +10,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from open_webui.migrations.util import key_text
 
 # revision identifiers, used by Alembic.
 revision: str = '38d63c18f30f'
@@ -52,7 +53,7 @@ def upgrade() -> None:
             sa.ForeignKey('user.id', ondelete='CASCADE'),
             nullable=False,
         ),
-        sa.Column('provider', sa.Text(), nullable=False),
+        sa.Column('provider', key_text(), nullable=False),
         sa.Column('token', sa.Text(), nullable=False),
         sa.Column('expires_at', sa.BigInteger(), nullable=False),
         sa.Column('created_at', sa.BigInteger(), nullable=False),

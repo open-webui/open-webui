@@ -18,12 +18,63 @@ import uuid
 from alembic import op
 import sqlalchemy as sa
 
-from open_webui.migrations.util import get_existing_tables
+from open_webui.migrations.util import get_existing_tables, key_text
 
 revision: str = 'f1e2d3c4b5a6'
 down_revision: Union[str, None] = '8452d01d26d7'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
+
+"""
+Column length limits used for `access_grant` only on MySQL/MariaDB.
+
+Why these values:
+- PostgreSQL and SQLite keep the historical `Text` behavior through `key_text()`.
+- MySQL/MariaDB cannot safely use unbounded `TEXT` columns in `PRIMARY KEY`,
+  `UNIQUE`, `INDEX`, or `FOREIGN KEY` paths.
+- On `utf8mb4`, indexed `VARCHAR` columns must stay within InnoDB key-size
+  limits, so identifier-like fields use a conservative `191` characters.
+- Enum-like fields (`resource_type`, `principal_type`, `permission`) are kept
+  short at `64` characters to reduce composite index width.
+
+Why this is safe for Open-WebUI:
+- Open-WebUI identifiers are normally UUID strings (`str(uuid.uuid4())`),
+  which are only 36 characters long, well below the `191` limit.
+- `resource_type`, `principal_type`, and `permission` store small categorical
+  values such as `knowledge`, `user`, `group`, `read`, and `write`, so `64`
+  characters provides ample headroom.
+
+These limits are therefore applied only for MySQL/MariaDB compatibility,
+while PostgreSQL and SQLite continue using the original unrestricted text
+behavior.
+"""
+RESOURCE_TYPE_LEN = 64
+RESOURCE_ID_LEN = 191
+PRINCIPAL_TYPE_LEN = 64
+PRINCIPAL_ID_LEN = 191
+PERMISSION_LEN = 64
+
+
+def _is_mysql_family(conn) -> bool:
+    return (conn.dialect.name or '').lower() in ('mysql', 'mariadb')
+
+
+def _validate_access_grant_lengths(conn, resource_type, resource_id, principal_type, principal_id, permission) -> None:
+    # Only needed for MySQL/MariaDB, where these columns are narrowed to
+    # VARCHAR(...) for index/key compatibility.
+    if not _is_mysql_family(conn):
+        return
+
+    values = [
+        ('resource_type', resource_type, RESOURCE_TYPE_LEN),
+        ('resource_id', resource_id, RESOURCE_ID_LEN),
+        ('principal_type', principal_type, PRINCIPAL_TYPE_LEN),
+        ('principal_id', principal_id, PRINCIPAL_ID_LEN),
+        ('permission', permission, PERMISSION_LEN),
+    ]
+    for name, value, max_len in values:
+        if value is not None and len(str(value)) > max_len:
+            raise ValueError(f'access_grant.{name} exceeds max length {max_len}: {value!r}')
 
 
 def upgrade() -> None:
@@ -31,14 +82,18 @@ def upgrade() -> None:
 
     # Create access_grant table
     if 'access_grant' not in existing_tables:
+        # Keep composite UNIQUE / secondary index columns tight on MySQL/MariaDB
+        # to avoid oversized utf8mb4 indexes. Use shorter lengths for enum-like
+        # fields and 191 for identifier-like fields as a conservative indexed
+        # string limit.
         op.create_table(
             'access_grant',
-            sa.Column('id', sa.Text(), nullable=False, primary_key=True),
-            sa.Column('resource_type', sa.Text(), nullable=False),
-            sa.Column('resource_id', sa.Text(), nullable=False),
-            sa.Column('principal_type', sa.Text(), nullable=False),
-            sa.Column('principal_id', sa.Text(), nullable=False),
-            sa.Column('permission', sa.Text(), nullable=False),
+            sa.Column('id', key_text(), nullable=False, primary_key=True),
+            sa.Column('resource_type', key_text(length=RESOURCE_TYPE_LEN), nullable=False),
+            sa.Column('resource_id', key_text(length=RESOURCE_ID_LEN), nullable=False),
+            sa.Column('principal_type', key_text(length=PRINCIPAL_TYPE_LEN), nullable=False),
+            sa.Column('principal_id', key_text(length=PRINCIPAL_ID_LEN), nullable=False),
+            sa.Column('permission', key_text(length=PERMISSION_LEN), nullable=False),
             sa.Column('created_at', sa.BigInteger(), nullable=False),
             sa.UniqueConstraint(
                 'resource_type',
@@ -108,6 +163,7 @@ def upgrade() -> None:
 
                 key = (resource_type, resource_id, 'user', '*', 'read')
                 if key not in inserted:
+                    _validate_access_grant_lengths(conn, resource_type, resource_id, 'user', '*', 'read')
                     try:
                         conn.execute(
                             sa.text("""
@@ -164,6 +220,7 @@ def upgrade() -> None:
                     key = (resource_type, resource_id, 'group', group_id, permission)
                     if key in inserted:
                         continue
+                    _validate_access_grant_lengths(conn, resource_type, resource_id, 'group', group_id, permission)
                     try:
                         conn.execute(
                             sa.text("""
@@ -188,6 +245,7 @@ def upgrade() -> None:
                     key = (resource_type, resource_id, 'user', user_id, permission)
                     if key in inserted:
                         continue
+                    _validate_access_grant_lengths(conn, resource_type, resource_id, 'user', user_id, permission)
                     try:
                         conn.execute(
                             sa.text("""

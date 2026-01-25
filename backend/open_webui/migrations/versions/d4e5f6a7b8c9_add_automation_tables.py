@@ -10,6 +10,8 @@ from typing import Union
 from alembic import op
 import sqlalchemy as sa
 
+from open_webui.migrations.util import key_text
+
 revision: str = 'd4e5f6a7b8c9'
 down_revision: Union[str, None] = 'a3dd5bedd151'
 branch_labels = None
@@ -19,8 +21,8 @@ depends_on = None
 def upgrade():
     op.create_table(
         'automation',
-        sa.Column('id', sa.Text(), primary_key=True),
-        sa.Column('user_id', sa.Text(), nullable=False),
+        sa.Column('id', key_text(), primary_key=True),
+        sa.Column('user_id', key_text(), nullable=False),
         sa.Column('name', sa.Text(), nullable=False),
         sa.Column('data', sa.JSON(), nullable=False),
         sa.Column('meta', sa.JSON(), nullable=True),
@@ -34,9 +36,9 @@ def upgrade():
 
     op.create_table(
         'automation_run',
-        sa.Column('id', sa.Text(), primary_key=True),
-        sa.Column('automation_id', sa.Text(), nullable=False),
-        sa.Column('chat_id', sa.Text(), nullable=True),
+        sa.Column('id', key_text(), primary_key=True),
+        sa.Column('automation_id', key_text(), nullable=False),
+        sa.Column('chat_id', key_text(), nullable=True),
         sa.Column('status', sa.Text(), nullable=False),
         sa.Column('error', sa.Text(), nullable=True),
         sa.Column('created_at', sa.BigInteger(), nullable=False),
