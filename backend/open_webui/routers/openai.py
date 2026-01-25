@@ -176,10 +176,15 @@ async def detect_chapter_from_conversation(chat_id: str, api_key: str) -> Option
 챕터 목록:
 {chapter_list}
 
-중요:
-- 명확한 챕터 관련 내용이 있을 때만 chapter_id 반환
-- 일반 인사("안녕하세요"), 짧은 대화 → null 반환
-- 수학 내용이지만 챕터 불명확 → null 반환
+CRITICAL RULES:
+1. 명확한 챕터 관련 내용이 있을 때만 chapter_id 반환 (예: "ch-5")
+2. 다음 경우는 반드시 chapter_id를 null로 설정:
+   - 일반 인사("안녕하세요", "감사합니다")
+   - 짧은 대화 (1-2 메시지만 있는 경우)
+   - 수학 내용이지만 특정 챕터를 확신할 수 없는 경우
+3. NEVER return "uncategorized", "unknown", "none" or similar strings
+4. Only return valid chapter IDs from the list above, or null
+5. When uncertain, return null (NOT "uncategorized")
 """
 
         # Call Gemini with cleaned JSON schema
@@ -208,9 +213,20 @@ async def detect_chapter_from_conversation(chat_id: str, api_key: str) -> Option
         else:
             log.info(f"[CHAPTER-AUTO] LLM: No chapter for chat {chat_id}")
 
-        # Validate
-        if result.chapter_id and result.chapter_id in chapter_mappings:
-            return result.chapter_id
+        # Validate and reject invalid values
+        if result.chapter_id:
+            # Reject invalid strings like "uncategorized", "unknown", etc.
+            if result.chapter_id.lower() in ["uncategorized", "unknown", "none", "n/a"]:
+                log.warning(f"[CHAPTER-AUTO] Rejected invalid chapter_id: {result.chapter_id}")
+                return None
+
+            # Check if valid chapter exists
+            if result.chapter_id in chapter_mappings:
+                return result.chapter_id
+            else:
+                log.warning(f"[CHAPTER-AUTO] Chapter {result.chapter_id} not found in mappings")
+                return None
+
         return None
 
     except Exception as e:
@@ -1007,6 +1023,12 @@ async def handle_gemini_native_request(
                 """Generate OpenAI-compatible SSE chunks from Gemini stream"""
                 try:
                     citations = []
+                    usage_dict = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+                    collected_text = ""  # Collect full response for tracing
+
+                    # Track timing for Langfuse tracing
+                    import time
+                    llm_start_time = time.time()
 
                     # Call streaming service with conversation history
                     # NOTE: force_tool_use only works with function_declarations, not with FileSearch
@@ -1030,6 +1052,21 @@ async def handle_gemini_native_request(
                                 continue
                             except Exception as e:
                                 log.error(f"[CHAPTER-AUTO] Failed to parse citations: {e}")
+
+                        # Check for usage marker
+                        if chunk_text.startswith("\n__USAGE__:"):
+                            # Extract usage from marker
+                            try:
+                                usage_json = chunk_text.replace("\n__USAGE__:", "")
+                                usage_dict = json.loads(usage_json)
+                                log.info(f"[LANGFUSE] Received usage from stream: {usage_dict}")
+                                # Don't send this marker to the client
+                                continue
+                            except Exception as e:
+                                log.error(f"[LANGFUSE] Failed to parse usage: {e}")
+
+                        # Collect text for tracing
+                        collected_text += chunk_text
 
                         # Format as OpenAI chunk
                         chunk_data = openai_chat_chunk_message_template(
@@ -1094,6 +1131,65 @@ async def handle_gemini_native_request(
                     # Send [DONE] marker
                     yield "data: [DONE]\n\n"
 
+                    # Track end time for Langfuse tracing
+                    llm_end_time = time.time()
+
+                    # ============================================================
+                    # Trace to Langfuse after streaming completes
+                    # ============================================================
+                    try:
+                        from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+                        tracer = get_langfuse_tracer()
+                        if tracer and metadata and collected_text:
+                            # Prepare tracing metadata
+                            trace_metadata = {
+                                "user_id": metadata.get("user_id"),
+                                "prompt_group_id": metadata.get("prompt_group_id"),
+                                "proficiency_level": metadata.get("proficiency_level"),
+                                "response_style": metadata.get("response_style"),
+                                "composed_prompt_length": len(final_system) if final_system else 0,
+                                "tool_count": 0,
+                                "provider": "gemini",
+                                "chapter_id": chapter_id,
+                                "store_names": store_names,
+                                "stream": True,
+                            }
+
+                            # Create response_data in OpenAI format
+                            response_data = {
+                                "id": f"chatcmpl-{int(time.time())}",
+                                "object": "chat.completion",
+                                "created": int(time.time()),
+                                "model": model_id,
+                                "choices": [{
+                                    "index": 0,
+                                    "message": {
+                                        "role": "assistant",
+                                        "content": collected_text
+                                    },
+                                    "finish_reason": "stop"
+                                }],
+                                "usage": usage_dict  # Use actual usage from stream
+                            }
+
+                            # Trace the completion with explicit timing
+                            trace, generation = tracer.trace_chat_completion(
+                                chat_id=chat_id or f"unknown-{int(time.time())}",
+                                model=model_id,
+                                messages=gemini_contents,
+                                response=response_data,
+                                metadata=trace_metadata,
+                                start_time=llm_start_time,
+                                end_time=llm_end_time
+                            )
+                            # Store trace for tool tracing
+                            if trace and metadata is not None:
+                                metadata["langfuse_trace"] = trace
+                            log.info(f"[LANGFUSE] Traced Gemini streaming completion: {chat_id}")
+                    except Exception as trace_error:
+                        # Don't fail the request if tracing fails
+                        log.error(f"[LANGFUSE] Failed to trace streaming completion: {trace_error}")
+
                 except Exception as e:
                     log.error(f"[GEMINI-NATIVE] Streaming error: {e}")
                     log.exception(e)
@@ -1118,6 +1214,10 @@ async def handle_gemini_native_request(
 
         # Non-streaming mode
         else:
+            # Track timing for Langfuse tracing
+            import time
+            llm_start_time = time.time()
+
             # Call unified service with conversation history
             # CRITICAL: Run in thread pool to avoid blocking event loop (multi-user support)
             # NOTE: force_tool_use only works with function_declarations, not with FileSearch
@@ -1133,6 +1233,9 @@ async def handle_gemini_native_request(
                 cache_stage=cache_stage
             )
 
+            # Track end time
+            llm_end_time = time.time()
+
             if not result.get("success"):
                 return {
                     "error": {
@@ -1143,7 +1246,8 @@ async def handle_gemini_native_request(
                 }
 
             text = result.get("text", "")
-            log.info(f"[GEMINI-NATIVE] Response received: {len(text)} chars")
+            usage_dict = result.get("usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
+            log.info(f"[GEMINI-NATIVE] Response received: {len(text)} chars, usage: {usage_dict}")
 
             # ============================================================
             # Auto-chapter assignment (non-streaming mode) - LLM-based
@@ -1192,7 +1296,7 @@ async def handle_gemini_native_request(
                     log.error(f"[CHAPTER-AUTO] Error: {e}")
 
             # Convert to OpenAI format
-            return {
+            response_data = {
                 "id": f"chatcmpl-{int(time.time())}",
                 "object": "chat.completion",
                 "created": int(time.time()),
@@ -1205,12 +1309,46 @@ async def handle_gemini_native_request(
                     },
                     "finish_reason": "stop"
                 }],
-                "usage": {
-                    "prompt_tokens": 0,  # Gemini doesn't provide this
-                    "completion_tokens": 0,
-                    "total_tokens": 0
-                }
+                "usage": usage_dict  # Use actual usage from Gemini
             }
+
+            # Trace to Langfuse for observability
+            try:
+                from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+                tracer = get_langfuse_tracer()
+                if tracer and metadata:
+                    # Prepare tracing metadata
+                    trace_metadata = {
+                        "user_id": metadata.get("user_id"),
+                        "prompt_group_id": metadata.get("prompt_group_id"),
+                        "proficiency_level": metadata.get("proficiency_level"),
+                        "response_style": metadata.get("response_style"),
+                        "composed_prompt_length": len(final_system) if final_system else 0,
+                        "tool_count": 0,  # TODO: Add tool count if tools are used
+                        "provider": "gemini",
+                        "chapter_id": chapter_id,
+                        "store_names": store_names,
+                    }
+
+                    # Trace the completion with explicit timing
+                    trace, generation = tracer.trace_chat_completion(
+                        chat_id=chat_id or f"unknown-{int(time.time())}",
+                        model=model_id,
+                        messages=gemini_contents,
+                        response=response_data,
+                        metadata=trace_metadata,
+                        start_time=llm_start_time,
+                        end_time=llm_end_time
+                    )
+                    # Store trace for tool tracing
+                    if trace and metadata is not None:
+                        metadata["langfuse_trace"] = trace
+                    log.info(f"[LANGFUSE] Traced Gemini completion: {chat_id}")
+            except Exception as trace_error:
+                # Don't fail the request if tracing fails
+                log.error(f"[LANGFUSE] Failed to trace completion: {trace_error}")
+
+            return response_data
 
     except Exception as e:
         log.error(f"[GEMINI-NATIVE] Request handling error: {e}")
@@ -2245,6 +2383,16 @@ async def generate_chat_completion(
     log.info(f"[OPENAI] Tool prompts count: {len(tool_prompts)}")
     log.info(f"[OPENAI] Inline tool execution: {tool_prompts and not is_utility_request}")
     log.info("=" * 80)
+
+    # Add prompt_group_id and user_id to metadata for Langfuse tracing
+    # (Used by both Gemini and OpenAI-compatible backends)
+    if metadata is None:
+        metadata = {}
+    metadata["prompt_group_id"] = prompt_group_id
+    metadata["user_id"] = user.id
+    metadata["proficiency_level"] = proficiency_level
+    metadata["response_style"] = response_style
+    # chapter_id is already in metadata if it was set earlier
 
     # CRITICAL: If Gemini backend, use native SDK for ALL requests
     # This enables context caching and improves performance

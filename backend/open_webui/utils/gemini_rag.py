@@ -587,10 +587,21 @@ class GeminiRAGService:
         # No function_call found, return text response
         citations = self._extract_citations(response)
 
+        # Extract usage metadata from response
+        usage_dict = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        if hasattr(response, "usage_metadata"):
+            usage = response.usage_metadata
+            usage_dict = {
+                "prompt_tokens": getattr(usage, "prompt_token_count", 0),
+                "completion_tokens": getattr(usage, "candidates_token_count", 0),
+                "total_tokens": getattr(usage, "total_token_count", 0)
+            }
+
         return {
             "success": True,
             "text": response.text,
             "citations": citations,
+            "usage": usage_dict,
             "model": model
         }
 
@@ -797,6 +808,18 @@ class GeminiRAGService:
             # This allows the caller to extract citations after streaming completes
             if citations:
                 yield f"\n__CITATIONS__:{json.dumps(citations)}"
+
+            # Extract usage metadata from final response
+            if final_response and hasattr(final_response, "usage_metadata"):
+                usage = final_response.usage_metadata
+                usage_dict = {
+                    "prompt_tokens": getattr(usage, "prompt_token_count", 0),
+                    "completion_tokens": getattr(usage, "candidates_token_count", 0),
+                    "total_tokens": getattr(usage, "total_token_count", 0)
+                }
+                log.info(f"[GEMINI RAG STREAM] Usage: {usage_dict}")
+                # Yield usage as a special marker
+                yield f"\n__USAGE__:{json.dumps(usage_dict)}"
 
         except Exception as e:
             log.error("="*80)
