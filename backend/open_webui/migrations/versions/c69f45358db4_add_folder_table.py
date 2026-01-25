@@ -8,6 +8,7 @@ Create Date: 2024-10-16 02:02:35.241684
 
 from alembic import op
 import sqlalchemy as sa
+from open_webui.migrations.util import key_text
 
 revision = 'c69f45358db4'
 down_revision = '3ab32c4b8f59'
@@ -19,7 +20,7 @@ def upgrade():
     op.create_table(
         'folder',
         sa.Column('id', sa.Text(), nullable=False),
-        sa.Column('parent_id', sa.Text(), nullable=True),
+        sa.Column('parent_id', key_text(), nullable=True),
         sa.Column('user_id', sa.Text(), nullable=False),
         sa.Column('name', sa.Text(), nullable=False),
         sa.Column('items', sa.JSON(), nullable=True),
@@ -38,7 +39,7 @@ def upgrade():
 
     op.add_column(
         'chat',
-        sa.Column('folder_id', sa.Text(), nullable=True),
+        sa.Column('folder_id', key_text(), nullable=True),
     )
 
 

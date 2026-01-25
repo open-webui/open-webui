@@ -4,7 +4,133 @@ from logging.config import fileConfig
 from alembic import context
 from open_webui.models.auths import Auth
 from open_webui.env import DATABASE_URL, DATABASE_PASSWORD, LOG_FORMAT
+import sqlalchemy as sa
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import engine_from_config, pool, create_engine
+
+log = logging.getLogger(__name__)
+
+
+# --- MySQL/MariaDB compatibility shims ---------------------------------------
+# Goal:
+#   Keep existing historical Alembic revisions unchanged while making them
+#   executable on MySQL/MariaDB.
+#
+# Why this is needed:
+#   Open-WebUI has older migrations that were originally written with
+#   SQLite/PostgreSQL-friendly assumptions. In particular:
+#     - some revisions use sa.String() without an explicit length
+#     - some revisions use sa.Text() for identifier-like columns such as ids,
+#       unique keys, indexed columns, or foreign-key columns
+#
+# On MySQL/MariaDB, these patterns can fail during DDL generation because:
+#   - VARCHAR requires a length
+#   - TEXT/BLOB columns cannot be used safely for PRIMARY KEY / UNIQUE / indexed
+#     columns without a key length
+#   - foreign-key columns must be type-compatible with the referenced key
+#
+# Scope:
+#   These shims affect Alembic migration DDL compilation only. They do not change
+#   SQLAlchemy model definitions or runtime query behavior outside migrations.
+#
+# Design note:
+#   sa.String() can be fixed globally because the issue is type-only (missing length).
+#   sa.Text() cannot: TEXT is valid in general, but invalid/problematic only when used
+#   for PK/UNIQUE/index/FK columns, so we must inspect column context during DDL compilation.
+#
+#   This shim is a safety net for historical revisions during CREATE TABLE DDL generation.
+#   New migrations should still use MariaDB-safe types explicitly (for example key_text()),
+#   especially for columns that may later participate in op.create_index(...) or other
+#   for PK/UNIQUE/index/FK columns, so we must inspect column context during DDL compilation.
+#
+# 1) sa.String() without a length:
+#    Triggered when a historical migration emits sa.String() and Alembic compiles
+#    it for the mysql/mariadb dialect. In that case, rewrite it to VARCHAR(255)
+#    so the migration remains valid without editing the historical revision.
+@compiles(sa.String, 'mysql')
+@compiles(sa.String, 'mariadb')
+def _compile_string_mysql(type_, compiler, **kw):
+    if type_.length is None:
+        type_ = sa.String(length=255)
+    return compiler.visit_VARCHAR(type_, **kw)
+
+
+#
+#
+# 2) sa.Text() used for key-like columns:
+#    Triggered when a historical migration defines a TEXT column that is also:
+#      - a PRIMARY KEY
+#      - UNIQUE
+#      - indexed
+#      - or used as a FOREIGN KEY
+#
+#    During MySQL/MariaDB migration DDL compilation only, rewrite those columns
+#    from TEXT to VARCHAR(255). This preserves the intent of the old migration
+#    while satisfying MySQL/MariaDB key and FK requirements.
+#
+#    How it works:
+#      - patch MySQLDDLCompiler.get_column_specification()
+#      - inspect each column as Alembic renders CREATE/ALTER TABLE DDL
+#      - if the column type is sa.Text and it participates in a PK/UNIQUE/index/FK,
+#        make a shallow column copy and replace its type with sa.String(255)
+#      - delegate back to SQLAlchemy's original compiler method
+#
+#    This keeps the compatibility logic centralized in env.py instead of
+#    modifying many already-released migration files.
+try:
+    from sqlalchemy.dialects.mysql.base import MySQLDDLCompiler
+
+    def _is_mysql_key_text_column(column) -> bool:
+        """
+        Return True when a TEXT column participates in a key-like path that is
+        unsafe on MySQL/MariaDB and should be rewritten to VARCHAR(255) during
+        CREATE TABLE DDL compilation.
+
+        This covers both:
+        - column-level flags (primary_key / unique / index / foreign_keys)
+        - table-level constraints/indexes attached before CREATE TABLE compilation
+        """
+        is_fk_col = bool(getattr(column, 'foreign_keys', None))
+        if column.primary_key or column.unique or column.index or is_fk_col:
+            return True
+
+        table = getattr(column, 'table', None)
+        if table is None:
+            return False
+
+        for constraint in getattr(table, 'constraints', ()):
+            if isinstance(constraint, (sa.PrimaryKeyConstraint, sa.UniqueConstraint)):
+                try:
+                    if column in constraint.columns:
+                        return True
+                except Exception:
+                    pass
+
+        for index in getattr(table, 'indexes', ()):
+            try:
+                if column in index.columns:
+                    return True
+            except Exception:
+                pass
+
+        return False
+
+    _orig_get_colspec = MySQLDDLCompiler.get_column_specification
+
+    def _patched_get_column_specification(self, column, **kw):
+        # NOTE: For mysql/mariadb, FK columns must be type-compatible with the referenced key.
+        # If historical migrations used TEXT for FK columns, MySQL/MariaDB will reject the FK.
+        if isinstance(column.type, sa.Text) and _is_mysql_key_text_column(column):
+            column = column.copy()
+            column.type = sa.String(length=255)
+        return _orig_get_colspec(self, column, **kw)
+
+    MySQLDDLCompiler.get_column_specification = _patched_get_column_specification
+except Exception:
+    if DATABASE_URL.startswith(('mysql', 'mariadb')):
+        log.exception('Failed to install MySQL/MariaDB compatibility shims')
+        raise
+    # If MySQL/MariaDB is not the active dialect, continue without installing the shim.
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

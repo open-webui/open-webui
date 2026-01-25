@@ -29,6 +29,9 @@ from contextlib import suppress
 import peewee as pw
 from peewee_migrate import Migrator
 
+from open_webui.internal.utils import key_text
+
+
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
@@ -38,8 +41,8 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
     @migrator.create_model
     class Function(pw.Model):
-        id = pw.TextField(unique=True)
-        user_id = pw.TextField()
+        id = key_text(database, unique=True)
+        user_id = key_text(database)
 
         name = pw.TextField()
         type = pw.TextField()

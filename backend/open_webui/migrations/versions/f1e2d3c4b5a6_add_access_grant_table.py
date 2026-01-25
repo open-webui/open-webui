@@ -18,7 +18,7 @@ import uuid
 from alembic import op
 import sqlalchemy as sa
 
-from open_webui.migrations.util import get_existing_tables
+from open_webui.migrations.util import get_existing_tables, key_text
 
 revision: str = 'f1e2d3c4b5a6'
 down_revision: Union[str, None] = '8452d01d26d7'
@@ -31,14 +31,18 @@ def upgrade() -> None:
 
     # Create access_grant table
     if 'access_grant' not in existing_tables:
+        # Keep composite UNIQUE / secondary index columns tight on MySQL/MariaDB
+        # to avoid oversized utf8mb4 indexes. Use shorter lengths for enum-like
+        # fields and 191 for identifier-like fields as a conservative indexed
+        # string limit.
         op.create_table(
             'access_grant',
-            sa.Column('id', sa.Text(), nullable=False, primary_key=True),
-            sa.Column('resource_type', sa.Text(), nullable=False),
-            sa.Column('resource_id', sa.Text(), nullable=False),
-            sa.Column('principal_type', sa.Text(), nullable=False),
-            sa.Column('principal_id', sa.Text(), nullable=False),
-            sa.Column('permission', sa.Text(), nullable=False),
+            sa.Column('id', key_text(), nullable=False, primary_key=True),
+            sa.Column('resource_type', key_text(length=64), nullable=False),
+            sa.Column('resource_id', key_text(length=191), nullable=False),
+            sa.Column('principal_type', key_text(length=64), nullable=False),
+            sa.Column('principal_id', key_text(length=191), nullable=False),
+            sa.Column('permission', key_text(length=64), nullable=False),
             sa.Column('created_at', sa.BigInteger(), nullable=False),
             sa.UniqueConstraint(
                 'resource_type',
