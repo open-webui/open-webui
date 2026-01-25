@@ -956,8 +956,12 @@ async def generate_chat_completion(
             )
 
             if r.status >= 400:
-                # Do not retry on client errors that won't change (Unauthorized, Not Found, etc.)
-                if r.status in [401, 403, 404, 422]:
+                if attempt < RETRIES - 1:
+                    await cleanup_response(r, session)
+                    log.warning(f"Request failed with status {r.status}, retrying in {DELAY}s... (Attempt {attempt+1}/{RETRIES})")
+                    await asyncio.sleep(DELAY)
+                    continue
+                else:
                     try:
                         response = await r.json()
                     except:
@@ -967,12 +971,6 @@ async def generate_chat_completion(
                         return JSONResponse(status_code=r.status, content=response)
                     else:
                         return PlainTextResponse(status_code=r.status, content=response)
-                
-                if attempt < RETRIES - 1:
-                    await cleanup_response(r, session)
-                    log.warning(f"Request failed with status {r.status}, retrying in {DELAY}s... (Attempt {attempt+1}/{RETRIES})")
-                    await asyncio.sleep(DELAY)
-                    continue
 
             # Check if response is SSE
             if "text/event-stream" in r.headers.get("Content-Type", ""):
