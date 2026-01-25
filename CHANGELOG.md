@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎨 Long model names and IDs in the admin panel now truncate properly to prevent visual overflow, with full names visible on hover. [#20696](https://github.com/open-webui/open-webui/pull/20696)
 - 👥 Filtering users in the admin panel now automatically resets to page 1, preventing empty results when searching from pages beyond the first. [#20723](https://github.com/open-webui/open-webui/pull/20723), [Commit](https://github.com/open-webui/open-webui/commit/be75bc506adb048ef11b1612c0e3662511c920d0)
 - 🔎 Searching for users by username now works correctly on Models, Knowledge, and Functions workspace pages, making it easier to find resources owned by specific users. [#20780](https://github.com/open-webui/open-webui/pull/20780)
+
 ## [0.7.2] - 2026-01-10
 
 ### Fixed
