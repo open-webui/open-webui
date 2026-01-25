@@ -20,6 +20,10 @@
 	let filesInputElement = null;
 	let inputFiles = null;
 
+	$: if (selectedItems === null) {
+		selectedItems = [];
+	}
+
 	const uploadFileHandler = async (file, fullContext: boolean = false) => {
 		if ($user?.role !== 'admin' && !($user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));

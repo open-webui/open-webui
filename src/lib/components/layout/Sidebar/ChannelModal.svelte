@@ -17,6 +17,7 @@
 	import MemberSelector from '$lib/components/workspace/common/MemberSelector.svelte';
 	import Visibility from '$lib/components/workspace/common/Visibility.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import WebhooksModal from '$lib/components/channel/WebhooksModal.svelte';
 
 	export let show = false;
 	export let onSubmit: Function = () => {};
@@ -97,6 +98,7 @@
 	}
 
 	let showDeleteConfirmDialog = false;
+	let showWebhooksModal = false;
 
 	const deleteHandler = async () => {
 		showDeleteConfirmDialog = false;
@@ -126,7 +128,7 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">
@@ -247,6 +249,22 @@
 						</div>
 					{/if}
 
+					{#if edit}
+						<div class="flex w-full mt-2 items-center justify-between">
+							<div class="text-xs text-gray-500">{$i18n.t('Webhooks')}</div>
+
+							<button
+								class="text-xs bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden text-left"
+								type="button"
+								on:click={() => {
+									showWebhooksModal = true;
+								}}
+							>
+								{$i18n.t('Manage')}
+							</button>
+						</div>
+					{/if}
+
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						{#if edit}
 							<button
@@ -294,3 +312,5 @@
 		deleteHandler();
 	}}
 />
+
+<WebhooksModal bind:show={showWebhooksModal} {channel} />

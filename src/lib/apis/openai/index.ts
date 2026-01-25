@@ -103,7 +103,7 @@ export const getOpenAIUrls = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.OPENAI_API_BASE_URLS;
+	return res?.OPENAI_API_BASE_URLS ?? [];
 };
 
 export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
@@ -170,7 +170,7 @@ export const getOpenAIKeys = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.OPENAI_API_KEYS;
+	return res?.OPENAI_API_KEYS ?? [];
 };
 
 export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {

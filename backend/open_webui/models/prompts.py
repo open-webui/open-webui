@@ -1,7 +1,8 @@
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, get_db
+from sqlalchemy.orm import Session
+from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
 
@@ -62,6 +63,10 @@ class PromptUserResponse(PromptModel):
     user: Optional[UserResponse] = None
 
 
+class PromptAccessResponse(PromptUserResponse):
+    write_access: Optional[bool] = False
+
+
 class PromptForm(BaseModel):
     command: str
     title: str
@@ -71,7 +76,7 @@ class PromptForm(BaseModel):
 
 class PromptsTable:
     def insert_new_prompt(
-        self, user_id: str, form_data: PromptForm
+        self, user_id: str, form_data: PromptForm, db: Optional[Session] = None
     ) -> Optional[PromptModel]:
         prompt = PromptModel(
             **{
@@ -82,7 +87,7 @@ class PromptsTable:
         )
 
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 result = Prompt(**prompt.model_dump())
                 db.add(result)
                 db.commit()
@@ -94,21 +99,23 @@ class PromptsTable:
         except Exception:
             return None
 
-    def get_prompt_by_command(self, command: str) -> Optional[PromptModel]:
+    def get_prompt_by_command(
+        self, command: str, db: Optional[Session] = None
+    ) -> Optional[PromptModel]:
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 return PromptModel.model_validate(prompt)
         except Exception:
             return None
 
-    def get_prompts(self) -> list[PromptUserResponse]:
-        with get_db() as db:
+    def get_prompts(self, db: Optional[Session] = None) -> list[PromptUserResponse]:
+        with get_db_context(db) as db:
             all_prompts = db.query(Prompt).order_by(Prompt.timestamp.desc()).all()
 
             user_ids = list(set(prompt.user_id for prompt in all_prompts))
 
-            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
 
             prompts = []
@@ -126,10 +133,12 @@ class PromptsTable:
             return prompts
 
     def get_prompts_by_user_id(
-        self, user_id: str, permission: str = "write"
+        self, user_id: str, permission: str = "write", db: Optional[Session] = None
     ) -> list[PromptUserResponse]:
-        prompts = self.get_prompts()
-        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
+        prompts = self.get_prompts(db=db)
+        user_group_ids = {
+            group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
+        }
 
         return [
             prompt
@@ -139,10 +148,10 @@ class PromptsTable:
         ]
 
     def update_prompt_by_command(
-        self, command: str, form_data: PromptForm
+        self, command: str, form_data: PromptForm, db: Optional[Session] = None
     ) -> Optional[PromptModel]:
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 prompt.title = form_data.title
                 prompt.content = form_data.content
@@ -153,9 +162,11 @@ class PromptsTable:
         except Exception:
             return None
 
-    def delete_prompt_by_command(self, command: str) -> bool:
+    def delete_prompt_by_command(
+        self, command: str, db: Optional[Session] = None
+    ) -> bool:
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 db.query(Prompt).filter_by(command=command).delete()
                 db.commit()
 

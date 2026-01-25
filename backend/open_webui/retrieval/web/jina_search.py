@@ -7,17 +7,21 @@ from yarl import URL
 log = logging.getLogger(__name__)
 
 
-def search_jina(api_key: str, query: str, count: int) -> list[SearchResult]:
+def search_jina(
+    api_key: str, query: str, count: int, base_url: str = ""
+) -> list[SearchResult]:
     """
     Search using Jina's Search API and return the results as a list of SearchResult objects.
     Args:
+        api_key (str): The Jina API key
         query (str): The query to search for
         count (int): The number of results to return
+        base_url (str): Optional custom base URL for the Jina API
 
     Returns:
         list[SearchResult]: A list of search results
     """
-    jina_search_endpoint = "https://s.jina.ai/"
+    jina_search_endpoint = base_url if base_url else "https://s.jina.ai/"
 
     headers = {
         "Accept": "application/json",

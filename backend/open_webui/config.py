@@ -19,6 +19,7 @@ from authlib.integrations.starlette_client import OAuth
 from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
+    ENABLE_DB_MIGRATIONS,
     ENV,
     REDIS_URL,
     REDIS_KEY_PREFIX,
@@ -67,7 +68,8 @@ def run_migrations():
         log.exception(f"Error running migrations: {e}")
 
 
-run_migrations()
+if ENABLE_DB_MIGRATIONS:
+    run_migrations()
 
 
 class Config(Base):
@@ -1468,6 +1470,15 @@ USER_PERMISSIONS_FEATURES_API_KEYS = (
     os.environ.get("USER_PERMISSIONS_FEATURES_API_KEYS", "False").lower() == "true"
 )
 
+USER_PERMISSIONS_FEATURES_MEMORIES = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_MEMORIES", "True").lower() == "true"
+)
+
+
+USER_PERMISSIONS_SETTINGS_INTERFACE = (
+    os.environ.get("USER_PERMISSIONS_SETTINGS_INTERFACE", "True").lower() == "true"
+)
+
 
 DEFAULT_USER_PERMISSIONS = {
     "workspace": {
@@ -1526,6 +1537,10 @@ DEFAULT_USER_PERMISSIONS = {
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
+        "memories": USER_PERMISSIONS_FEATURES_MEMORIES,
+    },
+    "settings": {
+        "interface": USER_PERMISSIONS_SETTINGS_INTERFACE,
     },
 }
 
@@ -1541,6 +1556,12 @@ ENABLE_FOLDERS = PersistentConfig(
     os.environ.get("ENABLE_FOLDERS", "True").lower() == "true",
 )
 
+FOLDER_MAX_FILE_COUNT = PersistentConfig(
+    "FOLDER_MAX_FILE_COUNT",
+    "folders.max_file_count",
+    os.environ.get("FOLDER_MAX_FILE_COUNT", ""),
+)
+
 ENABLE_CHANNELS = PersistentConfig(
     "ENABLE_CHANNELS",
     "channels.enable",
@@ -1551,6 +1572,12 @@ ENABLE_NOTES = PersistentConfig(
     "ENABLE_NOTES",
     "notes.enable",
     os.environ.get("ENABLE_NOTES", "True").lower() == "true",
+)
+
+ENABLE_USER_STATUS = PersistentConfig(
+    "ENABLE_USER_STATUS",
+    "users.enable_status",
+    os.environ.get("ENABLE_USER_STATUS", "True").lower() == "true",
 )
 
 ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
@@ -2067,6 +2094,12 @@ ENABLE_CODE_INTERPRETER = PersistentConfig(
     os.environ.get("ENABLE_CODE_INTERPRETER", "True").lower() == "true",
 )
 
+ENABLE_MEMORIES = PersistentConfig(
+    "ENABLE_MEMORIES",
+    "memories.enable",
+    os.environ.get("ENABLE_MEMORIES", "True").lower() == "true",
+)
+
 CODE_INTERPRETER_ENGINE = PersistentConfig(
     "CODE_INTERPRETER_ENGINE",
     "code_interpreter.engine",
@@ -2339,6 +2372,51 @@ else:
         PGVECTOR_IVFFLAT_LISTS = int(PGVECTOR_IVFFLAT_LISTS)
     except Exception:
         PGVECTOR_IVFFLAT_LISTS = 100
+
+# openGauss
+OPENGAUSS_DB_URL = os.environ.get("OPENGAUSS_DB_URL", DATABASE_URL)
+
+OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH = int(
+    os.environ.get("OPENGAUSS_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
+)
+
+OPENGAUSS_POOL_SIZE = os.environ.get("OPENGAUSS_POOL_SIZE", None)
+
+if OPENGAUSS_POOL_SIZE != None:
+    try:
+        OPENGAUSS_POOL_SIZE = int(OPENGAUSS_POOL_SIZE)
+    except Exception:
+        OPENGAUSS_POOL_SIZE = None
+
+OPENGAUSS_POOL_MAX_OVERFLOW = os.environ.get("OPENGAUSS_POOL_MAX_OVERFLOW", 0)
+
+if OPENGAUSS_POOL_MAX_OVERFLOW == "":
+    OPENGAUSS_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        OPENGAUSS_POOL_MAX_OVERFLOW = int(OPENGAUSS_POOL_MAX_OVERFLOW)
+    except Exception:
+        OPENGAUSS_POOL_MAX_OVERFLOW = 0
+
+OPENGAUSS_POOL_TIMEOUT = os.environ.get("OPENGAUSS_POOL_TIMEOUT", 30)
+
+if OPENGAUSS_POOL_TIMEOUT == "":
+    OPENGAUSS_POOL_TIMEOUT = 30
+else:
+    try:
+        OPENGAUSS_POOL_TIMEOUT = int(OPENGAUSS_POOL_TIMEOUT)
+    except Exception:
+        OPENGAUSS_POOL_TIMEOUT = 30
+
+OPENGAUSS_POOL_RECYCLE = os.environ.get("OPENGAUSS_POOL_RECYCLE", 3600)
+
+if OPENGAUSS_POOL_RECYCLE == "":
+    OPENGAUSS_POOL_RECYCLE = 3600
+else:
+    try:
+        OPENGAUSS_POOL_RECYCLE = int(OPENGAUSS_POOL_RECYCLE)
+    except Exception:
+        OPENGAUSS_POOL_RECYCLE = 3600
 
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)
@@ -2815,6 +2893,12 @@ RAG_TEXT_SPLITTER = PersistentConfig(
     os.environ.get("RAG_TEXT_SPLITTER", ""),
 )
 
+ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = PersistentConfig(
+    "ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER",
+    "rag.enable_markdown_header_text_splitter",
+    os.environ.get("ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER", "True").lower() == "true",
+)
+
 
 TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
 TIKTOKEN_ENCODING_NAME = PersistentConfig(
@@ -2827,6 +2911,13 @@ TIKTOKEN_ENCODING_NAME = PersistentConfig(
 CHUNK_SIZE = PersistentConfig(
     "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
 )
+
+CHUNK_MIN_SIZE_TARGET = PersistentConfig(
+    "CHUNK_MIN_SIZE_TARGET",
+    "rag.chunk_min_size_target",
+    int(os.environ.get("CHUNK_MIN_SIZE_TARGET", "0")),
+)
+
 CHUNK_OVERLAP = PersistentConfig(
     "CHUNK_OVERLAP",
     "rag.chunk_overlap",
@@ -3127,10 +3218,22 @@ SERPLY_API_KEY = PersistentConfig(
     os.getenv("SERPLY_API_KEY", ""),
 )
 
+DDGS_BACKEND = PersistentConfig(
+    "DDGS_BACKEND",
+    "rag.web.search.ddgs_backend",
+    os.getenv("DDGS_BACKEND", "auto"),
+)
+
 JINA_API_KEY = PersistentConfig(
     "JINA_API_KEY",
     "rag.web.search.jina_api_key",
     os.getenv("JINA_API_KEY", ""),
+)
+
+JINA_API_BASE_URL = PersistentConfig(
+    "JINA_API_BASE_URL",
+    "rag.web.search.jina_api_base_url",
+    os.getenv("JINA_API_BASE_URL", ""),
 )
 
 SEARCHAPI_API_KEY = PersistentConfig(
@@ -3265,6 +3368,12 @@ FIRECRAWL_API_BASE_URL = PersistentConfig(
     "FIRECRAWL_API_BASE_URL",
     "rag.web.loader.firecrawl_api_url",
     os.environ.get("FIRECRAWL_API_BASE_URL", "https://api.firecrawl.dev"),
+)
+
+FIRECRAWL_TIMEOUT = PersistentConfig(
+    "FIRECRAWL_TIMEOUT",
+    "rag.web.loader.firecrawl_timeout",
+    os.environ.get("FIRECRAWL_TIMEOUT", ""),
 )
 
 EXTERNAL_WEB_SEARCH_URL = PersistentConfig(
@@ -3628,17 +3737,16 @@ WHISPER_MODEL = PersistentConfig(
     os.getenv("WHISPER_MODEL", "base"),
 )
 
+WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 WHISPER_MODEL_DIR = os.getenv("WHISPER_MODEL_DIR", f"{CACHE_DIR}/whisper/models")
 WHISPER_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE
     and os.environ.get("WHISPER_MODEL_AUTO_UPDATE", "").lower() == "true"
 )
 
-WHISPER_VAD_FILTER = PersistentConfig(
-    "WHISPER_VAD_FILTER",
-    "audio.stt.whisper_vad_filter",
-    os.getenv("WHISPER_VAD_FILTER", "False").lower() == "true",
-)
+WHISPER_VAD_FILTER = os.getenv("WHISPER_VAD_FILTER", "False").lower() == "true"
+
+WHISPER_MULTILINGUAL = os.getenv("WHISPER_MULTILINGUAL", "False").lower() == "true"
 
 WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "").lower() or None
 

@@ -113,7 +113,11 @@ class OpenSearchClient(VectorDBBase):
         self.client.indices.delete(index=self._get_index_name(collection_name))
 
     def search(
-        self, collection_name: str, vectors: list[list[float | int]], limit: int
+        self,
+        collection_name: str,
+        vectors: list[list[float | int]],
+        filter: Optional[dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         try:
             if not self.has_collection(collection_name):

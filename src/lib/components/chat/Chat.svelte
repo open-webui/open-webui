@@ -390,6 +390,9 @@
 					if (autoScroll) {
 						scrollToBottom('smooth');
 					}
+				} else if (type === 'chat:message:favorite') {
+					// Update message favorite status
+					message.favorite = data.favorite;
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
@@ -889,15 +892,8 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
-		if ($user?.role !== 'admin') {
-			if ($user?.permissions?.chat?.temporary_enforced) {
-				await temporaryChatEnabled.set(true);
-			}
-
-			if (!$user?.permissions?.chat?.temporary) {
-				await temporaryChatEnabled.set(false);
-				return;
-			}
+		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+			await temporaryChatEnabled.set(true);
 		}
 
 		if ($settings?.temporaryChatByDefault ?? false) {
@@ -909,9 +905,15 @@
 			}
 		}
 
+		if ($user?.role !== 'admin' && !$user?.permissions?.chat?.temporary) {
+			await temporaryChatEnabled.set(false);
+		}
+
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
+
+		const defaultModels = $config?.default_models ? $config?.default_models.split(',') : [];
 
 		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
 			const urlModels = (
@@ -921,8 +923,8 @@
 			)?.split(',');
 
 			if (urlModels.length === 1) {
-				const m = $models.find((m) => m.id === urlModels[0]);
-				if (!m) {
+				if (!$models.find((m) => m.id === urlModels[0])) {
+					// Model not found; open model selector and prefill
 					const modelSelectorButton = document.getElementById('model-selector-0-button');
 					if (modelSelectorButton) {
 						modelSelectorButton.click();
@@ -936,37 +938,51 @@
 						}
 					}
 				} else {
+					// Model found; set it as selected
 					selectedModels = urlModels;
 				}
 			} else {
+				// Multiple models; set as selected
 				selectedModels = urlModels;
 			}
 
+			// Unavailable models filtering
 			selectedModels = selectedModels.filter((modelId) =>
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
 			if ($selectedFolder?.data?.model_ids) {
+				// Set from folder model IDs
 				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
 				if (sessionStorage.selectedModels) {
+					// Set from session storage (temporary selection)
 					selectedModels = JSON.parse(sessionStorage.selectedModels);
 					sessionStorage.removeItem('selectedModels');
 				} else {
 					if ($settings?.models) {
+						// Set from user settings
 						selectedModels = $settings?.models;
-					} else if ($config?.default_models) {
-						console.log($config?.default_models.split(',') ?? '');
-						selectedModels = $config?.default_models.split(',');
+					} else if (defaultModels && defaultModels.length > 0) {
+						// Set from default models
+						selectedModels = defaultModels;
 					}
 				}
 			}
 
+			// Unavailable & hidden models filtering
 			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
 		}
 
+		// Ensure at least one model is selected
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
 			if (availableModels.length > 0) {
+				if (defaultModels && defaultModels.length > 0) {
+					// Set from default models
+					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
+				}
+
+				// Set to first available model
 				selectedModels = [availableModels?.at(0) ?? ''];
 			} else {
 				selectedModels = [''];
@@ -1103,7 +1119,7 @@
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
-						if (message.role === 'assistant') {
+						if (message && message.role === 'assistant') {
 							message.done = true;
 						}
 					}
@@ -1731,13 +1747,18 @@
 
 				if (model) {
 					// If there are image files, check if model is vision capable
+					// Skip this check if image generation is enabled, as images may be for editing or are generated outputs in the history
 					const hasImages = createMessagesList(_history, parentId).some((message) =>
 						message.files?.some(
-							(file) => file.type === 'image' || file?.content_type?.startsWith('image/')
+							(file) => file.type === 'image' || (file?.content_type ?? '').startsWith('image/')
 						)
 					);
 
-					if (hasImages && !(model.info?.meta?.capabilities?.vision ?? true)) {
+					if (
+						hasImages &&
+						!(model.info?.meta?.capabilities?.vision ?? true) &&
+						!imageGenerationEnabled
+					) {
 						toast.error(
 							$i18n.t('Model {{modelName}} is not vision capable', {
 								modelName: model.name ?? model.id
@@ -2083,8 +2104,10 @@
 
 			const responseMessage = history.messages[history.currentId];
 			// Set all response messages to done
-			for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
-				history.messages[messageId].done = true;
+			if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
+				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+					history.messages[messageId].done = true;
+				}
 			}
 
 			history.messages[history.currentId] = responseMessage;
@@ -2139,6 +2162,11 @@
 
 		if (history.currentId) {
 			let userMessage = history.messages[message.parentId];
+
+			if (!userMessage) {
+				toast.error($i18n.t('Parent message not found'));
+				return;
+			}
 
 			if (autoScroll) {
 				scrollToBottom();

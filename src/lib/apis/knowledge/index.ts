@@ -485,3 +485,29 @@ export const reindexKnowledgeFiles = async (token: string) => {
 
 	return res;
 };
+
+export const exportKnowledgeById = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/export`, {
+		method: 'GET',
+		headers: {
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.blob();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

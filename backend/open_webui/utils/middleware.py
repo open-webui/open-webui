@@ -44,6 +44,7 @@ from open_webui.routers.retrieval import (
     process_web_search,
     SearchForm,
 )
+from open_webui.utils.tools import get_builtin_tools
 from open_webui.routers.images import (
     image_generations,
     CreateImageForm,
@@ -92,7 +93,11 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
 )
-from open_webui.utils.tools import get_tools, get_updated_tool_function
+from open_webui.utils.tools import (
+    get_tools,
+    get_updated_tool_function,
+    has_tool_server_access,
+)
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -118,6 +123,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
+    RAG_SYSTEM_CONTEXT,
 )
 from open_webui.constants import TASKS
 
@@ -138,6 +144,196 @@ DEFAULT_REASONING_TAGS = [
 ]
 DEFAULT_SOLUTION_TAGS = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 DEFAULT_CODE_INTERPRETER_TAGS = [("<code_interpreter>", "</code_interpreter>")]
+
+
+def get_citation_source_from_tool_result(
+    tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ""
+) -> list[dict]:
+    """
+    Parse a tool's result and convert it to source dicts for citation display.
+
+    Follows the source format conventions from get_sources_from_items:
+    - source: file/item info object with id, name, type
+    - document: list of document contents
+    - metadata: list of metadata objects with source, file_id, name fields
+
+    Returns a list of sources (usually one, but query_knowledge_files may return multiple).
+    """
+    try:
+        if tool_name == "search_web":
+            # Parse JSON array: [{"title": "...", "link": "...", "snippet": "..."}]
+            results = json.loads(tool_result)
+            documents = []
+            metadata = []
+
+            for result in results:
+                title = result.get("title", "")
+                link = result.get("link", "")
+                snippet = result.get("snippet", "")
+
+                documents.append(f"{title}\n{snippet}")
+                metadata.append(
+                    {
+                        "source": link,
+                        "name": title,
+                        "url": link,
+                    }
+                )
+
+            return [
+                {
+                    "source": {"name": "search_web", "id": "search_web"},
+                    "document": documents,
+                    "metadata": metadata,
+                }
+            ]
+
+        elif tool_name == "view_knowledge_file":
+            file_data = json.loads(tool_result)
+            filename = file_data.get("filename", "Unknown File")
+            file_id = file_data.get("id", "")
+            knowledge_name = file_data.get("knowledge_name", "")
+
+            return [
+                {
+                    "source": {
+                        "id": file_id,
+                        "name": filename,
+                        "type": "file",
+                    },
+                    "document": [file_data.get("content", "")],
+                    "metadata": [
+                        {
+                            "file_id": file_id,
+                            "name": filename,
+                            "source": filename,
+                            **(
+                                {"knowledge_name": knowledge_name}
+                                if knowledge_name
+                                else {}
+                            ),
+                        }
+                    ],
+                }
+            ]
+
+        elif tool_name == "query_knowledge_files":
+            chunks = json.loads(tool_result)
+
+            # Group chunks by source for better citation display
+            # Each unique source becomes a separate source entry
+            sources_by_file = {}
+
+            for chunk in chunks:
+                source_name = chunk.get("source", "Unknown")
+                file_id = chunk.get("file_id", "")
+                note_id = chunk.get("note_id", "")
+                chunk_type = chunk.get("type", "file")
+                content = chunk.get("content", "")
+
+                # Use file_id or note_id as the key
+                key = file_id or note_id or source_name
+
+                if key not in sources_by_file:
+                    sources_by_file[key] = {
+                        "source": {
+                            "id": file_id or note_id,
+                            "name": source_name,
+                            "type": chunk_type,
+                        },
+                        "document": [],
+                        "metadata": [],
+                    }
+
+                sources_by_file[key]["document"].append(content)
+                sources_by_file[key]["metadata"].append(
+                    {
+                        "file_id": file_id,
+                        "name": source_name,
+                        "source": source_name,
+                        **({"note_id": note_id} if note_id else {}),
+                    }
+                )
+
+            # Return all grouped sources as a list
+            if sources_by_file:
+                return list(sources_by_file.values())
+
+            # Empty result fallback
+            return []
+
+        else:
+            # Fallback for other tools
+            return [
+                {
+                    "source": {
+                        "name": tool_name,
+                        "type": "tool",
+                        "id": tool_id or tool_name,
+                    },
+                    "document": [str(tool_result)],
+                    "metadata": [{"source": tool_name, "name": tool_name}],
+                }
+            ]
+    except Exception as e:
+        log.exception(f"Error parsing tool result for {tool_name}: {e}")
+        return [
+            {
+                "source": {"name": tool_name, "type": "tool"},
+                "document": [str(tool_result)],
+                "metadata": [{"source": tool_name}],
+            }
+        ]
+
+
+def apply_source_context_to_messages(
+    request: Request,
+    messages: list,
+    sources: list,
+    user_message: str,
+) -> list:
+    """
+    Build source context from citation sources and apply to messages.
+    Uses RAG template to format context for model consumption.
+    """
+    if not sources or not user_message:
+        return messages
+
+    context_string = ""
+    citation_idx = {}
+
+    for source in sources:
+        for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
+            src_id = meta.get("source") or source.get("source", {}).get("id") or "N/A"
+            if src_id not in citation_idx:
+                citation_idx[src_id] = len(citation_idx) + 1
+            src_name = source.get("source", {}).get("name")
+            context_string += (
+                f'<source id="{citation_idx[src_id]}"'
+                + (f' name="{src_name}"' if src_name else "")
+                + f">{doc}</source>\n"
+            )
+
+    context_string = context_string.strip()
+    if not context_string:
+        return messages
+
+    if RAG_SYSTEM_CONTEXT:
+        return add_or_update_system_message(
+            rag_template(
+                request.app.state.config.RAG_TEMPLATE, context_string, user_message
+            ),
+            messages,
+            append=True,
+        )
+    else:
+        return add_or_update_user_message(
+            rag_template(
+                request.app.state.config.RAG_TEMPLATE, context_string, user_message
+            ),
+            messages,
+            append=False,
+        )
 
 
 def process_tool_result(
@@ -724,6 +920,8 @@ def get_images_from_messages(message_list):
         for file in message.get("files", []):
             if file.get("type") == "image":
                 message_images.append(file.get("url"))
+            elif file.get("content_type", "").startswith("image/"):
+                message_images.append(file.get("url"))
 
         if message_images:
             images.append(message_images)
@@ -750,6 +948,51 @@ def get_image_urls(delta_images, request, metadata, user) -> list[str]:
         image_urls.append(url)
 
     return image_urls
+
+
+def add_file_context(messages: list, chat_id: str, user) -> list:
+    """
+    Add file URLs to messages for native function calling.
+    """
+    if not chat_id or chat_id.startswith("local:"):
+        return messages
+
+    chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    if not chat:
+        return messages
+
+    history = chat.chat.get("history", {})
+    stored_messages = get_message_list(
+        history.get("messages", {}), history.get("currentId")
+    )
+
+    def format_file_tag(file):
+        attrs = f'type="{file.get("type", "file")}" url="{file["url"]}"'
+        if file.get("content_type"):
+            attrs += f' content_type="{file["content_type"]}"'
+        if file.get("name"):
+            attrs += f' name="{file["name"]}"'
+        return f"<file {attrs}/>"
+
+    for message, stored_message in zip(messages, stored_messages):
+        files_with_urls = [
+            file for file in stored_message.get("files", []) if file.get("url")
+        ]
+        if not files_with_urls:
+            continue
+
+        file_tags = [format_file_tag(file) for file in files_with_urls]
+        file_context = (
+            "<attached_files>\n" + "\n".join(file_tags) + "\n</attached_files>\n\n"
+        )
+
+        content = message.get("content", "")
+        if isinstance(content, list):
+            message["content"] = [{"type": "text", "text": file_context}] + content
+        else:
+            message["content"] = file_context + content
+
+    return messages
 
 
 async def chat_image_generation_handler(
@@ -1196,6 +1439,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         "__oauth_token__": oauth_token,
         "__request__": request,
         "__model__": model,
+        "__chat_id__": metadata.get("chat_id"),
+        "__message_id__": metadata.get("message_id"),
     }
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
@@ -1239,7 +1484,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     user_message = get_last_user_message(form_data["messages"])
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
 
-    if model_knowledge:
+    if (
+        model_knowledge
+        and metadata.get("params", {}).get("function_calling") != "native"
+    ):
         await event_emitter(
             {
                 "type": "status",
@@ -1305,7 +1553,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise Exception(f"{e}")
 
-    features = form_data.pop("features", None)
+    features = form_data.pop("features", None) or {}
+    extra_params["__features__"] = features
     if features:
         if "voice" in features and features["voice"]:
             if request.app.state.config.VOICE_MODE_PROMPT_TEMPLATE != None:
@@ -1320,19 +1569,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if "memory" in features and features["memory"]:
-            form_data = await chat_memory_handler(
-                request, form_data, extra_params, user
-            )
+            # Skip forced memory injection when native FC is enabled - model can use memory tools
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data = await chat_memory_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "web_search" in features and features["web_search"]:
-            form_data = await chat_web_search_handler(
-                request, form_data, extra_params, user
-            )
+            # Skip forced RAG web search when native FC is enabled - model can use web_search tool
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data = await chat_web_search_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "image_generation" in features and features["image_generation"]:
-            form_data = await chat_image_generation_handler(
-                request, form_data, extra_params, user
-            )
+            # Skip forced image generation when native FC is enabled - model can use generate_image tool
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data = await chat_image_generation_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "code_interpreter" in features and features["code_interpreter"]:
             form_data["messages"] = add_or_update_user_message(
@@ -1410,6 +1665,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                     if not mcp_server_connection:
                         log.error(f"MCP server with id {server_id} not found")
+                        continue
+
+                    # Check access control for MCP server
+                    if not has_tool_server_access(user, mcp_server_connection):
+                        log.warning(
+                            f"Access denied to MCP server {server_id} for user {user.id}"
+                        )
                         continue
 
                     auth_type = mcp_server_connection.get("auth_type", "")
@@ -1543,6 +1805,36 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if mcp_clients:
         metadata["mcp_clients"] = mcp_clients
 
+    # Inject builtin tools for native function calling based on enabled features and model capability
+    # Check if builtin_tools capability is enabled for this model (defaults to True if not specified)
+    builtin_tools_enabled = (
+        model.get("info", {})
+        .get("meta", {})
+        .get("capabilities", {})
+        .get("builtin_tools", True)
+    )
+    if (
+        metadata.get("params", {}).get("function_calling") == "native"
+        and builtin_tools_enabled
+    ):
+        # Add file context to user messages
+        chat_id = metadata.get("chat_id")
+        form_data["messages"] = add_file_context(
+            form_data.get("messages", []), chat_id, user
+        )
+        builtin_tools = get_builtin_tools(
+            request,
+            {
+                **extra_params,
+                "__event_emitter__": event_emitter,
+            },
+            features,
+            model,
+        )
+        for name, tool_dict in builtin_tools.items():
+            if name not in tools_dict:
+                tools_dict[name] = tool_dict
+
     if tools_dict:
         if metadata.get("params", {}).get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
@@ -1551,6 +1843,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 {"type": "function", "function": tool.get("spec", {})}
                 for tool in tools_dict.values()
             ]
+
         else:
             # If the function calling is not native, then call the tools function calling handler
             try:
@@ -1561,54 +1854,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             except Exception as e:
                 log.exception(e)
 
-    try:
-        form_data, flags = await chat_completion_files_handler(
-            request, form_data, extra_params, user
-        )
-        sources.extend(flags.get("sources", []))
-    except Exception as e:
-        log.exception(e)
+    # Check if file context extraction is enabled for this model (default True)
+    file_context_enabled = (
+        model.get("info", {})
+        .get("meta", {})
+        .get("capabilities", {})
+        .get("file_context", True)
+    )
+
+    if file_context_enabled:
+        try:
+            form_data, flags = await chat_completion_files_handler(
+                request, form_data, extra_params, user
+            )
+            sources.extend(flags.get("sources", []))
+        except Exception as e:
+            log.exception(e)
 
     # If context is not empty, insert it into the messages
-    if len(sources) > 0:
-        context_string = ""
-        citation_idx_map = {}
-
-        for source in sources:
-            if "document" in source:
-                for document_text, document_metadata in zip(
-                    source["document"], source["metadata"]
-                ):
-                    source_name = source.get("source", {}).get("name", None)
-                    source_id = (
-                        document_metadata.get("source", None)
-                        or source.get("source", {}).get("id", None)
-                        or "N/A"
-                    )
-
-                    if source_id not in citation_idx_map:
-                        citation_idx_map[source_id] = len(citation_idx_map) + 1
-
-                    context_string += (
-                        f'<source id="{citation_idx_map[source_id]}"'
-                        + (f' name="{source_name}"' if source_name else "")
-                        + f">{document_text}</source>\n"
-                    )
-
-        context_string = context_string.strip()
-        if prompt is None:
-            raise Exception("No user message found")
-
-        if context_string != "":
-            form_data["messages"] = add_or_update_user_message(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE,
-                    context_string,
-                    prompt,
-                ),
-                form_data["messages"],
-                append=False,
-            )
+    if sources and prompt:
+        form_data["messages"] = apply_source_context_to_messages(
+            request, form_data["messages"], sources, prompt
+        )
 
     # If there are citations, add them to the data_items
     sources = [
@@ -2605,8 +2872,42 @@ async def process_chat_response(
                                         continue
 
                                     delta = choices[0].get("delta", {})
-                                    delta_tool_calls = delta.get("tool_calls", None)
 
+                                    # Handle delta annotations
+                                    annotations = delta.get("annotations")
+                                    if annotations:
+                                        for annotation in annotations:
+                                            if (
+                                                annotation.get("type") == "url_citation"
+                                                and "url_citation" in annotation
+                                            ):
+                                                url_citation = annotation[
+                                                    "url_citation"
+                                                ]
+
+                                                url = url_citation.get("url", "")
+                                                title = url_citation.get("title", url)
+
+                                                await event_emitter(
+                                                    {
+                                                        "type": "source",
+                                                        "data": {
+                                                            "source": {
+                                                                "name": title,
+                                                                "url": url,
+                                                            },
+                                                            "document": [title],
+                                                            "metadata": [
+                                                                {
+                                                                    "source": url,
+                                                                    "name": title,
+                                                                }
+                                                            ],
+                                                        },
+                                                    }
+                                                )
+
+                                    delta_tool_calls = delta.get("tool_calls", None)
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
                                             tool_call_index = delta_tool_call.get(
@@ -2664,6 +2965,29 @@ async def process_chat_response(
                                                         ][
                                                             "arguments"
                                                         ] += delta_arguments
+
+                                        # Emit pending tool calls in real-time
+                                        if response_tool_calls:
+                                            # Flush any pending text first
+                                            await flush_pending_delta_data()
+
+                                            pending_content_blocks = content_blocks + [
+                                                {
+                                                    "type": "tool_calls",
+                                                    "content": response_tool_calls,
+                                                    "pending": True,
+                                                }
+                                            ]
+                                            await event_emitter(
+                                                {
+                                                    "type": "chat:completion",
+                                                    "data": {
+                                                        "content": serialize_content_blocks(
+                                                            pending_content_blocks
+                                                        ),
+                                                    },
+                                                }
+                                            )
 
                                     image_urls = get_image_urls(
                                         delta.get("images", []), request, metadata, user
@@ -2878,6 +3202,7 @@ async def process_chat_response(
                 await stream_body_handler(response, form_data)
 
                 tool_call_retries = 0
+                tool_call_sources = []  # Track citation sources from tool results
 
                 while (
                     len(tool_calls) > 0
@@ -3012,6 +3337,27 @@ async def process_chat_response(
                             )
                         )
 
+                        # Extract citation sources from tool results
+                        if (
+                            tool_function_name
+                            in [
+                                "search_web",
+                                "view_knowledge_file",
+                                "query_knowledge_files",
+                            ]
+                            and tool_result
+                        ):
+                            try:
+                                citation_sources = get_citation_source_from_tool_result(
+                                    tool_name=tool_function_name,
+                                    tool_params=tool_function_params,
+                                    tool_result=tool_result,
+                                    tool_id=tool.get("tool_id", "") if tool else "",
+                                )
+                                tool_call_sources.extend(citation_sources)
+                            except Exception as e:
+                                log.exception(f"Error extracting citation source: {e}")
+
                         results.append(
                             {
                                 "tool_call_id": tool_call_id,
@@ -3036,6 +3382,22 @@ async def process_chat_response(
                             "content": "",
                         }
                     )
+
+                    # Emit citation sources for UI display
+                    for source in tool_call_sources:
+                        await event_emitter({"type": "source", "data": source})
+
+                    # Apply source context to messages for model
+                    if tool_call_sources:
+                        user_msg = get_last_user_message(form_data["messages"])
+                        if user_msg:
+                            form_data["messages"] = apply_source_context_to_messages(
+                                request,
+                                form_data["messages"],
+                                tool_call_sources,
+                                user_msg,
+                            )
+                        tool_call_sources.clear()
 
                     await event_emitter(
                         {
@@ -3063,6 +3425,7 @@ async def process_chat_response(
                             request,
                             new_form_data,
                             user,
+                            bypass_system_prompt=True,
                         )
 
                         if isinstance(res, StreamingResponse):
@@ -3242,6 +3605,7 @@ async def process_chat_response(
                                 request,
                                 new_form_data,
                                 user,
+                                bypass_system_prompt=True,
                             )
 
                             if isinstance(res, StreamingResponse):

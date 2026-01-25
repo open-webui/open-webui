@@ -200,7 +200,7 @@
 				}
 			}
 
-			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
+			text = text.replaceAll('{{CLIPBOARD}}', clipboardText.replaceAll('\r\n', '\n'));
 		}
 
 		if (text.includes('{{USER_LOCATION}}')) {
@@ -731,10 +731,20 @@
 						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 					}
 
-					const blob = await (await fetch(imageUrl)).blob();
-					const compressedFile = new File([blob], file.name, { type: file.type });
+					if ($temporaryChatEnabled) {
+						files = [
+							...files,
+							{
+								type: 'image',
+								url: imageUrl
+							}
+						];
+					} else {
+						const blob = await (await fetch(imageUrl)).blob();
+						const compressedFile = new File([blob], file.name, { type: file.type });
 
-					uploadFileHandler(compressedFile, false);
+						uploadFileHandler(compressedFile, false);
+					}
 				};
 
 				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
@@ -1701,7 +1711,7 @@
 											</Tooltip>
 										</div>
 									{:else}
-										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false) && ($_user?.role === 'admin' || ($_user?.permissions?.features?.notes ?? true))}
 											<!-- {$i18n.t('Create Note')}  -->
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button

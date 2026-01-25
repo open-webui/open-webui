@@ -24,6 +24,7 @@
 
 	import { getModels } from '$lib/apis';
 	import { getGroups } from '$lib/apis/groups';
+	import { updateUserSettings } from '$lib/apis/users';
 
 	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
 
@@ -43,6 +44,7 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Pagination from '../common/Pagination.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 
 	let shiftKey = false;
 
@@ -213,6 +215,19 @@
 			type: 'application/json'
 		});
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
+	};
+
+	const pinModelHandler = async (modelId) => {
+		let pinnedModels = $settings?.pinnedModels ?? [];
+
+		if (pinnedModels.includes(modelId)) {
+			pinnedModels = pinnedModels.filter((id) => id !== modelId);
+		} else {
+			pinnedModels = [...new Set([...pinnedModels, modelId])];
+		}
+
+		settings.set({ ...$settings, pinnedModels: pinnedModels });
+		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
 	onMount(async () => {
@@ -443,14 +458,12 @@
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
-							class="  flex cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl w-full p-2.5"
+							class="flex transition rounded-2xl w-full p-2.5 {model.write_access
+								? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50'
+								: 'cursor-not-allowed opacity-60'}"
 							id="model-item-{model.id}"
 							on:click={() => {
-								if (
-									$user?.role === 'admin' ||
-									model.user_id === $user?.id ||
-									model.access_control.write.group_ids.some((wg) => groupIds.includes(wg))
-								) {
+								if (model.write_access) {
 									goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
 								}
 							}}
@@ -485,13 +498,16 @@
 													</a>
 												</Tooltip>
 
-												<div class=" flex items-center gap-1">
-													<div
-														class="flex justify-end w-full {model.is_active ? '' : 'text-gray-500'}"
-													>
-														<div class="flex justify-between items-center w-full">
-															<div class=""></div>
-															<div class="flex flex-row gap-0.5 items-center">
+												<div class="flex items-center gap-1">
+													{#if !model.write_access}
+														<div>
+															<Badge type="muted" content={$i18n.t('Read Only')} />
+														</div>
+													{/if}
+
+													{#if model.write_access || $user?.role === 'admin'}
+														<div class="flex {model.is_active ? '' : 'text-gray-500'}">
+															<div class="flex items-center gap-0.5">
 																{#if shiftKey}
 																	<Tooltip
 																		content={model?.meta?.hidden
@@ -547,6 +563,9 @@
 																		hideHandler={() => {
 																			hideModelHandler(model);
 																		}}
+																		pinModelHandler={() => {
+																			pinModelHandler(model.id);
+																		}}
 																		copyLinkHandler={() => {
 																			copyLinkHandler(model);
 																		}}
@@ -565,31 +584,33 @@
 																{/if}
 															</div>
 														</div>
-													</div>
+													{/if}
 
-													<button
-														on:click={(e) => {
-															e.stopPropagation();
-														}}
-													>
-														<Tooltip
-															content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+													{#if model.write_access}
+														<button
+															on:click={(e) => {
+																e.stopPropagation();
+															}}
 														>
-															<Switch
-																bind:state={model.is_active}
-																on:change={async () => {
-																	toggleModelById(localStorage.token, model.id);
-																	_models.set(
-																		await getModels(
-																			localStorage.token,
-																			$config?.features?.enable_direct_connections &&
-																				($settings?.directConnections ?? null)
-																		)
-																	);
-																}}
-															/>
-														</Tooltip>
-													</button>
+															<Tooltip
+																content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+															>
+																<Switch
+																	bind:state={model.is_active}
+																	on:change={async () => {
+																		toggleModelById(localStorage.token, model.id);
+																		_models.set(
+																			await getModels(
+																				localStorage.token,
+																				$config?.features?.enable_direct_connections &&
+																					($settings?.directConnections ?? null)
+																			)
+																		);
+																	}}
+																/>
+															</Tooltip>
+														</button>
+													{/if}
 												</div>
 											</div>
 

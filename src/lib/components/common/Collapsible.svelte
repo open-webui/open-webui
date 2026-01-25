@@ -206,7 +206,7 @@
 							/>
 						{/if}
 					{:else if typeof file === 'object'}
-						{#if file.type === 'image' && file.url}
+						{#if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) && file.url}
 							<Image
 								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
 								src={file.url}

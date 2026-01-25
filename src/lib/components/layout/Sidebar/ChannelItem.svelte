@@ -171,7 +171,7 @@
 		<div class="flex items-center">
 			{#if channel?.unread_count > 0}
 				<div
-					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-medium"
+					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-medium whitespace-nowrap"
 				>
 					{new Intl.NumberFormat($i18n.locale, {
 						notation: 'compact',

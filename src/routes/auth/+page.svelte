@@ -9,12 +9,18 @@
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
+	import {
+		ldapUserSignIn,
+		getSessionUser,
+		userSignIn,
+		userSignUp,
+		updateUserTimezone
+	} from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 
-	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
@@ -46,6 +52,12 @@
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
+
+			// Update user timezone
+			const timezone = getUserTimezone();
+			if (sessionUser.token && timezone) {
+				updateUserTimezone(sessionUser.token, timezone);
+			}
 
 			if (!redirectPath) {
 				redirectPath = $page.url.searchParams.get('redirect') || '/';

@@ -18,6 +18,7 @@
 
 	const i18n = getContext('i18n');
 
+	export let onExport: null | Function = null;
 	export let onClose: Function = () => {};
 
 	let show = false;
@@ -54,6 +55,18 @@
 			align="end"
 			transition={flyAndScale}
 		>
+			{#if onExport}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+					on:click={() => {
+						onExport();
+					}}
+				>
+					<Download />
+					<div class="flex items-center">{$i18n.t('Export')}</div>
+				</DropdownMenu.Item>
+			{/if}
+
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm   cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
