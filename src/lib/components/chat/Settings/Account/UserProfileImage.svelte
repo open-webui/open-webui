@@ -90,7 +90,7 @@
 		>
 			<img
 				src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(user?.name)}
-				alt="profile"
+				alt={$i18n.t('Profile')}
 				class=" rounded-full {imageClassName} object-cover"
 			/>
 

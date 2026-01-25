@@ -230,7 +230,7 @@
 										<div class="relative flex items-center">
 											<Image
 												src={fileUrl}
-												alt="input"
+												alt={$i18n.t('Input')}
 												imageClassName=" size-14 rounded-xl object-cover"
 											/>
 										</div>

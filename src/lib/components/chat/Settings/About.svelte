@@ -118,28 +118,29 @@
 					<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
 				{/if}
 
-				<span class=" capitalize">{$config?.license_metadata?.type}</span> license purchased by
+				<span class=" capitalize">{$config?.license_metadata?.type}</span>
+				{$i18n.t('license purchased by')}
 				<span class=" capitalize">{$config?.license_metadata?.organization_name}</span>
 			</div>
 		{:else}
 			<div class="flex space-x-1">
 				<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
 					<img
-						alt="Discord"
+						alt={$i18n.t('Discord')}
 						src="https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white"
 					/>
 				</a>
 
 				<a href="https://twitter.com/OpenWebUI" target="_blank">
 					<img
-						alt="X (formerly Twitter) Follow"
+						alt={$i18n.t('X (formerly Twitter) Follow')}
 						src="https://img.shields.io/twitter/follow/OpenWebUI"
 					/>
 				</a>
 
 				<a href="https://github.com/open-webui/open-webui" target="_blank">
 					<img
-						alt="Github Repo"
+						alt={$i18n.t('Github Repo')}
 						src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
 					/>
 				</a>
@@ -147,19 +148,19 @@
 		{/if}
 
 		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-			Emoji graphics provided by
-			<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, licensed under
+			{$i18n.t('Emoji graphics provided by')}
+			<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, {$i18n.t('licensed under')}
 			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
 		</div>
 
 		<div>
 			<pre
-				class="text-xs text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
+				class="text-xs text-gray-400 dark:text-gray-500">{$i18n.t('Copyright (c)')} {new Date().getFullYear()} <a
 					href="https://openwebui.com"
 					target="_blank"
 					class="underline">Open WebUI Inc.</a
 				> <a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"
-					>All rights reserved.</a
+					>{$i18n.t('All rights reserved.')}</a
 				>
 </pre>
 		</div>

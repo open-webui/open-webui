@@ -1,8 +1,12 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let status = { urls: [], query: '' };
 	let state = false;
@@ -67,7 +71,7 @@
 						<div class="w-fit">
 							<img
 								src="https://www.google.com/s2/favicons?sz=32&domain={item.link}"
-								alt="favicon"
+								alt={$i18n.t('Favicon')}
 								class="size-3.5"
 							/>
 						</div>
@@ -107,7 +111,7 @@
 						<div class="w-fit">
 							<img
 								src="https://www.google.com/s2/favicons?sz=32&domain={url}"
-								alt="favicon"
+								alt={$i18n.t('Favicon')}
 								class="size-3.5"
 							/>
 						</div>
