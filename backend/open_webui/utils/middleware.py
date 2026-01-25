@@ -2756,14 +2756,19 @@ async def process_chat_response(
                                     return {"success": False, "error": str(e)}
 
                             tool_validation_rules = metadata.get("tool_validation_rules", {})
+                            chat_id = metadata.get("chat_id")
+                            langfuse_trace = metadata.get("langfuse_trace")  # Get trace object from metadata
                             tool_executor = ToolInlineExecutor(
                                 event_emitter=event_emitter,
                                 tool_prompts=tool_prompts_dict,
                                 tool_validation_rules=tool_validation_rules,
-                                llm_call_fn=make_inline_llm_call
+                                llm_call_fn=make_inline_llm_call,
+                                chat_id=chat_id,
+                                langfuse_trace=langfuse_trace  # Pass trace object for linking tool calls
                             )
-                            log.info(f"[MIDDLEWARE] ToolInlineExecutor created: {tool_executor}")
+                            log.info(f"[MIDDLEWARE] ToolInlineExecutor created with Langfuse trace: {langfuse_trace is not None}")
                             log.info(f"[MIDDLEWARE] Tool validation rules: {list(tool_validation_rules.keys())}")
+                            log.info(f"[MIDDLEWARE] Chat ID for tracing: {chat_id}")
                         else:
                             log.warning(f"[MIDDLEWARE] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url")
                     else:
@@ -3628,6 +3633,7 @@ async def process_chat_response(
 
             # Initialize inline tool executor for fallback path
             fallback_tool_executor = None
+            tool_event_queue = None  # Queue for tool events
             log.info(f"[MIDDLEWARE FALLBACK] Checking tool notifications: enable={metadata.get('enable_tool_notifications')}")
 
             if metadata.get("enable_tool_notifications"):
@@ -3639,12 +3645,17 @@ async def process_chat_response(
                 if tool_prompts_dict and api_request_url:
                     log.info(f"[MIDDLEWARE FALLBACK] Creating ToolInlineExecutor with prompts: {list(tool_prompts_dict.keys())}")
 
+                    # Create event queue for streaming tool events
+                    tool_event_queue = asyncio.Queue()
+
                     # Create LLM call function for inline tool execution
                     async def make_fallback_inline_llm_call(
                         system_prompt: str,
                         user_message: str,
                         use_fast_model: bool = False,
-                        response_schema: Optional[type] = None
+                        response_schema: Optional[type] = None,
+                        disable_afc: bool = False,
+                        force_model: Optional[str] = None
                     ) -> dict:
                         """Make a non-streaming LLM call for inline tool execution.
 
@@ -3653,6 +3664,8 @@ async def process_chat_response(
                             user_message: User message/question
                             use_fast_model: Whether to use fast model (Flash) vs Pro (ignored in fallback)
                             response_schema: Pydantic schema for structured output (ignored in fallback)
+                            disable_afc: Disable AFC for this call (ignored in fallback, Gemini-specific)
+                            force_model: Force specific model for this call (ignored in fallback)
                         """
                         try:
                             payload = {
@@ -3686,19 +3699,27 @@ async def process_chat_response(
                             log.error(f"[MIDDLEWARE FALLBACK] Inline LLM call exception: {e}")
                             return {"success": False, "error": str(e)}
 
-                    # Dummy event emitter for fallback (just logs)
-                    async def dummy_event_emitter(event: dict):
-                        log.info(f"[MIDDLEWARE FALLBACK] Event (no WebSocket): {event.get('type', 'unknown')}")
+                    # Event emitter that puts events into queue for streaming
+                    async def stream_event_emitter(event: dict):
+                        event_type = event.get('type', 'unknown')
+                        log.info(f"[MIDDLEWARE FALLBACK] Event (no WebSocket): {event_type}")
+                        # Put event into queue for streaming
+                        await tool_event_queue.put(event)
 
                     tool_validation_rules = metadata.get("tool_validation_rules", {})
+                    chat_id = metadata.get("chat_id")
+                    langfuse_trace = metadata.get("langfuse_trace")  # Get trace object from metadata
                     fallback_tool_executor = ToolInlineExecutor(
-                        event_emitter=dummy_event_emitter,
+                        event_emitter=stream_event_emitter,
                         tool_prompts=tool_prompts_dict,
                         tool_validation_rules=tool_validation_rules,
-                        llm_call_fn=make_fallback_inline_llm_call
+                        llm_call_fn=make_fallback_inline_llm_call,
+                        chat_id=chat_id,
+                        langfuse_trace=langfuse_trace  # Pass trace object for linking tool calls
                     )
-                    log.info(f"[MIDDLEWARE FALLBACK] ToolInlineExecutor created")
+                    log.info(f"[MIDDLEWARE FALLBACK] ToolInlineExecutor created with Langfuse trace: {langfuse_trace is not None}")
                     log.info(f"[MIDDLEWARE FALLBACK] Tool validation rules: {list(tool_validation_rules.keys())}")
+                    log.info(f"[MIDDLEWARE FALLBACK] Chat ID for tracing: {chat_id}")
                 else:
                     log.warning(f"[MIDDLEWARE FALLBACK] enable_tool_notifications=True but missing tool_prompts_dict or api_request_url")
 
@@ -3715,6 +3736,21 @@ async def process_chat_response(
                     yield wrap_item(json.dumps(event))
 
             async for data in original_generator:
+                # First, check if there are any tool events in the queue
+                if tool_event_queue:
+                    while not tool_event_queue.empty():
+                        try:
+                            tool_event = tool_event_queue.get_nowait()
+                            # Convert tool event to SSE format
+                            event_data = {
+                                "type": tool_event.get("type"),
+                                "data": tool_event.get("data", {})
+                            }
+                            yield wrap_item(json.dumps(event_data))
+                            log.info(f"[MIDDLEWARE FALLBACK] Streamed tool event: {tool_event.get('type')}")
+                        except asyncio.QueueEmpty:
+                            break
+
                 data, _ = await process_filter_functions(
                     request=request,
                     filter_functions=filter_functions,
@@ -3796,6 +3832,20 @@ async def process_chat_response(
                         collected_content.append(remaining)
                 except Exception as e:
                     log.error(f"[MIDDLEWARE FALLBACK] Error flushing tool executor: {e}")
+
+            # Flush any remaining tool events in queue after stream ends
+            if tool_event_queue:
+                while not tool_event_queue.empty():
+                    try:
+                        tool_event = tool_event_queue.get_nowait()
+                        event_data = {
+                            "type": tool_event.get("type"),
+                            "data": tool_event.get("data", {})
+                        }
+                        yield wrap_item(json.dumps(event_data))
+                        log.info(f"[MIDDLEWARE FALLBACK] Flushed remaining tool event: {tool_event.get('type')}")
+                    except asyncio.QueueEmpty:
+                        break
 
             # 스트리밍 완료 후 DB에 저장
             if collected_content and metadata.get("chat_id") and metadata.get("message_id"):

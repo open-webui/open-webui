@@ -59,6 +59,8 @@ class ToolInlineExecutor:
         tool_validation_rules: Optional[Dict[str, Dict]] = None,
         llm_call_fn: Optional[Callable] = None,
         conversation_context: Optional[str] = None,
+        chat_id: Optional[str] = None,
+        langfuse_trace=None,  # Langfuse trace object for linking tool calls
     ):
         self.event_emitter = event_emitter
         # Map: normalized command -> full prompt content
@@ -68,6 +70,10 @@ class ToolInlineExecutor:
         self.llm_call_fn = llm_call_fn
         # Store conversation context for recovery calls
         self.conversation_context = conversation_context or ""
+        # Store chat_id for Langfuse tracing (backward compatibility)
+        self.chat_id = chat_id
+        # Store Langfuse trace object for linking tool calls to parent trace
+        self.langfuse_trace = langfuse_trace
 
         # Buffer for detecting markers across chunks
         self.buffer = ""
@@ -333,7 +339,28 @@ class ToolInlineExecutor:
         # Check if this is a hardcoded tool (uses response_schema)
         if is_hardcoded_tool(command):
             log.info(f"[HARDCODED TOOL] Detected hardcoded tool: {command}")
-            return await self._execute_hardcoded_tool(command, context)
+            result = await self._execute_hardcoded_tool(command, context)
+
+            # Trace tool execution to Langfuse
+            try:
+                from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+                tracer = get_langfuse_tracer()
+                if tracer:
+                    # Use trace object if available, otherwise fall back to chat_id
+                    trace_obj = self.langfuse_trace or self.chat_id
+                    if trace_obj:
+                        tracer.trace_tool_call(
+                            trace_obj=trace_obj,
+                            tool_name=command,
+                            tool_input={"context": context[:500]},  # Limit context length
+                            tool_output={"result": result[:500]},  # Limit result length
+                            metadata={"tool_type": "hardcoded"}
+                        )
+                        log.info(f"[LANGFUSE] Traced hardcoded tool: {command}")
+            except Exception as trace_error:
+                log.error(f"[LANGFUSE] Failed to trace tool call: {trace_error}")
+
+            return result
 
         # Find matching tool prompt (DB tool)
         tool_prompt = self._find_tool_prompt(command)
@@ -371,6 +398,25 @@ Do NOT include any explanatory text before or after the output block."""
             if result.get("success"):
                 tool_output = result.get("text", "")
                 log.info(f"[TOOL INLINE] Tool output received: {len(tool_output)} chars")
+
+                # Trace DB tool execution to Langfuse
+                try:
+                    from open_webui.integrations.langfuse_tracing import get_langfuse_tracer
+                    tracer = get_langfuse_tracer()
+                    if tracer:
+                        # Use trace object if available, otherwise fall back to chat_id
+                        trace_obj = self.langfuse_trace or self.chat_id
+                        if trace_obj:
+                            tracer.trace_tool_call(
+                                trace_obj=trace_obj,
+                                tool_name=command,
+                                tool_input={"context": context[:500]},  # Limit context length
+                                tool_output={"result": tool_output[:500]},  # Limit output length
+                                metadata={"tool_type": "db_tool"}
+                            )
+                            log.info(f"[LANGFUSE] Traced DB tool: {command}")
+                except Exception as trace_error:
+                    log.error(f"[LANGFUSE] Failed to trace DB tool call: {trace_error}")
 
                 # Validate output for json_tool types
                 normalized_cmd = command.lower().replace('_', '-').lstrip('/')
