@@ -1766,13 +1766,12 @@ def process_file(
                 }
             else:
                 try:
-                    # Release the database connection relative to the 'file' object
-                    # to prevent holding the connection during the slow embedding step.
-                    db.expunge(file)
+                    # Commit any pending changes before the slow embedding step.
+                    # Note: file is already a Pydantic model (not ORM), so no expunge needed.
                     db.commit()
 
                     # External embedding API takes time (5-60s+).
-                    # No DB connection is held here.
+                    # Subsequent updates use fresh sessions via get_db().
                     result = save_docs_to_vector_db(
                         request,
                         docs=docs,
