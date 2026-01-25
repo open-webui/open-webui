@@ -1013,6 +1013,11 @@ async def update_rag_config(
         if form_data.TEXT_SPLITTER is not None
         else request.app.state.config.TEXT_SPLITTER
     )
+    request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = (
+        form_data.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER
+        if form_data.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER is not None
+        else request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER
+    )
     request.app.state.config.CHUNK_SIZE = (
         form_data.CHUNK_SIZE
         if form_data.CHUNK_SIZE is not None
