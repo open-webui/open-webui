@@ -100,6 +100,7 @@ from open_webui.routers import (
     textbook,
     gemini_rag,
     message_tags,
+    langfuse_proxy, 
 )
 
 from open_webui.routers.retrieval import (
@@ -1394,6 +1395,7 @@ app.add_middleware(
 app.mount("/ws", socket_app)
 
 
+app.include_router(langfuse_proxy.router, prefix="/api/v1/langfuse", tags=["langfuse"])
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
 

@@ -314,10 +314,10 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         return Exception(f"Error: {e}")
 
     metadata = {
-        "chat_id": data["chat_id"],
-        "message_id": data["id"],
+        "chat_id": data.get("chat_id"),
+        "message_id": data.get("id"),
         "filter_ids": data.get("filter_ids", []),
-        "session_id": data["session_id"],
+        "session_id": data.get("session_id"),
         "user_id": user.id,
     }
 
@@ -379,17 +379,17 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
 
     __event_emitter__ = get_event_emitter(
         {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
+            "chat_id": data.get("chat_id"),
+            "message_id": data.get("id"),
+            "session_id": data.get("session_id"),
             "user_id": user.id,
         }
     )
     __event_call__ = get_event_call(
         {
-            "chat_id": data["chat_id"],
-            "message_id": data["id"],
-            "session_id": data["session_id"],
+            "chat_id": data.get("chat_id"),
+            "message_id": data.get("id"),
+            "session_id": data.get("session_id"),
             "user_id": user.id,
         }
     )

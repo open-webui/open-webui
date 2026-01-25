@@ -110,8 +110,22 @@ class PromptsTable:
                 db.add(result)
                 db.commit()
                 db.refresh(result)
+
                 if result:
-                    return PromptModel.model_validate(result)
+                    validated_prompt = PromptModel.model_validate(result)
+
+                    # Sync to Langfuse for version control
+                    try:
+                        from open_webui.integrations.langfuse_adapter import get_langfuse_adapter
+                        adapter = get_langfuse_adapter()
+                        if adapter:
+                            adapter.sync_prompt_to_langfuse(validated_prompt)
+                    except Exception as e:
+                        # Log but don't fail the operation if Langfuse sync fails
+                        import logging
+                        logging.error(f"Failed to sync new prompt to Langfuse: {e}")
+
+                    return validated_prompt
                 else:
                     return None
         except Exception:
@@ -216,7 +230,21 @@ class PromptsTable:
                 prompt.validation_rules = form_data.validation_rules
                 prompt.timestamp = int(time.time())
                 db.commit()
-                return PromptModel.model_validate(prompt)
+
+                validated_prompt = PromptModel.model_validate(prompt)
+
+                # Sync to Langfuse (creates new version)
+                try:
+                    from open_webui.integrations.langfuse_adapter import get_langfuse_adapter
+                    adapter = get_langfuse_adapter()
+                    if adapter:
+                        adapter.sync_prompt_to_langfuse(validated_prompt)
+                except Exception as e:
+                    # Log but don't fail the operation if Langfuse sync fails
+                    import logging
+                    logging.error(f"Failed to sync updated prompt to Langfuse: {e}")
+
+                return validated_prompt
         except Exception:
             return None
 
