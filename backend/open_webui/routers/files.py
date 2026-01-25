@@ -7,6 +7,7 @@ from typing import Optional
 from urllib.parse import quote
 import asyncio
 
+
 from fastapi import (
     BackgroundTasks,
     APIRouter,
@@ -20,12 +21,15 @@ from fastapi import (
     Query,
 )
 
+
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from open_webui.internal.db import get_session, SessionLocal
 
+
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
 
 from open_webui.models.channels import Channels
 from open_webui.models.users import Users
@@ -40,10 +44,13 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
 
 
+
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 
+
 from open_webui.storage.provider import Storage
+
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -51,14 +58,18 @@ from open_webui.utils.access_control import has_access
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 
+
 log = logging.getLogger(__name__)
 
+
 router = APIRouter()
+
 
 
 ############################
 # Check if the current user has access to a file through any knowledge bases the user may be in.
 ############################
+
 
 
 # TODO: Optimize this function to use the knowledge_file table for faster lookups.
@@ -76,6 +87,7 @@ def has_access_to_file(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+
     # Check if the file is associated with any knowledge bases the user has access to
     knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id, db=db)
     user_group_ids = {
@@ -87,6 +99,7 @@ def has_access_to_file(
         ):
             return True
 
+
     knowledge_base_id = file.meta.get("collection_name") if file.meta else None
     if knowledge_base_id:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(
@@ -96,10 +109,12 @@ def has_access_to_file(
             if knowledge_base.id == knowledge_base_id:
                 return True
 
+
     # Check if the file is associated with any channels the user has access to
     channels = Channels.get_channels_by_file_id_and_user_id(file_id, user.id, db=db)
     if access_type == "read" and channels:
         return True
+
 
     # Check if the file is associated with any chats the user has access to
     # TODO: Granular access control for chats
@@ -107,12 +122,15 @@ def has_access_to_file(
     if chats:
         return True
 
+
     return False
+
 
 
 ############################
 # Upload File
 ############################
+
 
 
 def process_uploaded_file(
@@ -131,6 +149,7 @@ def process_uploaded_file(
                     request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
                 )
 
+
                 if strict_match_mime_type(
                     stt_supported_content_types, file.content_type
                 ):
@@ -138,6 +157,7 @@ def process_uploaded_file(
                     result = transcribe(
                         request, file_path_processed, file_metadata, user
                     )
+
 
                     process_file(
                         request,
@@ -171,6 +191,7 @@ def process_uploaded_file(
                     db=db_session,
                 )
 
+
         except Exception as e:
             log.error(f"Error processing file: {file_item.id}")
             Files.update_file_data_by_id(
@@ -182,11 +203,13 @@ def process_uploaded_file(
                 db=db_session,
             )
 
+
     if db:
         _process_handler(db)
     else:
         with SessionLocal() as db_session:
             _process_handler(db_session)
+
 
 
 @router.post("/", response_model=FileModelResponse)
@@ -212,6 +235,7 @@ def upload_file(
     )
 
 
+
 def upload_file_handler(
     request: Request,
     file: UploadFile = File(...),
@@ -224,6 +248,7 @@ def upload_file_handler(
 ):
     log.info(f"file.content_type: {file.content_type} {process}")
 
+
     if isinstance(metadata, str):
         try:
             metadata = json.loads(metadata)
@@ -234,18 +259,22 @@ def upload_file_handler(
             )
     file_metadata = metadata if metadata else {}
 
+
     try:
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
+
 
         file_extension = os.path.splitext(filename)[1]
         # Remove the leading dot from the file extension
         file_extension = file_extension[1:] if file_extension else ""
 
+
         if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
             request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
                 ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
             ]
+
 
             if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
                 raise HTTPException(
@@ -254,6 +283,7 @@ def upload_file_handler(
                         f"File type {file_extension} is not allowed"
                     ),
                 )
+
 
         # replace filename with uuid
         id = str(uuid.uuid4())
@@ -269,6 +299,7 @@ def upload_file_handler(
                 "OpenWebUI-File-Id": id,
             },
         )
+
 
         file_item = Files.insert_new_file(
             user.id,
@@ -291,6 +322,7 @@ def upload_file_handler(
             db=db,
         )
 
+
         if "channel_id" in file_metadata:
             channel = Channels.get_channel_by_id_and_user_id(
                 file_metadata["channel_id"], user.id, db=db
@@ -299,6 +331,7 @@ def upload_file_handler(
                 Channels.add_file_to_channel_by_id(
                     channel.id, file_item.id, user.id, db=db
                 )
+
 
         if process:
             if background_tasks and process_in_background:
@@ -332,6 +365,7 @@ def upload_file_handler(
                     detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
                 )
 
+
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -340,9 +374,11 @@ def upload_file_handler(
         )
 
 
+
 ############################
 # List Files
 ############################
+
 
 
 @router.get("/", response_model=list[FileModelResponse])
@@ -356,17 +392,21 @@ async def list_files(
     else:
         files = Files.get_files_by_user_id(user.id, db=db)
 
+
     if not content:
         for file in files:
             if "content" in file.data:
                 del file.data["content"]
 
+
     return files
+
 
 
 ############################
 # Search Files
 ############################
+
 
 
 @router.get("/search", response_model=list[FileModelResponse])
@@ -376,6 +416,7 @@ async def search_files(
         description="Filename pattern to search for. Supports wildcards such as '*.txt'",
     ),
     content: bool = Query(True),
+    view_option: Optional[str] = Query(None, description="Option to control response content, e.g. 'metadata_only'"),
     skip: int = Query(0, ge=0, description="Number of files to skip"),
     limit: int = Query(
         100, ge=1, le=1000, description="Maximum number of files to return"
@@ -390,6 +431,7 @@ async def search_files(
     # Determine user_id: null for admin (search all), user.id for regular users
     user_id = None if user.role == "admin" else user.id
 
+
     # Use optimized database query with pagination
     files = Files.search_files(
         user_id=user_id,
@@ -399,23 +441,28 @@ async def search_files(
         db=db,
     )
 
+
     if not files:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No files found matching the pattern.",
         )
 
-    if not content:
+    # Apply content stripping if content is False OR view_option is metadata_only
+    if not content or view_option == "metadata_only":
         for file in files:
             if file.data and "content" in file.data:
                 del file.data["content"]
 
+
     return files
+
 
 
 ############################
 # Delete All Files
 ############################
+
 
 
 @router.delete("/all")
@@ -442,9 +489,11 @@ async def delete_all_files(
         )
 
 
+
 ############################
 # Get File By Id
 ############################
+
 
 
 @router.get("/{id}", response_model=Optional[FileModel])
@@ -453,11 +502,13 @@ async def get_file_by_id(
 ):
     file = Files.get_file_by_id(id, db=db)
 
+
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
 
     if (
         file.user_id == user.id
@@ -472,6 +523,7 @@ async def get_file_by_id(
         )
 
 
+
 @router.get("/{id}/process/status")
 async def get_file_process_status(
     id: str,
@@ -481,11 +533,13 @@ async def get_file_process_status(
 ):
     file = Files.get_file_by_id(id, db=db)
 
+
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
 
     if (
         file.user_id == user.id
@@ -494,6 +548,7 @@ async def get_file_process_status(
     ):
         if stream:
             MAX_FILE_PROCESSING_DURATION = 3600 * 2
+
 
             async def event_stream(file_id):
                 # NOTE: We intentionally do NOT capture the request's db session here.
@@ -505,10 +560,12 @@ async def get_file_process_status(
                         data = file_item.model_dump().get("data", {})
                         status = data.get("status")
 
+
                         if status:
                             event = {"status": status}
                             if status == "failed":
                                 event["error"] = data.get("error")
+
 
                             yield f"data: {json.dumps(event)}\n\n"
                             if status in ("completed", "failed"):
@@ -520,7 +577,9 @@ async def get_file_process_status(
                         yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
                         break
 
+
                     await asyncio.sleep(1)
+
 
             return StreamingResponse(
                 event_stream(file.id),
@@ -535,9 +594,11 @@ async def get_file_process_status(
         )
 
 
+
 ############################
 # Get File Data Content By Id
 ############################
+
 
 
 @router.get("/{id}/data/content")
@@ -546,11 +607,13 @@ async def get_file_data_content_by_id(
 ):
     file = Files.get_file_by_id(id, db=db)
 
+
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
 
     if (
         file.user_id == user.id
@@ -565,13 +628,16 @@ async def get_file_data_content_by_id(
         )
 
 
+
 ############################
 # Update File Data Content By Id
 ############################
 
 
+
 class ContentForm(BaseModel):
     content: str
+
 
 
 @router.post("/{id}/data/content/update")
@@ -584,11 +650,13 @@ async def update_file_data_content_by_id(
 ):
     file = Files.get_file_by_id(id, db=db)
 
+
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
 
     if (
         file.user_id == user.id
@@ -606,6 +674,7 @@ async def update_file_data_content_by_id(
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
 
+
         return {"content": file.data.get("content", "")}
     else:
         raise HTTPException(
@@ -614,9 +683,11 @@ async def update_file_data_content_by_id(
         )
 
 
+
 ############################
 # Get File Content By Id
 ############################
+
 
 
 @router.get("/{id}/content")
@@ -628,11 +699,13 @@ async def get_file_content_by_id(
 ):
     file = Files.get_file_by_id(id, db=db)
 
+
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
 
     if (
         file.user_id == user.id
@@ -643,16 +716,19 @@ async def get_file_content_by_id(
             file_path = Storage.get_file(file.path)
             file_path = Path(file_path)
 
+
             # Check if the file already exists in the cache
             if file_path.is_file():
                 # Handle Unicode filenames
                 filename = file.meta.get("name", file.filename)
                 encoded_filename = quote(filename)  # RFC5987 encoding
 
+
                 content_type = file.meta.get("content_type")
                 filename = file.meta.get("name", file.filename)
                 encoded_filename = quote(filename)
                 headers = {}
+
 
                 if attachment:
                     headers["Content-Disposition"] = (
@@ -671,7 +747,9 @@ async def get_file_content_by_id(
                             f"attachment; filename*=UTF-8''{encoded_filename}"
                         )
 
+
                 return FileResponse(file_path, headers=headers, media_type=content_type)
+
 
             else:
                 raise HTTPException(
@@ -692,11 +770,13 @@ async def get_file_content_by_id(
         )
 
 
+
 @router.get("/{id}/content/html")
 async def get_html_file_content_by_id(
     id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     file = Files.get_file_by_id(id, db=db)
+
 
     if not file:
         raise HTTPException(
@@ -704,12 +784,14 @@ async def get_html_file_content_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+
     file_user = Users.get_user_by_id(file.user_id, db=db)
     if not file_user.role == "admin":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
 
     if (
         file.user_id == user.id
@@ -719,6 +801,7 @@ async def get_html_file_content_by_id(
         try:
             file_path = Storage.get_file(file.path)
             file_path = Path(file_path)
+
 
             # Check if the file already exists in the cache
             if file_path.is_file():
@@ -743,17 +826,20 @@ async def get_html_file_content_by_id(
         )
 
 
+
 @router.get("/{id}/content/{file_name}")
 async def get_file_content_by_id(
     id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     file = Files.get_file_by_id(id, db=db)
 
+
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
 
     if (
         file.user_id == user.id
@@ -762,6 +848,7 @@ async def get_file_content_by_id(
     ):
         file_path = file.path
 
+
         # Handle Unicode filenames
         filename = file.meta.get("name", file.filename)
         encoded_filename = quote(filename)  # RFC5987 encoding
@@ -769,9 +856,11 @@ async def get_file_content_by_id(
             "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
         }
 
+
         if file_path:
             file_path = Storage.get_file(file_path)
             file_path = Path(file_path)
+
 
             # Check if the file already exists in the cache
             if file_path.is_file():
