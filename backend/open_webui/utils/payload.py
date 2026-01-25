@@ -196,6 +196,13 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
             form_data[key] = value(param)
             del params[key]
 
+    # Ollama doesn't support the reasoning_effort parameter. Instead, it expects a `think` field containing
+    # either a boolean or string with the values "low", "medium", "high".'
+    if "reasoning_effort" in params:
+        if params["reasoning_effort"] in ["low", "medium", "high"]:
+            form_data["think"] = params["reasoning_effort"]
+        del params["reasoning_effort"]
+
     # Unlike OpenAI, Ollama does not support params directly in the body
     form_data["options"] = apply_model_params_to_body(
         params, (form_data.get("options", {}) or {}), mappings
@@ -344,6 +351,13 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         if "system" in ollama_options:
             ollama_payload["system"] = ollama_options["system"]
             del ollama_options["system"]
+
+        # Ollama doesn't support the reasoning_effort parameter. Instead, it expects a `think` field containing
+        # either a boolean or string with the values "low", "medium", "high".'
+        if "reasoning_effort" in ollama_options:
+            if ollama_options["reasoning_effort"] in ["low", "medium", "high"]:
+                ollama_payload["think"] = ollama_options["reasoning_effort"]
+            del ollama_options["reasoning_effort"]
 
         ollama_payload["options"] = ollama_options
 
