@@ -1,5 +1,7 @@
 <script>
-	import { onMount, onDestroy } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	let map;
 	let mapElement;
@@ -23,14 +25,18 @@
 			points = [
 				{
 					coords: setViewLocation,
-					content: `Lat: ${setViewLocation[0]}, Lng: ${setViewLocation[1]}`
+					content: $i18n.t('Lat: {{LAT}}, Lng: {{LNG}}', {
+						LAT: setViewLocation[0],
+						LNG: setViewLocation[1]
+					})
 				}
 			];
 		}
 
 		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			attribution:
+			attribution: $i18n.t(
 				'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+			)
 		}).addTo(map);
 
 		const setMarkers = (points) => {
@@ -65,7 +71,10 @@
 			setMarkers([
 				{
 					coords: [e.latlng.lat, e.latlng.lng],
-					content: `Lat: ${e.latlng.lat}, Lng: ${e.latlng.lng}`
+					content: $i18n.t('Lat: {{LAT}}, Lng: {{LNG}}', {
+						LAT: e.latlng.lat,
+						LNG: e.latlng.lng
+					})
 				}
 			]);
 		});

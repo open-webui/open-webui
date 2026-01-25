@@ -251,7 +251,7 @@
 													<img
 														class="rounded-2xl w-6 h-6 object-cover flex-shrink-0"
 														src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-														alt="user"
+														alt={$i18n.t('user')}
 													/>
 												</ProfilePreview>
 												<Tooltip content={user.email} placement="top-start">

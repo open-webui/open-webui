@@ -46,7 +46,7 @@
 				<div class="text-lg font-medium self-center">
 					{$i18n.t('Feedback Details')}
 				</div>
-				<button class="self-center" on:click={close} aria-label="Close">
+				<button class="self-center" on:click={close} aria-label={$i18n.t('Close')}>
 					<XMark className={'size-5'} />
 				</button>
 			</div>

@@ -74,7 +74,7 @@
 
 				{#if pipeline}
 					<div class=" absolute top-0.5 right-2.5">
-						<Tooltip content="Pipelines">
+						<Tooltip content={$i18n.t('Pipelines')}>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 24 24"

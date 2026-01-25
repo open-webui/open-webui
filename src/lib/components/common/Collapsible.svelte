@@ -202,7 +202,7 @@
 							<Image
 								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
 								src={file}
-								alt="Image"
+								alt={$i18n.t('Image')}
 							/>
 						{/if}
 					{:else if typeof file === 'object'}
@@ -210,7 +210,7 @@
 							<Image
 								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
 								src={file.url}
-								alt="Image"
+								alt={$i18n.t('Image')}
 							/>
 						{/if}
 					{/if}

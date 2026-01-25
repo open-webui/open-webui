@@ -66,7 +66,7 @@
 					{model.name}
 				</div>
 			</Tooltip>
-			<button class="self-center" on:click={close} aria-label="Close">
+			<button class="self-center" on:click={close} aria-label={$i18n.t('Close')}>
 				<XMark className={'size-5'} />
 			</button>
 		</div>

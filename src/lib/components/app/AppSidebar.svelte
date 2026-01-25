@@ -1,7 +1,11 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+
+	const i18n = getContext('i18n');
 
 	let selected = '';
 </script>
@@ -14,7 +18,7 @@
 			</div>
 		{/if}
 
-		<Tooltip content="Home" placement="right">
+		<Tooltip content={$i18n.t('Home')} placement="right">
 			<button
 				class=" cursor-pointer {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
 				on:click={() => {
@@ -28,7 +32,7 @@
 				<img
 					src="{WEBUI_BASE_URL}/static/splash.png"
 					class="size-11 dark:invert p-0.5"
-					alt="logo"
+					alt={$i18n.t('Logo')}
 					draggable="false"
 				/>
 			</button>
@@ -52,7 +56,7 @@
 			<img
 				src="{WEBUI_BASE_URL}/static/favicon.png"
 				class="size-10 {selected === '' ? 'rounded-2xl' : 'rounded-full'}"
-				alt="logo"
+				alt={$i18n.t('Logo')}
 				draggable="false"
 			/>
 		</button>

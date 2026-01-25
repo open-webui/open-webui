@@ -68,7 +68,7 @@
 
 	const updateModelsHandler = async () => {
 		updateCancelled = false;
-		toast.info('Checking for model updates...');
+		toast.info($i18n.t('Checking for model updates...'));
 
 		for (const model of ollamaModels) {
 			if (updateCancelled) {
@@ -142,9 +142,9 @@
 		}
 
 		if (updateCancelled) {
-			toast.info('Model update cancelled');
+			toast.info($i18n.t('Model update cancelled'));
 		} else {
-			toast.success('All models are up to date');
+			toast.success($i18n.t('All models are up to date'));
 		}
 		updateModelId = null;
 		updateProgress = null;
@@ -614,7 +614,7 @@
 						</div>
 
 						<div>
-							<Tooltip content="Update All Models" placement="top">
+							<Tooltip content={$i18n.t('Update All Models')} placement="top">
 								<button
 									class="flex gap-2 items-center bg-transparent rounded-lg transition"
 									on:click={() => {
@@ -716,7 +716,7 @@
 
 					{#if updateModelId}
 						<div class="text-xs flex justify-between items-center">
-							<div>Updating "{updateModelId}" {updateProgress ? `(${updateProgress}%)` : ''}</div>
+							<div>{$i18n.t('Updating "{{model}}"', { model: updateModelId })}{updateProgress ? ` (${updateProgress}%)` : ''}</div>
 
 							<Tooltip content={$i18n.t('Cancel')}>
 								<button

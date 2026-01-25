@@ -207,21 +207,21 @@
 							<div class="flex space-x-1">
 								<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
 									<img
-										alt="Discord"
+										alt={$i18n.t('Discord')}
 										src="https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white"
 									/>
 								</a>
 
 								<a href="https://twitter.com/OpenWebUI" target="_blank">
 									<img
-										alt="X (formerly Twitter) Follow"
+										alt={$i18n.t('X (formerly Twitter) Follow')}
 										src="https://img.shields.io/twitter/follow/OpenWebUI"
 									/>
 								</a>
 
 								<a href="https://github.com/open-webui/open-webui" target="_blank">
 									<img
-										alt="Github Repo"
+										alt={$i18n.t('Github Repo')}
 										src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
 									/>
 								</a>
@@ -243,16 +243,16 @@
 										class="text-gray-500 mt-0.5"
 									>
 										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.type}
-											license</span
+											>{$i18n.t('{{type}} license', { type: $config?.license_metadata?.type })}
+											</span
 										>
-										registered to
+										{$i18n.t('registered to')}
 										<span class=" capitalize text-black dark:text-white"
 											>{$config?.license_metadata?.organization_name}</span
 										>
-										for
+										{$i18n.t('for')}
 										<span class=" font-medium text-black dark:text-white"
-											>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
+											>{$i18n.t('{{COUNT}} users.', { COUNT: $config?.license_metadata?.seats ?? $i18n.t('Unlimited') })}</span
 										>
 									</a>
 									{#if $config?.license_metadata?.html}
@@ -312,7 +312,7 @@
 								bind:value={adminConfig.DEFAULT_GROUP_ID}
 								placeholder={$i18n.t('Select a group')}
 							>
-								<option value={''}>None</option>
+								<option value={''}>{$i18n.t('None')}</option>
 								{#each groups as group}
 									<option value={group.id}>{group.name}</option>
 								{/each}

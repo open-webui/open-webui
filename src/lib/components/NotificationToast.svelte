@@ -4,9 +4,10 @@
 	import DOMPurify from 'dompurify';
 
 	import { marked } from 'marked';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 
 	const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
 
 	export let onClick: Function = () => {};
 	export let title: string = 'HI';
@@ -85,7 +86,11 @@
 	}}
 >
 	<div class="shrink-0 self-top -translate-y-0.5">
-		<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="favicon" class="size-6 rounded-full" />
+		<img
+			src="{WEBUI_BASE_URL}/static/favicon.png"
+			alt={$i18n.t('Favicon')}
+			class="size-6 rounded-full"
+		/>
 	</div>
 
 	<div>

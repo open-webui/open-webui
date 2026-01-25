@@ -365,7 +365,7 @@
 									<img
 										class="rounded-full w-6 h-6 object-cover mr-0.5 flex-shrink-0"
 										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-										alt="user"
+										alt={$i18n.t('user')}
 									/>
 								</ProfilePreview>
 
@@ -481,7 +481,7 @@
 	{#if total > 50}
 		<div class="text-sm">
 			<Markdown
-				content={`
+				content={$i18n.t(`
 > [!NOTE]
 > # **Hey there! 👋**
 >
@@ -495,7 +495,7 @@
 > 
 > - 👉 **[Click here to learn more about enterprise licensing](https://docs.openwebui.com/enterprise)**
 > - 👉 *[Click here to sponsor the project on GitHub](https://github.com/sponsors/tjbck)*
-`}
+`)}
 			/>
 		</div>
 	{/if}

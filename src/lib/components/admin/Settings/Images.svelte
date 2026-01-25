@@ -515,7 +515,7 @@
 									<button
 										class="  transition"
 										type="button"
-										aria-label="verify connection"
+										aria-label={$i18n.t('verify connection')}
 										on:click={async () => {
 											await updateConfigHandler();
 											const res = await verifyConfigUrl(localStorage.token).catch((error) => {
@@ -629,7 +629,7 @@
 									<button
 										class="  rounded-lg transition"
 										type="button"
-										aria-label="verify connection"
+										aria-label={$i18n.t('verify connection')}
 										on:click={async () => {
 											await updateConfigHandler();
 											const res = await verifyConfigUrl(localStorage.token).catch((error) => {
@@ -1042,7 +1042,7 @@
 									<button
 										class="  transition"
 										type="button"
-										aria-label="verify connection"
+										aria-label={$i18n.t('verify connection')}
 										on:click={async () => {
 											await updateConfigHandler();
 											const res = await verifyConfigUrl(localStorage.token).catch((error) => {
