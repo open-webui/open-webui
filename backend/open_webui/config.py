@@ -3400,6 +3400,24 @@ EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
     os.environ.get("EXTERNAL_WEB_LOADER_API_KEY", ""),
 )
 
+YANDEX_WEB_SEARCH_URL = PersistentConfig(
+    "YANDEX_WEB_SEARCH_URL",
+    "rag.web.search.yandex_web_search_url",
+    os.environ.get("YANDEX_WEB_SEARCH_URL", ""),
+)
+
+YANDEX_WEB_SEARCH_API_KEY = PersistentConfig(
+    "YANDEX_WEB_SEARCH_API_KEY",
+    "rag.web.search.yandex_web_search_api_key",
+    os.environ.get("YANDEX_WEB_SEARCH_API_KEY", ""),
+)
+
+YANDEX_WEB_SEARCH_CONFIG = PersistentConfig(
+    "YANDEX_WEB_SEARCH_CONFIG",
+    "rag.web.search.yandex_web_search_config",
+    os.environ.get("YANDEX_WEB_SEARCH_CONFIG", ""),
+)
+
 ####################################
 # Images
 ####################################

@@ -76,6 +76,7 @@ from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
 from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.external import search_external
+from open_webui.retrieval.web.yandex import search_yandex
 
 from open_webui.retrieval.utils import (
     get_content_from_url,
@@ -577,6 +578,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "YOUTUBE_LOADER_LANGUAGE": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "YOUTUBE_LOADER_PROXY_URL": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
             "YOUTUBE_LOADER_TRANSLATION": request.app.state.YOUTUBE_LOADER_TRANSLATION,
+            "YANDEX_WEB_SEARCH_URL": request.app.state.config.YANDEX_WEB_SEARCH_URL,
+            "YANDEX_WEB_SEARCH_API_KEY": request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
+            "YANDEX_WEB_SEARCH_CONFIG": request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
         },
     }
 
@@ -640,6 +644,9 @@ class WebConfig(BaseModel):
     YOUTUBE_LOADER_LANGUAGE: Optional[List[str]] = None
     YOUTUBE_LOADER_PROXY_URL: Optional[str] = None
     YOUTUBE_LOADER_TRANSLATION: Optional[str] = None
+    YANDEX_WEB_SEARCH_URL: Optional[str] = None
+    YANDEX_WEB_SEARCH_API_KEY: Optional[str] = None
+    YANDEX_WEB_SEARCH_CONFIG: Optional[str] = None
 
 
 class ConfigForm(BaseModel):
@@ -1164,6 +1171,15 @@ async def update_rag_config(
         request.app.state.YOUTUBE_LOADER_TRANSLATION = (
             form_data.web.YOUTUBE_LOADER_TRANSLATION
         )
+        request.app.state.config.YANDEX_WEB_SEARCH_URL = (
+            form_data.web.YANDEX_WEB_SEARCH_URL
+        )
+        request.app.state.config.YANDEX_WEB_SEARCH_API_KEY = (
+            form_data.web.YANDEX_WEB_SEARCH_API_KEY
+        )
+        request.app.state.config.YANDEX_WEB_SEARCH_CONFIG = (
+            form_data.web.YANDEX_WEB_SEARCH_CONFIG
+        )
 
     return {
         "status": True,
@@ -1287,6 +1303,9 @@ async def update_rag_config(
             "YOUTUBE_LOADER_LANGUAGE": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "YOUTUBE_LOADER_PROXY_URL": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
             "YOUTUBE_LOADER_TRANSLATION": request.app.state.YOUTUBE_LOADER_TRANSLATION,
+            "YANDEX_WEB_SEARCH_URL": request.app.state.config.YANDEX_WEB_SEARCH_URL,
+            "YANDEX_WEB_SEARCH_API_KEY": request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
+            "YANDEX_WEB_SEARCH_CONFIG": request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
         },
     }
 
@@ -2201,6 +2220,17 @@ def search_web(
             request,
             request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            user=user,
+        )
+    elif engine == "yandex":
+        return search_yandex(
+            request,
+            request.app.state.config.YANDEX_WEB_SEARCH_URL,
+            request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
+            request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
