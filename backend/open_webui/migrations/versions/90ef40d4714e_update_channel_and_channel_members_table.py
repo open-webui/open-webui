@@ -42,11 +42,11 @@ def upgrade() -> None:
     #  Create 'channel_webhook' table
     op.create_table(
         "channel_webhook",
-        sa.Column("id", sa.Text(), primary_key=True, unique=True, nullable=False),
-        sa.Column("user_id", sa.Text(), nullable=False),
+        sa.Column("id", sa.String(length=255), primary_key=True, unique=True, nullable=False),
+        sa.Column("user_id", sa.String(length=255), nullable=False),
         sa.Column(
             "channel_id",
-            sa.Text(),
+            sa.String(length=255),
             sa.ForeignKey("channel.id", ondelete="CASCADE"),
             nullable=False,
         ),

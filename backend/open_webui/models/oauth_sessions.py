@@ -25,9 +25,9 @@ log = logging.getLogger(__name__)
 class OAuthSession(Base):
     __tablename__ = "oauth_session"
 
-    id = Column(Text, primary_key=True, unique=True)
-    user_id = Column(Text, nullable=False)
-    provider = Column(Text, nullable=False)
+    id = Column(String(255), primary_key=True, unique=True)
+    user_id = Column(String(255), nullable=False)
+    provider = Column(String(255), nullable=False)
     token = Column(
         Text, nullable=False
     )  # JSON with access_token, id_token, refresh_token

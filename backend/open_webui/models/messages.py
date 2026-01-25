@@ -22,9 +22,9 @@ from sqlalchemy.sql import exists
 
 class MessageReaction(Base):
     __tablename__ = "message_reaction"
-    id = Column(Text, primary_key=True, unique=True)
-    user_id = Column(Text)
-    message_id = Column(Text)
+    id = Column(String(255), primary_key=True, unique=True)
+    user_id = Column(String(255))
+    message_id = Column(String(255))
     name = Column(Text)
     created_at = Column(BigInteger)
 
@@ -41,18 +41,18 @@ class MessageReactionModel(BaseModel):
 
 class Message(Base):
     __tablename__ = "message"
-    id = Column(Text, primary_key=True, unique=True)
+    id = Column(String(255), primary_key=True, unique=True)
 
-    user_id = Column(Text)
-    channel_id = Column(Text, nullable=True)
+    user_id = Column(String(255))
+    channel_id = Column(String(255), nullable=True)
 
-    reply_to_id = Column(Text, nullable=True)
-    parent_id = Column(Text, nullable=True)
+    reply_to_id = Column(String(255), nullable=True)
+    parent_id = Column(String(255), nullable=True)
 
     # Pins
     is_pinned = Column(Boolean, nullable=False, default=False)
     pinned_at = Column(BigInteger, nullable=True)
-    pinned_by = Column(Text, nullable=True)
+    pinned_by = Column(String(255), nullable=True)
 
     content = Column(Text)
     data = Column(JSON, nullable=True)

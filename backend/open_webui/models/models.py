@@ -54,13 +54,13 @@ class ModelMeta(BaseModel):
 class Model(Base):
     __tablename__ = "model"
 
-    id = Column(Text, primary_key=True, unique=True)
+    id = Column(String(255), primary_key=True, unique=True)
     """
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
-    user_id = Column(Text)
+    user_id = Column(String(255))
 
-    base_model_id = Column(Text, nullable=True)
+    base_model_id = Column(String(255), nullable=True)
     """
         An optional pointer to the actual model that should be used when proxying requests.
     """

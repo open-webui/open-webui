@@ -19,8 +19,8 @@ from open_webui.utils.access_control import has_access
 class Prompt(Base):
     __tablename__ = "prompt"
 
-    command = Column(String, primary_key=True)
-    user_id = Column(String)
+    command = Column(String(255), primary_key=True)
+    user_id = Column(String(255))
     title = Column(Text)
     content = Column(Text)
     timestamp = Column(BigInteger)

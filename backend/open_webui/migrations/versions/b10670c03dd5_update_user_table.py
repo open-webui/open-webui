@@ -116,10 +116,10 @@ def upgrade() -> None:
     op.add_column(
         "user", sa.Column("profile_banner_image_url", sa.Text(), nullable=True)
     )
-    op.add_column("user", sa.Column("timezone", sa.String(), nullable=True))
+    op.add_column("user", sa.Column("timezone", sa.String(length=255), nullable=True))
 
-    op.add_column("user", sa.Column("presence_state", sa.String(), nullable=True))
-    op.add_column("user", sa.Column("status_emoji", sa.String(), nullable=True))
+    op.add_column("user", sa.Column("presence_state", sa.String(length=255), nullable=True))
+    op.add_column("user", sa.Column("status_emoji", sa.String(length=255), nullable=True))
     op.add_column("user", sa.Column("status_message", sa.Text(), nullable=True))
     op.add_column(
         "user", sa.Column("status_expires_at", sa.BigInteger(), nullable=True)
@@ -134,9 +134,9 @@ def upgrade() -> None:
 
     op.create_table(
         "api_key",
-        sa.Column("id", sa.Text(), primary_key=True, unique=True),
-        sa.Column("user_id", sa.Text(), sa.ForeignKey("user.id", ondelete="CASCADE")),
-        sa.Column("key", sa.Text(), unique=True, nullable=False),
+        sa.Column("id", sa.String(length=255), primary_key=True, unique=True),
+        sa.Column("user_id", sa.String(length=255), sa.ForeignKey("user.id", ondelete="CASCADE")),
+        sa.Column("key", sa.String(length=255), unique=True, nullable=False),
         sa.Column("data", sa.JSON(), nullable=True),
         sa.Column("expires_at", sa.BigInteger(), nullable=True),
         sa.Column("last_used_at", sa.BigInteger(), nullable=True),
@@ -199,7 +199,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # --- 1. Restore old oauth_sub column ---
-    op.add_column("user", sa.Column("oauth_sub", sa.Text(), nullable=True))
+    op.add_column("user", sa.Column("oauth_sub", sa.String(length=255), nullable=True))
 
     conn = op.get_bind()
     users = conn.execute(
@@ -223,7 +223,7 @@ def downgrade() -> None:
     op.drop_column("user", "oauth")
 
     # --- 2. Restore api_key field ---
-    op.add_column("user", sa.Column("api_key", sa.String(), nullable=True))
+    op.add_column("user", sa.Column("api_key", sa.String(length=255), nullable=True))
 
     # Restore values from api_key
     keys = conn.execute(sa.text("SELECT user_id, key FROM api_key")).fetchall()

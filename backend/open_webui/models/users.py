@@ -46,12 +46,12 @@ class UserSettings(BaseModel):
 class User(Base):
     __tablename__ = "user"
 
-    id = Column(String, primary_key=True, unique=True)
-    email = Column(String)
+    id = Column(String(255), primary_key=True, unique=True)
+    email = Column(String(320))
     username = Column(String(50), nullable=True)
-    role = Column(String)
+    role = Column(String(50))
 
-    name = Column(String)
+    name = Column(String(255))
 
     profile_image_url = Column(Text)
     profile_banner_image_url = Column(Text, nullable=True)
@@ -59,10 +59,10 @@ class User(Base):
     bio = Column(Text, nullable=True)
     gender = Column(Text, nullable=True)
     date_of_birth = Column(Date, nullable=True)
-    timezone = Column(String, nullable=True)
+    timezone = Column(String(255), nullable=True)
 
-    presence_state = Column(String, nullable=True)
-    status_emoji = Column(String, nullable=True)
+    presence_state = Column(String(50), nullable=True)
+    status_emoji = Column(String(64), nullable=True)
     status_message = Column(Text, nullable=True)
     status_expires_at = Column(BigInteger, nullable=True)
 
@@ -119,9 +119,9 @@ class UserStatusModel(UserModel):
 class ApiKey(Base):
     __tablename__ = "api_key"
 
-    id = Column(Text, primary_key=True, unique=True)
-    user_id = Column(Text, nullable=False)
-    key = Column(Text, unique=True, nullable=False)
+    id = Column(String(255), primary_key=True, unique=True)
+    user_id = Column(String(255), nullable=False)
+    key = Column(String(255), unique=True, nullable=False)
     data = Column(JSON, nullable=True)
     expires_at = Column(BigInteger, nullable=True)
     last_used_at = Column(BigInteger, nullable=True)

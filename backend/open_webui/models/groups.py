@@ -35,8 +35,8 @@ log = logging.getLogger(__name__)
 class Group(Base):
     __tablename__ = "group"
 
-    id = Column(Text, unique=True, primary_key=True)
-    user_id = Column(Text)
+    id = Column(String(255), unique=True, primary_key=True)
+    user_id = Column(String(255))
 
     name = Column(Text)
     description = Column(Text)
@@ -71,13 +71,13 @@ class GroupModel(BaseModel):
 class GroupMember(Base):
     __tablename__ = "group_member"
 
-    id = Column(Text, unique=True, primary_key=True)
+    id = Column(String(255), unique=True, primary_key=True)
     group_id = Column(
         Text,
         ForeignKey("group.id", ondelete="CASCADE"),
         nullable=False,
     )
-    user_id = Column(Text, nullable=False)
+    user_id = Column(String(255), nullable=False)
     created_at = Column(BigInteger, nullable=True)
     updated_at = Column(BigInteger, nullable=True)
 

@@ -43,8 +43,8 @@ log = logging.getLogger(__name__)
 class Knowledge(Base):
     __tablename__ = "knowledge"
 
-    id = Column(Text, unique=True, primary_key=True)
-    user_id = Column(Text)
+    id = Column(String(255), unique=True, primary_key=True)
+    user_id = Column(String(255))
 
     name = Column(Text)
     description = Column(Text)
@@ -91,13 +91,13 @@ class KnowledgeModel(BaseModel):
 class KnowledgeFile(Base):
     __tablename__ = "knowledge_file"
 
-    id = Column(Text, unique=True, primary_key=True)
+    id = Column(String(255), unique=True, primary_key=True)
 
     knowledge_id = Column(
-        Text, ForeignKey("knowledge.id", ondelete="CASCADE"), nullable=False
+        String(255), ForeignKey("knowledge.id", ondelete="CASCADE"), nullable=False
     )
-    file_id = Column(Text, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Text, nullable=False)
+    file_id = Column(String(255), ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(255), nullable=False)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)

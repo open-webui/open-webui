@@ -35,8 +35,8 @@ from sqlalchemy.sql import exists
 class Channel(Base):
     __tablename__ = "channel"
 
-    id = Column(Text, primary_key=True, unique=True)
-    user_id = Column(Text)
+    id = Column(String(255), primary_key=True, unique=True)
+    user_id = Column(String(255))
     type = Column(Text, nullable=True)
 
     name = Column(Text)
@@ -52,13 +52,13 @@ class Channel(Base):
     created_at = Column(BigInteger)
 
     updated_at = Column(BigInteger)
-    updated_by = Column(Text, nullable=True)
+    updated_by = Column(String(255), nullable=True)
 
     archived_at = Column(BigInteger, nullable=True)
-    archived_by = Column(Text, nullable=True)
+    archived_by = Column(String(255), nullable=True)
 
     deleted_at = Column(BigInteger, nullable=True)
-    deleted_by = Column(Text, nullable=True)
+    deleted_by = Column(String(255), nullable=True)
 
 
 class ChannelModel(BaseModel):
@@ -93,9 +93,9 @@ class ChannelModel(BaseModel):
 class ChannelMember(Base):
     __tablename__ = "channel_member"
 
-    id = Column(Text, primary_key=True, unique=True)
-    channel_id = Column(Text, nullable=False)
-    user_id = Column(Text, nullable=False)
+    id = Column(String(255), primary_key=True, unique=True)
+    channel_id = Column(String(255), nullable=False)
+    user_id = Column(String(255), nullable=False)
 
     role = Column(Text, nullable=True)
     status = Column(Text, nullable=True)
@@ -109,7 +109,7 @@ class ChannelMember(Base):
     meta = Column(JSON, nullable=True)
 
     invited_at = Column(BigInteger, nullable=True)
-    invited_by = Column(Text, nullable=True)
+    invited_by = Column(String(255), nullable=True)
 
     joined_at = Column(BigInteger)
     left_at = Column(BigInteger, nullable=True)
@@ -153,16 +153,16 @@ class ChannelMemberModel(BaseModel):
 class ChannelFile(Base):
     __tablename__ = "channel_file"
 
-    id = Column(Text, unique=True, primary_key=True)
-    user_id = Column(Text, nullable=False)
+    id = Column(String(255), unique=True, primary_key=True)
+    user_id = Column(String(255), nullable=False)
 
     channel_id = Column(
-        Text, ForeignKey("channel.id", ondelete="CASCADE"), nullable=False
+        String(255), ForeignKey("channel.id", ondelete="CASCADE"), nullable=False
     )
     message_id = Column(
-        Text, ForeignKey("message.id", ondelete="CASCADE"), nullable=True
+        String(255), ForeignKey("message.id", ondelete="CASCADE"), nullable=True
     )
-    file_id = Column(Text, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
+    file_id = Column(String(255), ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
@@ -188,9 +188,9 @@ class ChannelFileModel(BaseModel):
 class ChannelWebhook(Base):
     __tablename__ = "channel_webhook"
 
-    id = Column(Text, primary_key=True, unique=True)
-    channel_id = Column(Text, nullable=False)
-    user_id = Column(Text, nullable=False)
+    id = Column(String(255), primary_key=True, unique=True)
+    channel_id = Column(String(255), nullable=False)
+    user_id = Column(String(255), nullable=False)
 
     name = Column(Text, nullable=False)
     profile_image_url = Column(Text, nullable=True)

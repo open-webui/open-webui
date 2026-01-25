@@ -27,8 +27,8 @@ from sqlalchemy.sql import exists
 class Note(Base):
     __tablename__ = "note"
 
-    id = Column(Text, primary_key=True, unique=True)
-    user_id = Column(Text)
+    id = Column(String(255), primary_key=True, unique=True)
+    user_id = Column(String(255))
 
     title = Column(Text)
     data = Column(JSON, nullable=True)

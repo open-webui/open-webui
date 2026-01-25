@@ -58,9 +58,9 @@ def upgrade():
 
     tag = table(
         "tag",
-        column("id", sa.String()),
-        column("name", sa.String()),
-        column("user_id", sa.String()),
+        column("id", sa.String(length=255)),
+        column("name", sa.String(length=255)),
+        column("user_id", sa.String(length=255)),
         column("meta", sa.JSON()),
     )
 
@@ -104,11 +104,11 @@ def upgrade():
     )
 
     chatidtag = table(
-        "chatidtag", column("chat_id", sa.String()), column("tag_name", sa.String())
+        "chatidtag", column("chat_id", sa.String(length=255)), column("tag_name", sa.String(length=255))
     )
     chat = table(
         "chat",
-        column("id", sa.String()),
+        column("id", sa.String(length=255)),
         column("pinned", sa.Boolean()),
         column("meta", sa.JSON()),
     )

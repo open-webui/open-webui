@@ -8,7 +8,7 @@ from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import User
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
+from sqlalchemy import BigInteger, Column, String, Text, JSON, Boolean
 
 log = logging.getLogger(__name__)
 
@@ -20,8 +20,8 @@ log = logging.getLogger(__name__)
 
 class Feedback(Base):
     __tablename__ = "feedback"
-    id = Column(Text, primary_key=True, unique=True)
-    user_id = Column(Text)
+    id = Column(String(255), primary_key=True, unique=True)
+    user_id = Column(String(255))
     version = Column(BigInteger, default=0)
     type = Column(Text)
     data = Column(JSON, nullable=True)

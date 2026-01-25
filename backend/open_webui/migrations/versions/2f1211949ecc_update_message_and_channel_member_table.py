@@ -85,7 +85,7 @@ def upgrade() -> None:
         ),
     )
     op.add_column("message", sa.Column("pinned_at", sa.BigInteger(), nullable=True))
-    op.add_column("message", sa.Column("pinned_by", sa.Text(), nullable=True))
+    op.add_column("message", sa.Column("pinned_by", sa.String(length=255), nullable=True))
 
 
 def downgrade() -> None:

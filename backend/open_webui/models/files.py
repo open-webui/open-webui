@@ -16,8 +16,8 @@ log = logging.getLogger(__name__)
 
 class File(Base):
     __tablename__ = "file"
-    id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String)
+    id = Column(String(255), primary_key=True, unique=True)
+    user_id = Column(String(255))
     hash = Column(Text, nullable=True)
 
     filename = Column(Text)

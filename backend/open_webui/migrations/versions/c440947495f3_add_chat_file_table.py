@@ -22,21 +22,21 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         "chat_file",
-        sa.Column("id", sa.Text(), primary_key=True),
-        sa.Column("user_id", sa.Text(), nullable=False),
+        sa.Column("id", sa.String(length=255), primary_key=True),
+        sa.Column("user_id", sa.String(length=255), nullable=False),
         sa.Column(
             "chat_id",
-            sa.Text(),
+            sa.String(length=255),
             sa.ForeignKey("chat.id", ondelete="CASCADE"),
             nullable=False,
         ),
         sa.Column(
             "file_id",
-            sa.Text(),
+            sa.String(length=255),
             sa.ForeignKey("file.id", ondelete="CASCADE"),
             nullable=False,
         ),
-        sa.Column("message_id", sa.Text(), nullable=True),
+        sa.Column("message_id", sa.String(length=255), nullable=True),
         sa.Column("created_at", sa.BigInteger(), nullable=False),
         sa.Column("updated_at", sa.BigInteger(), nullable=False),
         # indexes

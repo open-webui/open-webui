@@ -6,7 +6,7 @@ import re
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text, JSON, Boolean, func
+from sqlalchemy import BigInteger, Column, String, Text, JSON, Boolean, func
 from sqlalchemy.orm import Session
 
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
@@ -22,9 +22,9 @@ log = logging.getLogger(__name__)
 
 class Folder(Base):
     __tablename__ = "folder"
-    id = Column(Text, primary_key=True, unique=True)
-    parent_id = Column(Text, nullable=True)
-    user_id = Column(Text)
+    id = Column(String(255), primary_key=True, unique=True)
+    parent_id = Column(String(255), nullable=True)
+    user_id = Column(String(255))
     name = Column(Text)
     items = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)

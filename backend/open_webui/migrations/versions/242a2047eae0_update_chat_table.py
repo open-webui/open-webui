@@ -52,7 +52,7 @@ def upgrade():
     # Step 3: Migrate data from 'old_chat' to 'chat'
     chat_table = table(
         "chat",
-        sa.Column("id", sa.String(), primary_key=True),
+        sa.Column("id", sa.String(length=255), primary_key=True),
         sa.Column("old_chat", sa.Text()),
         sa.Column("chat", sa.JSON()),
     )
@@ -85,7 +85,7 @@ def downgrade():
     # Step 2: Convert 'chat' JSON data back to text and store in 'old_chat'
     chat_table = table(
         "chat",
-        sa.Column("id", sa.String(), primary_key=True),
+        sa.Column("id", sa.String(length=255), primary_key=True),
         sa.Column("chat", sa.JSON()),
         sa.Column("old_chat", sa.Text()),
     )

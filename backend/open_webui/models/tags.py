@@ -18,9 +18,9 @@ log = logging.getLogger(__name__)
 ####################
 class Tag(Base):
     __tablename__ = "tag"
-    id = Column(String)
-    name = Column(String)
-    user_id = Column(String)
+    id = Column(String(255))
+    name = Column(String(255))
+    user_id = Column(String(255))
     meta = Column(JSON, nullable=True)
 
     __table_args__ = (

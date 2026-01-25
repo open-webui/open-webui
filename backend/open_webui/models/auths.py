@@ -18,8 +18,8 @@ log = logging.getLogger(__name__)
 class Auth(Base):
     __tablename__ = "auth"
 
-    id = Column(String, primary_key=True, unique=True)
-    email = Column(String)
+    id = Column(String(255), primary_key=True, unique=True)
+    email = Column(String(320))
     password = Column(Text)
     active = Column(Boolean)
 

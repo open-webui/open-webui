@@ -36,20 +36,20 @@ log = logging.getLogger(__name__)
 class Chat(Base):
     __tablename__ = "chat"
 
-    id = Column(String, primary_key=True, unique=True)
-    user_id = Column(String)
+    id = Column(String(255), primary_key=True, unique=True)
+    user_id = Column(String(255))
     title = Column(Text)
     chat = Column(JSON)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
-    share_id = Column(Text, unique=True, nullable=True)
+    share_id = Column(String(255), unique=True, nullable=True)
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
     meta = Column(JSON, server_default="{}")
-    folder_id = Column(Text, nullable=True)
+    folder_id = Column(String(255), nullable=True)
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -88,12 +88,12 @@ class ChatModel(BaseModel):
 class ChatFile(Base):
     __tablename__ = "chat_file"
 
-    id = Column(Text, unique=True, primary_key=True)
-    user_id = Column(Text, nullable=False)
+    id = Column(String(255), unique=True, primary_key=True)
+    user_id = Column(String(255), nullable=False)
 
-    chat_id = Column(Text, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False)
-    message_id = Column(Text, nullable=True)
-    file_id = Column(Text, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
+    chat_id = Column(String(255), ForeignKey("chat.id", ondelete="CASCADE"), nullable=False)
+    message_id = Column(String(255), nullable=True)
+    file_id = Column(String(255), ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)

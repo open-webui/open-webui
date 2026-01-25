@@ -29,8 +29,8 @@ def upgrade() -> None:
     if "auth" not in existing_tables:
         op.create_table(
             "auth",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("email", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("email", sa.String(length=320), nullable=True),
             sa.Column("password", sa.Text(), nullable=True),
             sa.Column("active", sa.Boolean(), nullable=True),
             sa.PrimaryKeyConstraint("id"),
@@ -39,13 +39,13 @@ def upgrade() -> None:
     if "chat" not in existing_tables:
         op.create_table(
             "chat",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("title", sa.Text(), nullable=True),
             sa.Column("chat", sa.Text(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=True),
             sa.Column("updated_at", sa.BigInteger(), nullable=True),
-            sa.Column("share_id", sa.Text(), nullable=True),
+            sa.Column("share_id", sa.String(length=255), nullable=True),
             sa.Column("archived", sa.Boolean(), nullable=True),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("share_id"),
@@ -54,10 +54,10 @@ def upgrade() -> None:
     if "chatidtag" not in existing_tables:
         op.create_table(
             "chatidtag",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("tag_name", sa.String(), nullable=True),
-            sa.Column("chat_id", sa.String(), nullable=True),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("tag_name", sa.String(length=255), nullable=True),
+            sa.Column("chat_id", sa.String(length=255), nullable=True),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("timestamp", sa.BigInteger(), nullable=True),
             sa.PrimaryKeyConstraint("id"),
         )
@@ -65,12 +65,12 @@ def upgrade() -> None:
     if "document" not in existing_tables:
         op.create_table(
             "document",
-            sa.Column("collection_name", sa.String(), nullable=False),
-            sa.Column("name", sa.String(), nullable=True),
+            sa.Column("collection_name", sa.String(length=255), nullable=False),
+            sa.Column("name", sa.String(length=255), nullable=True),
             sa.Column("title", sa.Text(), nullable=True),
             sa.Column("filename", sa.Text(), nullable=True),
             sa.Column("content", sa.Text(), nullable=True),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("timestamp", sa.BigInteger(), nullable=True),
             sa.PrimaryKeyConstraint("collection_name"),
             sa.UniqueConstraint("name"),
@@ -79,8 +79,8 @@ def upgrade() -> None:
     if "file" not in existing_tables:
         op.create_table(
             "file",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("filename", sa.Text(), nullable=True),
             sa.Column("meta", JSONField(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=True),
@@ -90,8 +90,8 @@ def upgrade() -> None:
     if "function" not in existing_tables:
         op.create_table(
             "function",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("name", sa.Text(), nullable=True),
             sa.Column("type", sa.Text(), nullable=True),
             sa.Column("content", sa.Text(), nullable=True),
@@ -107,8 +107,8 @@ def upgrade() -> None:
     if "memory" not in existing_tables:
         op.create_table(
             "memory",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("content", sa.Text(), nullable=True),
             sa.Column("updated_at", sa.BigInteger(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=True),
@@ -118,9 +118,9 @@ def upgrade() -> None:
     if "model" not in existing_tables:
         op.create_table(
             "model",
-            sa.Column("id", sa.Text(), nullable=False),
-            sa.Column("user_id", sa.Text(), nullable=True),
-            sa.Column("base_model_id", sa.Text(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
+            sa.Column("base_model_id", sa.String(length=255), nullable=True),
             sa.Column("name", sa.Text(), nullable=True),
             sa.Column("params", JSONField(), nullable=True),
             sa.Column("meta", JSONField(), nullable=True),
@@ -132,8 +132,8 @@ def upgrade() -> None:
     if "prompt" not in existing_tables:
         op.create_table(
             "prompt",
-            sa.Column("command", sa.String(), nullable=False),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("command", sa.String(length=255), nullable=False),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("title", sa.Text(), nullable=True),
             sa.Column("content", sa.Text(), nullable=True),
             sa.Column("timestamp", sa.BigInteger(), nullable=True),
@@ -143,9 +143,9 @@ def upgrade() -> None:
     if "tag" not in existing_tables:
         op.create_table(
             "tag",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("name", sa.String(), nullable=True),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("name", sa.String(length=255), nullable=True),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("data", sa.Text(), nullable=True),
             sa.PrimaryKeyConstraint("id"),
         )
@@ -153,8 +153,8 @@ def upgrade() -> None:
     if "tool" not in existing_tables:
         op.create_table(
             "tool",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("user_id", sa.String(length=255), nullable=True),
             sa.Column("name", sa.Text(), nullable=True),
             sa.Column("content", sa.Text(), nullable=True),
             sa.Column("specs", JSONField(), nullable=True),
@@ -168,18 +168,18 @@ def upgrade() -> None:
     if "user" not in existing_tables:
         op.create_table(
             "user",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("name", sa.String(), nullable=True),
-            sa.Column("email", sa.String(), nullable=True),
-            sa.Column("role", sa.String(), nullable=True),
+            sa.Column("id", sa.String(length=255), nullable=False),
+            sa.Column("name", sa.String(length=255), nullable=True),
+            sa.Column("email", sa.String(length=320), nullable=True),
+            sa.Column("role", sa.String(length=255), nullable=True),
             sa.Column("profile_image_url", sa.Text(), nullable=True),
             sa.Column("last_active_at", sa.BigInteger(), nullable=True),
             sa.Column("updated_at", sa.BigInteger(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=True),
-            sa.Column("api_key", sa.String(), nullable=True),
+            sa.Column("api_key", sa.String(length=255), nullable=True),
             sa.Column("settings", JSONField(), nullable=True),
             sa.Column("info", JSONField(), nullable=True),
-            sa.Column("oauth_sub", sa.Text(), nullable=True),
+            sa.Column("oauth_sub", sa.String(length=255), nullable=True),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("api_key"),
             sa.UniqueConstraint("oauth_sub"),
