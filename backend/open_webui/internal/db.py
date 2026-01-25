@@ -55,8 +55,13 @@ class JSONField(types.TypeDecorator):
 def handle_peewee_migration(DATABASE_URL):
     # db = None
     try:
-        # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
+        # Peewee's db_url helper uses slightly different schemes than SQLAlchemy.
+        # Normalize known variants before initializing the Peewee migration DB.
+        peewee_url = DATABASE_URL.replace("postgresql://", "postgres://")
+        peewee_url = peewee_url.replace("mysql+pymysql://", "mysql://")
+        peewee_url = peewee_url.replace("mariadb+mariadbconnector://", "mysql://")
+
+        db = register_connection(peewee_url)
         migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()

@@ -32,6 +32,9 @@ class CustomReconnectMixin(ReconnectMixin):
         # psycopg2
         (OperationalError, "termin"),
         (InterfaceError, "closed"),
+        # PyMySQL / MySQLdb (MySQL/MariaDB)
+        (OperationalError, "server has gone away"),
+        (OperationalError, "lost connection"),
         # peewee
         (PeeWeeInterfaceError, "closed"),
     )
@@ -41,7 +44,13 @@ class ReconnectingPostgresqlDatabase(CustomReconnectMixin, PostgresqlDatabase):
     pass
 
 
-def register_connection(db_url):
+class ReconnectingMySQLDatabase(CustomReconnectMixin, MySQLDatabase):
+    """MySQL/MariaDB Peewee database with automatic reconnect behavior."""
+
+    pass
+
+
+def register_connection(db_url: str):
     # Check if using SQLCipher protocol
     if db_url.startswith("sqlite+sqlcipher://"):
         database_password = os.environ.get("DATABASE_PASSWORD")
@@ -62,8 +71,19 @@ def register_connection(db_url):
         log.info("Connected to encrypted SQLite database using SQLCipher")
 
     else:
-        # Standard database connection (existing logic)
-        db = connect(db_url, unquote_user=True, unquote_password=True)
+        # Standard database connection
+        # NOTE: Peewee's playhouse.db_url does not understand SQLAlchemy-style driver suffixes.
+        # Normalize common MariaDB/MySQL SQLAlchemy URLs so Peewee can connect.
+        peewee_db_url = db_url
+        if peewee_db_url.startswith("mysql+pymysql://"):
+            peewee_db_url = peewee_db_url.replace("mysql+pymysql://", "mysql://", 1)
+        elif peewee_db_url.startswith("mariadb+mariadbconnector://"):
+            # For Peewee migrations we connect using the MySQL-compatible driver (PyMySQL).
+            peewee_db_url = peewee_db_url.replace(
+                "mariadb+mariadbconnector://", "mysql://", 1
+            )
+
+        db = connect(peewee_db_url, unquote_user=True, unquote_password=True)
         if isinstance(db, PostgresqlDatabase):
             # Enable autoconnect for SQLite databases, managed by Peewee
             db.autoconnect = True
@@ -71,10 +91,19 @@ def register_connection(db_url):
             log.info("Connected to PostgreSQL database")
 
             # Get the connection details
-            connection = parse(db_url, unquote_user=True, unquote_password=True)
+            connection = parse(peewee_db_url, unquote_user=True, unquote_password=True)
 
             # Use our custom database class that supports reconnection
             db = ReconnectingPostgresqlDatabase(**connection)
+            db.connect(reuse_if_open=True)
+        elif isinstance(db, MySQLDatabase):
+            # Enable autoconnect for MySQL/MariaDB databases, managed by Peewee
+            db.autoconnect = True
+            db.reuse_if_open = True
+            log.info("Connected to MySQL/MariaDB database")
+
+            connection = parse(peewee_db_url, unquote_user=True, unquote_password=True)
+            db = ReconnectingMySQLDatabase(**connection)
             db.connect(reuse_if_open=True)
         elif isinstance(db, SqliteDatabase):
             # Enable autoconnect for SQLite databases, managed by Peewee
