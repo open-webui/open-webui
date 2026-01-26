@@ -1,0 +1,61 @@
+# Cloud Build configuration for production deployment
+# Service: ks-ai-openwebui
+# Region: europe-west4
+# Platform: Google Cloud Run
+
+steps:
+  # Build Docker image with layer caching enabled
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
+      - '-t'
+      - '${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}/${_SERVICE_NAME}:latest'
+      - '.'
+      - '-f'
+      - 'Dockerfile'
+      - '${_BUILDPLATFORM}'
+    id: Build
+
+  # Push image with commit SHA tag to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
+    id: Push
+
+  # Deploy to Cloud Run production service
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - '${_SERVICE_NAME}'
+      - '--platform=${_PLATFORM}'
+      - '--image=${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
+      - '--labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=${COMMIT_SHA},gcb-build-id=${BUILD_ID},gcb-trigger-id=${_TRIGGER_ID}'
+      - '--region=${_DEPLOY_REGION}'
+      - '--quiet'
+    id: Deploy
+
+# Substitution variables
+substitutions:
+  _AR_HOSTNAME: 'europe-west4-docker.pkg.dev'
+  _AR_PROJECT_ID: 'keeper-ai'
+  _AR_REPOSITORY: 'cloud-run-source-deploy'
+  _SERVICE_NAME: 'ks-ai-openwebui'
+  _DEPLOY_REGION: 'europe-west4'
+  _PLATFORM: 'managed'
+  _TRIGGER_ID: 'cb88ff89-b77e-4a3d-8e1b-cd8cc595b1ca'
+  _BUILDPLATFORM: '--platform linux/amd64'
+
+# Build options
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamicSubstitutions: true
+  substitutionOption: ALLOW_LOOSE
+
+# Timeout set to 1 hour
+timeout: 3600s
