@@ -1,4 +1,5 @@
 import hashlib
+import asyncio
 import json
 import logging
 import os
@@ -56,6 +57,7 @@ from open_webui.env import (
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
 )
+from open_webui.utils.headers import get_headers_and_cookies
 
 
 router = APIRouter()
@@ -159,6 +161,7 @@ def set_faster_whisper_model(model: str, auto_update: bool = False):
 class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    OPENAI_API_CONFIG: Optional[dict] = None
     OPENAI_PARAMS: Optional[dict] = None
     API_KEY: str
     ENGINE: str
@@ -173,6 +176,7 @@ class TTSConfigForm(BaseModel):
 class STTConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    OPENAI_API_CONFIG: Optional[dict] = None
     ENGINE: str
     MODEL: str
     SUPPORTED_CONTENT_TYPES: list[str] = []
@@ -199,6 +203,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
         "tts": {
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
+            "OPENAI_API_CONFIG": request.app.state.config.TTS_OPENAI_API_CONFIG,
             "OPENAI_PARAMS": request.app.state.config.TTS_OPENAI_PARAMS,
             "API_KEY": request.app.state.config.TTS_API_KEY,
             "ENGINE": request.app.state.config.TTS_ENGINE,
@@ -212,6 +217,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
         "stt": {
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
+            "OPENAI_API_CONFIG": request.app.state.config.STT_OPENAI_API_CONFIG,
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
@@ -235,6 +241,7 @@ async def update_audio_config(
 ):
     request.app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
     request.app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
+    request.app.state.config.TTS_OPENAI_API_CONFIG = form_data.tts.OPENAI_API_CONFIG
     request.app.state.config.TTS_OPENAI_PARAMS = form_data.tts.OPENAI_PARAMS
     request.app.state.config.TTS_API_KEY = form_data.tts.API_KEY
     request.app.state.config.TTS_ENGINE = form_data.tts.ENGINE
@@ -251,6 +258,7 @@ async def update_audio_config(
 
     request.app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     request.app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
+    request.app.state.config.STT_OPENAI_API_CONFIG = form_data.stt.OPENAI_API_CONFIG
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
     request.app.state.config.STT_SUPPORTED_CONTENT_TYPES = (
@@ -288,6 +296,7 @@ async def update_audio_config(
             "VOICE": request.app.state.config.TTS_VOICE,
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
+            "OPENAI_API_CONFIG": request.app.state.config.TTS_OPENAI_API_CONFIG,
             "OPENAI_PARAMS": request.app.state.config.TTS_OPENAI_PARAMS,
             "API_KEY": request.app.state.config.TTS_API_KEY,
             "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON,
@@ -298,6 +307,7 @@ async def update_audio_config(
         "stt": {
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
+            "OPENAI_API_CONFIG": request.app.state.config.STT_OPENAI_API_CONFIG,
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "SUPPORTED_CONTENT_TYPES": request.app.state.config.STT_SUPPORTED_CONTENT_TYPES,
@@ -381,17 +391,19 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     **(request.app.state.config.TTS_OPENAI_PARAMS or {}),
                 }
 
-                headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
-                }
-                if ENABLE_FORWARD_USER_INFO_HEADERS:
-                    headers = include_user_info_headers(headers, user)
+                headers, cookies = await get_headers_and_cookies(
+                    request=request,
+                    url=request.app.state.config.TTS_OPENAI_API_BASE_URL,
+                    key=request.app.state.config.TTS_OPENAI_API_KEY,
+                    config=request.app.state.config.TTS_OPENAI_API_CONFIG,
+                    user=user,
+                )
 
                 r = await session.post(
                     url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
                     json=payload,
                     headers=headers,
+                    cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 )
 
@@ -633,15 +645,23 @@ def transcription_handler(request, file_path, metadata, user=None):
                 if language:
                     payload["language"] = language
 
-                headers = {
-                    "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
-                }
-                if user and ENABLE_FORWARD_USER_INFO_HEADERS:
-                    headers = include_user_info_headers(headers, user)
+                headers, cookies = asyncio.run(
+                    get_headers_and_cookies(
+                        request=request,
+                        url=request.app.state.config.STT_OPENAI_API_BASE_URL,
+                        key=request.app.state.config.STT_OPENAI_API_KEY,
+                        config=request.app.state.config.STT_OPENAI_API_CONFIG,
+                        user=user,
+                    )
+                )
+
+                # requests library doesn't support cookies dict directly in the same way as aiohttp for all cases, but widely supported
+                # Adapting usage if needed. requests.post(..., cookies=cookies) works.
 
                 r = requests.post(
                     url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
                     headers=headers,
+                    cookies=cookies,
                     files={"file": (filename, open(file_path, "rb"))},
                     data=payload,
                 )
@@ -1235,18 +1255,19 @@ def get_available_models(request: Request) -> list[dict]:
     available_models = []
     if request.app.state.config.TTS_ENGINE == "openai":
         # Use custom endpoint if not using the official OpenAI API URL
-        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
-            "https://api.openai.com"
-        ):
+        base_url = request.app.state.config.TTS_OPENAI_API_BASE_URL
+        if base_url and not base_url.startswith("https://api.openai.com"):
             try:
-                response = requests.get(
-                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models"
-                )
+                # Ensure base_url is a valid absolute URL
+                if not base_url.startswith(("http://", "https://")):
+                    raise ValueError(f"Invalid URL: {base_url}")
+
+                response = requests.get(f"{base_url}/audio/models", timeout=5)
                 response.raise_for_status()
                 data = response.json()
                 available_models = data.get("models", [])
             except Exception as e:
-                log.error(f"Error fetching models from custom endpoint: {str(e)}")
+                log.error(f"Error fetching models from custom endpoint ({base_url}): {str(e)}")
                 available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
         else:
             available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
@@ -1281,19 +1302,20 @@ def get_available_voices(request) -> dict:
     available_voices = {}
     if request.app.state.config.TTS_ENGINE == "openai":
         # Use custom endpoint if not using the official OpenAI API URL
-        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
-            "https://api.openai.com"
-        ):
+        base_url = request.app.state.config.TTS_OPENAI_API_BASE_URL
+        if base_url and not base_url.startswith("https://api.openai.com"):
             try:
-                response = requests.get(
-                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices"
-                )
+                # Ensure base_url is a valid absolute URL
+                if not base_url.startswith(("http://", "https://")):
+                    raise ValueError(f"Invalid URL: {base_url}")
+
+                response = requests.get(f"{base_url}/audio/voices", timeout=5)
                 response.raise_for_status()
                 data = response.json()
                 voices_list = data.get("voices", [])
                 available_voices = {voice["id"]: voice["name"] for voice in voices_list}
             except Exception as e:
-                log.error(f"Error fetching voices from custom endpoint: {str(e)}")
+                log.error(f"Error fetching voices from custom endpoint ({base_url}): {str(e)}")
                 available_voices = {
                     "alloy": "alloy",
                     "echo": "echo",

@@ -8,7 +8,7 @@ import aiohttp
 from aiocache import cached
 import requests
 
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+
 
 from fastapi import Depends, HTTPException, Request, APIRouter
 from fastapi.responses import (
@@ -52,7 +52,12 @@ from open_webui.utils.misc import (
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.access_control import has_access
+from open_webui.utils.headers import (
+    include_user_info_headers,
+    get_headers_and_cookies,
+    get_microsoft_entra_id_access_token,
+)
 
 
 log = logging.getLogger(__name__)
@@ -117,87 +122,6 @@ def openai_reasoning_model_handler(payload):
             payload["messages"][0]["role"] = "developer"
 
     return payload
-
-
-async def get_headers_and_cookies(
-    request: Request,
-    url,
-    key=None,
-    config=None,
-    metadata: Optional[dict] = None,
-    user: UserModel = None,
-):
-    cookies = {}
-    headers = {
-        "Content-Type": "application/json",
-        **(
-            {
-                "HTTP-Referer": "https://openwebui.com/",
-                "X-Title": "Open WebUI",
-            }
-            if "openrouter.ai" in url
-            else {}
-        ),
-    }
-
-    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-        headers = include_user_info_headers(headers, user)
-        if metadata and metadata.get("chat_id"):
-            headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get("chat_id")
-
-    token = None
-    auth_type = config.get("auth_type")
-
-    if auth_type == "bearer" or auth_type is None:
-        # Default to bearer if not specified
-        token = f"{key}"
-    elif auth_type == "none":
-        token = None
-    elif auth_type == "session":
-        cookies = request.cookies
-        token = request.state.token.credentials
-    elif auth_type == "system_oauth":
-        cookies = request.cookies
-
-        oauth_token = None
-        try:
-            if request.cookies.get("oauth_session_id", None):
-                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                    user.id,
-                    request.cookies.get("oauth_session_id", None),
-                )
-        except Exception as e:
-            log.error(f"Error getting OAuth token: {e}")
-
-        if oauth_token:
-            token = f"{oauth_token.get('access_token', '')}"
-
-    elif auth_type in ("azure_ad", "microsoft_entra_id"):
-        token = get_microsoft_entra_id_access_token()
-
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    if config.get("headers") and isinstance(config.get("headers"), dict):
-        headers = {**headers, **config.get("headers")}
-
-    return headers, cookies
-
-
-def get_microsoft_entra_id_access_token():
-    """
-    Get Microsoft Entra ID access token using DefaultAzureCredential for Azure OpenAI.
-    Returns the token string or None if authentication fails.
-    """
-    try:
-        token_provider = get_bearer_token_provider(
-            DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
-        )
-        return token_provider()
-    except Exception as e:
-        log.error(f"Error getting Microsoft Entra ID access token: {e}")
-        return None
-
 
 ##########################################
 #

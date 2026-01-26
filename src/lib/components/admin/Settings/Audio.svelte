@@ -28,6 +28,9 @@
 	// Audio
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
+	let TTS_OPENAI_API_CONFIG = {
+		auth_type: 'bearer'
+	};
 	let TTS_API_KEY = '';
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
@@ -38,8 +41,14 @@
 	let TTS_AZURE_SPEECH_BASE_URL = '';
 	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
 
+	let TTS_OPENAI_HEADERS = '';
+	let STT_OPENAI_HEADERS = '';
+
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
+	let STT_OPENAI_API_CONFIG = {
+		auth_type: 'bearer'
+	};
 	let STT_ENGINE = '';
 	let STT_MODEL = '';
 	let STT_SUPPORTED_CONTENT_TYPES = '';
@@ -104,6 +113,30 @@
 
 	const updateConfigHandler = async () => {
 		let openaiParams = {};
+		let ttsHeaders = {};
+		let sttHeaders = {};
+
+		try {
+			ttsHeaders = TTS_OPENAI_HEADERS ? JSON.parse(TTS_OPENAI_HEADERS) : {};
+			TTS_OPENAI_HEADERS = JSON.stringify(ttsHeaders, null, 2);
+			if (TTS_OPENAI_HEADERS === '{}') TTS_OPENAI_HEADERS = '';
+		} catch (e) {
+			toast.error($i18n.t('Invalid JSON format for TTS Headers'));
+			return;
+		}
+
+		try {
+			sttHeaders = STT_OPENAI_HEADERS ? JSON.parse(STT_OPENAI_HEADERS) : {};
+			STT_OPENAI_HEADERS = JSON.stringify(sttHeaders, null, 2);
+			if (STT_OPENAI_HEADERS === '{}') STT_OPENAI_HEADERS = '';
+		} catch (e) {
+			toast.error($i18n.t('Invalid JSON format for STT Headers'));
+			return;
+		}
+
+		TTS_OPENAI_API_CONFIG.headers = ttsHeaders;
+		STT_OPENAI_API_CONFIG.headers = sttHeaders;
+
 		try {
 			openaiParams = TTS_OPENAI_PARAMS ? JSON.parse(TTS_OPENAI_PARAMS) : {};
 			TTS_OPENAI_PARAMS = JSON.stringify(openaiParams, null, 2);
@@ -116,6 +149,7 @@
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				OPENAI_API_CONFIG: TTS_OPENAI_API_CONFIG,
 				OPENAI_PARAMS: openaiParams,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
@@ -129,6 +163,7 @@
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: STT_OPENAI_API_KEY,
+				OPENAI_API_CONFIG: STT_OPENAI_API_CONFIG,
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL,
 				SUPPORTED_CONTENT_TYPES: STT_SUPPORTED_CONTENT_TYPES.split(','),
@@ -162,8 +197,17 @@
 
 		if (res) {
 			console.log(res);
+
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_OPENAI_API_CONFIG = {
+				auth_type: 'bearer',
+				...(res.tts.OPENAI_API_CONFIG || {})
+			};
+
+			TTS_OPENAI_HEADERS = JSON.stringify(TTS_OPENAI_API_CONFIG?.headers || {}, null, 2);
+			if (TTS_OPENAI_HEADERS === '{}') TTS_OPENAI_HEADERS = '';
+
 			TTS_OPENAI_PARAMS = JSON.stringify(res?.tts?.OPENAI_PARAMS ?? '', null, 2);
 			TTS_API_KEY = res.tts.API_KEY;
 
@@ -179,6 +223,13 @@
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
+			STT_OPENAI_API_CONFIG = {
+				auth_type: 'bearer',
+				...(res.stt.OPENAI_API_CONFIG || {})
+			};
+
+			STT_OPENAI_HEADERS = JSON.stringify(STT_OPENAI_API_CONFIG?.headers || {}, null, 2);
+			if (STT_OPENAI_HEADERS === '{}') STT_OPENAI_HEADERS = '';
 
 			STT_ENGINE = res.stt.ENGINE;
 			STT_MODEL = res.stt.MODEL;
@@ -258,8 +309,62 @@
 								bind:value={STT_OPENAI_API_BASE_URL}
 								required
 							/>
+						</div>
 
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_OPENAI_API_KEY} />
+						<div class="flex gap-2 mt-2">
+							<div class="flex flex-col w-full">
+								<label for="stt-auth-type" class="mb-0.5 text-xs text-gray-500">{$i18n.t('Auth')}</label>
+								<div class="flex gap-2">
+									<div class="flex-shrink-0">
+										<select
+											id="stt-auth-type"
+											class="dark:bg-gray-900 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 outline-hidden"
+											bind:value={STT_OPENAI_API_CONFIG.auth_type}
+										>
+											<option value="none">{$i18n.t('None')}</option>
+											<option value="bearer">{$i18n.t('Bearer')}</option>
+											<option value="session">{$i18n.t('Session')}</option>
+											<option value="system_oauth">{$i18n.t('OAuth')}</option>
+										</select>
+									</div>
+
+									<div class="flex flex-1 items-center">
+										{#if STT_OPENAI_API_CONFIG.auth_type === 'bearer'}
+											<SensitiveInput
+												bind:value={STT_OPENAI_API_KEY}
+												placeholder={$i18n.t('API Key')}
+												required={false}
+											/>
+										{:else if STT_OPENAI_API_CONFIG.auth_type === 'none'}
+											<div class="text-xs text-gray-500">
+												{$i18n.t('No authentication')}
+											</div>
+										{:else if STT_OPENAI_API_CONFIG.auth_type === 'session'}
+											<div class="text-xs text-gray-500">
+												{$i18n.t('Forwards system user session credentials')}
+											</div>
+										{:else if STT_OPENAI_API_CONFIG.auth_type === 'system_oauth'}
+											<div class="text-xs text-gray-500">
+												{$i18n.t('Forwards system user OAuth access token')}
+											</div>
+										{/if}
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="flex flex-col w-full mt-2">
+							<label for="stt-headers" class="mb-0.5 text-xs text-gray-500">{$i18n.t('Headers')}</label>
+							<div class="flex-1">
+								<Textarea
+									id="stt-headers"
+									className="w-full text-sm outline-hidden"
+									bind:value={STT_OPENAI_HEADERS}
+									placeholder={$i18n.t('Enter additional headers in JSON format')}
+									required={false}
+									minSize={30}
+								/>
+							</div>
 						</div>
 					</div>
 
@@ -541,8 +646,62 @@
 								bind:value={TTS_OPENAI_API_BASE_URL}
 								required
 							/>
+						</div>
 
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
+						<div class="flex gap-2 mt-2">
+							<div class="flex flex-col w-full">
+								<label for="tts-auth-type" class="mb-0.5 text-xs text-gray-500">{$i18n.t('Auth')}</label>
+								<div class="flex gap-2">
+									<div class="flex-shrink-0">
+										<select
+											id="tts-auth-type"
+											class="dark:bg-gray-900 w-full rounded-lg py-2 px-4 text-sm bg-gray-50 outline-hidden"
+											bind:value={TTS_OPENAI_API_CONFIG.auth_type}
+										>
+											<option value="none">{$i18n.t('None')}</option>
+											<option value="bearer">{$i18n.t('Bearer')}</option>
+											<option value="session">{$i18n.t('Session')}</option>
+											<option value="system_oauth">{$i18n.t('OAuth')}</option>
+										</select>
+									</div>
+
+									<div class="flex flex-1 items-center">
+										{#if TTS_OPENAI_API_CONFIG.auth_type === 'bearer'}
+											<SensitiveInput
+												bind:value={TTS_OPENAI_API_KEY}
+												placeholder={$i18n.t('API Key')}
+												required={false}
+											/>
+										{:else if TTS_OPENAI_API_CONFIG.auth_type === 'none'}
+											<div class="text-xs text-gray-500">
+												{$i18n.t('No authentication')}
+											</div>
+										{:else if TTS_OPENAI_API_CONFIG.auth_type === 'session'}
+											<div class="text-xs text-gray-500">
+												{$i18n.t('Forwards system user session credentials')}
+											</div>
+										{:else if TTS_OPENAI_API_CONFIG.auth_type === 'system_oauth'}
+											<div class="text-xs text-gray-500">
+												{$i18n.t('Forwards system user OAuth access token')}
+											</div>
+										{/if}
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="flex flex-col w-full mt-2">
+							<label for="tts-headers" class="mb-0.5 text-xs text-gray-500">{$i18n.t('Headers')}</label>
+							<div class="flex-1">
+								<Textarea
+									id="tts-headers"
+									className="w-full text-sm outline-hidden"
+									bind:value={TTS_OPENAI_HEADERS}
+									placeholder={$i18n.t('Enter additional headers in JSON format')}
+									required={false}
+									minSize={30}
+								/>
+							</div>
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}
