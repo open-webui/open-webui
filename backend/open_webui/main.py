@@ -372,6 +372,7 @@ from open_webui.config import (
     ENABLE_NOTES,
     ENABLE_USER_STATUS,
     ENABLE_COMMUNITY_SHARING,
+    ENABLE_PLAYGROUND,
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
     ENABLE_EVALUATION_ARENA_MODELS,
@@ -799,8 +800,11 @@ app.state.config.BANNERS = WEBUI_BANNERS
 app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
 app.state.config.FOLDER_MAX_FILE_COUNT = FOLDER_MAX_FILE_COUNT
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
+app.state.config.ENABLE_MENORIES = ENABLE_MEMORIES
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
+app.state.config.ENABLE_USER_STATUS = ENABLE_USER_STATUS
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
+app.state.config.ENABLE_PLAYGROUND = ENABLE_PLAYGROUND
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 app.state.config.ENABLE_USER_WEBHOOKS = ENABLE_USER_WEBHOOKS
 app.state.config.ENABLE_USER_STATUS = ENABLE_USER_STATUS
@@ -1947,6 +1951,7 @@ async def get_app_config(request: Request):
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
                     "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
+                    "enable_playground": app.state.config.ENABLE_PLAYGROUND,
                     "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
                     "enable_user_webhooks": app.state.config.ENABLE_USER_WEBHOOKS,
                     "enable_user_status": app.state.config.ENABLE_USER_STATUS,

@@ -1629,6 +1629,12 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
 
+ENABLE_PLAYGROUND = PersistentConfig(
+    "ENABLE_PLAYGROUND",
+    "ui.enable_playground",
+    os.environ.get("ENABLE_PLAYGROUND", "True").lower() == "true",
+)
+
 ENABLE_MESSAGE_RATING = PersistentConfig(
     "ENABLE_MESSAGE_RATING",
     "ui.enable_message_rating",
