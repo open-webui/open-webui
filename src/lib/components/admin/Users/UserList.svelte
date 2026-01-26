@@ -66,6 +66,7 @@
 		}
 
 		if (res) {
+			showDeleteConfirmDialog = false;
 			getUserList();
 		}
 	};
