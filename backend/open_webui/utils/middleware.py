@@ -147,6 +147,11 @@ DEFAULT_SOLUTION_TAGS = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 DEFAULT_CODE_INTERPRETER_TAGS = [("<code_interpreter>", "</code_interpreter>")]
 
 
+def output_id(prefix: str) -> str:
+    """Generate OR-style ID: prefix + 24-char hex UUID."""
+    return f"{prefix}_{uuid4().hex[:24]}"
+
+
 def get_citation_source_from_tool_result(
     tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ""
 ) -> list[dict]:
@@ -2233,6 +2238,9 @@ async def process_chat_response(
                             )
 
                             title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                            
+                            # Use output from backend if provided (OR-compliant backends)
+                            response_output = response_data.get("output")
 
                             await event_emitter(
                                 {
@@ -2240,6 +2248,7 @@ async def process_chat_response(
                                     "data": {
                                         "done": True,
                                         "content": content,
+                                        **({"output": response_output} if response_output else {}),
                                         "title": title,
                                     },
                                 }
@@ -2252,6 +2261,7 @@ async def process_chat_response(
                                 {
                                     "role": "assistant",
                                     "content": content,
+                                    **({"output": response_output} if response_output else {}),
                                 },
                             )
 
@@ -2504,6 +2514,101 @@ async def process_chat_response(
                             content = f"{content}{block['type']}: {block_content}\n"
 
                 return content.strip()
+
+            def serialize_output(output: list) -> str:
+                """
+                Convert OR-aligned output items to HTML for display.
+                For LLM consumption, use convert_output_to_messages() instead.
+                """
+                content = ""
+                
+                # First pass: collect function_call_output items by call_id for lookup
+                tool_outputs = {}
+                for item in output:
+                    if item.get("type") == "function_call_output":
+                        tool_outputs[item.get("call_id")] = item
+                
+                # Second pass: render items in order
+                for item in output:
+                    item_type = item.get("type", "")
+                    
+                    if item_type == "message":
+                        for content_part in item.get("content", []):
+                            if content_part.get("type") == "output_text":
+                                text = content_part.get("text", "").strip()
+                                if text:
+                                    content = f"{content}{text}\n"
+                    
+                    elif item_type == "function_call":
+                        # Render tool call inline with its result (if available)
+                        if content and not content.endswith("\n"):
+                            content += "\n"
+                        
+                        call_id = item.get("call_id", "")
+                        name = item.get("name", "")
+                        arguments = item.get("arguments", "")
+                        
+                        result_item = tool_outputs.get(call_id)
+                        if result_item:
+                            result_text = ""
+                            for out in result_item.get("output", []):
+                                if out.get("type") == "input_text":
+                                    result_text += out.get("text", "")
+                            files = result_item.get("files")
+                            embeds = result_item.get("embeds", "")
+                            
+                            content += f'<details type="tool_calls" done="true" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}" result="{html.escape(json.dumps(result_text, ensure_ascii=False))}" files="{html.escape(json.dumps(files)) if files else ""}" embeds="{html.escape(json.dumps(embeds))}">\n<summary>Tool Executed</summary>\n</details>\n'
+                        else:
+                            content += f'<details type="tool_calls" done="false" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}">\n<summary>Executing...</summary>\n</details>\n'
+                    
+                    elif item_type == "function_call_output":
+                        # Already handled inline with function_call above
+                        pass
+                    
+                    elif item_type == "reasoning":
+                        reasoning_content = ""
+                        for content_part in item.get("content", []):
+                            if content_part.get("type") == "output_text":
+                                reasoning_content = content_part.get("text", "").strip()
+                        
+                        duration = item.get("duration")
+                        status = item.get("status", "in_progress")
+                        
+                        if content and not content.endswith("\n"):
+                            content += "\n"
+                        
+                        display = html.escape("\n".join(
+                            (f"> {line}" if not line.startswith(">") else line)
+                            for line in reasoning_content.splitlines()
+                        ))
+                        
+                        if status == "completed" or duration is not None:
+                            content = f'{content}<details type="reasoning" done="true" duration="{duration or 0}">\n<summary>Thought for {duration or 0} seconds</summary>\n{display}\n</details>\n'
+                        else:
+                            content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{display}\n</details>\n'
+                    
+                    elif item_type == "open_webui:code_interpreter":
+                        code = item.get("code", "")
+                        output_val = item.get("output")
+                        lang = item.get("lang", "")
+                        
+                        content_stripped, original_whitespace = split_content_and_whitespace(content)
+                        if is_opening_code_block(content_stripped):
+                            content = content_stripped.rstrip("`").rstrip() + original_whitespace
+                        else:
+                            content = content_stripped + original_whitespace
+                        
+                        if content and not content.endswith("\n"):
+                            content += "\n"
+                        
+                        if output_val:
+                            output_escaped = html.escape(json.dumps(output_val))
+                            content = f'{content}<details type="code_interpreter" done="true" output="{output_escaped}">\n<summary>Analyzed</summary>\n```{lang}\n{code}\n```\n</details>\n'
+                        else:
+                            content = f'{content}<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n```{lang}\n{code}\n```\n</details>\n'
+                
+                return content.strip()
+
 
             def convert_content_blocks_to_messages(content_blocks, raw=False):
                 messages = []
@@ -2823,6 +2928,21 @@ async def process_chat_response(
                 else last_assistant_message if last_assistant_message else ""
             )
 
+            # Initialize output: use existing from message if continuing, else create new
+            existing_output = message.get("output") if message else None
+            if existing_output:
+                output = existing_output
+            else:
+                # Always create an initial message item (even if content is empty)
+                output = [{
+                    "type": "message",
+                    "id": output_id("msg"),
+                    "status": "in_progress",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": content}],
+                }]
+            
+            # Keep content_blocks for backward compatibility during transition
             content_blocks = [
                 {
                     "type": "text",
@@ -3234,16 +3354,13 @@ async def process_chat_response(
 
                                         if ENABLE_REALTIME_CHAT_SAVE:
                                             # Save message in the database
+                                            output = convert_content_blocks_to_output(content_blocks)
                                             Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata["chat_id"],
                                                 metadata["message_id"],
                                                 {
-                                                    "content": serialize_content_blocks(
-                                                        content_blocks
-                                                    ),
-                                                    "output": convert_content_blocks_to_output(
-                                                        content_blocks
-                                                    ),
+                                                    "content": serialize_output(output),
+                                                    "output": output,
                                                 },
                                             )
                                         else:
@@ -3328,12 +3445,13 @@ async def process_chat_response(
                         }
                     )
 
+                    output = convert_content_blocks_to_output(content_blocks)
                     await event_emitter(
                         {
                             "type": "chat:completion",
                             "data": {
-                                "content": serialize_content_blocks(content_blocks),
-                                "output": convert_content_blocks_to_output(content_blocks),
+                                "content": serialize_output(output),
+                                "output": output,
                             },
                         }
                     )
@@ -3508,12 +3626,13 @@ async def process_chat_response(
                             )
                         tool_call_sources.clear()
 
+                    output = convert_content_blocks_to_output(content_blocks)
                     await event_emitter(
                         {
                             "type": "chat:completion",
                             "data": {
-                                "content": serialize_content_blocks(content_blocks),
-                                "output": convert_content_blocks_to_output(content_blocks),
+                                "content": serialize_output(output),
+                                "output": output,
                             },
                         }
                     )
@@ -3555,12 +3674,13 @@ async def process_chat_response(
                         and retries < MAX_RETRIES
                     ):
 
+                        output = convert_content_blocks_to_output(content_blocks)
                         await event_emitter(
                             {
                                 "type": "chat:completion",
                                 "data": {
-                                    "content": serialize_content_blocks(content_blocks),
-                                    "output": convert_content_blocks_to_output(content_blocks),
+                                    "content": serialize_output(output),
+                                    "output": output,
                                 },
                             }
                         )
@@ -3687,12 +3807,13 @@ async def process_chat_response(
                             }
                         )
 
+                        output = convert_content_blocks_to_output(content_blocks)
                         await event_emitter(
                             {
                                 "type": "chat:completion",
                                 "data": {
-                                    "content": serialize_content_blocks(content_blocks),
-                                    "output": convert_content_blocks_to_output(content_blocks),
+                                    "content": serialize_output(output),
+                                    "output": output,
                                 },
                             }
                         )
@@ -3729,10 +3850,11 @@ async def process_chat_response(
                             break
 
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                output = convert_content_blocks_to_output(content_blocks)
                 data = {
                     "done": True,
-                    "content": serialize_content_blocks(content_blocks),
-                    "output": convert_content_blocks_to_output(content_blocks),
+                    "content": serialize_output(output),
+                    "output": output,
                     "title": title,
                 }
 
@@ -3742,8 +3864,8 @@ async def process_chat_response(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
-                            "content": serialize_content_blocks(content_blocks),
-                            "output": convert_content_blocks_to_output(content_blocks),
+                            "content": serialize_output(output),
+                            "output": output,
                         },
                     )
 
@@ -3777,12 +3899,13 @@ async def process_chat_response(
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
+                    output = convert_content_blocks_to_output(content_blocks)
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
-                            "content": serialize_content_blocks(content_blocks),
-                            "output": convert_content_blocks_to_output(content_blocks),
+                            "content": serialize_output(output),
+                            "output": output,
                         },
                     )
 
