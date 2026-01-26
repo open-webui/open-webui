@@ -12,10 +12,9 @@ steps:
       - '${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
       - '-t'
       - '${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}/${_SERVICE_NAME}:latest'
-      - '.'
       - '-f'
       - 'Dockerfile'
-      - '${_BUILDPLATFORM}'
+      - '.'
     id: Build
 
   # Push image with commit SHA tag to Artifact Registry
@@ -49,7 +48,6 @@ substitutions:
   _DEPLOY_REGION: 'europe-west4'
   _PLATFORM: 'managed'
   _TRIGGER_ID: 'cb88ff89-b77e-4a3d-8e1b-cd8cc595b1ca'
-  _BUILDPLATFORM: ''
 
 # Build options
 options:
