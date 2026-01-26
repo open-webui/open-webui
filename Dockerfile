@@ -24,7 +24,7 @@ ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
-FROM --platform=linux/amd64 node:22-alpine3.20 AS build
+FROM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 ENV NODE_OPTIONS=--max_old_space_size=4096
 
