@@ -29,6 +29,7 @@ class PromptVersionUpdateForm(BaseModel):
 class PromptMetadataForm(BaseModel):
     name: str
     command: str
+    tags: Optional[list[str]] = None
 
 
 router = APIRouter()
@@ -49,6 +50,21 @@ async def get_prompts(
         prompts = Prompts.get_prompts_by_user_id(user.id, "read", db=db)
 
     return prompts
+
+
+@router.get("/tags", response_model=list[str])
+async def get_prompt_tags(
+    user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+        return Prompts.get_tags(db=db)
+    else:
+        prompts = Prompts.get_prompts_by_user_id(user.id, "read", db=db)
+        tags = set()
+        for prompt in prompts:
+            if prompt.tags:
+                tags.update(prompt.tags)
+        return sorted(list(tags))
 
 
 @router.get("/list", response_model=list[PromptAccessResponse])
@@ -278,7 +294,7 @@ async def update_prompt_metadata(
             )
 
     updated_prompt = Prompts.update_prompt_metadata(
-        prompt.id, form_data.name, form_data.command, db=db
+        prompt.id, form_data.name, form_data.command, form_data.tags, db=db
     )
     if updated_prompt:
         return updated_prompt

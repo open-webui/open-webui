@@ -17,12 +17,14 @@
 		getPromptHistory,
 		setProductionPromptVersion,
 		deletePromptHistoryVersion,
-		updatePromptMetadata
+		updatePromptMetadata,
+		getPromptTags
 	} from '$lib/apis/prompts';
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import PromptHistoryMenu from './PromptHistoryMenu.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import Tags from '$lib/components/common/Tags.svelte';
 
 	dayjs.extend(localizedFormat);
 
@@ -40,6 +42,7 @@
 	let name = '';
 	let command = '';
 	let content = '';
+	let tags = [];
 	let commitMessage = '';
 	let isProduction = true;
 
@@ -57,7 +60,10 @@
 	// For debounced auto-save of name/command
 	let originalName = '';
 	let originalCommand = '';
+	let originalTags = [];
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	let suggestionTags = [];
 
 	$: if (!edit && !hasManualEdit) {
 		command = name !== '' ? slugify(name) : '';
@@ -80,6 +86,7 @@
 				name,
 				command,
 				content,
+				tags: tags.map((tag) => tag.name),
 				access_control: accessControl,
 				commit_message: commitMessage || undefined,
 				is_production: isProduction
@@ -207,7 +214,12 @@
 
 		debounceTimer = setTimeout(async () => {
 			// Skip if nothing changed
-			if (name === originalName && command === originalCommand) return;
+			if (
+				name === originalName &&
+				command === originalCommand &&
+				JSON.stringify(tags) === JSON.stringify(originalTags)
+			)
+				return;
 
 			if (!validateCommandString(command)) {
 				toast.error(
@@ -218,16 +230,24 @@
 			}
 
 			try {
-				await updatePromptMetadata(localStorage.token, prompt?.id, name, command);
+				await updatePromptMetadata(
+					localStorage.token,
+					prompt?.id,
+					name,
+					command,
+					tags.map((tag) => tag.name)
+				);
 				// Update originals on success
 				originalName = name;
 				originalCommand = command;
+				originalTags = tags;
 				toast.success($i18n.t('Saved'));
 			} catch (error) {
 				toast.error(`${error}`);
 				// Revert on error (collision)
 				name = originalName;
 				command = originalCommand;
+				tags = originalTags;
 			}
 		}, 500);
 	};
@@ -238,11 +258,13 @@
 			await tick();
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
+			tags = (prompt.tags || []).map((tag) => ({ name: tag }));
 			accessControl = prompt?.access_control === undefined ? {} : prompt?.access_control;
 
 			// Store originals for revert on collision
 			originalName = name;
 			originalCommand = command;
+			originalTags = tags;
 
 			if (edit) {
 				await loadHistory();
@@ -253,6 +275,11 @@
 					selectedHistoryEntry = history[0];
 				}
 			}
+		}
+
+		const res = await getPromptTags(localStorage.token);
+		if (res) {
+			suggestionTags = res.map((tag) => ({ name: tag }));
 		}
 	});
 </script>
@@ -361,21 +388,37 @@
 						{disabled}
 					/>
 				</div>
+
+				<div class="mt-2">
+					<Tags
+						{tags}
+						{suggestionTags}
+						on:add={(e) => {
+							tags = [...tags, { name: e.detail }];
+							debouncedSaveMetadata();
+						}}
+						on:delete={(e) => {
+							tags = tags.filter((tag) => tag.name !== e.detail);
+							debouncedSaveMetadata();
+						}}
+					/>
+				</div>
 			</div>
 			<div class="flex items-center gap-2 shrink-0">
 				{#if !disabled}
+					<button
+						class="px-4 py-1 text-sm font-medium bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition shadow-xs"
+						on:click={() => (showEditModal = true)}
+					>
+						{$i18n.t('Edit')}
+					</button>
+
 					<button
 						class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2.5 py-1 rounded-full flex gap-1.5 items-center text-sm border border-gray-100 dark:border-gray-800"
 						on:click={() => (showAccessControlModal = true)}
 					>
 						<LockClosed strokeWidth="2.5" className="size-3.5" />
 						{$i18n.t('Access')}
-					</button>
-					<button
-						class="px-4 py-1 text-sm font-medium bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition shadow-xs"
-						on:click={() => (showEditModal = true)}
-					>
-						{$i18n.t('Edit')}
 					</button>
 				{:else}
 					<span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
@@ -491,6 +534,19 @@
 								bind:value={command}
 								on:input={handleCommandInput}
 								required
+							/>
+						</div>
+
+						<div class="mt-1">
+							<Tags
+								{tags}
+								{suggestionTags}
+								on:add={(e) => {
+									tags = [...tags, { name: e.detail }];
+								}}
+								on:delete={(e) => {
+									tags = tags.filter((tag) => tag.name !== e.detail);
+								}}
 							/>
 						</div>
 					</div>

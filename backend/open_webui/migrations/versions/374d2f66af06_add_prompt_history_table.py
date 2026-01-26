@@ -65,6 +65,7 @@ def upgrade() -> None:
         sa.Column("access_control", sa.JSON(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="1"),
         sa.Column("version_id", sa.Text(), nullable=True),
+        sa.Column("tags", sa.JSON(), nullable=True),
         sa.Column("created_at", sa.BigInteger(), nullable=False),
         sa.Column("updated_at", sa.BigInteger(), nullable=False),
     )
@@ -94,6 +95,7 @@ def upgrade() -> None:
         sa.column("access_control", sa.JSON()),
         sa.column("is_active", sa.Boolean()),
         sa.column("version_id", sa.Text()),
+        sa.column("tags", sa.JSON()),
         sa.column("created_at", sa.BigInteger()),
         sa.column("updated_at", sa.BigInteger()),
     )
@@ -134,6 +136,7 @@ def upgrade() -> None:
                 access_control=access_control,
                 is_active=True,
                 version_id=history_uuid,
+                tags=[],
                 created_at=timestamp,
                 updated_at=timestamp,
             )

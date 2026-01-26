@@ -30,6 +30,7 @@ class Prompt(Base):
     content = Column(Text)
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    tags = Column(JSON, nullable=True)
     is_active = Column(Boolean, default=True)
     version_id = Column(Text, nullable=True)  # Points to active history entry
     created_at = Column(BigInteger, nullable=True)
@@ -61,6 +62,7 @@ class PromptModel(BaseModel):
     content: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    tags: Optional[list[str]] = None
     is_active: Optional[bool] = True
     version_id: Optional[str] = None
     created_at: Optional[int] = None
@@ -89,6 +91,7 @@ class PromptForm(BaseModel):
     content: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    tags: Optional[list[str]] = None
     access_control: Optional[dict] = None
     version_id: Optional[str] = None  # Active version
     commit_message: Optional[str] = None  # For history tracking
@@ -110,6 +113,7 @@ class PromptsTable:
             content=form_data.content,
             data=form_data.data or {},
             meta=form_data.meta or {},
+            tags=form_data.tags or [],
             access_control=form_data.access_control,
             is_active=True,
             created_at=now,
@@ -130,6 +134,7 @@ class PromptsTable:
                         "command": form_data.command,
                         "data": form_data.data or {},
                         "meta": form_data.meta or {},
+                        "tags": form_data.tags or [],
                         "access_control": form_data.access_control,
                     }
 
@@ -310,6 +315,7 @@ class PromptsTable:
                     or prompt.command != form_data.command
                     or prompt.content != form_data.content
                     or prompt.access_control != form_data.access_control
+                    or (form_data.tags is not None and prompt.tags != form_data.tags)
                 )
 
                 # Update prompt fields
@@ -319,6 +325,10 @@ class PromptsTable:
                 prompt.data = form_data.data or prompt.data
                 prompt.meta = form_data.meta or prompt.meta
                 prompt.access_control = form_data.access_control
+                
+                if form_data.tags is not None:
+                    prompt.tags = form_data.tags
+                    
                 prompt.updated_at = int(time.time())
 
                 db.commit()
@@ -331,6 +341,7 @@ class PromptsTable:
                         "command": prompt.command,
                         "data": form_data.data or {},
                         "meta": form_data.meta or {},
+                        "tags": prompt.tags or [],
                         "access_control": form_data.access_control,
                     }
 
@@ -357,6 +368,7 @@ class PromptsTable:
         prompt_id: str,
         name: str,
         command: str,
+        tags: Optional[list[str]] = None,
         db: Optional[Session] = None,
     ) -> Optional[PromptModel]:
         """Update only name and command (no history created)."""
@@ -368,6 +380,10 @@ class PromptsTable:
                 
                 prompt.name = name
                 prompt.command = command
+                
+                if tags is not None:
+                    prompt.tags = tags
+                    
                 prompt.updated_at = int(time.time())
                 db.commit()
                 
@@ -402,6 +418,7 @@ class PromptsTable:
                     prompt.content = snapshot.get("content", prompt.content)
                     prompt.data = snapshot.get("data", prompt.data)
                     prompt.meta = snapshot.get("meta", prompt.meta)
+                    prompt.tags = snapshot.get("tags", prompt.tags)
                     # Note: command and access_control are not restored from snapshot
 
                 prompt.version_id = version_id
@@ -463,6 +480,20 @@ class PromptsTable:
                 return False
         except Exception:
             return False
+
+    def get_tags(self, db: Optional[Session] = None) -> list[str]:
+        try:
+            with get_db_context(db) as db:
+                prompts = db.query(Prompt).filter_by(is_active=True).all()
+                tags = set()
+                for prompt in prompts:
+                    if prompt.tags:
+                        for tag in prompt.tags:
+                            if tag:
+                                tags.add(tag)
+                return sorted(list(tags))
+        except Exception:
+            return []
 
 
 Prompts = PromptsTable()

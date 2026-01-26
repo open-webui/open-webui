@@ -7,7 +7,13 @@
 	import { onMount, getContext, tick } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
-	import { createNewPrompt, deletePromptById, getPrompts, getPromptList } from '$lib/apis/prompts';
+	import {
+		createNewPrompt,
+		deletePromptById,
+		getPrompts,
+		getPromptList,
+		getPromptTags
+	} from '$lib/apis/prompts';
 	import { capitalizeFirstLetter, slugify, copyToClipboard } from '$lib/utils';
 
 	import PromptMenu from './Prompts/PromptMenu.svelte';
@@ -23,6 +29,7 @@
 	import XMark from '../icons/XMark.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
+	import TagSelector from './common/TagSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	let shiftKey = false;
 
@@ -34,23 +41,25 @@
 	let query = '';
 
 	let prompts = [];
+	let tags = [];
 
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
+	let selectedTag = '';
 	let copiedId: string | null = null;
 
 	let filteredItems = [];
 
-	$: if (prompts && query !== undefined && viewOption !== undefined) {
+	$: if (prompts && query !== undefined && viewOption !== undefined && selectedTag !== undefined) {
 		setFilteredItems();
 	}
 
 	const setFilteredItems = () => {
 		filteredItems = prompts.filter((p) => {
-			if (query === '' && viewOption === '') return true;
+			if (query === '' && viewOption === '' && selectedTag === '') return true;
 			const lowerQuery = query.toLowerCase();
 			return (
 				((p.title || '').toLowerCase().includes(lowerQuery) ||
@@ -59,7 +68,8 @@
 					(p.user?.email || '').toLowerCase().includes(lowerQuery)) &&
 				(viewOption === '' ||
 					(viewOption === 'created' && p.user_id === $user?.id) ||
-					(viewOption === 'shared' && p.user_id !== $user?.id))
+					(viewOption === 'shared' && p.user_id !== $user?.id)) &&
+				(selectedTag === '' || (p.tags && p.tags.includes(selectedTag)))
 			);
 		});
 	};
@@ -129,6 +139,7 @@
 
 	const init = async () => {
 		prompts = await getPromptList(localStorage.token);
+		tags = await getPromptTags(localStorage.token);
 		await _prompts.set(await getPrompts(localStorage.token));
 	};
 
@@ -323,6 +334,13 @@
 						await tick();
 					}}
 				/>
+
+				{#if (tags ?? []).length > 0}
+					<TagSelector
+						bind:value={selectedTag}
+						items={tags.map((tag) => ({ value: tag, label: tag }))}
+					/>
+				{/if}
 			</div>
 		</div>
 
