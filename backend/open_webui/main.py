@@ -1315,9 +1315,18 @@ class APIKeyRestrictionMiddleware(BaseHTTPMiddleware):
         token = None
 
         if auth_header:
-            scheme, token = auth_header.split(" ")
+            try:
+                parts = auth_header.split(maxsplit=1)
+                if len(parts) != 2:
+                    raise ValueError("Invalid header format")
 
-        # Only apply restrictions if an sk- API key is used
+                scheme, token = parts
+            except ValueError:
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Invalid Authorization header format"},
+                )
+        # Only apply restrictions if a sk- API key is used
         if token and token.startswith("sk-"):
             # Check if restrictions are enabled
             if request.app.state.config.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS:
