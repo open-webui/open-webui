@@ -18,4 +18,5 @@
 	class=" {className} object-cover rounded-full"
 	alt="profile"
 	draggable="false"
+	loading="lazy"
 />

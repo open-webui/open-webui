@@ -321,3 +321,7 @@ backend/.vscode/
 
 # webui-secret-key
 .webui_secret_key
+
+
+#Custom ignore rules
+scripts/add_test_users.py

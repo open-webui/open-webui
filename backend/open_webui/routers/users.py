@@ -499,28 +499,45 @@ async def get_user_oauth_sessions_by_id(
 
 @router.get("/{user_id}/profile/image")
 async def get_user_profile_image_by_id(
-    user_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    user_id: str,
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    user = Users.get_user_by_id(user_id, db=db)
-    if user:
-        if user.profile_image_url:
+    user_obj = Users.get_user_by_id(user_id, db=db)
+    if user_obj:
+        # Generate ETag from updated_at timestamp
+        etag = f'"{user_obj.updated_at}"' if user_obj.updated_at else None
+
+        # Check If-None-Match header for conditional requests
+        if etag and request.headers.get("If-None-Match") == etag:
+            return Response(status_code=status.HTTP_304_NOT_MODIFIED)
+
+        if user_obj.profile_image_url:
             # check if it's url or base64
-            if user.profile_image_url.startswith("http"):
+            if user_obj.profile_image_url.startswith("http"):
                 return Response(
                     status_code=status.HTTP_302_FOUND,
-                    headers={"Location": user.profile_image_url},
+                    headers={"Location": user_obj.profile_image_url},
                 )
-            elif user.profile_image_url.startswith("data:image"):
+            elif user_obj.profile_image_url.startswith("data:image"):
                 try:
-                    header, base64_data = user.profile_image_url.split(",", 1)
+                    header, base64_data = user_obj.profile_image_url.split(",", 1)
                     image_data = base64.b64decode(base64_data)
                     image_buffer = io.BytesIO(image_data)
                     media_type = header.split(";")[0].lstrip("data:")
 
+                    headers = {
+                        "Content-Disposition": "inline",
+                        "Cache-Control": "public, max-age=86400",  # Cache 24 hours
+                    }
+                    if etag:
+                        headers["ETag"] = etag
+
                     return StreamingResponse(
                         image_buffer,
                         media_type=media_type,
-                        headers={"Content-Disposition": "inline"},
+                        headers=headers,
                     )
                 except Exception as e:
                     pass

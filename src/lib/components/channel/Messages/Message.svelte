@@ -250,6 +250,7 @@
 								: `${WEBUI_API_BASE_URL}/users/${message.reply_to_message.user?.id}/profile/image`}
 							alt={message.reply_to_message.user?.name ?? $i18n.t('Unknown User')}
 							class="size-4 ml-0.5 rounded-full object-cover"
+							loading="lazy"
 						/>
 					{/if}
 

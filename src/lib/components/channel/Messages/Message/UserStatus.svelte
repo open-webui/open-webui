@@ -40,6 +40,7 @@
 					src={`${WEBUI_API_BASE_URL}/users/${user?.id}/profile/image`}
 					class=" size-14 object-cover rounded-xl"
 					alt="profile"
+					loading="lazy"
 				/>
 			</div>
 

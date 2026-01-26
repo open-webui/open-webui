@@ -242,6 +242,7 @@
 												class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
 												src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 												alt="user"
+												loading="lazy"
 											/>
 
 											<div class="font-medium truncate">{user.name}</div>

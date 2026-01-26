@@ -248,6 +248,7 @@
 														class="rounded-2xl w-6 h-6 object-cover flex-shrink-0"
 														src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 														alt="user"
+														loading="lazy"
 													/>
 												</ProfilePreview>
 												<Tooltip content={user.email} placement="top-start">

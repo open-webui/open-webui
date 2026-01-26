@@ -292,6 +292,7 @@
 												src={`${WEBUI_API_BASE_URL}/users/${feedback.user.id}/profile/image`}
 												alt={feedback?.user?.name}
 												class="size-5 rounded-full object-cover shrink-0"
+												loading="lazy"
 											/>
 										</div>
 									</Tooltip>
