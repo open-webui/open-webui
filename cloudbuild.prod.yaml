@@ -49,7 +49,7 @@ substitutions:
   _DEPLOY_REGION: 'europe-west4'
   _PLATFORM: 'managed'
   _TRIGGER_ID: 'cb88ff89-b77e-4a3d-8e1b-cd8cc595b1ca'
-  _BUILDPLATFORM: '--platform linux/amd64'
+  _BUILDPLATFORM: ''
 
 # Build options
 options:
