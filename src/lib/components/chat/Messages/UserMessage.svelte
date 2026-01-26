@@ -112,6 +112,7 @@
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
 	title={$i18n.t('Delete message?')}
+	danger={true}
 	on:confirm={() => {
 		deleteMessageHandler();
 	}}
@@ -378,9 +379,9 @@
 				>
 					{#if !($settings?.chatBubble ?? true)}
 						{#if siblings.length > 1}
-							<div class="flex self-center" dir="ltr">
+							<div class="flex items-center" dir="ltr">
 								<button
-									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+									class="p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-lg transition"
 									on:click={() => {
 										showPreviousMessage(message);
 									}}
@@ -403,7 +404,7 @@
 
 								{#if messageIndexEdit}
 									<div
-										class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+										class="text-xs flex justify-center font-medium self-center dark:text-gray-100 min-w-fit"
 									>
 										<input
 											id="message-index-input-{message.id}"
@@ -424,13 +425,13 @@
 													messageIndexEdit = false;
 												}
 											}}
-											class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
-										/>/{siblings.length}
+											class="bg-transparent font-medium self-center dark:text-gray-100 min-w-fit outline-hidden w-4 text-center"
+										/><span class="text-gray-400 dark:text-gray-500">/</span>{siblings.length}
 									</div>
 								{:else}
 									<!-- svelte-ignore a11y-no-static-element-interactions -->
 									<div
-										class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+										class="text-xs font-medium self-center dark:text-gray-100 min-w-fit select-none"
 										on:dblclick={async () => {
 											messageIndexEdit = true;
 
@@ -442,12 +443,14 @@
 											}
 										}}
 									>
-										{siblings.indexOf(message.id) + 1}/{siblings.length}
+										{siblings.indexOf(message.id) + 1}<span class="text-gray-400 dark:text-gray-500"
+											>/</span
+										>{siblings.length}
 									</div>
 								{/if}
 
 								<button
-									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+									class="p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-lg transition"
 									on:click={() => {
 										showNextMessage(message);
 									}}
@@ -475,7 +478,7 @@
 							<button
 								class="{($settings?.highContrastMode ?? false)
 									? ''
-									: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
+									: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 								on:click={() => {
 									editMessageHandler();
 								}}
@@ -484,14 +487,19 @@
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
 									viewBox="0 0 24 24"
-									stroke-width="2.3"
+									stroke-width="2"
 									stroke="currentColor"
-									class="w-4 h-4"
+									class="size-4"
 								>
 									<path
 										stroke-linecap="round"
 										stroke-linejoin="round"
-										d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+										d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+									/>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
 									/>
 								</svg>
 							</button>
@@ -503,7 +511,7 @@
 							<button
 								class="{($settings?.highContrastMode ?? false)
 									? ''
-									: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+									: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
 									copyToClipboard(message.content);
 								}}
@@ -512,14 +520,14 @@
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
 									viewBox="0 0 24 24"
-									stroke-width="2.3"
+									stroke-width="2"
 									stroke="currentColor"
-									class="w-4 h-4"
+									class="size-[18px]"
 								>
 									<path
 										stroke-linecap="round"
 										stroke-linejoin="round"
-										d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+										d="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 12h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"
 									/>
 								</svg>
 							</button>
@@ -527,12 +535,12 @@
 					{/if}
 
 					{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.delete_message ?? false)}
-						{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
+						{#if !readOnly}
 							<Tooltip content={$i18n.t('Delete')} placement="bottom">
 								<button
 									class="{($settings?.highContrastMode ?? false)
 										? ''
-										: 'invisible group-hover:visible'} p-1 rounded-sm dark:hover:text-white hover:text-black transition"
+										: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 									on:click={() => {
 										showDeleteConfirm = true;
 									}}
@@ -543,7 +551,7 @@
 										viewBox="0 0 24 24"
 										stroke-width="2"
 										stroke="currentColor"
-										class="w-4 h-4"
+										class="size-4"
 									>
 										<path
 											stroke-linecap="round"
@@ -558,9 +566,9 @@
 
 					{#if $settings?.chatBubble ?? true}
 						{#if siblings.length > 1}
-							<div class="flex self-center" dir="ltr">
+							<div class="flex items-center" dir="ltr">
 								<button
-									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+									class="p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-lg transition"
 									on:click={() => {
 										showPreviousMessage(message);
 									}}
@@ -583,7 +591,7 @@
 
 								{#if messageIndexEdit}
 									<div
-										class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+										class="text-xs flex justify-center font-medium self-center dark:text-gray-100 min-w-fit"
 									>
 										<input
 											id="message-index-input-{message.id}"
@@ -604,13 +612,13 @@
 													messageIndexEdit = false;
 												}
 											}}
-											class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
-										/>/{siblings.length}
+											class="bg-transparent font-medium self-center dark:text-gray-100 min-w-fit outline-hidden w-4 text-center"
+										/><span class="text-gray-400 dark:text-gray-500">/</span>{siblings.length}
 									</div>
 								{:else}
 									<!-- svelte-ignore a11y-no-static-element-interactions -->
 									<div
-										class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+										class="text-xs font-medium self-center dark:text-gray-100 min-w-fit select-none"
 										on:dblclick={async () => {
 											messageIndexEdit = true;
 
@@ -622,12 +630,14 @@
 											}
 										}}
 									>
-										{siblings.indexOf(message.id) + 1}/{siblings.length}
+										{siblings.indexOf(message.id) + 1}<span class="text-gray-400 dark:text-gray-500"
+											>/</span
+										>{siblings.length}
 									</div>
 								{/if}
 
 								<button
-									class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+									class="p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-lg transition"
 									on:click={() => {
 										showNextMessage(message);
 									}}

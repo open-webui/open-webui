@@ -13,6 +13,8 @@
 	let loaded = false;
 
 	onMount(async () => {
+		// 设置路由已移至 /settings，此处只需检查管理员权限
+		// 如果用户访问旧的 /admin/settings 路由，会被自动重定向到 /settings
 		if ($user?.role !== 'admin') {
 			await goto('/');
 		}
@@ -59,6 +61,7 @@
 					<div
 						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
 					>
+						{#if $user?.role === 'admin'}
 						<a
 							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/users')
 								? ''
@@ -86,12 +89,13 @@
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							href="/admin/functions">{$i18n.t('Functions')}</a
 						>
+						{/if}
 
 						<a
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/settings')
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/settings')
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-							href="/admin/settings">{$i18n.t('Settings')}</a
+							href="/settings">{$i18n.t('Settings')}</a
 						>
 					</div>
 				</div>

@@ -538,3 +538,30 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# UI Config
+############################
+
+
+class UIConfigForm(BaseModel):
+    # Admin-only Global Settings
+    showUpdateToast: bool = True
+    showChangelog: bool = True
+    landingPageMode: str = ""
+
+
+@router.get("/ui")
+async def get_ui_config(request: Request, user=Depends(get_admin_user)):
+    return request.app.state.config.UI_CONFIG if hasattr(request.app.state.config, 'UI_CONFIG') and request.app.state.config.UI_CONFIG else UIConfigForm().model_dump()
+
+
+@router.post("/ui")
+async def set_ui_config(
+    request: Request,
+    form_data: UIConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.UI_CONFIG = form_data.model_dump()
+    return request.app.state.config.UI_CONFIG

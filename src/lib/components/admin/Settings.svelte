@@ -1,13 +1,15 @@
 <script lang="ts">
-	import { getContext, tick, onMount } from 'svelte';
+	import { getContext, tick, onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
-	import { config } from '$lib/stores';
-	import { getBackendConfig } from '$lib/apis';
+	import { config, user, settings, models } from '$lib/stores';
+	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
+	import { updateUserSettings } from '$lib/apis/users';
 	import Database from './Settings/Database.svelte';
 
+	// Admin Settings Components
 	import General from './Settings/General.svelte';
 	import Pipelines from './Settings/Pipelines.svelte';
 	import Audio from './Settings/Audio.svelte';
@@ -22,21 +24,29 @@
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
 
-	import ChartBar from '../icons/ChartBar.svelte';
-	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
+	// User Settings Components
+	import UserGeneral from './Settings/User/General.svelte';
+	import UserAudio from './Settings/User/Audio.svelte';
+	import UserConnections from './Settings/User/Connections.svelte';
+	import UserTools from './Settings/User/Tools.svelte';
+	import UserPersonalization from './Settings/User/Personalization.svelte';
+	import UserDataControls from './Settings/User/DataControls.svelte';
+	import UserAccount from './Settings/User/Account.svelte';
+	import UserAbout from './Settings/User/About.svelte';
+
 	import Search from '../icons/Search.svelte';
-	import XMark from '../icons/XMark.svelte';
 
 	import type { Writable } from 'svelte/store';
 	const i18n: Writable<any> = getContext('i18n');
 
 	let selectedTab = 'general';
 
-	// Get current tab from URL pathname, default to 'general'
+	// Get current tab from URL pathname, default to 'user-general' for non-admin users
 	$: {
 		const pathParts = $page.url.pathname.split('/');
 		const tabFromPath = pathParts[pathParts.length - 1];
-		selectedTab = [
+		const validTabs = [
+			// Admin tabs
 			'general',
 			'connections',
 			'models',
@@ -49,10 +59,24 @@
 			'audio',
 			'images',
 			'pipelines',
-			'db'
-		].includes(tabFromPath)
-			? tabFromPath
-			: 'general';
+			'db',
+			// User tabs
+			'user-general',
+			'user-connections',
+			'user-tools',
+			'user-personalization',
+			'user-audio',
+			'user-data',
+			'user-account',
+			'user-about'
+		];
+
+		if (validTabs.includes(tabFromPath)) {
+			selectedTab = tabFromPath;
+		} else {
+			// Default to user-general for non-admin, general for admin
+			selectedTab = $user?.role === 'admin' ? 'general' : 'user-general';
+		}
 	}
 
 	$: if (selectedTab) {
@@ -70,12 +94,108 @@
 	let search = '';
 	let searchDebounceTimeout: any;
 	let filteredSettings: any[] = [];
+	let searchVisible = true;
+
+	let tabsContainer: HTMLElement | null = null;
+	const tabsWheelHandler = (event: WheelEvent) => {
+		if (!tabsContainer) {
+			return;
+		}
+
+		if (event.deltaY !== 0) {
+			tabsContainer.scrollLeft += event.deltaY;
+		}
+	};
+
+	const updateSearchVisibility = () => {
+		if (typeof window === 'undefined') {
+			return;
+		}
+
+		const visible = window.matchMedia('(min-width: 768px)').matches;
+		if (searchVisible !== visible) {
+			searchVisible = visible;
+			if (!searchVisible && search !== '') {
+				search = '';
+			}
+		}
+	};
 
 	const allSettings = [
+		// ========== 用户设置 (所有用户可见) ==========
+		{
+			id: 'user-general',
+			title: '个人设置',
+			route: '/settings/user-general',
+			keywords: ['user', 'general', 'theme', 'language', 'notifications', 'system prompt', 'parameters'],
+			adminOnly: false,
+			category: 'user'
+		},
+		{
+			id: 'user-account',
+			title: '账户信息',
+			route: '/settings/user-account',
+			keywords: ['account', 'profile', 'password', 'api key', 'webhook'],
+			adminOnly: false,
+			category: 'user'
+		},
+		{
+			id: 'user-connections',
+			title: '个人连接',
+			route: '/settings/user-connections',
+			keywords: ['connections', 'direct', 'openai', 'api'],
+			adminOnly: false,
+			category: 'user',
+			featureFlag: 'enable_direct_connections'
+		},
+		{
+			id: 'user-tools',
+			title: '个人工具',
+			route: '/settings/user-tools',
+			keywords: ['tools', 'servers', 'openapi'],
+			adminOnly: false,
+			category: 'user',
+			permissionCheck: (user) => user?.role === 'admin' || user?.permissions?.features?.direct_tool_servers
+		},
+		{
+			id: 'user-personalization',
+			title: '个性化',
+			route: '/settings/user-personalization',
+			keywords: ['personalization', 'memory', 'memories'],
+			adminOnly: false,
+			category: 'user',
+			featureFlag: 'enable_memories',
+			permissionCheck: (user) => user?.role === 'admin' || (user?.permissions?.features?.memories ?? true)
+		},
+		{
+			id: 'user-audio',
+			title: '语音偏好',
+			route: '/settings/user-audio',
+			keywords: ['audio', 'voice', 'tts', 'stt', 'speech'],
+			adminOnly: false,
+			category: 'user'
+		},
+		{
+			id: 'user-data',
+			title: '数据控制',
+			route: '/settings/user-data',
+			keywords: ['data', 'chats', 'export', 'import', 'archive', 'delete'],
+			adminOnly: false,
+			category: 'user'
+		},
+		{
+			id: 'user-about',
+			title: '关于',
+			route: '/settings/user-about',
+			keywords: ['about', 'version', 'update'],
+			adminOnly: false,
+			category: 'user'
+		},
+		// ========== 管理员设置 (仅管理员可见) ==========
 		{
 			id: 'general',
-			title: 'General',
-			route: '/admin/settings/general',
+			title: '通用设置',
+			route: '/settings/general',
 			keywords: [
 				'general',
 				'admin',
@@ -93,12 +213,14 @@
 				'webhook',
 				'community',
 				'channels'
-			]
+			],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'connections',
-			title: 'Connections',
-			route: '/admin/settings/connections',
+			title: '接口配置',
+			route: '/settings/connections',
 			keywords: [
 				'connections',
 				'ollama',
@@ -108,12 +230,14 @@
 				'direct connections',
 				'proxy',
 				'key'
-			]
+			],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'models',
-			title: 'Models',
-			route: '/admin/settings/models',
+			title: '模型列表',
+			route: '/settings/models',
 			keywords: [
 				'models',
 				'pull',
@@ -124,24 +248,30 @@
 				'gguf',
 				'import',
 				'export'
-			]
+			],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'evaluations',
-			title: 'Evaluations',
-			route: '/admin/settings/evaluations',
-			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
+			title: '竞技评估',
+			route: '/settings/evaluations',
+			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference'],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'tools',
 			title: 'External Tools',
-			route: '/admin/settings/tools',
-			keywords: ['tools', 'plugins', 'extensions', 'functions', 'openapi', 'server']
+			route: '/settings/tools',
+			keywords: ['tools', 'plugins', 'extensions', 'functions', 'openapi', 'server'],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'documents',
-			title: 'Documents',
-			route: '/admin/settings/documents',
+			title: '文档处理',
+			route: '/settings/documents',
 			keywords: [
 				'documents',
 				'files',
@@ -158,12 +288,14 @@
 				'tika',
 				'docling',
 				'unstructured'
-			]
+			],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'web',
 			title: 'Web Search',
-			route: '/admin/settings/web',
+			route: '/settings/web',
 			keywords: [
 				'web search',
 				'google',
@@ -179,18 +311,22 @@
 				'exa',
 				'perplexity',
 				'firecrawl'
-			]
+			],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'code-execution',
 			title: 'Code Execution',
-			route: '/admin/settings/code-execution',
-			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter']
+			route: '/settings/code-execution',
+			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter'],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'interface',
-			title: 'Interface',
-			route: '/admin/settings/interface',
+			title: '界面设置',
+			route: '/settings/interface',
 			keywords: [
 				'interface',
 				'ui',
@@ -200,12 +336,14 @@
 				'prompt suggestions',
 				'title generation',
 				'tags'
-			]
+			],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'audio',
-			title: 'Audio',
-			route: '/admin/settings/audio',
+			title: '语音设置',
+			route: '/settings/audio',
 			keywords: [
 				'audio',
 				'voice',
@@ -217,12 +355,14 @@
 				'azure',
 				'openai',
 				'elevenlabs'
-			]
+			],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'images',
-			title: 'Images',
-			route: '/admin/settings/images',
+			title: '图像设置',
+			route: '/settings/images',
 			keywords: [
 				'images',
 				'generation',
@@ -231,24 +371,46 @@
 				'comfyui',
 				'automatic1111',
 				'gemini'
-			]
+			],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'pipelines',
-			title: 'Pipelines',
-			route: '/admin/settings/pipelines',
-			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
+			title: '扩展管线',
+			route: '/settings/pipelines',
+			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware'],
+			adminOnly: true,
+			category: 'admin'
 		},
 		{
 			id: 'db',
-			title: 'Database',
-			route: '/admin/settings/db',
-			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
+			title: '数据管理',
+			route: '/settings/db',
+			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users'],
+			adminOnly: true,
+			category: 'admin'
 		}
 	];
 
 	const setFilteredSettings = () => {
 		filteredSettings = allSettings.filter((tab) => {
+			// 1. 检查管理员权限
+			if (tab.adminOnly && $user?.role !== 'admin') {
+				return false;
+			}
+
+			// 2. 检查功能开关
+			if (tab.featureFlag && !$config?.features?.[tab.featureFlag]) {
+				return false;
+			}
+
+			// 3. 检查用户权限
+			if (tab.permissionCheck && !tab.permissionCheck($user)) {
+				return false;
+			}
+
+			// 4. 搜索过滤
 			const searchTerm = search.toLowerCase().trim();
 			return (
 				search === '' ||
@@ -256,6 +418,26 @@
 				tab.keywords.some((keyword) => keyword.includes(searchTerm))
 			);
 		});
+	};
+
+	// 用户设置保存函数
+	const saveUserSettings = async (updated: Record<string, any>) => {
+		console.log(updated);
+		await settings.set({ ...$settings, ...updated });
+		await models.set(await getModels());
+		await updateUserSettings(localStorage.token, { ui: $settings });
+	};
+
+	const getModels = async () => {
+		return await _getModels(
+			localStorage.token,
+			$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
+		);
+	};
+
+	const handleResize = () => {
+		updateSearchVisibility();
+		setFilteredSettings();
 	};
 
 	const searchDebounceHandler = () => {
@@ -269,20 +451,26 @@
 	};
 
 	onMount(() => {
-		const containerElement = document.getElementById('admin-settings-tabs-container');
+		tabsContainer = document.getElementById('admin-settings-tabs-container');
 
-		if (containerElement) {
-			containerElement.addEventListener('wheel', function (event) {
-				if (event.deltaY !== 0) {
-					// Adjust horizontal scroll position based on vertical scroll
-					containerElement.scrollLeft += event.deltaY;
-				}
-			});
+		if (tabsContainer) {
+			tabsContainer.addEventListener('wheel', tabsWheelHandler);
 		}
 
-		setFilteredSettings();
+		handleResize();
+		window.addEventListener('resize', handleResize);
 		// Scroll to the selected tab on mount
 		scrollToTab(selectedTab);
+	});
+
+	onDestroy(() => {
+		if (tabsContainer) {
+			tabsContainer.removeEventListener('wheel', tabsWheelHandler);
+		}
+
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('resize', handleResize);
+		}
 	});
 </script>
 
@@ -324,181 +512,266 @@
 		{#each filteredSettings as tab (tab.id)}
 			<button
 				id={tab.id}
-				class="px-2.5 py-2 min-w-fit rounded-xl flex-1 lg:flex-none flex items-center text-right transition {selectedTab ===
+				class="px-2 py-1.5 min-w-fit rounded-lg flex-1 lg:flex-none flex items-center text-right transition {selectedTab ===
 				tab.id
-					? 'bg-gray-100 dark:bg-gray-800 text-black dark:text-white'
-					: 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 hover:text-gray-800 dark:hover:text-gray-200'}"
+					? 'bg-gray-100 dark:bg-gray-800 text-black dark:text-white font-medium'
+					: 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 hover:text-gray-800 dark:hover:text-gray-200 font-normal'}"
 				on:click={() => {
 					goto(tab.route);
 				}}
 			>
-				<div class="self-center mr-2.5 flex items-center justify-center w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700">
+				<div class="self-center mr-2 flex items-center justify-center size-8 rounded-lg bg-gray-200/90 dark:bg-gray-700 transition-all {selectedTab === tab.id ? 'bg-gray-300 dark:bg-gray-600 shadow-sm' : ''}"
+				>
 					{#if tab.id === 'general'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								fill-rule="evenodd"
-								d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.321-1.081a.5.5 0 0 1 .67.033l.774.775a.5.5 0 0 1 .034.67l-1.08 1.32c.25.417.44.873.561 1.357l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l1.082 1.322a.5.5 0 0 1-.034.67l-.774.774a.5.5 0 0 1-.67.033l-1.322-1.08c-.416.25-.872.44-1.356.561l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a4.973 4.973 0 0 1-1.356-.562L4.108 13.37a.5.5 0 0 1-.67-.033l-.774-.775a.5.5 0 0 1-.034-.67l1.08-1.32a4.971 4.971 0 0 1-.561-1.357l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356L2.629 4.107a.5.5 0 0 1 .034-.67l.774-.774a.5.5 0 0 1 .67-.033L5.43 3.71a4.97 4.97 0 0 1 1.356-.561l.17-1.699ZM6 8c0 .538.212 1.026.558 1.385l.057.057a2 2 0 0 0 2.828-2.828l-.058-.056A2 2 0 0 0 6 8Z"
-								clip-rule="evenodd"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281Z"
+							/>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
 							/>
 						</svg>
 					{:else if tab.id === 'connections'}
+						<!-- 链接图标 - 更符合"接口配置"的含义 -->
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								d="M1 9.5A3.5 3.5 0 0 0 4.5 13H12a3 3 0 0 0 .917-5.857 2.503 2.503 0 0 0-3.198-3.019 3.5 3.5 0 0 0-6.628 2.171A3.5 3.5 0 0 0 1 9.5Z"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"
 							/>
 						</svg>
 					{:else if tab.id === 'models'}
+						<!-- 立方体图标 - 更符合"模型"的含义 -->
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								fill-rule="evenodd"
-								d="M10 1c3.866 0 7 1.79 7 4s-3.134 4-7 4-7-1.79-7-4 3.134-4 7-4zm5.694 8.13c.464-.264.91-.583 1.306-.952V10c0 2.21-3.134 4-7 4s-7-1.79-7-4V8.178c.396.37.842.688 1.306.953C5.838 10.006 7.854 10.5 10 10.5s4.162-.494 5.694-1.37zM3 13.179V15c0 2.21 3.134 4 7 4s7-1.79 7-4v-1.822c-.396.37-.842.688-1.306.953-1.532.875-3.548 1.369-5.694 1.369s-4.162-.494-5.694-1.37A7.009 7.009 0 013 13.179z"
-								clip-rule="evenodd"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
 							/>
 						</svg>
 					{:else if tab.id === 'evaluations'}
-						<div class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300">
-							<DocumentChartBar />
-						</div>
+						<!-- 奖牌图标 - 表达"竞技评估/排名" -->
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z"
+							/>
+						</svg>
 					{:else if tab.id === 'tools'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
 							viewBox="0 0 24 24"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								fill-rule="evenodd"
-								d="M12 6.75a5.25 5.25 0 0 1 6.775-5.025.75.75 0 0 1 .313 1.248l-3.32 3.319c.063.475.276.934.641 1.299.365.365.824.578 1.3.64l3.318-3.319a.75.75 0 0 1 1.248.313 5.25 5.25 0 0 1-5.472 6.756c-1.018-.086-1.87.1-2.309.634L7.344 21.3A3.298 3.298 0 1 1 2.7 16.657l8.684-7.151c.533-.44.72-1.291.634-2.309A5.342 5.342 0 0 1 12 6.75ZM4.117 19.125a.75.75 0 0 1 .75-.75h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75h-.008a.75.75 0 0 1-.75-.75v-.008Z"
-								clip-rule="evenodd"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M21.75 6.75a4.5 4.5 0 0 1-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 1 1-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 0 1 6.336-4.486l-3.276 3.276a3.004 3.004 0 0 0 2.25 2.25l3.276-3.276c.294.295.352.757.29 1.148Z"
 							/>
 						</svg>
 					{:else if tab.id === 'documents'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
 							viewBox="0 0 24 24"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
-							<path d="M11.625 16.5a1.875 1.875 0 1 0 0-3.75 1.875 1.875 0 0 0 0 3.75Z" />
 							<path
-								fill-rule="evenodd"
-								d="M5.625 1.5H9a3.75 3.75 0 0 1 3.75 3.75v1.875c0 1.036.84 1.875 1.875 1.875H16.5a3.75 3.75 0 0 1 3.75 3.75v7.875c0 1.035-.84 1.875-1.875 1.875H5.625a1.875 1.875 0 0 1-1.875-1.875V3.375c0-1.036.84-1.875 1.875-1.875Zm6 16.5c.66 0 1.277-.19 1.797-.518l1.048 1.048a.75.75 0 0 0 1.06-1.06l-1.047-1.048A3.375 3.375 0 1 0 11.625 18Z"
-								clip-rule="evenodd"
-							/>
-							<path
-								d="M14.25 5.25a5.23 5.23 0 0 0-1.279-3.434 9.768 9.768 0 0 1 6.963 6.963A5.23 5.23 0 0 0 16.5 7.5h-1.875a.375.375 0 0 1-.375-.375V5.25Z"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
 							/>
 						</svg>
 					{:else if tab.id === 'web'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
 							viewBox="0 0 24 24"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								d="M21.721 12.752a9.711 9.711 0 0 0-.945-5.003 12.754 12.754 0 0 1-4.339 2.708 18.991 18.991 0 0 1-.214 4.772 17.165 17.165 0 0 0 5.498-2.477ZM14.634 15.55a17.324 17.324 0 0 0 .332-4.647c-.952.227-1.945.347-2.966.347-1.021 0-2.014-.12-2.966-.347a17.515 17.515 0 0 0 .332 4.647 17.385 17.385 0 0 0 5.268 0ZM9.772 17.119a18.963 18.963 0 0 0 4.456 0A17.182 17.182 0 0 1 12 21.724a17.18 17.18 0 0 1-2.228-4.605ZM7.777 15.23a18.87 18.87 0 0 1-.214-4.774 12.753 12.753 0 0 1-4.34-2.708 9.711 9.711 0 0 0-.944 5.004 17.165 17.165 0 0 0 5.498 2.477ZM21.356 14.752a9.765 9.765 0 0 1-7.478 6.817 18.64 18.64 0 0 0 1.988-4.718 18.627 18.627 0 0 0 5.49-2.098ZM2.644 14.752c1.682.971 3.53 1.688 5.49 2.099a18.64 18.64 0 0 0 1.988 4.718 9.765 9.765 0 0 1-7.478-6.816ZM13.878 2.43a9.755 9.755 0 0 1 6.116 3.986 11.267 11.267 0 0 1-3.746 2.504 18.63 18.63 0 0 0-2.37-6.49ZM12 2.276a17.152 17.152 0 0 1 2.805 7.121c-.897.23-1.837.353-2.805.353-.968 0-1.908-.122-2.805-.353A17.151 17.151 0 0 1 12 2.276ZM10.122 2.43a18.629 18.629 0 0 0-2.37 6.49 11.266 11.266 0 0 1-3.746-2.504 9.754 9.754 0 0 1 6.116-3.985Z"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"
 							/>
 						</svg>
 					{:else if tab.id === 'code-execution'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								fill-rule="evenodd"
-								d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm2.22 1.97a.75.75 0 0 0 0 1.06l.97.97-.97.97a.75.75 0 1 0 1.06 1.06l1.5-1.5a.75.75 0 0 0 0-1.06l-1.5-1.5a.75.75 0 0 0-1.06 0ZM8.75 8.5a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z"
-								clip-rule="evenodd"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3"
+							/>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M3 3h18a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 21 21H3a2.25 2.25 0 0 1-2.25-2.25V5.25A2.25 2.25 0 0 1 3 3Z"
 							/>
 						</svg>
 					{:else if tab.id === 'interface'}
+						<!-- 滑块调节器图标 - 更符合"界面设置"的含义 -->
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								fill-rule="evenodd"
-								d="M2 4.25A2.25 2.25 0 0 1 4.25 2h7.5A2.25 2.25 0 0 1 14 4.25v5.5A2.25 2.25 0 0 1 11.75 12h-1.312c.1.128.21.248.328.36a.75.75 0 0 1 .234.545v.345a.75.75 0 0 1-.75.75h-4.5a.75.75 0 0 1-.75-.75v-.345a.75.75 0 0 1 .234-.545c.118-.111.228-.232.328-.36H4.25A2.25 2.25 0 0 1 2 9.75v-5.5Zm2.25-.75a.75.75 0 0 0-.75.75v4.5c0 .414.336.75.75.75h7.5a.75.75 0 0 0 .75-.75v-4.5a.75.75 0 0 0-.75-.75h-7.5Z"
-								clip-rule="evenodd"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
 							/>
 						</svg>
 					{:else if tab.id === 'audio'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								d="M7.557 2.066A.75.75 0 0 1 8 2.75v10.5a.75.75 0 0 1-1.248.56L3.59 11H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.59l3.162-2.81a.75.75 0 0 1 .805-.124ZM12.95 3.05a.75.75 0 1 0-1.06 1.06 5.5 5.5 0 0 1 0 7.78.75.75 0 1 0 1.06 1.06 7 7 0 0 0 0-9.9Z"
-							/>
-							<path
-								d="M10.828 5.172a.75.75 0 1 0-1.06 1.06 2.5 2.5 0 0 1 0 3.536.75.75 0 1 0 1.06 1.06 4 4 0 0 0 0-5.656Z"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
 							/>
 						</svg>
 					{:else if tab.id === 'images'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								fill-rule="evenodd"
-								d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-								clip-rule="evenodd"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
 							/>
 						</svg>
 					{:else if tab.id === 'pipelines'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
 							viewBox="0 0 24 24"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
 							<path
-								d="M11.644 1.59a.75.75 0 0 1 .712 0l9.75 5.25a.75.75 0 0 1 0 1.32l-9.75 5.25a.75.75 0 0 1-.712 0l-9.75-5.25a.75.75 0 0 1 0-1.32l9.75-5.25Z"
-							/>
-							<path
-								d="m3.265 10.602 7.668 4.129a2.25 2.25 0 0 0 2.134 0l7.668-4.13 1.37.739a.75.75 0 0 1 0 1.32l-9.75 5.25a.75.75 0 0 1-.71 0l-9.75-5.25a.75.75 0 0 1 0-1.32l1.37-.738Z"
-							/>
-							<path
-								d="m10.933 19.231-7.668-4.13-1.37.739a.75.75 0 0 0 0 1.32l9.75 5.25c.221.12.489.12.71 0l9.75-5.25a.75.75 0 0 0 0-1.32l-1.37-.738-7.668 4.13a2.25 2.25 0 0 1-2.134-.001Z"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
 							/>
 						</svg>
 					{:else if tab.id === 'db'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5 text-gray-600 dark:text-gray-300"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-4"
 						>
-							<path d="M8 7c3.314 0 6-1.343 6-3s-2.686-3-6-3-6 1.343-6 3 2.686 3 6 3Z" />
 							<path
-								d="M8 8.5c1.84 0 3.579-.37 4.914-1.037A6.33 6.33 0 0 0 14 6.78V8c0 1.657-2.686 3-6 3S2 9.657 2 8V6.78c.346.273.72.5 1.087.683C4.42 8.131 6.16 8.5 8 8.5Z"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
 							/>
-							<path
-								d="M8 12.5c1.84 0 3.579-.37 4.914-1.037.366-.183.74-.41 1.086-.684V12c0 1.657-2.686 3-6 3s-6-1.343-6-3v-1.22c.346.273.72.5 1.087.683C4.42 12.131 6.16 12.5 8 12.5Z"
-							/>
+						</svg>
+					<!-- ========== 用户设置图标 ========== -->
+					{:else if tab.id === 'user-general'}
+						<!-- 用户设置图标 -->
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281Z" />
+							<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+						</svg>
+					{:else if tab.id === 'user-account'}
+						<!-- 用户账户图标 -->
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+						</svg>
+					{:else if tab.id === 'user-connections'}
+						<!-- 用户连接图标 -->
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+						</svg>
+					{:else if tab.id === 'user-tools'}
+						<!-- 用户工具图标 -->
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75a4.5 4.5 0 0 1-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 1 1-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 0 1 6.336-4.486l-3.276 3.276a3.004 3.004 0 0 0 2.25 2.25l3.276-3.276c.294.295.352.757.29 1.148Z" />
+						</svg>
+					{:else if tab.id === 'user-personalization'}
+						<!-- 个性化图标 -->
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z" />
+						</svg>
+					{:else if tab.id === 'user-audio'}
+						<!-- 用户语音图标 -->
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+						</svg>
+					{:else if tab.id === 'user-data'}
+						<!-- 数据控制图标 -->
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+						</svg>
+					{:else if tab.id === 'user-about'}
+						<!-- 关于图标 -->
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
 						</svg>
 					{/if}
 				</div>
@@ -508,7 +781,7 @@
 	</div>
 
 	<div
-		class="flex-1 mt-3 lg:mt-1 px-[16px] lg:pr-[16px] lg:pl-0 overflow-y-scroll scrollbar-hidden"
+		class="flex-1 mt-3 lg:mt-1 px-[16px] lg:pr-[16px] lg:pl-0 overflow-y-auto scrollbar-none"
 	>
 		{#if selectedTab === 'general'}
 			<General
@@ -588,6 +861,57 @@
 					toast.success($i18n.t('Settings saved successfully!'));
 				}}
 			/>
+		<!-- ========== 用户设置组件 ========== -->
+		{:else if selectedTab === 'user-general'}
+			<UserGeneral
+				getModels={getModels}
+				saveSettings={async (updated) => {
+					await saveUserSettings(updated);
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'user-account'}
+			<UserAccount
+				saveSettings={saveUserSettings}
+				saveHandler={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'user-connections'}
+			<UserConnections
+				saveSettings={async (updated) => {
+					await saveUserSettings(updated);
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'user-tools'}
+			<UserTools
+				saveSettings={async (updated) => {
+					await saveUserSettings(updated);
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'user-personalization'}
+			<UserPersonalization
+				saveSettings={saveUserSettings}
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'user-audio'}
+			<UserAudio
+				saveSettings={saveUserSettings}
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'user-data'}
+			<UserDataControls saveSettings={saveUserSettings} />
+		{:else if selectedTab === 'user-about'}
+			<UserAbout />
 		{/if}
 	</div>
 </div>

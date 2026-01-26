@@ -1918,6 +1918,35 @@ ENABLE_TITLE_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_TITLE_GENERATION", "True").lower() == "true",
 )
 
+ENABLE_SUMMARIZE_GENERATION = PersistentConfig(
+    "ENABLE_SUMMARIZE_GENERATION",
+    "task.summarize.enable",
+    os.environ.get("ENABLE_SUMMARIZE_GENERATION", "True").lower() == "true",
+)
+
+SUMMARIZE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "SUMMARIZE_GENERATION_PROMPT_TEMPLATE",
+    "task.summarize.prompt_template",
+    os.environ.get("SUMMARIZE_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_SUMMARIZE_GENERATION_PROMPT_TEMPLATE = """### Task:
+Summarize the following conversation concisely, highlighting the key points and conclusions.
+
+### Guidelines:
+- Provide a clear and concise summary of the main topics discussed.
+- Highlight key decisions, conclusions, or action items if any.
+- Use bullet points for better readability when appropriate.
+- Write the summary in the same language as the conversation.
+- Keep the summary focused and avoid unnecessary details.
+
+### Chat History:
+<chat_history>
+{{MESSAGES}}
+</chat_history>
+
+### Summary:"""
+
 
 ENABLE_SEARCH_QUERY_GENERATION = PersistentConfig(
     "ENABLE_SEARCH_QUERY_GENERATION",

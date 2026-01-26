@@ -142,6 +142,24 @@
 
 	// Context break: message IDs after which to start sending context
 	let contextBreakMessageIds: string[] = [];
+	const contextBreakStorageKey = 'context_break_message_ids';
+	const persistContextBreaks = async () => {
+		if ($temporaryChatEnabled || !$chatId) {
+			return;
+		}
+		await saveChatHandler($chatId, history);
+	};
+	const addContextBreak = async (messageId: string) => {
+		if (!messageId || contextBreakMessageIds.includes(messageId)) {
+			return;
+		}
+		contextBreakMessageIds = [...contextBreakMessageIds, messageId];
+		await persistContextBreaks();
+	};
+	const removeContextBreak = async (messageId: string) => {
+		contextBreakMessageIds = contextBreakMessageIds.filter((id) => id !== messageId);
+		await persistContextBreaks();
+	};
 
 	let showCommands = false;
 
@@ -952,6 +970,7 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
+		contextBreakMessageIds = [];
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
 		}
@@ -1173,6 +1192,7 @@
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
+				contextBreakMessageIds = chatContent?.[contextBreakStorageKey] ?? [];
 
 				autoScroll = true;
 				await tick();
@@ -2426,6 +2446,7 @@
 					params: params,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
+					[contextBreakStorageKey]: contextBreakMessageIds,
 					tags: [],
 					timestamp: Date.now()
 				},
@@ -2476,7 +2497,8 @@
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
-					files: chatFiles
+					files: chatFiles,
+					[contextBreakStorageKey]: contextBreakMessageIds
 				});
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -2631,6 +2653,7 @@
 										models: selectedModels,
 										history: history,
 										messages: messages,
+										[contextBreakStorageKey]: contextBreakMessageIds,
 										timestamp: Date.now()
 									},
 									null
@@ -2686,9 +2709,8 @@
 										bottomPadding={files.length > 0}
 										{onSelect}
 										{contextBreakMessageIds}
-										onRemoveContextBreak={(id) => {
-											contextBreakMessageIds = contextBreakMessageIds.filter((i) => i !== id);
-										}}
+										{addContextBreak}
+										onRemoveContextBreak={removeContextBreak}
 									/>
 								</div>
 							</div>
@@ -2718,10 +2740,15 @@
 									contextBreakEnabled={contextBreakMessageIds.length > 0}
 									onToggleContextBreak={() => {
 										if (history?.currentId) {
-											if (!contextBreakMessageIds.includes(history.currentId)) {
-												contextBreakMessageIds = [...contextBreakMessageIds, history.currentId];
-											}
+											addContextBreak(history.currentId);
 										}
+									}}
+									reasoningEffort={params?.reasoning_effort ?? 'default'}
+									onReasoningEffortChange={(value) => {
+										params = {
+											...params,
+											reasoning_effort: value === 'default' ? null : value
+										};
 									}}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
@@ -2766,6 +2793,13 @@
 									{createMessagePair}
 									{onSelect}
 									{onUpload}
+									reasoningEffort={params?.reasoning_effort ?? 'default'}
+									onReasoningEffortChange={(value) => {
+										params = {
+											...params,
+											reasoning_effort: value === 'default' ? null : value
+										};
+									}}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data);

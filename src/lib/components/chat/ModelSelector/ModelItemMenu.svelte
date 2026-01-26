@@ -106,7 +106,7 @@
 					e.preventDefault();
 
 					show = false;
-					await goto(`/admin/settings/models?id=${encodeURIComponent(model?.id)}`);
+					await goto(`/settings/models?id=${encodeURIComponent(model?.id)}`);
 				}}
 			>
 				<Cog6 />

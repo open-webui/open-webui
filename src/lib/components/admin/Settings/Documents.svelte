@@ -357,7 +357,7 @@
 	}}
 >
 	{#if RAGConfig}
-		<div class="space-y-4 overflow-y-scroll scrollbar-hidden h-full pr-2">
+		<div class="space-y-4 overflow-y-auto scrollbar-hidden h-full">
 			<div class="max-w-5xl mx-auto">
 				<div class="mb-4">
 					<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>

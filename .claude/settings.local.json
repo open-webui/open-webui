@@ -1,46 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)",
-      "Bash(find . -name \"*.py\" -exec grep -l \"def search_web\" {} ;)",
-      "Bash(python -c \"\nimport inspect\nfrom open_webui.tools.builtin import search_web\nfrom open_webui.utils.tools import convert_function_to_pydantic_model, convert_pydantic_model_to_openai_function_spec\n\n# 生成spec\npydantic_model = convert_function_to_pydantic_model\\(search_web\\)\nspec = convert_pydantic_model_to_openai_function_spec\\(pydantic_model\\)\n\nimport json\nprint\\(json.dumps\\(spec, indent=2, ensure_ascii=False\\)\\)\n\")",
-      "Bash(python3 -c \"\nimport inspect\nfrom open_webui.tools.builtin import search_web\nfrom open_webui.utils.tools import convert_function_to_pydantic_model, convert_pydantic_model_to_openai_function_spec\n\n# 生成spec\npydantic_model = convert_function_to_pydantic_model\\(search_web\\)\nspec = convert_pydantic_model_to_openai_function_spec\\(pydantic_model\\)\n\nimport json\nprint\\(json.dumps\\(spec, indent=2, ensure_ascii=False\\)\\)\n\")",
-      "Bash(awk:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git tag:*)",
-      "Bash(git push:*)",
-      "Bash(python -m py_compile:*)",
-      "Bash(python3 -m py_compile:*)",
-      "Bash(git log:*)",
-      "Bash(gh release create:*)",
-      "Bash(where gh:*)",
-      "Bash(gh:*)",
-      "Bash(find:*)",
-      "Bash(ls:*)",
-      "Bash(du:*)",
-      "Bash(npm run check:*)",
-      "Bash(powershell -Command:*)",
-      "Bash(node:*)",
-      "Bash(where:*)",
-      "Bash(npx tsc --noEmit)",
-      "Bash(npm install --save-dev @types/uuid)",
-      "Bash(npm i --save-dev @types/turndown)",
-      "Bash(npx svelte-check:*)",
-      "Bash(del:*)",
-      "Bash(grep:*)",
-      "Bash(curl:*)",
-      "Bash(py -3.11 -c:*)",
-      "Bash(py -3.11 -m pip download:*)",
-      "Bash(unzip:*)",
-      "Bash(py -3.11 -m hatchling build:*)",
-      "Bash(py -3.11 -m build:*)",
-      "Bash(pip download:*)",
-      "Bash(git checkout:*)",
-      "Bash(/c/Windows/py:*)",
-      "Bash(git grep -n \"DEFAULT_ARENA_MODEL\" --no-color)",
-      "Bash(git grep -n \"DEFAULT_ARENA_MODEL\")",
-      "Bash(docker manifest inspect:*)"
-    ]
+      "Bash(git commit:*)"
+    ],
+    "deny": [],
+    "ask": []
   }
 }

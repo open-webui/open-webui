@@ -1,4 +1,5 @@
 import { browser, dev } from '$app/environment';
+import { env } from '$env/dynamic/public';
 // import { version } from '../../package.json';
 
 declare const APP_VERSION: string;
@@ -6,16 +7,62 @@ declare const APP_BUILD_HASH: string;
 
 export const APP_NAME = 'Open WebUI';
 
-export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
-export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : ``;
-export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
+const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '');
+const normalizedPublicBaseUrl = env.PUBLIC_WEBUI_BASE_URL
+	? normalizeBaseUrl(env.PUBLIC_WEBUI_BASE_URL)
+	: '';
 
-export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
-export const OPENAI_API_BASE_URL = `${WEBUI_BASE_URL}/openai`;
-export const GEMINI_API_BASE_URL = `${WEBUI_BASE_URL}/gemini`;
-export const AUDIO_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/audio`;
-export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/images`;
-export const RETRIEVAL_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/retrieval`;
+const readStoredBaseUrl = () => {
+	if (!browser) {
+		return '';
+	}
+	try {
+		const localValue = localStorage.getItem('webui.baseUrl')?.trim() ?? '';
+		if (localValue) {
+			return localValue;
+		}
+		return sessionStorage.getItem('webui.baseUrl')?.trim() ?? '';
+	} catch {
+		return '';
+	}
+};
+
+const buildUrl = (baseUrl: string, path: string) => (baseUrl ? `${baseUrl}${path}` : path);
+
+export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
+export let WEBUI_BASE_URL = '';
+export let WEBUI_API_BASE_URL = '';
+export let OLLAMA_API_BASE_URL = '';
+export let OPENAI_API_BASE_URL = '';
+export let GEMINI_API_BASE_URL = '';
+export let AUDIO_API_BASE_URL = '';
+export let IMAGES_API_BASE_URL = '';
+export let RETRIEVAL_API_BASE_URL = '';
+
+const applyBaseUrl = (baseUrl: string) => {
+	const normalizedBaseUrl = baseUrl ? normalizeBaseUrl(baseUrl) : '';
+	WEBUI_BASE_URL = normalizedBaseUrl;
+	WEBUI_API_BASE_URL = buildUrl(WEBUI_BASE_URL, '/api/v1');
+	OLLAMA_API_BASE_URL = buildUrl(WEBUI_BASE_URL, '/ollama');
+	OPENAI_API_BASE_URL = buildUrl(WEBUI_BASE_URL, '/openai');
+	GEMINI_API_BASE_URL = buildUrl(WEBUI_BASE_URL, '/gemini');
+	AUDIO_API_BASE_URL = buildUrl(WEBUI_BASE_URL, '/api/v1/audio');
+	IMAGES_API_BASE_URL = buildUrl(WEBUI_BASE_URL, '/api/v1/images');
+	RETRIEVAL_API_BASE_URL = buildUrl(WEBUI_BASE_URL, '/api/v1/retrieval');
+};
+
+export const syncWebuiBaseUrl = (override?: string) => {
+	const storedBaseUrl = override ?? readStoredBaseUrl();
+	const normalizedStoredBaseUrl = storedBaseUrl ? normalizeBaseUrl(storedBaseUrl) : '';
+	const resolvedBaseUrl = browser
+		? normalizedStoredBaseUrl || normalizedPublicBaseUrl || (dev ? `http://${WEBUI_HOSTNAME}` : ``)
+		: normalizedStoredBaseUrl || normalizedPublicBaseUrl || ``;
+
+	applyBaseUrl(resolvedBaseUrl);
+	return resolvedBaseUrl;
+};
+
+syncWebuiBaseUrl();
 
 export const WEBUI_VERSION = APP_VERSION;
 export const WEBUI_BUILD_HASH = APP_BUILD_HASH;
@@ -101,7 +148,6 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 
 export const PASTED_TEXT_CHARACTER_LIMIT = 1000;
 
-// Source: https://kit.svelte.dev/docs/modules#$env-static-public
-// This feature, akin to $env/static/private, exclusively incorporates environment variables
-// that are prefixed with config.kit.env.publicPrefix (usually set to PUBLIC_).
-// Consequently, these variables can be securely exposed to client-side code.
+// Source: https://kit.svelte.dev/docs/modules#$env-dynamic-public
+// Dynamic public env exposes variables prefixed with config.kit.env.publicPrefix
+// (usually set to PUBLIC_) to client-side code at runtime.

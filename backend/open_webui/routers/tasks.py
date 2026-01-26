@@ -16,6 +16,7 @@ from open_webui.utils.task import (
     tags_generation_template,
     emoji_generation_template,
     moa_response_generation_template,
+    summarize_generation_template,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
@@ -34,6 +35,7 @@ from open_webui.config import (
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
+    DEFAULT_SUMMARIZE_GENERATION_PROMPT_TEMPLATE,
 )
 
 
@@ -63,6 +65,8 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "ENABLE_FOLLOW_UP_GENERATION": request.app.state.config.ENABLE_FOLLOW_UP_GENERATION,
         "ENABLE_TAGS_GENERATION": request.app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_TITLE_GENERATION": request.app.state.config.ENABLE_TITLE_GENERATION,
+        "ENABLE_SUMMARIZE_GENERATION": request.app.state.config.ENABLE_SUMMARIZE_GENERATION,
+        "SUMMARIZE_GENERATION_PROMPT_TEMPLATE": request.app.state.config.SUMMARIZE_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
@@ -83,6 +87,8 @@ class TaskConfigForm(BaseModel):
     FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_FOLLOW_UP_GENERATION: bool
     ENABLE_TAGS_GENERATION: bool
+    ENABLE_SUMMARIZE_GENERATION: bool
+    SUMMARIZE_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_SEARCH_QUERY_GENERATION: bool
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
     QUERY_GENERATION_PROMPT_TEMPLATE: str
@@ -123,6 +129,12 @@ async def update_task_config(
         form_data.TAGS_GENERATION_PROMPT_TEMPLATE
     )
     request.app.state.config.ENABLE_TAGS_GENERATION = form_data.ENABLE_TAGS_GENERATION
+    request.app.state.config.ENABLE_SUMMARIZE_GENERATION = (
+        form_data.ENABLE_SUMMARIZE_GENERATION
+    )
+    request.app.state.config.SUMMARIZE_GENERATION_PROMPT_TEMPLATE = (
+        form_data.SUMMARIZE_GENERATION_PROMPT_TEMPLATE
+    )
     request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION = (
         form_data.ENABLE_SEARCH_QUERY_GENERATION
     )
@@ -151,6 +163,8 @@ async def update_task_config(
         "AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH": request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
         "TAGS_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_TAGS_GENERATION": request.app.state.config.ENABLE_TAGS_GENERATION,
+        "ENABLE_SUMMARIZE_GENERATION": request.app.state.config.ENABLE_SUMMARIZE_GENERATION,
+        "SUMMARIZE_GENERATION_PROMPT_TEMPLATE": request.app.state.config.SUMMARIZE_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_FOLLOW_UP_GENERATION": request.app.state.config.ENABLE_FOLLOW_UP_GENERATION,
         "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE": request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
@@ -756,4 +770,77 @@ async def generate_moa_response(
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(e)},
+        )
+
+
+@router.post("/summarize/completions")
+async def generate_summarize(
+    request: Request, form_data: dict, user=Depends(get_verified_user)
+):
+
+    if not request.app.state.config.ENABLE_SUMMARIZE_GENERATION:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"detail": "Summarize generation is disabled"},
+        )
+
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
+
+    model_id = form_data["model"]
+    if model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    # Check if the user has a custom task model
+    # If the user has a custom task model, use that model
+    task_model_id = get_task_model_id(
+        model_id,
+        request.app.state.config.TASK_MODEL,
+        request.app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
+
+    log.debug(
+        f"generating summarize using model {task_model_id} for user {user.email} "
+    )
+
+    if request.app.state.config.SUMMARIZE_GENERATION_PROMPT_TEMPLATE != "":
+        template = request.app.state.config.SUMMARIZE_GENERATION_PROMPT_TEMPLATE
+    else:
+        template = DEFAULT_SUMMARIZE_GENERATION_PROMPT_TEMPLATE
+
+    content = summarize_generation_template(template, form_data["messages"], user)
+
+    payload = {
+        "model": task_model_id,
+        "messages": [{"role": "user", "content": content}],
+        "stream": form_data.get("stream", False),
+        "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
+            "task": str(TASKS.SUMMARIZE_GENERATION),
+            "task_body": form_data,
+            "chat_id": form_data.get("chat_id", None),
+        },
+    }
+
+    # Process the payload through the pipeline
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
+
+    try:
+        return await generate_chat_completion(request, form_data=payload, user=user)
+    except Exception as e:
+        log.error("Exception occurred", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": "An internal error has occurred."},
         )

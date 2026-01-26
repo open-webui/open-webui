@@ -9,7 +9,7 @@
 	import { getUsage } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 
-	import { showSettings, mobile, showSidebar, showShortcuts, user, config } from '$lib/stores';
+	import { mobile, showSidebar, showShortcuts, user, config } from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -19,7 +19,6 @@
 	import Keyboard from '$lib/components/icons/Keyboard.svelte';
 	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
 	import Settings from '$lib/components/icons/Settings.svelte';
-	import UserGroup from '$lib/components/icons/UserGroup.svelte';
 	import SignOut from '$lib/components/icons/SignOut.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import UserStatusModal from './UserStatusModal.svelte';
@@ -199,7 +198,8 @@
 				on:click={async () => {
 					show = false;
 
-					await showSettings.set(true);
+					// 跳转到统一设置页面
+					await goto('/settings/user-general');
 
 					if ($mobile) {
 						await tick();
@@ -232,26 +232,6 @@
 				</div>
 				<div class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
-
-			{#if role === 'admin'}
-				<DropdownMenu.Item
-					as="a"
-					href="/admin"
-					class="flex items-center gap-3 rounded-xl py-2 px-2.5 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-					on:click={async () => {
-						show = false;
-						if ($mobile) {
-							await tick();
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700">
-						<UserGroup className="size-4 text-gray-600 dark:text-gray-300" strokeWidth="1.5" />
-					</div>
-					<div class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Admin Panel')}</div>
-				</DropdownMenu.Item>
-			{/if}
 
 			{#if help}
 				<hr class="border-gray-100 dark:border-gray-800 mx-2 my-1.5" />

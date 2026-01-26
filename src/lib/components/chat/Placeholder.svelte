@@ -55,6 +55,9 @@
 	export let webSearchEnabled = false;
 	export let nativeWebSearchEnabled = false;
 
+	export let reasoningEffort: string = 'default';
+	export let onReasoningEffortChange: (value: string) => void = () => {};
+
 	export let onUpload: Function = (e) => {};
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
@@ -218,6 +221,8 @@
 					{stopResponse}
 					{createMessagePair}
 					placeholder={$i18n.t('How can I help you today?')}
+					{reasoningEffort}
+					{onReasoningEffortChange}
 					{onChange}
 					{onUpload}
 					on:submit={(e) => {

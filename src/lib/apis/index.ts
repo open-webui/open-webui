@@ -1,4 +1,4 @@
-import { WEBUI_BASE_URL } from '$lib/constants';
+import { WEBUI_BASE_URL, syncWebuiBaseUrl } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
@@ -1071,6 +1071,43 @@ export const generateMoACompletion = async (
 	return [res, controller];
 };
 
+export const generateSummary = async (
+	token: string = '',
+	model: string,
+	messages: object[],
+	chat_id?: string,
+	stream: boolean = false
+) => {
+	const controller = new AbortController();
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/summarize/completions`, {
+		signal: controller.signal,
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			messages: messages,
+			stream: stream,
+			...(chat_id && { chat_id: chat_id })
+		})
+	}).catch((err) => {
+		console.error(err);
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return [res, controller];
+};
+
 export const getPipelinesList = async (token: string = '') => {
 	let error = null;
 
@@ -1391,6 +1428,7 @@ export const getUsage = async (token: string = '') => {
 
 export const getBackendConfig = async () => {
 	let error = null;
+	syncWebuiBaseUrl();
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
 		method: 'GET',
@@ -1727,6 +1765,33 @@ export const updateModelConfig = async (token: string, config: GlobalModelConfig
 		body: JSON.stringify({
 			models: config
 		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getAdminStats = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/admin/stats`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

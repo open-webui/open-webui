@@ -49,7 +49,7 @@
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
 
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME, syncWebuiBaseUrl } from '$lib/constants';
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
@@ -101,6 +101,39 @@
 	const BREAKPOINT = 768;
 	const HEARTBEAT_ACTIVE = 30000; // 30 seconds when page is visible
 	const HEARTBEAT_BACKGROUND = 120000; // 2 minutes when page is hidden
+	const BASE_URL_STORAGE_KEY = 'webui.baseUrl';
+	const BASE_URL_PROMPT_KEY = 'webui.baseUrlPrompted';
+	const BACKEND_ERROR_KEY = 'webui.backendError';
+	const DEFAULT_WEBUI_BASE_URL = 'http://192.168.3.200:8080';
+
+	let showBaseUrlPrompt = false;
+	let baseUrlInput = DEFAULT_WEBUI_BASE_URL;
+	let baseUrlError = '';
+	let baseUrlReadyResolver: (() => void) | null = null;
+
+	const normalizeBaseUrl = (value) => value.trim().replace(/\/+$/, '');
+	const isValidBaseUrl = (value) => /^https?:\/\/.+/i.test(value);
+	const isCapacitorApp = () => typeof window !== 'undefined' && 'Capacitor' in window;
+	const waitForBaseUrl = () =>
+		new Promise<void>((resolve) => {
+			baseUrlReadyResolver = resolve;
+		});
+
+	const saveBaseUrl = () => {
+		const normalized = normalizeBaseUrl(baseUrlInput);
+		if (!isValidBaseUrl(normalized)) {
+			baseUrlError = 'Enter a valid URL starting with http:// or https://';
+			return;
+		}
+		baseUrlError = '';
+		localStorage.setItem(BASE_URL_STORAGE_KEY, normalized);
+		sessionStorage.setItem(BASE_URL_STORAGE_KEY, normalized);
+		syncWebuiBaseUrl(normalized);
+		sessionStorage.setItem(BASE_URL_PROMPT_KEY, '1');
+		showBaseUrlPrompt = false;
+		baseUrlReadyResolver?.();
+		baseUrlReadyResolver = null;
+	};
 
 	// Setup heartbeat with visibility-aware interval
 	const setupHeartbeat = (_socket: any) => {
@@ -644,6 +677,20 @@
 
 	onMount(async () => {
 		window.addEventListener('message', windowMessageEventHandler);
+		syncWebuiBaseUrl();
+
+		if (isCapacitorApp()) {
+			const hasPrompted = sessionStorage.getItem(BASE_URL_PROMPT_KEY) === '1';
+			if (!hasPrompted) {
+				const storedBaseUrl =
+					localStorage.getItem(BASE_URL_STORAGE_KEY) || sessionStorage.getItem(BASE_URL_STORAGE_KEY);
+				showBaseUrlPrompt = true;
+				baseUrlInput = storedBaseUrl ? normalizeBaseUrl(storedBaseUrl) : DEFAULT_WEBUI_BASE_URL;
+				document.getElementById('splash-screen')?.remove();
+				await waitForBaseUrl();
+				syncWebuiBaseUrl();
+			}
+		}
 
 		let touchstartY = 0;
 
@@ -760,8 +807,12 @@
 		try {
 			backendConfig = await getBackendConfig();
 			console.log('Backend config:', backendConfig);
+			sessionStorage.removeItem(BACKEND_ERROR_KEY);
 		} catch (error) {
 			console.error('Error loading backend config:', error);
+			const message =
+				typeof error === 'string' ? error : error?.message ?? JSON.stringify(error ?? {});
+			sessionStorage.setItem(BACKEND_ERROR_KEY, message);
 		}
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
@@ -883,6 +934,38 @@
 		crossorigin="use-credentials"
 	/>
 </svelte:head>
+
+{#if showBaseUrlPrompt}
+	<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-6">
+		<form
+			class="w-full max-w-sm rounded-2xl bg-white p-6 text-gray-900 shadow-2xl"
+			on:submit|preventDefault={saveBaseUrl}
+		>
+			<h2 class="text-lg font-semibold">Server URL</h2>
+			<p class="mt-1 text-sm text-gray-600">Enter the backend address for this session.</p>
+
+			<div class="mt-4">
+				<label class="text-xs font-medium uppercase tracking-wide text-gray-500">URL</label>
+				<input
+					class="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+					placeholder={DEFAULT_WEBUI_BASE_URL}
+					bind:value={baseUrlInput}
+					on:input={() => (baseUrlError = '')}
+				/>
+				{#if baseUrlError}
+					<div class="mt-2 text-xs text-red-500">{baseUrlError}</div>
+				{/if}
+			</div>
+
+			<button
+				type="submit"
+				class="mt-6 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
+			>
+				Save and Continue
+			</button>
+		</form>
+	</div>
+{/if}
 
 {#if showRefresh}
 	<div class=" py-5">

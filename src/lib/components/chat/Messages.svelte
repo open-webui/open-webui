@@ -60,6 +60,7 @@
 
 	export let contextBreakMessageIds: string[] = [];
 	export let onRemoveContextBreak: (id: string) => void = () => {};
+	export let addContextBreak: Function = () => {};
 
 	export let messagesCount: number | null = 20;
 	let messagesLoading = false;
@@ -462,6 +463,7 @@
 								{continueResponse}
 								{mergeResponses}
 								{addMessages}
+								{addContextBreak}
 								{triggerScroll}
 								{readOnly}
 								{editCodeBlock}

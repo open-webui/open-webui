@@ -19,7 +19,9 @@
 	import { compareVersion } from '$lib/utils';
 
 	import {
+		appData,
 		config,
+		isApp,
 		user,
 		settings,
 		models,
@@ -30,7 +32,6 @@
 		tags,
 		banners,
 		bannersCache,
-		showSettings,
 		showShortcuts,
 		showChangelog,
 		temporaryChatEnabled,
@@ -41,9 +42,8 @@
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
-	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
-	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
+		import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { Shortcut, shortcuts } from '$lib/shortcuts';
@@ -53,6 +53,9 @@
 	let loaded = false;
 	let DB = null;
 	let localDBChats = [];
+	let showOllamaGuide = false;
+
+	const OLLAMA_GUIDE_DISMISS_KEY = 'openwebui.desktop.ollama.dismissed';
 
 	let version;
 
@@ -242,7 +245,8 @@
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.OPEN_SETTINGS])) {
 					console.log('Shortcut triggered: OPEN_SETTINGS');
 					event.preventDefault();
-					showSettings.set(!$showSettings);
+					// 跳转到统一设置页面
+					await goto('/settings/user-general');
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.SHOW_SHORTCUTS])) {
 					console.log('Shortcut triggered: SHOW_SHORTCUTS');
 					event.preventDefault();
@@ -250,7 +254,6 @@
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.CLOSE_MODAL])) {
 					console.log('Shortcut triggered: CLOSE_MODAL');
 					event.preventDefault();
-					showSettings.set(false);
 					showShortcuts.set(false);
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_TEMPORARY_CHAT])) {
 					console.log('Shortcut triggered: NEW_TEMPORARY_CHAT');
@@ -328,9 +331,22 @@
 		// Cache the result
 		versionUpdatesCache.set(version);
 	};
+
+	const dismissOllamaGuide = () => {
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem(OLLAMA_GUIDE_DISMISS_KEY, '1');
+		}
+		showOllamaGuide = false;
+	};
+
+	$: if (typeof window !== 'undefined') {
+		const dismissed = sessionStorage.getItem(OLLAMA_GUIDE_DISMISS_KEY) === '1';
+		showOllamaGuide = Boolean(
+			$isApp && $appData?.ollama && !$appData.ollama.available && !dismissed
+		);
+	}
 </script>
 
-<SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}

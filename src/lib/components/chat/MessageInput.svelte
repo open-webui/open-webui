@@ -84,6 +84,7 @@
 	import PlusAlt from '../icons/PlusAlt.svelte';
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
+	import ReasoningEffortButton from './MessageInput/ReasoningEffortButton.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
@@ -124,6 +125,9 @@
 
 	export let contextBreakEnabled = false;
 	export let onToggleContextBreak: () => void = () => {};
+
+	export let reasoningEffort: string = 'default';
+	export let onReasoningEffortChange: (value: string) => void = () => {};
 
 	let inputContent = null;
 
@@ -985,7 +989,13 @@
 </script>
 
 <FilesOverlay show={dragged} />
-<ToolServersModal bind:show={showTools} {selectedToolIds} />
+<ToolServersModal
+	bind:show={showTools}
+	bind:selectedToolIds
+	on:change={(e) => {
+		selectedToolIds = e.detail;
+	}}
+/>
 
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
@@ -1552,6 +1562,12 @@
 										</IntegrationsMenu>
 									{/if}
 
+									<!-- Reasoning Effort Button -->
+									<ReasoningEffortButton
+										bind:value={reasoningEffort}
+										on:change={(e) => onReasoningEffortChange(e.detail)}
+									/>
+
 									{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}
 										<div class="ml-1 flex gap-1.5">
 											<Tooltip content={$i18n.t('Valves')} placement="top">
@@ -1579,7 +1595,7 @@
 												})}
 											>
 												<button
-													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
+													class="group p-[7px] text-sm rounded-full transition-colors duration-300 focus:outline-hidden text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20"
 													aria-label="Available Tools"
 													type="button"
 													on:click={() => {
@@ -1587,10 +1603,6 @@
 													}}
 												>
 													<Wrench className="size-4" strokeWidth="1.75" />
-
-													<span class="text-sm">
-														{selectedToolIds.length}
-													</span>
 												</button>
 											</Tooltip>
 										{/if}

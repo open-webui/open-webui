@@ -17,6 +17,8 @@
 	export let cancelLabel = $i18n.t('Cancel');
 	export let confirmLabel = $i18n.t('Confirm');
 
+	export let danger = false;
+
 	export let onConfirm = () => {};
 
 	export let input = false;
@@ -102,23 +104,35 @@
 		}}
 	>
 		<div
-			class=" m-auto max-w-full w-[32rem] mx-2 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm rounded-4xl max-h-[100dvh] shadow-3xl border border-white dark:border-gray-900"
+			class=" m-auto max-w-full w-[28rem] mx-2 bg-white dark:bg-gray-900 backdrop-blur-sm rounded-2xl max-h-[100dvh] shadow-2xl"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
 			}}
 		>
-			<div class="px-[1.75rem] py-6 flex flex-col">
-				<div class=" text-lg font-medium dark:text-gray-200 mb-2.5">
-					{#if title !== ''}
-						{title}
-					{:else}
-						{$i18n.t('Confirm your action')}
-					{/if}
+			<div class="px-6 py-5 flex flex-col">
+				{#if danger}
+					<div class="flex justify-center mb-4">
+						<div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-red-600 dark:text-red-400">
+								<path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z" clip-rule="evenodd" />
+							</svg>
+						</div>
+					</div>
+				{/if}
+
+				<div class="text-center mb-2">
+					<div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{#if title !== ''}
+							{title}
+						{:else}
+							{$i18n.t('Confirm your action')}
+						{/if}
+					</div>
 				</div>
 
 				<slot>
-					<div class=" text-sm text-gray-500 flex-1">
+					<div class="text-sm text-gray-500 dark:text-gray-400 text-center mb-5">
 						{#if message !== ''}
 							{@const html = DOMPurify.sanitize(marked.parse(message))}
 							{@html html}
@@ -130,7 +144,7 @@
 							<textarea
 								bind:value={inputValue}
 								placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-								class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
+								class="w-full mt-3 rounded-xl px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 outline-hidden resize-none border border-gray-200 dark:border-gray-700 focus:border-gray-300 dark:focus:border-gray-600 transition text-left"
 								rows="3"
 								required
 							/>
@@ -138,9 +152,9 @@
 					</div>
 				</slot>
 
-				<div class="mt-6 flex justify-between gap-1.5">
+				<div class="flex gap-3">
 					<button
-						class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2 rounded-3xl transition"
+						class="flex-1 text-sm font-medium py-2.5 px-4 rounded-xl transition border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
 						on:click={() => {
 							show = false;
 							dispatch('cancel');
@@ -150,7 +164,7 @@
 						{cancelLabel}
 					</button>
 					<button
-						class="text-sm bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2 rounded-3xl transition"
+						class="flex-1 text-sm font-medium py-2.5 px-4 rounded-xl transition bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900"
 						on:click={() => {
 							confirmHandler();
 						}}

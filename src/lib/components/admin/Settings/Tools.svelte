@@ -62,7 +62,7 @@
 		updateHandler();
 	}}
 >
-	<div class="overflow-y-scroll scrollbar-hidden h-full">
+	<div class="overflow-y-auto scrollbar-hidden h-full">
 		{#if servers !== null}
 			<div class="max-w-5xl mx-auto">
 				<div class="mb-3">

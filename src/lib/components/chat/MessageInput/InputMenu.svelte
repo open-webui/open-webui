@@ -120,7 +120,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-70 rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+			class="w-full max-w-72 rounded-2xl px-1.5 py-1.5 border border-gray-300/40 dark:border-gray-700/60 z-50 bg-white dark:bg-gray-900 dark:text-white shadow-lg shadow-gray-300/30 dark:shadow-gray-950/50 max-h-80 overflow-y-auto overflow-x-hidden scrollbar-thin"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
@@ -138,7 +138,7 @@
 						className="w-full"
 					>
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+							class="group flex gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
@@ -147,9 +147,11 @@
 								}
 							}}
 						>
-							<Clip />
+							<div class="text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+								<Clip />
+							</div>
 
-							<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+							<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">{$i18n.t('Upload Files')}</span>
 						</DropdownMenu.Item>
 					</Tooltip>
 
@@ -162,7 +164,7 @@
 						className="w-full"
 					>
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50  rounded-xl {!fileUploadEnabled
+							class="group flex gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
@@ -179,8 +181,10 @@
 								}
 							}}
 						>
-							<Camera />
-							<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+							<div class="text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+								<Camera />
+							</div>
+							<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">{$i18n.t('Capture')}</span>
 						</DropdownMenu.Item>
 					</Tooltip>
 
@@ -193,7 +197,7 @@
 						className="w-full"
 					>
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
+							class="group flex gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
@@ -202,8 +206,10 @@
 								}
 							}}
 						>
-							<GlobeAlt />
-							<div class="line-clamp-1">{$i18n.t('Attach Webpage')}</div>
+							<div class="text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+								<GlobeAlt />
+							</div>
+							<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">{$i18n.t('Attach Webpage')}</span>
 						</DropdownMenu.Item>
 					</Tooltip>
 
@@ -217,21 +223,23 @@
 							className="w-full"
 						>
 							<button
-								class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+								class="group flex gap-2.5 w-full items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
 									tab = 'notes';
 								}}
 							>
-								<PageEdit />
+								<div class="text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+									<PageEdit />
+								</div>
 
 								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
+									<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">
 										{$i18n.t('Attach Notes')}
-									</div>
+									</span>
 
-									<div class="text-gray-500">
+									<div class="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
 										<ChevronRight />
 									</div>
 								</div>
@@ -248,21 +256,23 @@
 						className="w-full"
 					>
 						<button
-							class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+							class="group flex gap-2.5 w-full items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
 								tab = 'knowledge';
 							}}
 						>
-							<Database />
+							<div class="text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+								<Database />
+							</div>
 
 							<div class="flex items-center w-full justify-between">
-								<div class=" line-clamp-1">
+								<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">
 									{$i18n.t('Attach Knowledge')}
-								</div>
+								</span>
 
-								<div class="text-gray-500">
+								<div class="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
 									<ChevronRight />
 								</div>
 							</div>
@@ -279,21 +289,23 @@
 							className="w-full"
 						>
 							<button
-								class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+								class="group flex gap-2.5 w-full items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
 									tab = 'chats';
 								}}
 							>
-								<ClockRotateRight />
+								<div class="text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+									<ClockRotateRight />
+								</div>
 
 								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
+									<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">
 										{$i18n.t('Reference Chats')}
-									</div>
+									</span>
 
-									<div class="text-gray-500">
+									<div class="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
 										<ChevronRight />
 									</div>
 								</div>
@@ -304,12 +316,12 @@
 					{#if fileUploadEnabled}
 						{#if $config?.features?.enable_google_drive_integration}
 							<DropdownMenu.Item
-								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+								class="group flex gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
 								on:click={() => {
 									uploadGoogleDriveHandler();
 								}}
 							>
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78" class="w-4">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78" class="size-4">
 									<path
 										d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z"
 										fill="#0066da"
@@ -335,13 +347,13 @@
 										fill="#ffba00"
 									/>
 								</svg>
-								<div class="line-clamp-1">{$i18n.t('Google Drive')}</div>
+								<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">{$i18n.t('Google Drive')}</span>
 							</DropdownMenu.Item>
 						{/if}
 
 						{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
 							<button
-								class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+								class="group flex gap-2.5 w-full items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -435,11 +447,11 @@
 								</svg>
 
 								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
+									<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">
 										{$i18n.t('Microsoft OneDrive')}
-									</div>
+									</span>
 
-									<div class="text-gray-500">
+									<div class="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
 										<ChevronRight />
 									</div>
 								</div>
@@ -448,104 +460,112 @@
 					{/if}
 				</div>
 			{:else if tab === 'knowledge'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div in:fly={{ x: 20, duration: 150 }} class="space-y-0.5">
 					<button
-						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						class="group flex w-full gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
 						on:click={() => {
 							tab = '';
 						}}
 					>
-						<ChevronLeft />
-
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Knowledge')}
-							</div>
+						<div class="text-gray-500 dark:text-gray-400">
+							<ChevronLeft />
 						</div>
+
+						<span class="font-medium text-gray-700 dark:text-gray-200">
+							{$i18n.t('Knowledge')}
+						</span>
 					</button>
+
+					<div class="mx-3 my-1 h-px bg-gray-200 dark:bg-gray-700/70" />
 
 					<Knowledge {onSelect} />
 				</div>
 			{:else if tab === 'notes'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div in:fly={{ x: 20, duration: 150 }} class="space-y-0.5">
 					<button
-						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						class="group flex w-full gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
 						on:click={() => {
 							tab = '';
 						}}
 					>
-						<ChevronLeft />
-
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Notes')}
-							</div>
+						<div class="text-gray-500 dark:text-gray-400">
+							<ChevronLeft />
 						</div>
+
+						<span class="font-medium text-gray-700 dark:text-gray-200">
+							{$i18n.t('Notes')}
+						</span>
 					</button>
+
+					<div class="mx-3 my-1 h-px bg-gray-200 dark:bg-gray-700/70" />
 
 					<Notes {onSelect} />
 				</div>
 			{:else if tab === 'chats'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div in:fly={{ x: 20, duration: 150 }} class="space-y-0.5">
 					<button
-						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						class="group flex w-full gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
 						on:click={() => {
 							tab = '';
 						}}
 					>
-						<ChevronLeft />
-
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Chats')}
-							</div>
+						<div class="text-gray-500 dark:text-gray-400">
+							<ChevronLeft />
 						</div>
+
+						<span class="font-medium text-gray-700 dark:text-gray-200">
+							{$i18n.t('Chats')}
+						</span>
 					</button>
+
+					<div class="mx-3 my-1 h-px bg-gray-200 dark:bg-gray-700/70" />
 
 					<Chats {onSelect} />
 				</div>
 			{:else if tab === 'microsoft_onedrive'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div in:fly={{ x: 20, duration: 150 }} class="space-y-0.5">
 					<button
-						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+						class="group flex w-full gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
 						on:click={() => {
 							tab = '';
 						}}
 					>
-						<ChevronLeft />
-
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Microsoft OneDrive')}
-							</div>
+						<div class="text-gray-500 dark:text-gray-400">
+							<ChevronLeft />
 						</div>
+
+						<span class="font-medium text-gray-700 dark:text-gray-200">
+							{$i18n.t('Microsoft OneDrive')}
+						</span>
 					</button>
+
+					<div class="mx-3 my-1 h-px bg-gray-200 dark:bg-gray-700/70" />
 
 					{#if $config?.features?.enable_onedrive_personal}
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl text-left"
+							class="group flex gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 text-left"
 							on:click={() => {
 								uploadOneDriveHandler('personal');
 							}}
 						>
 							<div class="flex flex-col">
-								<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</div>
+								<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</span>
 							</div>
 						</DropdownMenu.Item>
 					{/if}
 
 					{#if $config?.features?.enable_onedrive_business}
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl text-left"
+							class="group flex gap-2.5 items-center px-3 py-2 text-sm cursor-pointer rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 text-left"
 							on:click={() => {
 								uploadOneDriveHandler('organizations');
 							}}
 						>
 							<div class="flex flex-col">
-								<div class="line-clamp-1">
+								<span class="font-medium text-gray-700 dark:text-gray-200 line-clamp-1">
 									{$i18n.t('Microsoft OneDrive (work/school)')}
-								</div>
-								<div class="text-xs text-gray-500">{$i18n.t('Includes SharePoint')}</div>
+								</span>
+								<span class="text-xs text-gray-500 dark:text-gray-400">{$i18n.t('Includes SharePoint')}</span>
 							</div>
 						</DropdownMenu.Item>
 					{/if}

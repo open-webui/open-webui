@@ -2,16 +2,23 @@
 	import { goto } from '$app/navigation';
 	import { WEBUI_NAME, config } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
+	import { WEBUI_BASE_URL, syncWebuiBaseUrl } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+	let backendBaseUrl = '';
+	let backendError = '';
+	const BACKEND_ERROR_KEY = 'webui.backendError';
 
 	onMount(async () => {
 		if ($config) {
 			await goto('/');
 		}
 
+		syncWebuiBaseUrl();
+		backendBaseUrl = WEBUI_BASE_URL || '';
+		backendError = sessionStorage.getItem(BACKEND_ERROR_KEY) ?? '';
 		loaded = true;
 	});
 </script>
@@ -29,6 +36,18 @@
 						{$i18n.t(
 							"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend."
 						)}
+
+						{#if backendBaseUrl}
+							<div class="mt-3 text-xs text-gray-500 break-words">
+								{$i18n.t('Current URL')}: {backendBaseUrl}
+							</div>
+						{/if}
+
+						{#if backendError}
+							<div class="mt-2 text-xs text-red-500 break-words">
+								{$i18n.t('Last error')}: {backendError}
+							</div>
+						{/if}
 
 						<br class=" " />
 						<br class=" " />

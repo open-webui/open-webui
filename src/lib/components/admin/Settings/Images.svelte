@@ -303,7 +303,7 @@
 		saveHandler();
 	}}
 >
-	<div class="space-y-4 overflow-y-scroll scrollbar-hidden pr-2">
+	<div class="space-y-4 overflow-y-auto scrollbar-hidden">
 		{#if config}
 			<div class="max-w-5xl mx-auto">
 				<div class="mb-3.5">

@@ -269,7 +269,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="space-y-4 overflow-y-scroll scrollbar-hidden h-full">
+	<div class="space-y-4 overflow-y-auto scrollbar-hidden h-full">
 		<div class="max-w-5xl mx-auto flex flex-col gap-4">
 			<div>
 				<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>

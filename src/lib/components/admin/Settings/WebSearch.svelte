@@ -141,7 +141,7 @@
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+	<div class=" space-y-3 overflow-y-auto scrollbar-hidden h-full">
 		{#if webConfig}
 			<div class="max-w-5xl mx-auto">
 				<div class="mb-3">
