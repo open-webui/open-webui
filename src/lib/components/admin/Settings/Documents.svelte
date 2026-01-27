@@ -57,7 +57,7 @@
 	let showResetUploadDirConfirm = false;
 
 	let embeddingEngine = 'portkey';
-	let embeddingModel = '@openai-embedding/text-embedding-3-small';
+	let embeddingModel = '';  // CRITICAL RBAC: No default - each admin must set their own model
 	let embeddingBatchSize = 1;
 	let rerankingModel = '';
 
@@ -159,8 +159,24 @@
 		updateEmbeddingModelLoading = false;
 
 		if (res) {
-			console.log('embeddingModelUpdateHandler:', res);
+			console.log('[RBAC_UI] embeddingModelUpdateHandler response:', res);
 			if (res.status === true) {
+				// CRITICAL RBAC: Update UI state from backend response to ensure we show the correct per-admin values
+				// This prevents one admin from seeing another admin's values on the same pod
+				if (res.embedding_model !== undefined) {
+					embeddingModel = res.embedding_model || '';
+					console.log('[RBAC_UI] Updated embeddingModel from response:', embeddingModel);
+				}
+				if (res.openai_config?.key !== undefined) {
+					if (embeddingEngine === 'portkey') {
+						PortkeyKey = res.openai_config.key || '';
+					} else if (embeddingEngine === 'openai') {
+						OpenAIKey = res.openai_config.key || '';
+					}
+					console.log('[RBAC_UI] Updated API key from response (masked)');
+				}
+				// Re-fetch config to ensure we have the latest values
+				await setEmbeddingConfig();
 				toast.success($i18n.t('Embedding model set to "{{embedding_model}}"', res), {
 					duration: 1000 * 10
 				});
