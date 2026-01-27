@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { WEBUI_NAME, config, functions as _functions, models, settings, user } from '$lib/stores';
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -52,7 +52,9 @@
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
 
+	let searchQuery = '';
 	let query = '';
+	let searchDebounceTimer;
 	let selectedTag = '';
 	let selectedType = '';
 
@@ -69,6 +71,14 @@
 	let loaded = false;
 	let functions = null;
 	let filteredItems = [];
+
+	$: {
+		searchQuery;
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			query = searchQuery;
+		}, 300);
+	}
 
 	$: if (
 		functions &&
@@ -355,16 +365,16 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
+						bind:value={searchQuery}
 						placeholder={$i18n.t('Search Functions')}
 					/>
 
-					{#if query}
+					{#if searchQuery}
 						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 							<button
 								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 								on:click={() => {
-									query = '';
+									searchQuery = '';
 								}}
 							>
 								<XMark className="size-3" strokeWidth="2" />
