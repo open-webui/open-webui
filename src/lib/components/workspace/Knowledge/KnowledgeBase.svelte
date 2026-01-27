@@ -87,7 +87,9 @@
 
 	let inputFiles = null;
 
+	let searchQuery = '';
 	let query = '';
+	let debounceTimer;
 	let viewOption = null;
 	let sortKey = null;
 	let direction = null;
@@ -95,6 +97,18 @@
 	let currentPage = 1;
 	let fileItems = null;
 	let fileItemsTotal = null;
+
+	$: {
+		searchQuery;
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			query = searchQuery;
+		}, 300);
+	}
+
+	onDestroy(() => {
+		clearTimeout(debounceTimer);
+	});
 
 	const reset = () => {
 		currentPage = 1;
@@ -901,7 +915,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
+						bind:value={searchQuery}
 						placeholder={`${$i18n.t('Search Collection')}`}
 						on:focus={() => {
 							selectedFileId = null;
