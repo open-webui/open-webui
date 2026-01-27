@@ -747,9 +747,11 @@ async def update_rag_config(
     if form_data.chunk is not None:
         request.app.state.config.TEXT_SPLITTER = form_data.chunk.text_splitter
         # Validate and set chunk_size (must be > 0, default 1000)
+        log.info(f"[CHUNK_UPDATE] Received chunk_size={form_data.chunk.chunk_size}, chunk_overlap={form_data.chunk.chunk_overlap} from user={user.email}")
         chunk_size = form_data.chunk.chunk_size if form_data.chunk.chunk_size and form_data.chunk.chunk_size > 0 else 1000
-        # Validate and set chunk_overlap (must be >= 0, default 200)
-        chunk_overlap = form_data.chunk.chunk_overlap if form_data.chunk.chunk_overlap is not None and form_data.chunk.chunk_overlap >= 0 else 200
+        # Validate and set chunk_overlap (must be > 0, default 200) - treat 0 as invalid
+        chunk_overlap = form_data.chunk.chunk_overlap if form_data.chunk.chunk_overlap is not None and form_data.chunk.chunk_overlap > 0 else 200
+        log.info(f"[CHUNK_UPDATE] Validated and saving chunk_size={chunk_size}, chunk_overlap={chunk_overlap} for user={user.email}")
         request.app.state.config.CHUNK_SIZE.set(user.email, chunk_size)
         request.app.state.config.CHUNK_OVERLAP.set(user.email, chunk_overlap)
 
