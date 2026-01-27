@@ -174,7 +174,7 @@
 			</div>
 
 			<div class="flex w-full justify-end gap-1.5">
-				
+				<a
 					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
 					href="/workspace/knowledge/create"
 				>
