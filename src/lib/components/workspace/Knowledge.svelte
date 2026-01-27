@@ -4,7 +4,7 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, knowledge, user } from '$lib/stores';
@@ -35,7 +35,9 @@
 	let selectedItem = null;
 
 	let page = 1;
+	let searchQuery = '';
 	let query = '';
+	let debounceTimer;
 	let viewOption = '';
 
 	let items = null;
@@ -43,6 +45,24 @@
 
 	let allItemsLoaded = false;
 	let itemsLoading = false;
+
+	$: {
+		searchQuery;
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				query = searchQuery;
+			}, 300);
+		} else {
+			debounceTimer = setTimeout(() => {
+				// Initialize timer so subsequent changes trigger debounce
+			}, 0);
+		}
+	}
+
+	onDestroy(() => {
+		clearTimeout(debounceTimer);
+	});
 
 	$: if (loaded && query !== undefined && viewOption !== undefined) {
 		init();
@@ -182,15 +202,15 @@
 				</div>
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={query}
+					bind:value={searchQuery}
 					placeholder={$i18n.t('Search Knowledge')}
 				/>
-				{#if query}
+				{#if searchQuery}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:click={() => {
-								query = '';
+								searchQuery = '';
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />
