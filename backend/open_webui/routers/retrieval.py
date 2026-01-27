@@ -285,8 +285,11 @@ async def get_worker_status(request: Request, user=Depends(get_verified_user)):
 
 @router.get("/")
 async def get_status(request: Request, user=Depends(get_verified_user)):
-    chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
-    chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user.email)
+    # Get chunk settings with defaults (1000/200) if not configured or invalid
+    chunk_size_raw = request.app.state.config.CHUNK_SIZE.get(user.email)
+    chunk_size = chunk_size_raw if chunk_size_raw and chunk_size_raw > 0 else 1000
+    chunk_overlap_raw = request.app.state.config.CHUNK_OVERLAP.get(user.email)
+    chunk_overlap = chunk_overlap_raw if chunk_overlap_raw is not None and chunk_overlap_raw >= 0 else 200
     template = request.app.state.config.RAG_TEMPLATE.get(user.email)
 
     log.info(f"[get_status] user={user.email} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap} | template={template}")
@@ -294,8 +297,8 @@ async def get_status(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
         
-        "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email),
-        "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email),
+        "chunk_size": chunk_size,
+        "chunk_overlap": chunk_overlap,
         "template": request.app.state.config.RAG_TEMPLATE.get(user.email),
         "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -557,8 +560,8 @@ async def get_rag_config(request: Request, user=Depends(get_verified_user)):
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
-            "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email),
-            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email),
+            "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email) or 1000,
+            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email) if request.app.state.config.CHUNK_OVERLAP.get(user.email) is not None and request.app.state.config.CHUNK_OVERLAP.get(user.email) >= 0 else 200,
         },
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
@@ -743,8 +746,12 @@ async def update_rag_config(
 
     if form_data.chunk is not None:
         request.app.state.config.TEXT_SPLITTER = form_data.chunk.text_splitter
-        request.app.state.config.CHUNK_SIZE.set(user.email,form_data.chunk.chunk_size)
-        request.app.state.config.CHUNK_OVERLAP.set(user.email,form_data.chunk.chunk_overlap)
+        # Validate and set chunk_size (must be > 0, default 1000)
+        chunk_size = form_data.chunk.chunk_size if form_data.chunk.chunk_size and form_data.chunk.chunk_size > 0 else 1000
+        # Validate and set chunk_overlap (must be >= 0, default 200)
+        chunk_overlap = form_data.chunk.chunk_overlap if form_data.chunk.chunk_overlap is not None and form_data.chunk.chunk_overlap >= 0 else 200
+        request.app.state.config.CHUNK_SIZE.set(user.email, chunk_size)
+        request.app.state.config.CHUNK_OVERLAP.set(user.email, chunk_overlap)
 
     if form_data.youtube is not None:
         request.app.state.config.YOUTUBE_LOADER_LANGUAGE = form_data.youtube.language
@@ -857,8 +864,8 @@ async def update_rag_config(
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
-            "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email),
-            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email),
+            "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email) or 1000,
+            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email) if request.app.state.config.CHUNK_OVERLAP.get(user.email) is not None and request.app.state.config.CHUNK_OVERLAP.get(user.email) >= 0 else 200,
         },
         "youtube": {
             "language": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
@@ -968,10 +975,15 @@ def _get_user_chunk_settings(request: Request, user=None):
     if user_email:
         chunk_size = request.app.state.config.CHUNK_SIZE.get(user_email)
         chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user_email)
+        # Ensure defaults if get() returns None or invalid values (0 is invalid)
+        if not chunk_size or chunk_size <= 0:
+            chunk_size = 1000
+        if not chunk_overlap or chunk_overlap < 0:
+            chunk_overlap = 200
     else:
         # Use default chunk size if user is not available
-        chunk_size = request.app.state.config.CHUNK_SIZE.get(None) or 1000
-        chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(None) or 200
+        chunk_size = 1000
+        chunk_overlap = 200
     return user_email, chunk_size, chunk_overlap
 
 

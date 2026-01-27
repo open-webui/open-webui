@@ -2084,7 +2084,7 @@ CHUNK_SIZE = UserScopedConfig("rag.chunk_size", int(os.environ.get("CHUNK_SIZE",
 
 CHUNK_OVERLAP = UserScopedConfig(
     "rag.chunk_overlap",
-    int(os.environ.get("CHUNK_OVERLAP", "100")),
+    int(os.environ.get("CHUNK_OVERLAP", "200")),
 )
 
 # CHUNK_OVERLAP = PersistentConfig(

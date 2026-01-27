@@ -72,8 +72,8 @@
 	let showDocumentIntelligenceConfig = false;
 
 	let textSplitter = '';
-	let chunkSize = 0;
-	let chunkOverlap = 0;
+	let chunkSize = 1000;
+	let chunkOverlap = 200;
 	let pdfExtractImages = true;
 
 	let RAG_FULL_CONTEXT = false;
@@ -322,8 +322,9 @@
 			pdfExtractImages = res.pdf_extract_images;
 
 			textSplitter = res.chunk.text_splitter;
-			chunkSize = res.chunk.chunk_size;
-			chunkOverlap = res.chunk.chunk_overlap;
+			// Use defaults if backend returns 0 or undefined (means not configured)
+			chunkSize = res.chunk.chunk_size && res.chunk.chunk_size > 0 ? res.chunk.chunk_size : 1000;
+			chunkOverlap = res.chunk.chunk_overlap && res.chunk.chunk_overlap >= 0 ? res.chunk.chunk_overlap : 200;
 
 			RAG_FULL_CONTEXT = res.RAG_FULL_CONTEXT;
 			BYPASS_EMBEDDING_AND_RETRIEVAL = res.BYPASS_EMBEDDING_AND_RETRIEVAL;
