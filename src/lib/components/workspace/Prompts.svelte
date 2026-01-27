@@ -286,7 +286,7 @@
 						</div>
 					</button>
 				{/if}
-				
+				<a
 					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
 					href="/workspace/prompts/create"
 				>
