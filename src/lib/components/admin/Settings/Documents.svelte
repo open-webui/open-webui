@@ -219,6 +219,8 @@
 			}
 		}
 
+		console.log('BEFORE SAVE - chunkSize:', chunkSize, 'chunkOverlap:', chunkOverlap);
+		
 		const res = await updateRAGConfig(localStorage.token, {
 			email: $user.email,
 			pdf_extract_images: pdfExtractImages,
@@ -245,11 +247,27 @@
 			}
 		});
 
+		console.log('AFTER SAVE - Response:', res);
+		console.log('AFTER SAVE - res.chunk:', res?.chunk);
+		
 		// CRITICAL: Update UI state from backend response (backend may have corrected 0 values to defaults)
 		if (res && res.chunk) {
+			const newChunkSize = (res.chunk.chunk_size && res.chunk.chunk_size > 0) ? res.chunk.chunk_size : 1000;
+			const newChunkOverlap = (res.chunk.chunk_overlap && res.chunk.chunk_overlap > 0) ? res.chunk.chunk_overlap : 200;
+			console.log('UPDATING UI - newChunkSize:', newChunkSize, 'newChunkOverlap:', newChunkOverlap);
 			textSplitter = res.chunk.text_splitter;
-			chunkSize = (res.chunk.chunk_size && res.chunk.chunk_size > 0) ? res.chunk.chunk_size : 1000;
-			chunkOverlap = (res.chunk.chunk_overlap && res.chunk.chunk_overlap > 0) ? res.chunk.chunk_overlap : 200;
+			chunkSize = newChunkSize;
+			chunkOverlap = newChunkOverlap;
+			console.log('AFTER UPDATE - chunkSize:', chunkSize, 'chunkOverlap:', chunkOverlap);
+		} else {
+			console.error('NO RESPONSE OR NO CHUNK IN RESPONSE!', res);
+			// Force re-fetch if response is missing
+			const refreshRes = await getRAGConfig(localStorage.token, $user.email);
+			if (refreshRes && refreshRes.chunk) {
+				chunkSize = (refreshRes.chunk.chunk_size && refreshRes.chunk.chunk_size > 0) ? refreshRes.chunk.chunk_size : 1000;
+				chunkOverlap = (refreshRes.chunk.chunk_overlap && refreshRes.chunk.chunk_overlap > 0) ? refreshRes.chunk.chunk_overlap : 200;
+				textSplitter = refreshRes.chunk.text_splitter;
+			}
 		}
 
 		await updateQuerySettings(localStorage.token, {email: $user.email, ...querySettings});
@@ -325,14 +343,21 @@
 
 		const res = await getRAGConfig(localStorage.token, $user.email);
 
+		console.log('ONMOUNT - getRAGConfig response:', res);
+		console.log('ONMOUNT - res.chunk:', res?.chunk);
+
 		if (res) {
 			pdfExtractImages = res.pdf_extract_images;
 
 			textSplitter = res.chunk.text_splitter;
 			// Use defaults if backend returns 0, null, undefined, or invalid (means not configured)
 			// Backend should never return 0, but handle it defensively
-			chunkSize = (res.chunk.chunk_size && res.chunk.chunk_size > 0) ? res.chunk.chunk_size : 1000;
-			chunkOverlap = (res.chunk.chunk_overlap && res.chunk.chunk_overlap > 0) ? res.chunk.chunk_overlap : 200;
+			const loadedChunkSize = (res.chunk.chunk_size && res.chunk.chunk_size > 0) ? res.chunk.chunk_size : 1000;
+			const loadedChunkOverlap = (res.chunk.chunk_overlap && res.chunk.chunk_overlap > 0) ? res.chunk.chunk_overlap : 200;
+			console.log('ONMOUNT - Setting chunkSize:', loadedChunkSize, 'chunkOverlap:', loadedChunkOverlap);
+			chunkSize = loadedChunkSize;
+			chunkOverlap = loadedChunkOverlap;
+			console.log('ONMOUNT - After setting, chunkSize:', chunkSize, 'chunkOverlap:', chunkOverlap);
 
 			RAG_FULL_CONTEXT = res.RAG_FULL_CONTEXT;
 			BYPASS_EMBEDDING_AND_RETRIEVAL = res.BYPASS_EMBEDDING_AND_RETRIEVAL;
