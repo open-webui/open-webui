@@ -528,7 +528,21 @@
 	        const totalToProcess = new_files.length + changed_files.length;
 	        let processedCount = 0;
 	
-	        // Upload new files (no old version to delete)
+	        // STEP 1: Delete removed files FIRST
+	        // If a file was incorrectly classified as both "new" and "removed" (due to filename
+	        // matching issues), deleting first allows the subsequent upload to succeed.
+	        if (removed_file_ids.length > 0) {
+	            toast.info(
+	                $i18n.t('Removing {{count}} deleted files...', {
+	                    count: removed_file_ids.length
+	                })
+	            );
+	            for (const fileId of removed_file_ids) {
+	                await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+	            }
+	        }
+
+	        // STEP 2: Upload new files
 	        for (const filePath of new_files) {
 	            const fileData = directoryFiles.find((f) => f.path === filePath);
 	            if (fileData) {
@@ -543,7 +557,7 @@
 	            }
 	        }
 	
-	        // Upload changed files using atomic upload_and_replace endpoint
+	        // STEP 3: Upload changed files using atomic upload_and_replace endpoint
 	        for (const changedFile of changed_files) {
 	            const fileData = directoryFiles.find((f) => f.path === changedFile.file_path);
 	            if (fileData) {
@@ -560,18 +574,6 @@
 	                        total: totalToProcess
 	                    })
 	                );
-	            }
-	        }
-	
-	        // Delete removed files (files that no longer exist in directory)
-	        if (removed_file_ids.length > 0) {
-	            toast.info(
-	                $i18n.t('Removing {{count}} deleted files...', {
-	                    count: removed_file_ids.length
-	                })
-	            );
-	            for (const fileId of removed_file_ids) {
-	                await removeFileFromKnowledgeById(localStorage.token, id, fileId);
 	            }
 	        }
 	
