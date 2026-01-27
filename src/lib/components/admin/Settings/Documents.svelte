@@ -245,6 +245,13 @@
 			}
 		});
 
+		// CRITICAL: Update UI state from backend response (backend may have corrected 0 values to defaults)
+		if (res && res.chunk) {
+			textSplitter = res.chunk.text_splitter;
+			chunkSize = (res.chunk.chunk_size && res.chunk.chunk_size > 0) ? res.chunk.chunk_size : 1000;
+			chunkOverlap = (res.chunk.chunk_overlap && res.chunk.chunk_overlap > 0) ? res.chunk.chunk_overlap : 200;
+		}
+
 		await updateQuerySettings(localStorage.token, {email: $user.email, ...querySettings});
 
 		if (fileMaxSize === '' || fileMaxSize === null) {
