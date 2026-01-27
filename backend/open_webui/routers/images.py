@@ -910,7 +910,8 @@ async def image_edits(
         if isinstance(form_data.image, str):
             form_data.image = await load_url_image(form_data.image)
         elif isinstance(form_data.image, list):
-            form_data.image = [await load_url_image(img) for img in form_data.image]
+            # Load all images in parallel for better performance
+            form_data.image = list(await asyncio.gather(*[load_url_image(img) for img in form_data.image]))
     except Exception as e:
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
