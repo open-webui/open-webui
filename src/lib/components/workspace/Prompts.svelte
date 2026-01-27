@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
 	import {
@@ -31,6 +31,7 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+
 	let shiftKey = false;
 
 	const i18n = getContext('i18n');
@@ -39,6 +40,7 @@
 
 	let importFiles = null;
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let prompts = [];
 	let tags = [];
@@ -53,7 +55,14 @@
 
 	let filteredItems = [];
 
-	$: if (prompts && query !== undefined && viewOption !== undefined && selectedTag !== undefined) {
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			setFilteredItems();
+		}, 300);
+	}
+
+	$: if (prompts && viewOption !== undefined && selectedTag !== undefined) {
 		setFilteredItems();
 	}
 
@@ -169,10 +178,15 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
 		};
+	});
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 	});
 </script>
 
@@ -272,46 +286,6 @@
 						</div>
 					</button>
 				{/if}
-				<a
-					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
-					href="/workspace/prompts/create"
-				>
-					<Plus className="size-3" strokeWidth="2.5" />
-
-					<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Prompt')}</div>
-				</a>
-			</div>
-		</div>
-	</div>
-
-	<div
-		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
-	>
-		<div class=" flex w-full space-x-2 py-0.5 px-3.5 pb-2">
-			<div class="flex flex-1">
-				<div class=" self-center ml-1 mr-3">
-					<Search className="size-3.5" />
-				</div>
-				<input
-					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={query}
-					placeholder={$i18n.t('Search Prompts')}
-				/>
-
-				{#if query}
-					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
-						<button
-							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								query = '';
-							}}
-						>
-							<XMark className="size-3" strokeWidth="2" />
-						</button>
-					</div>
-				{/if}
-			</div>
-		</div>
 
 		<div
 			class="px-3 flex w-full bg-transparent overflow-x-auto scrollbar-none -mx-1"
