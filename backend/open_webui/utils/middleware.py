@@ -64,7 +64,11 @@ from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
-from open_webui.retrieval.utils import get_sources_from_files
+from open_webui.retrieval.utils import (
+    get_sources_from_files,
+    get_embedding_function,
+    get_ef,
+)
 
 
 from open_webui.utils.chat import generate_chat_completion
@@ -589,24 +593,73 @@ async def chat_completion_files_handler(
             log.debug(f"Using user message as RAG query fallback: {queries}")
 
         try:
-            # Offload get_sources_from_files to module-level thread pool (more efficient)
-            loop = asyncio.get_running_loop()
-            sources = await loop.run_in_executor(
-                _RAG_EXECUTOR,
-                lambda: get_sources_from_files(
-                    request=request,
-                    files=files,
-                    queries=queries,
-                    embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
-                        query, user=user
-                    ),
-                    k=request.app.state.config.TOP_K.get(user.email),
-                    reranking_function=request.app.state.rf,
-                    r=request.app.state.config.RELEVANCE_THRESHOLD,
-                    hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.get(user.email),
-                    full_context=request.app.state.config.RAG_FULL_CONTEXT.get(user.email),
-                ),
-            )
+            # RBAC: Create embedding function on-the-fly using user's per-admin model/key
+            # This ensures each user uses their own (or their group admin's) model/key
+            user_email = user.email if user else None
+            if not user_email:
+                log.error("No user email available for RAG query - cannot determine per-admin model/key")
+                sources = []
+            else:
+                # Get per-admin model and key for the user
+                owner_model = request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(user_email)
+                owner_key = request.app.state.config.RAG_OPENAI_API_KEY.get(user_email)
+                
+                # Validate both are present (no fallback)
+                if not owner_model or not owner_model.strip():
+                    log.error(
+                        f"No embedding model configured for user {user_email}. "
+                        f"RAG query will fail. Please configure in Settings > Documents."
+                    )
+                    sources = []
+                elif not owner_key or not owner_key.strip():
+                    log.error(
+                        f"No embedding API key configured for user {user_email}. "
+                        f"RAG query will fail. Please configure in Settings > Documents."
+                    )
+                    sources = []
+                else:
+                    # Get base URL (global, with fallback)
+                    base_url_config = request.app.state.config.RAG_OPENAI_API_BASE_URL
+                    base_url = (
+                        base_url_config.value
+                        if hasattr(base_url_config, 'value')
+                        else str(base_url_config)
+                    )
+                    if not base_url or base_url.strip() == "":
+                        base_url = "https://ai-gateway.apps.cloud.rt.nyu.edu/v1"
+                    
+                    # Create embedding function using per-admin model/key
+                    ef = get_ef(
+                        request.app.state.config.RAG_EMBEDDING_ENGINE,
+                        owner_model,  # RBAC: Per-admin model (not global)
+                    )
+                    user_embedding_function = get_embedding_function(
+                        request.app.state.config.RAG_EMBEDDING_ENGINE,
+                        owner_model,  # RBAC: Per-admin model (not global)
+                        ef,
+                        base_url,
+                        owner_key,  # RBAC: Per-admin key (not global)
+                        request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+                    )
+                    
+                    # Offload get_sources_from_files to module-level thread pool (more efficient)
+                    loop = asyncio.get_running_loop()
+                    sources = await loop.run_in_executor(
+                        _RAG_EXECUTOR,
+                        lambda: get_sources_from_files(
+                            request=request,
+                            files=files,
+                            queries=queries,
+                            embedding_function=lambda query: user_embedding_function(
+                                query, user=user
+                            ),
+                            k=request.app.state.config.TOP_K.get(user.email),
+                            reranking_function=request.app.state.rf,
+                            r=request.app.state.config.RELEVANCE_THRESHOLD,
+                            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.get(user.email),
+                            full_context=request.app.state.config.RAG_FULL_CONTEXT.get(user.email),
+                        ),
+                    )
         except Exception as e:
             log.exception(e)
 

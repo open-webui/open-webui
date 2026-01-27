@@ -177,6 +177,8 @@ def enqueue_file_processing_job(
     collection_name: Optional[str] = None,
     knowledge_id: Optional[str] = None,
     user_id: Optional[str] = None,
+    owner_email: Optional[str] = None,
+    embedding_model: Optional[str] = None,
     embedding_api_key: Optional[str] = None,
     job_timeout: int = DEFAULT_JOB_TIMEOUT,
 ) -> Optional[str]:
@@ -189,6 +191,8 @@ def enqueue_file_processing_job(
         collection_name: Optional collection name for embeddings (must be JSON-serializable)
         knowledge_id: Optional knowledge base ID (must be JSON-serializable)
         user_id: User ID who initiated the processing (must be JSON-serializable)
+        owner_email: Email of the admin who owns the KB/file (for RBAC - per-admin model/key lookup)
+        embedding_model: Per-admin embedding model name (resolved at enqueue time for RBAC)
         embedding_api_key: API key for embedding service (per-user, from admin config)
         job_timeout: Job timeout in seconds (default: 1 hour)
         
@@ -211,6 +215,8 @@ def enqueue_file_processing_job(
             "collection_name": collection_name,
             "knowledge_id": knowledge_id,
             "user_id": user_id,
+            "owner_email": owner_email,
+            "embedding_model": embedding_model,
             "embedding_api_key": embedding_api_key,
         })
     except (TypeError, ValueError) as e:
@@ -269,12 +275,15 @@ def enqueue_file_processing_job(
                 trace_context = {}
         
         # Prepare job arguments (serializable data only)
+        # RBAC: Include owner_email and embedding_model for per-admin model/key resolution in worker
         job_kwargs = {
             "file_id": file_id,
             "content": content,
             "collection_name": collection_name,
             "knowledge_id": knowledge_id,
             "user_id": user_id,
+            "owner_email": owner_email,  # KB owner or uploader (for RBAC)
+            "embedding_model": embedding_model,  # Per-admin model name (resolved at enqueue time)
             "embedding_api_key": embedding_api_key,
         }
         

@@ -53,6 +53,7 @@ from open_webui.config import (
     # Import all RAG config objects needed by worker
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_MODEL,
+    RAG_EMBEDDING_MODEL_USER,  # RBAC: Per-admin model name
     RAG_EMBEDDING_BATCH_SIZE,
     RAG_RERANKING_MODEL,
     RAG_OPENAI_API_BASE_URL,
@@ -172,6 +173,7 @@ def get_worker_config():
             # Assign all RAG config values to AppConfig (same as main.py)
             _worker_config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
             _worker_config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
+            _worker_config.RAG_EMBEDDING_MODEL_USER = RAG_EMBEDDING_MODEL_USER  # RBAC: Per-admin model name
             _worker_config.RAG_EMBEDDING_BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE
             _worker_config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
             _worker_config.RAG_OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
@@ -411,6 +413,8 @@ def process_file_job(
     collection_name: Optional[str] = None,
     knowledge_id: Optional[str] = None,
     user_id: Optional[str] = None,
+    owner_email: Optional[str] = None,
+    embedding_model: Optional[str] = None,
     embedding_api_key: Optional[str] = None,
     _otel_trace_context: Optional[dict] = None,
 ) -> dict:
@@ -423,6 +427,8 @@ def process_file_job(
         collection_name: Optional collection name for embeddings
         knowledge_id: Optional knowledge base ID
         user_id: User ID who initiated the processing
+        owner_email: Email of the admin who owns the KB/file (for RBAC - per-admin model/key lookup)
+        embedding_model: Per-admin embedding model name (resolved at enqueue time for RBAC)
         embedding_api_key: API key for embedding service (per-user, from admin config)
         _otel_trace_context: Optional trace context for distributed tracing (internal use)
         
@@ -437,6 +443,8 @@ def process_file_job(
     log.debug(f"  knowledge_id: {knowledge_id}")
     log.debug(f"  collection_name: {collection_name}")
     log.debug(f"  content provided: {bool(content)}")
+    log.debug(f"  owner_email: {owner_email}")
+    log.debug(f"  embedding_model: {embedding_model}")
     log.debug(f"  embedding_api_key provided: {bool(embedding_api_key)}")
     log.debug("=" * 80)
     
@@ -490,15 +498,39 @@ def process_file_job(
                 try:
                     request = MockRequest(embedding_api_key=embedding_api_key)
                     
-                    # CRITICAL: Validate API key BEFORE initialization
+                    # RBAC: Validate owner_email, embedding_model, and API key BEFORE initialization
+                    if not owner_email or not owner_email.strip():
+                        error_msg = (
+                            f"No owner_email provided in job for file_id={file_id}! "
+                            f"This is required for RBAC (per-admin model/key lookup)."
+                        )
+                        log.error(error_msg)
+                        raise ValueError(error_msg)
+                    
+                    if not embedding_model or not embedding_model.strip():
+                        error_msg = (
+                            f"No embedding_model provided in job for file_id={file_id}! "
+                            f"This is required for RBAC (per-admin model). "
+                            f"Owner: {owner_email}"
+                        )
+                        log.error(error_msg)
+                        raise ValueError(error_msg)
+                    
                     if not embedding_api_key or not embedding_api_key.strip():
                         error_msg = (
                             f"No embedding API key provided in job for file_id={file_id}! "
                             f"This will cause embedding generation to fail. "
-                            f"The API key should have been retrieved from admin config and passed to the job."
+                            f"The API key should have been retrieved from admin config and passed to the job. "
+                            f"Owner: {owner_email}"
                         )
                         log.error(error_msg)
                         raise ValueError(error_msg)
+                    
+                    log.info(
+                        f"[JOB] RBAC Config: owner_email={owner_email}, "
+                        f"embedding_model={embedding_model}, "
+                        f"api_key_length={len(embedding_api_key) if embedding_api_key else 0}"
+                    )
                     
                     # CRITICAL: Initialize EMBEDDING_FUNCTION per-job with the correct per-user/per-admin API key
                     # This ensures RBAC-protected API keys are used (each admin has their own key)
@@ -536,19 +568,25 @@ def process_file_job(
                                     "processing without user context"
                                 )
                             else:
-                                # CRITICAL: Set the user's API key in the config for save_docs_to_vector_db
-                                # This ensures RBAC-protected API keys are used (each admin has their own key)
-                                # Users inherit from their group admin's key
-                                if embedding_api_key and user.email:
+                                # RBAC: Set the owner's model and API key in the config for save_docs_to_vector_db
+                                # This ensures RBAC-protected model/key are used (each admin has their own)
+                                # Users inherit from their group admin's model/key
+                                if owner_email and embedding_model and embedding_api_key:
                                     try:
-                                        # Update the config with the user's API key to ensure consistency
-                                        # This is important because save_docs_to_vector_db retrieves the key from config
+                                        # Update the config with the owner's model and key to ensure consistency
+                                        # This is important because save_docs_to_vector_db retrieves from config
                                         if request.app.state.config.RAG_EMBEDDING_ENGINE in ["openai", "portkey"]:
-                                            # Set the user's API key in the config cache (RBAC-protected)
-                                            request.app.state.config.RAG_OPENAI_API_KEY.set(user.email, embedding_api_key)
+                                            # Set the owner's model and API key in the config (RBAC-protected)
+                                            request.app.state.config.RAG_EMBEDDING_MODEL_USER.set(owner_email, embedding_model)
+                                            request.app.state.config.RAG_OPENAI_API_KEY.set(owner_email, embedding_api_key)
+                                            log.info(
+                                                f"[JOB] RBAC Config Set: owner_email={owner_email}, "
+                                                f"model={embedding_model}, key_length={len(embedding_api_key)}"
+                                            )
                                     except Exception as config_update_error:
-                                        # Non-critical - the key is already passed and will be used as fallback
-                                        log.warning(f"Could not update config with user API key: {config_update_error}")
+                                        # Critical - model/key must be set for RBAC
+                                        log.error(f"Could not update config with owner model/key: {config_update_error}")
+                                        raise
                         except Exception as user_error:
                             log.warning(
                                 f"Error retrieving user {user_id} for file processing (file_id={file_id}): {user_error}, "
@@ -991,6 +1029,7 @@ def process_file_job(
                             file_collection = f"file-{file.id}"
                             collections = [file_collection, knowledge_id]
 
+                            # RBAC: Pass owner_email so save_docs_to_multiple_collections uses per-admin model/key
                             result = save_docs_to_multiple_collections(
                                 request,
                                 docs=docs,
@@ -1001,6 +1040,7 @@ def process_file_job(
                                     "hash": hash,
                                 },
                                 user=user,  # Use user object if available
+                                owner_email=owner_email,  # RBAC: Per-admin model/key lookup
                             )
 
                             # Use file collection name for file metadata
@@ -1027,6 +1067,7 @@ def process_file_job(
                         else:
                             file_collection = f"file-{file.id}"
                             log.info(f"[EMBED] SINGLE_COLLECTION | file_id={file.id} | collection={file_collection}")
+                            # RBAC: Pass owner_email so save_docs_to_vector_db uses per-admin model/key
                             result = save_docs_to_vector_db(
                                 request,
                                 docs=docs,
@@ -1038,6 +1079,7 @@ def process_file_job(
                                 },
                                 add=(True if collection_name else False),
                                 user=user,  # Use user object if available
+                                owner_email=owner_email,  # RBAC: Per-admin model/key lookup
                             )
 
                             if result:

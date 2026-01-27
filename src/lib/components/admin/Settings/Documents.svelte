@@ -99,22 +99,40 @@
 	};
 
 	const embeddingModelUpdateHandler = async () => {
-		// Portkey is the only supported embedding engine - enforce it
-		if (embeddingEngine !== 'portkey') {
-			embeddingEngine = 'portkey';
-			if (!embeddingModel || embeddingModel === '') {
-				embeddingModel = '@openai-embedding/text-embedding-3-small';
-			}
-		}
-		
-		if (embeddingEngine === 'portkey' && (PortkeyKey === '' || PortkeyUrl === '')) {
-			toast.error($i18n.t('Portkey URL/Key required.'));
+		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
+			toast.error(
+				$i18n.t(
+					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
+				)
+			);
 			return;
 		}
-		
-		// Ensure model is set to default if empty
-		if (!embeddingModel || embeddingModel === '') {
-			embeddingModel = '@openai-embedding/text-embedding-3-small';
+		if (embeddingEngine === 'ollama' && embeddingModel === '') {
+			toast.error(
+				$i18n.t(
+					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
+				)
+			);
+			return;
+		}
+
+		// Embedding model is mandatory for OpenAI/Portkey engines
+		if (
+			(embeddingEngine === 'openai' || embeddingEngine === 'portkey') &&
+			(embeddingModel === '' || embeddingModel.trim() === '')
+		) {
+			toast.error($i18n.t('Embedding model required.'));
+			return;
+		}
+
+		// API key is mandatory for OpenAI/Portkey engines (URL may fall back on backend)
+		if (embeddingEngine === 'openai' && OpenAIKey === '') {
+			toast.error($i18n.t('OpenAI API key required.'));
+			return;
+		}
+		if (embeddingEngine === 'portkey' && PortkeyKey === '') {
+			toast.error($i18n.t('PORTKEY API key required.'));
+			return;
 		}
 
 		console.log('Update embedding model attempt:', embeddingModel);
@@ -122,7 +140,7 @@
 		updateEmbeddingModelLoading = true;
 		const res = await updateEmbeddingConfig(localStorage.token, {
 			email: $user.email,
-			embedding_engine: 'portkey', // Always use Portkey
+			embedding_engine: embeddingEngine,
 			embedding_model: embeddingModel,
 			embedding_batch_size: embeddingBatchSize,
 			ollama_config: {
@@ -130,8 +148,8 @@
 				url: OllamaUrl
 			},
 			openai_config: {
-				key: PortkeyKey,
-				url: PortkeyUrl
+				key: embeddingEngine === 'portkey' ? PortkeyKey : OpenAIKey,
+				url: embeddingEngine === 'portkey' ? PortkeyUrl : OpenAIUrl
 			}
 		}).catch(async (error) => {
 			toast.error(`${error}`);
@@ -244,36 +262,29 @@
 
 		if (embeddingConfig) {
 			embeddingEngine = embeddingConfig.embedding_engine || 'portkey';
-			if (!embeddingConfig.embedding_model) {
-				if (embeddingConfig.embedding_engine === 'portkey') {
-					embeddingModel = '@openai-embedding/text-embedding-3-small'; 
-				} else if (embeddingConfig.embedding_engine === '') {
-					embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
-				} else {
-					embeddingModel = '';
-				}
-			} else {
-				embeddingModel = embeddingConfig.embedding_model;
-			}
+			// Do not apply any fallback/default for model name; it must be explicitly set per admin.
+			embeddingModel = embeddingConfig.embedding_model || '';
 
 
 
 			// embeddingModel = embeddingConfig.embedding_model;
 			embeddingBatchSize = embeddingConfig.embedding_batch_size ?? 1;
 
-			// Portkey is the only supported embedding engine
-			if (embeddingConfig.embedding_engine === 'portkey' || embeddingConfig.embedding_engine === 'openai') {
-				// Handle both 'portkey' and legacy 'openai' configs for Portkey
+			if (embeddingConfig.embedding_engine === 'portkey') {
 				PortkeyKey = embeddingConfig.openai_config?.key || PortkeyKey;
 				PortkeyUrl = embeddingConfig.openai_config?.url || PortkeyUrl;
+			} else if (embeddingConfig.embedding_engine === 'openai') {
+				OpenAIKey = embeddingConfig.openai_config?.key || OpenAIKey;
+				OpenAIUrl = embeddingConfig.openai_config?.url || OpenAIUrl;
 			}
 
 
 			OllamaKey = embeddingConfig.ollama_config.key;
 			OllamaUrl = embeddingConfig.ollama_config.url;
 		} else {
-		embeddingEngine = 'portkey';
-		embeddingModel = '@openai-embedding/text-embedding-3-small';
+			// No embedding config yet for this admin; force explicit entry.
+			embeddingEngine = 'portkey';
+			embeddingModel = '';
 		}
 	};
 
@@ -517,26 +528,59 @@
 									bind:value={embeddingEngine}
 									aria-label="Select an embedding model engine"
 									placeholder="Select an embedding model engine"
-									disabled={true}
 									on:change={(e) => {
-										// Portkey is the only supported embedding engine
-										embeddingEngine = 'portkey';
-										embeddingModel = '@openai-embedding/text-embedding-3-small';
+										if (e.target.value === 'ollama') {
+											embeddingModel = '';
+										} else if (e.target.value === 'openai') {
+											embeddingModel = 'text-embedding-3-small';
+										} else if (e.target.value === 'portkey') {
+											embeddingModel = '@openai-embedding/text-embedding-3-small'
+										} else if (e.target.value === '') {
+											embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
+										}
 									}}
 								>
-									<option value="portkey">{$i18n.t('Portkey')} (Default)</option>
+									<!-- <option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
+									<option value="ollama">{$i18n.t('Ollama')}</option>
+									<option value="openai">{$i18n.t('OpenAI')}</option> -->
+									<option value="portkey">{$i18n.t('Portkey')}</option>
 								</select>
 							</div>
 						</div>
 
-						{#if embeddingEngine === 'portkey'}
+						{#if embeddingEngine === 'openai'}
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('API Base URL')}
+									bind:value={OpenAIUrl}
+									required
+								/>
+
+								<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
+							</div>
+						{:else if embeddingEngine === 'ollama'}
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('API Base URL')}
+									bind:value={OllamaUrl}
+									required
+								/>
+
+								<SensitiveInput
+									placeholder={$i18n.t('API Key')}
+									bind:value={OllamaKey}
+									required={false}
+								/>
+							</div>
+						{:else if embeddingEngine === 'portkey'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
 									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
 									placeholder={$i18n.t('API Base URL')}
 									bind:value={PortkeyUrl}
 									required
-									readonly={true}
 								/>
 								<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={PortkeyKey} />
 							</div>
@@ -637,7 +681,7 @@
 						</div>
 					</div>
 
-					{#if embeddingEngine === 'portkey'}
+					{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' || embeddingEngine == 'portkey'}
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Batch Size')}</div>
 

@@ -2000,12 +2000,24 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
     os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true",
 )
 
+# DEPRECATED: Legacy global embedding model - NOT USED for RAG operations
+# We only use Portkey for embeddings, and each admin has their own model name (see RAG_EMBEDDING_MODEL_USER below)
 RAG_EMBEDDING_MODEL = PersistentConfig(
     "RAG_EMBEDDING_MODEL",
     "rag.embedding_model",
-    os.environ.get("RAG_EMBEDDING_MODEL", "@openai-embedding/text-embedding-3-small"),
+    # No hardcoded default model; must be configured explicitly by an admin.
+    os.environ.get("RAG_EMBEDDING_MODEL", ""),
 )
-log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
+log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value!r}")
+
+# Per-admin embedding model name (RBAC-scoped)
+# Each admin sets their own model name that applies to them and their user group
+# No hardcoded default - admins must configure their own model name
+# This is used for all RAG operations (file embeddings, query embeddings)
+RAG_EMBEDDING_MODEL_USER = UserScopedConfig(
+    "rag.embedding_model_user",
+    os.getenv("RAG_EMBEDDING_MODEL_USER", ""),  # Empty default - must be configured by admin
+)
 
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE
