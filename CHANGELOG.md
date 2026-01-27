@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.3] - 2026-01-26
+## [0.7.3] - 2026-01-28
 
 ### Added
 
@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💬 The "Reference Chats" option now appears in the message input menu even when the sidebar is collapsed, fixing the issue where it was hidden on mobile devices and at first load. [#20827](https://github.com/open-webui/open-webui/issues/20827), [Commit](https://github.com/open-webui/open-webui/commit/a3600e8b219fc4c019b95258d16bd3e2827490c6)
 - 🔍 The "search_chats" builtin tool now excludes the current conversation from search results, preventing redundant matches. [#20718](https://github.com/open-webui/open-webui/issues/20718), [Commit](https://github.com/open-webui/open-webui/commit/1a4bdd2b30017d901b9cac1e2e10684ec1edd062)
 - 🖼️ Code blocks within model reasoning sections no longer incorrectly render as interactive artifacts, ensuring only intended output displays as previews. [#20801](https://github.com/open-webui/open-webui/issues/20801), [#20877](https://github.com/open-webui/open-webui/pull/20877), [Commit](https://github.com/open-webui/open-webui/commit/4c6f100b5fe2145a3d676b70b5f7c0e7f07cee20)
-- 💻 Code execution now works reliably when models wrap code in markdown fences, automatically stripping the backticks before execution to prevent syntax errors that affected most non-GPT models. [#20941](https://github.com/open-webui/open-webui/issues/20941), [Commit](https://github.com/open-webui/open-webui/commit/4a5516775927aaf002212f2e09c55a17c699bc46)
+- 💻 Code execution now works reliably when models wrap code in markdown fences, automatically stripping the backticks before execution to prevent syntax errors that affected most non-GPT models. [#20941](https://github.com/open-webui/open-webui/issues/20941), [Commit](https://github.com/open-webui/open-webui/commit/4a5516775927aaf002212f2e09c55a17c699bc46), [Commit](https://github.com/open-webui/open-webui/commit/683438b418fb3b453a8ad88c1ba1a9944eac3593)
 - 🧠 Knowledge base queries no longer fail intermittently when models send tool call parameters as strings instead of their expected types. [#20705](https://github.com/open-webui/open-webui/pull/20705)
 - 📚 Reindexing knowledge base files now works correctly instead of failing with duplicate content errors. [#20854](https://github.com/open-webui/open-webui/issues/20854), [#20857](https://github.com/open-webui/open-webui/pull/20857)
 - 📋 Batch file processing operations now return properly structured error information when failures occur, making it clearer what went wrong during multi-file operations. [#20795](https://github.com/open-webui/open-webui/issues/20795), [Commit](https://github.com/open-webui/open-webui/commit/68b2872ed645cffb641fa5a21a784d6e9ea0d72b)
@@ -60,6 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎨 Long model names and IDs in the admin panel now truncate properly to prevent visual overflow, with full names visible on hover. [#20696](https://github.com/open-webui/open-webui/pull/20696)
 - 👥 Filtering users in the admin panel now automatically resets to page 1, preventing empty results when searching from pages beyond the first. [#20723](https://github.com/open-webui/open-webui/pull/20723), [Commit](https://github.com/open-webui/open-webui/commit/be75bc506adb048ef11b1612c0e3662511c920d0)
 - 🔎 Searching for users by username now works correctly on Models, Knowledge, and Functions workspace pages, making it easier to find resources owned by specific users. [#20780](https://github.com/open-webui/open-webui/pull/20780)
+
+### Changed
+
+- ⚠️ **IMPORTANT: Database Migration Required** — This release includes database schema changes to the prompts system; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances.
+- 🔗 Prompts now use unique ID-based URLs instead of command-based URLs, allowing more flexible command renaming without breaking saved links or integrations. [#20945](https://github.com/open-webui/open-webui/pull/20945)
 
 ### Changed
 
