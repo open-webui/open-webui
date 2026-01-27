@@ -519,7 +519,11 @@
 										placeholder={$i18n.t('Enter Chunk Size')}
 										bind:value={chunkSize}
 										autocomplete="off"
-										min="0"
+										min="1"
+										on:input={(e) => {
+											const val = parseInt(e.target.value) || 0;
+											chunkSize = val > 0 ? val : 1000;
+										}}
 									/>
 								</div>
 							</div>
@@ -537,6 +541,10 @@
 										bind:value={chunkOverlap}
 										autocomplete="off"
 										min="0"
+										on:input={(e) => {
+											const val = parseInt(e.target.value) || 0;
+											chunkOverlap = val > 0 ? val : 200;
+										}}
 									/>
 								</div>
 							</div>
