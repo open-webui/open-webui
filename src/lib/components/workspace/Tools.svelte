@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, config, prompts, tools as _tools, user } from '$lib/stores';
@@ -46,7 +46,9 @@
 	let importFiles;
 
 	let showConfirm = false;
+	let searchQuery = '';
 	let query = '';
+	let searchDebounceTimer;
 
 	let showManifestModal = false;
 	let showValvesModal = false;
@@ -61,6 +63,14 @@
 	let viewOption = '';
 
 	let showImportModal = false;
+
+	$: {
+		searchQuery;
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			query = searchQuery;
+		}, 300);
+	}
 
 	$: if (tools && query !== undefined && viewOption !== undefined) {
 		setFilteredItems();
@@ -179,10 +189,15 @@
 		window.addEventListener('blur-sm', onBlur);
 
 		return () => {
+			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur-sm', onBlur);
 		};
+	});
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 	});
 </script>
 
@@ -311,15 +326,15 @@
 				</div>
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={query}
+					bind:value={searchQuery}
 					placeholder={$i18n.t('Search Tools')}
 				/>
-				{#if query}
+				{#if searchQuery}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:click={() => {
-								query = '';
+								searchQuery = '';
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />
