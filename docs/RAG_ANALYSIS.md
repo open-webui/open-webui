@@ -1169,3 +1169,842 @@ Retrieval (Hybrid) → [Reranking] → Template → [Generación]
 6. **Documenta tus hallazgos** por tipo de PDF (tablas vs narrativo, técnico vs general, etc.)
 
 ¡Buena suerte con tu especialización en RAG! 🚀
+
+---
+---
+
+# ANÁLISIS EN PROFUNDIDAD DEL MÓDULO DE RETRIEVAL
+
+Este documento proporciona un análisis exhaustivo y técnico del subsistema de retrieval en Open WebUI, cubriendo todos los aspectos desde la arquitectura hasta los riesgos y mejoras.
+
+---
+
+## Índice del Análisis en Profundidad
+
+1. [Arquitectura del Sistema de Retrieval](#1-arquitectura-del-sistema-de-retrieval)
+2. [Construcción e Indexación](#2-construcción-e-indexación)
+3. [Estrategias de Chunking y Preprocesado](#3-estrategias-de-chunking-y-preprocesado)
+4. [Proceso de Consulta y Búsqueda](#4-proceso-de-consulta-y-búsqueda)
+5. [Almacenamiento Vectorial](#5-almacenamiento-vectorial)
+6. [Calidad y Métricas](#6-calidad-y-métricas)
+7. [Rendimiento y Coste](#7-rendimiento-y-coste)
+8. [Observabilidad y Trazabilidad](#8-observabilidad-y-trazabilidad)
+9. [Riesgos y Edge Cases](#9-riesgos-y-edge-cases)
+10. [Recomendaciones de Mejora](#10-recomendaciones-de-mejora)
+
+---
+
+## 1. Arquitectura del Sistema de Retrieval
+
+### 1.1 Visión General de Componentes
+
+El sistema de retrieval en Open WebUI sigue una arquitectura modular basada en el patrón RAG (Retrieval-Augmented Generation):
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    ARQUITECTURA DE RETRIEVAL                     │
+└─────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│   Content    │───→│   Chunking   │───→│  Embedding   │
+│  Extraction  │    │   Engine     │    │   Engine     │
+└──────────────┘    └──────────────┘    └──────────────┘
+       ↓                    ↓                    ↓
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│   Document   │    │    Chunks    │    │   Vectors    │
+│   Loaders    │    │  + Metadata  │    │  + Metadata  │
+└──────────────┘    └──────────────┘    └──────────────┘
+                                                ↓
+                                        ┌──────────────┐
+                                        │  Vector DB   │
+                                        │   Storage    │
+                                        └──────────────┘
+                                                ↓
+┌──────────────────────────────────────────────────────────┐
+│                    QUERY PIPELINE                         │
+└──────────────────────────────────────────────────────────┘
+                                                
+Query → Embedding → Vector Search ──┐
+                                     ├→ Ensemble → Reranking → Results
+Query ────────────→ BM25 Search ────┘
+```
+
+### 1.2 Módulos Principales
+
+| Módulo | Archivo | Responsabilidad |
+|--------|---------|-----------------|
+| **Router** | `backend/open_webui/routers/retrieval.py` | API endpoints, orchestración del flujo |
+| **Utils** | `backend/open_webui/retrieval/utils.py` | Funciones core de retrieval, embeddings, reranking |
+| **Vector Factory** | `backend/open_webui/retrieval/vector/factory.py` | Abstracción de bases de datos vectoriales |
+| **Loaders** | `backend/open_webui/retrieval/loaders/` | Extracción de contenido por tipo de archivo |
+| **Rerankers** | `backend/open_webui/retrieval/models/` | Modelos de reranking (ColBERT, CrossEncoder) |
+| **Web Search** | `backend/open_webui/retrieval/web/` | Integración con motores de búsqueda web |
+
+### 1.3 Flujo de Datos Completo
+
+**FASE 1: INGESTA (Offline)**
+```
+Upload File → Content Extraction → Text Chunks → Generate Embeddings → Store in Vector DB
+    ↓              ↓                    ↓               ↓                    ↓
+ PDF/Doc      PyPDF/Docling      RecursiveChar    SentenceTransform   ChromaDB/Qdrant
+                Tika/etc          TokenSplitter      Ollama/OpenAI      Milvus/etc
+```
+
+**FASE 2: QUERY (Online)**
+```
+User Query → Query Embedding → Parallel Search → Ensemble → Rerank → LLM Context
+    ↓              ↓                  ↓              ↓          ↓           ↓
+"¿Qué es X?"  [0.1, 0.2,...]   Vector: top_k   Weight BM25  ColBERT   RAG Template
+                               BM25: top_k      + Vector    top_n      + Retrieved
+                                                                        Chunks
+```
+
+---
+
+## 2. Construcción e Indexación
+
+### 2.1 Pipeline de Construcción de Índices
+
+**Ubicación:** `backend/open_webui/routers/retrieval.py:save_docs_to_vector_db()`
+
+**Pasos del proceso:**
+
+1. **Verificación de duplicados** (líneas 1411-1421)
+   - Usa hash SHA256 del contenido
+   - Query por metadata: `{"hash": metadata["hash"]}`
+   - Previene re-indexación de documentos idénticos
+
+2. **Chunking** (líneas 1423-1478)
+   - Markdown Header Splitter (opcional, ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER)
+   - Text Splitter (RecursiveCharacter o Token)
+   - Merge de chunks pequeños (CHUNK_MIN_SIZE_TARGET)
+
+3. **Generación de Embeddings** (líneas 1480-1530)
+   - Batch processing con configuración de tamaño
+   - Async/Sync según ENABLE_ASYNC_EMBEDDING
+   - Aplicación de prefijos (RAG_EMBEDDING_CONTENT_PREFIX)
+
+4. **Upsert a Vector DB** (líneas 1532-1571)
+   - Construcción de VectorItem con id, texto, vector, metadata
+   - Upsert (insert or update) en colección
+   - Manejo de errores y rollback
+
+### 2.2 Tipos de Índices Soportados
+
+**Vector Search (Denso):**
+- Basado en embeddings densos (768, 384, 1536 dims según modelo)
+- Búsqueda por similitud coseno/euclidiana
+- Implementado en todas las Vector DBs
+
+**BM25 (Sparse):**
+- Keyword-based ranking
+- TF-IDF con normalización de longitud de documento
+- Implementado vía `langchain_community.retrievers.BM25Retriever`
+- Se construye en memoria a partir de documentos recuperados
+
+**Hybrid (Ensemble):**
+- Combinación lineal de Vector + BM25
+- Peso configurable: `RAG_HYBRID_BM25_WEIGHT` (default: 0.5)
+- Formula: `score = (1-w)*vector_score + w*bm25_score`
+
+### 2.3 Metadata Schema
+
+**Campos estándar por chunk:**
+
+```python
+{
+    "id": "unique_chunk_id",           # UUID generado
+    "source": "file_path_or_url",      # Origen del documento
+    "name": "filename.pdf",            # Nombre del archivo
+    "hash": "sha256_hash",             # Hash del contenido original
+    "title": "Document Title",         # Título (si disponible)
+    "page": 5,                         # Número de página (PDFs)
+    "start_index": 1024,               # Índice de inicio del chunk
+    "headings": ["H1", "H2"],          # Headers markdown (si aplica)
+    "snippet": "preview text...",      # Snippet para web search
+    "score": 0.85,                     # Score de relevancia (post-retrieval)
+    "file_id": "file_uuid",            # ID del archivo en BD
+    "user_id": "user_uuid",            # Usuario propietario (multitenancy)
+}
+```
+
+### 2.4 Namespaces y Multitenancy
+
+**Estrategias de aislamiento:**
+
+1. **Collection-based (Default)**
+   - Cada documento/knowledge base = 1 colección
+   - Naming: `file_{file_id}` o `knowledge_{knowledge_id}`
+   - Aislamiento completo, overhead de gestión
+
+2. **Partition-based (Milvus/Qdrant Multitenancy)**
+   - Configuración: `ENABLE_MILVUS_MULTITENANCY_MODE=true`
+   - Single collection, filtrado por `user_id` metadata
+   - Mejor rendimiento, menos overhead
+   - Requiere ACL a nivel de query
+
+**Control de acceso:**
+- Verificación en `backend/open_webui/utils/access_control.py`
+- `has_access(user, file)` antes de query
+- Filtros de metadata aplicados automáticamente
+
+### 2.5 Versionado de Documentos
+
+**Estrategia actual:**
+- **No hay versionado automático**
+- Re-upload sobrescribe (via upsert con mismo hash)
+- Recomendación: Implementar suffix de versión en collection name
+
+**Implementación sugerida:**
+```python
+collection_name = f"file_{file_id}_v{version}"
+# O metadata-based:
+metadata["version"] = "2024-01-27"
+metadata["is_latest"] = True
+```
+
+---
+
+## 3. Estrategias de Chunking y Preprocesado
+
+### 3.1 Algoritmos de Chunking Disponibles
+
+#### 3.1.1 RecursiveCharacterTextSplitter (Default)
+
+**Ubicación:** `langchain_text_splitters.RecursiveCharacterTextSplitter`
+
+**Funcionamiento:**
+```python
+RecursiveCharacterTextSplitter(
+    chunk_size=1000,        # Caracteres
+    chunk_overlap=100,      # Caracteres de overlap
+    add_start_index=True,   # Añade metadata de posición
+    separators=["\n\n", "\n", " ", ""]  # Jerarquía de separadores
+)
+```
+
+**Algoritmo:**
+1. Intenta dividir por `\n\n` (párrafos)
+2. Si chunk > chunk_size, divide por `\n` (líneas)
+3. Si aún es grande, divide por ` ` (palabras)
+4. Último recurso: divide por caracteres
+
+**Ventajas:**
+- Preserva estructura natural del texto
+- Chunks semánticamente coherentes
+- Rápido y eficiente
+
+**Desventajas:**
+- No considera tokens (puede exceder límites de modelo)
+- Cuenta caracteres, no significado semántico
+
+#### 3.1.2 TokenTextSplitter
+
+**Configuración:**
+```python
+TokenTextSplitter(
+    encoding_name="cl100k_base",  # tiktoken encoding (GPT-4)
+    chunk_size=1000,               # Tokens
+    chunk_overlap=100,             # Tokens
+)
+```
+
+**Ventajas:**
+- Garantiza chunks dentro de límites de token del modelo
+- Crucial para embeddings con límite estricto (OpenAI: 8191 tokens)
+
+**Desventajas:**
+- Más lento (tokenización adicional)
+- Puede romper palabras/conceptos
+
+**Cuándo usar:**
+- Embeddings con OpenAI/Azure (límite de tokens estricto)
+- Documentos técnicos densos (código, ecuaciones)
+
+#### 3.1.3 MarkdownHeaderTextSplitter
+
+**Configuración:**
+```python
+MarkdownHeaderTextSplitter(
+    headers_to_split_on=[
+        ("#", "Header 1"),
+        ("##", "Header 2"),
+        ("###", "Header 3"),
+        # ... hasta ######
+    ],
+    strip_headers=False,  # Mantiene headers en contenido
+)
+```
+
+**Funcionamiento:**
+- Divide por headers markdown
+- Preserva jerarquía en metadata: `["H1", "H2", "H3"]`
+- Permite navegación contextual
+
+**Ventajas:**
+- Chunks alineados con estructura del documento
+- Metadata rica para filtrado
+- Ideal para documentación técnica
+
+**Desventajas:**
+- Solo funciona con markdown
+- Chunks pueden ser muy desiguales en tamaño
+
+### 3.2 Chunk Merging
+
+**Función:** `merge_docs_to_target_size()` (retrieval.py:1314-1377)
+
+**Objetivo:** Crecer chunks pequeños hasta `CHUNK_MIN_SIZE_TARGET`
+
+**Algoritmo:**
+```python
+while current_chunk_size < target_size:
+    if can_merge_with_next_chunk():
+        merge()
+    else:
+        break
+```
+
+**Condiciones de merge:**
+- Mismo source/file
+- Chunk combinado < max_size (chunk_size * 1.5)
+- Chunks adyacentes (start_index consecutivos)
+
+**Beneficio:**
+- Evita chunks demasiado pequeños (bajo contexto)
+- Reduce fragmentación de conceptos
+- Mejor utilización de espacio en vector DB
+
+### 3.3 Preprocesado de Texto
+
+**Función:** `sanitize_text_for_db()` (utils/misc.py)
+
+**Transformaciones aplicadas:**
+1. Normalización de whitespace
+2. Eliminación de caracteres de control
+3. Encoding UTF-8 seguro
+4. Truncamiento de strings muy largos
+
+**Limitaciones actuales:**
+- **No hay stemming/lemmatization**
+- **No hay stop word removal**
+- **No hay language detection automática**
+
+**Impacto:**
+- BM25 sensible a variaciones morfológicas
+- Queries en plural vs singular pueden fallar
+
+### 3.4 Configuraciones Recomendadas por Tipo de Documento
+
+| Tipo de Documento | TEXT_SPLITTER | CHUNK_SIZE | CHUNK_OVERLAP | ENABLE_MARKDOWN |
+|-------------------|---------------|------------|---------------|-----------------|
+| **Documentación Técnica** | character | 1500 | 200 | True |
+| **Papers Académicos** | token | 1000 | 100 | True |
+| **Legal/Contratos** | character | 800 | 150 | False |
+| **Code Repositories** | character | 2000 | 300 | True |
+| **Chat/Conversaciones** | character | 500 | 50 | False |
+| **Presentaciones** | character | 600 | 100 | False |
+| **Tablas/Datos** | character | 1200 | 0 | False |
+
+**Rationale:**
+- Documentación: Chunks grandes para mantener contexto de secciones
+- Papers: Token-based para garantizar límites de embedding
+- Legal: Chunks más pequeños para precisión en cláusulas
+- Code: Chunks grandes para mantener funciones completas
+- Chat: Chunks pequeños por naturaleza conversacional
+- Presentaciones: Medium chunks alineados con slides
+- Tablas: No overlap para evitar duplicación de filas
+
+---
+
+## 4. Proceso de Consulta y Búsqueda
+
+### 4.1 Generación de Embeddings de Query
+
+**Función:** `get_embedding_function()` (retrieval/utils.py:789-870)
+
+**Engines soportados:**
+
+#### 4.1.1 Local (Sentence Transformers)
+
+**Configuración:**
+```python
+RAG_EMBEDDING_ENGINE=""  # o no configurado
+RAG_EMBEDDING_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+```
+
+**Características:**
+- Modelo cargado en memoria (GPU/CPU según DEVICE_TYPE)
+- Batch processing con `encode()`
+- Sin límites de rate ni coste por llamada
+- Latencia: ~50-200ms por batch de 10 queries
+
+**Modelos recomendados:**
+- `all-MiniLM-L6-v2`: Rápido, 384 dims, bueno para español
+- `paraphrase-multilingual-mpnet-base-v2`: Multilingüe, 768 dims
+- `all-mpnet-base-v2`: Alta calidad, 768 dims, solo inglés
+
+#### 4.1.2 Ollama
+
+**Configuración:**
+```python
+RAG_EMBEDDING_ENGINE="ollama"
+RAG_EMBEDDING_MODEL="nomic-embed-text"
+RAG_OLLAMA_BASE_URL="http://ollama:11434"
+```
+
+**Características:**
+- Modelos self-hosted via Ollama
+- API REST asíncrona
+- Batch support nativo
+- Latencia: ~100-500ms según modelo y hardware
+
+**Modelos recomendados:**
+- `nomic-embed-text`: SOTA open-source, 768 dims
+- `mxbai-embed-large`: Alta calidad, 1024 dims
+- `snowflake-arctic-embed`: Especializado en retrieval
+
+#### 4.1.3 OpenAI
+
+**Configuración:**
+```python
+RAG_EMBEDDING_ENGINE="openai"
+RAG_EMBEDDING_MODEL="text-embedding-3-small"
+RAG_OPENAI_API_BASE_URL="https://api.openai.com/v1"
+RAG_OPENAI_API_KEY="sk-..."
+```
+
+**Características:**
+- API cloud de OpenAI
+- Batch processing con rate limits
+- Latencia: ~200-800ms (red + processing)
+- Coste: $0.00002/1K tokens (text-embedding-3-small)
+
+**Modelos recomendados:**
+- `text-embedding-3-small`: Mejor costo/rendimiento, 1536 dims
+- `text-embedding-3-large`: Máxima calidad, 3072 dims
+- `text-embedding-ada-002`: Legacy, 1536 dims
+
+#### 4.1.4 Azure OpenAI
+
+Similar a OpenAI pero con deployment en Azure:
+```python
+RAG_EMBEDDING_ENGINE="azure_openai"
+RAG_AZURE_OPENAI_BASE_URL="https://<resource>.openai.azure.com"
+RAG_AZURE_OPENAI_API_KEY="..."
+RAG_AZURE_OPENAI_API_VERSION="2024-02-15-preview"
+```
+
+### 4.2 Búsqueda Vectorial (Vector Search)
+
+**Función:** `query_doc()` (retrieval/utils.py:138-155)
+
+**Algoritmo:**
+```python
+result = VECTOR_DB_CLIENT.search(
+    collection_name=collection_name,
+    vectors=[query_embedding],  # [dim] array
+    limit=k,                     # top_k results
+)
+```
+
+**Métricas de similitud (según Vector DB):**
+- **Coseno** (default en la mayoría): `similarity = dot(A, B) / (||A|| * ||B||)`
+- **Euclidiana** (Milvus option): `distance = sqrt(sum((A - B)^2))`
+- **Inner Product** (algunos DBs): `similarity = dot(A, B)`
+
+**Retorno:**
+```python
+SearchResult(
+    ids=[[chunk_id_1, chunk_id_2, ...]],
+    documents=[[text_1, text_2, ...]],
+    metadatas=[[meta_1, meta_2, ...]],
+    distances=[[score_1, score_2, ...]]  # 0.0-1.0 (cosine)
+)
+```
+
+### 4.3 Búsqueda Híbrida (Hybrid Search)
+
+**Función:** `query_doc_with_hybrid_search()` (retrieval/utils.py:210-317)
+
+**Arquitectura:**
+
+```
+                    ┌─────────────┐
+                    │    Query    │
+                    └─────────────┘
+                           │
+           ┌───────────────┴───────────────┐
+           ↓                               ↓
+    ┌─────────────┐                 ┌─────────────┐
+    │ BM25 Search │                 │Vector Search│
+    │  (Sparse)   │                 │   (Dense)   │
+    └─────────────┘                 └─────────────┘
+           │                               │
+           │  top_k results                │  top_k results
+           └───────────────┬───────────────┘
+                           ↓
+                  ┌─────────────────┐
+                  │Ensemble Retriever│
+                  │  Weighted Merge  │
+                  └─────────────────┘
+                           │
+                           ↓
+                  ┌─────────────────┐
+                  │   Rerank (opt)  │
+                  │  ColBERT/Cross  │
+                  └─────────────────┘
+                           │
+                           ↓
+                    top_k_reranker
+```
+
+**Pesos de Ensemble:**
+
+```python
+if hybrid_bm25_weight <= 0:
+    # Solo vector search
+    weights = [1.0]
+elif hybrid_bm25_weight >= 1:
+    # Solo BM25
+    weights = [1.0]
+else:
+    # Hybrid
+    weights = [hybrid_bm25_weight, 1.0 - hybrid_bm25_weight]
+```
+
+**Ejemplo con BM25_WEIGHT=0.5:**
+```
+BM25 Score:    0.8  0.6  0.4  0.3
+Vector Score:  0.9  0.5  0.7  0.2
+Ensemble:      0.85 0.55 0.55 0.25
+               ↑
+               (0.5*0.8 + 0.5*0.9)
+```
+
+**Enriched Texts para BM25:**
+
+Si `ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS=True`, BM25 usa texto enriquecido:
+
+```python
+enriched_text = f"""
+{original_text}
+Filename: {filename} {filename_tokens} {filename_tokens}
+Title: {title}
+Section: {headings}
+Source: {source}
+Snippet: {snippet}
+"""
+```
+
+**Beneficio:** Mayor peso a metadatos en scoring BM25 (nombre de archivo aparece 3x)
+
+### 4.4 Reranking
+
+**Función:** `RerankCompressor.acompress_documents()` (retrieval/utils.py:1259-1337)
+
+**Modelos de Reranking:**
+
+#### 4.4.1 CrossEncoder (Default)
+
+```python
+from sentence_transformers import CrossEncoder
+
+model = CrossEncoder(
+    "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    device=DEVICE_TYPE,
+)
+
+scores = model.predict([
+    (query, doc1.page_content),
+    (query, doc2.page_content),
+    # ...
+])
+```
+
+**Características:**
+- Procesamiento conjunto de query + documento
+- Scoring más preciso que dot product
+- Latencia: ~20-100ms por doc
+- Modelos recomendados:
+  - `cross-encoder/ms-marco-MiniLM-L-6-v2`: Rápido, inglés
+  - `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`: Multilingüe
+
+#### 4.4.2 ColBERT
+
+```python
+from open_webui.retrieval.models.colbert import ColBERT
+
+model = ColBERT("jinaai/jina-colbert-v2")
+scores = model.predict([(query, doc1), (query, doc2), ...])
+```
+
+**Características:**
+- Late interaction scoring
+- MaxSim entre tokens de query y documento
+- Mayor calidad que CrossEncoder
+- Latencia: ~50-200ms por doc
+- Requiere GPU para rendimiento óptimo
+
+#### 4.4.3 External Reranker
+
+```python
+RAG_RERANKING_ENGINE="external"
+RAG_EXTERNAL_RERANKER_URL="https://reranker-service/rerank"
+RAG_EXTERNAL_RERANKER_API_KEY="..."
+```
+
+**Payload:**
+```json
+{
+  "query": "user query",
+  "documents": ["doc1", "doc2", ...],
+  "top_n": 3
+}
+```
+
+**Response:**
+```json
+{
+  "scores": [0.95, 0.82, 0.71, ...]
+}
+```
+
+### 4.5 Filtrado por Relevancia
+
+**Configuración:** `RAG_RELEVANCE_THRESHOLD` (default: 0.0)
+
+**Aplicación:**
+```python
+# En RerankCompressor
+filtered_docs = [
+    doc for doc, score in zip(documents, scores)
+    if score >= r_score
+]
+```
+
+**Valores recomendados:**
+- **0.0**: Sin filtrado (default, devuelve todos los top_k)
+- **0.3-0.5**: Filtrado conservador (elimina claramente irrelevantes)
+- **0.6-0.8**: Filtrado agresivo (solo alta confianza)
+
+**Trade-off:**
+- Threshold bajo: Mayor recall, menor precision
+- Threshold alto: Mayor precision, menor recall
+
+**Monitoreo sugerido:**
+```python
+log.info(f"Chunks before filtering: {len(documents)}")
+log.info(f"Chunks after filtering (>{r_score}): {len(filtered_docs)}")
+log.info(f"Scores: {scores}")
+```
+
+---
+
+## 5. Almacenamiento Vectorial
+
+### 5.1 Bases de Datos Vectoriales Soportadas
+
+Open WebUI soporta **11 vector databases** via abstracción `VectorDBBase`:
+
+| Vector DB | Modalidad | Multitenancy | Escalabilidad | Uso Recomendado |
+|-----------|-----------|--------------|---------------|-----------------|
+| **ChromaDB** | Embedded/Server | No | Baja-Media | Desarrollo, prototipos |
+| **Qdrant** | Server | Sí (partitions) | Alta | Producción, self-hosted |
+| **Milvus** | Server | Sí (partitions) | Muy Alta | Producción, enterprise |
+| **Pinecone** | Cloud | No (namespaces) | Muy Alta | Producción, cloud-first |
+| **Weaviate** | Server | Sí (multi-tenant) | Alta | Producción, graph queries |
+| **PgVector** | PostgreSQL | Sí (RLS) | Media | Existing Postgres infra |
+| **Elasticsearch** | Server | Sí (indices) | Alta | Existing ES infra |
+| **OpenSearch** | Server | Sí (indices) | Alta | AWS OpenSearch |
+| **OpenGauss** | Database | Sí | Media | Huawei ecosystem |
+| **Oracle 23AI** | Database | Sí | Alta | Oracle enterprise |
+| **S3Vector** | S3-based | No | Media | Serverless, low-cost |
+
+### 5.2 Configuración por Vector DB
+
+#### 5.2.1 ChromaDB (Default)
+
+**Variables de entorno:**
+```bash
+VECTOR_DB=chroma
+CHROMA_DATA_PATH=/app/backend/data/vector_db
+CHROMA_TENANT=default_tenant
+CHROMA_DATABASE=default_database
+
+# Cliente HTTP (opcional)
+CHROMA_HTTP_HOST=""  # Si vacío, usa embedded
+CHROMA_HTTP_PORT=8000
+CHROMA_HTTP_SSL=false
+CHROMA_CLIENT_AUTH_PROVIDER=""  # token/basic
+CHROMA_CLIENT_AUTH_CREDENTIALS=""
+CHROMA_HTTP_HEADERS="key1=value1,key2=value2"
+```
+
+**Características:**
+- Embedded mode: SQLite local, no server
+- Server mode: Cliente HTTP a ChromaDB server
+- Persistencia en disco (CHROMA_DATA_PATH)
+- Límites: ~1M vectors (embedded), más en server mode
+
+#### 5.2.2 Qdrant
+
+**Variables de entorno:**
+```bash
+VECTOR_DB=qdrant
+QDRANT_URL=http://qdrant:6333
+QDRANT_API_KEY=your_api_key
+ENABLE_QDRANT_MULTITENANCY_MODE=true  # Partition-based multitenancy
+```
+
+**Características:**
+- REST + gRPC APIs
+- Payload filtering (metadata queries)
+- Multitenancy via partitions
+- Snapshots y backups nativos
+
+#### 5.2.3 Milvus
+
+**Variables de entorno:**
+```bash
+VECTOR_DB=milvus
+MILVUS_URI=http://milvus:19530  # o file path para embedded
+MILVUS_DB=default
+MILVUS_TOKEN=root:Milvus  # user:password
+ENABLE_MILVUS_MULTITENANCY_MODE=true
+MILVUS_COLLECTION_PREFIX=open_webui
+
+# Index configuration
+MILVUS_INDEX_TYPE=HNSW     # HNSW/IVF_FLAT/DISKANN
+MILVUS_METRIC_TYPE=COSINE  # COSINE/L2/IP
+MILVUS_HNSW_M=16
+MILVUS_HNSW_EFCONSTRUCTION=100
+```
+
+**Índices soportados:**
+- **HNSW** (default): Hierarchical Navigable Small World, excelente recall/latencia
+- **IVF_FLAT**: Inverted File, menor memoria, bueno para millones de vectores
+- **DISKANN**: Disk-based ANN, para billones de vectores
+
+#### 5.2.4 Pinecone
+
+**Variables de entorno:**
+```bash
+VECTOR_DB=pinecone
+PINECONE_API_KEY=your_api_key
+PINECONE_INDEX=open-webui  # Debe existir previamente
+PINECONE_NAMESPACE=default  # Opcional
+```
+
+**Características:**
+- Fully managed, cloud-native
+- Auto-scaling
+- Namespaces para aislamiento
+- Costos por vector-hour
+
+#### 5.2.5 PgVector
+
+**Variables de entorno:**
+```bash
+VECTOR_DB=pgvector
+PGVECTOR_HOST=postgres
+PGVECTOR_PORT=5432
+PGVECTOR_DATABASE=open_webui
+PGVECTOR_USER=postgres
+PGVECTOR_PASSWORD=password
+PGVECTOR_SCHEMA=public
+```
+
+**Características:**
+- PostgreSQL extension
+- SQL queries + vector search
+- Transacciones ACID
+- Row-level security para multitenancy
+
+### 5.3 Schema de Metadatos y Queries
+
+**Operaciones CRUD:**
+
+```python
+# Insert/Upsert
+VECTOR_DB_CLIENT.upsert(
+    collection_name="file_123",
+    items=[
+        VectorItem(
+            id="chunk_1",
+            text="chunk content",
+            vector=[0.1, 0.2, ...],
+            metadata={"page": 1, "user_id": "user_123"}
+        )
+    ]
+)
+
+# Search
+result = VECTOR_DB_CLIENT.search(
+    collection_name="file_123",
+    vectors=[[0.1, 0.2, ...]],
+    limit=5,
+    filter={"user_id": "user_123"}  # Metadata filtering
+)
+
+# Query (metadata only)
+result = VECTOR_DB_CLIENT.query(
+    collection_name="file_123",
+    filter={"page": {"$gte": 5}},
+    limit=10
+)
+
+# Get all
+result = VECTOR_DB_CLIENT.get(collection_name="file_123")
+
+# Delete
+VECTOR_DB_CLIENT.delete(
+    collection_name="file_123",
+    ids=["chunk_1", "chunk_2"],
+    # OR
+    filter={"user_id": "user_to_delete"}
+)
+
+# Delete collection
+VECTOR_DB_CLIENT.delete_collection(collection_name="file_123")
+```
+
+**Filtros de metadata soportados:**
+
+```python
+# Equality
+{"user_id": "user_123"}
+
+# Greater than/less than (depende del DB)
+{"page": {"$gte": 5, "$lte": 10}}
+
+# In array
+{"category": {"$in": ["tech", "science"]}}
+
+# Logical operators
+{
+    "$and": [
+        {"user_id": "user_123"},
+        {"page": {"$gte": 5}}
+    ]
+}
+```
+
+**Nota:** Sintaxis de filtros varía entre Vector DBs. Se recomienda usar abstracción de `filter_metadata()` (retrieval/vector/utils.py).
+
+### 5.4 Escalabilidad y Límites
+
+| Vector DB | Max Vectors | Max Dim | Latency (p99) | Throughput |
+|-----------|-------------|---------|---------------|------------|
+| ChromaDB (embedded) | ~1M | 2048 | 50-200ms | ~100 QPS |
+| Qdrant | Billions | 65536 | 10-50ms | ~1000 QPS |
+| Milvus | Trillions | 32768 | 10-100ms | ~10K QPS |
+| Pinecone | Billions | 20000 | 20-100ms | Variable (cloud) |
+| PgVector | ~10M | 2000 | 100-500ms | ~50 QPS |
+| Weaviate | Billions | 65536 | 20-100ms | ~500 QPS |
+
+**Benchmarks aproximados con:**
+- 768-dim vectors
+- 1M vector dataset
+- top_k=10
+- Single node (excepto Pinecone)
