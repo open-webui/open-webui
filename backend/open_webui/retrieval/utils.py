@@ -904,44 +904,89 @@ def generate_portkey_embeddings_sdk(
     
     # Generate embeddings using SDK
     # The SDK handles retries, rate limiting, and error handling automatically
+    # CRITICAL: Azure OpenAI (via Portkey) has a limit of 2048 items per request
+    # We need to batch large requests into chunks of max 2048 items
+    MAX_BATCH_SIZE = 2048
+    
     try:
-        # Log a concise view of the request payload (without the API key or full text)
-        if isinstance(texts, str):
-            sample_preview = texts[:80].replace("\n", " ") + ("..." if len(texts) > 80 else "")
-            texts_count = 1
-        elif isinstance(texts, list) and texts:
-            first = texts[0]
-            first_str = first if isinstance(first, str) else str(first)
-            sample_preview = first_str[:80].replace("\n", " ") + ("..." if len(first_str) > 80 else "")
-            texts_count = len(texts)
+        # Convert single string to list for uniform processing
+        is_single_string = isinstance(texts, str)
+        if is_single_string:
+            texts_list = [texts]
+        elif isinstance(texts, list):
+            texts_list = texts
         else:
-            sample_preview = "<empty>"
-            texts_count = 0
-
+            raise ValueError(f"Invalid input type: {type(texts)}. Expected str or list[str]")
+        
+        # Validate all items are strings
+        for i, text in enumerate(texts_list):
+            if not isinstance(text, str):
+                raise ValueError(f"Item at index {i} is not a string: {type(text)}")
+            if not text.strip():
+                log.warning(f"Empty string at index {i} - may cause API errors")
+        
+        texts_count = len(texts_list)
+        
+        # Log a concise view of the request payload
+        if texts_list:
+            first_str = texts_list[0][:80].replace("\n", " ") + ("..." if len(texts_list[0]) > 80 else "")
+        else:
+            first_str = "<empty>"
+        
         log.info(
             f"Generating Portkey embeddings via SDK: "
             f"model={model}, "
             f"texts_count={texts_count}, "
             f"encoding_format={encoding_format}, "
-            f"sample_preview={sample_preview!r}"
+            f"sample_preview={first_str!r}, "
+            f"will_batch={texts_count > MAX_BATCH_SIZE}"
         )
         
-        response = portkey.embeddings.create(
-            model=model,
-            input=texts,
-            encoding_format=encoding_format
-        )
-        
-        # Extract embeddings from response
-        # Response.data is a list of EmbeddingData objects, ordered by index
-        embeddings = [item.embedding for item in response.data]
+        # Batch processing for large requests
+        if texts_count <= MAX_BATCH_SIZE:
+            # Single batch - process all at once
+            response = portkey.embeddings.create(
+                model=model,
+                input=texts_list,
+                encoding_format=encoding_format
+            )
+            
+            # Extract embeddings from response
+            embeddings = [item.embedding for item in response.data]
+        else:
+            # Multiple batches needed - process in chunks
+            log.info(f"Batching {texts_count} texts into chunks of {MAX_BATCH_SIZE} for Azure OpenAI limit")
+            all_embeddings = []
+            
+            for i in range(0, texts_count, MAX_BATCH_SIZE):
+                batch = texts_list[i:i + MAX_BATCH_SIZE]
+                batch_num = (i // MAX_BATCH_SIZE) + 1
+                total_batches = (texts_count + MAX_BATCH_SIZE - 1) // MAX_BATCH_SIZE
+                
+                log.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} items)")
+                
+                response = portkey.embeddings.create(
+                    model=model,
+                    input=batch,
+                    encoding_format=encoding_format
+                )
+                
+                batch_embeddings = [item.embedding for item in response.data]
+                all_embeddings.extend(batch_embeddings)
+            
+            embeddings = all_embeddings
         
         # Validate embeddings were generated
         if not embeddings:
             raise ValueError("No embeddings returned from Portkey SDK")
         
+        if len(embeddings) != texts_count:
+            raise ValueError(
+                f"Embedding count mismatch: expected {texts_count}, got {len(embeddings)}"
+            )
+        
         # Return single embedding for single string, list for batch
-        if isinstance(texts, str):
+        if is_single_string:
             if len(embeddings) == 0:
                 raise ValueError("Expected at least one embedding for single text input")
             return embeddings[0]
