@@ -2,7 +2,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -42,9 +42,11 @@
 	let users = null;
 	let total = null;
 
+	let searchQuery = '';
 	let query = '';
 	let orderBy = 'created_at'; // default sort key
 	let direction = 'asc'; // default sort order
+	let debounceTimer;
 
 	let selectedUser = null;
 
@@ -97,6 +99,13 @@
 		}
 	};
 
+	$: {
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			query = searchQuery;
+		}, 300);
+	}
+
 	$: if (query) {
 		page = 1;
 	}
@@ -104,6 +113,10 @@
 	$: if (query !== null && page !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
+
+	onDestroy(() => {
+		clearTimeout(debounceTimer);
+	});
 </script>
 
 <ConfirmDialog
@@ -198,7 +211,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
+						bind:value={searchQuery}
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
