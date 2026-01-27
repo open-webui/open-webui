@@ -1,14 +1,11 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 	import { DropdownMenu } from 'bits-ui';
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
-
+	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import { searchNotes } from '$lib/apis/notes';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
-
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { decodeString } from '$lib/utils';
-
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -26,6 +23,7 @@
 	let show = false;
 
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let noteItems = [];
 	let knowledgeItems = [];
@@ -35,9 +33,16 @@
 
 	$: items = [...noteItems, ...knowledgeItems, ...fileItems];
 
-	$: if (query !== null) {
-		getItems();
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			getItems();
+		}, 300);
 	}
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+	});
 
 	const getItems = () => {
 		getNoteItems();
