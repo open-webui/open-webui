@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.retrieval.web.utils import validate_url
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS
 
 from open_webui.models.chats import Chats
@@ -881,6 +882,8 @@ async def image_edits(
                 return data
 
             if data.startswith("http://") or data.startswith("https://"):
+                # Validate URL to prevent SSRF attacks against local/private networks
+                validate_url(data)
                 r = await asyncio.to_thread(requests.get, data)
                 r.raise_for_status()
 
