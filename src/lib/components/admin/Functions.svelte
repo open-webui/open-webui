@@ -99,7 +99,6 @@
 			)
 			.sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
 	};
-
 	const shareHandler = async (func) => {
 		const item = await getFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
