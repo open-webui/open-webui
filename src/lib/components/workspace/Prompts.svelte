@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
 	import {
@@ -32,6 +32,7 @@
 	import TagSelector from './common/TagSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Pagination from '../common/Pagination.svelte';
+  
 	let shiftKey = false;
 
 	const i18n = getContext('i18n');
@@ -40,6 +41,7 @@
 
 	let importFiles = null;
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let prompts = null;
 	let tags = [];
@@ -55,7 +57,6 @@
 	let copiedId: string | null = null;
 
 	let page = 1;
-	let searchDebounceTimer;
 
 	// Debounce only query changes
 	$: if (query !== undefined) {
@@ -195,10 +196,15 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
 		};
+	});
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 	});
 </script>
 
