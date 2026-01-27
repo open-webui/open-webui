@@ -1047,6 +1047,28 @@ def save_docs_to_vector_db(
                 user_email, chunk_size, chunk_overlap = _get_user_chunk_settings(request, user)
                 log.info(f"[Splitting] user={user_email or 'background'} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
 
+                # CRITICAL: Validate chunk_size to prevent character-level splitting
+                if chunk_size <= 0:
+                    error_msg = (
+                        f"Invalid chunk_size={chunk_size}. "
+                        f"chunk_size must be > 0 (typically 500-2000). "
+                        f"This prevents character-level splitting which creates thousands of invalid chunks. "
+                        f"Please configure chunk_size in Settings > Documents."
+                    )
+                    log.error(error_msg)
+                    raise ValueError(error_msg)
+                
+                if chunk_overlap < 0:
+                    log.warning(f"chunk_overlap={chunk_overlap} is negative, setting to 0")
+                    chunk_overlap = 0
+                
+                if chunk_overlap >= chunk_size:
+                    log.warning(
+                        f"chunk_overlap={chunk_overlap} >= chunk_size={chunk_size}, "
+                        f"setting overlap to {chunk_size // 4} (25% of chunk_size)"
+                    )
+                    chunk_overlap = chunk_size // 4
+
                 if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
                     text_splitter = RecursiveCharacterTextSplitter(
                         chunk_size=chunk_size,

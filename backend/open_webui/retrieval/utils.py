@@ -918,25 +918,87 @@ def generate_portkey_embeddings_sdk(
         else:
             raise ValueError(f"Invalid input type: {type(texts)}. Expected str or list[str]")
         
+        texts_count = len(texts_list)
+        
+        # CRITICAL: Validate input format and log detailed diagnostics
+        log.info(
+            f"Portkey embedding input validation: "
+            f"input_type={type(texts)}, "
+            f"texts_count={texts_count}, "
+            f"is_list={isinstance(texts_list, list)}"
+        )
+        
+        # Sample first few items to diagnose format issues
+        sample_items = []
+        non_string_count = 0
+        empty_count = 0
+        very_short_count = 0  # Items with length <= 1
+        
+        for i, text in enumerate(texts_list[:10]):  # Check first 10 items
+            if not isinstance(text, str):
+                non_string_count += 1
+                sample_items.append(f"idx{i}:{type(text).__name__}={text!r}")
+            elif len(text.strip()) == 0:
+                empty_count += 1
+                sample_items.append(f"idx{i}:EMPTY")
+            elif len(text) <= 1:
+                very_short_count += 1
+                sample_items.append(f"idx{i}:LEN{len(text)}={text!r}")
+            else:
+                preview = text[:50].replace("\n", " ") + ("..." if len(text) > 50 else "")
+                sample_items.append(f"idx{i}:LEN{len(text)}={preview!r}")
+        
+        # Check beyond first 10 for patterns
+        for i in range(10, min(100, texts_count)):
+            text = texts_list[i]
+            if not isinstance(text, str):
+                non_string_count += 1
+            elif len(text.strip()) == 0:
+                empty_count += 1
+            elif len(text) <= 1:
+                very_short_count += 1
+        
+        log.warning(
+            f"Portkey input diagnostics: "
+            f"non_string_items={non_string_count}, "
+            f"empty_items={empty_count}, "
+            f"very_short_items(<=1char)={very_short_count}, "
+            f"sample_items={sample_items[:5]}"
+        )
+        
         # Validate all items are strings
         for i, text in enumerate(texts_list):
             if not isinstance(text, str):
-                raise ValueError(f"Item at index {i} is not a string: {type(text)}")
+                raise ValueError(
+                    f"Item at index {i} is not a string: {type(text)}={text!r}. "
+                    f"This suggests incorrect chunking or document processing."
+                )
             if not text.strip():
                 log.warning(f"Empty string at index {i} - may cause API errors")
         
-        texts_count = len(texts_list)
+        # Warn if most items are very short (suggests character-level chunking bug)
+        if texts_count > 100 and very_short_count > texts_count * 0.9:
+            error_msg = (
+                f"CRITICAL: {very_short_count}/{texts_count} items are <=1 character. "
+                f"This suggests chunk_size=0 or character-level splitting bug. "
+                f"Check chunk_size configuration (should be >0, typically 500-2000)."
+            )
+            log.error(error_msg)
+            raise ValueError(error_msg)
         
         # Log a concise view of the request payload
         if texts_list:
             first_str = texts_list[0][:80].replace("\n", " ") + ("..." if len(texts_list[0]) > 80 else "")
+            avg_len = sum(len(t) for t in texts_list[:100]) / min(100, texts_count)
         else:
             first_str = "<empty>"
+            avg_len = 0
         
         log.info(
             f"Generating Portkey embeddings via SDK: "
             f"model={model}, "
             f"texts_count={texts_count}, "
+            f"avg_text_length={avg_len:.1f}, "
             f"encoding_format={encoding_format}, "
             f"sample_preview={first_str!r}, "
             f"will_batch={texts_count > MAX_BATCH_SIZE}"
