@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { WEBUI_NAME, config, functions as _functions, models, settings, user } from '$lib/stores';
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -53,6 +53,7 @@
 	let viewOption = '';
 
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let selectedTag = '';
 	let selectedType = '';
 
@@ -70,12 +71,14 @@
 	let functions = null;
 	let filteredItems = [];
 
-	$: if (
-		functions &&
-		query !== undefined &&
-		selectedType !== undefined &&
-		viewOption !== undefined
-	) {
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			setFilteredItems();
+		}, 300);
+	}
+
+	$: if (functions && selectedType !== undefined && viewOption !== undefined) {
 		setFilteredItems();
 	}
 
@@ -96,6 +99,7 @@
 			)
 			.sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
 	};
+
 	const shareHandler = async (func) => {
 		const item = await getFunctionById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
@@ -238,6 +242,10 @@
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur-sm', onBlur);
 		};
+	});
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 	});
 </script>
 
