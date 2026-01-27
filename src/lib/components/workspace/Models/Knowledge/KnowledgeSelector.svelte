@@ -4,8 +4,10 @@
 	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import { searchNotes } from '$lib/apis/notes';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
+
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { decodeString } from '$lib/utils';
+
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
