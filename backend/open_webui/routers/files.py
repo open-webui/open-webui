@@ -225,15 +225,22 @@ def upload_file_handler(
 ):
     log.info(f"file.content_type: {file.content_type} {process}")
 
-    if isinstance(metadata, str):
+    # Handle metadata: when called directly (not via HTTP), Form(None) remains a Form object
+    # When called via HTTP, FastAPI resolves it to None or the actual value
+    if metadata is None or (hasattr(metadata, '__class__') and metadata.__class__.__name__ == 'Form'):
+        file_metadata = {}
+    elif isinstance(metadata, str):
         try:
-            metadata = json.loads(metadata)
+            file_metadata = json.loads(metadata)
         except json.JSONDecodeError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Invalid metadata format"),
             )
-    file_metadata = metadata if metadata else {}
+    elif isinstance(metadata, dict):
+        file_metadata = metadata
+    else:
+        file_metadata = {}
 
     try:
         unsanitized_filename = file.filename
