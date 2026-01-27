@@ -88,6 +88,8 @@
 	let inputFiles = null;
 
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+
 	let viewOption = null;
 	let sortKey = null;
 	let direction = null;
@@ -105,9 +107,18 @@
 		await getItemsPage();
 	};
 
+	// Debounce only query changes
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+
+		searchDebounceTimer = setTimeout(() => {
+			getItemsPage();
+		}, 300);
+	}
+
+	// Immediate response to filter/pagination changes
 	$: if (
 		knowledgeId !== null &&
-		query !== undefined &&
 		viewOption !== undefined &&
 		sortKey !== undefined &&
 		direction !== undefined &&
@@ -746,6 +757,7 @@
 	});
 
 	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 		mediaQuery?.removeEventListener('change', handleMediaQuery);
 		const dropZone = document.querySelector('body');
 		dropZone?.removeEventListener('dragover', onDragOver);
