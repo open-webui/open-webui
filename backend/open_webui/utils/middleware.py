@@ -67,8 +67,8 @@ from open_webui.models.models import Models
 from open_webui.retrieval.utils import (
     get_sources_from_files,
     get_embedding_function,
-    get_ef,
 )
+from open_webui.routers.retrieval import get_ef
 
 
 from open_webui.utils.chat import generate_chat_completion
