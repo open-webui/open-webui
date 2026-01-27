@@ -322,9 +322,10 @@
 			pdfExtractImages = res.pdf_extract_images;
 
 			textSplitter = res.chunk.text_splitter;
-			// Use defaults if backend returns 0 or undefined (means not configured)
-			chunkSize = res.chunk.chunk_size && res.chunk.chunk_size > 0 ? res.chunk.chunk_size : 1000;
-			chunkOverlap = res.chunk.chunk_overlap && res.chunk.chunk_overlap >= 0 ? res.chunk.chunk_overlap : 200;
+			// Use defaults if backend returns 0, null, undefined, or invalid (means not configured)
+			// Backend should never return 0, but handle it defensively
+			chunkSize = (res.chunk.chunk_size && res.chunk.chunk_size > 0) ? res.chunk.chunk_size : 1000;
+			chunkOverlap = (res.chunk.chunk_overlap && res.chunk.chunk_overlap > 0) ? res.chunk.chunk_overlap : 200;
 
 			RAG_FULL_CONTEXT = res.RAG_FULL_CONTEXT;
 			BYPASS_EMBEDDING_AND_RETRIEVAL = res.BYPASS_EMBEDDING_AND_RETRIEVAL;

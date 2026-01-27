@@ -297,8 +297,8 @@ async def get_status(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
         
-        "chunk_size": chunk_size,
-        "chunk_overlap": chunk_overlap,
+        "chunk_size": chunk_size if chunk_size and chunk_size > 0 else 1000,
+        "chunk_overlap": chunk_overlap if chunk_overlap is not None and chunk_overlap > 0 else 200,
         "template": request.app.state.config.RAG_TEMPLATE.get(user.email),
         "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -560,8 +560,8 @@ async def get_rag_config(request: Request, user=Depends(get_verified_user)):
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
-            "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email) or 1000,
-            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email) if request.app.state.config.CHUNK_OVERLAP.get(user.email) is not None and request.app.state.config.CHUNK_OVERLAP.get(user.email) >= 0 else 200,
+            "chunk_size": (lambda v: v if v and v > 0 else 1000)(request.app.state.config.CHUNK_SIZE.get(user.email)),
+            "chunk_overlap": (lambda v: v if v is not None and v > 0 else 200)(request.app.state.config.CHUNK_OVERLAP.get(user.email)),
         },
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
@@ -864,8 +864,8 @@ async def update_rag_config(
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
-            "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email) or 1000,
-            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email) if request.app.state.config.CHUNK_OVERLAP.get(user.email) is not None and request.app.state.config.CHUNK_OVERLAP.get(user.email) >= 0 else 200,
+            "chunk_size": (lambda v: v if v and v > 0 else 1000)(request.app.state.config.CHUNK_SIZE.get(user.email)),
+            "chunk_overlap": (lambda v: v if v is not None and v > 0 else 200)(request.app.state.config.CHUNK_OVERLAP.get(user.email)),
         },
         "youtube": {
             "language": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
