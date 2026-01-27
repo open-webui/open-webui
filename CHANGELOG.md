@@ -66,11 +66,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚠️ **IMPORTANT: Database Migration Required** — This release includes database schema changes to the prompts system; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances.
 - 🔗 Prompts now use unique ID-based URLs instead of command-based URLs, allowing more flexible command renaming without breaking saved links or integrations. [#20945](https://github.com/open-webui/open-webui/pull/20945)
 
-### Changed
-
-- ⚠️ **IMPORTANT: Database Migration Required** — This release includes database schema changes to the prompts system; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances.
-- 🔗 Prompts now use unique ID-based URLs instead of command-based URLs, allowing more flexible command renaming without breaking saved links or integrations. [#20945](https://github.com/open-webui/open-webui/pull/20945)
-
 ## [0.7.2] - 2026-01-10
 
 ### Fixed
