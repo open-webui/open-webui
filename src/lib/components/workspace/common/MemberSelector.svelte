@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -38,7 +38,9 @@
 	let users = null;
 	let total = null;
 
+	let searchQuery = '';
 	let query = '';
+	let debounceTimer;
 	let orderBy = 'name'; // default sort key
 	let direction = 'asc'; // default sort order
 
@@ -59,6 +61,24 @@
 			console.error(err);
 		}
 	};
+
+	$: {
+		searchQuery;
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				query = searchQuery;
+			}, 300);
+		} else {
+			debounceTimer = setTimeout(() => {
+				// Initialize timer so subsequent changes trigger debounce
+			}, 0);
+		}
+	}
+
+	onDestroy(() => {
+		clearTimeout(debounceTimer);
+	});
 
 	$: if (page !== null && query !== null && orderBy !== null && direction !== null) {
 		getUserList();
@@ -172,7 +192,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
+						bind:value={searchQuery}
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
