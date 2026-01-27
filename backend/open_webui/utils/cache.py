@@ -222,13 +222,22 @@ class CacheManager:
     
     # User settings caching (inherited from group admin)
     def get_user_settings(self, user_id: str, config_path: str) -> Optional[Any]:
-        """Get cached user settings for a specific config path."""
+        """Get cached user settings for a specific config path.
+        
+        CRITICAL RBAC: Cache keys are scoped by user_id to ensure proper isolation.
+        """
         key = f"{CACHE_PREFIX_USER_SETTINGS}:{user_id}:{config_path}"
-        return self._get(key)
+        cached = self._get(key)
+        if cached is not None:
+            log.debug(f"[RBAC_CACHE_GET] Cache HIT for user_id={user_id} config_path={config_path}")
+        else:
+            log.debug(f"[RBAC_CACHE_GET] Cache MISS for user_id={user_id} config_path={config_path}")
+        return cached
     
     def set_user_settings(self, user_id: str, config_path: str, value: Any) -> bool:
         """Cache user settings for a specific config path.
         
+        CRITICAL RBAC: Cache keys are scoped by user_id to ensure proper isolation.
         Also maintains a Set tracking all config_paths for this user for fast bulk invalidation.
         """
         if not self._check_redis_available():
@@ -236,6 +245,7 @@ class CacheManager:
         
         try:
             key = f"{CACHE_PREFIX_USER_SETTINGS}:{user_id}:{config_path}"
+            log.debug(f"[RBAC_CACHE_SET] Setting cache for user_id={user_id} config_path={config_path} value_length={len(str(value)) if value else 0}")
             serialized = json.dumps(value)
             self.redis.setex(key, DEFAULT_CACHE_TTL, serialized)
             

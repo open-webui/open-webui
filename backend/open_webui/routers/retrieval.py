@@ -317,6 +317,20 @@ async def get_embedding_config(request: Request, user=Depends(get_verified_user)
     - If user is in a group: Returns the group creator's (admin's) API key
     - Other admins' API keys are NOT accessible (proper RBAC isolation)
     """
+    # CRITICAL RBAC: Log the requesting user's email to ensure proper isolation
+    requesting_email = user.email
+    log.info(f"[RBAC_GET_EMBEDDING] Requesting user: {requesting_email} (ID: {user.id})")
+    
+    # Get model and key for THIS specific user
+    embedding_model = request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(requesting_email) or ""
+    embedding_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(requesting_email)
+    
+    log.info(
+        f"[RBAC_GET_EMBEDDING] For user {requesting_email}: "
+        f"model={embedding_model[:50] if embedding_model else '(empty)'}, "
+        f"key_length={len(embedding_api_key) if embedding_api_key else 0}"
+    )
+    
     return {
         "status": True,
         "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,  # Always "portkey"
@@ -325,7 +339,7 @@ async def get_embedding_config(request: Request, user=Depends(get_verified_user)
         # 1. The admin who configured it (when they request it)
         # 2. Users in groups created by that admin (via group inheritance)
         # 3. NOT accessible to other admins or their groups
-        "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(user.email) or "",
+        "embedding_model": embedding_model,
         "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         "openai_config": {
             "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
@@ -334,7 +348,7 @@ async def get_embedding_config(request: Request, user=Depends(get_verified_user)
             # 1. The admin who configured it (when they request it)
             # 2. Users in groups created by that admin (via group inheritance)
             # 3. NOT accessible to other admins or their groups
-            "key": request.app.state.config.RAG_OPENAI_API_KEY.get(user.email),
+            "key": embedding_api_key,
         },
     }
 
@@ -382,9 +396,11 @@ async def update_embedding_config(
                 detail="Embedding API key is required for OpenAI/Portkey engines.",
             )
 
+    # CRITICAL RBAC: Log the admin's email to ensure proper isolation
+    admin_email = user.email
     log.info(
-        f"Updating embedding model for admin={user.email}: "
-        f"{request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(user.email) or '(empty)'} -> {form_data.embedding_model}, "
+        f"[RBAC_SET_EMBEDDING] Admin {admin_email} (ID: {user.id}) updating embedding config: "
+        f"{request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(admin_email) or '(empty)'} -> {form_data.embedding_model}, "
         f"engine={form_data.embedding_engine}"
     )
     try:
@@ -394,8 +410,9 @@ async def update_embedding_config(
         # 1. The admin themselves
         # 2. Users in groups created by this admin (via group inheritance)
         # 3. NOT accessible to other admins or their groups
+        log.info(f"[RBAC_SET_EMBEDDING] Setting model for admin {admin_email}: {form_data.embedding_model}")
         request.app.state.config.RAG_EMBEDDING_MODEL_USER.set(
-            user.email, form_data.embedding_model
+            admin_email, form_data.embedding_model
         )
 
         if request.app.state.config.RAG_EMBEDDING_ENGINE in [
@@ -412,8 +429,12 @@ async def update_embedding_config(
                 # 1. The admin themselves
                 # 2. Users in groups created by this admin
                 # 3. NOT accessible to other admins or their groups
+                log.info(
+                    f"[RBAC_SET_EMBEDDING] Setting API key for admin {admin_email}: "
+                    f"key_length={len(form_data.openai_config.key) if form_data.openai_config.key else 0}"
+                )
                 request.app.state.config.RAG_OPENAI_API_KEY.set(
-                    user.email, form_data.openai_config.key
+                    admin_email, form_data.openai_config.key
                 )
                 masked_key_suffix = (
                     form_data.openai_config.key[-4:]
