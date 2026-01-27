@@ -37,30 +37,36 @@
 </script>
 
 <form
-	class="flex flex-col text-sm"
+	class="flex flex-col"
 	on:submit|preventDefault={() => {
 		updatePasswordHandler();
 	}}
 >
-	<div class="flex justify-between items-center text-sm">
-		<div class="  font-medium">{$i18n.t('Change Password')}</div>
-		<button
-			class=" text-xs font-medium text-gray-500"
-			type="button"
-			on:click={() => {
-				show = !show;
-			}}>{show ? $i18n.t('Hide') : $i18n.t('Show')}</button
-		>
-	</div>
+	<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+		<div class="flex justify-between items-center">
+			<div class="font-semibold text-gray-800 dark:text-gray-200">
+				{$i18n.t('Change Password')}
+			</div>
+			<button
+				class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+				type="button"
+				on:click={() => {
+					show = !show;
+				}}
+			>
+				{show ? $i18n.t('Hide') : $i18n.t('Show')}
+			</button>
+		</div>
 
-	{#if show}
-		<div class=" py-2.5 space-y-1.5">
-			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Current Password')}</div>
-
-				<div class="flex-1">
+		{#if show}
+			<div class="mt-4 space-y-4">
+				<!-- Current Password -->
+				<div class="space-y-2">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+						{$i18n.t('Current Password')}
+					</label>
 					<input
-						class="w-full bg-transparent dark:text-gray-300 outline-hidden placeholder:opacity-30"
+						class="w-full px-4 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition placeholder:text-gray-400 dark:placeholder:text-gray-500"
 						type="password"
 						bind:value={currentPassword}
 						placeholder={$i18n.t('Enter your current password')}
@@ -68,14 +74,14 @@
 						required
 					/>
 				</div>
-			</div>
 
-			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
-
-				<div class="flex-1">
+				<!-- New Password -->
+				<div class="space-y-2">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+						{$i18n.t('New Password')}
+					</label>
 					<input
-						class="w-full bg-transparent text-sm dark:text-gray-300 outline-hidden placeholder:opacity-30"
+						class="w-full px-4 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition placeholder:text-gray-400 dark:placeholder:text-gray-500"
 						type="password"
 						bind:value={newPassword}
 						placeholder={$i18n.t('Enter your new password')}
@@ -83,14 +89,14 @@
 						required
 					/>
 				</div>
-			</div>
 
-			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Confirm Password')}</div>
-
-				<div class="flex-1">
+				<!-- Confirm Password -->
+				<div class="space-y-2">
+					<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+						{$i18n.t('Confirm Password')}
+					</label>
 					<input
-						class="w-full bg-transparent text-sm dark:text-gray-300 outline-hidden placeholder:opacity-30"
+						class="w-full px-4 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition placeholder:text-gray-400 dark:placeholder:text-gray-500"
 						type="password"
 						bind:value={newPasswordConfirm}
 						placeholder={$i18n.t('Confirm your new password')}
@@ -98,15 +104,17 @@
 						required
 					/>
 				</div>
-			</div>
-		</div>
 
-		<div class="mt-3 flex justify-end">
-			<button
-				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			>
-				{$i18n.t('Update password')}
-			</button>
-		</div>
-	{/if}
+				<!-- Submit Button -->
+				<div class="flex justify-end pt-2">
+					<button
+						type="submit"
+						class="px-6 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md"
+					>
+						{$i18n.t('Update password')}
+					</button>
+				</div>
+			</div>
+		{/if}
+	</div>
 </form>

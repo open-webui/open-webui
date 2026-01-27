@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	// @ts-ignore
 	import { v4 as uuidv4 } from 'uuid';
+	// @ts-ignore
+	import type { Folder as FolderType } from '$lib/apis/folders';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -24,7 +27,7 @@
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext('i18n') as any;
 
 	import {
 		deleteChatById,
@@ -61,12 +64,12 @@
 
 	const BREAKPOINT = 768;
 
-	let navElement;
+	let navElement: HTMLElement | undefined;
 	let search = '';
 
 	let shiftKey = false;
 
-	let selectedChatId = null;
+	let selectedChatId: string | null = null;
 	let showDropdown = false;
 	let showPinnedChat = true;
 
@@ -76,8 +79,8 @@
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
-	let folders = {};
-	let newFolderId = null;
+	let folders: Record<string, any> = {};
+	let newFolderId: string | null = null;
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -112,7 +115,7 @@
 					: [folder.id];
 
 				// Sort the children by updated_at field
-				folders[folder.parent_id].childrenIds.sort((a, b) => {
+				folders[folder.parent_id].childrenIds.sort((a: string, b: string) => {
 					return folders[b].updated_at - folders[a].updated_at;
 				});
 			}
@@ -121,16 +124,18 @@
 
 	const createFolder = async (name = 'Untitled') => {
 		if (name === '') {
-			toast.error($i18n.t('Folder name cannot be empty.'));
+			toast.error(i18n.t(`Folder name cannot be empty.`));
 			return;
 		}
 
-		const rootFolders = Object.values(folders).filter((folder) => folder.parent_id === null);
-		if (rootFolders.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
+		const rootFolders = Object.values(folders).filter((folder: any) => folder.parent_id === null);
+		if (rootFolders.find((folder: any) => folder.name.toLowerCase() === name.toLowerCase())) {
 			// If a folder with the same name already exists, append a number to the name
 			let i = 1;
 			while (
-				rootFolders.find((folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase())
+				rootFolders.find(
+					(folder: any) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase()
+				)
 			) {
 				i++;
 			}
@@ -199,12 +204,12 @@
 
 		// once the bottom of the list has been reached (no results) there is no need to continue querying
 		allChatsLoaded = newChatList.length === 0;
-		await chats.set([...($chats ? $chats : []), ...newChatList]);
+		await chats.set([...($chats ?? []), ...newChatList] as any);
 
 		chatListLoading = false;
 	};
 
-	let searchDebounceTimeout;
+	let searchDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	const searchDebounceHandler = async () => {
 		console.log('search', search);
@@ -223,14 +228,18 @@
 				currentChatPage.set(1);
 				await chats.set(await getChatListBySearchText(localStorage.token, search));
 
-				if ($chats.length === 0) {
+				if ((($chats as any) ?? []).length === 0) {
 					tags.set(await getAllTags(localStorage.token));
 				}
 			}, 1000);
 		}
 	};
 
-	const importChatHandler = async (items, pinned = false, folderId = null) => {
+	const importChatHandler = async (
+		items: any[],
+		pinned = false,
+		folderId: string | null = null
+	) => {
 		console.log('importChatHandler', items, pinned, folderId);
 		for (const item of items) {
 			console.log(item);
@@ -242,19 +251,19 @@
 		initChatList();
 	};
 
-	const inputFilesHandler = async (files) => {
+	const inputFilesHandler = async (files: File[] | FileList) => {
 		console.log(files);
 
 		for (const file of files) {
 			const reader = new FileReader();
 			reader.onload = async (e) => {
-				const content = e.target.result;
+				const content = (e.target?.result as string) ?? '';
 
 				try {
 					const chatItems = JSON.parse(content);
 					importChatHandler(chatItems);
 				} catch {
-					toast.error($i18n.t(`Invalid file format.`));
+					toast.error(i18n.t(`Invalid file format.`));
 				}
 			};
 
@@ -262,7 +271,7 @@
 		}
 	};
 
-	const tagEventHandler = async (type, tagName, chatId) => {
+	const tagEventHandler = async (type: string, tagName: string, chatId: string) => {
 		console.log(type, tagName, chatId);
 		if (type === 'delete') {
 			initChatList();
@@ -273,7 +282,7 @@
 
 	let draggedOver = false;
 
-	const onDragOver = (e) => {
+	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 
 		// Check if a file is being draggedOver.
@@ -288,7 +297,7 @@
 		draggedOver = false;
 	};
 
-	const onDrop = async (e) => {
+	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e); // Log the drop event
 
@@ -305,10 +314,11 @@
 		draggedOver = false; // Reset draggedOver status after drop
 	};
 
-	let touchstart;
-	let touchend;
+	let touchstart: Touch | null = null;
+	let touchend: Touch | null = null;
 
 	function checkDirection() {
+		if (!touchstart || !touchend) return;
 		const screenWidth = window.innerWidth;
 		const swipeDistance = Math.abs(touchend.screenX - touchstart.screenX);
 		if (touchstart.clientX < 40 && swipeDistance >= screenWidth / 8) {
@@ -321,27 +331,57 @@
 		}
 	}
 
-	const onTouchStart = (e) => {
+	const onTouchStart = (e: TouchEvent) => {
 		touchstart = e.changedTouches[0];
-		console.log(touchstart.clientX);
+		console.log(touchstart?.clientX);
 	};
 
-	const onTouchEnd = (e) => {
+	const handleChannelSubmit = async (data: { name: string; access_control: any }) => {
+		const res = await createNewChannel(localStorage.token, {
+			name: data.name,
+			access_control: data.access_control
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			if ($socket) {
+				$socket.emit('join-channels', { auth: { token: (localStorage as any).token } });
+			}
+			await initChannels();
+			showCreateChannel = false;
+		}
+	};
+
+	const onTouchEnd = (e: TouchEvent) => {
 		touchend = e.changedTouches[0];
 		checkDirection();
 	};
 
-	const onKeyDown = (e) => {
+	const onKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') {
 			shiftKey = true;
 		}
 	};
 
-	const onKeyUp = (e) => {
+	const onKeyUp = (e: KeyboardEvent) => {
 		if (e.key === 'Shift') {
 			shiftKey = false;
 		}
 	};
+
+	// Helper variables to avoid type assertion issues in templates
+	$: hasWorkspaceAccess = $user?.role === 'admin' || ($user as any)?.permissions;
+	$: hasChannelsEnabled = ($config as any)?.features?.enable_channels;
+	$: chatList = ($chats as any) ?? [];
+	$: pinnedChatList = ($pinnedChats as any) ?? [];
+	$: renderChatList = chatList.map((c: any, idx: number) => ({
+		id: c?.id,
+		title: c?.title,
+		time_range: c?.time_range,
+		showTimeRange: idx === 0 || (idx > 0 && c?.time_range !== chatList[idx - 1]?.time_range)
+	}));
 
 	const onFocus = () => {};
 
@@ -361,7 +401,7 @@
 			if ($showSidebar && !value) {
 				const navElement = document.getElementsByTagName('nav')[0];
 				if (navElement) {
-					navElement.style['-webkit-app-region'] = 'drag';
+					(navElement as any).style.webkitAppRegion = 'drag';
 				}
 			}
 
@@ -380,12 +420,12 @@
 			if (navElement) {
 				if ($mobile) {
 					if (!value) {
-						navElement.style['-webkit-app-region'] = 'drag';
+						(navElement as any).style.webkitAppRegion = 'drag';
 					} else {
-						navElement.style['-webkit-app-region'] = 'no-drag';
+						(navElement as any).style.webkitAppRegion = 'no-drag';
 					}
 				} else {
-					navElement.style['-webkit-app-region'] = 'drag';
+					(navElement as any).style.webkitAppRegion = 'drag';
 				}
 			}
 		});
@@ -434,24 +474,7 @@
 	}}
 />
 
-<ChannelModal
-	bind:show={showCreateChannel}
-	onSubmit={async ({ name, access_control }) => {
-		const res = await createNewChannel(localStorage.token, {
-			name: name,
-			access_control: access_control
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			$socket.emit('join-channels', { auth: { token: $user?.token } });
-			await initChannels();
-			showCreateChannel = false;
-		}
-	}}
-/>
+<ChannelModal bind:show={showCreateChannel} onSubmit={handleChannelSubmit} />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 
@@ -473,43 +496,41 @@
 		? 'md:relative w-[260px] max-w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
-        "
+		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden border-r border-gray-200 dark:border-gray-800"
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
+		class="py-3 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+		<!-- Header with Menu Toggle and New Chat -->
+		<div class="px-2 flex items-center gap-2">
 			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="p-2 flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
 			>
-				<div class=" m-auto self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-5"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-						/>
-					</svg>
-				</div>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="2"
+					stroke="currentColor"
+					class="size-5"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+					/>
+				</svg>
 			</button>
 
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				class="flex-1 flex items-center justify-between gap-2 rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors no-drag-region group"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -524,56 +545,28 @@
 					}, 0);
 				}}
 			>
-				<div class="flex items-center">
-					<div class="self-center mx-1.5">
-						<img
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-5 -translate-x-1.5 rounded-full"
-							alt="logo"
-						/>
-					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
-						{$i18n.t('New Chat')}
-					</div>
+				<div class="flex items-center gap-2 min-w-0">
+					<img
+						crossorigin="anonymous"
+						src="{WEBUI_BASE_URL}/static/favicon.png"
+						class="size-5 rounded-full flex-shrink-0"
+						alt="logo"
+					/>
+					<span class="font-medium text-sm truncate">{$i18n.t('New Chat')}</span>
 				</div>
 
-				<div>
-					<PencilSquare className=" size-5" strokeWidth="2" />
-				</div>
+				<PencilSquare
+					className="size-4 flex-shrink-0 text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors"
+					strokeWidth="2"
+				/>
 			</a>
 		</div>
 
-		<!-- {#if $user?.role === 'admin'}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+		<!-- Workspace Link -->
+		{#if hasWorkspaceAccess}
+			<div class="px-2 mt-2">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/home"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center">
-						<Home strokeWidth="2" className="size-[1.1rem]" />
-					</div>
-
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Home')}</div>
-					</div>
-				</a>
-			</div>
-		{/if} -->
-
-		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors group"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -585,31 +578,27 @@
 					}}
 					draggable="false"
 				>
-					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="size-[1.1rem]"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-							/>
-						</svg>
-					</div>
-
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
-					</div>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="2"
+						stroke="currentColor"
+						class="size-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
+						/>
+					</svg>
+					<span class="font-medium text-sm">{$i18n.t('Workspace')}</span>
 				</a>
 			</div>
 		{/if}
 
-		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
+		<!-- Search Input -->
+		<div class="px-2 mt-3 relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
@@ -622,14 +611,15 @@
 			/>
 		</div>
 
+		<!-- Chat List -->
 		<div
-			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled
+			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden mt-2 {$temporaryChatEnabled
 				? 'opacity-20'
 				: ''}"
 		>
-			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0) && !search}
+			{#if hasChannelsEnabled && ($user?.role === 'admin' || $channels.length > 0) && !search}
 				<Folder
-					className="px-2 mt-0.5"
+					className="px-2"
 					name={$i18n.t('Channels')}
 					dragAndDrop={false}
 					onAdd={async () => {
@@ -656,7 +646,11 @@
 
 			<Folder
 				collapsible={!search}
-				className="px-2 mt-0.5"
+				className="px-2 {hasChannelsEnabled &&
+				($user?.role === 'admin' || $channels.length > 0) &&
+				!search
+					? 'mt-2'
+					: ''}"
 				name={$i18n.t('Chats')}
 				onAdd={() => {
 					createFolder();
@@ -679,12 +673,14 @@
 						if (chat) {
 							console.log(chat);
 							if (chat.folder_id) {
-								const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
-									(error) => {
-										toast.error(`${error}`);
-										return null;
-									}
-								);
+								const res = await updateChatFolderIdById(
+									localStorage.token,
+									chat.id,
+									undefined
+								).catch((error) => {
+									toast.error(`${error}`);
+									return null;
+								});
 							}
 
 							if (chat.pinned) {
@@ -698,7 +694,7 @@
 							return;
 						}
 
-						const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
+						const res = await updateFolderParentIdById(localStorage.token, id, undefined).catch(
 							(error) => {
 								toast.error(`${error}`);
 								return null;
@@ -716,7 +712,7 @@
 				{/if}
 
 				{#if !search && $pinnedChats.length > 0}
-					<div class="flex flex-col space-y-1 rounded-xl">
+					<div class="flex flex-col space-y-1">
 						<Folder
 							className=""
 							bind:open={showPinnedChat}
@@ -744,7 +740,7 @@
 											const res = await updateChatFolderIdById(
 												localStorage.token,
 												chat.id,
-												null
+												undefined
 											).catch((error) => {
 												toast.error(`${error}`);
 												return null;
@@ -762,13 +758,13 @@
 							name={$i18n.t('Pinned')}
 						>
 							<div
-								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-200 dark:border-gray-800"
 							>
-								{#each $pinnedChats as chat, idx}
+								{#each pinnedChatList as chat, idx}
 									<ChatItem
 										className=""
-										id={chat.id}
-										title={chat.title}
+										id={chat.id ?? ''}
+										title={chat.title ?? ''}
 										{shiftKey}
 										selected={selectedChatId === chat.id}
 										on:select={() => {
@@ -782,7 +778,7 @@
 										}}
 										on:tag={(e) => {
 											const { type, name } = e.detail;
-											tagEventHandler(type, name, chat.id);
+											tagEventHandler(type, name, chat.id ?? '');
 										}}
 									/>
 								{/each}
@@ -808,42 +804,24 @@
 				{/if}
 
 				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
-					<div class="pt-1.5">
+					<div class="pt-1">
 						{#if $chats}
-							{#each $chats as chat, idx}
-								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
+							{#each renderChatList as chat, idx}
+								{#if chat.showTimeRange}
 									<div
 										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
 										0
 											? ''
-											: 'pt-5'} pb-1.5"
+											: 'pt-4'} pb-1.5"
 									>
 										{$i18n.t(chat.time_range)}
-										<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
-							{$i18n.t('Today')}
-							{$i18n.t('Yesterday')}
-							{$i18n.t('Previous 7 days')}
-							{$i18n.t('Previous 30 days')}
-							{$i18n.t('January')}
-							{$i18n.t('February')}
-							{$i18n.t('March')}
-							{$i18n.t('April')}
-							{$i18n.t('May')}
-							{$i18n.t('June')}
-							{$i18n.t('July')}
-							{$i18n.t('August')}
-							{$i18n.t('September')}
-							{$i18n.t('October')}
-							{$i18n.t('November')}
-							{$i18n.t('December')}
-							-->
 									</div>
 								{/if}
 
 								<ChatItem
 									className=""
-									id={chat.id}
-									title={chat.title}
+									id={chat.id ?? ''}
+									title={chat.title ?? ''}
 									{shiftKey}
 									selected={selectedChatId === chat.id}
 									on:select={() => {
@@ -857,7 +835,7 @@
 									}}
 									on:tag={(e) => {
 										const { type, name } = e.detail;
-										tagEventHandler(type, name, chat.id);
+										tagEventHandler(type, name, chat.id ?? '');
 									}}
 								/>
 							{/each}
@@ -871,17 +849,19 @@
 									}}
 								>
 									<div
-										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+										class="w-full flex justify-center py-2 text-xs text-gray-500 dark:text-gray-400 items-center gap-2"
 									>
-										<Spinner className=" size-4" />
-										<div class=" ">Loading...</div>
+										<Spinner className="size-4" />
+										<span>Loading...</span>
 									</div>
 								</Loader>
 							{/if}
 						{:else}
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-								<Spinner className=" size-4" />
-								<div class=" ">Loading...</div>
+							<div
+								class="w-full flex justify-center py-4 text-xs text-gray-500 dark:text-gray-400 items-center gap-2"
+							>
+								<Spinner className="size-4" />
+								<span>Loading...</span>
 							</div>
 						{/if}
 					</div>
@@ -889,7 +869,8 @@
 			</Folder>
 		</div>
 
-		<div class="px-2">
+		<!-- User Menu -->
+		<div class="px-2 mt-2 border-t border-gray-300 dark:border-gray-800 pt-2">
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
@@ -901,19 +882,29 @@
 						}}
 					>
 						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
+							class="flex items-center gap-2 rounded-xl py-2 px-2 w-full
+		   hover:bg-gray-200 dark:hover:bg-gray-900 transition"
 						>
-							<div class=" self-center mr-3">
-								<img
-									src={$user?.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-full"
-									alt="User profile"
-								/>
+							<img
+								src={$user?.profile_image_url}
+								class="w-[35px] h-[35px] object-cover rounded-full flex-shrink-0"
+								alt="User profile"
+							/>
+
+							<div class="font-medium truncate">
+								{$user?.name}
 							</div>
-							<div class=" self-center font-medium">{$user?.name}</div>
+
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="ml-auto size-4 text-gray-600"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6" />
+							</svg>
 						</button>
 					</UserMenu>
 				{/if}

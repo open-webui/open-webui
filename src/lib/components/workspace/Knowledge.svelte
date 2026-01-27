@@ -84,68 +84,73 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 my-1.5">
-		<div class="flex justify-between items-center">
-			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
-				{$i18n.t('Knowledge')}
-				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredItems.length}</span
-				>
+	<div class="flex flex-col gap-4 my-4">
+		<!-- Header Section -->
+		<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+			<div class="flex items-center gap-3">
+				<h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
+					{$i18n.t('Knowledge')}
+				</h1>
+				<div class="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800">
+					<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+						{filteredItems.length}
+					</span>
+				</div>
+			</div>
+
+			<!-- Search and Add Section -->
+			<div class="flex items-center gap-2 flex-1 sm:flex-initial sm:min-w-[320px]">
+				<div class="flex-1 relative">
+					<div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+						<Search className="size-4" />
+					</div>
+					<input
+						class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
+						bind:value={query}
+						placeholder={$i18n.t('Search Knowledge')}
+					/>
+				</div>
+
+				<Tooltip content={$i18n.t('Create Knowledge')}>
+					<button
+						class="p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm hover:shadow-md"
+						aria-label={$i18n.t('Create Knowledge')}
+						on:click={() => {
+							goto('/workspace/knowledge/create');
+						}}
+					>
+						<Plus className="size-4" />
+					</button>
+				</Tooltip>
 			</div>
 		</div>
 
-		<div class=" flex w-full space-x-2">
-			<div class="flex flex-1">
-				<div class=" self-center ml-1 mr-3">
-					<Search className="size-3.5" />
-				</div>
-				<input
-					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={query}
-					placeholder={$i18n.t('Search Knowledge')}
-				/>
-			</div>
-
-			<div>
+		<!-- Knowledge Grid -->
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{#each filteredItems as item}
 				<button
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					aria-label={$i18n.t('Create Knowledge')}
+					class="group bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 text-left"
 					on:click={() => {
-						goto('/workspace/knowledge/create');
+						if (item?.meta?.document) {
+							toast.error(
+								$i18n.t(
+									'Only collections can be edited, create a new knowledge base to edit/add documents.'
+								)
+							);
+						} else {
+							goto(`/workspace/knowledge/${item.id}`);
+						}
 					}}
 				>
-					<Plus className="size-3.5" />
-				</button>
-			</div>
-		</div>
-	</div>
-
-	<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
-		{#each filteredItems as item}
-			<button
-				class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-850 transition rounded-xl"
-				on:click={() => {
-					if (item?.meta?.document) {
-						toast.error(
-							$i18n.t(
-								'Only collections can be edited, create a new knowledge base to edit/add documents.'
-							)
-						);
-					} else {
-						goto(`/workspace/knowledge/${item.id}`);
-					}
-				}}
-			>
-				<div class=" w-full">
-					<div class="flex items-center justify-between -mt-1">
+					<!-- Card Header -->
+					<div class="flex items-center justify-between mb-3">
 						{#if item?.meta?.document}
 							<Badge type="muted" content={$i18n.t('Document')} />
 						{:else}
 							<Badge type="success" content={$i18n.t('Collection')} />
 						{/if}
 
-						<div class=" flex self-center -mr-1 translate-y-1">
+						<div class="opacity-0 group-hover:opacity-100 transition-opacity">
 							<ItemMenu
 								on:delete={() => {
 									selectedItem = item;
@@ -155,43 +160,64 @@
 						</div>
 					</div>
 
-					<div class=" self-center flex-1 px-1 mb-1">
-						<div class=" font-semibold line-clamp-1 h-fit">{item.name}</div>
+					<!-- Card Content -->
+					<div class="space-y-2">
+						<h3 class="font-semibold text-gray-900 dark:text-white line-clamp-1">
+							{item.name}
+						</h3>
 
-						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-							{item.description}
-						</div>
+						<p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 min-h-[2.5rem]">
+							{item.description || $i18n.t('No description')}
+						</p>
+					</div>
 
-						<div class="mt-3 flex justify-between">
-							<div class="text-xs text-gray-500">
-								<Tooltip
-									content={item?.user?.email ?? $i18n.t('Deleted User')}
-									className="flex shrink-0"
-									placement="top-start"
-								>
-									{$i18n.t('By {{name}}', {
-										name: capitalizeFirstLetter(
-											item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
-										)
-									})}
-								</Tooltip>
+					<!-- Card Footer -->
+					<div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
+						<Tooltip
+							content={item?.user?.email ?? $i18n.t('Deleted User')}
+							className="flex-shrink-0"
+							placement="top-start"
+						>
+							<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+								{$i18n.t('By {{name}}', {
+									name: capitalizeFirstLetter(
+										item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
+									)
+								})}
 							</div>
-							<div class=" text-xs text-gray-500 line-clamp-1">
-								{$i18n.t('Updated')}
-								{dayjs(item.updated_at * 1000).fromNow()}
-							</div>
+						</Tooltip>
+
+						<div class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
+							{dayjs(item.updated_at * 1000).fromNow()}
 						</div>
 					</div>
-				</div>
-			</button>
-		{/each}
-	</div>
+				</button>
+			{/each}
+		</div>
 
-	<div class=" text-gray-500 text-xs mt-1 mb-2">
-		ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
+		<!-- Info Message -->
+		<div class="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+			<div class="flex-shrink-0 mt-0.5">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-4 text-blue-600 dark:text-blue-400"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+			<p class="text-sm text-blue-800 dark:text-blue-300">
+				{$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
+			</p>
+		</div>
 	</div>
 {:else}
-	<div class="w-full h-full flex justify-center items-center">
-		<Spinner />
+	<div class="w-full h-full flex justify-center items-center py-12">
+		<Spinner className="size-8" />
 	</div>
 {/if}

@@ -16,8 +16,8 @@
 	export let allowHTML = true;
 	export let tippyOptions = {};
 
-	let tooltipElement;
-	let tooltipInstance;
+	let tooltipElement: HTMLElement | undefined;
+	let tooltipInstance: any;
 
 	$: if (tooltipElement && content) {
 		if (tooltipInstance) {
@@ -25,12 +25,12 @@
 		} else {
 			tooltipInstance = tippy(tooltipElement, {
 				content: DOMPurify.sanitize(content),
-				placement: placement,
+				placement: placement as any,
 				allowHTML: allowHTML,
 				touch: touch,
 				...(theme !== '' ? { theme } : { theme: 'dark' }),
 				arrow: false,
-				offset: offset,
+				offset: offset as any,
 				...tippyOptions
 			});
 		}

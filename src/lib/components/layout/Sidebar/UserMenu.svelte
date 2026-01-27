@@ -31,14 +31,14 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
+			class="w-full {className} text-sm rounded-2xl px-1.5 py-2 z-50 bg-white dark:bg-gray-900 dark:text-white shadow-xl border border-gray-100 dark:border-gray-800 font-primary backdrop-blur-sm"
 			sideOffset={8}
 			side="bottom"
 			align="start"
-			transition={(e) => fade(e, { duration: 100 })}
+			transition={(e) => fade(e, { duration: 150 })}
 		>
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex items-center rounded-lg py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 group"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -48,7 +48,7 @@
 					}
 				}}
 			>
-				<div class=" self-center mr-3">
+				<div class="self-center mr-3 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
@@ -69,11 +69,11 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
+				<div class="self-center truncate font-medium">{$i18n.t('Settings')}</div>
 			</button>
 
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex items-center rounded-lg py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 group"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -83,15 +83,19 @@
 					}
 				}}
 			>
-				<div class=" self-center mr-3">
+				<div class="self-center mr-3 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
+				<div class="self-center truncate font-medium">{$i18n.t('Archived Chats')}</div>
 			</button>
 
 			{#if role === 'admin'}
+				<div class="my-2 px-2">
+					<div class="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent"></div>
+				</div>
+
 				<a
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex items-center rounded-lg py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 group"
 					href="/playground"
 					on:click={() => {
 						show = false;
@@ -101,7 +105,7 @@
 						}
 					}}
 				>
-					<div class=" self-center mr-3">
+					<div class="self-center mr-3 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
@@ -117,11 +121,11 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
+					<div class="self-center truncate font-medium">{$i18n.t('Playground')}</div>
 				</a>
 
 				<a
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex items-center rounded-lg py-2.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 group"
 					href="/admin"
 					on:click={() => {
 						show = false;
@@ -131,7 +135,7 @@
 						}
 					}}
 				>
-					<div class=" self-center mr-3">
+					<div class="self-center mr-3 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
@@ -147,14 +151,16 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+					<div class="self-center truncate font-medium">{$i18n.t('Admin Panel')}</div>
 				</a>
 			{/if}
 
-			<hr class=" border-gray-100 dark:border-gray-850 my-1 p-0" />
+			<div class="my-2 px-2">
+				<div class="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent"></div>
+			</div>
 
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex items-center rounded-lg py-2.5 px-3.5 w-full hover:bg-red-50 dark:hover:bg-red-950/30 transition-all duration-200 group text-red-600 dark:text-red-400"
 				on:click={async () => {
 					await userSignOut();
 					user.set(null);
@@ -165,7 +171,7 @@
 					show = false;
 				}}
 			>
-				<div class=" self-center mr-3">
+				<div class="self-center mr-3 group-hover:text-red-700 dark:group-hover:text-red-300 transition-colors">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 20 20"
@@ -184,42 +190,40 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
+				<div class="self-center truncate font-medium">{$i18n.t('Sign Out')}</div>
 			</button>
 
 			{#if $activeUserIds?.length > 0}
-				<hr class=" border-gray-100 dark:border-gray-850 my-1 p-0" />
+				<div class="my-2 px-2">
+					<div class="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent"></div>
+				</div>
 
 				<Tooltip
 					content={$USAGE_POOL && $USAGE_POOL.length > 0
 						? `${$i18n.t('Running')}: ${$USAGE_POOL.join(', ')} ✨`
 						: ''}
 				>
-					<div class="flex rounded-md py-1.5 px-3 text-xs gap-2.5 items-center">
-						<div class=" flex items-center">
+					<div class="flex rounded-lg py-2 px-3.5 text-xs gap-2.5 items-center bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 mx-1">
+						<div class="flex items-center">
 							<span class="relative flex size-2">
 								<span
 									class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
 								/>
-								<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+								<span class="relative inline-flex rounded-full size-2 bg-green-500 shadow-lg shadow-green-500/50" />
 							</span>
 						</div>
 
-						<div class=" ">
-							<span class="">
+						<div class="flex-1">
+							<span class="text-gray-700 dark:text-gray-300">
 								{$i18n.t('Active Users')}:
 							</span>
-							<span class=" font-semibold">
+							<span class="font-bold text-green-700 dark:text-green-400 ml-1">
 								{$activeUserIds?.length}
 							</span>
 						</div>
 					</div>
 				</Tooltip>
 			{/if}
-
-			<!-- <DropdownMenu.Item class="flex items-center px-3 py-2 text-sm ">
-				<div class="flex items-center">Profile</div>
-			</DropdownMenu.Item> -->
 		</DropdownMenu.Content>
 	</slot>
 </DropdownMenu.Root>

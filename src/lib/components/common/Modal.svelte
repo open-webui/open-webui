@@ -66,8 +66,8 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] {containerClassName} flex justify-center z-9999 overflow-y-auto overscroll-contain"
-		in:fade={{ duration: 10 }}
+		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/40 backdrop-blur-sm w-full h-screen max-h-[100dvh] {containerClassName} flex justify-center z-9999 overflow-y-auto overscroll-contain transition-all duration-200"
+		in:fade={{ duration: 150 }}
 		on:mousedown={() => {
 			show = false;
 		}}
@@ -75,7 +75,7 @@
 		<div
 			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
 				? 'mx-2'
-				: ''} shadow-3xl min-h-fit scrollbar-hidden {className}"
+				: ''} shadow-2xl min-h-fit scrollbar-hidden {className}"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
@@ -88,17 +88,50 @@
 
 <style>
 	.modal-content {
-		animation: scaleUp 0.1s ease-out forwards;
+		animation: scaleUp 0.2s ease-out forwards;
 	}
 
 	@keyframes scaleUp {
 		from {
-			transform: scale(0.985);
+			transform: scale(0.95);
 			opacity: 0;
 		}
 		to {
 			transform: scale(1);
 			opacity: 1;
 		}
+	}
+
+	/* Enhanced scrollbar styling */
+	::-webkit-scrollbar {
+		width: 10px;
+		height: 10px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: rgba(200, 200, 200, 0.5);
+		border-radius: 5px;
+		border: 2px solid transparent;
+		background-clip: content-box;
+		transition: background 200ms ease;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: rgba(150, 150, 150, 0.8);
+		background-clip: content-box;
+	}
+
+	:global(.dark) ::-webkit-scrollbar-thumb {
+		background: rgba(80, 80, 80, 0.5);
+		background-clip: content-box;
+	}
+
+	:global(.dark) ::-webkit-scrollbar-thumb:hover {
+		background: rgba(120, 120, 120, 0.8);
+		background-clip: content-box;
 	}
 </style>

@@ -213,6 +213,13 @@
 			chatTitle = '';
 		}
 	};
+	const cleanTitle = (t: string = '') =>
+		t.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+
+	const previewTitle = (t: string = '', max = 120) => {
+		const clean = cleanTitle(t);
+		return clean.length > max ? clean.slice(0, max) + '…' : clean;
+	};
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
@@ -249,54 +256,57 @@
 >
 	{#if confirmEdit}
 		<div
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
-			confirmEdit
+			class="w-full flex items-center justify-between
+			   rounded-lg px-[11px] h-[32px]
+			   {id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}
+			   whitespace-nowrap text-ellipsis"
 		>
 			<input
 				use:focusEdit
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
-				class=" bg-transparent w-full outline-hidden mr-10"
+				class="bg-transparent w-full h-[32px] leading-[32px]
+				   outline-none mr-10 truncate"
 				on:keydown={chatTitleInputKeydownHandler}
 			/>
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
-			confirmEdit
+			class="w-full flex items-center justify-between
+			   rounded-lg px-[11px] h-[32px]
+			   {id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}
+			   whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
-
-				if ($mobile) {
-					showSidebar.set(false);
-				}
+				if ($mobile) showSidebar.set(false);
 			}}
 			on:dblclick={() => {
 				chatTitle = title;
 				confirmEdit = true;
 			}}
-			on:mouseenter={(e) => {
-				mouseOver = true;
-			}}
-			on:mouseleave={(e) => {
-				mouseOver = false;
-			}}
-			on:focus={(e) => {}}
+			on:mouseenter={() => (mouseOver = true)}
+			on:mouseleave={() => (mouseOver = false)}
 			draggable="false"
 		>
-			<div class=" flex self-center flex-1 w-full">
-				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
-					{title}
-				</div>
+			<div class="flex-1 overflow-hidden">
+				<div
+	dir="auto"
+	class="text-left overflow-hidden truncate
+		   h-[32px] leading-[32px]"
+	title={title && cleanTitle(title).length <= 200 ? previewTitle(title, 120) : undefined}
+>
+	{previewTitle(title, 80)}
+</div>
+
 			</div>
 		</a>
 	{/if}

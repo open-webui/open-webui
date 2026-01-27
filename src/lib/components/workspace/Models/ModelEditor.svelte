@@ -264,26 +264,24 @@
 {#if loaded}
 	{#if onBack}
 		<button
-			class="flex space-x-1"
+			class="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
 			on:click={() => {
 				onBack();
 			}}
 		>
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="h-4 w-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-			<div class=" self-center text-sm font-medium">{'Back'}</div>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 20 20"
+				fill="currentColor"
+				class="size-4"
+			>
+				<path
+					fill-rule="evenodd"
+					d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+					clip-rule="evenodd"
+				/>
+			</svg>
+			<span class="text-sm font-medium">{$i18n.t('Back')}</span>
 		</button>
 	{/if}
 
@@ -358,178 +356,168 @@
 
 		{#if !edit || (edit && model)}
 			<form
-				class="flex flex-col md:flex-row w-full gap-3 md:gap-6"
+				class="flex flex-col lg:flex-row w-full gap-6"
 				on:submit|preventDefault={() => {
 					submitHandler();
 				}}
 			>
-				<div class="self-center md:self-start flex justify-center my-2 shrink-0">
-					<div class="self-center">
+				<!-- Profile Image Section -->
+				<div class="flex-shrink-0">
+					<div class="sticky top-4">
 						<button
-							class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
-							'/static/favicon.png'
-								? 'bg-transparent'
-								: 'bg-white'} shadow-xl group relative"
+							class="relative group rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow bg-white dark:bg-gray-800"
 							type="button"
 							on:click={() => {
 								filesInputElement.click();
 							}}
 						>
-							{#if info.meta.profile_image_url}
-								<img
-									src={info.meta.profile_image_url}
-									alt="model profile"
-									class="rounded-xl size-72 md:size-60 object-cover shrink-0"
-								/>
-							{:else}
-								<img
-									src="/static/favicon.png"
-									alt="model profile"
-									class=" rounded-xl size-72 md:size-60 object-cover shrink-0"
-								/>
-							{/if}
-
-							<div class="absolute bottom-0 right-0 z-10">
-								<div class="m-1.5">
-									<div
-										class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="size-5"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</div>
-								</div>
-							</div>
+							<img
+								src={info.meta.profile_image_url || '/static/favicon.png'}
+								alt="model profile"
+								class="w-64 h-64 object-cover"
+							/>
 
 							<div
-								class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
-							></div>
+								class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+							>
+								<div class="text-white text-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										class="size-12 mx-auto mb-2"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+									<p class="text-sm font-medium">{$i18n.t('Change Image')}</p>
+								</div>
+							</div>
 						</button>
 
-						<div class="flex w-full mt-1 justify-end">
-							<button
-								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
-								on:click={() => {
-									info.meta.profile_image_url = '/static/favicon.png';
-								}}
-								type="button"
-							>
-								Reset Image</button
-							>
-						</div>
+						<button
+							class="w-full mt-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+							on:click={() => {
+								info.meta.profile_image_url = '/static/favicon.png';
+							}}
+							type="button"
+						>
+							{$i18n.t('Reset Image')}
+						</button>
 					</div>
 				</div>
 
-				<div class="w-full">
-					<div class="mt-2 my-2 flex flex-col">
-						<div class="flex-1">
+				<!-- Form Content -->
+				<div class="flex-1 space-y-6">
+					<!-- Basic Info Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+						<div class="space-y-4">
 							<div>
+								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									{$i18n.t('Model Name')}
+								</label>
 								<input
-									class="text-3xl font-semibold w-full bg-transparent outline-hidden"
-									placeholder={$i18n.t('Model Name')}
+									class="w-full px-4 py-3 text-lg font-semibold bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+									placeholder={$i18n.t('Enter model name')}
 									bind:value={name}
 									required
 								/>
 							</div>
-						</div>
 
-						<div class="flex-1">
 							<div>
+								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									{$i18n.t('Model ID')}
+								</label>
 								<input
-									class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
-									placeholder={$i18n.t('Model ID')}
+									class="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+									placeholder={$i18n.t('model-id')}
 									bind:value={id}
 									disabled={edit}
 									required
 								/>
 							</div>
-						</div>
-					</div>
 
-					{#if preset}
-						<div class="my-1">
-							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
+							{#if preset}
+								<div>
+									<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										{$i18n.t('Base Model (From)')}
+									</label>
+									<select
+										class="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer"
+										bind:value={info.base_model_id}
+										on:change={(e) => {
+											addUsage(e.target.value);
+										}}
+										required
+									>
+										<option value={null}>{$i18n.t('Select a base model')}</option>
+										{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
+											<option value={model.id}>{model.name}</option>
+										{/each}
+									</select>
+								</div>
+							{/if}
 
 							<div>
-								<select
-									class="text-sm w-full bg-transparent outline-hidden"
-									placeholder="Select a base model (e.g. llama3, gpt-4o)"
-									bind:value={info.base_model_id}
-									on:change={(e) => {
-										addUsage(e.target.value);
-									}}
-									required
-								>
-									<option value={null} class=" text-gray-900"
-										>{$i18n.t('Select a base model')}</option
+								<div class="flex items-center justify-between mb-2">
+									<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+										{$i18n.t('Description')}
+									</label>
+									<button
+										class="px-3 py-1 text-xs font-medium rounded-md {enableDescription
+											? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+											: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'} transition-colors"
+										type="button"
+										on:click={() => {
+											enableDescription = !enableDescription;
+										}}
 									>
-									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
-										<option value={model.id} class=" text-gray-900">{model.name}</option>
-									{/each}
-								</select>
+										{enableDescription ? $i18n.t('Custom') : $i18n.t('Default')}
+									</button>
+								</div>
+
+								{#if enableDescription}
+									<Textarea
+										className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+										placeholder={$i18n.t('Add a short description about what this model does')}
+										bind:value={info.meta.description}
+										rows={3}
+									/>
+								{/if}
+							</div>
+
+							<div>
+								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									{$i18n.t('Tags')}
+								</label>
+								<Tags
+									tags={info?.meta?.tags ?? []}
+									on:delete={(e) => {
+										const tagName = e.detail;
+										info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+									}}
+									on:add={(e) => {
+										const tagName = e.detail;
+										if (!(info?.meta?.tags ?? null)) {
+											info.meta.tags = [{ name: tagName }];
+										} else {
+											info.meta.tags = [...info.meta.tags, { name: tagName }];
+										}
+									}}
+								/>
 							</div>
 						</div>
-					{/if}
-
-					<div class="my-1">
-						<div class="mb-1 flex w-full justify-between items-center">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
-
-							<button
-								class="p-1 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									enableDescription = !enableDescription;
-								}}
-							>
-								{#if !enableDescription}
-									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-								{/if}
-							</button>
-						</div>
-
-						{#if enableDescription}
-							<Textarea
-								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-								placeholder={$i18n.t('Add a short description about what this model does')}
-								bind:value={info.meta.description}
-							/>
-						{/if}
 					</div>
 
-					<div class=" mt-2 my-1">
-						<div class="">
-							<Tags
-								tags={info?.meta?.tags ?? []}
-								on:delete={(e) => {
-									const tagName = e.detail;
-									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-								}}
-								on:add={(e) => {
-									const tagName = e.detail;
-									if (!(info?.meta?.tags ?? null)) {
-										info.meta.tags = [{ name: tagName }];
-									} else {
-										info.meta.tags = [...info.meta.tags, { name: tagName }];
-									}
-								}}
-							/>
-						</div>
-					</div>
-
-					<div class="my-2">
-						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+					<!-- Access Control Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+						<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+							{$i18n.t('Access Control')}
+						</h3>
+						<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
 							<AccessControl
 								bind:accessControl
 								accessRoles={['read', 'write']}
@@ -538,71 +526,70 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+					<!-- Model Parameters Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+						<h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+							{$i18n.t('Model Params')}
+						</h3>
 
-					<div class="my-2">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
-						</div>
-
-						<div class="mt-2">
-							<div class="my-1">
-								<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
-								<div>
-									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-										placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
-										rows={4}
-										bind:value={info.params.system}
-									/>
-								</div>
+						<div class="space-y-4">
+							<div>
+								<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									{$i18n.t('System Prompt')}
+								</label>
+								<Textarea
+									className="w-full px-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+									placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+									rows={4}
+									bind:value={info.params.system}
+								/>
 							</div>
 
-							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-semibold">
-									{$i18n.t('Advanced Params')}
-								</div>
-
-								<button
-									class="p-1 px-3 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										showAdvanced = !showAdvanced;
-									}}
-								>
-									{#if showAdvanced}
-										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
-									{/if}
-								</button>
-							</div>
-
-							{#if showAdvanced}
-								<div class="my-2">
-									<AdvancedParams
-										admin={true}
-										bind:params
-										on:change={(e) => {
-											info.params = { ...info.params, ...params };
+							<div>
+								<div class="flex items-center justify-between mb-3">
+									<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+										{$i18n.t('Advanced Params')}
+									</label>
+									<button
+										class="px-3 py-1 text-xs font-medium rounded-md {showAdvanced
+											? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+											: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'} transition-colors"
+										type="button"
+										on:click={() => {
+											showAdvanced = !showAdvanced;
 										}}
-									/>
+									>
+										{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}
+									</button>
 								</div>
-							{/if}
+
+								{#if showAdvanced}
+									<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+										<AdvancedParams
+											admin={true}
+											bind:params
+											on:change={(e) => {
+												info.params = { ...info.params, ...params };
+											}}
+										/>
+									</div>
+								{/if}
+							</div>
 						</div>
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1" />
-
-					<div class="my-2">
-						<div class="flex w-full justify-between items-center">
-							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-sm font-semibold">
-									{$i18n.t('Prompt suggestions')}
-								</div>
-
+					<!-- Prompt Suggestions Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+						<div class="flex items-center justify-between mb-4">
+							<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+								{$i18n.t('Prompt suggestions')}
+							</h3>
+							<div class="flex items-center gap-2">
 								<button
-									class="p-1 text-xs flex rounded-sm transition"
+									class="px-3 py-1 text-xs font-medium rounded-md {(info?.meta?.suggestion_prompts ??
+									null) !== null
+										? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+										: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'} transition-colors"
 									type="button"
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
@@ -612,57 +599,55 @@
 										}
 									}}
 								>
-									{#if (info?.meta?.suggestion_prompts ?? null) === null}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-									{/if}
+									{(info?.meta?.suggestion_prompts ?? null) === null
+										? $i18n.t('Default')
+										: $i18n.t('Custom')}
 								</button>
-							</div>
 
-							{#if (info?.meta?.suggestion_prompts ?? null) !== null}
-								<button
-									class="p-1 px-2 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										if (
-											info.meta.suggestion_prompts.length === 0 ||
-											info.meta.suggestion_prompts.at(-1).content !== ''
-										) {
-											info.meta.suggestion_prompts = [
-												...info.meta.suggestion_prompts,
-												{ content: '' }
-											];
-										}
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
+								{#if (info?.meta?.suggestion_prompts ?? null) !== null}
+									<button
+										class="p-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+										type="button"
+										on:click={() => {
+											if (
+												info.meta.suggestion_prompts.length === 0 ||
+												info.meta.suggestion_prompts.at(-1).content !== ''
+											) {
+												info.meta.suggestion_prompts = [
+													...info.meta.suggestion_prompts,
+													{ content: '' }
+												];
+											}
+										}}
 									>
-										<path
-											d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-										/>
-									</svg>
-								</button>
-							{/if}
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="size-4"
+										>
+											<path
+												d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+											/>
+										</svg>
+									</button>
+								{/if}
+							</div>
 						</div>
 
 						{#if info?.meta?.suggestion_prompts}
-							<div class="flex flex-col space-y-1 mt-1 mb-3">
+							<div class="space-y-2">
 								{#if info.meta.suggestion_prompts.length > 0}
 									{#each info.meta.suggestion_prompts as prompt, promptIdx}
-										<div class=" flex rounded-lg">
+										<div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
 											<input
-												class=" text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
+												class="flex-1 px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
 												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 												bind:value={prompt.content}
 											/>
 
 											<button
-												class="px-2"
+												class="p-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
 												type="button"
 												on:click={() => {
 													info.meta.suggestion_prompts.splice(promptIdx, 1);
@@ -673,7 +658,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
 													fill="currentColor"
-													class="w-4 h-4"
+													class="size-4"
 												>
 													<path
 														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
@@ -683,114 +668,105 @@
 										</div>
 									{/each}
 								{:else}
-									<div class="text-xs text-center">No suggestion prompts</div>
+									<div class="text-center py-8 text-sm text-gray-500">
+										{$i18n.t('No suggestion prompts')}
+									</div>
 								{/if}
 							</div>
 						{/if}
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
-
-					<div class="my-2">
+					<!-- Knowledge Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
 						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
 					</div>
 
-					<div class="my-2">
+					<!-- Tools Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
 					</div>
 
-					<div class="my-2">
+					<!-- Filters Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
 						<FiltersSelector
 							bind:selectedFilterIds={filterIds}
 							filters={$functions.filter((func) => func.type === 'filter')}
 						/>
 					</div>
 
-					<div class="my-2">
+					<!-- Actions Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
 						<ActionsSelector
 							bind:selectedActionIds={actionIds}
 							actions={$functions.filter((func) => func.type === 'action')}
 						/>
 					</div>
 
-					<div class="my-2">
+					<!-- Capabilities Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
 						<Capabilities bind:capabilities />
 					</div>
 
-					<div class="my-2 text-gray-300 dark:text-gray-700">
-						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
-
+					<!-- JSON Preview Section -->
+					<div class="bg-white dark:bg-gray-850 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+						<div class="flex items-center justify-between mb-4">
+							<h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+								{$i18n.t('JSON Preview')}
+							</h3>
 							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
+								class="px-3 py-1 text-xs font-medium rounded-md {showPreview
+									? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+									: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'} transition-colors"
 								type="button"
 								on:click={() => {
 									showPreview = !showPreview;
 								}}
 							>
-								{#if showPreview}
-									<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Show')}</span>
-								{/if}
+								{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}
 							</button>
 						</div>
 
 						{#if showPreview}
-							<div>
-								<textarea
-									class="text-sm w-full bg-transparent outline-hidden resize-none"
-									rows="10"
-									value={JSON.stringify(info, null, 2)}
-									disabled
-									readonly
-								/>
-							</div>
+							<textarea
+								class="w-full px-4 py-3 text-xs font-mono bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg outline-none resize-none"
+								rows="12"
+								value={JSON.stringify(info, null, 2)}
+								disabled
+								readonly
+							/>
 						{/if}
 					</div>
 
-					<div class="my-2 flex justify-end pb-20">
+					<!-- Submit Button -->
+					<div class="sticky bottom-0 bg-white dark:bg-gray-900 py-4 border-t border-gray-200 dark:border-gray-700">
 						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+							class="w-full px-6 py-3 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white transition-colors shadow-sm hover:shadow-md flex items-center justify-center gap-2"
 							type="submit"
 							disabled={loading}
 						>
-							<div class=" self-center font-medium">
+							<span>
 								{#if edit}
 									{$i18n.t('Save & Update')}
 								{:else}
 									{$i18n.t('Save & Create')}
 								{/if}
-							</div>
+							</span>
 
 							{#if loading}
-								<div class="ml-1.5 self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/><path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/></svg
-									>
-								</div>
+								<svg
+									class="size-4 animate-spin"
+									viewBox="0 0 24 24"
+									fill="currentColor"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<path
+										d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+										opacity=".25"
+									/>
+									<path
+										d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+									/>
+								</svg>
 							{/if}
 						</button>
 					</div>

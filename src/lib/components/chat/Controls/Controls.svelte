@@ -17,79 +17,88 @@
 	let showValves = false;
 </script>
 
-<div class=" dark:text-white">
-	<div class=" flex items-center justify-between dark:text-gray-100 mb-2">
-		<div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</div>
+<div class="flex flex-col h-full">
+	<!-- Header -->
+	<div class="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-700">
+		<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+			{$i18n.t('Chat Controls')}
+		</h2>
 		<button
-			class="self-center"
+			class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 			on:click={() => {
 				dispatch('close');
 			}}
+			aria-label="Close"
 		>
-			<XMark className="size-3.5" />
+			<XMark className="size-4" />
 		</button>
 	</div>
 
-	<div class=" dark:text-gray-200 text-sm font-primary py-0.5 px-0.5">
+	<!-- Content -->
+	<div class="flex-1 overflow-y-auto py-4 space-y-4 text-sm">
+		<!-- Files Section -->
 		{#if chatFiles.length > 0}
-			<Collapsible title={$i18n.t('Files')} open={true} buttonClassName="w-full">
-				<div class="flex flex-col gap-1 mt-1.5" slot="content">
-					{#each chatFiles as file, fileIdx}
-						<FileItem
-							className="w-full"
-							item={file}
-							edit={true}
-							url={file?.url ? file.url : null}
-							name={file.name}
-							type={file.type}
-							size={file?.size}
-							dismissible={true}
-							on:dismiss={() => {
-								// Remove the file from the chatFiles array
-
-								chatFiles.splice(fileIdx, 1);
-								chatFiles = chatFiles;
-							}}
-							on:click={() => {
-								console.log(file);
-							}}
-						/>
-					{/each}
-				</div>
-			</Collapsible>
-
-			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+				<Collapsible title={$i18n.t('Files')} open={true} buttonClassName="w-full">
+					<div class="flex flex-col gap-2 mt-3" slot="content">
+						{#each chatFiles as file, fileIdx}
+							<FileItem
+								className="w-full"
+								item={file}
+								edit={true}
+								url={file?.url ? file.url : null}
+								name={file.name}
+								type={file.type}
+								size={file?.size}
+								dismissible={true}
+								on:dismiss={() => {
+									// Remove the file from the chatFiles array
+									chatFiles.splice(fileIdx, 1);
+									chatFiles = chatFiles;
+								}}
+								on:click={() => {
+									console.log(file);
+								}}
+							/>
+						{/each}
+					</div>
+				</Collapsible>
+			</div>
 		{/if}
 
-		<Collapsible bind:open={showValves} title={$i18n.t('Valves')} buttonClassName="w-full">
-			<div class="text-sm" slot="content">
-				<Valves show={showValves} />
-			</div>
-		</Collapsible>
-
-		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
-			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
-
-			<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
-				<div class="" slot="content">
-					<textarea
-						bind:value={params.system}
-						class="w-full text-xs py-1.5 bg-transparent outline-hidden resize-none"
-						rows="4"
-						placeholder={$i18n.t('Enter system prompt')}
-					/>
+		<!-- Valves Section -->
+		<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+			<Collapsible bind:open={showValves} title={$i18n.t('Valves')} buttonClassName="w-full">
+				<div class="mt-3" slot="content">
+					<Valves show={showValves} />
 				</div>
 			</Collapsible>
+		</div>
 
-			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
+		<!-- Admin/Permission Sections -->
+		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
+			<!-- System Prompt Section -->
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+				<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
+					<div class="mt-3" slot="content">
+						<textarea
+							bind:value={params.system}
+							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
+							rows="4"
+							placeholder={$i18n.t('Enter system prompt')}
+						/>
+					</div>
+				</Collapsible>
+			</div>
 
-			<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
-				<div class="text-sm mt-1.5" slot="content">
-					<div>
+			<!-- Advanced Params Section -->
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+				<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
+					<div class="mt-3" slot="content">
 						<AdvancedParams admin={$user?.role === 'admin'} bind:params />
 					</div>
-				</div>
-			</Collapsible>
+				</Collapsible>
+			</div>
 		{/if}
 	</div>
 </div>

@@ -32,10 +32,10 @@
 
 	let prefixId = '';
 	let enable = true;
-	let tags = [];
+	let tags: string[] = [];
 
 	let modelId = '';
-	let modelIds = [];
+	let modelIds: string[] = [];
 
 	let loading = false;
 

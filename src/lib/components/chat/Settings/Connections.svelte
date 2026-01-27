@@ -70,34 +70,43 @@
 <AddConnectionModal direct bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
 
 <form
-	class="flex flex-col h-full justify-between text-sm"
+	class="flex flex-col h-full justify-between"
 	on:submit|preventDefault={() => {
 		updateHandler();
 	}}
 >
-	<div class=" overflow-y-scroll scrollbar-hidden h-full">
+	<div class="space-y-6 overflow-y-auto">
 		{#if config !== null}
-			<div class="">
-				<div class="pr-1.5">
-					<div class="">
-						<div class="flex justify-between items-center mb-0.5">
-							<div class="font-medium">{$i18n.t('Manage Direct Connections')}</div>
+			<!-- Direct Connections Section -->
+			<div class="space-y-4">
+				<div class="flex items-start justify-between gap-4">
+					<div class="flex-1">
+						<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+							{$i18n.t('Manage Direct Connections')}
+						</h3>
+						<p class="text-sm text-gray-500 dark:text-gray-400">
+							Connect to your own OpenAI compatible API endpoints
+						</p>
+					</div>
+					<Tooltip content={$i18n.t(`Add Connection`)}>
+						<button
+							class="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							on:click={() => {
+								showConnectionModal = true;
+							}}
+							type="button"
+						>
+							<Plus />
+							<span>{$i18n.t('Add Connection')}</span>
+						</button>
+					</Tooltip>
+				</div>
 
-							<Tooltip content={$i18n.t(`Add Connection`)}>
-								<button
-									class="px-1"
-									on:click={() => {
-										showConnectionModal = true;
-									}}
-									type="button"
-								>
-									<Plus />
-								</button>
-							</Tooltip>
-						</div>
-
-						<div class="flex flex-col gap-1.5">
-							{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
+				<!-- Connections List -->
+				{#if config?.OPENAI_API_BASE_URLS?.length > 0}
+					<div class="space-y-3">
+						{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
+							<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
 								<Connection
 									bind:url
 									bind:key={config.OPENAI_API_KEYS[idx]}
@@ -121,36 +130,128 @@
 										config.OPENAI_API_CONFIGS = newConfig;
 									}}
 								/>
-							{/each}
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-8 text-center">
+						<div class="flex flex-col items-center gap-3">
+							<div
+								class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="w-6 h-6 text-gray-400 dark:text-gray-500"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
+									/>
+								</svg>
+							</div>
+							<div>
+								<div class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+									No connections configured
+								</div>
+								<div class="text-xs text-gray-500 dark:text-gray-400">
+									Click "Add Connection" to get started
+								</div>
+							</div>
 						</div>
 					</div>
+				{/if}
 
-					<div class="my-1.5">
-						<div class="text-xs text-gray-500">
-							{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
-							<br />
-							{$i18n.t(
-								'CORS must be properly configured by the provider to allow requests from Open WebUI.'
-							)}
+				<!-- Info Box -->
+				<div
+					class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+				>
+					<div class="flex gap-3">
+						<div class="flex-shrink-0">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="w-5 h-5 text-blue-600 dark:text-blue-400"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+								/>
+							</svg>
+						</div>
+						<div class="flex-1">
+							<div class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+								Important Information
+							</div>
+							<div class="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+								<p>
+									{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
+								</p>
+								<p>
+									{$i18n.t(
+										'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+									)}
+								</p>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
 		{:else}
-			<div class="flex h-full justify-center">
-				<div class="my-auto">
-					<Spinner className="size-6" />
+			<!-- Loading State -->
+			<div class="flex h-full items-center justify-center py-12">
+				<div class="flex flex-col items-center gap-3">
+					<Spinner className="size-8" />
+					<div class="text-sm text-gray-500 dark:text-gray-400">Loading connections...</div>
 				</div>
 			</div>
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<!-- Save Button -->
+	<div class="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-6 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 			type="submit"
 		>
 			{$i18n.t('Save')}
 		</button>
 	</div>
 </form>
+
+<style>
+	/* Custom scrollbar styling */
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: rgba(156, 163, 175, 0.5);
+		border-radius: 4px;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: rgba(156, 163, 175, 0.7);
+	}
+
+	:global(.dark) ::-webkit-scrollbar-thumb {
+		background: rgba(75, 85, 99, 0.5);
+	}
+
+	:global(.dark) ::-webkit-scrollbar-thumb:hover {
+		background: rgba(75, 85, 99, 0.7);
+	}
+</style>

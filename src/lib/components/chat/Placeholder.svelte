@@ -1,14 +1,10 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
-
 	import { onMount, getContext, tick, createEventDispatcher } from 'svelte';
-	import { blur, fade } from 'svelte/transition';
-
-	const dispatch = createEventDispatcher();
 
 	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
-	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
+	import { sanitizeResponseContent } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Suggestions from './Suggestions.svelte';
@@ -16,213 +12,185 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
 
-	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
+	const i18n: any = getContext('i18n');
 
+	/* -----------------------------
+	   Props
+	----------------------------- */
 	export let transparentBackground = false;
-
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
-
 	export let autoScroll = false;
 
-	export let atSelectedModel: Model | undefined;
-	export let selectedModels: [''];
-
+	export let atSelectedModel: any;
+	export let selectedModels: string[] = [];
 	export let history;
 
 	export let prompt = '';
-	export let files = [];
+	export let files: any[] = [];
 
-	export let selectedToolIds = [];
+	export let selectedToolIds: any[] = [];
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 
-	export let toolServers = [];
+	export let toolServers: any[] = [];
 
-	let models = [];
+	/* -----------------------------
+	   Models
+	----------------------------- */
+	let models: any[] = [];
+	let selectedModelIdx = 0;
 
-	const selectSuggestionPrompt = async (p) => {
+	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
+	$: if (selectedModels.length > 0) selectedModelIdx = models.length - 1;
+
+	let selectedModelsForInput: any = selectedModels;
+	$: selectedModelsForInput = selectedModels;
+
+	/* -----------------------------
+	   ✅ VISIBILITY CONTROL (FINAL)
+	----------------------------- */
+	let inputActive = false;
+	let userInteracted = false;
+
+	// Only show after REAL user interaction
+	$: showSuggestions = userInteracted && (inputActive || prompt.length > 0);
+
+	/* -----------------------------
+	   Suggestion helpers
+	----------------------------- */
+	const getSuggestionPrompts = (meta: any) => meta?.suggestion_prompts;
+
+	const selectSuggestionPrompt = async (p: string) => {
 		let text = p;
 
 		if (p.includes('{{CLIPBOARD}}')) {
-			const clipboardText = await navigator.clipboard.readText().catch((err) => {
+			const clipboardText = await navigator.clipboard.readText().catch(() => {
 				toast.error($i18n.t('Failed to read clipboard contents'));
 				return '{{CLIPBOARD}}';
 			});
-
 			text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
-
-			console.log('Clipboard text:', clipboardText, text);
 		}
 
 		prompt = text;
-
-		console.log(prompt);
 		await tick();
 
-		const chatInputContainerElement = document.getElementById('chat-input-container');
 		const chatInputElement = document.getElementById('chat-input');
-
-		if (chatInputContainerElement) {
-			chatInputContainerElement.scrollTop = chatInputContainerElement.scrollHeight;
-		}
-
-		await tick();
-		if (chatInputElement) {
-			chatInputElement.focus();
-			chatInputElement.dispatchEvent(new Event('input'));
-		}
-
-		await tick();
+		chatInputElement?.focus();
+		chatInputElement?.dispatchEvent(new Event('input'));
 	};
 
-	let selectedModelIdx = 0;
-
-	$: if (selectedModels.length > 0) {
-		selectedModelIdx = models.length - 1;
-	}
-
-	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
-
-	onMount(() => {});
+	onMount(() => {
+		// 🔒 Force hidden on first load
+		inputActive = false;
+		userInteracted = false;
+	});
 </script>
 
-<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
+<!-- =====================================================
+     PAGE WRAPPER
+===================================================== -->
+<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 py-24 text-center">
+
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
-			className="w-full flex justify-center mb-0.5"
+			className="w-full flex justify-center mb-2"
 			placement="top"
 		>
-			<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-				<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
+			<div class="flex items-center gap-2 text-gray-500 font-medium text-sm">
+				<EyeSlash strokeWidth="2.5" className="size-4" />
+				{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
 	{/if}
 
-	<div
-		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
-	>
-		<div class="w-full flex flex-col justify-center items-center">
-			<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5">
-				<div class="flex shrink-0 justify-center">
-					<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
-						{#each models as model, modelIdx}
-							<Tooltip
-								content={(models[modelIdx]?.info?.meta?.tags ?? [])
-									.map((tag) => tag.name.toUpperCase())
-									.join(', ')}
-								placement="top"
-							>
-								<button
-									on:click={() => {
-										selectedModelIdx = modelIdx;
-									}}
-								>
-									<img
-										crossorigin="anonymous"
-										src={model?.info?.meta?.profile_image_url ??
-											($i18n.language === 'dg-DG'
-												? `/doge.png`
-												: `${WEBUI_BASE_URL}/static/favicon.png`)}
-										class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
-										alt="logo"
-										draggable="false"
-									/>
-								</button>
-							</Tooltip>
-						{/each}
-					</div>
-				</div>
+	<!-- HEADER -->
+	<div class="flex flex-col items-center justify-center text-center font-primary">
+		<img
+			src={`${WEBUI_BASE_URL}/static/favicon.png`}
+			alt="Copai Logo"
+			class="w-14 h-14 mb-4"
+			draggable="false"
+		/>
 
-				<div class=" text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
-					{#if models[selectedModelIdx]?.name}
-						{models[selectedModelIdx]?.name}
-					{:else}
-						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
-					{/if}
-				</div>
-			</div>
+		<h1 class="text-3xl @sm:text-4xl font-semibold text-gray-900 dark:text-gray-100">
+			Welcome to Copai
+		</h1>
 
-			<div class="flex mt-1 mb-2">
-				<div in:fade={{ duration: 100, delay: 50 }}>
-					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
-						<Tooltip
-							className=" w-fit"
-							content={marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
-							)}
-							placement="top"
-						>
-							<div
-								class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
-							>
-								{@html marked.parse(
-									sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
-								)}
-							</div>
-						</Tooltip>
+		<p class="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-md">
+			Start by scripting a task, and let the chat take over.
+		</p>
 
-						{#if models[selectedModelIdx]?.info?.meta?.user}
-							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
-								By
-								{#if models[selectedModelIdx]?.info?.meta?.user.community}
-									<a
-										href="https://openwebui.com/m/{models[selectedModelIdx]?.info?.meta?.user
-											.username}"
-										>{models[selectedModelIdx]?.info?.meta?.user.name
-											? models[selectedModelIdx]?.info?.meta?.user.name
-											: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
-									>
-								{:else}
-									{models[selectedModelIdx]?.info?.meta?.user.name}
-								{/if}
-							</div>
-						{/if}
-					{/if}
-				</div>
-			</div>
-
-			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
-				<MessageInput
-					{history}
-					{selectedModels}
-					bind:files
-					bind:prompt
-					bind:autoScroll
-					bind:selectedToolIds
-					bind:imageGenerationEnabled
-					bind:codeInterpreterEnabled
-					bind:webSearchEnabled
-					bind:atSelectedModel
-					{toolServers}
-					{transparentBackground}
-					{stopResponse}
-					{createMessagePair}
-					placeholder={$i18n.t('How can I help you today?')}
-					on:upload={(e) => {
-						dispatch('upload', e.detail);
-					}}
-					on:submit={(e) => {
-						dispatch('submit', e.detail);
-					}}
-				/>
-			</div>
-		</div>
+		<p class="text-sm text-gray-500 dark:text-gray-400">
+			Not sure where to start?
+		</p>
 	</div>
-	<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
-		<div class="mx-5">
-			<Suggestions
-				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-					$config?.default_prompt_suggestions ??
-					[]}
-				inputValue={prompt}
-				on:select={(e) => {
-					selectSuggestionPrompt(e.detail);
-				}}
+
+	<!-- =====================================================
+	     INPUT + SUGGESTIONS (FINAL, STABLE)
+	===================================================== -->
+	<div
+		class="mt-10 w-full flex flex-col-reverse items-center text-left"
+		on:focusin={() => {
+			inputActive = true;
+			userInteracted = true;
+		}}
+		on:click={() => {
+			inputActive = true;
+			userInteracted = true;
+		}}
+		on:keydown={() => (userInteracted = true)}
+	>
+
+		<!-- INPUT -->
+		<div class="w-full @md:max-w-3xl py-3">
+			<MessageInput
+				{history}
+				selectedModels={selectedModelsForInput}
+				bind:files
+				bind:prompt
+				bind:autoScroll
+				bind:selectedToolIds
+				bind:imageGenerationEnabled
+				bind:codeInterpreterEnabled
+				bind:webSearchEnabled
+				bind:atSelectedModel
+				{toolServers}
+				{transparentBackground}
+				{stopResponse}
+				{createMessagePair}
+				placeholder={$i18n.t('How can I help you today?')}
+				on:upload={(e) => dispatch('upload', e.detail)}
+				on:submit={(e) => dispatch('submit', e.detail)}
 			/>
 		</div>
+
+		<!-- 🔒 RESERVED SPACE (NO SHIFT EVER) -->
+		<div class="mx-auto max-w-2xl w-full min-h-[220px]">
+			<div
+				class="transition-opacity duration-200"
+				style="
+					opacity: {showSuggestions ? 1 : 0};
+					pointer-events: {showSuggestions ? 'auto' : 'none'};
+				"
+			>
+				<div class="mx-5">
+					<Suggestions
+						suggestionPrompts={
+							getSuggestionPrompts(atSelectedModel?.info?.meta) ??
+							getSuggestionPrompts(models[selectedModelIdx]?.info?.meta) ??
+							$config?.default_prompt_suggestions ??
+							[]
+						}
+						inputValue={prompt}
+						on:select={(e) => selectSuggestionPrompt(e.detail)}
+					/>
+				</div>
+			</div>
+		</div>
+
 	</div>
 </div>

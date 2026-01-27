@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { SvelteFlowProvider } from '@xyflow/svelte';
-	import { slide } from 'svelte/transition';
+	import { slide, fade, fly } from 'svelte/transition';
+	import { quintOut, cubicOut } from 'svelte/easing';
 	import { Pane, PaneResizer } from 'paneforge';
 
 	import { onDestroy, onMount, tick } from 'svelte';
@@ -35,15 +36,16 @@
 	let mediaQuery;
 	let largeScreen = false;
 	let dragged = false;
+	let isAnimating = false;
 
-	let minSize = 0;
+	let minSize = 30; // Fixed size percentage
 
 	export const openPane = () => {
-		if (parseInt(localStorage?.chatControlsSize)) {
-			pane.resize(parseInt(localStorage?.chatControlsSize));
-		} else {
-			pane.resize(minSize);
-		}
+		isAnimating = true;
+		pane.resize(minSize);
+		setTimeout(() => {
+			isAnimating = false;
+		}, 150);
 	};
 
 	const handleMediaQuery = async (e) => {
@@ -81,32 +83,6 @@
 
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
-
-		// Select the container element you want to observe
-		const container = document.getElementById('chat-container');
-
-		// initialize the minSize based on the container width
-		minSize = Math.floor((350 / container.clientWidth) * 100);
-
-		// Create a new ResizeObserver instance
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (let entry of entries) {
-				const width = entry.contentRect.width;
-				// calculate the percentage of 200px
-				const percentage = (350 / width) * 100;
-				// set the minSize to the percentage, must be an integer
-				minSize = Math.floor(percentage);
-
-				if ($showControls) {
-					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-						pane.resize(minSize);
-					}
-				}
-			}
-		});
-
-		// Start observing the container's size changes
-		resizeObserver.observe(container);
 
 		document.addEventListener('mousedown', onMouseDown);
 		document.addEventListener('mouseup', onMouseUp);
@@ -148,10 +124,12 @@
 					class=" {$showCallOverlay || $showOverview || $showArtifacts
 						? ' h-screen  w-full'
 						: 'px-6 py-4'} h-full"
+					in:fade={{ duration: 120, easing: cubicOut }}
+					out:fade={{ duration: 100, easing: cubicOut }}
 				>
 					{#if $showCallOverlay}
 						<div
-							class=" h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
+							class="h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
 						>
 							<CallOverlay
 								bind:files
@@ -191,46 +169,35 @@
 			</Drawer>
 		{/if}
 	{:else}
-		<!-- if $showControls -->
-
+		<!-- Desktop View -->
 		{#if $showControls}
-			<PaneResizer class="relative flex w-2 items-center justify-center bg-background group">
-				<div class="z-10 flex h-7 w-5 items-center justify-center rounded-xs">
-					<EllipsisVertical className="size-4 invisible group-hover:visible" />
-				</div>
-			</PaneResizer>
+			<!-- Removed PaneResizer - no longer resizable -->
+			<div class="w-1 bg-gray-200 dark:bg-gray-700"></div>
 		{/if}
 
 		<Pane
 			bind:pane
 			defaultSize={0}
-			onResize={(size) => {
-				console.log('size', size, minSize);
-
-				if ($showControls && pane.isExpanded()) {
-					if (size < minSize) {
-						pane.resize(minSize);
-					}
-
-					if (size < minSize) {
-						localStorage.chatControlsSize = 0;
-					} else {
-						localStorage.chatControlsSize = size;
-					}
-				}
-			}}
+			minSize={minSize}
+			maxSize={minSize}
 			onCollapse={() => {
 				showControls.set(false);
 			}}
 			collapsible={true}
-			class=" z-10 "
+			class="z-10 transition-all duration-200 ease-out"
 		>
 			{#if $showControls}
-				<div class="flex max-h-full min-h-full">
+				<div
+					class="flex max-h-full min-h-full"
+					in:fly={{ x: 50, duration: 180, easing: quintOut }}
+					out:fly={{ x: 50, duration: 120, easing: cubicOut }}
+				>
 					<div
 						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
-							? ' '
-							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+							? ''
+							: 'px-4 py-4 bg-white dark:bg-gray-850 border-l border-gray-200 dark:border-gray-700 shadow-xl dark:shadow-2xl'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden transition-all duration-200"
+						in:fade={{ duration: 150, delay: 50, easing: cubicOut }}
+						out:fade={{ duration: 100, easing: cubicOut }}
 					>
 						{#if $showCallOverlay}
 							<div class="w-full h-full flex justify-center">
@@ -280,3 +247,9 @@
 		</Pane>
 	{/if}
 </SvelteFlowProvider>
+
+<style>
+	:global(.pane) {
+		transition: width 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+	}
+</style>

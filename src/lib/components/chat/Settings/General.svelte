@@ -232,38 +232,56 @@
 	};
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm">
-	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
-		<div class="">
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
+<div class="flex flex-col h-full justify-between">
+	<div class="space-y-6 overflow-y-auto">
+		<!-- WebUI Settings Section -->
+		<div class="space-y-4">
+			<div>
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+					{$i18n.t('WebUI Settings')}
+				</h3>
+				<p class="text-sm text-gray-500 dark:text-gray-400">Customize your interface preferences</p>
+			</div>
 
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
-				<div class="flex items-center relative">
+			<!-- Theme Setting -->
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+				<div class="flex items-center justify-between gap-4">
+					<div class="flex-1">
+						<div class="font-medium text-gray-800 dark:text-gray-200">
+							{$i18n.t('Theme')}
+						</div>
+						<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+							Choose your preferred color theme
+						</div>
+					</div>
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
+						class="px-4 py-2 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors cursor-pointer hover:border-gray-300 dark:hover:border-gray-500"
 						bind:value={selectedTheme}
-						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
-						<option value="system">⚙️ {$i18n.t('System')}</option>
-						<option value="dark">🌑 {$i18n.t('Dark')}</option>
-						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
-						<option value="light">☀️ {$i18n.t('Light')}</option>
-						<option value="her">🌷 Her</option>
-						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
+						<option value="system">{$i18n.t('System')}</option>
+						<option value="dark"> {$i18n.t('Dark')}</option>
+						<option value="oled-dark"> {$i18n.t('OLED Dark')}</option>
+						<option value="light"> {$i18n.t('Light')}</option>
+						
 					</select>
 				</div>
 			</div>
 
-			<div class=" flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
-				<div class="flex items-center relative">
+			<!-- Language Setting -->
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+				<div class="flex items-center justify-between">
+					<div>
+						<div class="text-sm font-medium text-gray-900 dark:text-white">
+							{$i18n.t('Language')}
+						</div>
+						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+							Select your preferred language
+						</div>
+					</div>
 					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
+						class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
 						bind:value={lang}
-						placeholder="Select a language"
 						on:change={(e) => {
 							changeLanguage(lang);
 						}}
@@ -273,147 +291,185 @@
 						{/each}
 					</select>
 				</div>
-			</div>
-			{#if $i18n.language === 'en-US'}
-				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
-					Couldn't find your language?
-					<a
-						class=" text-gray-300 font-medium underline"
-						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
-						target="_blank"
+
+				{#if $i18n.language === 'en-US'}
+					<div
+						class="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700"
 					>
-						Help us translate Open WebUI!
-					</a>
-				</div>
-			{/if}
+						Couldn't find your language?
+						<a
+							class="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+							href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
+							target="_blank"
+						>
+							Help us translate Open WebUI!
+						</a>
+					</div>
+				{/if}
+			</div>
 
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
-
+			<!-- Notifications Setting -->
+			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+				<div class="flex items-center justify-between">
+					<div>
+						<div class="text-sm font-medium text-gray-900 dark:text-white">
+							{$i18n.t('Notifications')}
+						</div>
+						<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+							Enable browser notifications for responses
+						</div>
+					</div>
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {notificationEnabled
+							? 'bg-blue-600'
+							: 'bg-gray-300 dark:bg-gray-700'}"
 						on:click={() => {
 							toggleNotification();
 						}}
 						type="button"
 					>
-						{#if notificationEnabled === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span
+							class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {notificationEnabled
+								? 'translate-x-6'
+								: 'translate-x-1'}"
+						/>
 					</button>
 				</div>
 			</div>
 		</div>
 
 		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
-			<hr class="border-gray-50 dark:border-gray-850 my-3" />
+			<!-- System Prompt Section -->
+			<div class="space-y-4 pt-2">
+				<div>
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+						{$i18n.t('System Prompt')}
+					</h3>
+					<p class="text-sm text-gray-500 dark:text-gray-400">
+						Define default system behavior and instructions
+					</p>
+				</div>
 
-			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
-				<Textarea
-					bind:value={system}
-					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
-					rows="4"
-					placeholder={$i18n.t('Enter system prompt here')}
-				/>
+				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+					<Textarea
+						bind:value={system}
+						className="w-full text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all"
+						rows="4"
+						placeholder={$i18n.t('Enter system prompt here')}
+					/>
+				</div>
 			</div>
 
-			<div class="mt-2 space-y-3 pr-1.5">
-				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
+			<!-- Advanced Parameters Section -->
+			<div class="space-y-4 pt-2">
+				<div class="flex items-center justify-between">
+					<div>
+						<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+							{$i18n.t('Advanced Parameters')}
+						</h3>
+						<p class="text-sm text-gray-500 dark:text-gray-400">
+							Fine-tune model behavior and performance
+						</p>
+					</div>
 					<button
-						class=" text-xs font-medium text-gray-500"
+						class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
 						type="button"
 						on:click={() => {
 							showAdvanced = !showAdvanced;
-						}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
+						}}
 					>
+						{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}
+					</button>
 				</div>
 
 				{#if showAdvanced}
-					<AdvancedParams admin={$user?.role === 'admin'} bind:params />
-					<hr class=" border-gray-100 dark:border-gray-850" />
-
-					<div class=" w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Keep Alive')}</div>
-
-							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									keepAlive = keepAlive === null ? '5m' : null;
-								}}
-							>
-								{#if keepAlive === null}
-									<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-								{:else}
-									<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
-								{/if}
-							</button>
+					<div class="space-y-4">
+						<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+							<AdvancedParams admin={$user?.role === 'admin'} bind:params />
 						</div>
 
-						{#if keepAlive !== null}
-							<div class="flex mt-1 space-x-2">
-								<input
-									class="w-full text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									type="text"
-									placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
-									bind:value={keepAlive}
-								/>
+						<!-- Keep Alive Setting -->
+						<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+							<div class="flex items-center justify-between">
+								<div>
+									<div class="text-sm font-medium text-gray-900 dark:text-white">
+										{$i18n.t('Keep Alive')}
+									</div>
+									<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+										Control model memory duration
+									</div>
+								</div>
+								<button
+									class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors {keepAlive ===
+									null
+										? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+										: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}"
+									type="button"
+									on:click={() => {
+										keepAlive = keepAlive === null ? '5m' : null;
+									}}
+								>
+									{keepAlive === null ? $i18n.t('Default') : $i18n.t('Custom')}
+								</button>
 							</div>
-						{/if}
-					</div>
 
-					<div>
-						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Request Mode')}</div>
-
-							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								on:click={() => {
-									toggleRequestFormat();
-								}}
-							>
-								{#if requestFormat === null}
-									<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
-								{:else}
-									<!-- <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            class="w-4 h-4 self-center"
-                        >
-                            <path
-                                d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z"
-                            />
-                        </svg> -->
-									<span class="ml-2 self-center"> {$i18n.t('JSON')} </span>
-								{/if}
-							</button>
+							{#if keepAlive !== null}
+								<div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+									<input
+										class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+										type="text"
+										placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
+										bind:value={keepAlive}
+									/>
+								</div>
+							{/if}
 						</div>
 
-						{#if requestFormat !== null}
-							<div class="flex mt-1 space-x-2">
-								<Textarea
-									className="w-full  text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
-									placeholder={$i18n.t('e.g. "json" or a JSON schema')}
-									bind:value={requestFormat}
-								/>
+						<!-- Request Mode Setting -->
+						<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+							<div class="flex items-center justify-between">
+								<div>
+									<div class="text-sm font-medium text-gray-900 dark:text-white">
+										{$i18n.t('Request Mode')}
+									</div>
+									<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+										Configure response format
+									</div>
+								</div>
+								<button
+									class="px-4 py-1.5 text-sm font-medium rounded-lg transition-colors {requestFormat ===
+									null
+										? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+										: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}"
+									on:click={() => {
+										toggleRequestFormat();
+									}}
+								>
+									{requestFormat === null ? $i18n.t('Default') : $i18n.t('JSON')}
+								</button>
 							</div>
-						{/if}
+
+							{#if requestFormat !== null}
+								<div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+									<Textarea
+										className="w-full text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all"
+										placeholder={$i18n.t('e.g. "json" or a JSON schema')}
+										bind:value={requestFormat}
+										rows="3"
+									/>
+								</div>
+							{/if}
+						</div>
 					</div>
 				{/if}
 			</div>
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<!-- Save Button -->
+	<div class="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-6 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 			on:click={() => {
 				saveHandler();
 			}}
@@ -422,3 +478,32 @@
 		</button>
 	</div>
 </div>
+
+<style>
+	/* Custom scrollbar styling */
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: rgba(156, 163, 175, 0.5);
+		border-radius: 4px;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: rgba(156, 163, 175, 0.7);
+	}
+
+	:global(.dark) ::-webkit-scrollbar-thumb {
+		background: rgba(75, 85, 99, 0.5);
+	}
+
+	:global(.dark) ::-webkit-scrollbar-thumb:hover {
+		background: rgba(75, 85, 99, 0.7);
+	}
+</style>

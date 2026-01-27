@@ -152,7 +152,7 @@
 						</button>
 					</Tooltip>
 
-					{#if $user !== undefined && $user !== null}
+					<!-- {#if $user !== undefined && $user !== null}
 						<UserMenu
 							className="max-w-[200px]"
 							role={$user?.role}
@@ -176,7 +176,7 @@
 								</div>
 							</button>
 						</UserMenu>
-					{/if}
+					{/if} -->
 				</div>
 			</div>
 		</div>

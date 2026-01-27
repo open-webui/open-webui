@@ -12,10 +12,10 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext('i18n') as any;
 
-	export let modelIds = [];
-	export let models = [];
+	export let modelIds: string[] = [];
+	export let models: any[] = [];
 	export let atSelectedModel;
 
 	export let submitPrompt;
@@ -27,7 +27,7 @@
 		selectedModelIdx = models.length - 1;
 	}
 
-	$: models = modelIds.map((id) => $_models.find((m) => m.id === id));
+	$: models = (modelIds ?? []).map((id: string) => $_models?.find((m: any) => m.id === id));
 
 	onMount(() => {
 		mounted = true;
@@ -78,6 +78,19 @@
 			</Tooltip>
 		{/if}
 
+		<div class=" w-full font-primary mb-6" in:fade={{ duration: 200, delay: 300 }}>
+			<Suggestions
+				className="grid grid-cols-2"
+				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+					$config?.default_prompt_suggestions ??
+					[]}
+				on:select={(e) => {
+					submitPrompt(e.detail);
+				}}
+			/>
+		</div>
+
 		<div
 			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
 		>
@@ -89,14 +102,13 @@
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
 				</div>
-
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 						<div
 							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
 						>
 							{@html marked.parse(
-								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
+								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
 							)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
@@ -122,19 +134,6 @@
 					{/if}
 				</div>
 			</div>
-		</div>
-
-		<div class=" w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
-			<Suggestions
-				className="grid grid-cols-2"
-				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-					$config?.default_prompt_suggestions ??
-					[]}
-				on:select={(e) => {
-					submitPrompt(e.detail);
-				}}
-			/>
 		</div>
 	</div>
 {/key}

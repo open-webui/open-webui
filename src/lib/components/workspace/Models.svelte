@@ -208,95 +208,104 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 my-1.5">
-		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-medium px-0.5">
-				{$i18n.t('Models')}
-				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredModels.length}</span
-				>
-			</div>
-		</div>
-
-		<div class=" flex flex-1 items-center w-full space-x-2">
-			<div class="flex flex-1 items-center">
-				<div class=" self-center ml-1 mr-3">
-					<Search className="size-3.5" />
+	<div class="flex flex-col gap-4 my-4">
+		<!-- Header Section -->
+		<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+			<div class="flex items-center gap-3">
+				<h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
+					{$i18n.t('Models')}
+				</h1>
+				<div class="px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800">
+					<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+						{filteredModels.length}
+					</span>
 				</div>
-				<input
-					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={searchValue}
-					placeholder={$i18n.t('Search Models')}
-				/>
 			</div>
 
-			<div>
-				<a
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					href="/workspace/models/create"
-				>
-					<Plus className="size-3.5" />
-				</a>
+			<!-- Search and Add Section -->
+			<div class="flex items-center gap-2 flex-1 sm:flex-initial sm:min-w-[320px]">
+				<div class="flex-1 relative">
+					<div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+						<Search className="size-4" />
+					</div>
+					<input
+						class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
+						bind:value={searchValue}
+						placeholder={$i18n.t('Search Models')}
+					/>
+				</div>
+
+				<Tooltip content={$i18n.t('Create Model')}>
+					<a
+						class="p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm hover:shadow-md"
+						href="/workspace/models/create"
+					>
+						<Plus className="size-4" />
+					</a>
+				</Tooltip>
 			</div>
 		</div>
-	</div>
 
-	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
-		{#each filteredModels as model}
-			<div
-				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
-				id="model-item-{model.id}"
-			>
-				<div class="flex gap-4 mt-0.5 mb-0.5">
-					<div class=" w-[44px]">
-						<div
-							class=" rounded-full object-cover {model.is_active
-								? ''
-								: 'opacity-50 dark:opacity-50'} "
-						>
-							<img
-								src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
-								alt="modelfile profile"
-								class=" rounded-full w-full h-auto object-cover"
-							/>
-						</div>
-					</div>
-
-					<a
-						class=" flex flex-1 cursor-pointer w-full"
-						href={`/?models=${encodeURIComponent(model.id)}`}
-					>
-						<div class=" flex-1 self-center {model.is_active ? '' : 'text-gray-500'}">
-							<Tooltip
-								content={marked.parse(model?.meta?.description ?? model.id)}
-								className=" w-fit"
-								placement="top-start"
+		<!-- Models Grid -->
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" id="model-list">
+			{#each filteredModels as model}
+				<div
+					class="group bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200"
+					id="model-item-{model.id}"
+				>
+					<!-- Model Header -->
+					<div class="flex gap-3 mb-3">
+						<div class="flex-shrink-0">
+							<div
+								class="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 {model.is_active
+									? ''
+									: 'opacity-50'}"
 							>
-								<div class=" font-semibold line-clamp-1">{model.name}</div>
-							</Tooltip>
-
-							<div class="flex gap-1 text-xs overflow-hidden">
-								<div class="line-clamp-1">
-									{#if (model?.meta?.description ?? '').trim()}
-										{model?.meta?.description}
-									{:else}
-										{model.id}
-									{/if}
-								</div>
+								<img
+									src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
+									alt="Model profile"
+									class="w-full h-full object-cover"
+								/>
 							</div>
 						</div>
-					</a>
-				</div>
 
-				<div class="flex justify-between items-center -mb-0.5 px-0.5">
-					<div class=" text-xs mt-0.5">
+						
+						<a
+							class="flex-1 min-w-0"
+							href={`/?models=${encodeURIComponent(model.id)}`}
+						>
+							<Tooltip
+								content={marked.parse(model?.meta?.description ?? model.id)}
+								className="w-fit"
+								placement="top-start"
+							>
+								<h3
+									class="font-semibold text-gray-900 dark:text-white truncate {model.is_active
+										? ''
+										: 'text-gray-500 dark:text-gray-500'}"
+								>
+									{model.name}
+								</h3>
+							</Tooltip>
+
+							<p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+								{#if (model?.meta?.description ?? '').trim()}
+									{model?.meta?.description}
+								{:else}
+									{model.id}
+								{/if}
+							</p>
+						</a>
+					</div>
+
+					<!-- Model Footer -->
+					<div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
 						<Tooltip
 							content={model?.user?.email ?? $i18n.t('Deleted User')}
-							className="flex shrink-0"
+							className="flex-shrink-0"
 							placement="top-start"
 						>
-							<div class="shrink-0 text-gray-500">
+							<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
 								{$i18n.t('By {{name}}', {
 									name: capitalizeFirstLetter(
 										model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
@@ -304,101 +313,103 @@
 								})}
 							</div>
 						</Tooltip>
-					</div>
 
-					<div class="flex flex-row gap-0.5 items-center">
-						{#if shiftKey}
-							<Tooltip content={$i18n.t('Delete')}>
-								<button
-									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-									type="button"
-									on:click={() => {
-										deleteModelHandler(model);
-									}}
-								>
-									<GarbageBin />
-								</button>
-							</Tooltip>
-						{:else}
-							{#if $user?.role === 'admin' || model.user_id === $user?.id || model.access_control.write.group_ids.some( (wg) => group_ids.includes(wg) )}
-								<a
-									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-									type="button"
-									href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke-width="1.5"
-										stroke="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-										/>
-									</svg>
-								</a>
-							{/if}
-
-							<ModelMenu
-								user={$user}
-								{model}
-								shareHandler={() => {
-									shareModelHandler(model);
-								}}
-								cloneHandler={() => {
-									cloneModelHandler(model);
-								}}
-								exportHandler={() => {
-									exportModelHandler(model);
-								}}
-								hideHandler={() => {
-									hideModelHandler(model);
-								}}
-								deleteHandler={() => {
-									selectedModel = model;
-									showModelDeleteConfirm = true;
-								}}
-								onClose={() => {}}
-							>
-								<button
-									class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-									type="button"
-								>
-									<EllipsisHorizontal className="size-5" />
-								</button>
-							</ModelMenu>
-
-							<div class="ml-1">
-								<Tooltip content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-									<Switch
-										bind:state={model.is_active}
-										on:change={async (e) => {
-											toggleModelById(localStorage.token, model.id);
-											_models.set(
-												await getModels(
-													localStorage.token,
-													$config?.features?.enable_direct_connections &&
-														($settings?.directConnections ?? null)
-												)
-											);
+						<div class="flex items-center gap-1 flex-shrink-0 ml-2">
+							{#if shiftKey}
+								<Tooltip content={$i18n.t('Delete')}>
+									<button
+										class="p-2 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+										type="button"
+										on:click={() => {
+											deleteModelHandler(model);
 										}}
-									/>
+									>
+										<GarbageBin className="size-4" />
+									</button>
 								</Tooltip>
-							</div>
-						{/if}
+							{:else}
+								{#if $user?.role === 'admin' || model.user_id === $user?.id || model.access_control.write.group_ids.some( (wg) => group_ids.includes(wg) )}
+									<Tooltip content={$i18n.t('Edit')}>
+										
+										<a
+											class="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+											href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
+										>
+
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="1.5"
+												stroke="currentColor"
+												class="size-4"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+												/>
+											</svg>
+										</a>
+									</Tooltip>
+								{/if}
+
+								<ModelMenu
+									user={$user}
+									{model}
+									shareHandler={() => {
+										shareModelHandler(model);
+									}}
+									cloneHandler={() => {
+										cloneModelHandler(model);
+									}}
+									exportHandler={() => {
+										exportModelHandler(model);
+									}}
+									hideHandler={() => {
+										hideModelHandler(model);
+									}}
+									deleteHandler={() => {
+										selectedModel = model;
+										showModelDeleteConfirm = true;
+									}}
+									onClose={() => {}}
+								>
+									<button
+										class="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+										type="button"
+									>
+										<EllipsisHorizontal className="size-4" />
+									</button>
+								</ModelMenu>
+
+								<Tooltip content={model.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+									<div class="ml-1">
+										<Switch
+											bind:state={model.is_active}
+											on:change={async (e) => {
+												toggleModelById(localStorage.token, model.id);
+												_models.set(
+													await getModels(
+														localStorage.token,
+														$config?.features?.enable_direct_connections &&
+															($settings?.directConnections ?? null)
+													)
+												);
+											}}
+										/>
+									</div>
+								</Tooltip>
+							{/if}
+						</div>
 					</div>
 				</div>
-			</div>
-		{/each}
-	</div>
+			{/each}
+		</div>
 
-	{#if $user?.role === 'admin'}
-		<div class=" flex justify-end w-full mb-3">
-			<div class="flex space-x-1">
+		<!-- Import/Export Section -->
+		{#if $user?.role === 'admin'}
+			<div class="flex justify-end gap-2">
 				<input
 					id="models-import-input"
 					bind:this={modelsImportInputElement}
@@ -451,88 +462,83 @@
 				/>
 
 				<button
-					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+					class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors"
 					on:click={() => {
 						modelsImportInputElement.click();
 					}}
 				>
-					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Models')}</div>
-
-					<div class=" self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
+					<span>{$i18n.t('Import Models')}</span>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="size-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
 				</button>
 
 				{#if models.length}
 					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+						class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors"
 						on:click={async () => {
 							downloadModels(models);
 						}}
 					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Models')}
-						</div>
-
-						<div class=" self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-3.5 h-3.5"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
+						<span>{$i18n.t('Export Models')}</span>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="size-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
 					</button>
 				{/if}
 			</div>
-		</div>
-	{/if}
+		{/if}
 
-	{#if $config?.features.enable_community_sharing}
-		<div class=" my-16">
-			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by Open WebUI Community')}
-			</div>
+		<!-- Community Section -->
+		{#if $config?.features.enable_community_sharing}
+			<div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+				<h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+					{$i18n.t('Made by Open WebUI Community')}
+				</h2>
 
-			<a
-				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
-				target="_blank"
-			>
-				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a model')}</div>
-					<div class=" text-sm line-clamp-1">
-						{$i18n.t('Discover, download, and explore model presets')}
-					</div>
-				</div>
-
-				<div>
+				<a
+					class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl hover:shadow-md transition-all group"
+					href="https://openwebui.com/#open-webui-community"
+					target="_blank"
+				>
 					<div>
-						<ChevronRight />
+						<h3 class="font-semibold text-gray-900 dark:text-white mb-1">
+							{$i18n.t('Discover a model')}
+						</h3>
+						<p class="text-sm text-gray-600 dark:text-gray-400">
+							{$i18n.t('Discover, download, and explore model presets')}
+						</p>
 					</div>
-				</div>
-			</a>
-		</div>
-	{/if}
+
+					<div
+						class="p-2 bg-white dark:bg-gray-800 rounded-lg group-hover:translate-x-1 transition-transform"
+					>
+						<ChevronRight className="size-5 text-blue-600 dark:text-blue-400" />
+					</div>
+				</a>
+			</div>
+		{/if}
+	</div>
 {:else}
-	<div class="w-full h-full flex justify-center items-center">
-		<Spinner />
+	<div class="w-full h-full flex justify-center items-center py-12">
+		<Spinner className="size-8" />
 	</div>
 {/if}
