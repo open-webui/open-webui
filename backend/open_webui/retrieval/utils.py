@@ -18,7 +18,8 @@ try:
     PORTKEY_SDK_AVAILABLE = True
 except ImportError:
     PORTKEY_SDK_AVAILABLE = False
-    log.warning("Portkey SDK not available. Install portkey-ai package for embedding support.")
+
+log = logging.getLogger(__name__)
 
 
 from open_webui.config import VECTOR_DB, RAG_EMBEDDING_MODEL
@@ -27,15 +28,6 @@ from open_webui.utils.misc import get_last_user_message, calculate_sha256_string
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
-
-from open_webui.env import (
-    SRC_LOG_LEVELS,
-    OFFLINE_MODE,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-)
-
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 from typing import Any
@@ -1007,6 +999,24 @@ def generate_portkey_embeddings_sdk(
         # Batch processing for large requests
         if texts_count <= MAX_BATCH_SIZE:
             # Single batch - process all at once
+            # Log complete request payload details
+            sample_texts = [t[:50].replace("\n", " ") + ("..." if len(t) > 50 else "") for t in texts_list[:5]]
+            log.info(
+                f"[Portkey Request Payload]\n"
+                f"  Settings:\n"
+                f"    model: {model}\n"
+                f"    base_url: {base_url}\n"
+                f"    api_key: {api_key[:10]}...{api_key[-4:] if len(api_key) > 14 else '***'} (len={len(api_key)})\n"
+                f"    encoding_format: {encoding_format}\n"
+                f"  Payload:\n"
+                f"    input_type: {type(texts_list).__name__}\n"
+                f"    input_length: {texts_count}\n"
+                f"    input_shape: [{texts_count}]\n"
+                f"    avg_text_len: {sum(len(t) for t in texts_list) / texts_count:.1f}\n"
+                f"    min_text_len: {min(len(t) for t in texts_list)}\n"
+                f"    max_text_len: {max(len(t) for t in texts_list)}\n"
+                f"    sample_texts (first 5): {sample_texts}"
+            )
             response = portkey.embeddings.create(
                 model=model,
                 input=texts_list,
@@ -1024,9 +1034,13 @@ def generate_portkey_embeddings_sdk(
                 batch = texts_list[i:i + MAX_BATCH_SIZE]
                 batch_num = (i // MAX_BATCH_SIZE) + 1
                 total_batches = (texts_count + MAX_BATCH_SIZE - 1) // MAX_BATCH_SIZE
-                
-                log.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} items)")
-                
+                sample_batch = [t[:50].replace("\n", " ") + ("..." if len(t) > 50 else "") for t in batch[:3]]
+                log.info(
+                    f"[Portkey Batch {batch_num}/{total_batches}]\n"
+                    f"  Settings: model={model}, base_url={base_url}, api_key={api_key[:10]}...{api_key[-4:] if len(api_key) > 14 else '***'}, encoding={encoding_format}\n"
+                    f"  Payload: input_length={len(batch)}, shape=[{len(batch)}], avg_len={sum(len(t) for t in batch) / len(batch):.1f}\n"
+                    f"  Sample (first 3): {sample_batch}"
+                )
                 response = portkey.embeddings.create(
                     model=model,
                     input=batch,
