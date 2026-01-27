@@ -5,9 +5,11 @@ from open_webui.models.prompts import (
     PromptForm,
     PromptUserResponse,
     PromptAccessResponse,
+    PromptAccessListResponse,
     PromptModel,
     Prompts,
 )
+from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import (
     PromptHistories,
     PromptHistoryModel,
@@ -33,6 +35,8 @@ class PromptMetadataForm(BaseModel):
 
 
 router = APIRouter()
+
+PAGE_ITEM_COUNT = 30
 
 
 ############################
@@ -67,26 +71,57 @@ async def get_prompt_tags(
         return sorted(list(tags))
 
 
-@router.get("/list", response_model=list[PromptAccessResponse])
+@router.get("/list", response_model=PromptAccessListResponse)
 async def get_prompt_list(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
+    query: Optional[str] = None,
+    view_option: Optional[str] = None,
+    tag: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        prompts = Prompts.get_prompts(db=db)
-    else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "read", db=db)
+    limit = PAGE_ITEM_COUNT
 
-    return [
-        PromptAccessResponse(
-            **prompt.model_dump(),
-            write_access=(
-                (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                or user.id == prompt.user_id
-                or has_access(user.id, "write", prompt.access_control, db=db)
-            ),
-        )
-        for prompt in prompts
-    ]
+    page = max(1, page)
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if view_option:
+        filter["view_option"] = view_option
+    if tag:
+        filter["tag"] = tag
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    if not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL):
+        groups = Groups.get_groups_by_member_id(user.id, db=db)
+        if groups:
+            filter["group_ids"] = [group.id for group in groups]
+
+        filter["user_id"] = user.id
+
+    result = Prompts.search_prompts(user.id, filter=filter, skip=skip, limit=limit, db=db)
+
+    return PromptAccessListResponse(
+        items=[
+            PromptAccessResponse(
+                **prompt.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == prompt.user_id
+                    or has_access(user.id, "write", prompt.access_control, db=db)
+                ),
+            )
+            for prompt in result.items
+        ],
+        total=result.total,
+    )
 
 
 ############################
