@@ -1,7 +1,7 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 	import { DropdownMenu } from 'bits-ui';
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 
 	import { searchNotes } from '$lib/apis/notes';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
@@ -25,7 +25,9 @@
 
 	let show = false;
 
+	let searchQuery = '';
 	let query = '';
+	let debounceTimer;
 
 	let noteItems = [];
 	let knowledgeItems = [];
@@ -35,9 +37,24 @@
 
 	$: items = [...noteItems, ...knowledgeItems, ...fileItems];
 
-	$: if (query !== null) {
-		getItems();
+	$: {
+		searchQuery;
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				query = searchQuery;
+				getItems();
+			}, 300);
+		} else {
+			debounceTimer = setTimeout(() => {
+				// Initialize timer so subsequent changes trigger debounce
+			}, 0);
+		}
 	}
+
+	onDestroy(() => {
+		clearTimeout(debounceTimer);
+	});
 
 	const getItems = () => {
 		getNoteItems();
@@ -104,6 +121,7 @@
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
+			searchQuery = '';
 			query = '';
 		}
 	}}
@@ -125,7 +143,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
+						bind:value={searchQuery}
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
