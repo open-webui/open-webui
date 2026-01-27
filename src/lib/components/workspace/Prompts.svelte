@@ -57,7 +57,6 @@
 	let copiedId: string | null = null;
 
 	let page = 1;
-	let searchDebounceTimer;
 
 	// Debounce only query changes
 	$: if (query !== undefined) {
