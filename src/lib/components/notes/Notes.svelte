@@ -59,7 +59,9 @@
 	let items = null;
 	let total = null;
 
+	let searchQuery = '';
 	let query = '';
+	let debounceTimer;
 
 	let sortKey = null;
 	let displayOption = null;
@@ -162,6 +164,20 @@
 		reset();
 		await getItemsPage();
 	};
+
+	$: {
+		searchQuery;
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				query = searchQuery;
+			}, 300);
+		} else {
+			debounceTimer = setTimeout(() => {
+				// Initialize timer so subsequent changes trigger debounce
+			}, 0);
+		}
+	}
 
 	$: if (
 		loaded &&
@@ -283,6 +299,7 @@
 	});
 
 	onDestroy(() => {
+		clearTimeout(debounceTimer);
 		console.log('destroy');
 		const dropzoneElement = document.getElementById('notes-container');
 
@@ -358,16 +375,16 @@
 					</div>
 					<input
 						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
+						bind:value={searchQuery}
 						placeholder={$i18n.t('Search Notes')}
 					/>
 
-					{#if query}
+					{#if searchQuery}
 						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 							<button
 								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 								on:click={() => {
-									query = '';
+									searchQuery = '';
 								}}
 							>
 								<XMark className="size-3" strokeWidth="2" />
