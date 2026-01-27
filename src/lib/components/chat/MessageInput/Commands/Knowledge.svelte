@@ -23,8 +23,10 @@
 	export let query = '';
 	export let onSelect = (e) => {};
 
+	let searchQuery = '';
 	let selectedIdx = 0;
 	let items = [];
+	let debounceTimer;
 
 	export let filteredItems = [];
 	$: filteredItems = [
@@ -69,9 +71,23 @@
 
 	$: items = [...folderItems, ...knowledgeItems, ...fileItems];
 
-	$: if (query !== null) {
-		getItems();
+	$: {
+		searchQuery = query;
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				getItems();
+			}, 200);
+		} else {
+			debounceTimer = setTimeout(() => {
+				// Initialize timer so subsequent changes trigger debounce
+			}, 0);
+		}
 	}
+
+	onDestroy(() => {
+		clearTimeout(debounceTimer);
+	});
 
 	const getItems = () => {
 		getFolderItems();

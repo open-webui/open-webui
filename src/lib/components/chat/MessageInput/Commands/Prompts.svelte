@@ -11,9 +11,29 @@
 
 	let selectedPromptIdx = 0;
 	export let filteredItems = [];
+	let debounceTimer;
+	let debouncedQuery = '';
+
+	$: {
+		query;
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				debouncedQuery = query;
+			}, 200);
+		} else {
+			debounceTimer = setTimeout(() => {
+				// Initialize timer so subsequent changes trigger debounce
+			}, 0);
+		}
+	}
+
+	onDestroy(() => {
+		clearTimeout(debounceTimer);
+	});
 
 	$: filteredItems = prompts
-		.filter((p) => p.command.toLowerCase().includes(query.toLowerCase()))
+		.filter((p) => p.command.toLowerCase().includes(debouncedQuery.toLowerCase()))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: if (query) {
