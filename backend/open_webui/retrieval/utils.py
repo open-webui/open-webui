@@ -29,6 +29,13 @@ from open_webui.utils.misc import get_last_user_message, calculate_sha256_string
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
 
+from open_webui.env import (
+    SRC_LOG_LEVELS,
+    OFFLINE_MODE,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+)
+
+log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 from typing import Any
 
