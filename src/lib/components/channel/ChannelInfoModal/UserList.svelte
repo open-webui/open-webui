@@ -2,7 +2,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user as _user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, onDestroy } from 'svelte';
 
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -37,7 +37,9 @@
 	let users = null;
 	let total = null;
 
+	let searchQuery = '';
 	let query = '';
+	let debounceTimer;
 	let orderBy = 'name'; // default sort key
 	let direction = 'asc'; // default sort order
 
@@ -76,6 +78,24 @@
 			console.error(err);
 		}
 	};
+
+	$: {
+		searchQuery;
+		if (debounceTimer) {
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				query = searchQuery;
+			}, 300);
+		} else {
+			debounceTimer = setTimeout(() => {
+				// Initialize timer so subsequent changes trigger debounce
+			}, 0);
+		}
+	}
+
+	onDestroy(() => {
+		clearTimeout(debounceTimer);
+	});
 
 	$: if (
 		channel !== null &&
@@ -137,7 +157,7 @@
 						</div>
 						<input
 							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-							bind:value={query}
+							bind:value={searchQuery}
 							placeholder={$i18n.t('Search')}
 						/>
 					</div>
