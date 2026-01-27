@@ -189,6 +189,7 @@
 					/>
 				</div>
 			</div>
+		</div>
 
 		{#if users.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
