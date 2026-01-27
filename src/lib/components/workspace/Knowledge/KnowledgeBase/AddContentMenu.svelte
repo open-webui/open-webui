@@ -82,7 +82,7 @@
 
 			<Tooltip
 				content={$i18n.t(
-					'This option will delete all existing files in the collection and replace them with newly uploaded files.'
+					'Mirrors the local directory to the knowledge base. New or changed files will be uploaded, while files that no longer exist in the local directory will be removed. Unchanged files are skipped.'
 				)}
 				className="w-full"
 			>

@@ -1626,7 +1626,6 @@ def process_file(
 ):
     """
     Process a file and save its content to the vector database.
-    Process a file and save its content to the vector database.
     Note: granular session management is used to prevent connection pool exhaustion.
     The session is committed before external API calls, and updates use a fresh session.
     """

@@ -511,3 +511,99 @@ export const exportKnowledgeById = async (token: string, id: string) => {
 
 	return res;
 };
+
+export type FileSyncCompareItem = {
+	file_path: string;
+	file_hash: string;
+	size: number;
+};
+
+export type ChangedFileInfo = {
+	file_path: string;
+	old_file_id: string;
+};
+
+export type SyncCompareResponse = {
+	new_files: string[];
+	changed_files: ChangedFileInfo[];
+	removed_file_ids: string[];
+	unchanged: string[];
+};
+
+export const compareFilesForSync = async (
+	token: string,
+	id: string,
+	files: FileSyncCompareItem[]
+): Promise<SyncCompareResponse> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/sync/compare`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ files })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export type UploadAndReplaceResponse = {
+	new_file_id: string;
+	old_file_id: string;
+	filename: string;
+};
+
+export const uploadAndReplaceFile = async (
+	token: string,
+	knowledgeId: string,
+	file: File,
+	oldFileId: string
+): Promise<UploadAndReplaceResponse> => {
+	let error = null;
+
+	const formData = new FormData();
+	formData.append('file', file);
+	formData.append('old_file_id', oldFileId);
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/knowledge/${knowledgeId}/file/upload_and_replace`,
+		{
+			method: 'POST',
+			headers: {
+				authorization: `Bearer ${token}`
+			},
+			body: formData
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

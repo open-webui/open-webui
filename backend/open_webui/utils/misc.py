@@ -423,6 +423,11 @@ def calculate_sha256(file_path, chunk_size):
     return sha256.hexdigest()
 
 
+def calculate_sha256_bytes(data: bytes) -> str:
+    """Compute SHA-256 hash of raw bytes."""
+    return hashlib.sha256(data).hexdigest()
+
+
 def calculate_sha256_string(string):
     # Create a new SHA-256 hash object
     sha256_hash = hashlib.sha256()

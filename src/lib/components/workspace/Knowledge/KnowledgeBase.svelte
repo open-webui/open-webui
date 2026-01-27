@@ -31,7 +31,10 @@
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
-		searchKnowledgeFilesById
+		searchKnowledgeFilesById,
+		compareFilesForSync,
+		uploadAndReplaceFile,
+		type FileSyncCompareItem
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
@@ -325,21 +328,40 @@
 		}
 	};
 
+	// Upload directory handler - uses shared utility
 	const uploadDirectoryHandler = async () => {
-		// Check if File System Access API is supported
-		const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
-
-		try {
-			if (isFileSystemAccessSupported) {
-				// Modern browsers (Chrome, Edge) implementation
-				await handleModernBrowserUpload();
-			} else {
-				// Firefox fallback
-				await handleFirefoxUpload();
-			}
-		} catch (error) {
-			handleUploadError(error);
-		}
+	    try {
+	        const files = await collectDirectoryFiles();
+	
+	        if (files.length === 0) {
+	            toast.info($i18n.t('No files found in directory'));
+	            return;
+	        }
+	
+	        const totalFiles = files.length;
+	        let uploadedFiles = 0;
+	
+	        const updateProgress = () => {
+	            const percentage = (uploadedFiles / totalFiles) * 100;
+	            toast.info(
+	                $i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
+	                    uploadedFiles,
+	                    totalFiles,
+	                    percentage: percentage.toFixed(2)
+	                })
+	            );
+	        };
+	
+	        updateProgress();
+	
+	        for (const { file } of files) {
+	            await uploadFileHandler(file);
+	            uploadedFiles++;
+	            updateProgress();
+	        }
+	    } catch (error) {
+	        handleUploadError(error);
+	    }
 	};
 
 	// Helper function to check if a path contains hidden folders
@@ -347,144 +369,116 @@
 		return path.split('/').some((part) => part.startsWith('.'));
 	};
 
-	// Modern browsers implementation using File System Access API
-	const handleModernBrowserUpload = async () => {
-		const dirHandle = await window.showDirectoryPicker();
-		let totalFiles = 0;
-		let uploadedFiles = 0;
-
-		// Function to update the UI with the progress
-		const updateProgress = () => {
-			const percentage = (uploadedFiles / totalFiles) * 100;
-			toast.info(
-				$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
-					uploadedFiles: uploadedFiles,
-					totalFiles: totalFiles,
-					percentage: percentage.toFixed(2)
-				})
-			);
-		};
-
-		// Recursive function to count all files excluding hidden ones
-		async function countFiles(dirHandle) {
-			for await (const entry of dirHandle.values()) {
-				// Skip hidden files and directories
-				if (entry.name.startsWith('.')) continue;
-
-				if (entry.kind === 'file') {
-					totalFiles++;
-				} else if (entry.kind === 'directory') {
-					// Only process non-hidden directories
-					if (!entry.name.startsWith('.')) {
-						await countFiles(entry);
-					}
-				}
-			}
-		}
-
-		// Recursive function to process directories excluding hidden files and folders
-		async function processDirectory(dirHandle, path = '') {
-			for await (const entry of dirHandle.values()) {
-				// Skip hidden files and directories
-				if (entry.name.startsWith('.')) continue;
-
-				const entryPath = path ? `${path}/${entry.name}` : entry.name;
-
-				// Skip if the path contains any hidden folders
-				if (hasHiddenFolder(entryPath)) continue;
-
-				if (entry.kind === 'file') {
-					const file = await entry.getFile();
-					const fileWithPath = new File([file], entryPath, { type: file.type });
-
-					await uploadFileHandler(fileWithPath);
-					uploadedFiles++;
-					updateProgress();
-				} else if (entry.kind === 'directory') {
-					// Only process non-hidden directories
-					if (!entry.name.startsWith('.')) {
-						await processDirectory(entry, entryPath);
-					}
-				}
-			}
-		}
-
-		await countFiles(dirHandle);
-		updateProgress();
-
-		if (totalFiles > 0) {
-			await processDirectory(dirHandle);
-		} else {
-			console.log('No files to upload.');
-		}
+	// Calculate SHA-256 hash of a file in the browser
+	const calculateFileHash = async (file: File): Promise<string> => {
+		const buffer = await file.arrayBuffer();
+		const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+		return Array.from(new Uint8Array(hashBuffer))
+			.map((b) => b.toString(16).padStart(2, '0'))
+			.join('');
 	};
-
-	// Firefox fallback implementation using traditional file input
-	const handleFirefoxUpload = async () => {
-		return new Promise((resolve, reject) => {
-			// Create hidden file input
-			const input = document.createElement('input');
-			input.type = 'file';
-			input.webkitdirectory = true;
-			input.directory = true;
-			input.multiple = true;
-			input.style.display = 'none';
-
-			// Add input to DOM temporarily
-			document.body.appendChild(input);
-
-			input.onchange = async () => {
-				try {
-					const files = Array.from(input.files)
-						// Filter out files from hidden folders
-						.filter((file) => !hasHiddenFolder(file.webkitRelativePath));
-
-					let totalFiles = files.length;
-					let uploadedFiles = 0;
-
-					// Function to update the UI with the progress
-					const updateProgress = () => {
-						const percentage = (uploadedFiles / totalFiles) * 100;
-						toast.info(
-							$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
-								uploadedFiles: uploadedFiles,
-								totalFiles: totalFiles,
-								percentage: percentage.toFixed(2)
-							})
-						);
-					};
-
-					updateProgress();
-
-					// Process all files
-					for (const file of files) {
-						// Skip hidden files (additional check)
-						if (!file.name.startsWith('.')) {
-							const relativePath = file.webkitRelativePath || file.name;
-							const fileWithPath = new File([file], relativePath, { type: file.type });
-
-							await uploadFileHandler(fileWithPath);
-							uploadedFiles++;
-							updateProgress();
-						}
-					}
-
-					// Clean up
-					document.body.removeChild(input);
-					resolve();
-				} catch (error) {
-					reject(error);
-				}
-			};
-
-			input.onerror = (error) => {
-				document.body.removeChild(input);
-				reject(error);
-			};
-
-			// Trigger file picker
-			input.click();
-		});
+	
+	// Shared type for collected files
+	type CollectedFile = {
+	    file: File;
+	    path: string;
+	    size: number;
+	    hash?: string;
+	};
+	
+	// Shared utility to collect all files from a directory
+	const collectDirectoryFiles = async (options?: { withHashes?: boolean }): Promise<CollectedFile[]> => {
+	    const withHashes = options?.withHashes ?? false;
+	    const files: CollectedFile[] = [];
+	
+	    const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
+	
+	    if (isFileSystemAccessSupported) {
+	        const dirHandle = await window.showDirectoryPicker();
+	
+	        async function processDirectory(dirHandle: FileSystemDirectoryHandle, path = '') {
+	            for await (const entry of dirHandle.values()) {
+	                if (entry.name.startsWith('.')) continue;
+	
+	                const entryPath = path ? `${path}/${entry.name}` : entry.name;
+	
+	                if (hasHiddenFolder(entryPath)) continue;
+	
+	                if (entry.kind === 'file') {
+	                    const file = await (entry as FileSystemFileHandle).getFile();
+	                    const fileWithPath = new File([file], entryPath, { type: file.type });
+	
+	                    const collectedFile: CollectedFile = {
+	                        file: fileWithPath,
+	                        path: entryPath,
+	                        size: file.size
+	                    };
+	
+	                    if (withHashes) {
+	                        collectedFile.hash = await calculateFileHash(file);
+	                    }
+	
+	                    files.push(collectedFile);
+	                } else if (entry.kind === 'directory') {
+	                    await processDirectory(entry as FileSystemDirectoryHandle, entryPath);
+	                }
+	            }
+	        }
+	
+	        await processDirectory(dirHandle);
+	    } else {
+	        // Firefox fallback
+	        await new Promise<void>((resolve, reject) => {
+	            const input = document.createElement('input');
+	            input.type = 'file';
+	            input.webkitdirectory = true;
+	            input.directory = true;
+	            input.multiple = true;
+	            input.style.display = 'none';
+	
+	            document.body.appendChild(input);
+	
+	            input.onchange = async () => {
+	                try {
+	                    const inputFiles = Array.from(input.files || []).filter(
+	                        (file) => !hasHiddenFolder(file.webkitRelativePath) && !file.name.startsWith('.')
+	                    );
+	
+	                    for (const file of inputFiles) {
+	                        const relativePath = file.webkitRelativePath || file.name;
+	                        const fileWithPath = new File([file], relativePath, { type: file.type });
+	
+	                        const collectedFile: CollectedFile = {
+	                            file: fileWithPath,
+	                            path: relativePath,
+	                            size: file.size
+	                        };
+	
+	                        if (withHashes) {
+	                            collectedFile.hash = await calculateFileHash(file);
+	                        }
+	
+	                        files.push(collectedFile);
+	                    }
+	
+	                    document.body.removeChild(input);
+	                    resolve();
+	                } catch (error) {
+	                    document.body.removeChild(input);
+	                    reject(error);
+	                }
+	            };
+	
+	            input.onerror = (error) => {
+	                document.body.removeChild(input);
+	                reject(error);
+	            };
+	
+	            input.click();
+	        });
+	    }
+	
+	    return files;
 	};
 
 	// Error handler
@@ -497,23 +491,108 @@
 		}
 	};
 
-	// Helper function to maintain file paths within zip
+	// Smart sync: only upload changed files, delete removed files
 	const syncDirectoryHandler = async () => {
-		if (fileItems.length > 0) {
-			const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
-				toast.error(`${e}`);
-			});
-
-			if (res) {
-				fileItems = [];
-				toast.success($i18n.t('Knowledge reset successfully.'));
-
-				// Upload directory
-				uploadDirectoryHandler();
-			}
-		} else {
-			uploadDirectoryHandler();
-		}
+	    try {
+	        toast.info($i18n.t('Scanning directory...'));
+	        const directoryFiles = await collectDirectoryFiles({ withHashes: true });
+	
+	        if (directoryFiles.length === 0) {
+	            toast.info($i18n.t('No files found in directory'));
+	            return;
+	        }
+	
+	        toast.info(
+	            $i18n.t('Found {{count}} files, comparing with knowledge base...', {
+	                count: directoryFiles.length
+	            })
+	        );
+	
+	        // Prepare comparison data
+	        const compareData: FileSyncCompareItem[] = directoryFiles.map((f) => ({
+	            file_path: f.path,
+	            file_hash: f.hash!,
+	            size: f.size
+	        }));
+	
+	        // Call compare endpoint to get sync plan
+	        const comparison = await compareFilesForSync(localStorage.token, id, compareData);
+	
+	        if (!comparison) {
+	            toast.error($i18n.t('Failed to compare files'));
+	            return;
+	        }
+	
+	        const { new_files, changed_files, removed_file_ids, unchanged } = comparison;
+	
+	        const totalToProcess = new_files.length + changed_files.length;
+	        let processedCount = 0;
+	
+	        // Upload new files (no old version to delete)
+	        for (const filePath of new_files) {
+	            const fileData = directoryFiles.find((f) => f.path === filePath);
+	            if (fileData) {
+	                await uploadFileHandler(fileData.file);
+	                processedCount++;
+	                toast.info(
+	                    $i18n.t('Uploading new: {{current}}/{{total}}', {
+	                        current: processedCount,
+	                        total: totalToProcess
+	                    })
+	                );
+	            }
+	        }
+	
+	        // Upload changed files using atomic upload_and_replace endpoint
+	        for (const changedFile of changed_files) {
+	            const fileData = directoryFiles.find((f) => f.path === changedFile.file_path);
+	            if (fileData) {
+	                await uploadAndReplaceFile(
+	                    localStorage.token,
+	                    id,
+	                    fileData.file,
+	                    changedFile.old_file_id
+	                );
+	                processedCount++;
+	                toast.info(
+	                    $i18n.t('Updating: {{current}}/{{total}}', {
+	                        current: processedCount,
+	                        total: totalToProcess
+	                    })
+	                );
+	            }
+	        }
+	
+	        // Delete removed files (files that no longer exist in directory)
+	        if (removed_file_ids.length > 0) {
+	            toast.info(
+	                $i18n.t('Removing {{count}} deleted files...', {
+	                    count: removed_file_ids.length
+	                })
+	            );
+	            for (const fileId of removed_file_ids) {
+	                await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+	            }
+	        }
+	
+	        // Show summary
+	        toast.success(
+	            $i18n.t(
+	                'Sync complete: {{newCount}} new, {{changedCount}} updated, {{removedCount}} removed, {{unchangedCount}} unchanged',
+	                {
+	                    newCount: new_files.length,
+	                    changedCount: changed_files.length,
+	                    removedCount: removed_file_ids.length,
+	                    unchangedCount: unchanged.length
+	                }
+	            )
+	        );
+	
+	        // Refresh the file list
+	        await init();
+	    } catch (error) {
+	        handleUploadError(error);
+	    }
 	};
 
 	const addFileHandler = async (fileId) => {
@@ -766,7 +845,7 @@
 <SyncConfirmDialog
 	bind:show={showSyncConfirmModal}
 	message={$i18n.t(
-		'This will reset the knowledge base and sync all files. Do you wish to continue?'
+		'This will sync the knowledge base with the selected directory. New and changed files will be uploaded, and files removed from the directory will be deleted from the knowledge base. Continue?'
 	)}
 	on:confirm={() => {
 		syncDirectoryHandler();

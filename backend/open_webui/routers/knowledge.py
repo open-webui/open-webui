@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 import logging
@@ -26,10 +26,12 @@ from open_webui.routers.retrieval import (
     BatchProcessFilesForm,
 )
 from open_webui.storage.provider import Storage
+from open_webui.routers.files import upload_file_handler
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.misc import calculate_sha256
 
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
@@ -607,6 +609,126 @@ def add_file_to_knowledge_by_id(
         )
 
 
+############################
+# UploadAndReplaceFile
+############################
+
+
+class UploadAndReplaceResponse(BaseModel):
+    """Response from upload_and_replace endpoint."""
+
+    new_file_id: str
+    old_file_id: str
+    filename: str
+
+
+@router.post("/{id}/file/upload_and_replace", response_model=UploadAndReplaceResponse)
+def upload_and_replace_file(
+    request: Request,
+    id: str,
+    file: UploadFile = File(...),
+    old_file_id: str = Form(...),
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Atomically upload a new file and replace an existing file in the knowledge base.
+    """
+    # Validate knowledge base exists and user has access
+    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    # Validate old file exists
+    old_file = Files.get_file_by_id(old_file_id, db=db)
+    if not old_file:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Step 1: Upload the new file (reuses existing upload_file_handler)
+    try:
+        new_file_result = upload_file_handler(
+            request,
+            file=file,
+            process=True,
+            process_in_background=False,
+            user=user,
+            db=db,
+        )
+        new_file_id = new_file_result["id"]
+    except Exception as e:
+        log.error(f"Failed to upload new file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to upload file: {str(e)}",
+        )
+
+    # Step 2: Verify new file was processed
+    new_file = Files.get_file_by_id(new_file_id, db=db)
+    if not new_file or not new_file.data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
+        )
+
+    # Step 3: Add new file to knowledge base (reuses existing process_file)
+    try:
+        process_file(
+            request,
+            ProcessFileForm(file_id=new_file_id, collection_name=id),
+            user=user,
+            db=db,
+        )
+        Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=id, file_id=new_file_id, user_id=user.id, db=db
+        )
+    except Exception as e:
+        log.error(f"Failed to add new file to knowledge base: {e}")
+        # Clean up: delete the uploaded file since we couldn't add it to KB
+        try:
+            Files.delete_file_by_id(new_file_id, db=db)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to add file to knowledge base: {str(e)}",
+        )
+
+    # Step 4: Remove old file (reuses existing remove_file_from_knowledge_by_id)
+    try:
+        remove_file_from_knowledge_by_id(
+            id=id,
+            form_data=KnowledgeFileIdForm(file_id=old_file_id),
+            delete_file=True,
+            user=user,
+            db=db,
+        )
+    except Exception as e:
+        log.error(f"Failed to remove old file (new file is already added): {e}")
+        # Don't fail - new file is already added successfully
+
+    return UploadAndReplaceResponse(
+        new_file_id=new_file_id,
+        old_file_id=old_file_id,
+        filename=new_file.filename,
+    )
+
+
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
 def update_file_from_knowledge_by_id(
     request: Request,
@@ -855,6 +977,181 @@ async def reset_knowledge_by_id(
 
     knowledge = Knowledges.reset_knowledge_by_id(id=id, db=db)
     return knowledge
+
+
+############################
+# SyncCompare
+############################
+
+
+class FileSyncCompareItem(BaseModel):
+    """Item for comparing a file during sync."""
+
+    file_path: str  # Relative path within the directory (e.g., "docs/readme.md")
+    file_hash: str  # SHA-256 hash of the raw file bytes
+    size: int  # File size in bytes
+
+
+class SyncCompareForm(BaseModel):
+    """Form for comparing files for sync."""
+
+    files: List[FileSyncCompareItem]
+
+
+class ChangedFileInfo(BaseModel):
+    """Info about a changed file that needs to be replaced."""
+
+    file_path: str  # Path of the new file to upload
+    old_file_id: str  # ID of the old file to delete after upload
+
+
+class SyncCompareResponse(BaseModel):
+    """Response from sync compare endpoint."""
+
+    new_files: List[str]  # file_paths for new files (no old version exists)
+    changed_files: List[ChangedFileInfo]  # files that changed (upload new, delete old)
+    removed_file_ids: List[str]  # file_ids to remove (no new version exists)
+    unchanged: List[str]  # file_paths that are already up to date
+
+
+def get_file_hash(file: FileModel, persist: bool = False) -> Optional[str]:
+    """
+    Get the file hash from meta, or calculate it on-demand from the stored file.
+    This provides backwards compatibility for files uploaded before file_hash was stored.
+
+    Args:
+        file: The file model to get hash for
+        persist: If True and hash was calculated (not from meta), persist it to database.
+                 Only set to True when you know the file will NOT be replaced.
+    """
+    # First check if file_hash is already stored in meta
+    if file.meta and file.meta.get("file_hash"):
+        return file.meta.get("file_hash")
+
+    # If not, calculate it from the stored file
+    if not file.path:
+        log.warning(f"File {file.id} has no path, cannot calculate hash")
+        return None
+
+    try:
+        # Get the local file path (downloads from cloud storage if needed)
+        local_path = Storage.get_file(file.path)
+        # Calculate hash with 8KB chunks
+        file_hash = calculate_sha256(local_path, 8192)
+
+        # Only persist if explicitly requested (when file is confirmed unchanged)
+        if persist:
+            Files.update_file_metadata_by_id(
+                file.id,
+                {"file_hash": file_hash},
+            )
+
+        return file_hash
+    except Exception as e:
+        log.error(f"Failed to calculate hash for file {file.id}: {e}")
+        return None
+
+
+@router.post("/{id}/sync/compare", response_model=SyncCompareResponse)
+async def compare_files_for_sync(
+    id: str,
+    form_data: SyncCompareForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Compare uploaded files against existing knowledge base files.
+    Returns lists of files that need to be uploaded, deleted, or are unchanged.
+    """
+    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    # Get all files currently in the knowledge base
+    existing_files = Knowledges.get_files_by_id(id, db=db)
+
+    # Build a map of existing files by filename for quick lookup
+    existing_by_filename: dict[str, FileModel] = {}
+    for file in existing_files:
+        # Use the original filename from meta if available, otherwise use filename field
+        filename = file.meta.get("name", file.filename) if file.meta else file.filename
+        existing_by_filename[filename] = file
+
+    # Track files from the incoming directory
+    incoming_filenames = set()
+    new_files: List[str] = []  # New files (no old version)
+    changed_files: List[ChangedFileInfo] = []  # Changed files (need upload + delete old)
+    removed_file_ids: List[str] = []  # Removed files (no new version)
+    unchanged: List[str] = []
+    # Track files that need hash persisted (unchanged files without stored hash)
+    files_needing_hash_persist: list[tuple[str, str]] = []  # [(file_id, hash), ...]
+
+    for incoming_file in form_data.files:
+        incoming_filenames.add(incoming_file.file_path)
+
+        # Check if file exists in knowledge base
+        existing_file = existing_by_filename.get(incoming_file.file_path)
+
+        if existing_file:
+            # Check if hash was already stored in meta
+            had_stored_hash = bool(
+                existing_file.meta and existing_file.meta.get("file_hash")
+            )
+
+            # File exists - check if it has changed (don't persist yet)
+            existing_hash = get_file_hash(existing_file, persist=False)
+
+            if existing_hash and existing_hash == incoming_file.file_hash:
+                # File unchanged
+                unchanged.append(incoming_file.file_path)
+                # If hash was calculated on-demand (not from meta), queue for persistence
+                if not had_stored_hash:
+                    files_needing_hash_persist.append((existing_file.id, existing_hash))
+            else:
+                # File changed or hash calculation failed - need to upload new and delete old
+                changed_files.append(
+                    ChangedFileInfo(
+                        file_path=incoming_file.file_path,
+                        old_file_id=existing_file.id,
+                    )
+                )
+        else:
+            # New file - needs to be uploaded
+            new_files.append(incoming_file.file_path)
+
+    # Find files to delete (exist in KB but not in incoming directory)
+    for filename, file in existing_by_filename.items():
+        if filename not in incoming_filenames:
+            removed_file_ids.append(file.id)
+
+    # Now persist hashes only for unchanged files that were calculated on-demand
+    # These files are confirmed to stay, so caching their hash is beneficial
+    for file_id, file_hash in files_needing_hash_persist:
+        try:
+            Files.update_file_metadata_by_id(file_id, {"file_hash": file_hash})
+        except Exception as e:
+            log.warning(f"Failed to persist hash for file {file_id}: {e}")
+            # Non-critical, continue
+
+    return SyncCompareResponse(
+        new_files=new_files,
+        changed_files=changed_files,
+        removed_file_ids=removed_file_ids,
+        unchanged=unchanged,
+    )
 
 
 ############################
