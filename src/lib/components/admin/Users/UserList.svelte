@@ -43,7 +43,7 @@
 	let total = null;
 
 	let query = '';
-	let searchDebounceTimer;
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let orderBy = 'created_at'; // default sort key
 	let direction = 'asc'; // default sort order
 
