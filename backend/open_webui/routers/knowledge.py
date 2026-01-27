@@ -31,7 +31,6 @@ from open_webui.routers.files import upload_file_handler
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user, get_admin_user
 from open_webui.utils.access_control import has_access, has_permission
-from open_webui.utils.misc import calculate_sha256
 
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
@@ -1014,43 +1013,6 @@ class SyncCompareResponse(BaseModel):
     unchanged: List[str]  # file_paths that are already up to date
 
 
-def get_file_hash(file: FileModel, persist: bool = False) -> Optional[str]:
-    """
-    Get the file hash from meta, or calculate it on-demand from the stored file.
-    This provides backwards compatibility for files uploaded before file_hash was stored.
-
-    Args:
-        file: The file model to get hash for
-        persist: If True and hash was calculated (not from meta), persist it to database.
-                 Only set to True when you know the file will NOT be replaced.
-    """
-    # First check if file_hash is already stored in meta
-    if file.meta and file.meta.get("file_hash"):
-        return file.meta.get("file_hash")
-
-    # If not, calculate it from the stored file
-    if not file.path:
-        log.warning(f"File {file.id} has no path, cannot calculate hash")
-        return None
-
-    try:
-        # Get the local file path (downloads from cloud storage if needed)
-        local_path = Storage.get_file(file.path)
-        # Calculate hash with 8KB chunks
-        file_hash = calculate_sha256(local_path, 8192)
-
-        # Only persist if explicitly requested (when file is confirmed unchanged)
-        if persist:
-            Files.update_file_metadata_by_id(
-                file.id,
-                {"file_hash": file_hash},
-            )
-
-        return file_hash
-    except Exception as e:
-        log.error(f"Failed to calculate hash for file {file.id}: {e}")
-        return None
-
 
 @router.post("/{id}/sync/compare", response_model=SyncCompareResponse)
 async def compare_files_for_sync(
@@ -1096,8 +1058,6 @@ async def compare_files_for_sync(
     changed_files: List[ChangedFileInfo] = []  # Changed files (need upload + delete old)
     removed_file_ids: List[str] = []  # Removed files (no new version)
     unchanged: List[str] = []
-    # Track files that need hash persisted (unchanged files without stored hash)
-    files_needing_hash_persist: list[tuple[str, str]] = []  # [(file_id, hash), ...]
 
     for incoming_file in form_data.files:
         incoming_filenames.add(incoming_file.file_path)
@@ -1106,28 +1066,40 @@ async def compare_files_for_sync(
         existing_file = existing_by_filename.get(incoming_file.file_path)
 
         if existing_file:
-            # Check if hash was already stored in meta
-            had_stored_hash = bool(
-                existing_file.meta and existing_file.meta.get("file_hash")
-            )
+            # Check if hash is already stored in meta (files uploaded after this feature)
+            stored_hash = existing_file.meta.get("file_hash") if existing_file.meta else None
 
-            # File exists - check if it has changed (don't persist yet)
-            existing_hash = get_file_hash(existing_file, persist=False)
-
-            if existing_hash and existing_hash == incoming_file.file_hash:
-                # File unchanged
-                unchanged.append(incoming_file.file_path)
-                # If hash was calculated on-demand (not from meta), queue for persistence
-                if not had_stored_hash:
-                    files_needing_hash_persist.append((existing_file.id, existing_hash))
-            else:
-                # File changed or hash calculation failed - need to upload new and delete old
-                changed_files.append(
-                    ChangedFileInfo(
-                        file_path=incoming_file.file_path,
-                        old_file_id=existing_file.id,
+            if stored_hash:
+                # Modern file with stored hash - use accurate hash comparison
+                if stored_hash == incoming_file.file_hash:
+                    # File unchanged
+                    unchanged.append(incoming_file.file_path)
+                else:
+                    # File changed - need to upload new and delete old
+                    changed_files.append(
+                        ChangedFileInfo(
+                            file_path=incoming_file.file_path,
+                            old_file_id=existing_file.id,
+                        )
                     )
-                )
+            else:
+                # Legacy file without stored hash - use size comparison as fast fallback
+                # This avoids expensive I/O (downloading from S3 + hashing) during compare
+                # Trade-off: If content changed but size is same, we won't detect it
+                # But this is rare, and when files ARE re-uploaded, they get hashes stored
+                existing_size = existing_file.meta.get("size") if existing_file.meta else None
+
+                if existing_size is not None and existing_size == incoming_file.size:
+                    # Size matches - assume unchanged (conservative for legacy files)
+                    unchanged.append(incoming_file.file_path)
+                else:
+                    # Size differs or unknown - treat as changed
+                    changed_files.append(
+                        ChangedFileInfo(
+                            file_path=incoming_file.file_path,
+                            old_file_id=existing_file.id,
+                        )
+                    )
         else:
             # New file - needs to be uploaded
             new_files.append(incoming_file.file_path)
@@ -1137,14 +1109,6 @@ async def compare_files_for_sync(
         if filename not in incoming_filenames:
             removed_file_ids.append(file.id)
 
-    # Now persist hashes only for unchanged files that were calculated on-demand
-    # These files are confirmed to stay, so caching their hash is beneficial
-    for file_id, file_hash in files_needing_hash_persist:
-        try:
-            Files.update_file_metadata_by_id(file_id, {"file_hash": file_hash})
-        except Exception as e:
-            log.warning(f"Failed to persist hash for file {file_id}: {e}")
-            # Non-critical, continue
 
     return SyncCompareResponse(
         new_files=new_files,
