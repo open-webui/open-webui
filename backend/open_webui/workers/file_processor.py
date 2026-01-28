@@ -68,6 +68,12 @@ from open_webui.config import (
     DOCUMENT_INTELLIGENCE_ENDPOINT,
     DOCUMENT_INTELLIGENCE_KEY,
     BYPASS_EMBEDDING_AND_RETRIEVAL,
+    # Additional UserScopedConfig objects used in worker code paths
+    RAG_TEMPLATE,  # Used in _get_user_chunk_settings
+    RAG_TOP_K,  # Used in retrieval queries (aliased as TOP_K)
+    ENABLE_RAG_HYBRID_SEARCH,  # Used in retrieval queries
+    RAG_FULL_CONTEXT,  # Used in config endpoints
+    RAG_RELEVANCE_THRESHOLD,  # PersistentConfig, used in retrieval
 )
 from open_webui.retrieval.utils import get_embedding_function
 
@@ -184,8 +190,17 @@ def get_worker_config():
             _worker_config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
             _worker_config.CHUNK_SIZE = CHUNK_SIZE  # UserScopedConfig
             _worker_config.CHUNK_OVERLAP = CHUNK_OVERLAP  # UserScopedConfig
+            # Additional UserScopedConfig objects used in worker code paths
+            _worker_config.RAG_TEMPLATE = RAG_TEMPLATE  # Used in _get_user_chunk_settings
+            _worker_config.TOP_K = RAG_TOP_K  # Used in retrieval queries (aliased as TOP_K in main.py)
+            _worker_config.RAG_TOP_K = RAG_TOP_K  # Also set alias for compatibility
+            _worker_config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH  # Used in retrieval queries
+            _worker_config.RAG_FULL_CONTEXT = RAG_FULL_CONTEXT  # Used in config endpoints
+            _worker_config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD  # PersistentConfig, used in retrieval
             # CRITICAL: Force PDF_EXTRACT_IMAGES to False to prevent hangs (image extraction causes 2+ minute slowdowns)
-            _worker_config.PDF_EXTRACT_IMAGES = False
+            # First assign the PersistentConfig object (like main.py does), then override its value
+            PDF_EXTRACT_IMAGES.value = False
+            _worker_config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
             _worker_config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
             _worker_config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
             _worker_config.BYPASS_EMBEDDING_AND_RETRIEVAL = BYPASS_EMBEDDING_AND_RETRIEVAL
@@ -282,13 +297,14 @@ class MockState:
         # EMBEDDING_FUNCTION will be initialized per-job with the correct per-user API key
         self.EMBEDDING_FUNCTION = None
     
-    def initialize_embedding_function(self, embedding_api_key: Optional[str] = None):
+    def initialize_embedding_function(self, embedding_api_key: Optional[str] = None, embedding_model: Optional[str] = None):
         """
-        Initialize EMBEDDING_FUNCTION with the correct per-user/per-admin API key.
-        This is called per-job to ensure RBAC-protected API keys are used.
+        Initialize EMBEDDING_FUNCTION with the correct per-user/per-admin API key and model.
+        This is called per-job to ensure RBAC-protected API keys and models are used.
         
         Args:
             embedding_api_key: Per-user/per-admin API key from job (RBAC-protected)
+            embedding_model: Per-user/per-admin model name from job (RBAC-protected)
         """
         # Use the passed API key (from job) or the one stored during initialization
         api_key = embedding_api_key or self._embedding_api_key
@@ -333,9 +349,23 @@ class MockState:
                     log.error(error_msg)
                     raise ValueError(error_msg)
             
+            # CRITICAL RBAC: Use embedding_model from job parameter, not config
+            # Config may have fallback/env var values that break RBAC
+            model_to_use = embedding_model if embedding_model else self.config.RAG_EMBEDDING_MODEL
+            if not model_to_use or not model_to_use.strip():
+                error_msg = (
+                    "No embedding model provided! "
+                    "Embedding will fail. This model should come from admin config (RBAC-protected). "
+                    "Please ensure the admin has configured a model in Settings > Documents > Embedding."
+                )
+                log.error(error_msg)
+                raise ValueError(error_msg)
+            
+            log.info(f"[RBAC] Using embedding model from job: {model_to_use} (RBAC-protected)")
+            
             self.EMBEDDING_FUNCTION = get_embedding_function(
                 self.config.RAG_EMBEDDING_ENGINE,
-                self.config.RAG_EMBEDDING_MODEL,
+                model_to_use,  # Use job parameter, not config (RBAC-protected)
                 self.ef,  # Can be None for API-based engines
                 api_url,
                 api_key,
@@ -354,22 +384,54 @@ class MockState:
             raise  # Re-raise to fail fast
 
 
+# Mock UserScopedConfig class for fallback config compatibility
+# Must be defined before _FallbackConfig uses it
+class MockUserScopedConfig:
+    """
+    Mock UserScopedConfig for compatibility when AppConfig fails.
+    Provides .get() and .set() methods that return/accept values but don't persist them.
+    """
+    def __init__(self, default_value):
+        self.default = default_value
+    
+    def get(self, email: str = None):
+        """
+        Mock get() method for compatibility with UserScopedConfig.get().
+        In workers, we don't have user-specific configs, so always return the default value.
+        """
+        return self.default
+    
+    def set(self, email: str, value):
+        """
+        Mock set() method for compatibility with UserScopedConfig.set().
+        In workers, we don't persist user-specific configs, so this is a no-op.
+        """
+        # No-op: workers don't persist configs, they use job parameters
+        pass
+
+
 class _FallbackConfig:
     """
     Fallback configuration object used when AppConfig initialization fails.
     Provides minimal required attributes with safe defaults.
+    
+    NOTE: This should rarely be used. If AppConfig fails, it's usually a critical error.
+    Model names and API keys come from job parameters (RBAC-protected), not from env vars.
     """
     def __init__(self):
         # Set minimal required attributes with safe defaults from environment
+        # NOTE: RAG_EMBEDDING_MODEL should NOT be used - jobs pass embedding_model parameter (RBAC-protected)
         self.RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "portkey")
+        # WARNING: This is a fallback only - actual model comes from job parameter (embedding_model)
+        # Do NOT use this for embeddings - it breaks RBAC!
         self.RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "@openai-embedding/text-embedding-3-small")
+        # RAG_EMBEDDING_MODEL_USER is a UserScopedConfig - create mock for compatibility
+        # NOTE: This should NOT be used - jobs pass embedding_model parameter (RBAC-protected)
+        self.RAG_EMBEDDING_MODEL_USER = MockUserScopedConfig(os.environ.get("RAG_EMBEDDING_MODEL", "@openai-embedding/text-embedding-3-small"))
         self.RAG_EMBEDDING_BATCH_SIZE = int(os.environ.get("RAG_EMBEDDING_BATCH_SIZE", "1"))
         self.RAG_RERANKING_MODEL = os.environ.get("RAG_RERANKING_MODEL", "")
         self.RAG_OPENAI_API_BASE_URL = os.environ.get("RAG_OPENAI_API_BASE_URL", "")
-        # For UserScopedConfig, create a mock object with .default property
-        class MockUserScopedConfig:
-            def __init__(self, default_value):
-                self.default = default_value
+        # UserScopedConfig objects - use MockUserScopedConfig for compatibility
         self.RAG_OPENAI_API_KEY = MockUserScopedConfig(os.environ.get("RAG_OPENAI_API_KEY", ""))
         self.RAG_OLLAMA_BASE_URL = os.environ.get("RAG_OLLAMA_BASE_URL", "")
         self.RAG_OLLAMA_API_KEY = os.environ.get("RAG_OLLAMA_API_KEY", "")
@@ -378,19 +440,30 @@ class _FallbackConfig:
         # CRITICAL: Force extract_images=False to prevent hangs (image extraction causes 2+ minute slowdowns)
         self.PDF_EXTRACT_IMAGES = False
         self.TEXT_SPLITTER = os.environ.get("RAG_TEXT_SPLITTER", "recursive")
-        # UserScopedConfig - use .default for fallback
+        # UserScopedConfig objects - use MockUserScopedConfig for compatibility
+        # These are used in save_docs_to_vector_db and other worker code paths
         self.CHUNK_SIZE = MockUserScopedConfig(int(os.environ.get("CHUNK_SIZE", "1000")))
-        self.CHUNK_OVERLAP = MockUserScopedConfig(int(os.environ.get("CHUNK_OVERLAP", "100")))
+        self.CHUNK_OVERLAP = MockUserScopedConfig(int(os.environ.get("CHUNK_OVERLAP", "200")))
+        # RAG_TEMPLATE is used in _get_user_chunk_settings (called from save_docs_to_vector_db)
+        from open_webui.config import DEFAULT_RAG_TEMPLATE
+        self.RAG_TEMPLATE = MockUserScopedConfig(os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE))
+        # TOP_K is used in retrieval queries (aliased as RAG_TOP_K in config.py)
+        self.TOP_K = MockUserScopedConfig(int(os.environ.get("RAG_TOP_K", "10")))
+        self.RAG_TOP_K = self.TOP_K  # Alias for compatibility
+        # ENABLE_RAG_HYBRID_SEARCH is used in retrieval queries
+        self.ENABLE_RAG_HYBRID_SEARCH = MockUserScopedConfig(os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "False").lower() == "true")
+        # RAG_FULL_CONTEXT is used in config endpoints
+        self.RAG_FULL_CONTEXT = MockUserScopedConfig(os.environ.get("RAG_FULL_CONTEXT", "False").lower() == "true")
+        # RELEVANCE_THRESHOLD is a PersistentConfig, not UserScopedConfig
+        self.RELEVANCE_THRESHOLD = float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "1"))
+        
+        # Other non-UserScopedConfig attributes
         self.DOCUMENT_INTELLIGENCE_ENDPOINT = os.environ.get("DOCUMENT_INTELLIGENCE_ENDPOINT", "")
         self.DOCUMENT_INTELLIGENCE_KEY = os.environ.get("DOCUMENT_INTELLIGENCE_KEY", "")
         self.BYPASS_EMBEDDING_AND_RETRIEVAL = os.environ.get("BYPASS_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true"
         # Add TIKA_SERVER_URL for fallback (even though we don't use it, it might be accessed)
         self.TIKA_SERVER_URL = os.environ.get("TIKA_SERVER_URL", "")
-        # Add missing config attributes that might be accessed
-        self.RAG_EMBEDDING_ENGINE = os.environ.get("RAG_EMBEDDING_ENGINE", "portkey")
-        self.RAG_EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "@openai-embedding/text-embedding-3-small")
-        self.RAG_EMBEDDING_BATCH_SIZE = int(os.environ.get("RAG_EMBEDDING_BATCH_SIZE", "1"))
-        self.RAG_OPENAI_API_BASE_URL = os.environ.get("RAG_OPENAI_API_BASE_URL", "")
+        # Add missing config attributes that might be accessed (duplicates removed)
         self.RAG_OLLAMA_BASE_URL = os.environ.get("RAG_OLLAMA_BASE_URL", "")
         self.RAG_OLLAMA_API_KEY = os.environ.get("RAG_OLLAMA_API_KEY", "")
     
@@ -534,10 +607,13 @@ def process_file_job(
                         f"api_key_length={len(embedding_api_key) if embedding_api_key else 0}"
                     )
                     
-                    # CRITICAL: Initialize EMBEDDING_FUNCTION per-job with the correct per-user/per-admin API key
-                    # This ensures RBAC-protected API keys are used (each admin has their own key)
+                    # CRITICAL: Initialize EMBEDDING_FUNCTION per-job with the correct per-user/per-admin API key and model
+                    # This ensures RBAC-protected API keys and models are used (each admin has their own key/model)
                     try:
-                        request.app.state.initialize_embedding_function(embedding_api_key=embedding_api_key)
+                        request.app.state.initialize_embedding_function(
+                            embedding_api_key=embedding_api_key,
+                            embedding_model=embedding_model  # Pass job parameter (RBAC-protected)
+                        )
                         
                         if request.app.state.EMBEDDING_FUNCTION is None:
                             error_msg = (
