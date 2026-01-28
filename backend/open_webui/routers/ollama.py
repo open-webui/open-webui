@@ -426,9 +426,17 @@ async def get_all_models(request: Request, user: UserModel = None):
 
 async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
+    # Batch-fetch all model info in a single query to avoid N+1
+    model_ids = [model["model"] for model in models.get("models", [])]
+    if not model_ids:
+        return []
+
+    model_infos = Models.get_models_by_ids(model_ids, db=db)
+    model_info_map = {m.id: m for m in model_infos}
+
     filtered_models = []
     for model in models.get("models", []):
-        model_info = Models.get_model_by_id(model["model"], db=db)
+        model_info = model_info_map.get(model["model"])
         if model_info:
             if user.id == model_info.user_id or has_access(
                 user.id, type="read", access_control=model_info.access_control, db=db
@@ -1604,9 +1612,14 @@ async def get_openai_models(
 
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
+        # Batch-fetch all model info in a single query to avoid N+1
+        model_ids = [model["id"] for model in models]
+        model_infos = Models.get_models_by_ids(model_ids, db=db) if model_ids else []
+        model_info_map = {m.id: m for m in model_infos}
+
         filtered_models = []
         for model in models:
-            model_info = Models.get_model_by_id(model["id"], db=db)
+            model_info = model_info_map.get(model["id"])
             if model_info:
                 if user.id == model_info.user_id or has_access(
                     user.id,
