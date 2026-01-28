@@ -206,13 +206,16 @@ class GroupTable:
                         ).filter(GroupMember.user_id == filter["member_id"])
 
             groups = query.order_by(Group.updated_at.desc()).all()
+
+            # Batch-fetch member counts to avoid N+1 queries
+            group_ids = [group.id for group in groups]
+            member_counts = self.get_group_member_counts_by_ids(group_ids, db=db)
+
             return [
                 GroupResponse.model_validate(
                     {
                         **GroupModel.model_validate(group).model_dump(),
-                        "member_count": self.get_group_member_count_by_id(
-                            group.id, db=db
-                        ),
+                        "member_count": member_counts.get(group.id, 0),
                     }
                 )
                 for group in groups
@@ -248,11 +251,15 @@ class GroupTable:
             query = query.order_by(Group.updated_at.desc())
             groups = query.offset(skip).limit(limit).all()
 
+            # Batch-fetch member counts to avoid N+1 queries
+            group_ids = [group.id for group in groups]
+            member_counts = self.get_group_member_counts_by_ids(group_ids, db=db)
+
             return {
                 "items": [
                     GroupResponse.model_validate(
                         **GroupModel.model_validate(group).model_dump(),
-                        member_count=self.get_group_member_count_by_id(group.id, db=db),
+                        member_count=member_counts.get(group.id, 0),
                     )
                     for group in groups
                 ],
@@ -368,6 +375,23 @@ class GroupTable:
                 .scalar()
             )
             return count if count else 0
+
+    def get_group_member_counts_by_ids(
+        self, group_ids: list[str], db: Optional[Session] = None
+    ) -> dict[str, int]:
+        """Batch-fetch member counts for multiple groups in a single query."""
+        if not group_ids:
+            return {}
+        with get_db_context(db) as db:
+            results = (
+                db.query(GroupMember.group_id, func.count(GroupMember.user_id))
+                .filter(GroupMember.group_id.in_(group_ids))
+                .group_by(GroupMember.group_id)
+                .all()
+            )
+            counts = {group_id: count for group_id, count in results}
+            # Return 0 for groups with no members
+            return {gid: counts.get(gid, 0) for gid in group_ids}
 
     def update_group_by_id(
         self,
