@@ -65,7 +65,7 @@ async def get_tools(
 
     # Local Tools
     for tool in Tools.get_tools(db=db):
-        tool_module = get_tool_module(request, tool.id)
+        tool_module = get_tool_module(request, tool.id, load_from_db=False)
         tools.append(
             ToolUserResponse(
                 **{
