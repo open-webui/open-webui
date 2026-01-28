@@ -88,22 +88,21 @@
 
 				const logo = document.createElement('img');
 				logo.id = 'logo';
-				logo.style =
-					'position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%); display:block;';
+				logo.style = 'width: auto; height: 6rem; display:block;';
 				logo.src = isDarkMode ? '/static/splash-dark.png' : '/static/splash.png';
 
 				document.addEventListener('DOMContentLoaded', function () {
-					const splash = document.getElementById('splash-screen');
+					const logoContainer = document.getElementById('logo-container');
 					if (document.documentElement.classList.contains('her')) {
 						return;
 					}
 
-					if (splash) splash.prepend(logo);
+					if (logoContainer) logoContainer.prepend(logo);
 				});
 			})();
 		</script>
 
-		<title>Open WebUI</title>
+		<title>Keeper AI Gateway</title>
 
 		%sveltekit.head%
 	</head>
@@ -124,34 +123,33 @@
 			<div
 				style="
 					position: absolute;
-					top: 33%;
+					top: 50%;
 					left: 50%;
-
-					width: 24rem;
-					transform: translateX(-50%);
-
+					transform: translate(-50%, -50%);
 					display: flex;
 					flex-direction: column;
 					align-items: center;
+					gap: 1.5rem;
 				"
 			>
-				<img
-					id="logo-her"
-					style="width: auto; height: 13rem"
-					src="/static/splash.png"
-					class="animate-pulse-fast"
-				/>
+				<div id="logo-container">
+					<img
+						id="logo-her"
+						style="width: auto; height: 6rem"
+						src="/static/splash.png"
+						class="animate-pulse-fast"
+					/>
+				</div>
 
-				<div style="position: relative; width: 24rem; margin-top: 0.5rem">
+				<div style="position: relative; width: 16rem; height: 0.5rem">
 					<div
 						id="progress-background"
 						style="
 							position: absolute;
 							width: 100%;
-							height: 0.75rem;
-
+							height: 0.5rem;
 							border-radius: 9999px;
-							background-color: #fafafa9a;
+							background-color: #e5e7eb;
 						"
 					></div>
 
@@ -160,11 +158,10 @@
 						style="
 							position: absolute;
 							width: 0%;
-							height: 0.75rem;
+							height: 0.5rem;
 							border-radius: 9999px;
-							background-color: #fff;
+							background-color: #374151;
 						"
-						class="bg-white"
 					></div>
 				</div>
 			</div>
@@ -198,11 +195,43 @@
 		}
 
 		#progress-background {
-			display: none;
+			display: block;
 		}
 
 		#progress-bar {
-			display: none;
+			display: block;
+			animation: progressIndeterminate 2.5s ease-in-out infinite;
+		}
+
+		@keyframes progressIndeterminate {
+			0% {
+				width: 0%;
+				left: 0%;
+			}
+			50% {
+				width: 60%;
+				left: 20%;
+			}
+			100% {
+				width: 0%;
+				left: 100%;
+			}
+		}
+
+		html.dark #progress-background {
+			background-color: #374151 !important;
+		}
+
+		html.dark #progress-bar {
+			background-color: #9ca3af !important;
+		}
+
+		html.her #progress-background {
+			background-color: #fafafa9a !important;
+		}
+
+		html.her #progress-bar {
+			background-color: #fff !important;
 		}
 
 		html.her #logo {

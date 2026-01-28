@@ -12,6 +12,7 @@ const _WEBUI_NAME = writable(APP_NAME);
 
 // Add [DEV] prefix in dev mode
 export const WEBUI_NAME = derived(_WEBUI_NAME, ($name) => (isDev() ? `[DEV] ${$name}` : $name));
+
 // Export writable version for setting the name
 export const setWebUIName = (name: string) => _WEBUI_NAME.set(name);
 
