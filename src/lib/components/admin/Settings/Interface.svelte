@@ -34,6 +34,7 @@
 		TITLE_GENERATION_OVERRIDE: 'none',
 		TITLE_GENERATION_MODEL: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
+		FOLLOW_UP_GENERATION_OVERRIDE: 'none',
 		FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: '',
 		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_AUTOCOMPLETE_GENERATION: true,
@@ -290,14 +291,14 @@
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Follow Up Generation')}
 					</div>
-
+	
 					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} />
 				</div>
-
+	
 				{#if taskConfig.ENABLE_FOLLOW_UP_GENERATION}
 					<div class="mb-2.5">
 						<div class=" mb-1 text-xs font-medium">{$i18n.t('Follow Up Generation Prompt')}</div>
-
+	
 						<Tooltip
 							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 							placement="top-start"
@@ -309,6 +310,18 @@
 								)}
 							/>
 						</Tooltip>
+					</div>
+	
+					<div class="mb-2.5">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('Admin Override')}</div>
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={taskConfig.FOLLOW_UP_GENERATION_OVERRIDE}
+						>
+							<option value="none">{$i18n.t('None (User Setting)')}</option>
+							<option value="force_enable">{$i18n.t('Force Enable for All Users')}</option>
+							<option value="force_disable">{$i18n.t('Force Disable for All Users')}</option>
+						</select>
 					</div>
 				{/if}
 

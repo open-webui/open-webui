@@ -1695,6 +1695,12 @@ ENABLE_FOLLOW_UP_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_FOLLOW_UP_GENERATION", "True").lower() == "true",
 )
 
+FOLLOW_UP_GENERATION_OVERRIDE = PersistentConfig(
+    "FOLLOW_UP_GENERATION_OVERRIDE",
+    "task.follow_up.override",
+    os.environ.get("FOLLOW_UP_GENERATION_OVERRIDE", "none"),
+)
+
 ENABLE_TAGS_GENERATION = PersistentConfig(
     "ENABLE_TAGS_GENERATION",
     "task.tags.enable",

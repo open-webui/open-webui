@@ -65,6 +65,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "TAGS_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE": request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_FOLLOW_UP_GENERATION": request.app.state.config.ENABLE_FOLLOW_UP_GENERATION,
+        "FOLLOW_UP_GENERATION_OVERRIDE": getattr(request.app.state.config, "FOLLOW_UP_GENERATION_OVERRIDE", "none"),
         "ENABLE_TAGS_GENERATION": request.app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_TITLE_GENERATION": request.app.state.config.ENABLE_TITLE_GENERATION,
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
@@ -87,6 +88,7 @@ class TaskConfigForm(BaseModel):
     TAGS_GENERATION_PROMPT_TEMPLATE: str
     FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_FOLLOW_UP_GENERATION: bool
+    FOLLOW_UP_GENERATION_OVERRIDE: Optional[str]
     ENABLE_TAGS_GENERATION: bool
     ENABLE_SEARCH_QUERY_GENERATION: bool
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
@@ -113,6 +115,9 @@ async def update_task_config(
 
     request.app.state.config.ENABLE_FOLLOW_UP_GENERATION = (
         form_data.ENABLE_FOLLOW_UP_GENERATION
+    )
+    request.app.state.config.FOLLOW_UP_GENERATION_OVERRIDE = (
+        form_data.FOLLOW_UP_GENERATION_OVERRIDE
     )
     request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = (
         form_data.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE
@@ -158,6 +163,7 @@ async def update_task_config(
         "TAGS_GENERATION_PROMPT_TEMPLATE": request.app.state.config.TAGS_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_TAGS_GENERATION": request.app.state.config.ENABLE_TAGS_GENERATION,
         "ENABLE_FOLLOW_UP_GENERATION": request.app.state.config.ENABLE_FOLLOW_UP_GENERATION,
+        "FOLLOW_UP_GENERATION_OVERRIDE": getattr(request.app.state.config, "FOLLOW_UP_GENERATION_OVERRIDE", "none"),
         "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE": request.app.state.config.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
@@ -271,8 +277,16 @@ async def generate_title(
 async def generate_follow_ups(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
+    # Check admin override setting first
+    override = getattr(request.app.state.config, "FOLLOW_UP_GENERATION_OVERRIDE", "none")
+    if override == "force_disable":
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"detail": "Follow-up generation disabled by administrator"},
+        )
 
-    if not request.app.state.config.ENABLE_FOLLOW_UP_GENERATION:
+    # Only check ENABLE_FOLLOW_UP_GENERATION if not force_enable
+    if override != "force_enable" and not request.app.state.config.ENABLE_FOLLOW_UP_GENERATION:
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"detail": "Follow-up generation is disabled"},
