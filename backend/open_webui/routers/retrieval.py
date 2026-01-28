@@ -2105,10 +2105,11 @@ def _process_file_sync(
                         f"content_type={file.meta.get('content_type')} | engine={extraction_engine}"
                     )
                     
+                    # CRITICAL: Force PDF_EXTRACT_IMAGES=False to prevent hangs (image extraction causes 2+ minute slowdowns)
                     loader = Loader(
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                         TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
-                        PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                        PDF_EXTRACT_IMAGES=False,  # FORCED TO FALSE - image extraction causes hangs
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                     )

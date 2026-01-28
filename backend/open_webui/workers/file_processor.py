@@ -184,7 +184,8 @@ def get_worker_config():
             _worker_config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
             _worker_config.CHUNK_SIZE = CHUNK_SIZE  # UserScopedConfig
             _worker_config.CHUNK_OVERLAP = CHUNK_OVERLAP  # UserScopedConfig
-            _worker_config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
+            # CRITICAL: Force PDF_EXTRACT_IMAGES to False to prevent hangs (image extraction causes 2+ minute slowdowns)
+            _worker_config.PDF_EXTRACT_IMAGES = False
             _worker_config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
             _worker_config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
             _worker_config.BYPASS_EMBEDDING_AND_RETRIEVAL = BYPASS_EMBEDDING_AND_RETRIEVAL
@@ -374,7 +375,8 @@ class _FallbackConfig:
         self.RAG_OLLAMA_API_KEY = os.environ.get("RAG_OLLAMA_API_KEY", "")
         self.CONTENT_EXTRACTION_ENGINE = os.environ.get("CONTENT_EXTRACTION_ENGINE", "auto")
         self.TIKA_SERVER_URL = os.environ.get("TIKA_SERVER_URL", "")
-        self.PDF_EXTRACT_IMAGES = os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true"
+        # CRITICAL: Force extract_images=False to prevent hangs (image extraction causes 2+ minute slowdowns)
+        self.PDF_EXTRACT_IMAGES = False
         self.TEXT_SPLITTER = os.environ.get("RAG_TEXT_SPLITTER", "recursive")
         # UserScopedConfig - use .default for fallback
         self.CHUNK_SIZE = MockUserScopedConfig(int(os.environ.get("CHUNK_SIZE", "1000")))
@@ -698,11 +700,16 @@ def process_file_job(
                                                 file_size = os.path.getsize(file_path)
                                                 log.info(f"[FILE] id={file.id} | name={file.filename} | size={file_size}B | path={file_path}")
                                                 extraction_engine_val = ""  # Force PyPDF for PDFs (OpenShift requirement)
-                                                pdf_extract_images_val = getattr(request.app.state.config, 'PDF_EXTRACT_IMAGES', False) if hasattr(request.app.state.config, 'PDF_EXTRACT_IMAGES') else False
-                                                log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val}")
+                                                # CRITICAL: Force extract_images=False to prevent hangs (image extraction causes 2+ minute slowdowns)
+                                                pdf_extract_images_val = False
+                                                log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val} (FORCED TO FALSE)")
                                                 loader = Loader(engine=extraction_engine_val, PDF_EXTRACT_IMAGES=pdf_extract_images_val)
                                                 try:
+                                                    print(f"[DEBUG] About to call loader.load() for file_id={file.id} | extract_images={pdf_extract_images_val}", flush=True)
+                                                    log.info(f"[DEBUG] About to call loader.load() for file_id={file.id} | extract_images={pdf_extract_images_val}")
                                                     docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
+                                                    print(f"[DEBUG] loader.load() completed for file_id={file.id} | docs_count={len(docs) if docs else 0}", flush=True)
+                                                    log.info(f"[DEBUG] loader.load() completed for file_id={file.id} | docs_count={len(docs) if docs else 0}")
                                                     total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
                                                     non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
                                                     log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
@@ -801,11 +808,16 @@ def process_file_job(
                                             file_size = os.path.getsize(file_path)
                                             log.info(f"[FILE] id={file.id} | name={file.filename} | size={file_size}B | path={file_path}")
                                             extraction_engine_val = ""  # Force PyPDF for PDFs (OpenShift requirement)
-                                            pdf_extract_images_val = getattr(request.app.state.config, 'PDF_EXTRACT_IMAGES', False) if hasattr(request.app.state.config, 'PDF_EXTRACT_IMAGES') else False
-                                            log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val}")
+                                            # CRITICAL: Force extract_images=False to prevent hangs (image extraction causes 2+ minute slowdowns)
+                                            pdf_extract_images_val = False
+                                            log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val} (FORCED TO FALSE)")
                                             loader = Loader(engine=extraction_engine_val, PDF_EXTRACT_IMAGES=pdf_extract_images_val)
                                             try:
+                                                print(f"[DEBUG] About to call loader.load() for file_id={file.id} | extract_images={pdf_extract_images_val}", flush=True)
+                                                log.info(f"[DEBUG] About to call loader.load() for file_id={file.id} | extract_images={pdf_extract_images_val}")
                                                 docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
+                                                print(f"[DEBUG] loader.load() completed for file_id={file.id} | docs_count={len(docs) if docs else 0}", flush=True)
+                                                log.info(f"[DEBUG] loader.load() completed for file_id={file.id} | docs_count={len(docs) if docs else 0}")
                                                 total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
                                                 non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
                                                 log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
@@ -883,14 +895,19 @@ def process_file_job(
                                         file_size = os.path.getsize(file_path)
                                         log.info(f"[FILE] id={file.id} | name={file.filename} | size={file_size}B | path={file_path}")
                                         extraction_engine_val = ""  # Force PyPDF for PDFs (OpenShift requirement)
-                                        pdf_extract_images_val = getattr(request.app.state.config, 'PDF_EXTRACT_IMAGES', False) if hasattr(request.app.state.config, 'PDF_EXTRACT_IMAGES') else False
+                                        # CRITICAL: Force extract_images=False to prevent hangs (image extraction causes 2+ minute slowdowns)
+                                        pdf_extract_images_val = False
                                         extract_start = time.time()
-                                        log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val} | timestamp={extract_start:.3f}")
+                                        log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val} (FORCED TO FALSE) | timestamp={extract_start:.3f}")
                                         loader = Loader(engine=extraction_engine_val, PDF_EXTRACT_IMAGES=pdf_extract_images_val)
                                         try:
+                                            print(f"[DEBUG] About to call loader.load() for file_id={file.id} | extract_images={pdf_extract_images_val} | timestamp={extract_start:.3f}", flush=True)
+                                            log.info(f"[DEBUG] About to call loader.load() for file_id={file.id} | extract_images={pdf_extract_images_val}")
                                             docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
                                             extract_end = time.time()
                                             extract_duration = extract_end - extract_start
+                                            print(f"[DEBUG] loader.load() completed for file_id={file.id} | docs_count={len(docs) if docs else 0} | duration={extract_duration:.2f}s", flush=True)
+                                            log.info(f"[DEBUG] loader.load() completed for file_id={file.id} | docs_count={len(docs) if docs else 0} | duration={extract_duration:.2f}s")
                                             total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
                                             non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
                                             log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty} | duration={extract_duration:.2f}s | timestamp={extract_end:.3f}")

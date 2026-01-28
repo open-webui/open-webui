@@ -137,7 +137,24 @@ class Loader:
             loader = self._get_loader(filename, file_content_type, file_path)
             log.info(f"[LOADER] CREATED | type={type(loader).__name__}")
             
+            # DEBUG: Add detailed logging before calling loader.load()
+            import time
+            load_start = time.time()
+            print(f"[DEBUG] About to call loader.load() | filename={filename} | loader_type={type(loader).__name__} | timestamp={load_start:.3f}", flush=True)
+            log.info(f"[DEBUG] About to call loader.load() | filename={filename} | loader_type={type(loader).__name__} | timestamp={load_start:.3f}")
+            
+            # Check if it's PyPDFLoader and log extract_images value
+            if isinstance(loader, PyPDFLoader):
+                extract_images_val = getattr(loader, 'extract_images', 'unknown')
+                print(f"[DEBUG] PyPDFLoader detected | extract_images={extract_images_val}", flush=True)
+                log.info(f"[DEBUG] PyPDFLoader detected | extract_images={extract_images_val}")
+            
             docs = loader.load()
+            
+            load_end = time.time()
+            load_duration = load_end - load_start
+            print(f"[DEBUG] loader.load() completed | filename={filename} | docs_count={len(docs) if docs else 0} | duration={load_duration:.2f}s | timestamp={load_end:.3f}", flush=True)
+            log.info(f"[DEBUG] loader.load() completed | filename={filename} | docs_count={len(docs) if docs else 0} | duration={load_duration:.2f}s")
             total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
             non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
             
@@ -165,12 +182,18 @@ class Loader:
         
         # FORCE PyPDF for PDFs (OpenShift requirement) - check PDF first before engine logic
         if file_ext == "pdf":
-            extract_images = self.kwargs.get("PDF_EXTRACT_IMAGES", False)
-            log.info(f"[LOADER] PDF_DETECTED | file={filename} | loader=PyPDFLoader (forced) | extract_images={extract_images}")
+            # CRITICAL: Force extract_images=False to prevent hangs (image extraction causes 2+ minute slowdowns)
+            extract_images = False
+            log.info(f"[LOADER] PDF_DETECTED | file={filename} | loader=PyPDFLoader (forced) | extract_images={extract_images} (FORCED TO FALSE)")
             if os.path.exists(file_path):
                 file_size = os.path.getsize(file_path)
                 log.info(f"[LOADER] PDF_INFO | file={filename} | size={file_size}B")
-            return PyPDFLoader(file_path, extract_images=extract_images)
+            print(f"[DEBUG] Creating PyPDFLoader for {filename} | extract_images={extract_images} | file_path={file_path}", flush=True)
+            log.info(f"[DEBUG] Creating PyPDFLoader for {filename} | extract_images={extract_images}")
+            loader_instance = PyPDFLoader(file_path, extract_images=extract_images)
+            print(f"[DEBUG] PyPDFLoader created successfully for {filename}", flush=True)
+            log.info(f"[DEBUG] PyPDFLoader created successfully for {filename}")
+            return loader_instance
         
         # Check if Document Intelligence is configured
         use_doc_intel = (
