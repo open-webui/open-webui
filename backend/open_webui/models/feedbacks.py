@@ -460,23 +460,15 @@ class FeedbackTable:
         self, user_id: str, db: Optional[Session] = None
     ) -> bool:
         with get_db_context(db) as db:
-            feedbacks = db.query(Feedback).filter_by(user_id=user_id).all()
-            if not feedbacks:
-                return False
-            for feedback in feedbacks:
-                db.delete(feedback)
+            result = db.query(Feedback).filter_by(user_id=user_id).delete()
             db.commit()
-            return True
+            return result > 0
 
     def delete_all_feedbacks(self, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:
-            feedbacks = db.query(Feedback).all()
-            if not feedbacks:
-                return False
-            for feedback in feedbacks:
-                db.delete(feedback)
+            result = db.query(Feedback).delete()
             db.commit()
-            return True
+            return result > 0
 
 
 Feedbacks = FeedbackTable()
