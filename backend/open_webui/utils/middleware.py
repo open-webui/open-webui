@@ -2285,6 +2285,10 @@ async def process_chat_response(
                             data = json.loads(data)
                             chunk_count += 1
 
+                            # Debug logging: print RAW API response
+                            if hasattr(request.app.state, 'config') and getattr(request.app.state.config, 'ENABLE_API_DEBUG_LOGGING', False):
+                                print(f"[API RAW] {json.dumps(data)}", flush=True)
+
                             data, _ = await process_filter_functions(
                                 request=request,
                                 filter_functions=filter_functions,
@@ -2417,10 +2421,6 @@ async def process_chat_response(
                                                         ] += delta_arguments
 
                                     value = delta.get("content")
-                                    
-                                    # Debug logging for streaming content
-                                    if value and hasattr(request.app.state, 'config') and getattr(request.app.state.config, 'ENABLE_API_DEBUG_LOGGING', False):
-                                        print(value, end="", flush=True)
 
                                     reasoning_content = (
                                         delta.get("reasoning_content")
@@ -3007,10 +3007,6 @@ async def process_chat_response(
                         except Exception as e:
                             log.debug(e)
                             break
-
-                # Debug logging: print newline when stream completes
-                if hasattr(request.app.state, 'config') and getattr(request.app.state.config, 'ENABLE_API_DEBUG_LOGGING', False):
-                    print("\n[STREAM DONE]", flush=True)
 
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
                 data = {
