@@ -2,6 +2,7 @@ import json
 import logging
 import base64
 import io
+import time
 from typing import Optional
 
 
@@ -151,15 +152,19 @@ async def get_channels(
                 member.user_id
                 for member in Channels.get_members_by_channel_id(channel.id, db=db)
             ]
-            users = [
-                UserIdNameStatusResponse(
-                    **{
-                        **user.model_dump(),
-                        "is_active": Users.is_user_active(user.id, db=db),
-                    }
+            users = []
+            three_minutes_ago = int(time.time()) - 180
+            for user in Users.get_users_by_user_ids(user_ids, db=db):
+                is_active = (
+                    user.last_active_at is not None
+                    and user.last_active_at >= three_minutes_ago
                 )
-                for user in Users.get_users_by_user_ids(user_ids, db=db)
-            ]
+                users.append(
+                    UserIdNameStatusResponse(
+                        **user.model_dump(),
+                        is_active=is_active,
+                    )
+                )
 
         channel_list.append(
             ChannelListItemResponse(
