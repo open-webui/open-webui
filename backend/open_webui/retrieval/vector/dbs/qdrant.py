@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
+from fastembed import SparseTextEmbedding
 
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
@@ -26,6 +27,10 @@ from open_webui.config import (
 NO_LIMIT = 999999999
 
 log = logging.getLogger(__name__)
+
+bm25_embedding_model = SparseTextEmbedding(
+    "Qdrant/bm25", specific_model_path="/tmp/fastembed_cache/models--Qdrant--bm25"
+)
 
 
 class QdrantClient(VectorDBBase):
@@ -87,11 +92,19 @@ class QdrantClient(VectorDBBase):
         collection_name_with_prefix = f"{self.collection_prefix}_{collection_name}"
         self.client.create_collection(
             collection_name=collection_name_with_prefix,
-            vectors_config=models.VectorParams(
-                size=dimension,
-                distance=models.Distance.COSINE,
-                on_disk=self.QDRANT_ON_DISK,
-            ),
+            vectors_config={
+                "dense": models.VectorParams(
+                    size=dimension,
+                    distance=models.Distance.COSINE,
+                    on_disk=self.QDRANT_ON_DISK,
+                )
+            },
+            sparse_vectors_config={
+                "sparse": models.SparseVectorParams(
+                    modifier=models.Modifier.IDF,
+                    index=models.SparseIndexParams(on_disk=self.QDRANT_ON_DISK),
+                )
+            },
             hnsw_config=models.HnswConfigDiff(
                 m=self.QDRANT_HNSW_M,
             ),
@@ -124,11 +137,17 @@ class QdrantClient(VectorDBBase):
                 collection_name=collection_name, dimension=dimension
             )
 
+    def _get_sparse(self, query: str):
+        return next(bm25_embedding_model.embed(query)).as_object()
+
     def _create_points(self, items: list[VectorItem]):
         return [
             PointStruct(
                 id=item["id"],
-                vector=item["vector"],
+                vector={
+                    "dense": item["vector"],
+                    "sparse": self._get_sparse(item["text"]),
+                },
                 payload={"text": item["text"], "metadata": item["metadata"]},
             )
             for item in items
@@ -161,6 +180,44 @@ class QdrantClient(VectorDBBase):
             limit=limit,
         )
         get_result = self._result_to_get_result(query_response.points)
+        return SearchResult(
+            ids=get_result.ids,
+            documents=get_result.documents,
+            metadatas=get_result.metadatas,
+            # qdrant distance is [-1, 1], normalize to [0, 1]
+            distances=[[(point.score + 1.0) / 2.0 for point in query_response.points]],
+        )
+
+    def hybrid_search(
+        self,
+        collection_name: str,
+        vectors: list[list[float | int]],
+        limit: int,
+        bm25_weight: float,
+        query_text: str,
+    ) -> Optional[SearchResult]:
+        # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
+        if limit is None:
+            limit = NO_LIMIT  # otherwise qdrant would set limit to 10!
+
+        prefetch = [
+            models.Prefetch(query=vectors, using="dense", limit=limit),
+            models.Prefetch(
+                query=models.SparseVector(**self._get_sparse(query_text)),
+                using="sparse",
+                limit=limit,
+            ),
+        ]
+        query_response = self.client.query_points(
+            collection_name=f"{self.collection_prefix}_{collection_name}",
+            prefetch=prefetch,
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
+            limit=limit,
+        )
+
+        # Really limit the points
+        points = query_response.points[:limit]
+        get_result = self._result_to_get_result(points)
         return SearchResult(
             ids=get_result.ids,
             documents=get_result.documents,

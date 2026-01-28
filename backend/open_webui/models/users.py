@@ -109,6 +109,15 @@ class UserModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    def simplified(self):
+        return {
+            "id": self.id, 
+            "email": self.email, 
+            "name": self.name, 
+            "role": self.role,
+            "username": self.username
+        }
+
 
 class UserStatusModel(UserModel):
     is_active: bool = False
@@ -245,6 +254,7 @@ class UsersTable:
         role: str = "pending",
         oauth: Optional[dict] = None,
         db: Optional[Session] = None,
+        username: str = None,
     ) -> Optional[UserModel]:
         with get_db_context(db) as db:
             user = UserModel(
@@ -258,6 +268,7 @@ class UsersTable:
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                     "oauth": oauth,
+                    "username": username,
                 }
             )
             result = User(**user.model_dump())

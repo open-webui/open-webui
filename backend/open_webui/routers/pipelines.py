@@ -57,7 +57,6 @@ def get_sorted_filters(model_id, models):
 
 
 async def process_pipeline_inlet_filter(request, payload, user, models):
-    user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
     sorted_filters = get_sorted_filters(model_id, models)
     model = models[model_id]
@@ -82,7 +81,7 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
 
             headers = {"Authorization": f"Bearer {key}"}
             request_data = {
-                "user": user,
+                "user": user.simplified(),
                 "body": payload,
             }
 
@@ -110,7 +109,6 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
 
 
 async def process_pipeline_outlet_filter(request, payload, user, models):
-    user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
     sorted_filters = get_sorted_filters(model_id, models)
     model = models[model_id]
@@ -135,7 +133,7 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
 
             headers = {"Authorization": f"Bearer {key}"}
             request_data = {
-                "user": user,
+                "user": user.simplified(),
                 "body": payload,
             }
 

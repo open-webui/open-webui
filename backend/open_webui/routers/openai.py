@@ -880,12 +880,7 @@ async def generate_chat_completion(
 
     # Add user info to the payload if the model is a pipeline
     if "pipeline" in model and model.get("pipeline"):
-        payload["user"] = {
-            "name": user.name,
-            "id": user.id,
-            "email": user.email,
-            "role": user.role,
-        }
+        payload["user"] = user.simplified()
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]

@@ -79,6 +79,7 @@ class ERROR_MESSAGES(str, Enum):
     OLLAMA_NOT_FOUND = "WebUI could not connect to Ollama"
     CREATE_API_KEY_ERROR = "Oops! Something went wrong while creating your API key. Please try again later. If the issue persists, contact support for assistance."
     API_KEY_CREATION_NOT_ALLOWED = "API key creation is not allowed in the environment."
+    API_KEY_CREATION_NOT_ALLOWED_USER = "You don't have permission to create an API KEY. Please contact your administrator."
 
     EMPTY_CONTENT = "The content provided is empty. Please ensure that there is text or data present before proceeding."
 

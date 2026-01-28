@@ -37,6 +37,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
+    WEBUI_API_GROUP,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
@@ -458,6 +459,7 @@ async def ldap_auth(
                         name=cn,
                         role=role,
                         db=db,
+                        username=form_data.user.lower(),
                     )
 
                     if not user:
@@ -482,6 +484,9 @@ async def ldap_auth(
             user = Auths.authenticate_user_by_email(email, db=db)
 
             if user:
+                # Update username of the user
+                Users.update_user_by_id(id=user.id, updated={"username": form_data.user.lower()}, db=db)
+
                 expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
                 expires_at = None
                 if expires_delta:
@@ -1250,6 +1255,14 @@ async def generate_api_key(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
+        )
+
+    groups = Groups.get_groups_by_member_id(user.id)
+    # Check if user in special group. Get the group for env variable
+    if not any(WEBUI_API_GROUP == group.name for group in groups):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED_USER,
         )
 
     api_key = create_api_key()

@@ -92,6 +92,7 @@ class VectorSearchRetriever(BaseRetriever):
     collection_name: Any
     embedding_function: Any
     top_k: int
+    bm25_weight: float = 0.0
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -114,11 +115,20 @@ class VectorSearchRetriever(BaseRetriever):
         run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
         embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
-        result = VECTOR_DB_CLIENT.search(
-            collection_name=self.collection_name,
-            vectors=[embedding],
-            limit=self.top_k,
-        )
+        if hasattr(VECTOR_DB_CLIENT, "hybrid_search"):
+            result = VECTOR_DB_CLIENT.hybrid_search(
+                collection_name=self.collection_name,
+                vectors=[embedding],
+                limit=self.top_k,
+                bm25_weight=self.bm25_weight,
+                query_text=query
+            )
+        else:
+            result = VECTOR_DB_CLIENT.search(
+                collection_name=self.collection_name,
+                vectors=[embedding],
+                limit=self.top_k,
+            )
 
         ids = result.ids[0]
         metadatas = result.metadatas[0]
@@ -209,7 +219,8 @@ def get_enriched_texts(collection_result: GetResult) -> list[str]:
 
 async def query_doc_with_hybrid_search(
     collection_name: str,
-    collection_result: GetResult,
+    # We do not do the collection results anymore
+    # collection_result: GetResult,
     query: str,
     embedding_function,
     k: int,
@@ -220,57 +231,16 @@ async def query_doc_with_hybrid_search(
     enable_enriched_texts: bool = False,
 ) -> dict:
     try:
-        # First check if collection_result has the required attributes
-        if (
-            not collection_result
-            or not hasattr(collection_result, "documents")
-            or not hasattr(collection_result, "metadatas")
-        ):
-            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
-            return {"documents": [], "metadatas": [], "distances": []}
-
-        # Now safely check the documents content after confirming attributes exist
-        if (
-            not collection_result.documents
-            or len(collection_result.documents) == 0
-            or not collection_result.documents[0]
-        ):
-            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
-            return {"documents": [], "metadatas": [], "distances": []}
-
-        log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
-
-        bm25_texts = (
-            get_enriched_texts(collection_result)
-            if enable_enriched_texts
-            else collection_result.documents[0]
-        )
-
-        bm25_retriever = BM25Retriever.from_texts(
-            texts=bm25_texts,
-            metadatas=collection_result.metadatas[0],
-        )
-        bm25_retriever.k = k
-
         vector_search_retriever = VectorSearchRetriever(
             collection_name=collection_name,
             embedding_function=embedding_function,
             top_k=k,
+            bm25_weight=hybrid_bm25_weight
         )
 
-        if hybrid_bm25_weight <= 0:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[vector_search_retriever], weights=[1.0]
-            )
-        elif hybrid_bm25_weight >= 1:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever], weights=[1.0]
-            )
-        else:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever, vector_search_retriever],
-                weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
-            )
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[vector_search_retriever], weights=[1.0]
+        )
 
         compressor = RerankCompressor(
             embedding_function=embedding_function,
@@ -469,21 +439,9 @@ async def query_collection_with_hybrid_search(
 ) -> dict:
     results = []
     error = False
-    # Fetch collection data once per collection sequentially
-    # Avoid fetching the same data multiple times later
-    collection_results = {}
-    for collection_name in collection_names:
-        try:
-            log.debug(
-                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
-            )
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
-                collection_name=collection_name
-            )
-        except Exception as e:
-            log.exception(f"Failed to fetch collection {collection_name}: {e}")
-            collection_results[collection_name] = None
-
+    # This is a botleneck when the collectins are large.
+    # Since it's only used for BM25, and we are using qdrant,
+    # Which natively supports BM25, avoid the step or retrieval the whole collection.
     log.info(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
     )
@@ -492,7 +450,8 @@ async def query_collection_with_hybrid_search(
         try:
             result = await query_doc_with_hybrid_search(
                 collection_name=collection_name,
-                collection_result=collection_results[collection_name],
+                # We do not get the collection results anymore
+                # collection_result=collection_results[collection_name],
                 query=query,
                 embedding_function=embedding_function,
                 k=k,
@@ -508,11 +467,12 @@ async def query_collection_with_hybrid_search(
             return None, e
 
     # Prepare tasks for all collections and queries
-    # Avoid running any tasks for collections that failed to fetch data (have assigned None)
+    # We do not get the collection results anymore
     tasks = [
         (collection_name, query)
         for collection_name in collection_names
-        if collection_results[collection_name] is not None
+        # We do not get the collection results anymore
+        # if collection_results[collection_name] is not None
         for query in queries
     ]
 
