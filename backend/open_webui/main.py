@@ -122,6 +122,7 @@ from open_webui.config import (
     OLLAMA_API_CONFIGS,
     # OpenAI
     ENABLE_OPENAI_API,
+    ENABLE_API_DEBUG_LOGGING,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
@@ -637,6 +638,7 @@ app.state.OLLAMA_MODELS = {}
 ########################################
 
 app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
+app.state.config.ENABLE_API_DEBUG_LOGGING = ENABLE_API_DEBUG_LOGGING
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
