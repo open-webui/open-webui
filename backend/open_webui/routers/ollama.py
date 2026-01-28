@@ -1620,21 +1620,26 @@ async def get_openai_models(
 
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
-        # Batch-fetch all model info in a single query to avoid N+1
-        model_ids = [model["id"] for model in models]
-        model_infos = Models.get_models_by_ids(model_ids, db=db) if model_ids else []
-        model_info_map = {m.id: m for m in model_infos}
+        # Extract all model IDs we need to look up
+        model_ids_to_check = [model["id"] for model in models]
 
+        # Fetch all model configurations from database in a single query
+        db_models = Models.get_models_by_ids(model_ids_to_check, db=db) if model_ids_to_check else []
+        model_configs_by_id = {db_model.id: db_model for db_model in db_models}
+
+        # Filter: only include models where user has access
         filtered_models = []
         for model in models:
-            model_info = model_info_map.get(model["id"])
-            if model_info:
-                if user.id == model_info.user_id or has_access(
+            model_config = model_configs_by_id.get(model["id"])
+            if model_config:
+                user_owns_model = user.id == model_config.user_id
+                user_has_read_access = has_access(
                     user.id,
                     type="read",
-                    access_control=model_info.access_control,
+                    access_control=model_config.access_control,
                     db=db,
-                ):
+                )
+                if user_owns_model or user_has_read_access:
                     filtered_models.append(model)
         models = filtered_models
 
