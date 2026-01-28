@@ -268,11 +268,7 @@ async def query_doc_with_hybrid_search(
             )
             bm25_retriever.k = k
 
-            vector_search_retriever = VectorSearchRetriever(
-                collection_name=collection_name,
-                embedding_function=embedding_function,
-                top_k=k,
-            )
+            
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[bm25_retriever], weights=[1.0]
             )
