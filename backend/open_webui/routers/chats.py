@@ -1088,9 +1088,8 @@ async def delete_chat_by_id(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id, db=db) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id, db=db)
+        # Batch delete orphaned tags (threshold=1: delete if this is the only chat with this tag)
+        Chats.delete_orphaned_tags_for_chat(id, user.id, threshold=1, db=db)
 
         result = Chats.delete_chat_by_id(id, db=db)
 
@@ -1110,9 +1109,8 @@ async def delete_chat_by_id(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id, db=db) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id, db=db)
+        # Batch delete orphaned tags (threshold=1: delete if this is the only chat with this tag)
+        Chats.delete_orphaned_tags_for_chat(id, user.id, threshold=1, db=db)
 
         result = Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
         return result
@@ -1274,21 +1272,22 @@ async def archive_chat_by_id(
     if chat:
         chat = Chats.toggle_chat_archive_by_id(id, db=db)
 
-        # Delete tags if chat is archived
+        # Handle tags when archiving/unarchiving
         if chat.archived:
-            for tag_id in chat.meta.get("tags", []):
-                if (
-                    Chats.count_chats_by_tag_name_and_user_id(tag_id, user.id, db=db)
-                    == 0
-                ):
-                    log.debug(f"deleting tag: {tag_id}")
-                    Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
+            # Batch delete orphaned tags (threshold=0: delete if no active chats have this tag)
+            Chats.delete_orphaned_tags_for_chat(id, user.id, threshold=0, db=db)
         else:
-            for tag_id in chat.meta.get("tags", []):
-                tag = Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db)
-                if tag is None:
-                    log.debug(f"inserting tag: {tag_id}")
-                    tag = Tags.insert_new_tag(tag_id, user.id, db=db)
+            # Restore tags when unarchiving - batch check existing tags
+            tag_names = chat.meta.get("tags", [])
+            if tag_names:
+                tag_ids = [name.replace(" ", "_").lower() for name in tag_names]
+                existing_tags = Tags.get_tags_by_ids_and_user_id(tag_ids, user.id, db=db)
+                existing_ids = {t.id for t in existing_tags}
+                for tag_name in tag_names:
+                    tag_id = tag_name.replace(" ", "_").lower()
+                    if tag_id not in existing_ids:
+                        log.debug(f"inserting tag: {tag_name}")
+                        Tags.insert_new_tag(tag_name, user.id, db=db)
 
         return ChatResponse(**chat.model_dump())
     else:
@@ -1494,11 +1493,9 @@ async def delete_all_tags_by_id(
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        # Batch delete orphaned tags first (threshold=0: delete if no chats use this tag after removal)
+        Chats.delete_orphaned_tags_for_chat(id, user.id, threshold=0, db=db)
         Chats.delete_all_tags_by_id_and_user_id(id, user.id, db=db)
-
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id, db=db) == 0:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id, db=db)
 
         return True
     else:

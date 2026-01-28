@@ -1169,8 +1169,12 @@ class ChatTable:
     ) -> list[TagModel]:
         with get_db_context(db) as db:
             chat = db.get(Chat, id)
-            tags = chat.meta.get("tags", [])
-            return [Tags.get_tag_by_name_and_user_id(tag, user_id) for tag in tags]
+            tag_names = chat.meta.get("tags", [])
+            if not tag_names:
+                return []
+            # Convert names to IDs (same logic as Tags uses internally)
+            tag_ids = [name.replace(" ", "_").lower() for name in tag_names]
+            return Tags.get_tags_by_ids_and_user_id(tag_ids, user_id, db=db)
 
     def get_chat_list_by_user_id_and_tag_name(
         self,
@@ -1268,6 +1272,76 @@ class ChatTable:
             log.info(f"Count of chats for tag '{tag_name}': {count}")
 
             return count
+
+    def count_chats_by_tag_names_and_user_id(
+        self, tag_names: list[str], user_id: str, db: Optional[Session] = None
+    ) -> dict[str, int]:
+        """
+        Batch count of chats for multiple tag names.
+        Returns a dict of tag_name -> count.
+        """
+        if not tag_names:
+            return {}
+
+        with get_db_context(db) as db:
+            # Normalize all tag names to IDs
+            tag_ids = [name.replace(" ", "_").lower() for name in tag_names]
+            
+            counts = {}
+            for tag_id, tag_name in zip(tag_ids, tag_names):
+                query = db.query(Chat).filter_by(user_id=user_id, archived=False)
+
+                if db.bind.dialect.name == "sqlite":
+                    query = query.filter(
+                        text(
+                            f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                        )
+                    ).params(tag_id=tag_id)
+                elif db.bind.dialect.name == "postgresql":
+                    query = query.filter(
+                        text(
+                            "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
+                        )
+                    ).params(tag_id=tag_id)
+                else:
+                    raise NotImplementedError(
+                        f"Unsupported dialect: {db.bind.dialect.name}"
+                    )
+
+                counts[tag_name] = query.count()
+
+            return counts
+
+    def delete_orphaned_tags_for_chat(
+        self, chat_id: str, user_id: str, threshold: int = 1, db: Optional[Session] = None
+    ) -> list[str]:
+        """
+        Delete tags that would become orphaned after a chat is deleted/archived.
+        threshold=1 means delete if this is the only chat with this tag.
+        threshold=0 means delete if no chats have this tag.
+        Returns list of deleted tag names.
+        """
+        with get_db_context(db) as db:
+            chat = db.get(Chat, chat_id)
+            if not chat:
+                return []
+            
+            tag_names = chat.meta.get("tags", [])
+            if not tag_names:
+                return []
+
+            # Batch get counts for all tags
+            counts = self.count_chats_by_tag_names_and_user_id(tag_names, user_id, db=db)
+            
+            # Find orphaned tags (count <= threshold)
+            orphaned = [name for name, count in counts.items() if count <= threshold]
+            
+            # Batch delete orphaned tags
+            if orphaned:
+                for tag_name in orphaned:
+                    Tags.delete_tag_by_name_and_user_id(tag_name, user_id, db=db)
+            
+            return orphaned
 
     def count_chats_by_folder_id_and_user_id(
         self, folder_id: str, user_id: str, db: Optional[Session] = None
