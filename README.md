@@ -43,6 +43,8 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Open WebUI Community](https://openwebui.com/) integration.
 
+- 🎨 **Automatic Provider Logo Assignment**: Models automatically display provider logos (OpenAI, Anthropic, Google, Meta, Ollama) based on configurable ID patterns. Admins can customize providers, add new ones, and override logos manually. Full support for light/dark theme variants.
+
 - 🐍 **Native Python Function Calling Tool**: Enhance your LLMs with built-in code editor support in the tools workspace. Bring Your Own Function (BYOF) by simply adding your pure Python functions, enabling seamless integration with LLMs.
 
 - 💾 **Persistent Artifact Storage**: Built-in key-value storage API for artifacts, enabling features like journals, trackers, leaderboards, and collaborative tools with both personal and shared data scopes across sessions.
@@ -191,6 +193,31 @@ docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=
 ### Keeping Your Docker Installation Up-to-Date
 
 Check our Updating Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/updating).
+
+### Customizing Provider Logos 🎨
+
+Open WebUI automatically assigns provider logos to models based on their IDs (e.g., GPT models get OpenAI logo, Claude models get Anthropic logo). You can customize this behavior through the Admin Settings.
+
+**Managing Providers**:
+1. Navigate to **Admin Settings > Providers**
+2. View, edit, or add new providers
+3. Configure model ID patterns (regex) for automatic matching
+4. Set logo URLs (local files, external URLs, or base64 data)
+5. Support for light/dark theme variants
+
+**Adding Custom Provider Logos**:
+- Place logo files in the `static/providers/` directory
+- Supported formats: PNG, SVG, JPG
+- Recommended size: 256x256px with transparent background
+- Reference path: `/providers/your-logo.png`
+- Optional theme variants: `/providers/your-logo-light.png` and `/providers/your-logo-dark.png`
+
+**Provider Priority**:
+- Higher priority (0-1000, default 50) providers are checked first
+- Useful for overlapping patterns (e.g., Llama models from Ollama vs Meta)
+- Manual model logo uploads always override provider detection
+
+For more details, see the [Provider Logos README](./public/providers/README.md).
 
 ### Using the Dev Branch 🌙
 

@@ -13,9 +13,9 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { formatDate } from '$lib/utils';
+	import { formatDate, resolveTheme } from '$lib/utils';
 
-	import { settings, user, shortCodesToEmojis } from '$lib/stores';
+	import { settings, user, shortCodesToEmojis, theme } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { getMessageData } from '$lib/apis/channels';
 
@@ -238,7 +238,7 @@
 				>
 					{#if message?.reply_to_message?.meta?.model_id}
 						<img
-							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.reply_to_message.meta.model_id}`}
+							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.reply_to_message.meta.model_id}&theme=${resolveTheme($theme)}`}
 							alt={message.reply_to_message.meta.model_name ??
 								message.reply_to_message.meta.model_id}
 							class="size-4 ml-0.5 rounded-full object-cover"
@@ -276,7 +276,7 @@
 				{#if showUserProfile}
 					{#if message?.meta?.model_id}
 						<img
-							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.meta.model_id}`}
+							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.meta.model_id}&theme=${resolveTheme($theme)}`}
 							alt={message.meta.model_name ?? message.meta.model_id}
 							class="size-8 translate-y-1 ml-0.5 object-cover rounded-full"
 						/>

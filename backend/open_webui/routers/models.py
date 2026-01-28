@@ -65,7 +65,6 @@ async def get_models(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-
     limit = PAGE_ITEM_COUNT
 
     page = max(1, page)
@@ -344,41 +343,110 @@ async def get_model_by_id(
 
 @router.get("/model/profile/image")
 def get_model_profile_image(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    request: Request,
+    id: str,
+    theme: Optional[str] = "light",
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
 ):
+    from open_webui.models.providers import Providers
+
     model = Models.get_model_by_id(id, db=db)
 
     if model:
         etag = f'"{model.updated_at}"' if model.updated_at else None
 
-        if model.meta.profile_image_url:
-            if model.meta.profile_image_url.startswith("http"):
+        # Priority 1: Manual override (custom uploaded image)
+        if model.meta and model.meta.profile_image_url:
+            image_url = model.meta.profile_image_url
+
+            # Skip default favicon - fall through to provider detection
+            # Check for both relative and absolute paths to favicon
+            is_default_favicon = (
+                image_url == "/static/favicon.png"
+                or image_url.endswith("/static/favicon.png")
+            )
+
+            if not is_default_favicon:
+                if image_url.startswith("http"):
+                    return Response(
+                        status_code=status.HTTP_302_FOUND,
+                        headers={"Location": image_url},
+                    )
+                elif image_url.startswith("data:image"):
+                    try:
+                        header, base64_data = image_url.split(",", 1)
+                        image_data = base64.b64decode(base64_data)
+                        image_buffer = io.BytesIO(image_data)
+                        media_type = header.split(";")[0].lstrip("data:")
+
+                        headers = {"Content-Disposition": "inline"}
+                        if etag:
+                            headers["ETag"] = etag
+
+                        return StreamingResponse(
+                            image_buffer,
+                            media_type=media_type,
+                            headers=headers,
+                        )
+                    except Exception as e:
+                        log.warning(f"Error decoding profile image: {e}")
+                elif image_url.startswith("/"):
+                    return FileResponse(
+                        f"{STATIC_DIR}{image_url}",
+                        headers={"Cache-Control": "no-cache, must-revalidate"},
+                    )
+
+        # Priority 2: Automatic provider logo detection
+        # Determine owned_by from runtime model state or base_model_id
+        owned_by = "openai"  # Default assumption for custom models
+
+        # Try to get owned_by from runtime MODELS state (for base models)
+        if hasattr(request.app.state, "MODELS") and request.app.state.MODELS:
+            runtime_model = request.app.state.MODELS.get(model.id)
+            if runtime_model and "owned_by" in runtime_model:
+                owned_by = runtime_model.get("owned_by", "openai")
+            elif model.base_model_id:
+                # For custom presets, check the base model's owned_by
+                base_runtime_model = request.app.state.MODELS.get(model.base_model_id)
+                if base_runtime_model and "owned_by" in base_runtime_model:
+                    owned_by = base_runtime_model.get("owned_by", "openai")
+
+        provider_logo = Providers.detect_provider_logo(model.id, owned_by, theme or "light", db=db)
+
+        if provider_logo:
+            # Provider logo is HTTP URL - redirect
+            if provider_logo.startswith("http"):
                 return Response(
                     status_code=status.HTTP_302_FOUND,
-                    headers={"Location": model.meta.profile_image_url},
+                    headers={
+                        "Location": provider_logo,
+                        "Cache-Control": "no-cache, must-revalidate",
+                    },
                 )
-            elif model.meta.profile_image_url.startswith("data:image"):
+            # Provider logo is data URL - stream
+            elif provider_logo.startswith("data:image"):
                 try:
-                    header, base64_data = model.meta.profile_image_url.split(",", 1)
+                    header, base64_data = provider_logo.split(",", 1)
                     image_data = base64.b64decode(base64_data)
                     image_buffer = io.BytesIO(image_data)
                     media_type = header.split(";")[0].lstrip("data:")
-
-                    headers = {"Content-Disposition": "inline"}
-                    if etag:
-                        headers["ETag"] = etag
-
                     return StreamingResponse(
                         image_buffer,
                         media_type=media_type,
-                        headers=headers,
+                        headers={"Cache-Control": "no-cache, must-revalidate"},
                     )
                 except Exception as e:
-                    pass
+                    log.warning(f"Error decoding provider logo: {e}")
+            # Provider logo is relative path
+            elif provider_logo.startswith("/"):
+                return FileResponse(
+                    f"{STATIC_DIR}{provider_logo}",
+                    headers={"Cache-Control": "no-cache, must-revalidate"},
+                )
 
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
-    else:
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+    # Priority 3: Default fallback
+    return FileResponse(f"{STATIC_DIR}/favicon.png")
 
 
 ############################

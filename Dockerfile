@@ -179,6 +179,9 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
+# copy provider logos from static to backend static directory
+COPY --chown=$UID:$GID --from=build /app/static/providers /app/backend/open_webui/static/providers
+
 EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1

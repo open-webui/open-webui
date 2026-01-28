@@ -4,6 +4,8 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { theme } from '$lib/stores';
+	import { resolveTheme } from '$lib/utils/theme';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
@@ -36,7 +38,7 @@
 		>
 			<div class="self-center shrink-0">
 				<img
-					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
+					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&theme=${resolveTheme($theme)}&lang=${$i18n.language}`}
 					class=" size-5 rounded-full -translate-x-[0.5px]"
 					alt="logo"
 				/>

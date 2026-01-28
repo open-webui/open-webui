@@ -6,7 +6,7 @@
 	import { onMount, getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, config, mobile, models as _models, settings, user, theme } from '$lib/stores';
 	import {
 		createNewModel,
 		deleteAllModels,
@@ -16,6 +16,7 @@
 		importModels
 	} from '$lib/apis/models';
 	import { copyToClipboard } from '$lib/utils';
+	import { resolveTheme } from '$lib/utils/theme';
 	import { page } from '$app/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 
@@ -359,7 +360,7 @@
 										: 'opacity-50 dark:opacity-50'} "
 								>
 									<img
-										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}`}
+										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&theme=${resolveTheme($theme)}`}
 										alt="modelfile profile"
 										class=" rounded-full w-full h-auto object-cover"
 									/>

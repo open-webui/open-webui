@@ -2,7 +2,8 @@
 	import { getContext, onDestroy, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { channels, models, user } from '$lib/stores';
+	import { channels, models, user, theme } from '$lib/stores';
+	import { resolveTheme } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Hashtag from '$lib/components/icons/Hashtag.svelte';
 	import Lock from '$lib/components/icons/Lock.svelte';
@@ -173,7 +174,7 @@
 							</div>
 						{:else if item.type === 'model'}
 							<img
-								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}
+								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&theme=${resolveTheme($theme)}&lang=${$i18n.language}`}
 								alt={item?.data?.name ?? item.id}
 								class="rounded-full size-5 items-center mr-2"
 							/>

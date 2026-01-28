@@ -21,6 +21,7 @@
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
+	import Providers from './Settings/Providers.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
@@ -39,6 +40,7 @@
 			'general',
 			'connections',
 			'models',
+			'providers',
 			'evaluations',
 			'tools',
 			'documents',
@@ -123,6 +125,23 @@
 				'gguf',
 				'import',
 				'export'
+			]
+		},
+		{
+			id: 'providers',
+			title: 'Providers',
+			route: '/admin/settings/providers',
+			keywords: [
+				'providers',
+				'logos',
+				'avatars',
+				'openai',
+				'anthropic',
+				'google',
+				'meta',
+				'ollama',
+				'patterns',
+				'branding'
 			]
 		},
 		{
@@ -310,6 +329,7 @@
 		<!-- {$i18n.t('General')} -->
 		<!-- {$i18n.t('Connections')} -->
 		<!-- {$i18n.t('Models')} -->
+		<!-- {$i18n.t('Providers')} -->
 		<!-- {$i18n.t('Evaluations')} -->
 		<!-- {$i18n.t('External Tools')} -->
 		<!-- {$i18n.t('Documents')} -->
@@ -366,6 +386,19 @@
 							<path
 								fill-rule="evenodd"
 								d="M10 1c3.866 0 7 1.79 7 4s-3.134 4-7 4-7-1.79-7-4 3.134-4 7-4zm5.694 8.13c.464-.264.91-.583 1.306-.952V10c0 2.21-3.134 4-7 4s-7-1.79-7-4V8.178c.396.37.842.688 1.306.953C5.838 10.006 7.854 10.5 10 10.5s4.162-.494 5.694-1.37zM3 13.179V15c0 2.21 3.134 4 7 4s7-1.79 7-4v-1.822c-.396.37-.842.688-1.306.953-1.532.875-3.548 1.369-5.694 1.369s-4.162-.494-5.694-1.37A7.009 7.009 0 013 13.179z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					{:else if tab.id === 'providers'}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Zm7.75-4.25a.75.75 0 0 0-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5h-2.5v-3.5Z"
 								clip-rule="evenodd"
 							/>
 						</svg>
@@ -524,6 +557,8 @@
 			/>
 		{:else if selectedTab === 'models'}
 			<Models />
+		{:else if selectedTab === 'providers'}
+			<Providers />
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
 		{:else if selectedTab === 'tools'}

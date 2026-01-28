@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { models } from '$lib/stores';
+	import { models, theme } from '$lib/stores';
 	import { getLeaderboard } from '$lib/apis/evaluations';
+	import { resolveTheme } from '$lib/utils';
 	import ModelModal from './LeaderboardModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -178,7 +179,7 @@
 						<td class="px-3 py-1.5">
 							<div class="flex items-center gap-2">
 								<img
-									src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.id}"
+									src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.id}&theme={resolveTheme($theme)}"
 									alt={model.name}
 									class="size-5 rounded-full object-cover"
 								/>

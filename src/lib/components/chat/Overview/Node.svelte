@@ -3,6 +3,9 @@
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import { getContext } from 'svelte';
 
+	import { theme } from '$lib/stores';
+	import { resolveTheme } from '$lib/utils/theme';
+
 	import ProfileImage from '../Messages/ProfileImage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Heart from '$lib/components/icons/Heart.svelte';
@@ -44,7 +47,7 @@
 		{:else}
 			<div class="flex w-full">
 				<ProfileImage
-					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${data.model?.id ?? data.message.model}&lang=${$i18n.language}`}
+					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${data.model?.id ?? data.message.model}&theme=${resolveTheme($theme)}&lang=${$i18n.language}`}
 					className={'size-5 -translate-y-[1px]'}
 				/>
 

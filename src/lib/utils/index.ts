@@ -1690,3 +1690,6 @@ export const getCodeBlockContents = (content: string): object => {
 		js: jsContent.trim()
 	};
 };
+
+// Re-export theme utilities
+export { resolveTheme } from './theme';

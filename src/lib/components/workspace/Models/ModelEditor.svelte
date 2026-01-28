@@ -2,8 +2,16 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import {
+		models,
+		tools,
+		functions,
+		knowledge as knowledgeCollections,
+		user,
+		theme
+	} from '$lib/stores';
+	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL } from '$lib/constants';
+	import { resolveTheme } from '$lib/utils';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
@@ -414,16 +422,19 @@
 				<div class="self-center md:self-start flex justify-center my-2 shrink-0">
 					<div class="self-center">
 						<button
-							class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
-							`${WEBUI_BASE_URL}/static/favicon.png`
-								? 'bg-transparent'
-								: 'bg-white'} shadow-xl group relative"
+							class="rounded-xl flex shrink-0 items-center bg-white dark:bg-gray-850 shadow-xl group relative"
 							type="button"
 							on:click={() => {
 								filesInputElement.click();
 							}}
 						>
-							{#if info.meta.profile_image_url}
+							{#if edit && info.id}
+								<img
+									src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${info.id}&theme=${resolveTheme($theme)}`}
+									alt="model profile"
+									class="rounded-xl size-72 md:size-60 object-cover shrink-0"
+								/>
+							{:else if info.meta.profile_image_url}
 								<img
 									src={info.meta.profile_image_url}
 									alt="model profile"
@@ -556,7 +567,7 @@
 								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
 								placeholder={$i18n.t('Add a short description about what this model does')}
 								bind:value={info.meta.description}
-							/>
+							></Textarea>
 						{/if}
 					</div>
 
