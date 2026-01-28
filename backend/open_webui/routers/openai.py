@@ -1327,12 +1327,35 @@ async def generate_chat_completion(
 
             async def stream_wrapper(stream):
                 async for chunk in stream:
-                    if request.app.state.config.ENABLE_API_DEBUG_LOGGING:
-                        log.info(f"API Response Chunk: {chunk}")
                     yield chunk
                     try:
-                        # Attempt to extract usage from the chunk
+                        # Attempt to extract usage and content from the chunk
                         decoded = chunk.decode("utf-8", errors="ignore")
+                        
+                        # Debug logging for streaming responses
+                        if request.app.state.config.ENABLE_API_DEBUG_LOGGING:
+                            for line in decoded.split("\n"):
+                                if line.startswith("data: "):
+                                    data_content = line[6:].strip()
+                                    if data_content == "[DONE]":
+                                        log.info("[STREAM] Done")
+                                        continue
+                                    try:
+                                        data = json.loads(data_content)
+                                        # Extract and log the actual content from the delta
+                                        choices = data.get("choices", [])
+                                        for choice in choices:
+                                            delta = choice.get("delta", {})
+                                            content = delta.get("content", "")
+                                            reasoning = delta.get("reasoning_content", "")
+                                            if content:
+                                                # Print the actual streamed text without newline prefix
+                                                print(content, end="", flush=True)
+                                            if reasoning:
+                                                print(f"[REASONING] {reasoning}", end="", flush=True)
+                                    except json.JSONDecodeError:
+                                        pass
+                        
                         if '"usage"' in decoded:
                             for line in decoded.split("\n"):
                                 if line.startswith("data: "):
@@ -1362,6 +1385,17 @@ async def generate_chat_completion(
                 response = await r.json()
                 if request.app.state.config.ENABLE_API_DEBUG_LOGGING:
                     log.info(f"API Response: {response}")
+                    # Also print the actual content for easier reading
+                    if isinstance(response, dict):
+                        choices = response.get("choices", [])
+                        for choice in choices:
+                            message = choice.get("message", {})
+                            content = message.get("content", "")
+                            reasoning = message.get("reasoning_content", "")
+                            if content:
+                                print(f"\n[RESPONSE CONTENT]\n{content}")
+                            if reasoning:
+                                print(f"\n[REASONING CONTENT]\n{reasoning}")
             except Exception as e:
                 log.error(e)
                 response = await r.text()
