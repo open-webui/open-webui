@@ -30,6 +30,7 @@ from open_webui.env import (
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
+    ENABLE_API_DEBUG_LOGGING,
     log,
 )
 from open_webui.internal.db import Base, get_db
@@ -1107,6 +1108,12 @@ ENABLE_SIGNUP = PersistentConfig(
         if not WEBUI_AUTH
         else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
     ),
+)
+
+ENABLE_API_DEBUG_LOGGING = PersistentConfig(
+    "ENABLE_API_DEBUG_LOGGING",
+    "ui.enable_api_debug_logging",
+    ENABLE_API_DEBUG_LOGGING,
 )
 
 ENABLE_LOGIN_FORM = PersistentConfig(

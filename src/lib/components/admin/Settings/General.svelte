@@ -110,6 +110,11 @@
 		const ldapConfig = await getLdapConfig(localStorage.token);
 		ENABLE_LDAP = ldapConfig.ENABLE_LDAP;
 	});
+
+	let ENABLE_API_DEBUG_LOGGING = false;
+	$: if (adminConfig) {
+		ENABLE_API_DEBUG_LOGGING = adminConfig.ENABLE_API_DEBUG_LOGGING;
+	}
 </script>
 
 <form
@@ -341,6 +346,17 @@
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key')}</div>
 
 						<Switch bind:state={adminConfig.ENABLE_API_KEY} />
+					</div>
+
+					<div class="mb-2.5 flex w-full justify-between pr-2">
+						<div class="flex flex-col">
+							<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Debug Logging')}</div>
+							<div class="text-xs text-gray-500">
+								{$i18n.t('Log all API requests and responses to the console.')}
+							</div>
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_API_DEBUG_LOGGING} />
 					</div>
 
 					{#if adminConfig?.ENABLE_API_KEY}

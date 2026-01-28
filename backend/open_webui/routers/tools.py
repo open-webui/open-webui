@@ -121,6 +121,9 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                             "description": server.get("info", {}).get(
                                 "description", ""
                             ),
+                            "manifest": {
+                                "config": server.get("config", {}),
+                            },
                         },
                         "access_control": server.get("config", {}).get(
                             "access_control", None

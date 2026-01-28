@@ -2,9 +2,10 @@ import asyncio
 from typing import Optional
 from contextlib import AsyncExitStack
 
-from mcp import ClientSession
+from mcp import ClientSession, StdioServerParameters
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.stdio import stdio_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 
 
@@ -13,12 +14,38 @@ class MCPClient:
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
 
-    async def connect(self, url: str, headers: Optional[dict] = None):
+    async def connect(
+        self,
+        url: Optional[str] = None,
+        headers: Optional[dict] = None,
+        command: Optional[str] = None,
+        args: Optional[list[str]] = None,
+        env: Optional[dict[str, str]] = None,
+    ):
         try:
-            self._streams_context = streamablehttp_client(url, headers=headers)
+            if command:
+                server_params = StdioServerParameters(
+                    command=command,
+                    args=args or [],
+                    env=env,
+                )
+                self._streams_context = stdio_client(server_params)
+            elif url:
+                self._streams_context = streamablehttp_client(url, headers=headers)
+            else:
+                raise ValueError("Either url or command must be provided")
 
             transport = await self.exit_stack.enter_async_context(self._streams_context)
-            read_stream, write_stream, _ = transport
+
+            if command:
+                read_stream, write_stream = transport
+            else:
+                # `streamablehttp_client()` return signature has changed across MCP
+                # releases (either 2-tuple or 3-tuple). Handle both.
+                try:
+                    read_stream, write_stream = transport
+                except ValueError:
+                    read_stream, write_stream, _ = transport
 
             self._session_context = ClientSession(
                 read_stream, write_stream
@@ -32,7 +59,7 @@ class MCPClient:
             await self.disconnect()
             raise e
 
-    async def list_tool_specs(self) -> Optional[dict]:
+    async def list_tool_specs(self) -> Optional[list[dict]]:
         if not self.session:
             raise RuntimeError("MCP client is not connected.")
 

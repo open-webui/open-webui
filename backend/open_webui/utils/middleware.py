@@ -1149,9 +1149,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             oauth_token = None
 
                     mcp_clients[server_id] = MCPClient()
+                    mcp_config = mcp_server_connection.get("config", {})
+                    command = mcp_config.get("command") if mcp_config else None
+                    args = mcp_config.get("args") if mcp_config else None
+                    env = mcp_config.get("env") if mcp_config else None
+
                     await mcp_clients[server_id].connect(
-                        url=mcp_server_connection.get("url", ""),
-                        headers=headers if headers else None,
+                        url=mcp_server_connection.get("url", "") if not command else None,
+                        headers=headers if headers and not command else None,
+                        command=command,
+                        args=args,
+                        env=env,
                     )
 
                     tool_specs = await mcp_clients[server_id].list_tool_specs()

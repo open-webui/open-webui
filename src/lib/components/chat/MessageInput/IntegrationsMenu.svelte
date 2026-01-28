@@ -438,7 +438,27 @@
 							{/if}
 
 							<div class=" shrink-0">
-								<Switch state={tools[toolId].enabled} />
+								<div on:click|stopPropagation on:keydown|stopPropagation>
+									<Switch
+										state={tools[toolId].enabled}
+										on:change={async (e) => {
+											// Ensure toggling works even if user clicks the switch itself
+											if (!(tools[toolId]?.authenticated ?? true)) {
+												return;
+											}
+
+											const state = e.detail;
+											tools[toolId].enabled = state;
+											await tick();
+
+											if (state) {
+												selectedToolIds = Array.from(new Set([...selectedToolIds, toolId]));
+											} else {
+												selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+											}
+										}}
+									/>
+								</div>
 							</div>
 						</button>
 					{/each}

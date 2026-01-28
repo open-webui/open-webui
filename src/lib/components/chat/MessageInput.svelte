@@ -507,6 +507,32 @@
 	let suggestions = null;
 
 	let showTools = false;
+	let toolSelectionReady = false;
+
+	let activeServerToolIds: string[] = [];
+	$: activeServerToolIds = toolSelectionReady
+		? (selectedToolIds ?? []).filter(
+				(id) =>
+					id.startsWith('server:mcp:') ||
+					id.startsWith('server:') ||
+					id.startsWith('direct_server:')
+			)
+		: [];
+
+	const getToolLabel = (toolId: string) => {
+		// Local tools + server tools returned by `/tools`
+		const tool = ($tools ?? []).find((t) => t.id === toolId);
+		if (tool?.name) return tool.name;
+
+		// Direct tool servers (OpenAPI direct connections)
+		if (toolId.startsWith('direct_server:')) {
+			const idx = Number(toolId.split(':').at(-1));
+			const server = Number.isFinite(idx) ? ($toolServers ?? [])[idx] : null;
+			return server?.info?.title ?? server?.url ?? toolId;
+		}
+
+		return toolId;
+	};
 
 	let loaded = false;
 	let recording = false;
@@ -1118,6 +1144,11 @@
 		if (e.key === 'Escape') {
 			console.log('Escape');
 			dragged = false;
+			
+			// Stop response if generating (allows Escape to work even when input is not focused)
+			if (generating || (taskIds && taskIds.length > 0) || (history?.currentId && history.messages[history.currentId]?.done != true)) {
+				stopResponse();
+			}
 		}
 	};
 
@@ -1262,7 +1293,26 @@
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
 
-		await tools.set(await getTools(localStorage.token));
+		// Load tool list then sanitize selectedToolIds before rendering any "active tool" UI.
+		// This prevents a brief "1 available tool" flicker when a previously-selected
+		// tool server/tool has been deleted in admin settings.
+		const fetchedTools = await getTools(localStorage.token);
+		await tools.set(fetchedTools);
+
+		const fetchedToolIdSet = new Set((fetchedTools ?? []).map((t) => t?.id).filter(Boolean));
+		selectedToolIds = (selectedToolIds ?? []).filter((id) => {
+			if (!id) return false;
+			if (fetchedToolIdSet.has(id)) return true;
+
+			// Direct tool servers are generated client-side from $toolServers.
+			if (id.startsWith('direct_server:')) {
+				const idx = Number(id.split(':').at(-1));
+				return Number.isFinite(idx) && Boolean(($toolServers ?? [])[idx]?.info);
+			}
+
+			return false;
+		});
+		toolSelectionReady = true;
 
 		// Load reasoning effort preferences
 		loadReasoningEffortPreferences();
@@ -1847,30 +1897,51 @@
 											class="flex self-center w-[1px] h-5 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
 										/>
 
-										{#if showWebSearchButton}
-											<Tooltip content={$i18n.t('Web Search')} placement="top">
-												<button
-													on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-													type="button"
-													class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
-													($settings?.webSearch ?? false) === 'always'
-														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
-														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
-												>
-													<GlobeAlt className="size-5" strokeWidth="1.75" />
-													{#if webSearchEnabled}
-														<div class="hidden group-hover:block">
-															<XMark className="size-4" strokeWidth="1.75" />
-														</div>
-													{/if}
-												</button>
-											</Tooltip>
-										{/if}
+									{#if showWebSearchButton}
+										<Tooltip content={$i18n.t('Web Search')} placement="top">
+											<button
+												on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+												type="button"
+												class="group p-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
+												($settings?.webSearch ?? false) === 'always'
+													? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
+													: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+											>
+												<GlobeAlt className="size-5" strokeWidth="1.75" />
+												{#if webSearchEnabled}
+													<div class="hidden group-hover:block">
+														<XMark className="size-4" strokeWidth="1.75" />
+													</div>
+												{/if}
+											</button>
+										</Tooltip>
+									{/if}
 
-										{#if showStudyModeButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
-											<IntegrationsMenu
-												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
-												{toggleFilters}
+									{#if toolSelectionReady}
+										{#each activeServerToolIds as toolId (toolId)}
+											<Tooltip content={getToolLabel(toolId)} placement="top">
+												<button
+													on:click|preventDefault={() => {
+														selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+												}}
+												type="button"
+												class="group px-2 py-1.5 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20"
+												aria-label={$i18n.t('Disable {{NAME}}', { NAME: getToolLabel(toolId) })}
+											>
+												<Wrench className="size-4" strokeWidth="1.75" />
+												<span class="max-w-24 truncate text-xs font-medium">{getToolLabel(toolId)}</span>
+												<div class="hidden group-hover:block">
+													<XMark className="size-4" strokeWidth="1.75" />
+												</div>
+											</button>
+										</Tooltip>
+										{/each}
+									{/if}
+
+									{#if showStudyModeButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
+										<IntegrationsMenu
+											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+											{toggleFilters}
 												showWebSearchButton={false}
 												{showStudyModeButton}
 												{showImageGenerationButton}
@@ -1924,12 +1995,12 @@
 										{/if}
 
 										<div class="ml-1 flex gap-1.5">
-											{#if (selectedToolIds ?? []).length > 0}
-												<Tooltip
-													content={$i18n.t('{{COUNT}} Available Tools', {
-														COUNT: selectedToolIds.length
-													})}
-												>
+										{#if toolSelectionReady && (selectedToolIds ?? []).length > 0}
+											<Tooltip
+												content={$i18n.t('{{COUNT}} Available Tools', {
+													COUNT: selectedToolIds.length
+												})}
+											>
 													<button
 														class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
 														aria-label="Available Tools"

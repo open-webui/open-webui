@@ -318,6 +318,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "OPENAI_API_BASE_URLS": request.app.state.config.OPENAI_API_BASE_URLS,
         "OPENAI_API_KEYS": request.app.state.config.OPENAI_API_KEYS,
         "OPENAI_API_CONFIGS": request.app.state.config.OPENAI_API_CONFIGS,
+        "ENABLE_API_DEBUG_LOGGING": request.app.state.config.ENABLE_API_DEBUG_LOGGING,
     }
 
 
@@ -326,6 +327,7 @@ class OpenAIConfigForm(BaseModel):
     OPENAI_API_BASE_URLS: list[str]
     OPENAI_API_KEYS: list[str]
     OPENAI_API_CONFIGS: dict
+    ENABLE_API_DEBUG_LOGGING: Optional[bool] = None
 
 
 @router.post("/config/update")
@@ -364,11 +366,16 @@ async def update_config(
         if key in keys
     }
 
+    request.app.state.config.ENABLE_API_DEBUG_LOGGING = (
+        form_data.ENABLE_API_DEBUG_LOGGING
+    )
+
     return {
         "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
         "OPENAI_API_BASE_URLS": request.app.state.config.OPENAI_API_BASE_URLS,
         "OPENAI_API_KEYS": request.app.state.config.OPENAI_API_KEYS,
         "OPENAI_API_CONFIGS": request.app.state.config.OPENAI_API_CONFIGS,
+        "ENABLE_API_DEBUG_LOGGING": request.app.state.config.ENABLE_API_DEBUG_LOGGING,
     }
 
 
@@ -1268,6 +1275,16 @@ async def generate_chat_completion(
     else:
         request_url = f"{url}/chat/completions"
 
+    if request.app.state.config.ENABLE_API_DEBUG_LOGGING:
+        # Redact API keys from headers for logging
+        debug_headers = {
+            k: (v[:5] + "..." if k.lower() in ["authorization", "api-key"] else v)
+            for k, v in headers.items()
+        }
+        log.info(f"API Request to {request_url}")
+        log.info(f"Headers: {debug_headers}")
+        log.info(f"Payload: {payload}")
+
     payload = json.dumps(payload)
 
     r = None
@@ -1310,6 +1327,8 @@ async def generate_chat_completion(
 
             async def stream_wrapper(stream):
                 async for chunk in stream:
+                    if request.app.state.config.ENABLE_API_DEBUG_LOGGING:
+                        log.info(f"API Response Chunk: {chunk}")
                     yield chunk
                     try:
                         # Attempt to extract usage from the chunk
@@ -1341,6 +1360,8 @@ async def generate_chat_completion(
         else:
             try:
                 response = await r.json()
+                if request.app.state.config.ENABLE_API_DEBUG_LOGGING:
+                    log.info(f"API Response: {response}")
             except Exception as e:
                 log.error(e)
                 response = await r.text()
