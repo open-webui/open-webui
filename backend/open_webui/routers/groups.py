@@ -89,7 +89,7 @@ async def create_new_group(
 
 @router.get("/id/{id}", response_model=Optional[GroupResponse])
 async def get_group_by_id(
-    id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     group = Groups.get_group_by_id(id, db=db)
     if group:

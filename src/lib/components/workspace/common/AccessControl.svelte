@@ -3,11 +3,11 @@
 
 	const i18n = getContext('i18n');
 
-	import { getGroups } from '$lib/apis/groups';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import MemberSelector from '$lib/components/workspace/common/MemberSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 
 	export let onChange: Function = () => {};
@@ -17,9 +17,6 @@
 
 	export let share = true;
 	export let sharePublic = true;
-
-	let selectedGroupId = '';
-	let groups = [];
 
 	$: if (!sharePublic && accessControl === null) {
 		initPublicAccess();
@@ -42,11 +39,6 @@
 	};
 
 	onMount(async () => {
-		groups = await getGroups(localStorage.token, true).catch((error) => {
-			console.error(error);
-			return [];
-		});
-
 		if (accessControl === null) {
 			initPublicAccess();
 		} else {
@@ -147,109 +139,21 @@
 
 	{#if share}
 		{#if accessControl !== null}
-			{@const accessGroups = groups.filter((group) =>
-				(accessControl?.read?.group_ids ?? []).includes(group.id)
-			)}
-			<div>
+			<div class="mt-4">
 				<div class="">
 					<div class="flex justify-between mb-2.5">
 						<div class="text-xs font-medium text-gray-500">
-							{$i18n.t('Groups')}
+							{$i18n.t('Add Members')}
 						</div>
 					</div>
-
-					{#if accessGroups.length > 0}
-						<div class="flex flex-col gap-1.5 mb-2 px-0.5 mx-0.5">
-							{#each accessGroups as group}
-								<div class="flex items-center gap-3 justify-between text-sm w-full transition">
-									<div class="flex items-center gap-1.5 w-full">
-										<div>
-											{group.name} <span class="text-xs text-gray-500">{group?.member_count}</span>
-										</div>
-									</div>
-
-									<div class="w-full flex justify-end items-center gap-0.5">
-										<button
-											class=""
-											type="button"
-											on:click={() => {
-												if (accessRoles.includes('write')) {
-													if ((accessControl?.write?.group_ids ?? []).includes(group.id)) {
-														accessControl.write.group_ids = (
-															accessControl?.write?.group_ids ?? []
-														).filter((group_id) => group_id !== group.id);
-													} else {
-														accessControl.write.group_ids = [
-															...(accessControl?.write?.group_ids ?? []),
-															group.id
-														];
-													}
-													onChange(accessControl);
-												}
-											}}
-										>
-											{#if (accessControl?.write?.group_ids ?? []).includes(group.id)}
-												<Badge type={'success'} content={$i18n.t('Write')} />
-											{:else}
-												<Badge type={'info'} content={$i18n.t('Read')} />
-											{/if}
-										</button>
-
-										<button
-											class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-											type="button"
-											on:click={() => {
-												accessControl.read.group_ids = (
-													accessControl?.read?.group_ids ?? []
-												).filter((id) => id !== group.id);
-												accessControl.write.group_ids = (
-													accessControl?.write?.group_ids ?? []
-												).filter((id) => id !== group.id);
-												onChange(accessControl);
-											}}
-										>
-											<XMark />
-										</button>
-									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
-
-					<!-- <div class="flex items-center justify-center">
-						<div class="text-gray-500 text-xs text-center py-2 px-10">
-							{$i18n.t('No groups with access, add a group to grant access')}
-						</div>
-					</div> -->
 
 					<div class="mb-1">
 						<div class="flex w-full">
 							<div class="flex flex-1 items-center">
 								<div class="w-full px-0.5">
-									<select
-										class=" outline-hidden bg-transparent text-sm block w-full pr-10 max-w-full
-									{selectedGroupId ? '' : 'text-gray-500'}
-									dark:placeholder-gray-500"
-										bind:value={selectedGroupId}
-										on:change={() => {
-											if (selectedGroupId !== '') {
-												accessControl.read.group_ids = [
-													...(accessControl?.read?.group_ids ?? []),
-													selectedGroupId
-												];
-
-												selectedGroupId = '';
-												onChange(accessControl);
-											}
-										}}
-									>
-										<option class=" text-gray-700" value="" disabled selected
-											>{$i18n.t('Select a group')}</option
-										>
-										{#each groups.filter((group) => !(accessControl?.read?.group_ids ?? []).includes(group.id)) as group}
-											<option class=" text-gray-700" value={group.id}>{group.name}</option>
-										{/each}
-									</select>
+									<div class="">
+										<MemberSelector bind:accessControl bind:accessRoles {onChange} includeGroups={true} manageAccess={true} />
+									</div>
 								</div>
 							</div>
 						</div>

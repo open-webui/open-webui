@@ -16,13 +16,19 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
-	import { getGroups } from '$lib/apis/groups';
+	import Badge from '$lib/components/common/Badge.svelte';
+	import { getGroups, getGroupById } from '$lib/apis/groups';
+
+	export let onChange: Function = () => {};
 
 	export let includeGroups = true;
 	export let pagination = false;
+	export let manageAccess = false;
 
 	export let groupIds = [];
 	export let userIds = [];
+	export let accessRoles = ['read']; //available access roles for MemberSelector
+	export let accessControl = {};
 
 	let groups = null;
 	let filteredGroups = [];
@@ -31,7 +37,7 @@
 		? groups.filter((group) => group.name.toLowerCase().includes(query.toLowerCase()))
 		: [];
 
-	let selectedGroup = {};
+	let selectedGroups = {};
 	let selectedUsers = {};
 
 	let page = 1;
@@ -81,7 +87,10 @@
 			console.error(error);
 			return [];
 		});
-
+		if(manageAccess){
+			userIds = accessControl?.read?.user_ids ?? [];
+			groupIds = accessControl?.read?.group_ids ?? [];
+		}
 		if (userIds.length > 0) {
 			userIds.forEach(async (id) => {
 				const res = await getUserById(localStorage.token, id).catch((error) => {
@@ -92,7 +101,27 @@
 					selectedUsers[id] = res;
 				}
 			});
+		}if (groupIds.length > 0) {
+			groupIds.forEach(async (id) => {
+				const res = await getGroupById(localStorage.token, id).catch((error) => {
+					console.error(error);
+					return null;
+				});
+				if (res) {
+					selectedGroups[id] = res;
+					// Check if group with this ID already exists in groups array
+					const existingGroupIndex = groups.findIndex(group => group.id === res.id);
+					if (existingGroupIndex === -1) {
+						// If not found, add the new group
+					groups = [
+						...groups,
+						res
+						];
+					}
+				}
+			});
 		}
+		console.log(selectedUsers)
 	});
 </script>
 
@@ -102,7 +131,7 @@
 			<Spinner className="size-5" />
 		</div>
 	{:else}
-		{#if groupIds.length > 0}
+		{#if groupIds.length > 0 && !manageAccess}
 			<div class="mx-1 mb-1.5">
 				<div class="text-xs text-gray-500 mx-0.5 mb-1">
 					{groupIds.length}
@@ -110,18 +139,18 @@
 				</div>
 				<div class="flex gap-1 flex-wrap">
 					{#each groupIds as id}
-						{#if selectedGroup[id]}
+						{#if selectedGroups[id]}
 							<button
 								type="button"
 								class="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100/50 dark:bg-gray-850 rounded-lg text-xs"
 								on:click={() => {
 									groupIds = groupIds.filter((gid) => gid !== id);
-									delete selectedGroup[id];
+									delete selectedGroups[id];
 								}}
 							>
 								<div>
-									{selectedGroup[id].name}
-									<span class="text-xs text-gray-500">{selectedGroup[id].member_count}</span>
+									{selectedGroups[id].name}
+									<span class="text-xs text-gray-500">{selectedGroups[id].member_count}</span>
 								</div>
 
 								<div>
@@ -134,7 +163,7 @@
 			</div>
 		{/if}
 
-		{#if userIds.length > 0}
+		{#if userIds.length > 0 && !manageAccess}
 			<div class="mx-1 mb-1.5">
 				<div class="text-xs text-gray-500 mx-0.5 mb-1">
 					{userIds.length}
@@ -207,11 +236,49 @@
 										type="button"
 										on:click={() => {
 											if ((groupIds ?? []).includes(group.id)) {
-												groupIds = groupIds.filter((id) => id !== group.id);
-												delete selectedGroup[group.id];
+												if(manageAccess){
+													if (accessRoles.includes('write') && (accessControl?.write?.group_ids ?? []).includes(group.id)) {
+														accessControl.write.group_ids = (
+															accessControl?.write?.group_ids ?? []
+														).filter((group_id) => group_id !== group.id);
+														accessControl.read.group_ids = (
+															accessControl?.read?.group_ids ?? []
+														).filter((group_id) => group_id !== group.id);
+
+														groupIds = groupIds.filter((id) => id !== group.id);
+														delete selectedGroups[group.id];
+													} else {
+														if (accessRoles.includes('write')){
+															accessControl.write.group_ids = [
+																...(accessControl?.write?.group_ids ?? []),
+																group.id
+															];
+														} else {
+															accessControl.read.group_ids = (
+																accessControl?.read?.group_ids ?? []
+															).filter((group_id) => group_id !== group.id);
+
+															groupIds = groupIds.filter((id) => id !== group.id);
+															delete selectedGroups[group.id];
+														}
+													}														
+												} else {
+													groupIds = groupIds.filter((id) => id !== group.id);
+													delete selectedGroups[group.id];
+												}
 											} else {
 												groupIds = [...groupIds, group.id];
-												selectedGroup[group.id] = group;
+												selectedGroups[group.id] = group;
+												if(manageAccess){
+													accessControl.read.group_ids = [
+														...(accessControl?.read?.group_ids ?? []),
+														group.id
+													];
+												}
+											}
+
+											if(manageAccess){
+												onChange(accessControl);
 											}
 										}}
 									>
@@ -227,9 +294,15 @@
 
 										<div class="px-3 py-1">
 											<div class=" translate-y-0.5">
-												<Checkbox
-													state={(groupIds ?? []).includes(group.id) ? 'checked' : 'unchecked'}
-												/>
+												{#if manageAccess && (accessControl?.write?.group_ids ?? []).includes(group.id)}
+													<Badge type={'success'} content={$i18n.t('Write')} />
+												{:else if manageAccess && (accessControl?.read?.group_ids ?? []).includes(group.id)}
+													<Badge type={'info'} content={$i18n.t('Read')} />
+												{:else}
+													<Checkbox
+														state={(groupIds ?? []).includes(group.id) ? 'checked' : 'unchecked'}
+													/>
+												{/if}
 											</div>
 										</div>
 									</button>
@@ -249,26 +322,75 @@
 										type="button"
 										on:click={() => {
 											if ((userIds ?? []).includes(user.id)) {
-												userIds = userIds.filter((id) => id !== user.id);
-												delete selectedUsers[user.id];
+												if(manageAccess){
+													if(accessRoles.includes('write') && (accessControl?.write?.user_ids ?? []).includes(user.id)) {
+														accessControl.write.user_ids = (
+															accessControl?.write?.user_ids ?? []
+														).filter((user_id) => user_id !== user.id);
+														accessControl.read.user_ids = (
+															accessControl?.read?.user_ids ?? []
+														).filter((user_id) => user_id !== user.id);
+
+														userIds = userIds.filter((id) => id !== user.id);
+														delete selectedUsers[user.id];
+													} else {
+														if (accessRoles.includes('write')){
+															accessControl.write.user_ids = [
+																...(accessControl?.write?.user_ids ?? []),
+																user.id
+															];
+														} else {
+															accessControl.read.user_ids = (
+																accessControl?.read?.user_ids ?? []
+															).filter((user_id) => user_id !== user.id);
+
+															userIds = userIds.filter((id) => id !== user.id);
+															delete selectedUsers[user.id];
+														}
+													}
+												} else {
+													userIds = userIds.filter((id) => id !== user.id);
+													delete selectedUsers[user.id];
+												}								
 											} else {
 												userIds = [...userIds, user.id];
 												selectedUsers[user.id] = user;
+												if(manageAccess){
+													accessControl.read.user_ids = [
+														...(accessControl?.read?.user_ids ?? []),
+														user.id
+													];
+												}
+											}
+
+											if(manageAccess){
+												onChange(accessControl);
 											}
 										}}
 									>
 										<div class="px-3 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
 											<div class="flex items-center gap-2">
-												<ProfilePreview {user} side="right" align="center" sideOffset={6}>
+												{#if manageAccess}
 													<img
 														class="rounded-2xl w-6 h-6 object-cover flex-shrink-0"
 														src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 														alt="user"
 													/>
-												</ProfilePreview>
-												<Tooltip content={user.email} placement="top-start">
-													<div class="font-medium truncate">{user.name}</div>
-												</Tooltip>
+													<Tooltip content={user.email} placement="top-start">
+														<div class="font-medium truncate">{user.name} <span class="text-xs text-gray-500">{user?.email}</span></div>
+													</Tooltip>
+												{:else}
+													<ProfilePreview {user} side="right" align="center" sideOffset={6}>
+														<img
+															class="rounded-2xl w-6 h-6 object-cover flex-shrink-0"
+															src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+															alt="user"
+														/>
+													</ProfilePreview>
+													<Tooltip content={user.email} placement="top-start">
+														<div class="font-medium truncate">{user.name}</div>
+													</Tooltip>
+												{/if}
 
 												{#if user?.is_active}
 													<div>
@@ -286,9 +408,15 @@
 
 										<div class="px-3 py-1">
 											<div class=" translate-y-0.5">
-												<Checkbox
-													state={(userIds ?? []).includes(user.id) ? 'checked' : 'unchecked'}
-												/>
+												{#if manageAccess && (accessControl?.write?.user_ids ?? []).includes(user.id)}
+													<Badge type={'success'} content={$i18n.t('Write')} />
+												{:else if manageAccess && (accessControl?.read?.user_ids ?? []).includes(user.id)}
+													<Badge type={'info'} content={$i18n.t('Read')} />
+												{:else}
+													<Checkbox
+														state={(userIds ?? []).includes(user.id) ? 'checked' : 'unchecked'}
+													/>
+												{/if}
 											</div>
 										</div>
 									</button>
