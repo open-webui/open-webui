@@ -63,12 +63,16 @@ class WeaviateClient(VectorDBBase):
                     weaviate.classes.init.Auth.api_key(WEAVIATE_API_KEY)
                 )
 
-            # Add timeout configuration to prevent timeout during collection creation
+            # Add timeout AND connection pool configuration
             connection_params["additional_config"] = weaviate.classes.init.AdditionalConfig(
                 timeout=weaviate.classes.init.Timeout(
-                    init=60,     # Connection initialization timeout (seconds)
-                    query=300,   # Query operation timeout (5 minutes)
-                    insert=600   # Insert/create collection timeout (10 minutes)
+                    init=60,
+                    query=300,
+                    insert=600
+                ),
+                connection_config=weaviate.classes.init.ConnectionConfig(
+                    session_pool_connections=20,      # Max connections per host
+                    session_pool_maxsize=100          # Total connection pool size
                 )
             )
 
