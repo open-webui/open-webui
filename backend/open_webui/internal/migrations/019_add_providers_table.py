@@ -136,27 +136,12 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         },
     ]
 
-    # Insert providers using Python function
+    # Insert providers using Peewee ORM (database-agnostic)
     def seed_providers():
         """Seed default provider data."""
-        for provider in providers:
-            database.execute_sql(
-                "INSERT INTO provider (id, name, logo_light_url, logo_dark_url, logo_url, model_id_patterns, model_patterns, priority, is_active, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    provider['id'],
-                    provider['name'],
-                    provider['logo_light_url'],
-                    provider['logo_dark_url'],
-                    provider['logo_url'],
-                    provider['model_id_patterns'],
-                    provider.get('model_patterns'),
-                    provider['priority'],
-                    provider['is_active'],
-                    provider['created_at'],
-                    provider['updated_at']
-                )
-            )
+        Provider = migrator.orm['provider']
+        for provider_data in providers:
+            Provider.create(**provider_data)
 
     migrator.run(seed_providers)
 
