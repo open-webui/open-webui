@@ -58,17 +58,23 @@
 
 	let page = 1;
 
-	// Debounce only query changes
+	// Debounce only query changes (skip initial empty query)
+	let queryInitialized = false;
 	$: if (query !== undefined) {
-		loading = true;
-		clearTimeout(searchDebounceTimer);
-		searchDebounceTimer = setTimeout(() => {
-			getPromptList();
-		}, 300);
+		if (queryInitialized) {
+			loading = true;
+			clearTimeout(searchDebounceTimer);
+			searchDebounceTimer = setTimeout(() => {
+				page = 1; // Reset to first page on new search
+				getPromptList();
+			}, 300);
+		} else {
+			queryInitialized = true;
+		}
 	}
 
 	// Immediate response to page/filter changes
-	$: if (page && selectedTag !== undefined && viewOption !== undefined) {
+	$: if (loaded && page && selectedTag !== undefined && viewOption !== undefined) {
 		getPromptList();
 	}
 
