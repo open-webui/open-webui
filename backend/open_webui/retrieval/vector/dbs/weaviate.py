@@ -69,10 +69,6 @@ class WeaviateClient(VectorDBBase):
                     init=60,
                     query=300,
                     insert=600
-                ),
-                connection_config=weaviate.classes.init.ConnectionConfig(
-                    session_pool_connections=20,      # Max connections per host
-                    session_pool_maxsize=100          # Total connection pool size
                 )
             )
 
