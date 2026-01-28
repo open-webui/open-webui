@@ -394,17 +394,16 @@ class ModelsTable:
     ) -> Optional[ModelModel]:
         with get_db_context(db) as db:
             try:
-                is_active = db.query(Model).filter_by(id=id).first().is_active
+                model = db.query(Model).filter_by(id=id).first()
+                if not model:
+                    return None
 
-                db.query(Model).filter_by(id=id).update(
-                    {
-                        "is_active": not is_active,
-                        "updated_at": int(time.time()),
-                    }
-                )
+                model.is_active = not model.is_active
+                model.updated_at = int(time.time())
                 db.commit()
+                db.refresh(model)
 
-                return self.get_model_by_id(id, db=db)
+                return ModelModel.model_validate(model)
             except Exception:
                 return None
 
