@@ -457,15 +457,30 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
 
 async def get_filtered_models(models, user, db=None):
-    # Filter models based on user access control
+    """Filter models based on user access control using batch query."""
+    model_list = models.get("data", [])
+    if not model_list:
+        return []
+
+    # Extract all model IDs we need to look up
+    model_ids_to_check = [model["id"] for model in model_list]
+
+    # Fetch all model configurations from database in a single query
+    db_models = Models.get_models_by_ids(model_ids_to_check, db=db)
+    model_configs_by_id = {db_model.id: db_model for db_model in db_models}
+
+    # Filter: only include models where user has access
     filtered_models = []
-    for model in models.get("data", []):
-        model_info = Models.get_model_by_id(model["id"], db=db)
-        if model_info:
-            if user.id == model_info.user_id or has_access(
-                user.id, type="read", access_control=model_info.access_control, db=db
-            ):
+    for model in model_list:
+        model_config = model_configs_by_id.get(model["id"])
+        if model_config:
+            user_owns_model = user.id == model_config.user_id
+            user_has_read_access = has_access(
+                user.id, type="read", access_control=model_config.access_control, db=db
+            )
+            if user_owns_model or user_has_read_access:
                 filtered_models.append(model)
+
     return filtered_models
 
 
