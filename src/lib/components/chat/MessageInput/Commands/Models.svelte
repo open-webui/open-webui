@@ -87,6 +87,7 @@
 						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&theme=${resolveTheme($theme)}&lang=${$i18n.language}`}
 						alt={model?.name ?? model.id}
 						class="rounded-full size-5 items-center mr-2"
+						loading="lazy"
 					/>
 					<div class="truncate">
 						{model.name}

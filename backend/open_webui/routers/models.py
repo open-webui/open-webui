@@ -354,8 +354,6 @@ def get_model_profile_image(
     model = Models.get_model_by_id(id, db=db)
 
     if model:
-        etag = f'"{model.updated_at}"' if model.updated_at else None
-
         # Priority 1: Manual override (custom uploaded image)
         if model.meta and model.meta.profile_image_url:
             image_url = model.meta.profile_image_url
@@ -368,6 +366,14 @@ def get_model_profile_image(
             )
 
             if not is_default_favicon:
+                # ETag based on model's updated_at for manual overrides
+                etag = f'"{model.updated_at}"' if model.updated_at else None
+                client_etag = request.headers.get("If-None-Match")
+
+                # Check if client has cached version
+                if etag and client_etag == etag:
+                    return Response(status_code=status.HTTP_304_NOT_MODIFIED)
+
                 if image_url.startswith("http"):
                     return Response(
                         status_code=status.HTTP_302_FOUND,
@@ -380,7 +386,10 @@ def get_model_profile_image(
                         image_buffer = io.BytesIO(image_data)
                         media_type = header.split(";")[0].lstrip("data:")
 
-                        headers = {"Content-Disposition": "inline"}
+                        headers = {
+                            "Content-Disposition": "inline",
+                            "Cache-Control": "public, max-age=3600",
+                        }
                         if etag:
                             headers["ETag"] = etag
 
@@ -392,9 +401,12 @@ def get_model_profile_image(
                     except Exception as e:
                         log.warning(f"Error decoding profile image: {e}")
                 elif image_url.startswith("/"):
+                    headers = {"Cache-Control": "public, max-age=3600"}
+                    if etag:
+                        headers["ETag"] = etag
                     return FileResponse(
                         f"{STATIC_DIR}{image_url}",
-                        headers={"Cache-Control": "no-cache, must-revalidate"},
+                        headers=headers,
                     )
 
         # Priority 2: Automatic provider logo detection
@@ -412,17 +424,31 @@ def get_model_profile_image(
                 if base_runtime_model and "owned_by" in base_runtime_model:
                     owned_by = base_runtime_model.get("owned_by", "openai")
 
-        provider_logo = Providers.detect_provider_logo(model.id, owned_by, theme or "light", db=db)
+        provider_result = Providers.detect_provider_logo_with_metadata(model.id, owned_by, theme or "light", db=db)
 
-        if provider_logo:
+        if provider_result:
+            provider_logo = provider_result["logo_url"]
+            provider_updated_at = provider_result["updated_at"]
+
+            # ETag combines model and provider timestamps for cache invalidation
+            etag = f'"{model.updated_at}-{provider_updated_at}"' if model.updated_at and provider_updated_at else None
+            client_etag = request.headers.get("If-None-Match")
+
+            # Check if client has cached version
+            if etag and client_etag == etag:
+                return Response(status_code=status.HTTP_304_NOT_MODIFIED)
+
             # Provider logo is HTTP URL - redirect
             if provider_logo.startswith("http"):
+                headers = {
+                    "Location": provider_logo,
+                    "Cache-Control": "public, max-age=3600",
+                }
+                if etag:
+                    headers["ETag"] = etag
                 return Response(
                     status_code=status.HTTP_302_FOUND,
-                    headers={
-                        "Location": provider_logo,
-                        "Cache-Control": "no-cache, must-revalidate",
-                    },
+                    headers=headers,
                 )
             # Provider logo is data URL - stream
             elif provider_logo.startswith("data:image"):
@@ -431,18 +457,26 @@ def get_model_profile_image(
                     image_data = base64.b64decode(base64_data)
                     image_buffer = io.BytesIO(image_data)
                     media_type = header.split(";")[0].lstrip("data:")
+
+                    headers = {"Cache-Control": "public, max-age=3600"}
+                    if etag:
+                        headers["ETag"] = etag
+
                     return StreamingResponse(
                         image_buffer,
                         media_type=media_type,
-                        headers={"Cache-Control": "no-cache, must-revalidate"},
+                        headers=headers,
                     )
                 except Exception as e:
                     log.warning(f"Error decoding provider logo: {e}")
             # Provider logo is relative path
             elif provider_logo.startswith("/"):
+                headers = {"Cache-Control": "public, max-age=3600"}
+                if etag:
+                    headers["ETag"] = etag
                 return FileResponse(
                     f"{STATIC_DIR}{provider_logo}",
-                    headers={"Cache-Control": "no-cache, must-revalidate"},
+                    headers=headers,
                 )
 
     # Priority 3: Default fallback

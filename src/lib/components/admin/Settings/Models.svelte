@@ -6,7 +6,15 @@
 	import { onMount, getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user, theme } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		config,
+		mobile,
+		models as _models,
+		settings,
+		user,
+		theme
+	} from '$lib/stores';
 	import {
 		createNewModel,
 		deleteAllModels,
@@ -176,8 +184,6 @@
 			...model.meta,
 			hidden: !(model?.meta?.hidden ?? false)
 		};
-
-		console.debug(model);
 
 		toast.success(
 			model.meta.hidden
@@ -363,6 +369,7 @@
 										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&theme=${resolveTheme($theme)}`}
 										alt="modelfile profile"
 										class=" rounded-full w-full h-auto object-cover"
+										loading="lazy"
 									/>
 								</div>
 							</div>
@@ -588,7 +595,6 @@
 			model={models.find((m) => m.id === selectedModelId)}
 			preset={false}
 			onSubmit={(model) => {
-				console.log(model);
 				upsertModelHandler(model);
 				selectedModelId = null;
 			}}

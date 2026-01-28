@@ -8,6 +8,11 @@ import logging
 
 log = logging.getLogger(__name__)
 
+# Cache for provider list (invalidated on provider updates)
+_providers_cache = None
+_providers_cache_time = 0
+PROVIDERS_CACHE_TTL = 60  # Cache for 60 seconds
+
 
 class Provider(Base):
     __tablename__ = "provider"
@@ -79,18 +84,40 @@ class Providers:
 
     @staticmethod
     def get_active_providers(db=None):
-        """Get all active providers sorted by priority descending."""
+        """Get all active providers sorted by priority descending.
+        Uses in-memory cache to avoid repeated database queries."""
+        global _providers_cache, _providers_cache_time
+
+        current_time = time.time()
+
+        # Return cached result if still valid
+        if _providers_cache is not None and (current_time - _providers_cache_time) < PROVIDERS_CACHE_TTL:
+            return _providers_cache
+
         if db is None:
             with get_db() as db:
                 return Providers.get_active_providers(db)
 
-        return [
+        providers = [
             ProviderModel.model_validate(provider)
             for provider in db.query(Provider)
             .filter(Provider.is_active == True)
             .order_by(Provider.priority.desc(), Provider.id)
             .all()
         ]
+
+        # Update cache
+        _providers_cache = providers
+        _providers_cache_time = current_time
+
+        return providers
+
+    @staticmethod
+    def invalidate_cache():
+        """Invalidate the providers cache. Call this when providers are updated."""
+        global _providers_cache, _providers_cache_time
+        _providers_cache = None
+        _providers_cache_time = 0
 
     @staticmethod
     def get_provider_by_id(provider_id: str, db=None):
@@ -117,6 +144,7 @@ class Providers:
         db.add(provider)
         db.commit()
         db.refresh(provider)
+        Providers.invalidate_cache()  # Clear cache after create
         return ProviderModel.model_validate(provider)
 
     @staticmethod
@@ -136,6 +164,7 @@ class Providers:
         provider.updated_at = int(time.time())
         db.commit()
         db.refresh(provider)
+        Providers.invalidate_cache()  # Clear cache after update
         return ProviderModel.model_validate(provider)
 
     @staticmethod
@@ -149,6 +178,7 @@ class Providers:
         if provider:
             db.delete(provider)
             db.commit()
+            Providers.invalidate_cache()  # Clear cache after delete
             return True
         return False
 
@@ -171,9 +201,20 @@ class Providers:
         Returns:
             Logo URL string or None if no match
         """
+        result = Providers.detect_provider_logo_with_metadata(model_id, owned_by, theme, db)
+        return result["logo_url"] if result else None
+
+    @staticmethod
+    def detect_provider_logo_with_metadata(model_id: str, owned_by: str, theme: str = "light", db=None):
+        """
+        Detect provider logo with metadata for caching.
+
+        Returns:
+            dict with 'logo_url' and 'updated_at' keys, or None if no match
+        """
         if db is None:
             with get_db() as db:
-                return Providers.detect_provider_logo(model_id, owned_by, theme, db)
+                return Providers.detect_provider_logo_with_metadata(model_id, owned_by, theme, db)
 
         providers = Providers.get_active_providers(db)
 
@@ -188,7 +229,10 @@ class Providers:
                         try:
                             if re.match(pattern, model_id, re.IGNORECASE):
                                 log.debug(f"Model '{model_id}' matched model-specific pattern '{pattern}' in provider '{provider.id}'")
-                                return Providers._get_model_logo_for_theme(model_pattern, theme)
+                                return {
+                                    "logo_url": Providers._get_model_logo_for_theme(model_pattern, theme),
+                                    "updated_at": provider.updated_at
+                                }
                         except re.error as e:
                             log.warning(f"Invalid regex pattern '{pattern}' for model '{model_pattern.name}': {e}")
                             continue
@@ -202,7 +246,10 @@ class Providers:
                 try:
                     if re.match(pattern, model_id, re.IGNORECASE):
                         log.debug(f"Model '{model_id}' matched provider '{provider.id}' with pattern '{pattern}'")
-                        return Providers._get_logo_for_theme(provider, theme)
+                        return {
+                            "logo_url": Providers._get_logo_for_theme(provider, theme),
+                            "updated_at": provider.updated_at
+                        }
                 except re.error as e:
                     log.warning(f"Invalid regex pattern '{pattern}' for provider '{provider.id}': {e}")
                     continue
@@ -212,7 +259,10 @@ class Providers:
             ollama_provider = next((p for p in providers if p.id == "ollama"), None)
             if ollama_provider:
                 log.debug(f"Model '{model_id}' using Ollama fallback logo (owned_by='ollama')")
-                return Providers._get_logo_for_theme(ollama_provider, theme)
+                return {
+                    "logo_url": Providers._get_logo_for_theme(ollama_provider, theme),
+                    "updated_at": ollama_provider.updated_at
+                }
 
         return None
 
