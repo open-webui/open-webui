@@ -1125,7 +1125,11 @@ def save_docs_to_vector_db(
                 else:
                     raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
 
+                split_start = time.time()
                 docs = text_splitter.split_documents(docs)
+                split_end = time.time()
+                split_duration = split_end - split_start
+                log.info(f"[SPLITTING] COMPLETE | chunks={len(docs)} | duration={split_duration:.2f}s | timestamp={split_end:.3f}")
                 safe_add_span_event("embedding.split.completed", {"chunk.count": len(docs)})
                 safe_set_span_attribute(span, "chunk.count", len(docs))
 
@@ -1318,8 +1322,9 @@ def save_docs_to_vector_db(
                 log.info(f"  [STEP 5.1] ✅ Embedding function created successfully")
 
                 # Process all text chunks in a single API call
-                print(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch", flush=True)
-                log.info(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch")
+                embed_api_start = time.time()
+                print(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch | timestamp={embed_api_start:.3f}", flush=True)
+                log.info(f"  [STEP 6] Generating embeddings for {len(texts)} chunks in a single batch | timestamp={embed_api_start:.3f}")
                 
                 safe_add_span_event("embedding.generation.started", {"text.count": len(texts)})
                 
@@ -1327,6 +1332,9 @@ def save_docs_to_vector_db(
                     embeddings = embedding_function(
                         list(map(lambda x: x.replace("\n", " "), texts)), user=user
                     )
+                    embed_api_end = time.time()
+                    embed_api_duration = embed_api_end - embed_api_start
+                    log.info(f"[EMBED_API] COMPLETE | chunks={len(texts)} | duration={embed_api_duration:.2f}s | timestamp={embed_api_end:.3f}")
                 
                     print(f"  [STEP 6.1] Embedding generation result:", flush=True)
                     print(f"    embeddings is None: {embeddings is None}", flush=True)

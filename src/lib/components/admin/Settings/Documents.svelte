@@ -74,7 +74,7 @@
 	let textSplitter = '';
 	let chunkSize = 1000;
 	let chunkOverlap = 200;
-	let pdfExtractImages = true;
+	let pdfExtractImages = false;  // CRITICAL: Default to false - image extraction causes 2+ minute slowdowns/hangs
 
 	let RAG_FULL_CONTEXT = false;
 	let BYPASS_EMBEDDING_AND_RETRIEVAL = false;

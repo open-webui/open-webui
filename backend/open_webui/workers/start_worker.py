@@ -113,15 +113,19 @@ def start_worker():
         log.info(f"REDIS_URL configured: {REDIS_URL.split('@')[0]}@...")  # Hide password in logs
         
         # Get Redis connection
-        log.info("Connecting to Redis...")
+        import time
+        redis_connect_start = time.time()
+        log.info(f"Connecting to Redis... | timestamp={redis_connect_start:.3f}")
         try:
             # Check if Sentinel is configured
             if REDIS_USE_SENTINEL and REDIS_SENTINEL_HOSTS:
-                log.info("Using Redis Sentinel for high availability")
+                sentinel_start = time.time()
+                log.info(f"Using Redis Sentinel for high availability | timestamp={sentinel_start:.3f}")
                 log.info(f"Sentinel hosts: {REDIS_SENTINEL_HOSTS}")
                 log.info(f"Sentinel service name: {REDIS_SENTINEL_SERVICE_NAME}")
                 
                 # Parse Sentinel hosts (comma-separated list)
+                sentinel_parse_start = time.time()
                 sentinel_hosts = []
                 for host_port in REDIS_SENTINEL_HOSTS.split(','):
                     host_port = host_port.strip()
@@ -131,6 +135,8 @@ def start_worker():
                     else:
                         # Default port 26379
                         sentinel_hosts.append((host_port.strip(), 26379))
+                sentinel_parse_end = time.time()
+                log.info(f"[REDIS] Sentinel hosts parsed | duration={sentinel_parse_end - sentinel_parse_start:.3f}s | timestamp={sentinel_parse_end:.3f}")
                 
                 # Extract password from REDIS_URL if present
                 redis_password = None
@@ -144,13 +150,17 @@ def start_worker():
                         pass
                 
                 # Create Sentinel connection
+                sentinel_create_start = time.time()
                 sentinel = Sentinel(
                     sentinel_hosts,
                     socket_timeout=5,
                     socket_connect_timeout=10,
                 )
+                sentinel_create_end = time.time()
+                log.info(f"[REDIS] Sentinel object created | duration={sentinel_create_end - sentinel_create_start:.3f}s | timestamp={sentinel_create_end:.3f}")
                 
                 # Get master connection from Sentinel
+                master_lookup_start = time.time()
                 # CRITICAL: decode_responses=False because RQ stores binary job data (pickled)
                 # CRITICAL: socket_timeout=None for blocking operations (BRPOP)
                 master_kwargs = {
@@ -165,18 +175,26 @@ def start_worker():
                     REDIS_SENTINEL_SERVICE_NAME,
                     **master_kwargs
                 )
+                master_lookup_end = time.time()
+                log.info(f"[REDIS] Master lookup from Sentinel | duration={master_lookup_end - master_lookup_start:.3f}s | timestamp={master_lookup_end:.3f}")
                 
                 # Test connection
+                ping_start = time.time()
                 redis_conn.ping()
-                log.info(f"Redis Sentinel connection established successfully (master: {REDIS_SENTINEL_SERVICE_NAME})")
+                ping_end = time.time()
+                redis_connect_end = time.time()
+                log.info(f"[REDIS] Ping test | duration={ping_end - ping_start:.3f}s | timestamp={ping_end:.3f}")
+                log.info(f"[REDIS] Sentinel connection established | total_duration={redis_connect_end - redis_connect_start:.3f}s | master={REDIS_SENTINEL_SERVICE_NAME} | timestamp={redis_connect_end:.3f}")
             else:
                 # Fallback to direct connection (for local development or non-Sentinel setups)
-                log.info("Using direct Redis connection (Sentinel not configured)")
+                direct_conn_start = time.time()
+                log.info(f"Using direct Redis connection (Sentinel not configured) | timestamp={direct_conn_start:.3f}")
                 
                 # For RQ workers, we need a connection with NO timeout for blocking operations
                 # RQ uses BRPOP which blocks indefinitely waiting for jobs
                 # CRITICAL: decode_responses=False because RQ stores binary job data (pickled)
                 # Using socket_timeout=None allows blocking operations to work properly
+                pool_create_start = time.time()
                 worker_pool = ConnectionPool.from_url(
                     REDIS_URL,
                     decode_responses=False,  # CRITICAL: RQ stores binary pickled job data
@@ -186,16 +204,25 @@ def start_worker():
                     socket_timeout=None,  # CRITICAL: No timeout for blocking operations (BRPOP)
                     health_check_interval=30,
                 )
+                pool_create_end = time.time()
+                log.info(f"[REDIS] Connection pool created | duration={pool_create_end - pool_create_start:.3f}s | timestamp={pool_create_end:.3f}")
+                
                 redis_conn = Redis(connection_pool=worker_pool)
                 
                 # Test Redis connection (ping works with decode_responses=False)
+                ping_start = time.time()
                 redis_conn.ping()
-                log.info("Redis connection established successfully")
+                ping_end = time.time()
+                direct_conn_end = time.time()
+                log.info(f"[REDIS] Ping test | duration={ping_end - ping_start:.3f}s | timestamp={ping_end:.3f}")
+                log.info(f"[REDIS] Direct connection established | total_duration={direct_conn_end - direct_conn_start:.3f}s | timestamp={direct_conn_end:.3f}")
             
             # Test queue access (RQ handles binary data correctly)
+            queue_test_start = time.time()
             test_queue = Queue(FILE_PROCESSING_QUEUE_NAME, connection=redis_conn)
             queue_length = len(test_queue)
-            log.info(f"Queue '{FILE_PROCESSING_QUEUE_NAME}' accessible (current length: {queue_length})")
+            queue_test_end = time.time()
+            log.info(f"[REDIS] Queue access test | queue='{FILE_PROCESSING_QUEUE_NAME}' | length={queue_length} | duration={queue_test_end - queue_test_start:.3f}s | timestamp={queue_test_end:.3f}")
         except Exception as redis_error:
             log.error(f"Failed to connect to Redis: {redis_error}", exc_info=True)
             log.error("Worker cannot start without Redis connection. Please check:")
@@ -211,25 +238,75 @@ def start_worker():
         log.info(f"Worker name: {worker_name}")
         log.info(f"Queue name: {FILE_PROCESSING_QUEUE_NAME}")
         
+        # Clean up stale worker registrations before starting
+        # This prevents "There exists an active worker named '...' already" errors
+        # when pods restart (old worker registration still exists in Redis)
+        cleanup_start = time.time()
+        log.info(f"[REDIS] Starting worker cleanup check | timestamp={cleanup_start:.3f}")
+        try:
+            from rq.worker import Worker
+            
+            # Check if a worker with this name already exists (stale registration)
+            # This can happen when a pod restarts - the old worker registration may still be in Redis
+            try:
+                worker_list_start = time.time()
+                existing_workers = Worker.all(connection=redis_conn)
+                worker_list_end = time.time()
+                log.info(f"[REDIS] Worker list retrieved | count={len(existing_workers)} | duration={worker_list_end - worker_list_start:.3f}s | timestamp={worker_list_end:.3f}")
+                
+                for existing_worker in existing_workers:
+                    if existing_worker.name == worker_name:
+                        unregister_start = time.time()
+                        log.warning(f"[REDIS] Found stale worker registration: {existing_worker.name}. Cleaning up... | timestamp={unregister_start:.3f}")
+                        try:
+                            # Unregister the stale worker to free up the name
+                            existing_worker.unregister(death_penalty_class=None)
+                            unregister_end = time.time()
+                            log.info(f"[REDIS] Successfully cleaned up stale worker: {existing_worker.name} | duration={unregister_end - unregister_start:.3f}s | timestamp={unregister_end:.3f}")
+                        except Exception as cleanup_error:
+                            unregister_end = time.time()
+                            log.warning(f"[REDIS] Could not clean up stale worker {existing_worker.name}: {cleanup_error} | duration={unregister_end - unregister_start:.3f}s. Will try to continue anyway.")
+            except Exception as worker_list_error:
+                worker_list_end = time.time()
+                log.debug(f"[REDIS] Could not list existing workers (non-fatal): {worker_list_error} | duration={worker_list_end - cleanup_start:.3f}s")
+        except Exception as cleanup_error:
+            cleanup_end = time.time()
+            log.warning(f"[REDIS] Error during worker cleanup (non-fatal): {cleanup_error} | duration={cleanup_end - cleanup_start:.3f}s")
+            # Continue - cleanup failure shouldn't prevent worker from starting
+        else:
+            cleanup_end = time.time()
+            log.info(f"[REDIS] Worker cleanup completed | total_duration={cleanup_end - cleanup_start:.3f}s | timestamp={cleanup_end:.3f}")
+        
         # Create queue connection
+        worker_init_start = time.time()
+        log.info(f"[WORKER] Initializing worker | timestamp={worker_init_start:.3f}")
         with Connection(redis_conn):
             # Create queue
+            queue_create_start = time.time()
             queue = Queue(FILE_PROCESSING_QUEUE_NAME)
+            queue_create_end = time.time()
+            log.info(f"[WORKER] Queue object created | duration={queue_create_end - queue_create_start:.3f}s | timestamp={queue_create_end:.3f}")
             
             # Create and start worker
+            worker_create_start = time.time()
             worker = Worker([queue], name=worker_name)
+            worker_create_end = time.time()
+            log.info(f"[WORKER] Worker object created | duration={worker_create_end - worker_create_start:.3f}s | timestamp={worker_create_end:.3f}")
             
+            worker_init_end = time.time()
             log.info("=" * 80)
             log.info(
-                f"✅ RQ Worker '{worker_name}' starting for queue '{FILE_PROCESSING_QUEUE_NAME}'"
+                f"✅ RQ Worker '{worker_name}' starting for queue '{FILE_PROCESSING_QUEUE_NAME}' | init_duration={worker_init_end - worker_init_start:.3f}s"
             )
             log.info(f"   Redis: {REDIS_URL.split('@')[0]}@...")
             log.info(f"   Hostname: {hostname}")
             log.info(f"   PID: {os.getpid()}")
             log.info("=" * 80)
-            log.info("Worker is ready to process jobs. Waiting for jobs...")
+            log.info(f"Worker is ready to process jobs. Waiting for jobs... | timestamp={worker_init_end:.3f}")
             
             # Start worker (this blocks)
+            worker_work_start = time.time()
+            log.info(f"[WORKER] Starting worker.work() - will block waiting for jobs | timestamp={worker_work_start:.3f}")
             worker.work()
     except KeyboardInterrupt:
         log.info("Worker stopped by user (KeyboardInterrupt)")

@@ -2027,6 +2027,10 @@ RAG_EMBEDDING_ENGINE = PersistentConfig(
     os.environ.get("RAG_EMBEDDING_ENGINE", "portkey"),
 )
 
+# PDF_EXTRACT_IMAGES: Extract images from PDFs during processing
+# WARNING: Setting this to True can cause significant slowdowns (2+ minutes) or hangs
+# on PDFs with many images. PyPDFLoader's image extraction is CPU-intensive and can deadlock.
+# Default: False (disabled) - only extract text content
 PDF_EXTRACT_IMAGES = PersistentConfig(
     "PDF_EXTRACT_IMAGES",
     "rag.pdf_extract_images",

@@ -448,8 +448,8 @@ def process_file_job(
     log.debug(f"  embedding_api_key provided: {bool(embedding_api_key)}")
     log.debug("=" * 80)
     
-    log.info(f"[JOB] START | file_id={file_id} | user_id={user_id} | knowledge_id={knowledge_id}")
     start_time = time.time()
+    log.info(f"[JOB] START | file_id={file_id} | user_id={user_id} | knowledge_id={knowledge_id} | timestamp={start_time:.3f}")
     
     # Restore trace context from job metadata if available
     # This enables distributed tracing across process boundaries (main app → RQ worker)
@@ -884,13 +884,16 @@ def process_file_job(
                                         log.info(f"[FILE] id={file.id} | name={file.filename} | size={file_size}B | path={file_path}")
                                         extraction_engine_val = ""  # Force PyPDF for PDFs (OpenShift requirement)
                                         pdf_extract_images_val = getattr(request.app.state.config, 'PDF_EXTRACT_IMAGES', False) if hasattr(request.app.state.config, 'PDF_EXTRACT_IMAGES') else False
-                                        log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val}")
+                                        extract_start = time.time()
+                                        log.info(f"[EXTRACT] START | file_id={file.id} | engine=PyPDF (forced) | extract_images={pdf_extract_images_val} | timestamp={extract_start:.3f}")
                                         loader = Loader(engine=extraction_engine_val, PDF_EXTRACT_IMAGES=pdf_extract_images_val)
                                         try:
                                             docs = loader.load(file.filename, file.meta.get("content_type"), file_path)
+                                            extract_end = time.time()
+                                            extract_duration = extract_end - extract_start
                                             total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
                                             non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
-                                            log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
+                                            log.info(f"[EXTRACT] SUCCESS | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty} | duration={extract_duration:.2f}s | timestamp={extract_end:.3f}")
                                             log.debug(f"EXTRACT SUCCESS | docs={len(docs) if docs else 0} | chars={total_chars}")
                                             safe_add_span_event("job.file.extracted", {"content_length": total_chars, "document.count": len(docs)})
                                             docs = [Document(page_content=doc.page_content, metadata={**doc.metadata, "name": file.filename, "created_by": file.user_id, "file_id": file.id, "source": file.filename}) for doc in docs]
@@ -934,8 +937,9 @@ def process_file_job(
                             text_content = file_content
                             log.debug(f"After USING_FILE_DATA | docs={len(docs)} | text_content_len={len(text_content)}")
 
-                    # Log state after if/else block
-                    log.debug("After REGULAR_UPLOAD if/else block:")
+                    # Log state after if/else block with timestamp
+                    current_time = time.time()
+                    log.debug(f"After REGULAR_UPLOAD if/else block | timestamp={current_time:.3f} | elapsed={current_time - start_time:.2f}s")
                     log.debug(f"  'docs' in locals: {'docs' in locals()}")
                     log.debug(f"  docs count: {len(docs) if 'docs' in locals() and docs else 'UNDEFINED or None'}")
                     log.debug(f"  'text_content' in locals: {'text_content' in locals()}")
@@ -949,9 +953,10 @@ def process_file_job(
                         collection_name = vector_collection_name
                 except Exception as e:
                     # Consolidated error handling - log and update status
-                    elapsed_time = time.time() - start_time
+                    error_time = time.time()
+                    elapsed_time = error_time - start_time
                     error_msg = str(e)
-                    log.error(f"[JOB] FAILED | file_id={file_id} | user_id={user_id} | elapsed={elapsed_time:.2f}s | error={type(e).__name__}: {error_msg}", exc_info=True)
+                    log.error(f"[JOB] FAILED | file_id={file_id} | user_id={user_id} | elapsed={elapsed_time:.2f}s | timestamp={error_time:.3f} | error={type(e).__name__}: {error_msg}", exc_info=True)
                     
                     safe_add_span_event("job.failed", {
                         "error.type": type(e).__name__,
@@ -991,9 +996,10 @@ def process_file_job(
                 except Exception as debug_error:
                     log.debug(f"  ERROR accessing docs: {debug_error}")
                 
+                validate_start = time.time()
                 total_chars = sum(len(doc.page_content) for doc in docs) if docs else 0
                 non_empty = sum(1 for doc in docs if doc.page_content and doc.page_content.strip()) if docs else 0
-                log.info(f"[VALIDATE] START | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
+                log.info(f"[VALIDATE] START | file_id={file.id} | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty} | timestamp={validate_start:.3f} | elapsed={validate_start - start_time:.2f}s")
                 log.debug(f"VALIDATION | docs={len(docs) if docs else 0} | chars={total_chars} | non_empty={non_empty}")
                 
                 if not docs or len(docs) == 0:
@@ -1009,7 +1015,9 @@ def process_file_job(
                     Files.update_file_metadata_by_id(file.id, {"processing_status": "error", "processing_error": error_msg})
                     raise ValueError(error_msg)
                 
-                log.info(f"[VALIDATE] PASSED | file_id={file.id} | docs={len(docs)} | chars={total_chars} | non_empty={non_empty}")
+                validate_end = time.time()
+                validate_duration = validate_end - validate_start
+                log.info(f"[VALIDATE] PASSED | file_id={file.id} | docs={len(docs)} | chars={total_chars} | non_empty={non_empty} | duration={validate_duration:.2f}s | timestamp={validate_end:.3f} | elapsed={validate_end - start_time:.2f}s")
 
                 Files.update_file_data_by_id(
                     file.id,
@@ -1023,6 +1031,8 @@ def process_file_job(
                 bypass_embedding = getattr(request.app.state.config, 'BYPASS_EMBEDDING_AND_RETRIEVAL', False) if hasattr(request.app.state.config, 'BYPASS_EMBEDDING_AND_RETRIEVAL') else False
                 
                 if not bypass_embedding:
+                    embed_start = time.time()
+                    log.info(f"[EMBED] START | file_id={file.id} | docs={len(docs)} | timestamp={embed_start:.3f}")
                     try:
                         # If knowledge_id is provided, we're adding to both collections at once
                         if knowledge_id:
@@ -1045,7 +1055,9 @@ def process_file_job(
 
                             # Use file collection name for file metadata
                             if result:
-                                log.info(f"[EMBED] SUCCESS | file_id={file.id} | collections={collections}")
+                                embed_end = time.time()
+                                embed_duration = embed_end - embed_start
+                                log.info(f"[EMBED] SUCCESS | file_id={file.id} | collections={collections} | duration={embed_duration:.2f}s | timestamp={embed_end:.3f}")
                                 safe_add_span_event("job.embedding.completed", {"status": "success", "collection_name": file_collection})
                                 Files.update_file_metadata_by_id(
                                     file.id,
@@ -1066,7 +1078,7 @@ def process_file_job(
                                 )
                         else:
                             file_collection = f"file-{file.id}"
-                            log.info(f"[EMBED] SINGLE_COLLECTION | file_id={file.id} | collection={file_collection}")
+                            log.info(f"[EMBED] SINGLE_COLLECTION | file_id={file.id} | collection={file_collection} | timestamp={time.time():.3f}")
                             # RBAC: Pass owner_email so save_docs_to_vector_db uses per-admin model/key
                             result = save_docs_to_vector_db(
                                 request,
@@ -1083,6 +1095,9 @@ def process_file_job(
                             )
 
                             if result:
+                                embed_end = time.time()
+                                embed_duration = embed_end - embed_start
+                                log.info(f"[EMBED] SUCCESS | file_id={file.id} | collection={collection_name} | duration={embed_duration:.2f}s | timestamp={embed_end:.3f}")
                                 Files.update_file_metadata_by_id(
                                     file.id,
                                     {
