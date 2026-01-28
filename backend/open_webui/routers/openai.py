@@ -1275,12 +1275,20 @@ async def generate_chat_completion(
     else:
         request_url = f"{url}/chat/completions"
 
-    if request.app.state.config.ENABLE_API_DEBUG_LOGGING:
+    debug_enabled = request.app.state.config.ENABLE_API_DEBUG_LOGGING
+    print(f"\n{'='*60}")
+    print(f"[DEBUG LOGGING] ENABLE_API_DEBUG_LOGGING = {debug_enabled}")
+    print(f"{'='*60}")
+    
+    if debug_enabled:
         # Redact API keys from headers for logging
         debug_headers = {
             k: (v[:5] + "..." if k.lower() in ["authorization", "api-key"] else v)
             for k, v in headers.items()
         }
+        print(f"\n[API REQUEST] URL: {request_url}")
+        print(f"[API REQUEST] Headers: {debug_headers}")
+        print(f"[API REQUEST] Payload: {payload}")
         log.info(f"API Request to {request_url}")
         log.info(f"Headers: {debug_headers}")
         log.info(f"Payload: {payload}")

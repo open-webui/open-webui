@@ -35,6 +35,9 @@ else
     echo "✅ Frontend build is up to date (skipping build)"
 fi
 
+# Enable API Debug Logging to see model responses in console
+export ENABLE_API_DEBUG_LOGGING=true
+
 # Set up environment to use existing OpenWebUI data (Ubuntu-specific paths)
 if [ -d "/home/tennisbowling" ]; then
     export DATA_DIR="/home/tennisbowling/.local/lib/python3.12/site-packages/open_webui/data"
