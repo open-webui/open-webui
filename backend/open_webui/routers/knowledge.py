@@ -890,17 +890,19 @@ async def add_files_to_knowledge_batch(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Get files content
+    # Batch-fetch all files to avoid N+1 queries
     log.info(f"files/batch/add - {len(form_data)} files")
-    files: List[FileModel] = []
-    for form in form_data:
-        file = Files.get_file_by_id(form.file_id, db=db)
-        if not file:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File {form.file_id} not found",
-            )
-        files.append(file)
+    file_ids = [form.file_id for form in form_data]
+    files = Files.get_files_by_ids(file_ids, db=db)
+
+    # Verify all requested files were found
+    found_ids = {file.id for file in files}
+    missing_ids = [fid for fid in file_ids if fid not in found_ids]
+    if missing_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File {missing_ids[0]} not found",
+        )
 
     # Process files
     try:
