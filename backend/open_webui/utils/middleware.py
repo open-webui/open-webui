@@ -2422,13 +2422,18 @@ async def process_chat_response(
 
                                     value = delta.get("content")
 
+                                    # Get reasoning content from various possible fields
+                                    # Note: 'reasoning' and 'reasoning_details' often contain the SAME content
+                                    # (reasoning_details is just a more structured format), so we should NOT
+                                    # concatenate both - use reasoning_details ONLY if direct fields are empty
                                     reasoning_content = (
                                         delta.get("reasoning_content")
                                         or delta.get("reasoning")
                                         or delta.get("thinking")
                                     )
 
-                                    if delta_reasoning_details:
+                                    # Only use reasoning_details if we didn't get content from the direct fields
+                                    if not reasoning_content and delta_reasoning_details:
                                         for detail in delta_reasoning_details:
                                             if detail.get("type") == "reasoning.text":
                                                 reasoning_content = (
