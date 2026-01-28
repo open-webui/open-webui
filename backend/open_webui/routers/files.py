@@ -293,11 +293,12 @@ def upload_file_handler(
                         **({"status": "pending"} if process else {}),
                     },
                     "meta": {
-                        # Store original filename with path for sync comparison
-                        "name": unsanitized_filename,
+                        "name": name,
                         "content_type": file.content_type,
                         "size": len(contents),
                         "file_hash": file_hash,
+                        # Store original path for directory sync (includes subdirectories)
+                        "original_path": unsanitized_filename,
                         "data": file_metadata,
                     },
                 }

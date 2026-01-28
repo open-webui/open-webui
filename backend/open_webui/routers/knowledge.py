@@ -1045,12 +1045,16 @@ async def compare_files_for_sync(
     # Get all files currently in the knowledge base
     existing_files = Knowledges.get_files_by_id(id, db=db)
 
-    # Build a map of existing files by filename for quick lookup
-    existing_by_filename: dict[str, FileModel] = {}
+    # Build a map of existing files by their sync path for quick lookup
+    # Priority: original_path (for directory sync) > name > filename
+    existing_by_path: dict[str, FileModel] = {}
     for file in existing_files:
-        # Use the original filename from meta if available, otherwise use filename field
-        filename = file.meta.get("name", file.filename) if file.meta else file.filename
-        existing_by_filename[filename] = file
+        if file.meta:
+            # Use original_path for sync comparison (includes subdirectory structure)
+            sync_path = file.meta.get("original_path") or file.meta.get("name", file.filename)
+        else:
+            sync_path = file.filename
+        existing_by_path[sync_path] = file
 
     # Track files from the incoming directory
     incoming_filenames = set()
@@ -1063,7 +1067,7 @@ async def compare_files_for_sync(
         incoming_filenames.add(incoming_file.file_path)
 
         # Check if file exists in knowledge base
-        existing_file = existing_by_filename.get(incoming_file.file_path)
+        existing_file = existing_by_path.get(incoming_file.file_path)
 
         if existing_file:
             # Check if hash is already stored in meta (files uploaded after this feature)
@@ -1105,8 +1109,8 @@ async def compare_files_for_sync(
             new_files.append(incoming_file.file_path)
 
     # Find files to delete (exist in KB but not in incoming directory)
-    for filename, file in existing_by_filename.items():
-        if filename not in incoming_filenames:
+    for sync_path, file in existing_by_path.items():
+        if sync_path not in incoming_filenames:
             removed_file_ids.append(file.id)
 
 
