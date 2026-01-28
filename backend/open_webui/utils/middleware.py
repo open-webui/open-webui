@@ -225,8 +225,6 @@ def clean_api_response_content(content_str):
                     extracted.append(evt.get("data", {}).get("content", ""))
                 start = -1
     return "".join(extracted) or content_str
-DEFAULT_CODE_INTERPRETER_TAGS = [("<code_interpreter>", "</code_interpreter>")]
-
 
 def get_citation_source_from_tool_result(
     tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ""
