@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user as _user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
