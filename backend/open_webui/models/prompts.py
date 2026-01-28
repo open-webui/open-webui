@@ -14,6 +14,7 @@ from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, or_, fun
 
 
 from open_webui.utils.access_control import has_access
+from open_webui.utils.db.access_control import has_permission
 
 
 ####################
@@ -273,17 +274,7 @@ class PromptsTable:
                 elif view_option == "shared":
                     query = query.filter(Prompt.user_id != user_id)
 
-                # Apply access control filtering
-                group_ids = filter.get("group_ids", [])
-                filter_user_id = filter.get("user_id")
-
-                if filter_user_id:
-                    # User must have access: owner OR public OR explicit access
-                    access_conditions = [
-                        Prompt.user_id == filter_user_id,  # Owner
-                        Prompt.access_control == None,  # Public
-                    ]
-                    query = query.filter(or_(*access_conditions))
+                query = has_permission(db, Prompt, query, filter)
 
                 tag = filter.get("tag")
                 if tag:

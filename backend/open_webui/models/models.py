@@ -19,6 +19,7 @@ from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 
 from open_webui.utils.access_control import has_access
+from open_webui.utils.db.access_control import has_permission
 
 
 log = logging.getLogger(__name__)
@@ -232,48 +233,6 @@ class ModelsTable:
             or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
 
-    def _has_permission(self, db, query, filter: dict, permission: str = "read"):
-        group_ids = filter.get("group_ids", [])
-        user_id = filter.get("user_id")
-
-        dialect_name = db.bind.dialect.name
-
-        # Public access
-        conditions = []
-        if group_ids or user_id:
-            conditions.extend(
-                [
-                    Model.access_control.is_(None),
-                    cast(Model.access_control, String) == "null",
-                ]
-            )
-
-        # User-level permission
-        if user_id:
-            conditions.append(Model.user_id == user_id)
-
-        # Group-level permission
-        if group_ids:
-            group_conditions = []
-            for gid in group_ids:
-                if dialect_name == "sqlite":
-                    group_conditions.append(
-                        Model.access_control[permission]["group_ids"].contains([gid])
-                    )
-                elif dialect_name == "postgresql":
-                    group_conditions.append(
-                        cast(
-                            Model.access_control[permission]["group_ids"],
-                            JSONB,
-                        ).contains([gid])
-                    )
-            conditions.append(or_(*group_conditions))
-
-        if conditions:
-            query = query.filter(or_(*conditions))
-
-        return query
-
     def search_models(
         self,
         user_id: str,
@@ -307,8 +266,9 @@ class ModelsTable:
                     query = query.filter(Model.user_id != user_id)
 
                 # Apply access control filtering
-                query = self._has_permission(
+                query = has_permission(
                     db,
+                    Model,
                     query,
                     filter,
                     permission="read",

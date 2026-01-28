@@ -41,6 +41,20 @@ def has_permission(db, DocumentModel, query, filter: dict, permission: str = "re
             if group_read_conditions:
                 read_conditions.append(or_(*group_read_conditions))
 
+        # User read permission
+        if user_id:
+            if dialect_name == "sqlite":
+                read_conditions.append(
+                    DocumentModel.access_control["read"]["user_ids"].contains(user_id)
+                )
+            elif dialect_name == "postgresql":
+                read_conditions.append(
+                    cast(
+                        DocumentModel.access_control["read"]["user_ids"],
+                        JSONB,
+                    ).contains([user_id])
+                )
+
         # Combine read conditions
         if read_conditions:
             has_read = or_(*read_conditions)
@@ -74,6 +88,19 @@ def has_permission(db, DocumentModel, query, filter: dict, permission: str = "re
             if group_write_conditions:
                 # User should NOT have write permission
                 write_exclusions.append(~or_(*group_write_conditions))
+
+        if user_id:
+            if dialect_name == "sqlite":
+                write_exclusions.append(
+                    DocumentModel.access_control["write"]["user_ids"].contains(user_id)
+                )
+            elif dialect_name == "postgresql":
+                write_exclusions.append(
+                    cast(
+                        DocumentModel.access_control["write"]["user_ids"],
+                        JSONB,
+                    ).contains([user_id])
+                )
 
         # Exclude public items (items without access_control)
         write_exclusions.append(DocumentModel.access_control.isnot(None))
@@ -117,6 +144,22 @@ def has_permission(db, DocumentModel, query, filter: dict, permission: str = "re
                     ).contains([gid])
                 )
         conditions.append(or_(*group_conditions))
+
+    # Group-level permission
+    if user_id:
+        user_conditions = []
+        if dialect_name == "sqlite":
+            user_conditions.append(
+                DocumentModel.access_control[permission]["user_ids"].contains(user_id)
+            )
+        elif dialect_name == "postgresql":
+            user_conditions.append(
+                cast(
+                    DocumentModel.access_control[permission]["user_ids"],
+                    JSONB,
+                ).contains([user_id])
+            )
+        conditions.append(or_(*user_conditions))
 
     if conditions:
         query = query.filter(or_(*conditions))
