@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import dayjs from 'dayjs';
 
@@ -36,6 +36,8 @@
 	let selectedFile: any = null;
 	let showFileItemModal = false;
 
+	let shiftKey = false;
+
 	const PAGE_SIZE = 50;
 
 	const formatFileSize = (bytes: number): string => {
@@ -68,10 +70,16 @@
 		allFilesLoaded = false;
 
 		const doSearch = async () => {
-			const pattern = query ? `*${query}*` : '*';
-			const newFiles = await searchFiles(localStorage.token, pattern, 0, PAGE_SIZE);
-			files = sortFiles(newFiles);
-			allFilesLoaded = newFiles.length < PAGE_SIZE;
+			try {
+				const pattern = query ? `*${query}*` : '*';
+				const newFiles = await searchFiles(localStorage.token, pattern, 0, PAGE_SIZE);
+				files = sortFiles(newFiles);
+				allFilesLoaded = newFiles.length < PAGE_SIZE;
+			} catch (error) {
+				// Handle 404 or other errors - show empty state instead of spinner
+				files = [];
+				allFilesLoaded = true;
+			}
 		};
 
 		if (query === '') {
@@ -87,13 +95,18 @@
 		filesLoading = true;
 		page += 1;
 
-		const pattern = query ? `*${query}*` : '*';
-		const newFiles = await searchFiles(localStorage.token, pattern, page * PAGE_SIZE, PAGE_SIZE);
+		try {
+			const pattern = query ? `*${query}*` : '*';
+			const newFiles = await searchFiles(localStorage.token, pattern, page * PAGE_SIZE, PAGE_SIZE);
 
-		allFilesLoaded = newFiles.length < PAGE_SIZE;
+			allFilesLoaded = newFiles.length < PAGE_SIZE;
 
-		if (newFiles.length > 0) {
-			files = sortFiles([...(files || []), ...newFiles]);
+			if (newFiles.length > 0) {
+				files = sortFiles([...(files || []), ...newFiles]);
+			}
+		} catch (error) {
+			// Handle errors silently for load more
+			allFilesLoaded = true;
 		}
 
 		filesLoading = false;
@@ -121,7 +134,8 @@
 		try {
 			await deleteFileById(localStorage.token, fileId);
 			toast.success($i18n.t('File deleted successfully.'));
-			await searchHandler();
+			// Remove from local array instead of re-fetching to allow rapid deletion
+			files = files?.filter((f) => f.id !== fileId) ?? null;
 		} catch (error) {
 			toast.error(`${error}`);
 		}
@@ -141,6 +155,34 @@
 	$: if (show) {
 		searchHandler();
 	}
+
+	onMount(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				shiftKey = true;
+			}
+		};
+
+		const onKeyUp = (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		const onBlur = () => {
+			shiftKey = false;
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur', onBlur);
+
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
+		};
+	});
 </script>
 
 <ConfirmDialog
@@ -302,10 +344,14 @@
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
 											<Tooltip content={$i18n.t('Delete File')}>
 												<button
-													class="self-center w-fit px-1 text-sm rounded-xl"
+													class="self-center w-fit px-1 text-sm rounded-xl {shiftKey ? 'text-red-500' : ''}"
 													on:click|stopPropagation={() => {
-														selectedFileId = file.id;
-														showDeleteConfirmDialog = true;
+														if (shiftKey) {
+															deleteHandler(file.id);
+														} else {
+															selectedFileId = file.id;
+															showDeleteConfirmDialog = true;
+														}
 													}}
 												>
 													<GarbageBin class="size-4" strokeWidth="1.5" />
