@@ -2799,6 +2799,28 @@ async def process_chat_response(
                     return attributes
 
                 if content_blocks[-1]["type"] == "text":
+                    text_content = content_blocks[-1]["content"]
+                    
+                    # Check if text block starts with an end tag (e.g., </think>) that should
+                    # close a prior unclosed reasoning block. This happens when models don't
+                    # close thinking before tool calls.
+                    for start_tag, end_tag in tags:
+                        if text_content.lstrip().startswith(end_tag):
+                            # Look for an unclosed reasoning block earlier in content_blocks
+                            for i in range(len(content_blocks) - 2, -1, -1):
+                                block = content_blocks[i]
+                                if (block["type"] == content_type 
+                                    and block.get("end_tag") == end_tag
+                                    and "ended_at" not in block):
+                                    # Found unclosed reasoning block - close it
+                                    block["ended_at"] = time.time()
+                                    block["duration"] = int(block["ended_at"] - block["started_at"])
+                                    # Remove the end tag from the text block
+                                    content_blocks[-1]["content"] = text_content.lstrip()[len(end_tag):].lstrip()
+                                    text_content = content_blocks[-1]["content"]
+                                    break
+                            break
+                    
                     for start_tag, end_tag in tags:
 
                         start_tag_pattern = rf"{re.escape(start_tag)}"
@@ -2810,7 +2832,8 @@ async def process_chat_response(
                                 rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
                             )
 
-                        match = re.search(start_tag_pattern, content)
+                        # Search in the current text block's content, not global content
+                        match = re.search(start_tag_pattern, text_content)
                         if match:
                             try:
                                 attr_content = (
@@ -2824,20 +2847,15 @@ async def process_chat_response(
                             )  # Extract attributes safely
 
                             # Capture everything before and after the matched tag
-                            before_tag = content[
+                            before_tag = text_content[
                                 : match.start()
                             ]  # Content before opening tag
-                            after_tag = content[
+                            after_tag = text_content[
                                 match.end() :
                             ]  # Content after opening tag
 
-                            # Remove the start tag and after from the currently handling text block
-                            content_blocks[-1]["content"] = content_blocks[-1][
-                                "content"
-                            ].replace(match.group(0) + after_tag, "")
-
-                            if before_tag:
-                                content_blocks[-1]["content"] = before_tag
+                            # Set the text block content to just the part before the tag
+                            content_blocks[-1]["content"] = before_tag
 
                             if not content_blocks[-1]["content"]:
                                 content_blocks.pop()
