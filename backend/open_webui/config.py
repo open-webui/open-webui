@@ -1075,17 +1075,17 @@ OPENAI_API_BASE_URLS = PersistentConfig(
     "OPENAI_API_BASE_URLS", "openai.api_base_urls", OPENAI_API_BASE_URLS
 )
 
-OPENAI_API_CONFIGS_ENV = os.environ.get("OPENAI_API_CONFIGS", "{}")
+OPENAI_API_CONFIGS_RAW = os.environ.get("OPENAI_API_CONFIGS", "{}")
 try:
-    OPENAI_API_CONFIGS_ENV = json.loads(OPENAI_API_CONFIGS_ENV)
+    OPENAI_API_CONFIGS_RAW = json.loads(OPENAI_API_CONFIGS_RAW)
 except json.JSONDecodeError:
     log.warning(f"Invalid JSON in OPENAI_API_CONFIGS environment variable, using empty dict")
-    OPENAI_API_CONFIGS_ENV = {}
+    OPENAI_API_CONFIGS_RAW = {}
 
 OPENAI_API_CONFIGS = PersistentConfig(
     "OPENAI_API_CONFIGS",
     "openai.api_configs",
-    OPENAI_API_CONFIGS_ENV,
+    OPENAI_API_CONFIGS_RAW,
 )
 
 # Get the actual OpenAI API key based on the base URL
