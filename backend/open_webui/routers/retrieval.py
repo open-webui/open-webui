@@ -398,12 +398,19 @@ async def update_embedding_config(
 
     # CRITICAL RBAC: Log the admin's email to ensure proper isolation
     admin_email = user.email
-    log.info(
-        f"[RBAC_SET_EMBEDDING] Admin {admin_email} (ID: {user.id}) updating embedding config: "
-        f"{request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(admin_email) or '(empty)'} -> {form_data.embedding_model}, "
-        f"engine={form_data.embedding_engine}"
-    )
     try:
+        # Get current model safely inside try block to catch any potential errors
+        current_model = "(empty)"
+        try:
+            current_model = request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(admin_email) or "(empty)"
+        except Exception as e:
+            log.warning(f"Could not get current model for logging: {e}")
+        
+        log.info(
+            f"[RBAC_SET_EMBEDDING] Admin {admin_email} (ID: {user.id}) updating embedding config: "
+            f"{current_model} -> {form_data.embedding_model}, "
+            f"engine={form_data.embedding_engine}"
+        )
         request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
         # RBAC: Per-admin model name - stored under admin's email
         # The model will be accessible to:
@@ -503,16 +510,44 @@ async def update_embedding_config(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
+        # Fetch the saved values from database to verify the save worked
+        # (cache should be invalidated by set(), so get() will fetch from DB)
+        saved_model = request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(user.email) or ""
+        saved_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(user.email) or ""
+        
+        # Verify the save worked by comparing with what we tried to save
+        if saved_model != form_data.embedding_model:
+            log.error(
+                f"[RBAC_SET_EMBEDDING] VERIFICATION FAILED for admin {admin_email}: "
+                f"Tried to save model={form_data.embedding_model}, but database has model={saved_model}"
+            )
+        else:
+            log.info(
+                f"[RBAC_SET_EMBEDDING] Successfully saved and verified embedding config for admin {admin_email}: "
+                f"model={saved_model}, engine={form_data.embedding_engine}"
+            )
+
+        if saved_api_key != form_data.openai_config.key:
+            log.error(
+                f"[RBAC_SET_EMBEDDING] VERIFICATION FAILED for admin {admin_email}: "
+                f"Tried to save API key={form_data.openai_config.key}, but database has API key={saved_api_key}"
+            )
+        else:
+            log.info(
+                f"[RBAC_SET_EMBEDDING] Successfully saved and verified API key for admin {admin_email}: "
+                f"API key={saved_api_key}"
+            )
+        
         return {
             "status": True,
             "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-            # RBAC: Return per-admin model name (not global)
-            "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(user.email) or "",
+            # Return the verified value from database
+            "embedding_model": saved_model,
             "embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
             "openai_config": {
                 "url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
-                # Per-admin API key
-                "key": user_api_key,
+                # Return the verified API key from database
+                "key": saved_api_key,
             },
             "ollama_config": {
                 "url": request.app.state.config.RAG_OLLAMA_BASE_URL,

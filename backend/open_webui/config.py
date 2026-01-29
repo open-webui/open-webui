@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import os
@@ -473,7 +474,17 @@ class UserScopedConfig:
                 entry = Config(email=email, data={})
                 db.add(entry)
 
-            data = entry.data or {}
+            # CRITICAL FIX: Create a deep copy of the data dict to ensure SQLAlchemy
+            # detects the change. In-place modification of JSON columns may not be
+            # tracked properly even with flag_modified in some SQLAlchemy/PostgreSQL cases.
+            old_data = entry.data
+            data = copy.deepcopy(entry.data) if entry.data else {}
+            
+            logging.info(
+                f"[RBAC_CONFIG_SET] Before update - email={email}, config_path={self.config_path}, "
+                f"old_data={old_data}"
+            )
+            
             current = data
             parts = self.config_path.split(".")
             for part in parts[:-1]:
@@ -482,39 +493,56 @@ class UserScopedConfig:
                 current = current[part]
             current[parts[-1]] = value
 
+            logging.info(
+                f"[RBAC_CONFIG_SET] After update - email={email}, config_path={self.config_path}, "
+                f"new_value={value if not is_api_key else '***'}, "
+                f"updated_data={data if not is_api_key else '(contains API key, masked)'}"
+            )
+
+            # Assign the new dict object (not the same reference)
             entry.data = data
             entry.updated_at = datetime.now()
-            flag_modified(entry, "data")  
+            flag_modified(entry, "data")
             db.commit()
+            
+            logging.info(
+                f"[RBAC_CONFIG_SET] Successfully saved {self.config_path}={value} for {email} to database"
+            )
         
-        # CRITICAL RBAC: Invalidate cache for this user's settings
+        # CRITICAL RBAC: Update cache with new value (write-through caching)
+        # This ensures subsequent GET requests get the new value from cache
         user = Users.get_user_by_email(email)
         if user:
+            # Step 1: Invalidate old cache entries first (for this user and inherited groups)
             logging.info(
-                f"[RBAC_CACHE_INVALIDATE] Invalidating cache for admin {email} (ID: {user.id}) "
+                f"[RBAC_CACHE_UPDATE] Updating cache for admin {email} (ID: {user.id}) "
                 f"config_path={self.config_path}"
             )
-            invalidated_count = cache.invalidate_user_settings(user.id, self.config_path)
+            cache.invalidate_user_settings(user.id, self.config_path)
+            
+            # Step 2: Set the new value in cache (write-through)
+            cache.set_user_settings(user.id, self.config_path, value)
             logging.info(
-                f"[RBAC_CACHE_INVALIDATE] Invalidated {invalidated_count} cache entry(ies) for user {email} (ID: {user.id})"
+                f"[RBAC_CACHE_UPDATE] Cache updated for user {email} (ID: {user.id}): "
+                f"{self.config_path}={value if not is_api_key else '***'}"
             )
             
-            # Also invalidate cache for all users who inherit from this user (as group admin)
-            # Get all groups created by this user
+            # Step 3: Invalidate cache for all users who inherit from this admin (group members)
+            # They need to re-fetch to get the new inherited value
             groups = Groups.get_groups(email)
             if is_api_key:
                 logging.info(
-                    f"[RBAC_CACHE_INVALIDATE] Invalidating API key cache for admin {email} "
-                    f"and their {len(groups)} group(s) to ensure fresh RBAC enforcement"
+                    f"[RBAC_CACHE_UPDATE] Invalidating inherited cache for admin {email}'s "
+                    f"{len(groups)} group(s) to propagate new API key"
                 )
             for group in groups:
                 # Invalidate group admin config cache
                 cache.invalidate_group_admin_config(group.id, self.config_path)
-                # Invalidate cache for all members of this group
+                # Invalidate cache for all members of this group (they inherit from admin)
                 member_count = cache.invalidate_group_member_users(group.id)
                 logging.info(
-                    f"[RBAC_CACHE_INVALIDATE] Invalidated cache for {member_count} member(s) of group {group.id} "
-                    f"created by {email}"
+                    f"[RBAC_CACHE_UPDATE] Invalidated inherited cache for {member_count} member(s) "
+                    f"of group {group.id} created by {email}"
                 )
 
 
