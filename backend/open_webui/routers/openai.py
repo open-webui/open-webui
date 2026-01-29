@@ -64,16 +64,11 @@ log = logging.getLogger(__name__)
 ##########################################
 
 
-async def send_get_request(url, key=None, user: UserModel = None):
+async def send_get_request(request, url, key=None, api_config=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            headers = {
-                **({"Authorization": f"Bearer {key}"} if key else {}),
-            }
-
-            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-                headers = include_user_info_headers(headers, user)
+            headers, _ = await get_headers_and_cookies(request, url, key, api_config or {}, user=user)
 
             async with session.get(
                 url,
@@ -169,7 +164,8 @@ async def get_headers_and_cookies(
             log.error(f"Error getting OAuth token: {e}")
 
         if oauth_token:
-            token = f"{oauth_token.get('access_token', '')}"
+            token_type = config.get("token_type", "access_token")
+            token = f"{oauth_token.get(token_type, '')}"
 
     elif auth_type in ("azure_ad", "microsoft_entra_id"):
         token = get_microsoft_entra_id_access_token()
@@ -367,8 +363,10 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
         ):
             request_tasks.append(
                 send_get_request(
+                    request,
                     f"{url}/models",
                     request.app.state.config.OPENAI_API_KEYS[idx],
+                    {},  # Empty config for backward compatibility
                     user=user,
                 )
             )
@@ -387,8 +385,10 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 if len(model_ids) == 0:
                     request_tasks.append(
                         send_get_request(
+                            request,
                             f"{url}/models",
                             request.app.state.config.OPENAI_API_KEYS[idx],
+                            api_config,
                             user=user,
                         )
                     )

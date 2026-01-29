@@ -34,6 +34,8 @@
 	let key = '';
 	let auth_type = 'bearer';
 
+	let token_type = 'access_token';
+
 	let connectionType = 'external';
 	let azure = false;
 	$: azure =
@@ -97,7 +99,8 @@
 					auth_type,
 					azure: azure,
 					api_version: apiVersion,
-					...(_headers ? { headers: _headers } : {})
+					...(_headers ? { headers: _headers } : {}),
+					...(auth_type === 'system_oauth' ? { token_type } : {})
 				}
 			},
 			direct
@@ -183,7 +186,8 @@
 				connection_type: connectionType,
 				auth_type,
 				headers: headers ? JSON.parse(headers) : undefined,
-				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {})
+				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {}),
+				...(auth_type === 'system_oauth' ? { token_type } : {})
 			}
 		};
 
@@ -195,6 +199,7 @@
 		url = '';
 		key = '';
 		auth_type = 'bearer';
+		token_type = 'access_token';
 		prefixId = '';
 		tags = [];
 		modelIds = [];
@@ -206,6 +211,7 @@
 			key = connection.key;
 
 			auth_type = connection.config.auth_type ?? 'bearer';
+			token_type = connection.config?.token_type ?? 'access_token';
 			headers = connection.config?.headers
 				? JSON.stringify(connection.config.headers, null, 2)
 				: '';
@@ -396,10 +402,16 @@
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{:else if auth_type === 'system_oauth'}
-											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
-												{$i18n.t('Forwards system user OAuth access token to authenticate')}
+											<div class="flex flex-col flex-1">
+												<div
+													class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												>
+													{$i18n.t('Forwards system user OAuth token to authenticate')}
+												</div>
+												<select bind:value={token_type} class="w-48 text-sm mt-1 bg-transparent">
+													<option value="access_token">{$i18n.t('Access Token')}</option>
+													<option value="id_token">{$i18n.t('ID Token')}</option>
+												</select>
 											</div>
 										{:else if ['azure_ad', 'microsoft_entra_id'].includes(auth_type)}
 											<div
