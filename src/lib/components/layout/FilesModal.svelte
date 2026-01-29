@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import dayjs from 'dayjs';
 
@@ -342,7 +342,7 @@
 										</div>
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
-											<Tooltip content={$i18n.t('Delete File')}>
+											<Tooltip content={shiftKey ? $i18n.t('Delete File') : $i18n.t('Delete File')}>
 												<button
 													class="self-center w-fit px-1 text-sm rounded-xl {shiftKey ? 'text-red-500' : ''}"
 													on:click|stopPropagation={() => {
