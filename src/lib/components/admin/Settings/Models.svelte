@@ -301,37 +301,40 @@
 	{#if selectedModelId === null}
 		<div class="flex flex-col gap-1 mt-1.5 mb-2">
 			<div class="flex justify-between items-center">
-				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2">
-					{$i18n.t('Models')}
-					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-						>{filteredModels.length}</span
-					>
+				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+					<div>
+						{$i18n.t('Models')}
+					</div>
+
+					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+						{filteredModels.length}
+					</div>
 				</div>
 
-				<div class="flex items-center gap-1.5">
-					<Tooltip content={$i18n.t('Manage Models')}>
-						<button
-							class=" p-1 rounded-full flex gap-1 items-center"
-							type="button"
-							on:click={() => {
-								showManageModal = true;
-							}}
-						>
-							<Download />
-						</button>
-					</Tooltip>
+				<div class="flex w-full justify-end gap-1.5">
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						type="button"
+						on:click={() => {
+							showManageModal = true;
+						}}
+					>
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Manage')}
+						</div>
+					</button>
 
-					<Tooltip content={$i18n.t('Settings')}>
-						<button
-							class=" p-1 rounded-full flex gap-1 items-center"
-							type="button"
-							on:click={() => {
-								showConfigModal = true;
-							}}
-						>
-							<Cog6 />
-						</button>
-					</Tooltip>
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						type="button"
+						on:click={() => {
+							showConfigModal = true;
+						}}
+					>
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Settings')}
+						</div>
+					</button>
 				</div>
 			</div>
 		</div>
