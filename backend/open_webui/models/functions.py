@@ -299,7 +299,7 @@ class FunctionsTable:
                 function.updated_at = int(time.time())
                 db.commit()
                 db.refresh(function)
-                return self.get_function_by_id(id, db=db)
+                return FunctionModel.model_validate(function)
             except Exception:
                 return None
 
@@ -319,7 +319,7 @@ class FunctionsTable:
                     function.updated_at = int(time.time())
                     db.commit()
                     db.refresh(function)
-                    return self.get_function_by_id(id, db=db)
+                    return FunctionModel.model_validate(function)
                 else:
                     return None
             except Exception as e:
@@ -381,7 +381,8 @@ class FunctionsTable:
                     }
                 )
                 db.commit()
-                return self.get_function_by_id(id, db=db)
+                function = db.get(Function, id)
+                return FunctionModel.model_validate(function) if function else None
             except Exception:
                 return None
 

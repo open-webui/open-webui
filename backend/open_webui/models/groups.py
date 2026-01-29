@@ -589,11 +589,10 @@ class GroupTable:
                 if not user_ids:
                     return GroupModel.model_validate(group)
 
-                # Remove each user from group_member
-                for user_id in user_ids:
-                    db.query(GroupMember).filter(
-                        GroupMember.group_id == id, GroupMember.user_id == user_id
-                    ).delete()
+                # Remove users from group_member in batch
+                db.query(GroupMember).filter(
+                    GroupMember.group_id == id, GroupMember.user_id.in_(user_ids)
+                ).delete(synchronize_session=False)
 
                 # Update group timestamp
                 group.updated_at = int(time.time())
