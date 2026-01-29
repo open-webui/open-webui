@@ -156,13 +156,16 @@ class AuthsTable:
         try:
             with get_db_context(db) as db:
                 # Single JOIN query instead of two separate queries
-                user = (
-                    db.query(User)
-                    .join(Auth, Auth.id == User.id)
+                result = (
+                    db.query(Auth, User)
+                    .join(User, Auth.id == User.id)
                     .filter(Auth.email == email, Auth.active == True)
                     .first()
                 )
-                return UserModel.model_validate(user) if user else None
+                if result:
+                    _, user = result
+                    return UserModel.model_validate(user)
+                return None
         except Exception:
             return None
 
