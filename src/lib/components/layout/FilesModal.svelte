@@ -124,6 +124,7 @@
 			await deleteFileById(localStorage.token, fileId);
 			toast.success($i18n.t('File deleted successfully.'));
 			// Remove from local array instead of re-fetching to allow rapid deletion
+			files = files?.filter((f) => f.id !== fileId) ?? null;
 		} catch (error) {
 			toast.error(`${error}`);
 		}
