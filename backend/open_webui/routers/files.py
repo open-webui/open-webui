@@ -575,7 +575,7 @@ class ContentForm(BaseModel):
 
 
 @router.post("/{id}/data/content/update")
-async def update_file_data_content_by_id(
+def update_file_data_content_by_id(
     request: Request,
     id: str,
     form_data: ContentForm,
@@ -824,7 +824,6 @@ async def delete_file_by_id(
         or user.role == "admin"
         or has_access_to_file(id, "write", user, db=db)
     ):
-
         result = Files.delete_file_by_id(id, db=db)
         if result:
             try:
