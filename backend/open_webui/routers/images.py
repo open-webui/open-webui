@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.retrieval.web.utils import validate_url
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS
 
 from open_webui.models.chats import Chats
@@ -881,6 +882,8 @@ async def image_edits(
                 return data
 
             if data.startswith("http://") or data.startswith("https://"):
+                # Validate URL to prevent SSRF attacks against local/private networks
+                validate_url(data)
                 r = await asyncio.to_thread(requests.get, data)
                 r.raise_for_status()
 
@@ -910,7 +913,8 @@ async def image_edits(
         if isinstance(form_data.image, str):
             form_data.image = await load_url_image(form_data.image)
         elif isinstance(form_data.image, list):
-            form_data.image = [await load_url_image(img) for img in form_data.image]
+            # Load all images in parallel for better performance
+            form_data.image = list(await asyncio.gather(*[load_url_image(img) for img in form_data.image]))
     except Exception as e:
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 

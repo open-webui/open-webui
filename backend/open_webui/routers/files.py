@@ -282,7 +282,7 @@ def upload_file_handler(
                     },
                     "meta": {
                         "name": name,
-                        "content_type": file.content_type,
+                        "content_type": file.content_type if isinstance(file.content_type, str) else None,
                         "size": len(contents),
                         "data": file_metadata,
                     },
@@ -826,6 +826,23 @@ async def delete_file_by_id(
         or user.role == "admin"
         or has_access_to_file(id, "write", user, db=db)
     ):
+
+        # Clean up KB associations and embeddings before deleting
+        knowledges = Knowledges.get_knowledges_by_file_id(id, db=db)
+        for knowledge in knowledges:
+            # Remove KB-file relationship
+            Knowledges.remove_file_from_knowledge_by_id(knowledge.id, id, db=db)
+            # Clean KB embeddings (same logic as /knowledge/{id}/file/remove)
+            try:
+                VECTOR_DB_CLIENT.delete(
+                    collection_name=knowledge.id, filter={"file_id": id}
+                )
+                if file.hash:
+                    VECTOR_DB_CLIENT.delete(
+                        collection_name=knowledge.id, filter={"hash": file.hash}
+                    )
+            except Exception as e:
+                log.debug(f"KB embedding cleanup for {knowledge.id}: {e}")
 
         result = Files.delete_file_by_id(id, db=db)
         if result:

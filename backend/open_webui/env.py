@@ -392,6 +392,22 @@ try:
     REDIS_SOCKET_CONNECT_TIMEOUT = float(REDIS_SOCKET_CONNECT_TIMEOUT)
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
+    
+REDIS_RECONNECT_DELAY = os.environ.get(
+    "REDIS_RECONNECT_DELAY", ""
+)
+
+if REDIS_RECONNECT_DELAY == "":
+    REDIS_RECONNECT_DELAY = None
+else:
+    try:
+        REDIS_RECONNECT_DELAY = float(
+            REDIS_RECONNECT_DELAY
+        )
+        if REDIS_RECONNECT_DELAY < 0:
+            REDIS_RECONNECT_DELAY = None
+    except Exception:
+        REDIS_RECONNECT_DELAY = None
 
 ####################################
 # UVICORN WORKERS
