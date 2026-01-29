@@ -282,7 +282,11 @@ def upload_file_handler(
                     },
                     "meta": {
                         "name": name,
-                        "content_type": file.content_type if isinstance(file.content_type, str) else None,
+                        "content_type": (
+                            file.content_type
+                            if isinstance(file.content_type, str)
+                            else None
+                        ),
                         "size": len(contents),
                         "data": file_metadata,
                     },
@@ -577,7 +581,7 @@ class ContentForm(BaseModel):
 
 
 @router.post("/{id}/data/content/update")
-async def update_file_data_content_by_id(
+def update_file_data_content_by_id(
     request: Request,
     id: str,
     form_data: ContentForm,
