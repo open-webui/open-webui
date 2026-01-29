@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import dayjs from 'dayjs';
 
@@ -35,6 +35,8 @@
 
 	let selectedFile: any = null;
 	let showFileItemModal = false;
+
+	let shiftKey = false;
 
 	const PAGE_SIZE = 50;
 
@@ -121,7 +123,8 @@
 		try {
 			await deleteFileById(localStorage.token, fileId);
 			toast.success($i18n.t('File deleted successfully.'));
-			await searchHandler();
+			// Remove from local array instead of re-fetching to allow rapid deletion
+			files = files?.filter((f) => f.id !== fileId) ?? null;
 		} catch (error) {
 			toast.error(`${error}`);
 		}
@@ -141,6 +144,34 @@
 	$: if (show) {
 		searchHandler();
 	}
+
+	onMount(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				shiftKey = true;
+			}
+		};
+
+		const onKeyUp = (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		const onBlur = () => {
+			shiftKey = false;
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur', onBlur);
+
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
+		};
+	});
 </script>
 
 <ConfirmDialog
@@ -300,12 +331,16 @@
 										</div>
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
-											<Tooltip content={$i18n.t('Delete File')}>
+											<Tooltip content={shiftKey ? $i18n.t('Delete File') : $i18n.t('Delete File')}>
 												<button
-													class="self-center w-fit px-1 text-sm rounded-xl"
+													class="self-center w-fit px-1 text-sm rounded-xl {shiftKey ? 'text-red-500' : ''}"
 													on:click|stopPropagation={() => {
-														selectedFileId = file.id;
-														showDeleteConfirmDialog = true;
+														if (shiftKey) {
+															deleteHandler(file.id);
+														} else {
+															selectedFileId = file.id;
+															showDeleteConfirmDialog = true;
+														}
 													}}
 												>
 													<GarbageBin class="size-4" strokeWidth="1.5" />
