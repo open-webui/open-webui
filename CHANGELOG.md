@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🐍 Code execution now works with Native function calling mode, allowing models to autonomously run Python code for calculations, data analysis, and visualizations without requiring Default mode. [#20592](https://github.com/open-webui/open-webui/pull/20592), [Docs:#998](https://github.com/open-webui/docs/pull/998)
 - 📧 Users can now reference their email address in prompts and system messages using the "{{USER_EMAIL}}" template variable. [#20881](https://github.com/open-webui/open-webui/pull/20881)
 - 📋 Prompts in the workspace now include a quick copy button for easily copying prompt content to the clipboard. [Commit](https://github.com/open-webui/open-webui/commit/78f856e2049991441a3469230ae52799cb86954e)
+- 🤝 Users can now view and manage all their shared chats from Settings, with options to copy share links or unshare conversations they no longer want public. [Commit](https://github.com/open-webui/open-webui/commit/a10ac774ab5d47b505e840b029c0c0340002508b)
+- 📁 Users can now view, search, and delete all their uploaded files from Settings, providing centralized file management in one place. [Commit](https://github.com/open-webui/open-webui/commit/93ed4ae2cda2f4311143e51f586aaa73b83a37a7)
+- 🌍 Users can now access community reviews for models directly from the model selector menu and are prompted to leave reviews after rating responses, with administrators able to disable this via the "Community Sharing" setting. [Commit](https://github.com/open-webui/open-webui/commit/bc90463ea60c9a66accb1fd242cf1853910ca838)
 - 🔤 Tools and Functions in the Chat Controls sidebar now appear in alphabetical order, making it easier to locate specific tools when working with multiple integrations. [#20871](https://github.com/open-webui/open-webui/pull/20871)
 - 📥 Administrators can now export playground chats as JSON or plain text files, allowing them to save their conversations for backup or sharing outside the platform. [Commit](https://github.com/open-webui/open-webui/commit/8e2b0b6fd2ac99c833a110e2bc6aa655f1682669)
 - 🗄️ Administrators can now connect to self-hosted Weaviate deployments with separate HTTP and gRPC endpoints via new environment variables. [#20620](https://github.com/open-webui/open-webui/pull/20620)
@@ -31,8 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛠️ Tool and function developers can now create dropdown fields with dynamically-generated options that update based on runtime context, such as available models or user permissions. [Commit](https://github.com/open-webui/open-webui/commit/474427c67e953bb9f7d122757a756a639214e0b2)
 - 🔐 Administrators can now connect to MCP servers with self-signed or custom SSL certificates via the "AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL" environment variable. [#20875](https://github.com/open-webui/open-webui/issues/20875), [Commit](https://github.com/open-webui/open-webui/commit/c7f996d593e4bb48103b91316204fe7e50e25b35)
 - 🎁 Administrators can now control the visibility of easter egg features via the "ENABLE_EASTER_EGGS" environment variable. [Commit](https://github.com/open-webui/open-webui/commit/907dba4517903e5646e40223a0edca26a7107bc8)
+- 🗃️ Administrators using Redis Sentinel can now configure a reconnection delay via "REDIS_RECONNECT_DELAY" to prevent retry exhaustion during failover elections. [#21021](https://github.com/open-webui/open-webui/pull/21021)
+- 🏎️ User profile updates and role changes are now faster by eliminating redundant database queries. [#21011](https://github.com/open-webui/open-webui/pull/21011)
+- 🚗 Toggling model visibility in the admin panel is now faster with optimized database access. [#21009](https://github.com/open-webui/open-webui/pull/21009)
+- 👁️ Administrators can now filter the model list by status (enabled, disabled, visible, hidden) and bulk enable or disable all filtered models at once. [#20553](https://github.com/open-webui/open-webui/issues/20553), [#20774](https://github.com/open-webui/open-webui/issues/20774), [Commit](https://github.com/open-webui/open-webui/commit/96a9696383d450dad2cbb230f3756ebfa258e029)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Catalan, Finnish, German, Japanese, Polish, Portuguese (Brazil), Simplified Chinese, Spanish, and Traditional Chinese were enhanced and expanded.
+- 🌐 Translations for Catalan, Finnish, German, Japanese, Polish, Portuguese (Brazil), Simplified Chinese, Slovak, Spanish, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
@@ -66,6 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 👥 Filtering users in the admin panel now automatically resets to page 1, preventing empty results when searching from pages beyond the first. [#20723](https://github.com/open-webui/open-webui/pull/20723), [Commit](https://github.com/open-webui/open-webui/commit/be75bc506adb048ef11b1612c0e3662511c920d0)
 - 🔎 Searching for users by username now works correctly on Models, Knowledge, and Functions workspace pages, making it easier to find resources owned by specific users. [#20780](https://github.com/open-webui/open-webui/pull/20780)
 - 🔒 External image loading now validates URLs before fetching to prevent SSRF attacks against local and private network addresses. [Commit](https://github.com/open-webui/open-webui/commit/ce50d9bac4f30b054b09a2fbda52569b73ea591c)
+- 🧹 Memory leaks caused by event listeners not being cleaned up during navigation have been resolved. [#20913](https://github.com/open-webui/open-webui/pull/20913)
+- 🗑️ Deleting files now properly removes associated knowledge base embeddings, preventing orphaned data from accumulating. [Commit](https://github.com/open-webui/open-webui/commit/93ed4ae2cda2f4311143e51f586aaa73b83a37a7)
 
 ### Changed
 
