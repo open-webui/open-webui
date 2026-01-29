@@ -291,6 +291,7 @@ class QdrantClient(VectorDBBase):
         query_response = self.client.query_points(
             collection_name=mt_collection,
             query=vectors[0],
+            using="dense",
             limit=limit,
             query_filter=models.Filter(must=[tenant_filter]),
         )

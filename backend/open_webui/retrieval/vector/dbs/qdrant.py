@@ -177,6 +177,7 @@ class QdrantClient(VectorDBBase):
         query_response = self.client.query_points(
             collection_name=f"{self.collection_prefix}_{collection_name}",
             query=vectors[0],
+            using="dense",
             limit=limit,
         )
         get_result = self._result_to_get_result(query_response.points)
@@ -201,7 +202,7 @@ class QdrantClient(VectorDBBase):
             limit = NO_LIMIT  # otherwise qdrant would set limit to 10!
 
         prefetch = [
-            models.Prefetch(query=vectors, using="dense", limit=limit),
+            models.Prefetch(query=vectors[0], using="dense", limit=limit),
             models.Prefetch(
                 query=models.SparseVector(**self._get_sparse(query_text)),
                 using="sparse",
