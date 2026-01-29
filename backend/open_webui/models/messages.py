@@ -567,6 +567,56 @@ class MessageTable:
 
             return [Reactions(**reaction) for reaction in reactions.values()]
 
+    def get_reactions_by_message_ids(
+        self, ids: list[str], db: Optional[Session] = None
+    ) -> dict[str, list[Reactions]]:
+        """
+        Batch fetch reactions for multiple messages in a single query.
+        Returns a dict mapping message_id -> list of Reactions.
+        """
+        if not ids:
+            return {}
+
+        with get_db_context(db) as db:
+            # JOIN User so all user info is fetched in one query
+            results = (
+                db.query(MessageReaction, User)
+                .join(User, MessageReaction.user_id == User.id)
+                .filter(MessageReaction.message_id.in_(ids))
+                .all()
+            )
+
+            # Build nested dict: message_id -> reaction_name -> reaction data
+            message_reactions: dict[str, dict[str, dict]] = {}
+
+            for reaction, user in results:
+                if reaction.message_id not in message_reactions:
+                    message_reactions[reaction.message_id] = {}
+
+                if reaction.name not in message_reactions[reaction.message_id]:
+                    message_reactions[reaction.message_id][reaction.name] = {
+                        "name": reaction.name,
+                        "users": [],
+                        "count": 0,
+                    }
+
+                message_reactions[reaction.message_id][reaction.name]["users"].append(
+                    {"id": user.id, "name": user.name}
+                )
+                message_reactions[reaction.message_id][reaction.name]["count"] += 1
+
+            # Convert to final format: message_id -> list[Reactions]
+            result = {}
+            for msg_id in ids:
+                if msg_id in message_reactions:
+                    result[msg_id] = [
+                        Reactions(**r) for r in message_reactions[msg_id].values()
+                    ]
+                else:
+                    result[msg_id] = []
+
+            return result
+
     def remove_reaction_by_id_and_user_id_and_name(
         self, id: str, user_id: str, name: str, db: Optional[Session] = None
     ) -> bool:

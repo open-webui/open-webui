@@ -831,6 +831,10 @@ async def get_channel_messages(
     user_ids = list(set(m.user_id for m in message_list))
     users = {u.id: u for u in Users.get_users_by_user_ids(user_ids, db=db)}
 
+    # Batch fetch all reactions in a single query (fixes N+1 problem)
+    message_ids = [m.id for m in message_list]
+    all_reactions = Messages.get_reactions_by_message_ids(message_ids, db=db)
+
     messages = []
     for message in message_list:
         thread_replies = Messages.get_thread_replies_by_message_id(message.id, db=db)
@@ -849,9 +853,7 @@ async def get_channel_messages(
                     **message.model_dump(),
                     "reply_count": len(thread_replies),
                     "latest_reply_at": latest_thread_reply_at,
-                    "reactions": Messages.get_reactions_by_message_id(
-                        message.id, db=db
-                    ),
+                    "reactions": all_reactions.get(message.id, []),
                     "user": user_info,
                 }
             )
@@ -908,6 +910,10 @@ async def get_pinned_channel_messages(
     user_ids = list(set(m.user_id for m in message_list))
     users = {u.id: u for u in Users.get_users_by_user_ids(user_ids, db=db)}
 
+    # Batch fetch all reactions in a single query (fixes N+1 problem)
+    message_ids = [m.id for m in message_list]
+    all_reactions = Messages.get_reactions_by_message_ids(message_ids, db=db)
+
     messages = []
     for message in message_list:
         # Check for webhook identity in meta
@@ -927,9 +933,7 @@ async def get_pinned_channel_messages(
             MessageWithReactionsResponse(
                 **{
                     **message.model_dump(),
-                    "reactions": Messages.get_reactions_by_message_id(
-                        message.id, db=db
-                    ),
+                    "reactions": all_reactions.get(message.id, []),
                     "user": user_info,
                 }
             )
