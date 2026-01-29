@@ -16,6 +16,7 @@ from open_webui.models.chats import (
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
+    SharedChatResponse,
     ChatStatsExport,
     AggregateChatStats,
     ChatBody,
@@ -856,6 +857,48 @@ async def unarchive_all_chats(
     user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     return Chats.unarchive_all_chats_by_user_id(user.id, db=db)
+
+
+############################
+# GetSharedChats
+############################
+
+
+@router.get("/shared", response_model=list[SharedChatResponse])
+async def get_shared_session_user_chat_list(
+    page: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    if page is None:
+        page = 1
+
+    limit = 60
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    chat_list = [
+        SharedChatResponse(**chat.model_dump())
+        for chat in Chats.get_shared_chat_list_by_user_id(
+            user.id,
+            filter=filter,
+            skip=skip,
+            limit=limit,
+            db=db,
+        )
+    ]
+
+    return chat_list
 
 
 ############################
