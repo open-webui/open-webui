@@ -25,6 +25,7 @@
 	import { toast } from 'svelte-sonner';
 	import ArchivedChatsModal from '$lib/components/layout/ArchivedChatsModal.svelte';
 	import SharedChatsModal from '$lib/components/layout/SharedChatsModal.svelte';
+	import FilesModal from '$lib/components/layout/FilesModal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
@@ -38,6 +39,7 @@
 	let showDeleteConfirmDialog = false;
 	let showArchivedChatsModal = false;
 	let showSharedChatsModal = false;
+	let showFilesModal = false;
 
 	let chatImportInputElement: HTMLInputElement;
 
@@ -139,6 +141,7 @@
 
 <ArchivedChatsModal bind:show={showArchivedChatsModal} onUpdate={handleArchivedChatsChange} />
 <SharedChatsModal bind:show={showSharedChatsModal} />
+<FilesModal bind:show={showFilesModal} />
 
 <ConfirmDialog
 	title={$i18n.t('Archive All Chats')}
@@ -171,7 +174,7 @@
 			hidden
 		/>
 
-			<div>
+		<div>
 			<div class="mb-1 text-sm font-medium">{$i18n.t('Chats')}</div>
 
 			<div>
@@ -262,6 +265,25 @@
 						type="button"
 					>
 						<span class="self-center">{$i18n.t('Delete All')}</span>
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<div>
+			<div class="mb-1 text-sm font-medium">{$i18n.t('Files')}</div>
+
+			<div>
+				<div class="py-0.5 flex w-full justify-between">
+					<div class="self-center text-xs">{$i18n.t('Manage Files')}</div>
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							showFilesModal = true;
+						}}
+						type="button"
+					>
+						<span class="self-center">{$i18n.t('Manage')}</span>
 					</button>
 				</div>
 			</div>
