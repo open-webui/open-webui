@@ -263,6 +263,7 @@
 								{:else}
 									<FileItem
 										item={file}
+										modal={['file', 'collection'].includes(file?.type)}
 										name={file.name}
 										type={file.type}
 										size={file?.size}

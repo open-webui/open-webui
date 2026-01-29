@@ -40,6 +40,7 @@
 								className="w-full"
 								item={file}
 								edit={true}
+								modal={['file', 'collection'].includes(file?.type)}
 								url={file?.url ? file.url : null}
 								name={file.name}
 								type={file.type}
