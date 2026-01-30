@@ -71,6 +71,55 @@ log = logging.getLogger(__name__)
 SPEECH_CACHE_DIR = CACHE_DIR / "audio" / "speech"
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+# Qwen-TTS Model (lazy loading)
+_qwen_tts_model = None
+
+def get_qwen_tts_model():
+    """Lazy load Qwen-TTS model"""
+    global _qwen_tts_model
+    if _qwen_tts_model is None:
+        try:
+            import os
+            os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'  # HuggingFace镜像
+            
+            import torch
+            from qwen_tts import Qwen3TTSModel
+            
+            log.info("Loading Qwen-TTS CustomVoice model from ModelScope...")
+            _qwen_tts_model = Qwen3TTSModel.from_pretrained(
+                "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+                device_map="auto",  # 自动选择GPU/CPU
+                dtype=torch.bfloat16,  # 使用bfloat16(GPU最优)
+                mirror="modelscope",  # 使用ModelScope镜像(国内)
+            )
+            log.info("Qwen-TTS model loaded successfully")
+        except Exception as e:
+            log.error(f"Failed to load Qwen-TTS model: {e}")
+            raise RuntimeError(f"Qwen-TTS initialization failed: {e}")
+    return _qwen_tts_model
+
+# CosyVoice TTS Model (lazy loading)
+_cosyvoice_model = None
+
+def get_cosyvoice_model():
+    """Lazy load CosyVoice model"""
+    global _cosyvoice_model
+    if _cosyvoice_model is None:
+        try:
+            import sys
+            sys.path.insert(0, '/tmp/CosyVoice')
+            
+            from cosyvoice.cli.cosyvoice import CosyVoice
+            
+            log.info("Loading CosyVoice model...")
+            # 使用iic/CosyVoice-300M模型 (约300MB)
+            _cosyvoice_model = CosyVoice('iic/CosyVoice-300M')
+            log.info("CosyVoice model loaded successfully")
+        except Exception as e:
+            log.error(f"Failed to load CosyVoice model: {e}")
+            raise RuntimeError(f"CosyVoice initialization failed: {e}")
+    return _cosyvoice_model
+
 
 ##########################################
 #
@@ -437,10 +486,23 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             )
 
         try:
+            api_key = request.app.state.config.TTS_API_KEY
+            log.info(f"DEBUG TTS: voice_id = {voice_id}")
+            log.info(f"DEBUG TTS: api_key = '{api_key}'")
+            log.info(f"DEBUG TTS: api_key repr = {repr(api_key)}")
+            log.info(f"DEBUG TTS: URL = {ELEVENLABS_API_BASE_URL}/v1/text-to-speech/{voice_id}")
+            
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
             async with aiohttp.ClientSession(
-                timeout=timeout, trust_env=True
+                timeout=timeout, trust_env=False
             ) as session:
+                headers = {
+                    "Accept": "audio/mpeg",
+                    "Content-Type": "application/json",
+                    "xi-api-key": api_key,
+                }
+                log.info(f"DEBUG TTS: headers = {headers}")
+                
                 async with session.post(
                     f"{ELEVENLABS_API_BASE_URL}/v1/text-to-speech/{voice_id}",
                     json={
@@ -448,13 +510,11 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "model_id": request.app.state.config.TTS_MODEL,
                         "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
                     },
-                    headers={
-                        "Accept": "audio/mpeg",
-                        "Content-Type": "application/json",
-                        "xi-api-key": request.app.state.config.TTS_API_KEY,
-                    },
+                    headers=headers,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
+                    log.info(f"DEBUG TTS: response status = {r.status}")
+                    log.info(f"DEBUG TTS: response headers = {dict(r.headers)}")
                     r.raise_for_status()
 
                     async with aiofiles.open(file_path, "wb") as f:
@@ -579,6 +639,123 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             await f.write(json.dumps(payload))
 
         return FileResponse(file_path)
+
+    elif request.app.state.config.TTS_ENGINE == "qwen3-tts":
+        payload = None
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+        try:
+            import soundfile as sf
+            import numpy as np
+            
+            log.info(f"Qwen-TTS (Local): Generating speech for text: {payload['input'][:50]}...")
+            
+            # 获取Qwen-TTS本地模型
+            model = get_qwen_tts_model()
+            
+            # 获取speaker配置
+            speaker = request.app.state.config.TTS_VOICE or "Vivian"
+            
+            # CustomVoice模型支持的speaker列表
+            valid_speakers = [
+                "Vivian",      # 中文女声,明亮
+                "Serena",      # 中文女声,温暖
+                "Uncle_Fu",    # 中文男声,沧桑
+                "Dylan",       # 北京话男声
+                "Eric",        # 四川话男声
+                "Ryan",        # 英文男声,活力
+                "Aiden",       # 英文男声,阳光
+                "Ono_Anna",    # 日语女声
+                "Sohee"        # 韩语女声
+            ]
+            
+            if speaker not in valid_speakers:
+                log.warning(f"Invalid speaker '{speaker}', using 'Vivian'")
+                speaker = "Vivian"
+            
+            log.info(f"Using speaker: {speaker}")
+            
+            # 生成语音 (CustomVoice模式)
+            wavs, sr = model.generate_custom_voice(
+                text=payload["input"],
+                language="Auto",  # 自动检测语言: Chinese, English, Japanese, Korean
+                speaker=speaker,
+                instruct=None,    # 可选: 情感控制,如"用特别愤怒的语气说"
+            )
+            
+            # wavs是列表,取第一个音频
+            audio_data = wavs[0] if isinstance(wavs, list) else wavs
+            
+            # 如果是Tensor,转换为numpy数组
+            if hasattr(audio_data, 'cpu'):
+                audio_data = audio_data.cpu().numpy()
+            
+            # 保存为WAV文件
+            sf.write(file_path, audio_data, sr)
+            
+            log.info(f"Qwen-TTS: Speech generated successfully, saved to {file_path}")
+            
+            async with aiofiles.open(file_body_path, "w") as f:
+                await f.write(json.dumps(payload))
+            
+            return FileResponse(file_path)
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.error(f"Qwen-TTS error: {str(e)}")
+            import traceback
+            log.error(traceback.format_exc())
+            raise HTTPException(
+                status_code=500,
+                detail=f"Qwen-TTS failed: {str(e)}"
+            )
+
+    elif request.app.state.config.TTS_ENGINE == "cosyvoice":
+        payload = None
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+        try:
+            import torch
+            import torchaudio
+            
+            log.info(f"CosyVoice TTS: Generating speech for text: {payload['input'][:50]}...")
+            
+            # 获取CosyVoice模型
+            cosyvoice = get_cosyvoice_model()
+            
+            # 使用预设音色,voice可以是: 中文女, 中文男, 英文女, 英文男, 日语男, 粤语女, 韩语女
+            voice = request.app.state.config.TTS_VOICE or "中文女"
+            
+            # 生成音频
+            output = cosyvoice.inference_sft(payload["input"], voice)
+            
+            # 保存为wav文件
+            torchaudio.save(file_path, output['tts_speech'], 22050)
+            
+            log.info(f"CosyVoice TTS: Speech generated successfully, saved to {file_path}")
+            
+            async with aiofiles.open(file_body_path, "w") as f:
+                await f.write(json.dumps(payload))
+            
+            return FileResponse(file_path)
+            
+        except Exception as e:
+            log.error(f"CosyVoice TTS error: {str(e)}")
+            import traceback
+            log.error(traceback.format_exc())
+            raise HTTPException(
+                status_code=500,
+                detail=f"CosyVoice TTS failed: {str(e)}"
+            )
 
 
 def transcription_handler(request, file_path, metadata, user=None):
@@ -1313,12 +1490,22 @@ def get_available_voices(request) -> dict:
             }
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
+            api_key = request.app.state.config.TTS_API_KEY
+            log.info(f"ElevenLabs API Key: {api_key[:10]}...{api_key[-4:] if api_key else 'EMPTY'} (length: {len(api_key) if api_key else 0})")
             available_voices = get_elevenlabs_voices(
-                api_key=request.app.state.config.TTS_API_KEY
+                api_key=api_key
             )
-        except Exception:
-            # Avoided @lru_cache with exception
-            pass
+        except Exception as e:
+            # If API key doesn't have voices_read permission, use default voice IDs
+            log.warning(f"Could not fetch ElevenLabs voices: {str(e)}. Using default voice IDs.")
+            available_voices = {
+                "21m00Tcm4TlvDq8ikWAM": "Rachel",
+                "EXAVITQu4vr4xnSDxMaL": "Sarah",
+                "cgSgspJ2msm6clMCkdW9": "Jessica",
+                "cjVigY5qzO86Huf0OWal": "Eric",
+                "iP95p4xoKVk53GoZ742B": "Chris",
+                "onwK4e9ZLuTAKqWW03F9": "Daniel",
+            }
     elif request.app.state.config.TTS_ENGINE == "azure":
         try:
             region = request.app.state.config.TTS_AZURE_SPEECH_REGION
@@ -1340,6 +1527,30 @@ def get_available_voices(request) -> dict:
                 )
         except requests.RequestException as e:
             log.error(f"Error fetching voices: {str(e)}")
+    elif request.app.state.config.TTS_ENGINE == "qwen3-tts":
+        # Qwen-TTS本地模型 - CustomVoice音色列表
+        available_voices = {
+            "Vivian": "Vivian (中文女声,明亮)",
+            "Serena": "Serena (中文女声,温暖)",
+            "Uncle_Fu": "Uncle Fu (中文男声,沧桑)",
+            "Dylan": "Dylan (北京话男声)",
+            "Eric": "Eric (四川话男声)",
+            "Ryan": "Ryan (英文男声,活力)",
+            "Aiden": "Aiden (英文男声,阳光)",
+            "Ono_Anna": "Ono Anna (日语女声)",
+            "Sohee": "Sohee (韩语女声)",
+        }
+    elif request.app.state.config.TTS_ENGINE == "cosyvoice":
+        # CosyVoice预设音色
+        available_voices = {
+            "中文女": "中文女声 (温柔)",
+            "中文男": "中文男声 (沉稳)",
+            "英文女": "English Female",
+            "英文男": "English Male",
+            "日语男": "日本語男性",
+            "粤语女": "粤语女声",
+            "韩语女": "한국어 여성",
+        }
 
     return available_voices
 
@@ -1356,6 +1567,10 @@ def get_elevenlabs_voices(api_key: str) -> dict:
 
     try:
         # TODO: Add retries
+        log.info(f"DEBUG: api_key value = '{api_key}'")
+        log.info(f"DEBUG: api_key repr = {repr(api_key)}")
+        log.info(f"DEBUG: ELEVENLABS_API_BASE_URL = {ELEVENLABS_API_BASE_URL}")
+        
         response = requests.get(
             f"{ELEVENLABS_API_BASE_URL}/v1/voices",
             headers={
@@ -1363,6 +1578,8 @@ def get_elevenlabs_voices(api_key: str) -> dict:
                 "Content-Type": "application/json",
             },
         )
+        log.info(f"DEBUG: Response status = {response.status_code}")
+        log.info(f"DEBUG: Response headers = {dict(response.headers)}")
         response.raise_for_status()
         voices_data = response.json()
 

@@ -1174,31 +1174,31 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            "title": ["帮我学习", "大学入学考试的词汇"],
+            "content": "帮我学习词汇：写一个句子让我填空，我会尝试选择正确的选项。",
         },
         {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            "title": ["给我一些想法", "如何处理孩子的艺术作品"],
+            "content": "我可以用孩子的艺术作品做哪5件有创意的事？我不想扔掉它们，但它们也太占地方了。",
         },
         {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
+            "title": ["告诉我一个有趣的事实", "关于罗马帝国"],
+            "content": "告诉我一个关于罗马帝国的随机趣事",
         },
         {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            "title": ["展示一段代码", "网站粘性头部的实现"],
+            "content": "向我展示一个使用CSS和JavaScript实现网站粘性头部的代码片段。",
         },
         {
             "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
+                "解释期权交易",
+                "假设我熟悉股票买卖",
             ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            "content": "如果我熟悉股票买卖，请用简单的术语解释期权交易。",
         },
         {
-            "title": ["Overcome procrastination", "give me tips"],
-            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
+            "title": ["克服拖延症", "给我一些建议"],
+            "content": "你能先问问我什么时候最容易拖延，然后给我一些克服拖延的建议吗？",
         },
     ]
 

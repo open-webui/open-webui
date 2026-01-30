@@ -3,6 +3,19 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
 
+# Load .env file from parent directory if it exists
+if [ -f "../.env" ]; then
+    echo "Loading environment variables from ../.env"
+    # Remove Windows line endings and load
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Remove carriage return and skip comments/empty lines
+        line=$(echo "$line" | tr -d '\r')
+        if [[ ! "$line" =~ ^# && -n "$line" ]]; then
+            export "$line"
+        fi
+    done < ../.env
+fi
+
 # Add conditional Playwright browser installation
 if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
     if [[ -z "${PLAYWRIGHT_WS_URL}" ]]; then
