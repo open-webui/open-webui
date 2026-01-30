@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
+	import { PaneGroup, Pane } from 'paneforge';
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
@@ -10,7 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import { get, type Unsubscriber, type Writable } from 'svelte/store';
+	import { type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -23,9 +23,7 @@
 		tags as allTags,
 		settings,
 		showSidebar,
-		WEBUI_NAME,
-		banners,
-		user,
+		WEBUI_NAME, user,
 		socket,
 		audioQueue,
 		showControls,
@@ -69,12 +67,10 @@
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
-	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
+	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
+	import { getAndUpdateUserLocation } from '$lib/apis/users';
 	import {
-		chatCompleted,
-		generateQueries,
-		chatAction,
+		chatCompleted, chatAction,
 		generateMoACompletion,
 		stopTask,
 		getTaskIdsByChatId
@@ -85,18 +81,13 @@
 	import { getFunctions } from '$lib/apis/functions';
 	import { updateFolderById } from '$lib/apis/folders';
 
-	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
-	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
-	import Sidebar from '../icons/Sidebar.svelte';
-	import Image from '../common/Image.svelte';
 
 	export let chatIdProp = '';
 
@@ -2093,6 +2084,19 @@
 
 	const stopResponse = async () => {
 		if (taskIds) {
+			const responseMessage = history.messages[history.currentId];
+			const messageIdsStillGenerating = new Set();
+			
+			if (responseMessage?.parentId && history.messages[responseMessage.parentId]) {
+				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+					if (history.messages[messageId]?.done !== true) {
+						messageIdsStillGenerating.add(messageId);
+					}
+				}
+			} else if (responseMessage && responseMessage.done !== true) {
+				messageIdsStillGenerating.add(history.currentId);
+			}
+
 			for (const taskId of taskIds) {
 				const res = await stopTask(localStorage.token, taskId).catch((error) => {
 					toast.error(`${error}`);
@@ -2102,16 +2106,21 @@
 
 			taskIds = null;
 
-			const responseMessage = history.messages[history.currentId];
-			// Set all response messages to done
-			if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
+			// Set all response messages to done; set stoppedByUser only for messages that were still generating at click time
+			if (responseMessage?.parentId && history.messages[responseMessage.parentId]) {
 				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
 					history.messages[messageId].done = true;
+					if (messageIdsStillGenerating.has(messageId)) {
+						history.messages[messageId].stoppedByUser = true;
+					}
+				}
+			} else {
+				history.messages[history.currentId].done = true;
+				if (messageIdsStillGenerating.has(history.currentId)) {
+					responseMessage.stoppedByUser = true;
+					history.messages[history.currentId] = responseMessage;
 				}
 			}
-
-			responseMessage.stoppedByUser = true;
-			history.messages[history.currentId] = responseMessage;
 
 			if (autoScroll) {
 				scrollToBottom();
