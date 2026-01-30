@@ -4,7 +4,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
-from open_webui.models.users import UserModel, UserProfileImageResponse, Users
+from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
 
@@ -155,10 +155,17 @@ class AuthsTable:
         log.info(f"authenticate_user_by_email: {email}")
         try:
             with get_db_context(db) as db:
-                auth = db.query(Auth).filter_by(email=email, active=True).first()
-                if auth:
-                    user = Users.get_user_by_id(auth.id, db=db)
-                    return user
+                # Single JOIN query instead of two separate queries
+                result = (
+                    db.query(Auth, User)
+                    .join(User, Auth.id == User.id)
+                    .filter(Auth.email == email, Auth.active == True)
+                    .first()
+                )
+                if result:
+                    _, user = result
+                    return UserModel.model_validate(user)
+                return None
         except Exception:
             return None
 
