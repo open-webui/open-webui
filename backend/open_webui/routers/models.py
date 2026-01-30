@@ -376,9 +376,7 @@ def get_model_profile_image(
                 except Exception as e:
                     pass
 
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
-    else:
-        return FileResponse(f"{STATIC_DIR}/favicon.png")
+    return FileResponse(f"{STATIC_DIR}/swagger-ui/favicon.png")
 
 
 ############################

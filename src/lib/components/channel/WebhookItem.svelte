@@ -90,7 +90,7 @@
 		on:click={onClick}
 	>
 		<img
-			src={image || `${WEBUI_BASE_URL}/static/favicon.png`}
+			src={image || `${WEBUI_BASE_URL}/static/swagger-ui/favicon.png`}
 			class="rounded-full size-8 object-cover flex-shrink-0"
 			alt=""
 		/>
@@ -124,7 +124,7 @@
 					on:click={() => filesInputElement.click()}
 				>
 					<img
-						src={image || `${WEBUI_BASE_URL}/static/favicon.png`}
+						src={image || `${WEBUI_BASE_URL}/static/swagger-ui/favicon.png`}
 						class="size-8 object-cover"
 						alt=""
 					/>

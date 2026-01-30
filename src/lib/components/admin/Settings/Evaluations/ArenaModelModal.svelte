@@ -37,11 +37,7 @@
 		}
 	};
 
-	let profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
-	let description = '';
-
-	let selectedModelId = '';
-	let modelIds = [];
+let profileImageUrl = `${WEBUI_BASE_URL}/static/swagger-ui/favicon.png`;
 	let filterMode = 'include';
 
 	let accessControl = {};
@@ -93,13 +89,7 @@
 
 		name = '';
 		id = '';
-		profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
-		description = '';
-		modelIds = [];
-		selectedModelId = '';
-	};
-
-	const initModel = () => {
+	profileImageUrl = `${WEBUI_BASE_URL}/static/swagger-ui/favicon.png`;
 		if (model) {
 			name = model.name;
 			id = model.id;
