@@ -53,6 +53,7 @@
 	import { fade } from 'svelte/transition';
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
+	import StoppedMessage from './ResponseMessage/StoppedMessage.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 
 	interface MessageType {
@@ -751,9 +752,7 @@
 							id="response-content-container"
 						>
 							{#if message.stoppedByUser && message.content === '' && !message.error}
-								<p class="text-md text-gray-500 dark:text-gray-400 mt-2">
-									{$i18n.t('Response generation stopped')}
-								</p>
+								<StoppedMessage />
 							{:else if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
 								<Skeleton />
 							{:else if message.content && message.error !== true}
@@ -799,9 +798,7 @@
 									}}
 								/>
 								{#if message.stoppedByUser}
-									<p class="text-md text-gray-500 dark:text-gray-400 mt-2">
-										{$i18n.t('Response generation stopped')}
-									</p>
+									<StoppedMessage />
 								{/if}
 							{/if}
 
