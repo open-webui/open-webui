@@ -2110,6 +2110,7 @@
 				}
 			}
 
+			responseMessage.stoppedByUser = true;
 			history.messages[history.currentId] = responseMessage;
 
 			if (autoScroll) {
