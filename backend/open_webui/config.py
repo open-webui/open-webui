@@ -87,7 +87,17 @@ def load_json_config():
         return json.load(file)
 
 
+# Global config row identifier. Only this row is updated by save_to_db(CONFIG_DATA).
+# User-scoped config is stored in rows with email=user@example.com and must never be overwritten.
+GLOBAL_CONFIG_EMAIL = "system@default"
+
+
 def save_to_db(data):
+    """
+    Persist global config (CONFIG_DATA) to the database.
+    Only updates the global config row (email=GLOBAL_CONFIG_EMAIL). Never overwrites
+    user-scoped config rows (per-email), which are updated via UserScopedConfig.set().
+    """
     with get_db() as db:
         # Get full call stack for debugging
         call_stack = []
@@ -100,9 +110,16 @@ def save_to_db(data):
             call_stack = ["unknown"]
         caller = " <- ".join(call_stack)
 
-        existing_config = db.query(Config).first()
+        existing_config = db.query(Config).filter(
+            Config.email == GLOBAL_CONFIG_EMAIL
+        ).first()
         if not existing_config:
-            new_config = Config(data=data, version=0)
+            # Legacy DB may have global config in a row with NULL email
+            existing_config = (
+                db.query(Config).filter(Config.email.is_(None)).order_by(Config.id.asc()).first()
+            )
+        if not existing_config:
+            new_config = Config(email=GLOBAL_CONFIG_EMAIL, data=data, version=0)
             db.add(new_config)
             logger.info(
                 "===== GLOBAL CONFIG: Creating NEW config in database ===== "
@@ -123,6 +140,8 @@ def save_to_db(data):
             )
             existing_config.data = data
             existing_config.updated_at = datetime.now()
+            if existing_config.email is None:
+                existing_config.email = GLOBAL_CONFIG_EMAIL
             db.add(existing_config)
         db.commit()
         logger.info("===== GLOBAL CONFIG: Database commit complete ===== Called from: %s", caller)
@@ -194,8 +213,16 @@ DEFAULT_CONFIG = {
 
 
 def get_config():
+    """Load global config for CONFIG_DATA. Prefers the global row (system@default)."""
     with get_db() as db:
-        config_entry = db.query(Config).order_by(Config.id.desc()).first()
+        config_entry = db.query(Config).filter(
+            Config.email == GLOBAL_CONFIG_EMAIL
+        ).first()
+        if not config_entry:
+            config_entry = (
+                db.query(Config).filter(Config.email.is_(None)).order_by(Config.id.asc()).first()
+                or db.query(Config).order_by(Config.id.desc()).first()
+            )
         return config_entry.data if config_entry else DEFAULT_CONFIG
 
 from sqlalchemy import create_engine, inspect, text
