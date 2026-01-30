@@ -1424,6 +1424,7 @@
 	"Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.": "웹사이트 권한이 거부되어 응답 알림을 활성화할 수 없습니다. 필요한 접근 권한을 부여하려면 브라우저 설정을 확인해 주세요.",
 	"Response splitting": "응답 나누기",
 	"Response Watermark": "응답 워터마크",
+	"Response generation stopped": "대답이 중지되었습니다",
 	"Result": "결과",
 	"RESULT": "결과",
 	"Retrieval": "검색",
