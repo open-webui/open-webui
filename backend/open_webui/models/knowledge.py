@@ -229,6 +229,9 @@ class KnowledgeTable:
                             or_(
                                 Knowledge.name.ilike(f"%{query_key}%"),
                                 Knowledge.description.ilike(f"%{query_key}%"),
+                                User.name.ilike(f"%{query_key}%"),
+                                User.email.ilike(f"%{query_key}%"),
+                                User.username.ilike(f"%{query_key}%"),
                             )
                         )
 
@@ -240,7 +243,7 @@ class KnowledgeTable:
 
                     query = has_permission(db, Knowledge, query, filter)
 
-                query = query.order_by(Knowledge.updated_at.desc())
+                query = query.order_by(Knowledge.updated_at.desc(), Knowledge.id.asc())
 
                 total = query.count()
                 if skip:
@@ -300,7 +303,7 @@ class KnowledgeTable:
                         query = query.filter(File.filename.ilike(f"%{q}%"))
 
                 # Order by file changes
-                query = query.order_by(File.updated_at.desc())
+                query = query.order_by(File.updated_at.desc(), File.id.asc())
 
                 # Count before pagination
                 total = query.count()
@@ -427,6 +430,9 @@ class KnowledgeTable:
                     .filter(KnowledgeFile.knowledge_id == knowledge_id)
                 )
 
+                # Default sort: updated_at descending
+                primary_sort = File.updated_at.desc()
+
                 if filter:
                     query_key = filter.get("query")
                     if query_key:
@@ -440,27 +446,17 @@ class KnowledgeTable:
 
                     order_by = filter.get("order_by")
                     direction = filter.get("direction")
+                    is_asc = direction == "asc"
 
                     if order_by == "name":
-                        if direction == "asc":
-                            query = query.order_by(File.filename.asc())
-                        else:
-                            query = query.order_by(File.filename.desc())
+                        primary_sort = File.filename.asc() if is_asc else File.filename.desc()
                     elif order_by == "created_at":
-                        if direction == "asc":
-                            query = query.order_by(File.created_at.asc())
-                        else:
-                            query = query.order_by(File.created_at.desc())
+                        primary_sort = File.created_at.asc() if is_asc else File.created_at.desc()
                     elif order_by == "updated_at":
-                        if direction == "asc":
-                            query = query.order_by(File.updated_at.asc())
-                        else:
-                            query = query.order_by(File.updated_at.desc())
-                    else:
-                        query = query.order_by(File.updated_at.desc())
+                        primary_sort = File.updated_at.asc() if is_asc else File.updated_at.desc()
 
-                else:
-                    query = query.order_by(File.updated_at.desc())
+                # Apply sort with secondary key for deterministic pagination
+                query = query.order_by(primary_sort, File.id.asc())
 
                 # Count BEFORE pagination
                 total = query.count()

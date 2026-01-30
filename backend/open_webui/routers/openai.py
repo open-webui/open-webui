@@ -801,8 +801,11 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
     bypass_system_prompt: bool = False,
-    db: Session = Depends(get_session),
 ):
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations (get_model_by_id, has_access) manage their own short-lived sessions.
+    # This prevents holding a connection during the entire LLM call (30-60+ seconds),
+    # which would exhaust the connection pool under concurrent load.
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -812,7 +815,7 @@ async def generate_chat_completion(
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id, db=db)
+    model_info = Models.get_model_by_id(model_id)
 
     # Check model info and override the payload
     if model_info:
@@ -842,7 +845,6 @@ async def generate_chat_completion(
                     user.id,
                     type="read",
                     access_control=model_info.access_control,
-                    db=db,
                 )
             ):
                 raise HTTPException(

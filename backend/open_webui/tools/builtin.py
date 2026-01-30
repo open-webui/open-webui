@@ -36,6 +36,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.channels import Channels, ChannelMember, Channel
 from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
+from open_webui.utils.sanitize import strip_markdown_code_fences
 
 log = logging.getLogger(__name__)
 
@@ -166,7 +167,7 @@ async def search_web(
         engine = __request__.app.state.config.WEB_SEARCH_ENGINE
         user = UserModel(**__user__) if __user__ else None
 
-        results = _search_web(__request__, engine, query, user)
+        results = await asyncio.to_thread(_search_web, __request__, engine, query, user)
 
         # Limit results
         results = results[:count] if results else []
@@ -338,6 +339,169 @@ async def edit_image(
         return json.dumps({"status": "success", "images": images}, ensure_ascii=False)
     except Exception as e:
         log.exception(f"edit_image error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+# =============================================================================
+# CODE INTERPRETER TOOLS
+# =============================================================================
+
+
+async def execute_code(
+    code: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __event_emitter__: callable = None,
+    __event_call__: callable = None,
+    __chat_id__: str = None,
+    __message_id__: str = None,
+    __metadata__: dict = None,
+) -> str:
+    """
+    Execute Python code in a sandboxed environment and return the output.
+    Use this to perform calculations, data analysis, generate visualizations,
+    or run any Python code that would help answer the user's question.
+
+    :param code: The Python code to execute
+    :return: JSON with stdout, stderr, and result from execution
+    """
+    from uuid import uuid4
+
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    try:
+        # Strip markdown fences if model included them
+        code = strip_markdown_code_fences(code)
+
+        # Import blocked modules from config (same as middleware)
+        from open_webui.config import CODE_INTERPRETER_BLOCKED_MODULES
+
+        # Add import blocking code if there are blocked modules
+        if CODE_INTERPRETER_BLOCKED_MODULES:
+            import textwrap
+            blocking_code = textwrap.dedent(
+                f"""
+                import builtins
+
+                BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
+
+                _real_import = builtins.__import__
+                def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
+                    if name.split('.')[0] in BLOCKED_MODULES:
+                        importer_name = globals.get('__name__') if globals else None
+                        if importer_name == '__main__':
+                            raise ImportError(
+                                f"Direct import of module {{name}} is restricted."
+                            )
+                    return _real_import(name, globals, locals, fromlist, level)
+
+                builtins.__import__ = restricted_import
+                """
+            )
+            code = blocking_code + "\n" + code
+
+        engine = getattr(__request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
+        if engine == "pyodide":
+            # Execute via frontend pyodide using bidirectional event call
+            if __event_call__ is None:
+                return json.dumps({"error": "Event call not available. WebSocket connection required for pyodide execution."})
+
+            output = await __event_call__(
+                {
+                    "type": "execute:python",
+                    "data": {
+                        "id": str(uuid4()),
+                        "code": code,
+                        "session_id": __metadata__.get("session_id") if __metadata__ else None,
+                    },
+                }
+            )
+
+            # Parse the output - pyodide returns dict with stdout, stderr, result
+            if isinstance(output, dict):
+                stdout = output.get("stdout", "")
+                stderr = output.get("stderr", "")
+                result = output.get("result", "")
+            else:
+                stdout = ""
+                stderr = ""
+                result = str(output) if output else ""
+
+        elif engine == "jupyter":
+            from open_webui.utils.code_interpreter import execute_code_jupyter
+
+            output = await execute_code_jupyter(
+                __request__.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
+                code,
+                (
+                    __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == "token"
+                    else None
+                ),
+                (
+                    __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == "password"
+                    else None
+                ),
+                __request__.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
+            )
+
+            stdout = output.get("stdout", "")
+            stderr = output.get("stderr", "")
+            result = output.get("result", "")
+
+        else:
+            return json.dumps({"error": f"Unknown code interpreter engine: {engine}"})
+
+        # Handle image outputs (base64 encoded) - replace with uploaded URLs
+        # Get actual user object for image upload (upload_image requires user.id attribute)
+        if __user__ and __user__.get("id"):
+            from open_webui.models.users import Users
+            from open_webui.utils.files import get_image_url_from_base64
+
+            user = Users.get_user_by_id(__user__["id"])
+
+            # Extract and upload images from stdout
+            if stdout and isinstance(stdout, str):
+                stdout_lines = stdout.split("\n")
+                for idx, line in enumerate(stdout_lines):
+                    if "data:image/png;base64" in line:
+                        image_url = get_image_url_from_base64(
+                            __request__,
+                            line,
+                            __metadata__ or {},
+                            user,
+                        )
+                        if image_url:
+                            stdout_lines[idx] = f"![Output Image]({image_url})"
+                stdout = "\n".join(stdout_lines)
+
+            # Extract and upload images from result
+            if result and isinstance(result, str):
+                result_lines = result.split("\n")
+                for idx, line in enumerate(result_lines):
+                    if "data:image/png;base64" in line:
+                        image_url = get_image_url_from_base64(
+                            __request__,
+                            line,
+                            __metadata__ or {},
+                            user,
+                        )
+                        if image_url:
+                            result_lines[idx] = f"![Output Image]({image_url})"
+                result = "\n".join(result_lines)
+
+        response = {
+            "status": "success",
+            "stdout": stdout,
+            "stderr": stderr,
+            "result": result,
+        }
+
+        return json.dumps(response, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f"execute_code error: {e}")
         return json.dumps({"error": str(e)})
 
 
@@ -732,6 +896,7 @@ async def search_chats(
     end_timestamp: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
+    __chat_id__: str = None,
 ) -> str:
     """
     Search the user's previous chat conversations by title and message content.
@@ -761,6 +926,10 @@ async def search_chats(
 
         results = []
         for chat in chats:
+            # Skip the current chat to avoid showing it in search results
+            if __chat_id__ and chat.id == __chat_id__:
+                continue
+
             # Apply date filters (updated_at is in seconds)
             if start_timestamp and chat.updated_at < start_timestamp:
                 continue
@@ -1438,6 +1607,25 @@ async def query_knowledge_files(
 
     if not __user__:
         return json.dumps({"error": "User context not available"})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5  # Default fallback
+
+    # Handle knowledge_ids being string "None", "null", or empty
+    if isinstance(knowledge_ids, str):
+        if knowledge_ids.lower() in ("none", "null", ""):
+            knowledge_ids = None
+        else:
+            # Try to parse as JSON array if it looks like one
+            try:
+                knowledge_ids = json.loads(knowledge_ids)
+            except json.JSONDecodeError:
+                # Treat as single ID
+                knowledge_ids = [knowledge_ids]
 
     try:
         from open_webui.models.knowledge import Knowledges

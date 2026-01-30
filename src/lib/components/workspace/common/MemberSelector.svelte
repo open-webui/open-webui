@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,6 +39,7 @@
 	let total = null;
 
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let orderBy = 'name'; // default sort key
 	let direction = 'asc'; // default sort order
 
@@ -60,12 +61,27 @@
 		}
 	};
 
-	$: if (page !== null && query !== null && orderBy !== null && direction !== null) {
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			getUserList();
+		}, 300);
+	}
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+	});
+
+	$: if (page !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
 
 	onMount(async () => {
-		groups = await getGroups(localStorage.token, true);
+		groups = await getGroups(localStorage.token, true).catch((error) => {
+			console.error(error);
+			return [];
+		});
+
 		if (userIds.length > 0) {
 			userIds.forEach(async (id) => {
 				const res = await getUserById(localStorage.token, id).catch((error) => {
