@@ -70,10 +70,16 @@
 		allFilesLoaded = false;
 
 		const doSearch = async () => {
-			const pattern = query ? `*${query}*` : '*';
-			const newFiles = await searchFiles(localStorage.token, pattern, 0, PAGE_SIZE);
-			files = sortFiles(newFiles);
-			allFilesLoaded = newFiles.length < PAGE_SIZE;
+			try {
+				const pattern = query ? `*${query}*` : '*';
+				const newFiles = await searchFiles(localStorage.token, pattern, 0, PAGE_SIZE);
+				files = sortFiles(newFiles);
+				allFilesLoaded = newFiles.length < PAGE_SIZE;
+			} catch (error) {
+				// Handle 404 or other errors - show empty state instead of spinner
+				files = [];
+				allFilesLoaded = true;
+			}
 		};
 
 		if (query === '') {
@@ -89,13 +95,18 @@
 		filesLoading = true;
 		page += 1;
 
-		const pattern = query ? `*${query}*` : '*';
-		const newFiles = await searchFiles(localStorage.token, pattern, page * PAGE_SIZE, PAGE_SIZE);
+		try {
+			const pattern = query ? `*${query}*` : '*';
+			const newFiles = await searchFiles(localStorage.token, pattern, page * PAGE_SIZE, PAGE_SIZE);
 
-		allFilesLoaded = newFiles.length < PAGE_SIZE;
+			allFilesLoaded = newFiles.length < PAGE_SIZE;
 
-		if (newFiles.length > 0) {
-			files = sortFiles([...(files || []), ...newFiles]);
+			if (newFiles.length > 0) {
+				files = sortFiles([...(files || []), ...newFiles]);
+			}
+		} catch (error) {
+			// Handle errors silently for load more
+			allFilesLoaded = true;
 		}
 
 		filesLoading = false;
