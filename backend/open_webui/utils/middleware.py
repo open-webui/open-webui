@@ -556,6 +556,23 @@ async def chat_completion_files_handler(
     sources = []
 
     if files := body.get("metadata", {}).get("files", None):
+        # RAG debug: which files/kbs are attached to this chat
+        file_ids = [str(f.get("id", "")) for f in files]
+        def _rag_file_name(f):
+            n = f.get("name") or f.get("filename")
+            if n:
+                return str(n)
+            _file = f.get("file")
+            if isinstance(_file, dict):
+                _data = _file.get("data") or {}
+                n = _data.get("name") if isinstance(_data, dict) else None
+                if n:
+                    return str(n)
+            return str(f.get("id") or "")
+        file_names = [_rag_file_name(f) for f in files]
+        log.info(
+            f"[RAG Chat] files_attached={len(files)} | file_ids={file_ids} | file_names={file_names} | user={user.email if user else None}"
+        )
         queries = []
         try:
             queries_response = await generate_queries(
@@ -582,6 +599,7 @@ async def chat_completion_files_handler(
                 queries_response = {"queries": [queries_response]}
 
             queries = queries_response.get("queries", [])
+            log.info(f"[RAG Chat] query_expansion | queries_count={len(queries)} | queries={queries[:5]}{'...' if len(queries) > 5 else ''}")
             log.debug(f"RAG query expansion generated {len(queries)} queries: {queries}")
         except Exception as e:
             # Query expansion failed - this is OK, we'll use the user's message as fallback
@@ -590,6 +608,7 @@ async def chat_completion_files_handler(
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
+            log.info(f"[RAG Chat] using user message as query (expansion failed or empty) | queries_count=1")
             log.debug(f"Using user message as RAG query fallback: {queries}")
 
         try:
@@ -660,6 +679,20 @@ async def chat_completion_files_handler(
                             full_context=request.app.state.config.RAG_FULL_CONTEXT.get(user.email),
                         ),
                     )
+                # RAG debug: summary of context retrieved (what the model got per file)
+                total_chunks = 0
+                summary_parts = []
+                for s in sources:
+                    doc_list = s.get("document") if isinstance(s.get("document"), list) else []
+                    chunk_count = len(doc_list)
+                    total_chunks += chunk_count
+                    src = s.get("source") or {}
+                    sid = src.get("id", "")
+                    sname = src.get("name") or src.get("filename") or sid
+                    summary_parts.append(f"file_id={sid} name={sname} chunks={chunk_count}")
+                log.info(
+                    f"[RAG Context Summary] total_chunks={total_chunks} | sources_count={len(sources)} | per_source: {' | '.join(summary_parts)}"
+                )
         except Exception as e:
             log.exception(e)
 

@@ -658,8 +658,10 @@ def process_file_job(
                                             request.app.state.config.RAG_EMBEDDING_MODEL_USER.set(owner_email, embedding_model)
                                             request.app.state.config.RAG_OPENAI_API_KEY.set(owner_email, embedding_api_key)
                                             log.info(
-                                                f"[JOB] RBAC Config Set: owner_email={owner_email}, "
-                                                f"model={embedding_model}, key_length={len(embedding_api_key)}"
+                                                f"***** BACKGROUND JOB SETTING API KEY ***** "
+                                                f"The file processor background job is setting API key for owner '{owner_email}'. "
+                                                f"Model = '{embedding_model}', API Key = '{embedding_api_key}'. "
+                                                f"This happens during file embedding in the background queue."
                                             )
                                     except Exception as config_update_error:
                                         # Critical - model/key must be set for RBAC
@@ -1125,7 +1127,9 @@ def process_file_job(
                 
                 if not bypass_embedding:
                     embed_start = time.time()
-                    log.info(f"[EMBED] START | file_id={file.id} | docs={len(docs)} | timestamp={embed_start:.3f}")
+                    filename = getattr(file, "filename", "") or ""
+                    log.info(f"[RAG File] file_id={file.id} | filename={filename} | docs_pre_split={len(docs)} (chunking and embedding next)")
+                    log.info(f"[EMBED] START | file_id={file.id} | filename={filename} | docs_pre_split={len(docs)} | timestamp={embed_start:.3f}")
                     try:
                         # If knowledge_id is provided, we're adding to both collections at once
                         if knowledge_id:
@@ -1150,7 +1154,7 @@ def process_file_job(
                             if result:
                                 embed_end = time.time()
                                 embed_duration = embed_end - embed_start
-                                log.info(f"[EMBED] SUCCESS | file_id={file.id} | collections={collections} | duration={embed_duration:.2f}s | timestamp={embed_end:.3f}")
+                                log.info(f"[EMBED] SUCCESS | file_id={file.id} | filename={filename} | collections={collections} | docs_pre_split={len(docs)} | duration={embed_duration:.2f}s | timestamp={embed_end:.3f}")
                                 safe_add_span_event("job.embedding.completed", {"status": "success", "collection_name": file_collection})
                                 Files.update_file_metadata_by_id(
                                     file.id,
@@ -1161,7 +1165,7 @@ def process_file_job(
                                     },
                                 )
                             else:
-                                log.error(f"[EMBED] FAILED | file_id={file.id} | reason=SAVE_TO_VDB_FAILED")
+                                log.error(f"[EMBED] FAILED | file_id={file.id} | filename={filename} | reason=SAVE_TO_VDB_FAILED")
                                 Files.update_file_metadata_by_id(
                                     file.id,
                                     {
@@ -1171,7 +1175,7 @@ def process_file_job(
                                 )
                         else:
                             file_collection = f"file-{file.id}"
-                            log.info(f"[EMBED] SINGLE_COLLECTION | file_id={file.id} | collection={file_collection} | timestamp={time.time():.3f}")
+                            log.info(f"[EMBED] SINGLE_COLLECTION | file_id={file.id} | filename={filename} | collection={file_collection} | docs_pre_split={len(docs)} | timestamp={time.time():.3f}")
                             # RBAC: Pass owner_email so save_docs_to_vector_db uses per-admin model/key
                             result = save_docs_to_vector_db(
                                 request,
@@ -1190,7 +1194,7 @@ def process_file_job(
                             if result:
                                 embed_end = time.time()
                                 embed_duration = embed_end - embed_start
-                                log.info(f"[EMBED] SUCCESS | file_id={file.id} | collection={collection_name} | duration={embed_duration:.2f}s | timestamp={embed_end:.3f}")
+                                log.info(f"[EMBED] SUCCESS | file_id={file.id} | filename={filename} | collection={collection_name} | docs_pre_split={len(docs)} | duration={embed_duration:.2f}s | timestamp={embed_end:.3f}")
                                 Files.update_file_metadata_by_id(
                                     file.id,
                                     {
@@ -1200,7 +1204,7 @@ def process_file_job(
                                     },
                                 )
                             else:
-                                log.error(f"[EMBED] FAILED | file_id={file.id} | reason=SAVE_TO_VDB_FAILED")
+                                log.error(f"[EMBED] FAILED | file_id={file.id} | filename={filename} | reason=SAVE_TO_VDB_FAILED")
                                 Files.update_file_metadata_by_id(
                                     file.id,
                                     {
@@ -1210,7 +1214,7 @@ def process_file_job(
                                 )
                     except Exception as e:
                         error_msg = str(e)
-                        log.error(f"[EMBED] FAILED | file_id={file.id} | error={type(e).__name__}: {error_msg}", exc_info=True)
+                        log.error(f"[EMBED] FAILED | file_id={file.id} | filename={filename} | error={type(e).__name__}: {error_msg}", exc_info=True)
                         try:
                             Files.update_file_metadata_by_id(
                                 file.id,

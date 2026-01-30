@@ -78,6 +78,7 @@ class VectorSearchRetriever(BaseRetriever):
 def query_doc(
     collection_name: str, query_embedding: list[float], k: int, user: UserModel = None
 ):
+    log.info(f"[VECTOR_SEARCH] query_doc START | collection={collection_name} | k={k} | embedding_len={len(query_embedding) if query_embedding else 0}")
     try:
         result = VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
@@ -86,24 +87,31 @@ def query_doc(
         )
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            num_results = len(result.ids[0]) if result.ids and result.ids[0] else 0
+            log.info(f"[VECTOR_SEARCH] query_doc SUCCESS | collection={collection_name} | results_count={num_results} | ids={result.ids} | metadatas={result.metadatas}")
+        else:
+            log.info(f"[VECTOR_SEARCH] query_doc EMPTY | collection={collection_name} | no results")
 
         return result
     except Exception as e:
-        log.exception(f"Error querying doc {collection_name} with limit {k}: {e}")
+        log.exception(f"[VECTOR_SEARCH] query_doc ERROR | collection={collection_name} | k={k} | error={e}")
         raise e
 
 
 def get_doc(collection_name: str, user: UserModel = None):
+    log.info(f"[VECTOR_GET] get_doc START | collection={collection_name}")
     try:
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            num_docs = len(result.ids[0]) if result.ids and result.ids[0] else 0
+            log.info(f"[VECTOR_GET] get_doc SUCCESS | collection={collection_name} | docs_count={num_docs} | ids={result.ids} | metadatas={result.metadatas}")
+        else:
+            log.info(f"[VECTOR_GET] get_doc EMPTY | collection={collection_name} | no documents")
 
         return result
     except Exception as e:
-        log.exception(f"Error getting doc {collection_name}: {e}")
+        log.exception(f"[VECTOR_GET] get_doc ERROR | collection={collection_name} | error={e}")
         raise e
 
 
@@ -242,11 +250,12 @@ def query_collection(
     embedding_function,
     k: int,
 ) -> dict:
+    log.info(f"[QUERY_COLLECTION] START | collections={list(collection_names)} | queries_count={len(queries) if queries else 0} | k={k} | queries={queries[:3] if queries else []}{'...' if queries and len(queries) > 3 else ''}")
     results = []
     
     # Handle edge cases
     if not queries or len(queries) == 0:
-        log.warning("query_collection called with empty queries list")
+        log.warning("[QUERY_COLLECTION] EMPTY | called with empty queries list")
         return merge_and_sort_query_results(results, k=k, reverse=True) if VECTOR_DB != "chroma" else merge_and_sort_query_results(results, k=k, reverse=False)
     
     if not collection_names or len(collection_names) == 0:
@@ -403,9 +412,13 @@ def query_collection(
     if VECTOR_DB == "chroma":
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
         # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
+        merged = merge_and_sort_query_results(results, k=k, reverse=False)
     else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+        merged = merge_and_sort_query_results(results, k=k, reverse=True)
+    
+    merged_count = len(merged.get("documents", [[]])[0]) if merged and merged.get("documents") else 0
+    log.info(f"[QUERY_COLLECTION] DONE | collections={list(collection_names)} | results_merged={merged_count} | k={k}")
+    return merged
 
 
 def query_collection_with_hybrid_search(
@@ -416,6 +429,7 @@ def query_collection_with_hybrid_search(
     reranking_function,
     r: float,
 ) -> dict:
+    log.info(f"[HYBRID_SEARCH] START | collections={list(collection_names)} | queries_count={len(queries) if queries else 0} | k={k} | r={r}")
     results = []
     errors = []
     
@@ -497,6 +511,7 @@ def query_collection_with_hybrid_search(
 
     # Only raise error if ALL searches failed
     if len(errors) == len(query_collection_pairs):
+        log.error(f"[HYBRID_SEARCH] ALL_FAILED | collections={list(collection_names)} | errors_count={len(errors)}")
         raise Exception(
             "Hybrid search failed for all collections. Using Non hybrid search as fallback."
         )
@@ -504,9 +519,13 @@ def query_collection_with_hybrid_search(
     if VECTOR_DB == "chroma":
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
         # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
+        merged = merge_and_sort_query_results(results, k=k, reverse=False)
     else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+        merged = merge_and_sort_query_results(results, k=k, reverse=True)
+    
+    merged_count = len(merged.get("documents", [[]])[0]) if merged and merged.get("documents") else 0
+    log.info(f"[HYBRID_SEARCH] DONE | collections={list(collection_names)} | results_merged={merged_count} | errors_count={len(errors)} | k={k}")
+    return merged
 
 
 def get_embedding_function(
@@ -598,6 +617,7 @@ def get_sources_from_files(
     relevant_contexts = []
 
     for file in files:
+        queried_collections_this_file = []
 
         context = None
         if file.get("docs"):
@@ -674,9 +694,11 @@ def get_sources_from_files(
             if not collection_names:
                 log.debug(f"skipping {file} as it has already been extracted")
                 continue
-            
+
+            queried_collections_this_file = list(collection_names)
+
             # Log collection names being queried for debugging RAG issues
-            log.info(f"[RAG Query] file_id={file.get('id')} | collection_names={list(collection_names)} | queries_count={len(queries)}")
+            log.info(f"[RAG Query] file_id={file.get('id')} | collection_names={queried_collections_this_file} | queries_count={len(queries)}")
             
             # Check if collections actually exist and have documents
             for coll_name in collection_names:
@@ -745,6 +767,24 @@ def get_sources_from_files(
             if "data" in file:
                 del file["data"]
 
+            # RAG debug: per-file retrieval result (which file, how many chunks retrieved)
+            num_chunks = 0
+            if context.get("documents") and context["documents"]:
+                num_chunks = len(context["documents"][0])
+            file_id = file.get("id", "")
+            file_name = file.get("name") or file.get("filename")
+            if not file_name:
+                _file = file.get("file")
+                if isinstance(_file, dict):
+                    _data = _file.get("data")
+                    if isinstance(_data, dict):
+                        file_name = _data.get("name")
+            if not file_name:
+                file_name = f"collection:{file_id}" if file.get("type") == "collection" else str(file_id)
+            file_name = str(file_name) if file_name else str(file_id)
+            log.info(
+                f"[RAG Retrieval] file_id={file_id} | file_name={file_name} | chunks_retrieved={num_chunks} | collections_queried={queried_collections_this_file}"
+            )
             relevant_contexts.append({**context, "file": file})
 
     sources = []
@@ -1140,6 +1180,9 @@ def generate_embeddings(
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
     user = kwargs.get("user")
+    user_email = user.email if user and hasattr(user, 'email') else "(no user)"
+    text_count = len(text) if isinstance(text, list) else 1
+    log.info(f"[GENERATE_EMBEDDINGS] START | engine={engine} | model={model} | texts_count={text_count} | url={url} | key={key} | user={user_email}")
     
     # CRITICAL FIX: For portkey/openai engines, dynamically retrieve the user's API key
     # The `key` passed in may be the startup default (empty), but users configure their own keys
@@ -1171,6 +1214,8 @@ def generate_embeddings(
                     "user": user,
                 }
             )
+        emb_count = len(embeddings) if isinstance(embeddings, list) else 1
+        log.info(f"[GENERATE_EMBEDDINGS] SUCCESS | engine=ollama | model={model} | embeddings_count={emb_count} | user={user_email}")
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "openai":
         if isinstance(text, list):
@@ -1178,6 +1223,8 @@ def generate_embeddings(
         else:
             embeddings = generate_openai_batch_embeddings(model, [text], url, key, user)
 
+        emb_count = len(embeddings) if isinstance(embeddings, list) else 1
+        log.info(f"[GENERATE_EMBEDDINGS] SUCCESS | engine=openai | model={model} | embeddings_count={emb_count} | user={user_email}")
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "portkey":
         # Use SDK-based implementation
@@ -1188,8 +1235,11 @@ def generate_embeddings(
             api_key=key,
             encoding_format="float"
         )
+        emb_count = len(embeddings) if isinstance(embeddings, list) else 1
+        log.info(f"[GENERATE_EMBEDDINGS] SUCCESS | engine={engine} | model={model} | embeddings_count={emb_count} | user={user_email}")
         return embeddings
     else:
+        log.error(f"[GENERATE_EMBEDDINGS] ERROR | unknown engine={engine}")
         raise ValueError(f"Unknown embedding engine: {engine}")
 
 

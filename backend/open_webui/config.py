@@ -18,6 +18,7 @@ from open_webui.models.groups import (
     Groups)
 from open_webui.models.users import (
     Users)
+import inspect
 
 from open_webui.env import (
     DATA_DIR,
@@ -32,6 +33,9 @@ from open_webui.env import (
     log,
 )
 from open_webui.internal.db import Base, get_db
+
+# Local logger for config persistence events
+logger = logging.getLogger(__name__)
 
 class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -85,15 +89,43 @@ def load_json_config():
 
 def save_to_db(data):
     with get_db() as db:
+        # Get full call stack for debugging
+        call_stack = []
+        try:
+            stack = inspect.stack()
+            for i in range(1, min(6, len(stack))):
+                frame = stack[i]
+                call_stack.append(f"{os.path.basename(frame.filename)}:{frame.function}:{frame.lineno}")
+        except Exception:
+            call_stack = ["unknown"]
+        caller = " <- ".join(call_stack)
+
         existing_config = db.query(Config).first()
         if not existing_config:
             new_config = Config(data=data, version=0)
             db.add(new_config)
+            logger.info(
+                "===== GLOBAL CONFIG: Creating NEW config in database ===== "
+                "Keys being saved: %s. Called from: %s. Full data: %s",
+                list(data.keys()) if isinstance(data, dict) else "unknown",
+                caller,
+                data,
+            )
         else:
+            logger.info(
+                "===== GLOBAL CONFIG: Updating EXISTING config in database ===== "
+                "Config ID: %s. Old keys: %s. New keys: %s. Called from: %s. New data: %s",
+                existing_config.id if hasattr(existing_config, "id") else "n/a",
+                list(existing_config.data.keys()) if isinstance(existing_config.data, dict) else "unknown",
+                list(data.keys()) if isinstance(data, dict) else "unknown",
+                caller,
+                data,
+            )
             existing_config.data = data
             existing_config.updated_at = datetime.now()
             db.add(existing_config)
         db.commit()
+        logger.info("===== GLOBAL CONFIG: Database commit complete ===== Called from: %s", caller)
 
 
 def reset_config():
@@ -437,7 +469,7 @@ class UserScopedConfig:
                                     return final_value
 
             # Step 4: Fallback to default
-            logging.debug(f"Using default for {email} for {self.config_path}")
+            logging.info(f"[RBAC_CONFIG_GET] Using default for {email} for {self.config_path}")
             # Cache the default value to avoid repeated DB queries
             cache.set_user_settings(user.id, self.config_path, self.default)
             return self.default
@@ -458,14 +490,32 @@ class UserScopedConfig:
         
         cache = get_cache_manager()
         
+        # Get caller information for debugging
+        caller = "unknown"
+        call_stack = []
+        try:
+            stack = inspect.stack()
+            # Get the immediate caller (index 1) and a few more levels for context
+            for i in range(1, min(5, len(stack))):
+                frame = stack[i]
+                call_stack.append(f"{os.path.basename(frame.filename)}:{frame.function}:{frame.lineno}")
+            caller = " <- ".join(call_stack)
+        except Exception:
+            pass
+        
         # RBAC: Log API key configuration for audit
         is_api_key = "api_key" in self.config_path or "openai_api_key" in self.config_path
+        logging.info(
+            f"===== CONFIG CHANGE START ===== "
+            f"User '{email}' is changing config '{self.config_path}' to value '{value}'. "
+            f"Called from: {caller}"
+        )
         if is_api_key:
             logging.info(
-                f"RBAC API Key Configuration: Admin {email} setting API key for {self.config_path}. "
-                f"This key will be accessible ONLY to: (1) Admin {email}, "
-                f"(2) Users in groups created by {email}. "
-                f"Other admins and their groups will NOT have access."
+                f"***** API KEY IS BEING CHANGED ***** "
+                f"Admin '{email}' is setting a NEW API KEY for '{self.config_path}'. "
+                f"New API Key = '{value}'. "
+                f"This change was triggered by: {caller}"
             )
         
         with get_db() as db:
@@ -481,8 +531,7 @@ class UserScopedConfig:
             data = copy.deepcopy(entry.data) if entry.data else {}
             
             logging.info(
-                f"[RBAC_CONFIG_SET] Before update - email={email}, config_path={self.config_path}, "
-                f"old_data={old_data}"
+                f"[CONFIG BEFORE] The CURRENT value in database for '{email}' before this change: {old_data}"
             )
             
             current = data
@@ -494,9 +543,10 @@ class UserScopedConfig:
             current[parts[-1]] = value
 
             logging.info(
-                f"[RBAC_CONFIG_SET] After update - email={email}, config_path={self.config_path}, "
-                f"new_value={value if not is_api_key else '***'}, "
-                f"updated_data={data if not is_api_key else '(contains API key, masked)'}"
+                f"[CONFIG AFTER] The NEW value being saved for '{email}': "
+                f"'{self.config_path}' = '{value}'. "
+                f"Full updated config data: {data}. "
+                f"Called from: {caller}"
             )
 
             # Assign the new dict object (not the same reference)
@@ -506,7 +556,9 @@ class UserScopedConfig:
             db.commit()
             
             logging.info(
-                f"[RBAC_CONFIG_SET] Successfully saved {self.config_path}={value} for {email} to database"
+                f"===== CONFIG SAVED TO DATABASE ===== "
+                f"Successfully saved '{self.config_path}' = '{value}' for user '{email}'. "
+                f"Called from: {caller}"
             )
         
         # CRITICAL RBAC: Update cache with new value (write-through caching)
@@ -523,8 +575,8 @@ class UserScopedConfig:
             # Step 2: Set the new value in cache (write-through)
             cache.set_user_settings(user.id, self.config_path, value)
             logging.info(
-                f"[RBAC_CACHE_UPDATE] Cache updated for user {email} (ID: {user.id}): "
-                f"{self.config_path}={value if not is_api_key else '***'}"
+                f"[CACHE UPDATED] Cache now has '{self.config_path}' = '{value}' for user '{email}' (ID: {user.id}). "
+                f"Called from: {caller}"
             )
             
             # Step 3: Invalidate cache for all users who inherit from this admin (group members)

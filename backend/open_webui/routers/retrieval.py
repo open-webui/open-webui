@@ -319,16 +319,19 @@ async def get_embedding_config(request: Request, user=Depends(get_verified_user)
     """
     # CRITICAL RBAC: Log the requesting user's email to ensure proper isolation
     requesting_email = user.email
-    log.info(f"[RBAC_GET_EMBEDDING] Requesting user: {requesting_email} (ID: {user.id})")
+    log.info(
+        f"========== LOADING EMBEDDING CONFIG (Documents Page) ========== "
+        f"User '{requesting_email}' (ID: {user.id}) is opening the Documents page."
+    )
     
     # Get model and key for THIS specific user
     embedding_model = request.app.state.config.RAG_EMBEDDING_MODEL_USER.get(requesting_email) or ""
     embedding_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(requesting_email)
     
     log.info(
-        f"[RBAC_GET_EMBEDDING] For user {requesting_email}: "
-        f"model={embedding_model[:50] if embedding_model else '(empty)'}, "
-        f"key_length={len(embedding_api_key) if embedding_api_key else 0}"
+        f"[RETURNING TO FRONTEND] For user '{requesting_email}': "
+        f"Model = '{embedding_model}', API Key = '{embedding_api_key}'. "
+        f"This is what the Documents page will display."
     )
     
     return {
@@ -383,6 +386,17 @@ class EmbeddingModelUpdateForm(BaseModel):
 async def update_embedding_config(
     request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_verified_user)
 ):
+    log.info(
+        f"========== EMBEDDING CONFIG UPDATE REQUEST ========== "
+        f"Admin '{user.email}' clicked SAVE on the Documents Embedding page. "
+        f"They want to set: Engine='{form_data.embedding_engine}', Model='{form_data.embedding_model}', "
+        f"BatchSize={form_data.embedding_batch_size}, "
+        f"OpenAI URL='{form_data.openai_config.url if form_data.openai_config else '(none)'}', "
+        f"OpenAI API Key='{form_data.openai_config.key if form_data.openai_config else '(none)'}', "
+        f"Ollama URL='{form_data.ollama_config.url if form_data.ollama_config else '(none)'}', "
+        f"Ollama Key='{form_data.ollama_config.key if form_data.ollama_config else '(none)'}'"
+    )
+
     # Basic validation: model and API key are mandatory for OpenAI/Portkey engines
     if form_data.embedding_engine in ["openai", "portkey"]:
         if not form_data.embedding_model or not form_data.embedding_model.strip():
@@ -411,6 +425,12 @@ async def update_embedding_config(
             f"{current_model} -> {form_data.embedding_model}, "
             f"engine={form_data.embedding_engine}"
         )
+        # Fetch CURRENT model BEFORE update
+        current_engine = getattr(request.app.state.config, 'RAG_EMBEDDING_ENGINE', '(unset)')
+        
+        log.info(
+            f"[ENGINE CHANGE] Admin '{admin_email}' is changing embedding engine from '{current_engine}' to '{form_data.embedding_engine}'"
+        )
         request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
         # RBAC: Per-admin model name - stored under admin's email
         # The model will be accessible to:
@@ -428,6 +448,19 @@ async def update_embedding_config(
             "portkey",
         ]:
             if form_data.openai_config is not None:
+                # Fetch CURRENT value BEFORE update to trace changes
+                current_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(admin_email) or "(empty)"
+                current_base_url = getattr(request.app.state.config.RAG_OPENAI_API_BASE_URL, 'value', str(request.app.state.config.RAG_OPENAI_API_BASE_URL)) or "(empty)"
+                
+                log.info(
+                    f"***** API KEY COMPARISON ***** "
+                    f"Admin '{admin_email}' is about to change the API key. "
+                    f"CURRENT API Key in system = '{current_api_key}'. "
+                    f"NEW API Key being set = '{form_data.openai_config.key}'. "
+                    f"CURRENT Base URL = '{current_base_url}'. "
+                    f"NEW Base URL = '{form_data.openai_config.url}'."
+                )
+                
                 request.app.state.config.RAG_OPENAI_API_BASE_URL = (
                     form_data.openai_config.url
                 )
@@ -437,22 +470,15 @@ async def update_embedding_config(
                 # 2. Users in groups created by this admin
                 # 3. NOT accessible to other admins or their groups
                 log.info(
-                    f"[RBAC_SET_EMBEDDING] Setting API key for admin {admin_email}: "
-                    f"key_length={len(form_data.openai_config.key) if form_data.openai_config.key else 0}"
+                    f"[NOW SAVING API KEY] Calling config.RAG_OPENAI_API_KEY.set() for admin '{admin_email}' with key='{form_data.openai_config.key}'"
                 )
                 request.app.state.config.RAG_OPENAI_API_KEY.set(
                     admin_email, form_data.openai_config.key
                 )
-                masked_key_suffix = (
-                    form_data.openai_config.key[-4:]
-                    if form_data.openai_config.key and len(form_data.openai_config.key) >= 4
-                    else "***"
-                )
                 log.info(
                     f"Admin {user.email} configured embedding OpenAI/Portkey API settings: "
                     f"base_url={form_data.openai_config.url}, "
-                    f"api_key_length={len(form_data.openai_config.key)}, "
-                    f"api_key_ends_with=...{masked_key_suffix} "
+                    f"api_key={form_data.openai_config.key} "
                     f"(RBAC: accessible to admin and their group members only)"
                 )
 
@@ -516,28 +542,42 @@ async def update_embedding_config(
         saved_api_key = request.app.state.config.RAG_OPENAI_API_KEY.get(user.email) or ""
         
         # Verify the save worked by comparing with what we tried to save
+        log.info(f"[VERIFICATION] Now checking if the save worked by reading back from database...")
+        
         if saved_model != form_data.embedding_model:
             log.error(
-                f"[RBAC_SET_EMBEDDING] VERIFICATION FAILED for admin {admin_email}: "
-                f"Tried to save model={form_data.embedding_model}, but database has model={saved_model}"
+                f"!!!!! MODEL SAVE FAILED !!!!! "
+                f"Admin '{admin_email}' tried to save model='{form_data.embedding_model}', "
+                f"but database actually has model='{saved_model}'. Something went wrong!"
             )
         else:
             log.info(
-                f"[RBAC_SET_EMBEDDING] Successfully saved and verified embedding config for admin {admin_email}: "
-                f"model={saved_model}, engine={form_data.embedding_engine}"
+                f"[MODEL VERIFIED] Model saved correctly for admin '{admin_email}': '{saved_model}'"
             )
 
-        if saved_api_key != form_data.openai_config.key:
-            log.error(
-                f"[RBAC_SET_EMBEDDING] VERIFICATION FAILED for admin {admin_email}: "
-                f"Tried to save API key={form_data.openai_config.key}, but database has API key={saved_api_key}"
-            )
+        if form_data.openai_config is not None:
+            if saved_api_key != form_data.openai_config.key:
+                log.error(
+                    f"!!!!! API KEY SAVE FAILED !!!!! "
+                    f"Admin '{admin_email}' tried to save API key='{form_data.openai_config.key}', "
+                    f"but database actually has API key='{saved_api_key}'. "
+                    f"THE KEY WAS OVERWRITTEN OR NOT SAVED CORRECTLY!"
+                )
+            else:
+                log.info(
+                    f"[API KEY VERIFIED] API key saved correctly for admin '{admin_email}': '{saved_api_key}'"
+                )
         else:
-            log.info(
-                f"[RBAC_SET_EMBEDDING] Successfully saved and verified API key for admin {admin_email}: "
-                f"API key={saved_api_key}"
-            )
+            log.info(f"[NO API KEY] No OpenAI/Portkey API key was provided (engine='{form_data.embedding_engine}')")
         
+        # Final summary
+        log.info(
+            f"========== EMBEDDING CONFIG UPDATE COMPLETE ========== "
+            f"Admin: '{admin_email}' | Engine: '{form_data.embedding_engine}' | Model: '{saved_model}' | "
+            f"API Key User Wanted: '{form_data.openai_config.key if form_data.openai_config else '(none)'}' | "
+            f"API Key Actually Saved: '{saved_api_key}'"
+        )
+
         return {
             "status": True,
             "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -1164,6 +1204,7 @@ def save_docs_to_vector_db(
                 docs = text_splitter.split_documents(docs)
                 split_end = time.time()
                 split_duration = split_end - split_start
+                log.info(f"[RAG Chunking] chunks_created={len(docs)} | collection_name={collection_name} | duration={split_duration:.2f}s | timestamp={split_end:.3f}")
                 log.info(f"[SPLITTING] COMPLETE | chunks={len(docs)} | duration={split_duration:.2f}s | timestamp={split_end:.3f}")
                 safe_add_span_event("embedding.split.completed", {"chunk.count": len(docs)})
                 safe_set_span_attribute(span, "chunk.count", len(docs))
@@ -1649,6 +1690,7 @@ def save_docs_to_multiple_collections(
             raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
 
         docs = text_splitter.split_documents(docs)
+        log.info(f"[RAG Chunking] chunks_created={len(docs)} | collections={list(collections)} | (multi-collection save)")
 
     if len(docs) == 0:
         # Provide detailed error for debugging empty content issues (multiple collections)
