@@ -1403,7 +1403,12 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
+		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+
+		// Store raw OR-aligned output items from backend
+		if (output) {
+			message.output = output;
+		}
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1899,7 +1904,9 @@
 				: undefined,
 			..._messages.map((message) => ({
 				...message,
-				content: processDetails(message.content)
+				content: processDetails(message.content),
+			// Include output for temp chats (backend will use it and strip before LLM)
+			...(message.output ? { output: message.output } : {})
 			}))
 		].filter((message) => message);
 

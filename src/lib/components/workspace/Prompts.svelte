@@ -9,14 +9,17 @@
 
 	import {
 		createNewPrompt,
-		deletePromptByCommand,
+		deletePromptById,
 		getPrompts,
-		getPromptList
+		getPromptList,
+		getPromptTags
 	} from '$lib/apis/prompts';
-	import { capitalizeFirstLetter, slugify } from '$lib/utils';
+	import { capitalizeFirstLetter, slugify, copyToClipboard } from '$lib/utils';
 
 	import PromptMenu from './Prompts/PromptMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import Clipboard from '../icons/Clipboard.svelte';
+	import Check from '../icons/Check.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
@@ -26,8 +29,8 @@
 	import XMark from '../icons/XMark.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
+	import TagSelector from './common/TagSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
-
 	let shiftKey = false;
 
 	const i18n = getContext('i18n');
@@ -38,22 +41,25 @@
 	let query = '';
 
 	let prompts = [];
+	let tags = [];
 
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
+	let selectedTag = '';
+	let copiedId: string | null = null;
 
 	let filteredItems = [];
 
-	$: if (prompts && query !== undefined && viewOption !== undefined) {
+	$: if (prompts && query !== undefined && viewOption !== undefined && selectedTag !== undefined) {
 		setFilteredItems();
 	}
 
 	const setFilteredItems = () => {
 		filteredItems = prompts.filter((p) => {
-			if (query === '' && viewOption === '') return true;
+			if (query === '' && viewOption === '' && selectedTag === '') return true;
 			const lowerQuery = query.toLowerCase();
 			return (
 				((p.title || '').toLowerCase().includes(lowerQuery) ||
@@ -62,7 +68,8 @@
 					(p.user?.email || '').toLowerCase().includes(lowerQuery)) &&
 				(viewOption === '' ||
 					(viewOption === 'created' && p.user_id === $user?.id) ||
-					(viewOption === 'shared' && p.user_id !== $user?.id))
+					(viewOption === 'shared' && p.user_id !== $user?.id)) &&
+				(selectedTag === '' || (p.tags && p.tags.includes(selectedTag)))
 			);
 		});
 	};
@@ -105,10 +112,20 @@
 		saveAs(blob, `prompt-export-${Date.now()}.json`);
 	};
 
+	const copyHandler = async (prompt) => {
+		const res = await copyToClipboard(prompt.content);
+		if (res) {
+			copiedId = prompt.command;
+			setTimeout(() => {
+				copiedId = null;
+			}, 2000);
+		}
+	};
+
 	const deleteHandler = async (prompt) => {
 		const command = prompt.command;
 
-		const res = await deletePromptByCommand(localStorage.token, command).catch((err) => {
+		const res = await deletePromptById(localStorage.token, prompt.id).catch((err) => {
 			toast.error(err);
 			return null;
 		});
@@ -122,6 +139,7 @@
 
 	const init = async () => {
 		prompts = await getPromptList(localStorage.token);
+		tags = await getPromptTags(localStorage.token);
 		await _prompts.set(await getPrompts(localStorage.token));
 	};
 
@@ -316,6 +334,13 @@
 						await tick();
 					}}
 				/>
+
+				{#if (tags ?? []).length > 0}
+					<TagSelector
+						bind:value={selectedTag}
+						items={tags.map((tag) => ({ value: tag, label: tag }))}
+					/>
+				{/if}
 			</div>
 		</div>
 
@@ -325,14 +350,14 @@
 				{#each filteredItems as prompt}
 					<a
 						class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
-						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+						href={`/workspace/prompts/${prompt.id}`}
 					>
 						<div class=" flex flex-col flex-1 space-x-4 cursor-pointer w-full pl-1">
-							<div class="flex items-center justify-between w-full">
+							<div class="flex items-center justify-between w-full mb-0.5">
 								<div class="flex items-center gap-2">
-									<div class="font-medium line-clamp-1 capitalize">{prompt.title}</div>
+									<div class="font-medium line-clamp-1 capitalize">{prompt.name}</div>
 									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-										{prompt.command}
+										/{prompt.command}
 									</div>
 								</div>
 								{#if !prompt.write_access}
@@ -340,7 +365,7 @@
 								{/if}
 							</div>
 
-							<div class=" text-xs">
+							<div class="flex gap-1 text-xs">
 								<Tooltip
 									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
 									className="flex shrink-0"
@@ -354,6 +379,16 @@
 										})}
 									</div>
 								</Tooltip>
+
+								<div>·</div>
+
+								{#if prompt.content}
+									<Tooltip content={prompt.content} placement="top">
+										<div class="line-clamp-1">
+											{prompt.content}
+										</div>
+									</Tooltip>
+								{/if}
 							</div>
 						</div>
 						<div class="flex flex-row gap-0.5 self-center">
@@ -370,6 +405,23 @@
 									</button>
 								</Tooltip>
 							{:else}
+								<Tooltip content={$i18n.t('Copy Prompt')}>
+									<button
+										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										type="button"
+										on:click={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											copyHandler(prompt);
+										}}
+									>
+										{#if copiedId === prompt.command}
+											<Check className="size-4" strokeWidth="1.5" />
+										{:else}
+											<Clipboard className="size-4" strokeWidth="1.5" />
+										{/if}
+									</button>
+								</Tooltip>
 								<PromptMenu
 									shareHandler={() => {
 										shareHandler(prompt);
