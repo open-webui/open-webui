@@ -23,8 +23,8 @@ starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
 
 sqlalchemy==2.0.45
-alembic==1.17.2
-peewee==3.18.3
+alembic==1.18.1
+peewee==3.19.0
 peewee-migrate==1.14.3
 
 pycrdt==0.12.44
@@ -42,19 +42,19 @@ mcp==1.25.0
 
 openai
 anthropic
-google-genai==1.56.0
+google-genai==1.59.0
 
-langchain==1.2.0
+langchain==1.2.4
 langchain-community==0.4.1
 langchain-classic==1.0.1
 langchain-text-splitters==1.1.0
 
 fake-useragent==2.2.0
-chromadb==1.4.0
+chromadb==1.4.1
 weaviate-client==4.19.2
 opensearch-py==3.1.0
 
-transformers==4.57.3
+transformers==4.57.6
 sentence-transformers==5.2.0
 accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
@@ -62,12 +62,12 @@ einops==0.8.1
 
 ftfy==6.3.1
 chardet==5.2.0
-pypdf==6.5.0
+pypdf==6.6.0
 fpdf2==2.8.5
 pymdown-extensions==10.20
 docx2txt==0.9
 python-pptx==1.0.2
-unstructured==0.18.24
+unstructured==0.18.27
 msoffcrypto-tool==5.4.2
 nltk==3.9.2
 Markdown==3.10
@@ -98,7 +98,7 @@ ddgs==9.10.0
 
 azure-ai-documentintelligence==1.0.2
 azure-identity==1.25.1
-azure-storage-blob==12.27.1
+azure-storage-blob==12.28.0
 azure-search-documents==11.6.0
 
 ## Google Drive
@@ -107,7 +107,7 @@ google-auth-httplib2
 google-auth-oauthlib
 
 googleapis-common-protos==1.72.0
-google-cloud-storage==3.7.0
+google-cloud-storage==3.8.0
 
 ## Databases
 pymongo
@@ -115,7 +115,7 @@ psycopg2-binary==2.9.11
 pgvector==0.4.2
 
 PyMySQL==1.1.2
-boto3==1.42.21
+boto3==1.42.29
 
 pymilvus==2.6.6
 qdrant-client==1.16.2
@@ -138,7 +138,7 @@ pytest-docker~=3.2.5
 ldap3==2.9.1
 
 ## Firecrawl
-firecrawl-py==4.12.0
+firecrawl-py==4.13.0
 
 ## Trace
 opentelemetry-api==1.39.1

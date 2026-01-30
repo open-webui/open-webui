@@ -168,6 +168,14 @@ class ChatTitleIdResponse(BaseModel):
     created_at: int
 
 
+class SharedChatResponse(BaseModel):
+    id: str
+    title: str
+    share_id: Optional[str] = None
+    updated_at: int
+    created_at: int
+
+
 class ChatListResponse(BaseModel):
     items: list[ChatModel]
     total: int
@@ -645,6 +653,49 @@ class ChatTable:
 
         with get_db_context(db) as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=True)
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction:
+                    if not getattr(Chat, order_by, None):
+                        raise ValueError("Invalid order_by field")
+
+                    if direction.lower() == "asc":
+                        query = query.order_by(getattr(Chat, order_by).asc())
+                    elif direction.lower() == "desc":
+                        query = query.order_by(getattr(Chat, order_by).desc())
+                    else:
+                        raise ValueError("Invalid direction for ordering")
+            else:
+                query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            all_chats = query.all()
+            return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def get_shared_chat_list_by_user_id(
+        self,
+        user_id: str,
+        filter: Optional[dict] = None,
+        skip: int = 0,
+        limit: int = 50,
+        db: Optional[Session] = None,
+    ) -> list[ChatModel]:
+
+        with get_db_context(db) as db:
+            query = db.query(Chat).filter_by(user_id=user_id).filter(
+                Chat.share_id.isnot(None)
+            )
 
             if filter:
                 query_key = filter.get("query")

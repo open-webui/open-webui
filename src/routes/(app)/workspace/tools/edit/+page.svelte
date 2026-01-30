@@ -56,13 +56,22 @@
 		const id = $page.url.searchParams.get('id');
 
 		if (id) {
-			tool = await getToolById(localStorage.token, id).catch((error) => {
+			const res = await getToolById(localStorage.token, id).catch((error) => {
 				toast.error(`${error}`);
 				goto('/workspace/tools');
 				return null;
 			});
 
-			console.log(tool);
+			if (res && !res.write_access) {
+				toast.error($i18n.t('You do not have permission to edit this tool'));
+				goto('/workspace/tools');
+				return;
+			}
+
+			if (res) {
+				tool = res;
+				console.log(tool);
+			}
 		}
 	});
 </script>

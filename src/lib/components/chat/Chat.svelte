@@ -1273,6 +1273,11 @@
 			const modelId = selectedModels[0];
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
+			if (!model) {
+				toast.error($i18n.t('Model not found'));
+				return;
+			}
+
 			const messages = createMessagesList(history, history.currentId);
 			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
 
@@ -1389,7 +1394,12 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
+		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+
+		// Store raw OR-aligned output items from backend
+		if (output) {
+			message.output = output;
+		}
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1885,7 +1895,9 @@
 				: undefined,
 			..._messages.map((message) => ({
 				...message,
-				content: processDetails(message.content)
+				content: processDetails(message.content),
+			// Include output for temp chats (backend will use it and strip before LLM)
+			...(message.output ? { output: message.output } : {})
 			}))
 		].filter((message) => message);
 

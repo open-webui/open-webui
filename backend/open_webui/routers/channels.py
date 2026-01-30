@@ -22,6 +22,7 @@ from open_webui.models.users import (
     UserListResponse,
     UserModelResponse,
     Users,
+    UserModel,
     UserNameResponse,
 )
 
@@ -80,13 +81,22 @@ router = APIRouter()
 ############################
 
 
-def check_channels_access(request: Request):
+def check_channels_access(request: Request, user: Optional[UserModel] = None):
     """Dependency to ensure channels are globally enabled."""
     if not request.app.state.config.ENABLE_CHANNELS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Channels are not enabled",
         )
+
+    if user:
+        if user.role != "admin" and not has_permission(
+            user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
 
 
 ############################
@@ -355,7 +365,7 @@ async def get_channel_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
@@ -467,7 +477,7 @@ async def get_channel_members_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
 
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
@@ -788,7 +798,7 @@ async def get_channel_messages(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
@@ -1874,13 +1884,9 @@ async def delete_message_by_id(
 
 
 @router.get("/webhooks/{webhook_id}/profile/image")
-async def get_webhook_profile_image(
-    webhook_id: str,
-    user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
-):
+def get_webhook_profile_image(webhook_id: str, user=Depends(get_verified_user)):
     """Get webhook profile image by webhook ID."""
-    webhook = Channels.get_webhook_by_id(webhook_id, db=db)
+    webhook = Channels.get_webhook_by_id(webhook_id)
     if not webhook:
         # Return default favicon if webhook not found
         return FileResponse(f"{STATIC_DIR}/favicon.png")

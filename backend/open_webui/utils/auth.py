@@ -33,6 +33,7 @@ from open_webui.env import (
     ENABLE_PASSWORD_VALIDATION,
     OFFLINE_MODE,
     LICENSE_BLOB,
+    PASSWORD_VALIDATION_HINT,
     PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
     pk,
@@ -173,7 +174,7 @@ def validate_password(password: str) -> bool:
 
     if ENABLE_PASSWORD_VALIDATION:
         if not PASSWORD_VALIDATION_REGEX_PATTERN.match(password):
-            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD())
+            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD(PASSWORD_VALIDATION_HINT))
 
     return True
 

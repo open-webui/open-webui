@@ -21,6 +21,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
+	import BuiltinTools from './BuiltinTools.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
@@ -104,6 +105,7 @@
 		builtin_tools: true
 	};
 	let defaultFeatureIds = [];
+	let builtinTools = {};
 
 	let actionIds = [];
 	let accessControl = {};
@@ -192,6 +194,14 @@
 		} else {
 			if (info.meta.defaultFeatureIds) {
 				delete info.meta.defaultFeatureIds;
+			}
+		}
+
+		if (Object.keys(builtinTools).length > 0) {
+			info.meta.builtinTools = builtinTools;
+		} else {
+			if (info.meta.builtinTools) {
+				delete info.meta.builtinTools;
 			}
 		}
 
@@ -288,6 +298,7 @@
 
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
+			builtinTools = model?.meta?.builtinTools ?? {};
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
 
 			if ('access_control' in model) {
@@ -778,6 +789,12 @@
 								<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
 							</div>
 						{/if}
+					{/if}
+
+					{#if capabilities.builtin_tools}
+						<div class="my-2">
+							<BuiltinTools bind:builtinTools />
+						</div>
 					{/if}
 
 					<div class="my-2">
