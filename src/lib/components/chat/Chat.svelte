@@ -2212,6 +2212,8 @@
 		if (history.currentId && history.messages[history.currentId].done == true) {
 			const responseMessage = history.messages[history.currentId];
 			responseMessage.done = false;
+			responseMessage.stoppedByUser = false;
+			
 			await tick();
 
 			const model = $models
