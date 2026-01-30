@@ -56,12 +56,12 @@
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 
-	let models = null;
+	let models: any[] | null = null;
 
-	let workspaceModels = null;
-	let baseModels = null;
+	let workspaceModels: any[] | null = null;
+	let baseModels: any[] | null = null;
 
-	let filteredModels = [];
+	let filteredModels: any[] = [];
 	let selectedModelId = null;
 
 	let showConfigModal = false;
@@ -95,8 +95,8 @@
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, null, true);
 
-		models = baseModels.map((m) => {
-			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
+		models = (baseModels || []).map((m) => {
+			const workspaceModel = (workspaceModels || []).find((wm) => wm.id === m.id);
 
 			if (workspaceModel) {
 				return {
@@ -118,7 +118,7 @@
 	const upsertModelHandler = async (model) => {
 		model.base_model_id = null;
 
-		if (workspaceModels.find((m) => m.id === model.id)) {
+		if (workspaceModels?.find((m) => m.id === model.id)) {
 			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
 				return null;
 			});

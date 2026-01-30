@@ -483,6 +483,106 @@ def get_model_profile_image(
     return FileResponse(f"{STATIC_DIR}/favicon.png")
 
 
+@router.get("/model/profile/image/preview")
+def get_model_profile_image_preview(
+    request: Request,
+    id: str,
+    theme: Optional[str] = "light",
+    profile_image_url: Optional[str] = None,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """
+    Preview what the profile image would be with a given profile_image_url override.
+    Used for showing immediate feedback in ModelEditor without saving.
+    """
+    from open_webui.models.providers import Providers
+
+    model = Models.get_model_by_id(id, db=db)
+    if not model:
+        return FileResponse(f"{STATIC_DIR}/favicon.png")
+
+    # If profile_image_url provided, use it for preview
+    # Otherwise fall through to provider detection
+    preview_url = profile_image_url if profile_image_url else (model.meta.profile_image_url if model.meta else None)
+
+    # Priority 1: Manual override (if not default favicon)
+    if preview_url:
+        is_default_favicon = (
+            preview_url == "/static/favicon.png"
+            or preview_url.endswith("/static/favicon.png")
+        )
+
+        if not is_default_favicon:
+            if preview_url.startswith("http"):
+                return Response(
+                    status_code=status.HTTP_302_FOUND,
+                    headers={"Location": preview_url},
+                )
+            elif preview_url.startswith("data:image"):
+                try:
+                    header, base64_data = preview_url.split(",", 1)
+                    image_data = base64.b64decode(base64_data)
+                    image_buffer = io.BytesIO(image_data)
+                    media_type = header.split(";")[0].lstrip("data:")
+                    return StreamingResponse(
+                        image_buffer,
+                        media_type=media_type,
+                        headers={"Cache-Control": "no-cache"},
+                    )
+                except Exception as e:
+                    log.warning(f"Error decoding preview image: {e}")
+            elif preview_url.startswith("/"):
+                return FileResponse(
+                    f"{STATIC_DIR}{preview_url}",
+                    headers={"Cache-Control": "no-cache"},
+                )
+
+    # Priority 2: Provider logo detection
+    owned_by = "openai"
+    if hasattr(request.app.state, "MODELS") and request.app.state.MODELS:
+        runtime_model = request.app.state.MODELS.get(model.id)
+        if runtime_model and "owned_by" in runtime_model:
+            owned_by = runtime_model.get("owned_by", "openai")
+        elif model.base_model_id:
+            base_runtime_model = request.app.state.MODELS.get(model.base_model_id)
+            if base_runtime_model and "owned_by" in base_runtime_model:
+                owned_by = base_runtime_model.get("owned_by", "openai")
+
+    provider_result = Providers.detect_provider_logo_with_metadata(
+        model.id, owned_by, theme or "light", db=db
+    )
+
+    if provider_result:
+        provider_logo = provider_result["logo_url"]
+        if provider_logo.startswith("http"):
+            return Response(
+                status_code=status.HTTP_302_FOUND,
+                headers={"Location": provider_logo, "Cache-Control": "no-cache"},
+            )
+        elif provider_logo.startswith("data:image"):
+            try:
+                header, base64_data = provider_logo.split(",", 1)
+                image_data = base64.b64decode(base64_data)
+                image_buffer = io.BytesIO(image_data)
+                media_type = header.split(";")[0].lstrip("data:")
+                return StreamingResponse(
+                    image_buffer,
+                    media_type=media_type,
+                    headers={"Cache-Control": "no-cache"},
+                )
+            except Exception as e:
+                log.warning(f"Error decoding provider logo: {e}")
+        elif provider_logo.startswith("/"):
+            return FileResponse(
+                f"{STATIC_DIR}{provider_logo}",
+                headers={"Cache-Control": "no-cache"},
+            )
+
+    # Priority 3: Default fallback
+    return FileResponse(f"{STATIC_DIR}/favicon.png")
+
+
 ############################
 # ToggleModelById
 ############################

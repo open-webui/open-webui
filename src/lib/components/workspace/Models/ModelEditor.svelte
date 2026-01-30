@@ -52,6 +52,12 @@
 
 	let loaded = false;
 
+	// Preview state for immediate image feedback
+	let previewImageUrl = null;
+
+	// Reactive theme resolution at top level
+	$: currentTheme = resolveTheme($theme);
+
 	// ///////////
 	// model
 	// ///////////
@@ -220,11 +226,17 @@
 
 		await onSubmit(info);
 
+		// Clear preview after successful save
+		previewImageUrl = null;
+
 		loading = false;
 		success = false;
 	};
 
 	onMount(async () => {
+		// Clear any preview on component mount
+		previewImageUrl = null;
+
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
 		const knowledgeData = await getKnowledgeBases(localStorage.token);
@@ -391,6 +403,7 @@
 
 						// Display the compressed image
 						info.meta.profile_image_url = compressedSrc;
+						previewImageUrl = compressedSrc; // Show data URL immediately
 
 						inputFiles = null;
 						filesInputElement.value = '';
@@ -429,18 +442,30 @@
 							}}
 						>
 							{#if edit && info.id}
-								<img
-									src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${info.id}&theme=${resolveTheme($theme)}`}
-									alt="model profile"
-									class="rounded-xl size-72 md:size-60 object-cover shrink-0"
-								/>
+								{#if previewImageUrl}
+									<!-- Show preview when local changes made -->
+									<img
+										src={previewImageUrl}
+										alt="model profile"
+										class="rounded-xl size-72 md:size-60 object-cover shrink-0"
+									/>
+								{:else}
+									<!-- Show current saved image from API -->
+									<img
+										src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${info.id}&theme=${resolveTheme($theme)}`}
+										alt="model profile"
+										class="rounded-xl size-72 md:size-60 object-cover shrink-0"
+									/>
+								{/if}
 							{:else if info.meta.profile_image_url}
+								<!-- Create mode: show local state -->
 								<img
 									src={info.meta.profile_image_url}
 									alt="model profile"
 									class="rounded-xl size-72 md:size-60 object-cover shrink-0"
 								/>
 							{:else}
+								<!-- Fallback -->
 								<img
 									src="/static/favicon.png"
 									alt="model profile"
@@ -479,6 +504,11 @@
 								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
 								on:click={() => {
 									info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
+
+									// Fetch preview of what image will be after reset
+									const previewUrl = `${WEBUI_API_BASE_URL}/models/model/profile/image/preview?id=${info.id}&theme=${currentTheme}&profile_image_url=${encodeURIComponent('/static/favicon.png')}&t=${Date.now()}`;
+
+									previewImageUrl = previewUrl;
 								}}
 								type="button"
 							>
