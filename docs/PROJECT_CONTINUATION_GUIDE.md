@@ -48,12 +48,14 @@ This is a fork of Open WebUI customized for a research study involving children 
 **Branch**: `feature/separate-quiz-workflow` - **INACTIVE** (merged, can be deleted)
 
 **Key Changes**:
+
 - Separated quiz/survey workflow from main chat interface
 - Added "Survey View" and "Chat View" navigation buttons
 - Improved sidebar visibility logic for survey pages
 - Fixed navigation issues with "Open WebUI" and "New Chat" buttons
 
 **Related Files**:
+
 - `src/lib/components/layout/Sidebar/UserMenu.svelte` - Survey/Chat View buttons
 - `src/lib/components/admin/Settings/General.svelte` - Open WebUI button
 - `src/lib/components/layout/Sidebar.svelte` - New Chat navigation
@@ -67,12 +69,14 @@ This is a fork of Open WebUI customized for a research study involving children 
 **Status**: Active Development
 
 **Components**:
+
 - **Moderation Scenario Flow**: Parents review AI responses to child prompts
 - **Initial Survey**: Collects child profile and personality data
 - **Exit Survey**: Post-study data collection
 - **Personality-Based Scenarios**: Generates scenarios from child profile characteristics
 
 **Key Routes**:
+
 - `/moderation-scenario` - Main moderation interface
 - `/initial-survey` - Child profile creation
 - `/exit-survey` - Post-study survey
@@ -86,6 +90,7 @@ This is a fork of Open WebUI customized for a research study involving children 
 **Status**: Active Development
 
 **Endpoints**:
+
 - `GET /workflow/state` - Current workflow state
 - `GET /workflow/current-attempt` - Attempt tracking
 - `GET /workflow/session-info` - Session information
@@ -102,6 +107,7 @@ This is a fork of Open WebUI customized for a research study involving children 
 **Status**: Active Development
 
 **Features**:
+
 - Child profile creation with personality traits
 - Parent-child profile management
 - Profile-based scenario generation
@@ -118,6 +124,7 @@ This is a fork of Open WebUI customized for a research study involving children 
 **Token Type**: Classic Personal Access Token (PAT)  
 **Token Format**: Starts with `ghp_`  
 **Required Scopes**:
+
 - ✅ **`repo`** - Full control of private repositories (includes PR operations)
 - ✅ **`read:org`** (optional but recommended) - For org-related queries
 
@@ -181,6 +188,7 @@ pip install -r requirements.txt
 #### 1. Start Services
 
 **Backend** (port 8080):
+
 ```bash
 cd backend
 ./start.sh
@@ -188,6 +196,7 @@ cd backend
 ```
 
 **Frontend** (port 5173 or 5174):
+
 ```bash
 npm run dev
 # Note the port Vite prints
@@ -196,6 +205,7 @@ npm run dev
 #### 2. Run Tests
 
 **Workflow API Tests**:
+
 ```bash
 export RUN_CHILD_PROFILE_TESTS=1
 export CYPRESS_baseUrl=http://localhost:5173  # Use actual port
@@ -203,18 +213,21 @@ xvfb-run -a npx cypress run --headless --spec cypress/e2e/workflow.cy.ts
 ```
 
 **Child Profile Tests**:
+
 ```bash
 RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 \
   npx cypress run --headless --spec "cypress/e2e/kids-profile.cy.ts,cypress/e2e/parent-child-profile.cy.ts"
 ```
 
 **All Tests**:
+
 ```bash
 RUN_CHILD_PROFILE_TESTS=1 CYPRESS_baseUrl=http://localhost:5173 \
   xvfb-run -a npx cypress run --headless
 ```
 
 **Interactive Mode** (requires display):
+
 ```bash
 npx cypress open
 ```
@@ -222,26 +235,28 @@ npx cypress open
 ### Test Account
 
 **Default Credentials**:
+
 - Email: `jjdrisco@ucsd.edu`
 - Password: `0000`
 
 **Override with Environment Variables**:
+
 - `INTERVIEWEE_EMAIL` / `INTERVIEWEE_PASSWORD` (kids spec)
 - `PARENT_EMAIL` / `PARENT_PASSWORD` (parent spec)
 - `TEST_EMAIL` / `TEST_PASSWORD` (both)
 
 ### Available Test Suites
 
-| Test File | Description |
-|-----------|-------------|
-| `workflow.cy.ts` | Workflow API endpoints and state management |
-| `kids-profile.cy.ts` | Child profile creation and management |
-| `parent-child-profile.cy.ts` | Parent-child profile interactions |
-| `navigation.cy.ts` | Navigation and routing tests |
-| `chat.cy.ts` | Chat interface tests |
-| `registration.cy.ts` | User registration flow |
-| `settings.cy.ts` | Settings page tests |
-| `documents.cy.ts` | Document management tests |
+| Test File                    | Description                                 |
+| ---------------------------- | ------------------------------------------- |
+| `workflow.cy.ts`             | Workflow API endpoints and state management |
+| `kids-profile.cy.ts`         | Child profile creation and management       |
+| `parent-child-profile.cy.ts` | Parent-child profile interactions           |
+| `navigation.cy.ts`           | Navigation and routing tests                |
+| `chat.cy.ts`                 | Chat interface tests                        |
+| `registration.cy.ts`         | User registration flow                      |
+| `settings.cy.ts`             | Settings page tests                         |
+| `documents.cy.ts`            | Document management tests                   |
 
 ### Common Issues
 
@@ -297,17 +312,20 @@ npm run test:frontend   # Run frontend unit tests
 ### Code Formatting
 
 **Frontend**:
+
 ```bash
 npm run format          # Prettier (JS/TS/Svelte/CSS/MD/HTML/JSON)
 npm run i18n:parse      # Parse and format i18n files
 ```
 
 **Backend**:
+
 ```bash
 python -m black . --exclude ".venv/|/venv/"
 ```
 
 **CI Requirements**:
+
 - Black version: 26.1.0 (check `pyproject.toml`)
 - Prettier: Latest (from `package.json`)
 - All files must pass formatting checks before PR merge
@@ -374,30 +392,30 @@ python -m black . --exclude ".venv/|/venv/"
 
 ### Core Documentation
 
-| Document | Location | Description |
-|----------|----------|-------------|
-| **Project Continuation Guide** | `docs/PROJECT_CONTINUATION_GUIDE.md` | This document - comprehensive project overview |
-| **Contributing Guidelines** | `docs/CONTRIBUTING.md` | General contribution guidelines |
-| **PR Workflow & Tokens** | `docs/PULL_REQUEST_WORKFLOW.md` | Pull request process and GitHub token setup |
-| **Cypress Test Setup** | `docs/CYPRESS_TEST_SETUP.md` | Cypress testing setup and configuration |
-| **Child Profile Tests** | `cypress/README_CHILD_PROFILE_TESTS.md` | Child profile test details |
+| Document                       | Location                                | Description                                    |
+| ------------------------------ | --------------------------------------- | ---------------------------------------------- |
+| **Project Continuation Guide** | `docs/PROJECT_CONTINUATION_GUIDE.md`    | This document - comprehensive project overview |
+| **Contributing Guidelines**    | `docs/CONTRIBUTING.md`                  | General contribution guidelines                |
+| **PR Workflow & Tokens**       | `docs/PULL_REQUEST_WORKFLOW.md`         | Pull request process and GitHub token setup    |
+| **Cypress Test Setup**         | `docs/CYPRESS_TEST_SETUP.md`            | Cypress testing setup and configuration        |
+| **Child Profile Tests**        | `cypress/README_CHILD_PROFILE_TESTS.md` | Child profile test details                     |
 
 ### Feature Documentation
 
-| Document | Location | Description |
-|----------|----------|-------------|
-| **Moderation Survey Flow** | `docs/MODERATION_SURVEY_FLOW.md` | Moderation workflow and decision tree |
-| **Scenario System** | `docs/SCENARIO_SYSTEM.md` | Scenario generation and management |
-| **Moderation Tool** | `docs/MODERATION_TOOL_DOCUMENTATION.md` | Moderation tool features |
-| **Survey Implementation** | `docs/SURVEY_IMPLEMENTATION.md` | Survey system details |
+| Document                   | Location                                | Description                           |
+| -------------------------- | --------------------------------------- | ------------------------------------- |
+| **Moderation Survey Flow** | `docs/MODERATION_SURVEY_FLOW.md`        | Moderation workflow and decision tree |
+| **Scenario System**        | `docs/SCENARIO_SYSTEM.md`               | Scenario generation and management    |
+| **Moderation Tool**        | `docs/MODERATION_TOOL_DOCUMENTATION.md` | Moderation tool features              |
+| **Survey Implementation**  | `docs/SURVEY_IMPLEMENTATION.md`         | Survey system details                 |
 
 ### Infrastructure Documentation
 
-| Document | Location | Description |
-|----------|----------|-------------|
-| **Heroku Backup Setup** | `docs/HEROKU_BACKUP_SETUP.md` | Heroku deployment and backup |
-| **Apache Configuration** | `docs/apache.md` | Apache server setup |
-| **Security Guidelines** | `docs/SECURITY.md` | Security practices and reporting |
+| Document                 | Location                      | Description                      |
+| ------------------------ | ----------------------------- | -------------------------------- |
+| **Heroku Backup Setup**  | `docs/HEROKU_BACKUP_SETUP.md` | Heroku deployment and backup     |
+| **Apache Configuration** | `docs/apache.md`              | Apache server setup              |
+| **Security Guidelines**  | `docs/SECURITY.md`            | Security practices and reporting |
 
 ### Additional Resources
 
@@ -412,6 +430,7 @@ python -m black . --exclude ".venv/|/venv/"
 ### Recently Merged (2026-01-30)
 
 **PR #10: Feature: Separate Quiz Workflow** ✅ **COMPLETE**
+
 - Separated survey/quiz workflow from main chat interface
 - Added navigation buttons for "Survey View" and "Chat View"
 - Fixed sidebar visibility on survey pages
@@ -419,6 +438,7 @@ python -m black . --exclude ".venv/|/venv/"
 - **Branch**: `feature/separate-quiz-workflow` - **INACTIVE** (merged, can be deleted)
 
 **Key Files Changed**:
+
 - `src/lib/components/layout/Sidebar/UserMenu.svelte`
 - `src/lib/components/admin/Settings/General.svelte`
 - `src/lib/components/layout/Sidebar.svelte`
@@ -466,16 +486,19 @@ Located in `.github/workflows/`:
 ### CI Requirements
 
 **Backend Formatting**:
+
 - Black version: 26.1.0 (see `pyproject.toml`)
 - Must format all Python files before PR merge
 - Command: `python -m black . --exclude ".venv/|/venv/"`
 
 **Frontend Formatting**:
+
 - Prettier for JS/TS/Svelte/CSS/MD/HTML/JSON
 - i18n parsing required
 - Command: `npm run format && npm run i18n:parse`
 
 **Frontend Build**:
+
 - Requires `package-lock.json` (must be committed)
 - Uses `npm ci` (not `npm install`)
 - Node.js v20.x recommended
@@ -501,6 +524,7 @@ Located in `.github/workflows/`:
 ### Git Issues
 
 **Problem**: Can't pull changes, "local changes would be overwritten"
+
 ```bash
 # Check what's modified
 git status
@@ -516,6 +540,7 @@ git stash pop
 ```
 
 **Problem**: Line ending conflicts (CRLF vs LF)
+
 ```bash
 # Force sync with remote
 git fetch origin main
@@ -525,6 +550,7 @@ git reset --hard origin/main
 ### Development Issues
 
 **Problem**: Frontend won't start
+
 ```bash
 # Clear node_modules and reinstall
 rm -rf node_modules package-lock.json
@@ -532,6 +558,7 @@ npm install --legacy-peer-deps
 ```
 
 **Problem**: Backend won't start
+
 ```bash
 # Check Python version (need 3.12+)
 python --version
@@ -545,6 +572,7 @@ lsof -i :8080
 ```
 
 **Problem**: Cypress tests fail
+
 ```bash
 # Verify Node.js version (need v20.x)
 node --version
@@ -560,11 +588,13 @@ curl http://localhost:5173
 ### PR Issues
 
 **Problem**: Can't create PR via API
+
 - Verify token has `repo` scope
 - Token must start with `ghp_` (Classic PAT)
 - Check token hasn't expired
 
 **Problem**: CI formatting failures
+
 - Run formatters locally: `npm run format` and `python -m black .`
 - Commit formatted files
 - Ensure Black version matches CI (26.1.0)

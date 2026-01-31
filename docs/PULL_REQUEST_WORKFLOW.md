@@ -28,6 +28,7 @@ Before creating a pull request, ensure you have:
    - This helps ensure the feature aligns with project goals
 
 2. **Ensure Your Branch is Up-to-Date**:
+
    ```bash
    git fetch origin main
    git rebase origin/main  # or merge, depending on your workflow
@@ -77,11 +78,13 @@ GitHub supports two types of Personal Access Tokens:
 For creating and managing pull requests, your token needs:
 
 #### Classic PAT Scopes:
+
 - ✅ **`repo`** - Full control of private repositories
   - This includes: `repo:status`, `repo_deployment`, `public_repo`, `repo:invite`, `security_events`
 - ✅ **`read:org`** (optional but recommended) - Read org and team membership
 
 #### Fine-grained PAT Permissions:
+
 - ✅ **Pull requests**: Read and write
 - ✅ **Contents**: Read and write
 - ✅ **Metadata**: Read (always included)
@@ -106,13 +109,14 @@ For creating and managing pull requests, your token needs:
    - Store it securely - you won't be able to see it again
 
 4. **Using the Token**:
+
    ```bash
    # Set as environment variable
    export GITHUB_TOKEN=ghp_your_token_here
-   
+
    # Or use with GitHub CLI
    gh auth login --with-token < token.txt
-   
+
    # Or configure git remote
    git remote set-url origin https://ghp_your_token_here@github.com/username/repo.git
    ```
@@ -121,6 +125,7 @@ For creating and managing pull requests, your token needs:
 
 > [!IMPORTANT]
 > **Security Guidelines**:
+>
 > - **Never commit tokens to version control**
 > - **Never share tokens in public channels**
 > - **Use environment variables** or secure secret management
@@ -135,6 +140,7 @@ For creating and managing pull requests, your token needs:
 **Cause**: Token lacks required permissions or is the wrong type.
 
 **Solutions**:
+
 1. Verify token starts with `ghp_` (Classic PAT)
 2. Ensure `repo` scope is selected
 3. Check token hasn't expired
@@ -145,6 +151,7 @@ For creating and managing pull requests, your token needs:
 **Cause**: Invalid or expired token.
 
 **Solutions**:
+
 1. Verify token is correct (no extra spaces/characters)
 2. Check token expiration date
 3. Regenerate token if expired
@@ -154,6 +161,7 @@ For creating and managing pull requests, your token needs:
 **Cause**: Token not properly configured in CI environment.
 
 **Solutions**:
+
 1. Add token as GitHub Secret in repository settings
 2. Reference secret in workflow: `${{ secrets.GITHUB_TOKEN }}` or `${{ secrets.PAT_TOKEN }}`
 3. Ensure CI workflow has `permissions:` section configured
@@ -197,6 +205,7 @@ For creating and managing pull requests, your token needs:
 **Problem**: Cannot create PR via API/CLI
 
 **Check**:
+
 1. Token has `repo` scope
 2. Token is valid and not expired
 3. Branch exists and is pushed to remote
@@ -207,6 +216,7 @@ For creating and managing pull requests, your token needs:
 **Problem**: PR has merge conflicts
 
 **Solution**:
+
 ```bash
 git fetch origin main
 git checkout your-branch
@@ -222,6 +232,7 @@ git push --force-with-lease
 **Problem**: Tests or formatting checks fail
 
 **Common Issues**:
+
 - **Formatting**: Run `black` (Python) or `prettier` (Frontend) locally
 - **Linting**: Fix linting errors before pushing
 - **Tests**: Run tests locally and fix failures
@@ -232,6 +243,7 @@ git push --force-with-lease
 **Problem**: `gh` CLI commands fail with token
 
 **Solution**:
+
 ```bash
 # Authenticate with token
 gh auth login --with-token <<< "ghp_your_token_here"

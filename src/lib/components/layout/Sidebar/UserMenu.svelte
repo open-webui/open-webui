@@ -244,8 +244,10 @@
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
 
-			{@const isSurveyView = $page.url.pathname.startsWith('/exit-survey') || $page.url.pathname.startsWith('/initial-survey')}
-			
+			{@const isSurveyView =
+				$page.url.pathname.startsWith('/exit-survey') ||
+				$page.url.pathname.startsWith('/initial-survey')}
+
 			{#if isSurveyView}
 				<DropdownMenu.Item
 					as="a"

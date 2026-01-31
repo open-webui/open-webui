@@ -57,6 +57,7 @@ We welcome pull requests. Before submitting one, please:
 
 > [!TIP]
 > **Need help with PR workflow or GitHub tokens?** See our detailed [Pull Request Workflow Guide](PULL_REQUEST_WORKFLOW.md) for comprehensive information about:
+>
 > - Creating and managing pull requests
 > - GitHub Personal Access Token (PAT) requirements and setup
 > - Troubleshooting common PR issues

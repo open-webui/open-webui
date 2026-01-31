@@ -19,13 +19,13 @@ describe('Survey Sidebar and Navigation', () => {
 		it('should redirect admin users to main chat page (/) instead of /admin/users', () => {
 			// Visit the root page
 			cy.visit('/', { failOnStatusCode: false });
-			
+
 			// Wait for redirect
 			cy.wait(2000);
-			
+
 			// Should not be on /admin/users
 			cy.url({ timeout: 10000 }).should('not.include', '/admin/users');
-			
+
 			// Should be on main chat page (either / or /c/[id])
 			cy.url().then((url) => {
 				expect(url).to.satisfy((u: string) => {
@@ -40,29 +40,35 @@ describe('Survey Sidebar and Navigation', () => {
 			// Navigate to exit-survey page
 			cy.visit('/exit-survey', { failOnStatusCode: false });
 			cy.wait(2000);
-			
+
 			// Toggle sidebar if it's hidden (click the menu button)
 			cy.get('body').then(($body) => {
 				if ($body.find('#survey-sidebar-nav, [id*="survey-sidebar"]').length === 0) {
 					// Sidebar is hidden, click toggle button
-					cy.get('#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]').first().click({ force: true });
+					cy.get(
+						'#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]'
+					)
+						.first()
+						.click({ force: true });
 					cy.wait(500);
 				}
 			});
-			
+
 			// Check if survey sidebar exists
 			cy.get('#survey-sidebar-nav, [id*="survey-sidebar"]', { timeout: 10000 }).should('exist');
-			
+
 			// Main sidebar should not be visible (or survey sidebar should be visible instead)
 			// The survey sidebar should have the user menu
-			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 }).should('exist');
+			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', {
+				timeout: 10000
+			}).should('exist');
 		});
 
 		it('should show survey sidebar on initial-survey page', () => {
 			// Navigate to initial-survey page
 			cy.visit('/initial-survey', { failOnStatusCode: false });
 			cy.wait(2000);
-			
+
 			// Check if survey sidebar exists
 			cy.get('#survey-sidebar-nav, [id*="survey-sidebar"]', { timeout: 10000 }).should('exist');
 		});
@@ -71,7 +77,7 @@ describe('Survey Sidebar and Navigation', () => {
 			// Navigate to a regular page (not survey)
 			cy.visit('/', { failOnStatusCode: false });
 			cy.wait(2000);
-			
+
 			// Main sidebar should exist (not survey sidebar)
 			// The main sidebar has different structure, check for chat-related elements
 			cy.get('body').then(($body) => {
@@ -88,25 +94,31 @@ describe('Survey Sidebar and Navigation', () => {
 			// Navigate to exit-survey page
 			cy.visit('/exit-survey', { failOnStatusCode: false });
 			cy.wait(2000);
-			
+
 			// Toggle sidebar if it's hidden
 			cy.get('body').then(($body) => {
 				if ($body.find('#survey-sidebar-nav, [id*="survey-sidebar"]').length === 0) {
-					cy.get('#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]').first().click({ force: true });
+					cy.get(
+						'#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]'
+					)
+						.first()
+						.click({ force: true });
 					cy.wait(500);
 				}
 			});
-			
+
 			// Wait for any modals to close
 			cy.wait(1000);
-			
+
 			// Click on the user menu (use force to bypass overlays)
-			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 }).first().click({ force: true });
+			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 })
+				.first()
+				.click({ force: true });
 			cy.wait(500);
-			
+
 			// Verify Main View button exists
 			cy.contains('Main View', { timeout: 10000 }).should('be.visible');
-			
+
 			// Survey View button should not be visible when on survey page
 			cy.get('body').then(($body) => {
 				const surveyViewButtons = $body.find('*:contains("Survey View")');
@@ -119,17 +131,19 @@ describe('Survey Sidebar and Navigation', () => {
 			// Navigate to a regular page
 			cy.visit('/', { failOnStatusCode: false });
 			cy.wait(2000);
-			
+
 			// Wait for any modals to close
 			cy.wait(1000);
-			
+
 			// Click on the user menu (use force to bypass overlays)
-			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 }).first().click({ force: true });
+			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 })
+				.first()
+				.click({ force: true });
 			cy.wait(500);
-			
+
 			// Verify Survey View button exists
 			cy.contains('Survey View', { timeout: 10000 }).should('be.visible');
-			
+
 			// Main View button should not be visible when not on survey page
 			cy.get('body').then(($body) => {
 				const mainViewButtons = $body.find('*:contains("Main View")');
@@ -141,29 +155,35 @@ describe('Survey Sidebar and Navigation', () => {
 			// Navigate to exit-survey page
 			cy.visit('/exit-survey', { failOnStatusCode: false });
 			cy.wait(2000);
-			
+
 			// Toggle sidebar if it's hidden
 			cy.get('body').then(($body) => {
 				if ($body.find('#survey-sidebar-nav, [id*="survey-sidebar"]').length === 0) {
-					cy.get('#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]').first().click({ force: true });
+					cy.get(
+						'#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]'
+					)
+						.first()
+						.click({ force: true });
 					cy.wait(500);
 				}
 			});
-			
+
 			// Wait for any modals to close
 			cy.wait(1000);
-			
+
 			// Click on the user menu (use force to bypass overlays)
-			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 }).first().click({ force: true });
+			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 })
+				.first()
+				.click({ force: true });
 			cy.wait(500);
-			
+
 			// Click on Main View button
 			cy.contains('Main View').click({ force: true });
 			cy.wait(2000);
-			
+
 			// Should navigate away from exit-survey
 			cy.url({ timeout: 10000 }).should('not.include', '/exit-survey');
-			
+
 			// Should be on main chat page (either / or /c/[id])
 			cy.url().then((url) => {
 				expect(url).to.satisfy((u: string) => {

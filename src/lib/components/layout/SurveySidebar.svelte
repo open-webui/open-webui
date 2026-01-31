@@ -58,7 +58,9 @@
 	>
 		<div class="flex flex-col flex-1 overflow-y-auto">
 			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+			<div
+				class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800"
+			>
 				<div class="flex items-center gap-2">
 					<h2 class="text-lg font-semibold">{$WEBUI_NAME}</h2>
 				</div>
@@ -91,7 +93,9 @@
 			<!-- Navigation Items -->
 			<div class="flex-1 p-4">
 				<div class="space-y-2">
-					<div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+					<div
+						class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4"
+					>
 						{$i18n.t('Survey Navigation')}
 					</div>
 					<!-- Survey navigation items can be added here if needed -->

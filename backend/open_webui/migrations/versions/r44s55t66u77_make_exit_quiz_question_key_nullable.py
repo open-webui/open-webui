@@ -48,11 +48,13 @@ def downgrade() -> None:
         # Check if question_key column exists
         if "question_key" in exit_quiz_columns:
             # First, set any NULL values to a default value
-            op.execute("""
+            op.execute(
+                """
                 UPDATE exit_quiz_response 
                 SET question_key = 'exit-survey' 
                 WHERE question_key IS NULL
-            """)
+            """
+            )
 
             # Then make it NOT NULL
             op.alter_column("exit_quiz_response", "question_key", nullable=False)

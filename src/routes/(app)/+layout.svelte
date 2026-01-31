@@ -544,8 +544,10 @@
 					</div>
 				{/if}
 
-				{@const isSurveyRoute = $page.url.pathname.startsWith('/exit-survey') || $page.url.pathname.startsWith('/initial-survey')}
-				
+				{@const isSurveyRoute =
+					$page.url.pathname.startsWith('/exit-survey') ||
+					$page.url.pathname.startsWith('/initial-survey')}
+
 				{#if isSurveyRoute}
 					<SurveySidebar />
 				{:else}
