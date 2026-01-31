@@ -4,6 +4,7 @@
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { fade, slide } from 'svelte/transition';
 
 	import { getUsage } from '$lib/apis';
@@ -243,24 +244,47 @@
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item
-				as="a"
-				href="/exit-survey"
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-				on:click={async () => {
-					show = false;
-					await goto('/exit-survey');
-					if ($mobile) {
-						await tick();
-						showSidebar.set(false);
-					}
-				}}
-			>
-				<div class=" self-center mr-3">
-					<DocumentChartBar className="size-5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Survey View')}</div>
-			</DropdownMenu.Item>
+			{@const isSurveyView = $page.url.pathname.startsWith('/exit-survey') || $page.url.pathname.startsWith('/initial-survey')}
+			
+			{#if isSurveyView}
+				<DropdownMenu.Item
+					as="a"
+					href="/"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					on:click={async () => {
+						show = false;
+						await goto('/');
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<DocumentChartBar className="size-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Main View')}</div>
+				</DropdownMenu.Item>
+			{:else}
+				<DropdownMenu.Item
+					as="a"
+					href="/exit-survey"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+					on:click={async () => {
+						show = false;
+						await goto('/exit-survey');
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<DocumentChartBar className="size-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Survey View')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			{#if role === 'admin'}
 				<DropdownMenu.Item
