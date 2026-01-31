@@ -1,13 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { showSidebar, user } from '$lib/stores';
+	import { showSidebar, user, mobile } from '$lib/stores';
 	import { get } from 'svelte/store';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { toast } from 'svelte-sonner';
 	import AssignmentTimeTracker from '$lib/components/assignment/AssignmentTimeTracker.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import VideoModal from '$lib/components/common/VideoModal.svelte';
+
+	// Ensure sidebar is visible on survey pages (unless on mobile)
+	onMount(() => {
+		if (!$mobile) {
+			showSidebar.set(true);
+		}
+	});
 
 	// Assignment workflow state
 	let assignmentStep: number = 1;

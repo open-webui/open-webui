@@ -25,7 +25,7 @@
 		}
 
 		if (userType === 'admin') {
-			goto('/admin/users');
+			goto('/');
 			return;
 		}
 

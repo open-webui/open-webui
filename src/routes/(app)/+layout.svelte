@@ -39,6 +39,7 @@
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
+	import SurveySidebar from '$lib/components/layout/SurveySidebar.svelte';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
@@ -543,7 +544,15 @@
 					</div>
 				{/if}
 
-				<Sidebar />
+				{@const isSurveyRoute =
+					$page.url.pathname.startsWith('/exit-survey') ||
+					$page.url.pathname.startsWith('/initial-survey')}
+
+				{#if isSurveyRoute}
+					<SurveySidebar />
+				{:else}
+					<Sidebar />
+				{/if}
 
 				{#if loaded}
 					<slot />

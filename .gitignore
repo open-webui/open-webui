@@ -311,3 +311,4 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 backend/db_output.txt
+data/webui.db
