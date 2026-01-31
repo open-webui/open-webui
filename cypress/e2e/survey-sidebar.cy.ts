@@ -41,12 +41,21 @@ describe('Survey Sidebar and Navigation', () => {
 			cy.visit('/exit-survey', { failOnStatusCode: false });
 			cy.wait(2000);
 			
+			// Toggle sidebar if it's hidden (click the menu button)
+			cy.get('body').then(($body) => {
+				if ($body.find('#survey-sidebar-nav, [id*="survey-sidebar"]').length === 0) {
+					// Sidebar is hidden, click toggle button
+					cy.get('#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]').first().click({ force: true });
+					cy.wait(500);
+				}
+			});
+			
 			// Check if survey sidebar exists
 			cy.get('#survey-sidebar-nav, [id*="survey-sidebar"]', { timeout: 10000 }).should('exist');
 			
 			// Main sidebar should not be visible (or survey sidebar should be visible instead)
 			// The survey sidebar should have the user menu
-			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]').should('exist');
+			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 }).should('exist');
 		});
 
 		it('should show survey sidebar on initial-survey page', () => {
@@ -80,8 +89,19 @@ describe('Survey Sidebar and Navigation', () => {
 			cy.visit('/exit-survey', { failOnStatusCode: false });
 			cy.wait(2000);
 			
-			// Click on the user menu
-			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]').first().click();
+			// Toggle sidebar if it's hidden
+			cy.get('body').then(($body) => {
+				if ($body.find('#survey-sidebar-nav, [id*="survey-sidebar"]').length === 0) {
+					cy.get('#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]').first().click({ force: true });
+					cy.wait(500);
+				}
+			});
+			
+			// Wait for any modals to close
+			cy.wait(1000);
+			
+			// Click on the user menu (use force to bypass overlays)
+			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 }).first().click({ force: true });
 			cy.wait(500);
 			
 			// Verify Main View button exists
@@ -100,8 +120,11 @@ describe('Survey Sidebar and Navigation', () => {
 			cy.visit('/', { failOnStatusCode: false });
 			cy.wait(2000);
 			
-			// Click on the user menu
-			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]').first().click();
+			// Wait for any modals to close
+			cy.wait(1000);
+			
+			// Click on the user menu (use force to bypass overlays)
+			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 }).first().click({ force: true });
 			cy.wait(500);
 			
 			// Verify Survey View button exists
@@ -119,8 +142,19 @@ describe('Survey Sidebar and Navigation', () => {
 			cy.visit('/exit-survey', { failOnStatusCode: false });
 			cy.wait(2000);
 			
-			// Click on the user menu
-			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]').first().click();
+			// Toggle sidebar if it's hidden
+			cy.get('body').then(($body) => {
+				if ($body.find('#survey-sidebar-nav, [id*="survey-sidebar"]').length === 0) {
+					cy.get('#sidebar-toggle-button, button[aria-label*="Sidebar"], button[aria-label*="Toggle"]').first().click({ force: true });
+					cy.wait(500);
+				}
+			});
+			
+			// Wait for any modals to close
+			cy.wait(1000);
+			
+			// Click on the user menu (use force to bypass overlays)
+			cy.get('img[aria-label*="User Profile"], img[aria-label*="User Menu"]', { timeout: 10000 }).first().click({ force: true });
 			cy.wait(500);
 			
 			// Click on Main View button

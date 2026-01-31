@@ -1,9 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { showSidebar } from '$lib/stores';
+	import { showSidebar, mobile } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { toast } from 'svelte-sonner';
+
+	// Ensure sidebar is visible on survey pages (unless on mobile)
+	onMount(() => {
+		if (!$mobile) {
+			showSidebar.set(true);
+		}
+	});
 
 	// Survey responses
 	let surveyResponses = {
