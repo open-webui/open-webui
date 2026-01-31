@@ -42,9 +42,10 @@ This is a fork of Open WebUI customized for a research study involving children 
 
 ## Features in Development
 
-### 1. Separate Quiz Workflow (Recently Merged - PR #10)
+### 1. Separate Quiz Workflow (Completed - PR #10)
 
-**Status**: ✅ Merged to main (2026-01-30)
+**Status**: ✅ **COMPLETE** - Merged to main (2026-01-30)  
+**Branch**: `feature/separate-quiz-workflow` - **INACTIVE** (merged, can be deleted)
 
 **Key Changes**:
 - Separated quiz/survey workflow from main chat interface
@@ -58,6 +59,8 @@ This is a fork of Open WebUI customized for a research study involving children 
 - `src/lib/components/layout/Sidebar.svelte` - New Chat navigation
 - `src/routes/(app)/+layout.svelte` - Sidebar visibility logic
 - `src/routes/(app)/+page.svelte` - Root route handling
+
+**Note**: This feature is complete and merged. The branch `feature/separate-quiz-workflow` is inactive and can be safely deleted.
 
 ### 2. Moderation & Survey System
 
@@ -408,11 +411,12 @@ python -m black . --exclude ".venv/|/venv/"
 
 ### Recently Merged (2026-01-30)
 
-**PR #10: Feature: Separate Quiz Workflow**
+**PR #10: Feature: Separate Quiz Workflow** ✅ **COMPLETE**
 - Separated survey/quiz workflow from main chat interface
 - Added navigation buttons for "Survey View" and "Chat View"
 - Fixed sidebar visibility on survey pages
 - Improved "Open WebUI" and "New Chat" button navigation
+- **Branch**: `feature/separate-quiz-workflow` - **INACTIVE** (merged, can be deleted)
 
 **Key Files Changed**:
 - `src/lib/components/layout/Sidebar/UserMenu.svelte`
@@ -420,6 +424,14 @@ python -m black . --exclude ".venv/|/venv/"
 - `src/lib/components/layout/Sidebar.svelte`
 - `src/routes/(app)/+layout.svelte`
 - `src/routes/(app)/+page.svelte`
+
+### Inactive/Completed Branches
+
+The following branches have been merged and are inactive:
+
+- **`feature/separate-quiz-workflow`** - Merged via PR #10 (2026-01-30)
+  - Status: Complete and merged to main
+  - Can be safely deleted from remote repository
 
 ### Active Development Areas
 
