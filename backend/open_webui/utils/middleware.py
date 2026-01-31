@@ -160,9 +160,14 @@ def get_citation_source_from_tool_result(
     Returns a list of sources (usually one, but query_knowledge_files may return multiple).
     """
     try:
+        # Handle error responses from tools - all builtin tools return {"error": ...} on failure
+        parsed = json.loads(tool_result)
+        if isinstance(parsed, dict) and "error" in parsed:
+            return []
+
         if tool_name == "search_web":
-            # Parse JSON array: [{"title": "...", "link": "...", "snippet": "..."}]
-            results = json.loads(tool_result)
+            # Expects JSON array: [{"title": "...", "link": "...", "snippet": "..."}]
+            results = parsed
             documents = []
             metadata = []
 
@@ -189,7 +194,7 @@ def get_citation_source_from_tool_result(
             ]
 
         elif tool_name == "view_knowledge_file":
-            file_data = json.loads(tool_result)
+            file_data = parsed
             filename = file_data.get("filename", "Unknown File")
             file_id = file_data.get("id", "")
             knowledge_name = file_data.get("knowledge_name", "")
@@ -218,7 +223,7 @@ def get_citation_source_from_tool_result(
             ]
 
         elif tool_name == "query_knowledge_files":
-            chunks = json.loads(tool_result)
+            chunks = parsed
 
             # Group chunks by source for better citation display
             # Each unique source becomes a separate source entry
