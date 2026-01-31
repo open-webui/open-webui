@@ -5,7 +5,14 @@ import logging
 
 import redis
 
-from open_webui.env import REDIS_SENTINEL_MAX_RETRY_COUNT
+from open_webui.env import (
+    REDIS_CLUSTER,
+    REDIS_SOCKET_CONNECT_TIMEOUT,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_MAX_RETRY_COUNT,
+    REDIS_SENTINEL_PORT,
+    REDIS_URL,
+)
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +42,38 @@ class SentinelRedisProxy:
             return orig_attr
 
         if self._async_mode:
+            if inspect.isasyncgenfunction(orig_attr):
+
+                def _wrapped_iter(*args, **kwargs):
+                    async def _iter():
+                        for i in range(REDIS_SENTINEL_MAX_RETRY_COUNT):
+                            try:
+                                method = getattr(self._master(), item)
+                                async for value in method(*args, **kwargs):
+                                    yield value
+                                return
+                            except (
+                                redis.exceptions.ConnectionError,
+                                redis.exceptions.ReadOnlyError,
+                            ) as e:
+                                if i < REDIS_SENTINEL_MAX_RETRY_COUNT - 1:
+                                    log.debug(
+                                        "Redis sentinel fail-over (%s). Retry %s/%s",
+                                        type(e).__name__,
+                                        i + 1,
+                                        REDIS_SENTINEL_MAX_RETRY_COUNT,
+                                    )
+                                    continue
+                                log.error(
+                                    "Redis operation failed after %s retries: %s",
+                                    REDIS_SENTINEL_MAX_RETRY_COUNT,
+                                    e,
+                                )
+                                raise e from e
+
+                    return _iter()
+
+                return _wrapped_iter
 
             async def _wrapped(*args, **kwargs):
                 for i in range(REDIS_SENTINEL_MAX_RETRY_COUNT):
@@ -108,6 +147,21 @@ def parse_redis_service_url(redis_url):
     }
 
 
+def get_redis_client(async_mode=False):
+    try:
+        return get_redis_connection(
+            redis_url=REDIS_URL,
+            redis_sentinels=get_sentinels_from_env(
+                REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+            ),
+            redis_cluster=REDIS_CLUSTER,
+            async_mode=async_mode,
+        )
+    except Exception as e:
+        log.debug(f"Failed to get Redis client: {e}")
+        return None
+
+
 def get_redis_connection(
     redis_url,
     redis_sentinels,
@@ -141,6 +195,7 @@ def get_redis_connection(
                 username=redis_config["username"],
                 password=redis_config["password"],
                 decode_responses=decode_responses,
+                socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
             )
             connection = SentinelRedisProxy(
                 sentinel,
@@ -167,6 +222,7 @@ def get_redis_connection(
                 username=redis_config["username"],
                 password=redis_config["password"],
                 decode_responses=decode_responses,
+                socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
             )
             connection = SentinelRedisProxy(
                 sentinel,

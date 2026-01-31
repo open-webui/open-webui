@@ -13,7 +13,7 @@
 {:else}
 	{#each texts as text}
 		<span class="" transition:fade={{ duration: 100 }}>
-			{text}
+			{text}{' '}
 		</span>
 	{/each}
 {/if}

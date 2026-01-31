@@ -8,21 +8,22 @@ import uuid
 
 from open_webui.utils.misc import get_last_user_message, get_messages_content
 
-from open_webui.env import SRC_LOG_LEVELS
 from open_webui.config import DEFAULT_RAG_TEMPLATE
 
-
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def get_task_model_id(
     default_model_id: str, task_model: str, task_model_external: str, models
 ) -> str:
-    log.info(f"DEBUG: get_task_model_id called with default_model_id: {default_model_id}")
+    log.info(
+        f"DEBUG: get_task_model_id called with default_model_id: {default_model_id}"
+    )
     log.info(f"DEBUG: get_task_model_id available models: {list(models.keys())}")
-    log.info(f"DEBUG: get_task_model_id default_model_id in models: {default_model_id in models}")
-    
+    log.info(
+        f"DEBUG: get_task_model_id default_model_id in models: {default_model_id in models}"
+    )
+
     # Set the task model
     task_model_id = default_model_id
     # Check if the user has a custom task model and use that model
@@ -213,20 +214,21 @@ def rag_template(template: str, context: str, query: str):
     if "[query]" in context:
         query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
         template = template.replace("[query]", query_placeholder)
-        query_placeholders.append(query_placeholder)
+        query_placeholders.append((query_placeholder, "[query]"))
 
     if "{{QUERY}}" in context:
         query_placeholder = "{{QUERY" + str(uuid.uuid4()) + "}}"
         template = template.replace("{{QUERY}}", query_placeholder)
-        query_placeholders.append(query_placeholder)
+        query_placeholders.append((query_placeholder, "{{QUERY}}"))
 
     template = template.replace("[context]", context)
     template = template.replace("{{CONTEXT}}", context)
+
     template = template.replace("[query]", query)
     template = template.replace("{{QUERY}}", query)
 
-    for query_placeholder in query_placeholders:
-        template = template.replace(query_placeholder, query)
+    for query_placeholder, original_placeholder in query_placeholders:
+        template = template.replace(query_placeholder, original_placeholder)
 
     return template
 

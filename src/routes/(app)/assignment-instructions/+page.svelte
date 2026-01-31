@@ -31,14 +31,14 @@
 			}
 			return false;
 		};
-		
+
 		checkInstructionsCompleted();
 
 		// Enable tracking if instructions are already completed (consent given)
 		if (instructionsCompleted) {
 			trackingEnabled = true;
 		}
-		
+
 		// Listen for storage changes to update state reactively
 		const handleStorageChange = () => {
 			checkInstructionsCompleted();
@@ -52,7 +52,7 @@
 				showSidebar.set(true);
 			}
 		} catch (e) {}
-		
+
 		// Set up scroll indicator
 		const timer = setTimeout(() => {
 			if (!hasScrolled) {
@@ -67,13 +67,13 @@
 
 		// Find the scrollable container
 		const scrollContainer = document.querySelector('.overflow-y-auto');
-		
+
 		// Attach to both window and container
 		if (scrollContainer) {
 			scrollContainer.addEventListener('scroll', handleScroll);
 		}
 		window.addEventListener('scroll', handleScroll);
-		
+
 		return () => {
 			clearTimeout(timer);
 			if (scrollContainer) {
@@ -85,14 +85,13 @@
 		};
 	});
 
-
 	function startAssignment() {
 		// Set initial assignment step
 		localStorage.setItem('assignmentStep', '1');
 		startButtonClicked = true;
 		goto('/kids/profile');
 	}
-	
+
 	function markInstructionsComplete() {
 		// Update local state immediately
 		instructionsCompleted = true;
@@ -106,7 +105,7 @@
 		// Start time tracking after consent
 		trackingEnabled = true;
 	}
-	
+
 	function proceedToTasks() {
 		instructionsCompleted = true;
 		localStorage.setItem('instructionsCompleted', 'true');
@@ -114,11 +113,10 @@
 		showReadyModal = false;
 		goto('/kids/profile');
 	}
-	
+
 	function cancelReady() {
 		showReadyModal = false;
 	}
-
 </script>
 
 <svelte:head>
@@ -130,7 +128,9 @@
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} max-w-full"
 >
-	<nav class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+	<nav
+		class="px-2.5 pt-1.5 pb-2 backdrop-blur-xl w-full drag-region bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800"
+	>
 		<div class="flex items-center justify-between">
 			<div class="flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
@@ -149,9 +149,7 @@
 				</div>
 
 				<div class="flex w-full">
-					<div class="flex items-center text-xl font-semibold">
-						Instructions
-					</div>
+					<div class="flex items-center text-xl font-semibold">Instructions</div>
 				</div>
 			</div>
 
@@ -164,7 +162,8 @@
 					>
 						<span>Next Task</span>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+							></path>
 						</svg>
 					</button>
 				</div>
@@ -177,10 +176,10 @@
 			<!-- Header -->
 			<div class="text-center mb-12">
 				<p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-					In this survey, you'll complete three tasks to help us understand what moderation strategies would be most effective for children's conversations with AI.
+					In this survey, you'll complete three tasks to help us understand what moderation
+					strategies would be most effective for children's conversations with AI.
 				</p>
 			</div>
-
 
 			<!-- Task Steps -->
 			<div class="space-y-6 mb-8">
@@ -188,7 +187,9 @@
 				<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
 					<div class="flex items-start space-x-4">
 						<div class="flex-shrink-0">
-							<div class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
+							<div
+								class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg"
+							>
 								1
 							</div>
 						</div>
@@ -197,7 +198,8 @@
 								Child Profile Setup
 							</h3>
 							<p class="text-gray-600 dark:text-gray-300">
-								Create a profile for your child including age, gender, interests, and characteristics.
+								Create a profile for your child including age, gender, interests, and
+								characteristics.
 							</p>
 						</div>
 					</div>
@@ -207,7 +209,9 @@
 				<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
 					<div class="flex items-start space-x-4">
 						<div class="flex-shrink-0">
-							<div class="w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
+							<div
+								class="w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold text-lg"
+							>
 								2
 							</div>
 						</div>
@@ -226,16 +230,17 @@
 				<div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
 					<div class="flex items-start space-x-4">
 						<div class="flex-shrink-0">
-							<div class="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
+							<div
+								class="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-lg"
+							>
 								3
 							</div>
 						</div>
 						<div class="flex-1">
-							<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-								Exit Survey
-							</h3>
+							<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">Exit Survey</h3>
 							<p class="text-gray-600 dark:text-gray-300">
-								Complete a brief survey about your experience and provide some additional information.
+								Complete a brief survey about your experience and provide some additional
+								information.
 							</p>
 						</div>
 					</div>
@@ -243,12 +248,15 @@
 			</div>
 
 			<!-- Help Videos Notice -->
-			<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 mb-8">
+			<div
+				class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 mb-8"
+			>
 				<h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">
 					📹 Tutorial Videos Available
 				</h3>
 				<p class="text-blue-700 dark:text-blue-300 mb-3">
-					Each task page includes a help button in the top-right corner that opens a tutorial video specific to that task.
+					Each task page includes a help button in the top-right corner that opens a tutorial video
+					specific to that task.
 				</p>
 				<div class="flex items-center gap-2">
 					<span class="text-blue-700 dark:text-blue-300 text-sm">Example:</span>
@@ -263,7 +271,9 @@
 			</div>
 
 			<!-- Important Notes -->
-			<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 mb-8">
+			<div
+				class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 mb-8"
+			>
 				<h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-3">
 					Note: Attention Check Questions
 				</h3>
@@ -279,7 +289,6 @@
 				</ul>
 			</div>
 
-
 			<!-- Done Button -->
 			<div class="text-center mt-8">
 				{#if !instructionsCompleted}
@@ -293,9 +302,16 @@
 						Click when you're ready to proceed
 					</p>
 				{:else}
-					<div class="text-green-600 dark:text-green-400 flex items-center justify-center space-x-2">
+					<div
+						class="text-green-600 dark:text-green-400 flex items-center justify-center space-x-2"
+					>
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M5 13l4 4L19 7"
+							></path>
 						</svg>
 						<span class="font-medium">Instructions Read</span>
 					</div>
@@ -306,10 +322,22 @@
 
 	<!-- Scroll Indicator -->
 	{#if showScrollIndicator}
-		<div class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center animate-bounce">
+		<div
+			class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center animate-bounce"
+		>
 			<span class="text-sm text-gray-400 dark:text-gray-500 mb-1">Scroll down</span>
-			<svg class="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+			<svg
+				class="w-6 h-6 text-gray-400 dark:text-gray-500"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M19 14l-7 7m0 0l-7-7m7 7V3"
+				></path>
 			</svg>
 		</div>
 	{/if}
@@ -317,21 +345,30 @@
 	<!-- Ready Modal -->
 	{#if showReadyModal}
 		<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={cancelReady}>
+		<div
+			class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			on:click={cancelReady}
+		>
 			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl" on:click|stopPropagation>
+			<div
+				class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl"
+				on:click|stopPropagation
+			>
 				<div class="text-center mb-6">
-					<div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+					<div
+						class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4"
+					>
 						<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+							></path>
 						</svg>
 					</div>
-					<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-						Ready to Begin?
-					</h3>
-					<p class="text-gray-600 dark:text-gray-400">
-						Have you read all the instructions?
-					</p>
+					<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Ready to Begin?</h3>
+					<p class="text-gray-600 dark:text-gray-400">Have you read all the instructions?</p>
 				</div>
 
 				<div class="flex flex-col space-y-3">
@@ -353,13 +390,7 @@
 	{/if}
 
 	<!-- Assignment Time Tracker -->
-{#if trackingEnabled}
-	<AssignmentTimeTracker 
-		userId={get(user)?.id || ''} 
-		sessionNumber={sessionNumber}
-		enabled={trackingEnabled}
-	/>
-{/if}
-
+	{#if trackingEnabled}
+		<AssignmentTimeTracker userId={get(user)?.id || ''} {sessionNumber} enabled={trackingEnabled} />
+	{/if}
 </div>
-

@@ -143,7 +143,7 @@
 	};
 
 	const onChange = async () => {
-		$socket?.emit('channel-events', {
+		$socket?.emit('events:channel', {
 			channel_id: channel.id,
 			message_id: threadId,
 			data: {
@@ -156,11 +156,11 @@
 	};
 
 	onMount(() => {
-		$socket?.on('channel-events', channelEventHandler);
+		$socket?.on('events:channel', channelEventHandler);
 	});
 
 	onDestroy(() => {
-		$socket?.off('channel-events', channelEventHandler);
+		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>
 
@@ -223,6 +223,7 @@
 					bind:replyToMessage
 					bind:chatInputElement
 					id={threadId}
+					{channel}
 					disabled={!channel?.write_access}
 					placeholder={!channel?.write_access
 						? $i18n.t('You do not have permission to send messages in this thread.')

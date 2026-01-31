@@ -6,7 +6,7 @@ import hmac
 import hashlib
 import requests
 import os
-
+import bcrypt
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -25,30 +25,33 @@ try:
 except ImportError:
     trace = None  # type: ignore
 
+
+from open_webui.utils.access_control import has_permission
 from open_webui.models.users import Users
+from open_webui.models.auths import Auths
+
 
 from open_webui.constants import ERROR_MESSAGES
 
 from open_webui.env import (
+    ENABLE_PASSWORD_VALIDATION,
     OFFLINE_MODE,
     LICENSE_BLOB,
+    PASSWORD_VALIDATION_REGEX_PATTERN,
+    REDIS_KEY_PREFIX,
     pk,
     WEBUI_SECRET_KEY,
     TRUSTED_SIGNATURE_KEY,
     STATIC_DIR,
-    SRC_LOG_LEVELS,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
+    INTERVIEWEE_STUDY_ID_WHITELIST,
 )
+from open_webui.config import get_config
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from passlib.context import CryptContext
-
-
-logging.getLogger("passlib").setLevel(logging.ERROR)
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
@@ -159,17 +162,37 @@ def get_license_data(app, key):
 
 
 bearer_security = HTTPBearer(auto_error=False)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def verify_password(plain_password, hashed_password):
+def get_password_hash(password: str) -> str:
+    """Hash a password using bcrypt"""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def validate_password(password: str) -> bool:
+    # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
+    if len(password.encode("utf-8")) > 72:
+        raise Exception(
+            ERROR_MESSAGES.PASSWORD_TOO_LONG,
+        )
+
+    if ENABLE_PASSWORD_VALIDATION:
+        if not PASSWORD_VALIDATION_REGEX_PATTERN.match(password):
+            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD())
+
+    return True
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash"""
     return (
-        pwd_context.verify(plain_password, hashed_password) if hashed_password else None
+        bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+        if hashed_password
+        else None
     )
-
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
 
 
 def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> str:
@@ -178,6 +201,9 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
     if expires_delta:
         expire = datetime.now(UTC) + expires_delta
         payload.update({"exp": expire})
+
+    jti = str(uuid.uuid4())
+    payload.update({"jti": jti})
 
     encoded_jwt = jwt.encode(payload, SESSION_SECRET, algorithm=ALGORITHM)
     return encoded_jwt
@@ -189,6 +215,47 @@ def decode_token(token: str) -> Optional[dict]:
         return decoded
     except Exception:
         return None
+
+
+async def is_valid_token(request, decoded) -> bool:
+    # Require Redis to check revoked tokens
+    if request.app.state.redis:
+        jti = decoded.get("jti")
+
+        if jti:
+            revoked = await request.app.state.redis.get(
+                f"{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked"
+            )
+            if revoked:
+                return False
+
+    return True
+
+
+async def invalidate_token(request, token):
+    decoded = decode_token(token)
+
+    # If token is invalid/expired, nothing to revoke
+    if not decoded:
+        return
+
+    # Require Redis to store revoked tokens
+    if request.app.state.redis:
+        jti = decoded.get("jti")
+        exp = decoded.get("exp")
+
+        if jti and exp:
+            ttl = exp - int(
+                datetime.now(UTC).timestamp()
+            )  # Calculate time-to-live for the token
+
+            if ttl > 0:
+                # Store the revoked token in Redis with an expiration time
+                await request.app.state.redis.set(
+                    f"{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked",
+                    "1",
+                    ex=ttl,
+                )
 
 
 def extract_token_from_auth_header(auth_header: str):
@@ -210,11 +277,15 @@ def get_http_authorization_cred(auth_header: Optional[str]):
         return None
 
 
-def get_current_user(
+async def get_current_user(
     request: Request,
     response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Sessions are managed internally with short-lived context managers.
+    # This ensures connections are released immediately after auth queries,
+    # not held for the entire request duration (e.g., during 30+ second LLM calls).
 ):
     token = None
 
@@ -229,30 +300,7 @@ def get_current_user(
 
     # auth by api key
     if token.startswith("sk-"):
-        if not request.state.enable_api_key:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
-            )
-
-        if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
-            allowed_paths = [
-                path.strip()
-                for path in str(
-                    request.app.state.config.API_KEY_ALLOWED_ENDPOINTS
-                ).split(",")
-            ]
-
-            # Check if the request path matches any allowed endpoint.
-            if not any(
-                request.url.path == allowed
-                or request.url.path.startswith(allowed + "/")
-                for allowed in allowed_paths
-            ):
-                raise HTTPException(
-                    status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
-                )
-
-        user = get_current_user_by_api_key(token)
+        user = get_current_user_by_api_key(request, token)
 
         # Add user info to current span
         current_span = trace.get_current_span() if trace else None
@@ -265,7 +313,6 @@ def get_current_user(
         return user
 
     # auth by jwt token
-
     try:
         try:
             data = decode_token(token)
@@ -276,6 +323,12 @@ def get_current_user(
             )
 
         if data is not None and "id" in data:
+            if data.get("jti") and not await is_valid_token(request, data):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token",
+                )
+
             user = Users.get_user_by_id(data["id"])
             if user is None:
                 raise HTTPException(
@@ -304,9 +357,7 @@ def get_current_user(
                 # Refresh the user's last active timestamp asynchronously
                 # to prevent blocking the request
                 if background_tasks:
-                    background_tasks.add_task(
-                        Users.update_user_last_active_by_id, user.id
-                    )
+                    background_tasks.add_task(Users.update_last_active_by_id, user.id)
             return user
         else:
             raise HTTPException(
@@ -328,7 +379,8 @@ def get_current_user(
         raise e
 
 
-def get_current_user_by_api_key(api_key: str):
+def get_current_user_by_api_key(request, api_key: str):
+    # Each function call manages its own short-lived session internally
     user = Users.get_user_by_api_key(api_key)
 
     if user is None:
@@ -336,22 +388,34 @@ def get_current_user_by_api_key(api_key: str):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
-    else:
-        # Add user info to current span
-        current_span = trace.get_current_span() if trace else None
-        if current_span:
-            current_span.set_attribute("client.user.id", user.id)
-            current_span.set_attribute("client.user.email", user.email)
-            current_span.set_attribute("client.user.role", user.role)
-            current_span.set_attribute("client.auth.type", "api_key")
 
-        Users.update_user_last_active_by_id(user.id)
+    if not request.state.enable_api_keys or (
+        user.role != "admin"
+        and not has_permission(
+            user.id,
+            "features.api_keys",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
+        )
 
+    # Add user info to current span
+    current_span = trace.get_current_span() if trace else None
+    if current_span:
+        current_span.set_attribute("client.user.id", user.id)
+        current_span.set_attribute("client.user.email", user.email)
+        current_span.set_attribute("client.user.role", user.role)
+        current_span.set_attribute("client.auth.type", "api_key")
+
+    Users.update_last_active_by_id(user.id)
     return user
 
 
 def get_verified_user(user=Depends(get_current_user)):
-    if user.role not in {"user", "admin"}:
+    # Accept new roles: interviewee, parent, child (in addition to user, admin)
+    if user.role not in {"user", "admin", "interviewee", "parent", "child"}:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -366,3 +430,94 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def is_interviewee_user(study_id: Optional[str]) -> bool:
+    """
+    Check if a user's STUDY_ID matches the whitelist.
+    Only STUDY_ID is checked (prolific_pid is not whitelisted).
+    Checks both config database and environment variable.
+    """
+    if not study_id:
+        return False
+
+    study_id = study_id.strip()
+
+    # First check config database (admin-managed)
+    try:
+        config = get_config()
+        config_whitelist = config.get("interviewee_study_id_whitelist", [])
+        if study_id in config_whitelist:
+            return True
+    except Exception:
+        pass  # Fall back to environment variable
+
+    # Fall back to environment variable
+    return study_id in INTERVIEWEE_STUDY_ID_WHITELIST
+
+
+def get_user_type(user, study_id: Optional[str] = None) -> str:
+    """
+    Determine user type based on role and STUDY_ID whitelist.
+    Returns: "interviewee", "parent", "child", "admin", or "user"
+    """
+    if user.role == "admin":
+        return "admin"
+
+    if user.role == "child":
+        return "child"
+
+    if user.role == "parent":
+        return "parent"
+
+    if user.role == "interviewee":
+        return "interviewee"
+
+    # For users with role "user", check STUDY_ID to determine if they should be interviewee
+    # If they have parent_id, they're a child
+    if hasattr(user, "parent_id") and user.parent_id:
+        return "child"
+
+    # Check STUDY_ID against whitelist
+    study_id_to_check = study_id or (
+        user.study_id if hasattr(user, "study_id") else None
+    )
+    if is_interviewee_user(study_id_to_check):
+        return "interviewee"
+
+    # Default to parent for regular users
+    return "parent"
+
+
+def create_admin_user(email: str, password: str, name: str = "Admin"):
+    """
+    Create an admin user from environment variables.
+    Used for headless/automated deployments.
+    Returns the created user or None if creation failed.
+    """
+
+    if not email or not password:
+        return None
+
+    if Users.has_users():
+        log.debug("Users already exist, skipping admin creation")
+        return None
+
+    log.info(f"Creating admin account from environment variables: {email}")
+    try:
+        hashed = get_password_hash(password)
+        user = Auths.insert_new_auth(
+            email=email.lower(),
+            password=hashed,
+            name=name,
+            role="admin",
+        )
+        if user:
+            log.info(f"Admin account created successfully: {email}")
+            return user
+        else:
+            log.error("Failed to create admin account from environment variables")
+            return None
+    except Exception as e:
+        log.error(f"Error creating admin account: {e}")
+        return None

@@ -29,7 +29,6 @@ from contextlib import suppress
 import peewee as pw
 from peewee_migrate import Migrator
 
-
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
@@ -37,7 +36,31 @@ with suppress(ImportError):
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
-    migrator.add_fields("chat", archived=pw.BooleanField(default=False))
+    column_exists = False
+    try:
+        if isinstance(database, pw.SqliteDatabase):
+            cursor = database.execute_sql("PRAGMA table_info(chat)")
+            columns = [row[1] for row in cursor.fetchall()]
+            column_exists = "archived" in columns
+        else:
+            cursor = database.execute_sql(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'chat' AND column_name = 'archived'"
+            )
+            column_exists = cursor.fetchone() is not None
+    except Exception:
+        column_exists = False
+
+    if not column_exists:
+        try:
+            migrator.add_fields("chat", archived=pw.BooleanField(default=False))
+        except Exception as e:
+            error_msg = str(e).lower()
+            if (
+                "duplicate column" not in error_msg
+                and "already exists" not in error_msg
+            ):
+                raise
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):

@@ -1,12 +1,11 @@
 import logging
+import time
 from typing import Optional
 
 import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_brave(
@@ -27,6 +26,14 @@ def search_brave(
     params = {"q": query, "count": count}
 
     response = requests.get(url, headers=headers, params=params)
+
+    # Handle 429 rate limiting - Brave free tier allows 1 request/second
+    # If rate limited, wait 1 second and retry once before failing
+    if response.status_code == 429:
+        log.info("Brave Search API rate limited (429), retrying after 1 second...")
+        time.sleep(1)
+        response = requests.get(url, headers=headers, params=params)
+
     response.raise_for_status()
 
     json_response = response.json()

@@ -2,14 +2,13 @@ import logging
 import uuid
 from typing import Optional
 
-from open_webui.internal.db import Base, get_db
-from open_webui.models.users import UserModel, Users
-from open_webui.env import SRC_LOG_LEVELS
+from sqlalchemy.orm import Session
+from open_webui.internal.db import Base, JSONField, get_db, get_db_context
+from open_webui.models.users import UserModel, UserProfileImageResponse, Users
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
 # DB MODEL
@@ -19,7 +18,7 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Auth(Base):
     __tablename__ = "auth"
 
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, unique=True)
     email = Column(String)
     password = Column(Text)
     active = Column(Boolean)
@@ -46,15 +45,7 @@ class ApiKey(BaseModel):
     api_key: Optional[str] = None
 
 
-class UserResponse(BaseModel):
-    id: str
-    email: str
-    name: str
-    role: str
-    profile_image_url: str
-
-
-class SigninResponse(Token, UserResponse):
+class SigninResponse(Token, UserProfileImageResponse):
     pass
 
 
@@ -96,9 +87,10 @@ class AuthsTable:
         name: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
-        oauth_sub: Optional[str] = None,
+        oauth: Optional[dict] = None,
+        db: Optional[Session] = None,
     ) -> Optional[UserModel]:
-        with get_db() as db:
+        with get_db_context(db) as db:
             log.info("insert_new_auth")
 
             id = str(uuid.uuid4())
@@ -110,7 +102,7 @@ class AuthsTable:
             db.add(result)
 
             user = Users.insert_new_user(
-                id, name, email, profile_image_url, role, oauth_sub
+                id, name, email, profile_image_url, role, oauth=oauth, db=db
             )
 
             db.commit()
@@ -121,21 +113,20 @@ class AuthsTable:
             else:
                 return None
 
-    def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
+    def authenticate_user(
+        self, email: str, verify_password: callable, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         log.info(f"authenticate_user: {email}")
 
-        user = Users.get_user_by_email(email)
+        user = Users.get_user_by_email(email, db=db)
         if not user:
             return None
 
         try:
-            # Import here to avoid loading fastapi and other dependencies during migrations
-            from open_webui.utils.auth import verify_password
-            
-            with get_db() as db:
+            with get_db_context(db) as db:
                 auth = db.query(Auth).filter_by(id=user.id, active=True).first()
                 if auth:
-                    if verify_password(password, auth.password):
+                    if verify_password(auth.password):
                         return user
                     else:
                         return None
@@ -144,32 +135,38 @@ class AuthsTable:
         except Exception:
             return None
 
-    def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
+    def authenticate_user_by_api_key(
+        self, api_key: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_api_key: {api_key}")
         # if no api_key, return None
         if not api_key:
             return None
 
         try:
-            user = Users.get_user_by_api_key(api_key)
+            user = Users.get_user_by_api_key(api_key, db=db)
             return user if user else None
         except Exception:
             return False
 
-    def authenticate_user_by_email(self, email: str) -> Optional[UserModel]:
+    def authenticate_user_by_email(
+        self, email: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
         log.info(f"authenticate_user_by_email: {email}")
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 auth = db.query(Auth).filter_by(email=email, active=True).first()
                 if auth:
-                    user = Users.get_user_by_id(auth.id)
+                    user = Users.get_user_by_id(auth.id, db=db)
                     return user
         except Exception:
             return None
 
-    def update_user_password_by_id(self, id: str, new_password: str) -> bool:
+    def update_user_password_by_id(
+        self, id: str, new_password: str, db: Optional[Session] = None
+    ) -> bool:
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 result = (
                     db.query(Auth).filter_by(id=id).update({"password": new_password})
                 )
@@ -178,20 +175,22 @@ class AuthsTable:
         except Exception:
             return False
 
-    def update_email_by_id(self, id: str, email: str) -> bool:
+    def update_email_by_id(
+        self, id: str, email: str, db: Optional[Session] = None
+    ) -> bool:
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 result = db.query(Auth).filter_by(id=id).update({"email": email})
                 db.commit()
                 return True if result == 1 else False
         except Exception:
             return False
 
-    def delete_auth_by_id(self, id: str) -> bool:
+    def delete_auth_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 # Delete User
-                result = Users.delete_user_by_id(id)
+                result = Users.delete_user_by_id(id, db=db)
 
                 if result:
                     db.query(Auth).filter_by(id=id).delete()

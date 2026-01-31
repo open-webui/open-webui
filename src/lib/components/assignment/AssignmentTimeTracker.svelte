@@ -32,12 +32,12 @@
 		if (!enabled) return;
 		const currentUserId = userId || get(user)?.id || 'unknown';
 		if (!currentUserId || !Number.isFinite(sessionNumber)) return;
-		
+
 		try {
 			await postAssignmentActivity(localStorage.token || '', {
 				user_id: currentUserId,
 				session_number: sessionNumber,
-				active_ms_cumulative: assignmentActiveMs,
+				active_ms_cumulative: assignmentActiveMs
 			});
 		} catch (e) {
 			console.warn('Assignment activity sync failed', e);
@@ -46,10 +46,10 @@
 
 	function startActivityTracking() {
 		if (!enabled) return;
-		
+
 		const currentUserId = userId || get(user)?.id || 'unknown';
 		if (!currentUserId || !Number.isFinite(sessionNumber)) return;
-		
+
 		// Restore from localStorage
 		try {
 			const k = activityKeyFor(currentUserId, sessionNumber);
@@ -100,7 +100,7 @@
 				const payload = JSON.stringify({
 					user_id: currentUserId,
 					session_number: sessionNumber,
-					active_ms_cumulative: assignmentActiveMs,
+					active_ms_cumulative: assignmentActiveMs
 				});
 				navigator.sendBeacon(`${WEBUI_API_BASE_URL}/assignment/session-activity`, payload);
 			} catch (e) {
@@ -112,7 +112,7 @@
 	function stopActivityTracking() {
 		// Send final time before stopping
 		void syncActivity();
-		
+
 		// Clear intervals
 		if (activityInterval) {
 			clearInterval(activityInterval);
@@ -159,6 +159,3 @@
 		}
 	}
 </script>
-
-
-

@@ -3,6 +3,7 @@
 ## Current Setup (CONSOLIDATED)
 
 The database has been consolidated to a single file:
+
 - **Ground truth database**: `backend/data/webui.db` (used by Alembic by default)
 - **Symlink**: `backend/open_webui/data/webui.db` → points to the ground truth database
 
@@ -50,4 +51,3 @@ export DATA_DIR="/absolute/path/to/data/directory"
 - **`DB_ABS` is NOT used** by Alembic or the application - it's a custom variable
 - Always use `DATABASE_URL` or `DATA_DIR` for database configuration
 - The symlink ensures both default paths point to the same database
-

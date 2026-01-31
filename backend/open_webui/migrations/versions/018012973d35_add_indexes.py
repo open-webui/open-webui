@@ -21,7 +21,7 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     # Chat table indexes
     if "chat" in existing_tables:
         existing_indexes = [idx["name"] for idx in inspector.get_indexes("chat")]
@@ -35,13 +35,13 @@ def upgrade():
         for idx_name, columns in indexes_to_create:
             if idx_name not in existing_indexes:
                 op.create_index(idx_name, "chat", columns)
-    
+
     # Tag table index
     if "tag" in existing_tables:
         existing_indexes = [idx["name"] for idx in inspector.get_indexes("tag")]
         if "user_id_idx" not in existing_indexes:
             op.create_index("user_id_idx", "tag", ["user_id"])
-    
+
     # Function table index
     if "function" in existing_tables:
         existing_indexes = [idx["name"] for idx in inspector.get_indexes("function")]
@@ -54,7 +54,7 @@ def downgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     # Chat table indexes
     if "chat" in existing_tables:
         existing_indexes = [idx["name"] for idx in inspector.get_indexes("chat")]
@@ -68,13 +68,13 @@ def downgrade():
         for idx_name in indexes_to_drop:
             if idx_name in existing_indexes:
                 op.drop_index(idx_name, table_name="chat")
-    
+
     # Tag table index
     if "tag" in existing_tables:
         existing_indexes = [idx["name"] for idx in inspector.get_indexes("tag")]
         if "user_id_idx" in existing_indexes:
             op.drop_index("user_id_idx", table_name="tag")
-    
+
     # Function table index
     if "function" in existing_tables:
         existing_indexes = [idx["name"] for idx in inspector.get_indexes("function")]

@@ -29,7 +29,6 @@ from contextlib import suppress
 import peewee as pw
 from peewee_migrate import Migrator
 
-
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
@@ -44,12 +43,26 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
 
 def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
+    # Idempotent: skip if created_at already exists (migration or Alembic already applied)
+    try:
+        cursor = database.execute_sql("PRAGMA table_info(chat)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "created_at" in columns:
+            return
+    except Exception:
+        pass
+
     # Adding fields created_at and updated_at to the 'chat' table
-    migrator.add_fields(
-        "chat",
-        created_at=pw.DateTimeField(null=True),  # Allow null for transition
-        updated_at=pw.DateTimeField(null=True),  # Allow null for transition
-    )
+    try:
+        migrator.add_fields(
+            "chat",
+            created_at=pw.DateTimeField(null=True),  # Allow null for transition
+            updated_at=pw.DateTimeField(null=True),  # Allow null for transition
+        )
+    except Exception as e:
+        if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+            return
+        raise
 
     # Populate the new fields from an existing 'timestamp' field
     migrator.sql(
@@ -57,23 +70,45 @@ def migrate_sqlite(migrator: Migrator, database: pw.Database, *, fake=False):
     )
 
     # Now that the data has been copied, remove the original 'timestamp' field
-    migrator.remove_fields("chat", "timestamp")
+    try:
+        migrator.remove_fields("chat", "timestamp")
+    except Exception:
+        pass  # timestamp may already be removed
 
     # Update the fields to be not null now that they are populated
-    migrator.change_fields(
-        "chat",
-        created_at=pw.DateTimeField(null=False),
-        updated_at=pw.DateTimeField(null=False),
-    )
+    try:
+        migrator.change_fields(
+            "chat",
+            created_at=pw.DateTimeField(null=False),
+            updated_at=pw.DateTimeField(null=False),
+        )
+    except Exception:
+        pass  # may already be NOT NULL
 
 
 def migrate_external(migrator: Migrator, database: pw.Database, *, fake=False):
+    # Idempotent: skip if created_at already exists
+    try:
+        cursor = database.execute_sql(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'chat' AND column_name = 'created_at'"
+        )
+        if cursor.fetchone() is not None:
+            return
+    except Exception:
+        pass
+
     # Adding fields created_at and updated_at to the 'chat' table
-    migrator.add_fields(
-        "chat",
-        created_at=pw.BigIntegerField(null=True),  # Allow null for transition
-        updated_at=pw.BigIntegerField(null=True),  # Allow null for transition
-    )
+    try:
+        migrator.add_fields(
+            "chat",
+            created_at=pw.BigIntegerField(null=True),  # Allow null for transition
+            updated_at=pw.BigIntegerField(null=True),  # Allow null for transition
+        )
+    except Exception as e:
+        if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+            return
+        raise
 
     # Populate the new fields from an existing 'timestamp' field
     migrator.sql(
@@ -81,14 +116,19 @@ def migrate_external(migrator: Migrator, database: pw.Database, *, fake=False):
     )
 
     # Now that the data has been copied, remove the original 'timestamp' field
-    migrator.remove_fields("chat", "timestamp")
+    try:
+        migrator.remove_fields("chat", "timestamp")
+    except Exception:
+        pass
 
-    # Update the fields to be not null now that they are populated
-    migrator.change_fields(
-        "chat",
-        created_at=pw.BigIntegerField(null=False),
-        updated_at=pw.BigIntegerField(null=False),
-    )
+    try:
+        migrator.change_fields(
+            "chat",
+            created_at=pw.BigIntegerField(null=False),
+            updated_at=pw.BigIntegerField(null=False),
+        )
+    except Exception:
+        pass
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):

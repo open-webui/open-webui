@@ -20,10 +20,10 @@ def upgrade():
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "channel" in existing_tables and "message" in existing_tables:
         return  # Tables already exist, skip creation
-    
+
     if "channel" not in existing_tables:
         op.create_table(
             "channel",

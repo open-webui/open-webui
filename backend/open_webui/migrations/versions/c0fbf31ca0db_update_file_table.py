@@ -24,16 +24,18 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "file" in existing_tables:
         existing_columns = [col["name"] for col in inspector.get_columns("file")]
-        
+
         if "hash" not in existing_columns:
             op.add_column("file", sa.Column("hash", sa.Text(), nullable=True))
         if "data" not in existing_columns:
             op.add_column("file", sa.Column("data", sa.JSON(), nullable=True))
         if "updated_at" not in existing_columns:
-            op.add_column("file", sa.Column("updated_at", sa.BigInteger(), nullable=True))
+            op.add_column(
+                "file", sa.Column("updated_at", sa.BigInteger(), nullable=True)
+            )
 
 
 def downgrade():

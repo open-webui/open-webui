@@ -337,7 +337,9 @@
 			<div class="space-y-4">
 				<!-- Statistics -->
 				{#if stats}
-					<div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+					<div
+						class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+					>
 						<div>
 							<div class="text-xs text-gray-500 dark:text-gray-400">Total Scenarios</div>
 							<div class="text-lg font-semibold">{stats.total_scenarios}</div>
@@ -360,10 +362,14 @@
 				{/if}
 
 				<!-- Active Set Management -->
-				<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+				<div
+					class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+				>
 					<div class="mb-2 text-sm font-medium">Active Scenario Set</div>
 					<div class="mb-2">
-						<label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Select Active Set</label>
+						<label class="block text-xs text-gray-500 dark:text-gray-400 mb-1"
+							>Select Active Set</label
+						>
 						<select
 							bind:value={activeScenarioSet}
 							class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -378,7 +384,8 @@
 						</select>
 					</div>
 					<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-						Selecting a set will activate all scenarios with that set name and deactivate all others.
+						Selecting a set will activate all scenarios with that set name and deactivate all
+						others.
 					</p>
 					<button
 						type="button"
@@ -428,9 +435,7 @@
 								fill="currentColor"
 								class="w-4 h-4"
 							>
-								<path
-									d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z"
-								/>
+								<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
 								<path
 									fill-rule="evenodd"
 									d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
@@ -525,8 +530,12 @@
 								</tr>
 							{:else}
 								{#each scenarios as scenario}
-									<tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-										<td class="py-2 px-2 font-mono text-xs">{truncateText(scenario.scenario_id, 12)}</td>
+									<tr
+										class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+									>
+										<td class="py-2 px-2 font-mono text-xs"
+											>{truncateText(scenario.scenario_id, 12)}</td
+										>
 										<td class="py-2 px-2 max-w-xs truncate" title={scenario.prompt_text}>
 											{truncateText(scenario.prompt_text, 50)}
 										</td>
@@ -601,10 +610,14 @@
 			<!-- Attention Checks Tab -->
 			<div class="space-y-4">
 				<!-- Active Set Management -->
-				<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+				<div
+					class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+				>
 					<div class="mb-2 text-sm font-medium">Active Attention Check Set</div>
 					<div class="mb-2">
-						<label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Select Active Set</label>
+						<label class="block text-xs text-gray-500 dark:text-gray-400 mb-1"
+							>Select Active Set</label
+						>
 						<select
 							bind:value={activeAttentionCheckSet}
 							class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -619,7 +632,8 @@
 						</select>
 					</div>
 					<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-						Selecting a set will activate all attention checks with that set name and deactivate all others.
+						Selecting a set will activate all attention checks with that set name and deactivate all
+						others.
 					</p>
 					<button
 						type="button"
@@ -669,9 +683,7 @@
 								fill="currentColor"
 								class="w-4 h-4"
 							>
-								<path
-									d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z"
-								/>
+								<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
 								<path
 									fill-rule="evenodd"
 									d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
@@ -718,11 +730,15 @@
 						<tbody>
 							{#if attentionChecks.length === 0}
 								<tr>
-									<td colspan="7" class="text-center py-4 text-gray-500">No attention checks found</td>
+									<td colspan="7" class="text-center py-4 text-gray-500"
+										>No attention checks found</td
+									>
 								</tr>
 							{:else}
 								{#each attentionChecks as ac}
-									<tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+									<tr
+										class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+									>
 										<td class="py-2 px-2 font-mono text-xs">{truncateText(ac.scenario_id, 12)}</td>
 										<td class="py-2 px-2 max-w-xs truncate" title={ac.prompt_text}>
 											{truncateText(ac.prompt_text, 50)}
@@ -762,7 +778,10 @@
 					<div class="flex justify-between items-center">
 						<div class="text-sm text-gray-500">
 							Showing {(attentionCheckFilters.page - 1) * attentionCheckFilters.page_size + 1} to
-							{Math.min(attentionCheckFilters.page * attentionCheckFilters.page_size, attentionCheckTotal)} of
+							{Math.min(
+								attentionCheckFilters.page * attentionCheckFilters.page_size,
+								attentionCheckTotal
+							)} of
 							{attentionCheckTotal}
 						</div>
 						<div class="flex space-x-2">
@@ -780,7 +799,8 @@
 							<button
 								type="button"
 								class="px-3 py-1 text-sm border rounded disabled:opacity-50"
-								disabled={attentionCheckFilters.page * attentionCheckFilters.page_size >= attentionCheckTotal}
+								disabled={attentionCheckFilters.page * attentionCheckFilters.page_size >=
+									attentionCheckTotal}
 								on:click={() => {
 									attentionCheckFilters.page++;
 									loadAttentionChecks();
@@ -795,4 +815,3 @@
 		{/if}
 	</div>
 </form>
-

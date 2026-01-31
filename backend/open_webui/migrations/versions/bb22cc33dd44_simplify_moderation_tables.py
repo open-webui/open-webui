@@ -9,7 +9,6 @@ Create Date: 2025-10-22 00:00:00.000000
 from alembic import op
 import sqlalchemy as sa
 
-
 revision = "bb22cc33dd44"
 down_revision = "b9d4578a786b"
 branch_labels = None
@@ -36,18 +35,26 @@ def upgrade():
             sa.Column("created_at", sa.BigInteger(), nullable=False),
             sa.Column("updated_at", sa.BigInteger(), nullable=False),
         )
-        op.create_index("idx_moderation_session_user_id", "moderation_session", ["user_id"])
-        op.create_index("idx_moderation_session_child_id", "moderation_session", ["child_id"]) 
-        op.create_index("idx_moderation_session_created_at", "moderation_session", ["created_at"]) 
+        op.create_index(
+            "idx_moderation_session_user_id", "moderation_session", ["user_id"]
+        )
+        op.create_index(
+            "idx_moderation_session_child_id", "moderation_session", ["child_id"]
+        )
+        op.create_index(
+            "idx_moderation_session_created_at", "moderation_session", ["created_at"]
+        )
 
 
 def downgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
     if "moderation_session" in inspector.get_table_names():
-        op.drop_index("idx_moderation_session_created_at", table_name="moderation_session")
-        op.drop_index("idx_moderation_session_child_id", table_name="moderation_session")
+        op.drop_index(
+            "idx_moderation_session_created_at", table_name="moderation_session"
+        )
+        op.drop_index(
+            "idx_moderation_session_child_id", table_name="moderation_session"
+        )
         op.drop_index("idx_moderation_session_user_id", table_name="moderation_session")
         op.drop_table("moderation_session")
-
-

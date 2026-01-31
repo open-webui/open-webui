@@ -21,7 +21,7 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "note" not in existing_tables:
         op.create_table(
             "note",
@@ -41,6 +41,6 @@ def downgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "note" in existing_tables:
         op.drop_table("note")

@@ -37,7 +37,9 @@
 			on:click|stopPropagation
 		>
 			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+			<div
+				class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700"
+			>
 				<h2 id="video-modal-title" class="text-lg font-semibold text-gray-900 dark:text-white">
 					{title}
 				</h2>
@@ -47,7 +49,12 @@
 					aria-label="Close video modal"
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						></path>
 					</svg>
 				</button>
 			</div>
@@ -56,12 +63,7 @@
 			<div class="flex-1 p-4 overflow-auto">
 				<div class="w-full max-w-4xl mx-auto">
 					<!-- svelte-ignore a11y-media-has-caption -->
-					<video
-						controls
-						class="w-full rounded-lg shadow-md"
-						preload="metadata"
-						autoplay={false}
-					>
+					<video controls class="w-full rounded-lg shadow-md" preload="metadata" autoplay={false}>
 						<source src={videoSrc} type="video/mp4" />
 						Your browser does not support the video tag.
 					</video>
@@ -70,4 +72,3 @@
 		</div>
 	</div>
 {/if}
-

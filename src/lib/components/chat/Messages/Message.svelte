@@ -48,6 +48,7 @@
 </script>
 
 <div
+	role="listitem"
 	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
 		: 'max-w-5xl'} mx-auto rounded-lg group {selectionBoxClass}"
@@ -103,29 +104,31 @@
 				{allowTextSelection}
 			/>
 		{:else}
-			<MultiResponseMessages
-				bind:history
-				{chatId}
-				{messageId}
-				{selectedModels}
-				isLastMessage={messageId === history?.currentId}
-				{setInputText}
-				{updateChat}
-				{editMessage}
-				{saveMessage}
-				{rateMessage}
-				{actionMessage}
-				{submitMessage}
-				{deleteMessage}
-				{continueResponse}
-				{regenerateResponse}
-				{mergeResponses}
-				{triggerScroll}
-				{addMessages}
-				{readOnly}
-				{editCodeBlock}
-				{topPadding}
-			/>
+			{#key messageId}
+				<MultiResponseMessages
+					bind:history
+					{chatId}
+					{messageId}
+					{selectedModels}
+					isLastMessage={messageId === history?.currentId}
+					{setInputText}
+					{updateChat}
+					{editMessage}
+					{saveMessage}
+					{rateMessage}
+					{actionMessage}
+					{submitMessage}
+					{deleteMessage}
+					{continueResponse}
+					{regenerateResponse}
+					{mergeResponses}
+					{triggerScroll}
+					{addMessages}
+					{readOnly}
+					{editCodeBlock}
+					{topPadding}
+				/>
+			{/key}
 		{/if}
 	{/if}
 </div>

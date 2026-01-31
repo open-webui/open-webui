@@ -4,8 +4,10 @@
 
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import calendar from 'dayjs/plugin/calendar';
 
 	dayjs.extend(localizedFormat);
+	dayjs.extend(calendar);
 
 	import { deleteChatById } from '$lib/apis/chats';
 
@@ -119,6 +121,7 @@
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
 						placeholder={$i18n.t('Search Chats')}
+						maxlength="500"
 					/>
 
 					{#if query}
@@ -242,7 +245,16 @@
 
 									<div class="basis-2/5 flex items-center justify-end">
 										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
-											{dayjs(chat?.updated_at * 1000).calendar()}
+											{$i18n.t(
+												dayjs(chat?.updated_at * 1000).calendar(null, {
+													sameDay: '[Today]',
+													nextDay: '[Tomorrow]',
+													nextWeek: 'dddd',
+													lastDay: '[Yesterday]',
+													lastWeek: '[Last] dddd',
+													sameElse: 'L' // use localized format, otherwise dayjs.calendar() defaults to DD/MM/YYYY
+												})
+											)}
 										</div>
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
@@ -342,7 +354,7 @@
 										class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto"
 									>
 										<thead
-											class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-1 border-gray-50 dark:border-gray-850"
+											class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-1 border-gray-50 dark:border-gray-850/30"
 										>
 											<tr>
 												<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
@@ -356,7 +368,7 @@
 											{#each chats as chat, idx}
 												<tr
 													class="bg-transparent {idx !== chats.length - 1 &&
-														'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850 text-xs"
+														'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850/30 text-xs"
 												>
 													<td class="px-3 py-1 w-2/3">
 														<a href="/c/{chat.id}" target="_blank">

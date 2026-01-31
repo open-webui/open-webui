@@ -30,7 +30,7 @@
 			const response = await fetch('/api/v1/initial-surveys', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify(surveyResponses)
 			});
@@ -42,7 +42,7 @@
 			// Mark as completed
 			localStorage.setItem('initialSurveyCompleted', 'true');
 			toast.success('Survey submitted successfully!');
-			
+
 			// Navigate to assignment instructions
 			goto('/assignment-instructions');
 		} catch (error) {
@@ -84,9 +84,7 @@
 				</div>
 
 				<div class="flex w-full">
-					<div class="flex items-center text-xl font-semibold">
-						Initial Survey
-					</div>
+					<div class="flex items-center text-xl font-semibold">Initial Survey</div>
 				</div>
 			</div>
 
@@ -97,7 +95,12 @@
 					class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 text-gray-400 dark:text-gray-500 cursor-not-allowed"
 				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 19l-7-7 7-7"
+						></path>
 					</svg>
 					<span>Previous Task</span>
 				</button>
@@ -107,7 +110,8 @@
 				>
 					<span>Next Task</span>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+						></path>
 					</svg>
 				</button>
 			</div>
@@ -120,11 +124,10 @@
 			<div class="mb-8">
 				<div class="flex items-center justify-between">
 					<div>
-						<h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-							Pre-Assignment Survey
-						</h1>
+						<h1 class="text-3xl font-bold text-gray-900 dark:text-white">Pre-Assignment Survey</h1>
 						<p class="text-gray-600 dark:text-gray-300 mt-2">
-							Please help us understand your background and expectations before starting the assignment.
+							Please help us understand your background and expectations before starting the
+							assignment.
 						</p>
 					</div>
 					<button
@@ -132,7 +135,12 @@
 						class="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
 					>
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M10 19l-7-7m0 0l7-7m-7 7h18"
+							></path>
 						</svg>
 						<span>Back to Instructions</span>
 					</button>
@@ -144,9 +152,11 @@
 				<form on:submit|preventDefault={submitSurvey} class="space-y-8">
 					<!-- Question 1 -->
 					<div>
-							<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								1. What is your experience with AI systems and chatbots? <span class="text-red-500">*</span>
-							</label>
+						<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+							1. What is your experience with AI systems and chatbots? <span class="text-red-500"
+								>*</span
+							>
+						</label>
 						<textarea
 							bind:value={surveyResponses.experienceWithAI}
 							rows="4"
@@ -158,9 +168,11 @@
 
 					<!-- Question 2 -->
 					<div>
-							<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								2. How would you describe your general parenting approach? <span class="text-red-500">*</span>
-							</label>
+						<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+							2. How would you describe your general parenting approach? <span class="text-red-500"
+								>*</span
+							>
+						</label>
 						<textarea
 							bind:value={surveyResponses.parentingApproach}
 							rows="4"
@@ -172,9 +184,11 @@
 
 					<!-- Question 3 -->
 					<div>
-							<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								3. Have you had experience moderating content for your child before? <span class="text-red-500">*</span>
-							</label>
+						<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+							3. Have you had experience moderating content for your child before? <span
+								class="text-red-500">*</span
+							>
+						</label>
 						<textarea
 							bind:value={surveyResponses.contentModerationExperience}
 							rows="4"
@@ -186,9 +200,9 @@
 
 					<!-- Question 4 -->
 					<div>
-							<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								4. What are your expectations for this assignment? <span class="text-red-500">*</span>
-							</label>
+						<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+							4. What are your expectations for this assignment? <span class="text-red-500">*</span>
+						</label>
 						<textarea
 							bind:value={surveyResponses.expectations}
 							rows="4"
@@ -200,9 +214,11 @@
 
 					<!-- Question 5 -->
 					<div>
-							<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								5. Do you have any concerns about AI systems interacting with children? <span class="text-red-500">*</span>
-							</label>
+						<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+							5. Do you have any concerns about AI systems interacting with children? <span
+								class="text-red-500">*</span
+							>
+						</label>
 						<textarea
 							bind:value={surveyResponses.concerns}
 							rows="4"
@@ -214,28 +230,55 @@
 
 					<!-- Question 6 -->
 					<div>
-							<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
-								6. How comfortable are you with technology in general? <span class="text-red-500">*</span>
-							</label>
+						<label class="block text-lg font-medium text-gray-900 dark:text-white mb-3">
+							6. How comfortable are you with technology in general? <span class="text-red-500"
+								>*</span
+							>
+						</label>
 						<div class="space-y-2">
 							<label class="flex items-center">
-								<input type="radio" bind:group={surveyResponses.techComfort} value="very-comfortable" class="mr-3">
+								<input
+									type="radio"
+									bind:group={surveyResponses.techComfort}
+									value="very-comfortable"
+									class="mr-3"
+								/>
 								<span class="text-gray-900 dark:text-white">Very Comfortable</span>
 							</label>
 							<label class="flex items-center">
-								<input type="radio" bind:group={surveyResponses.techComfort} value="somewhat-comfortable" class="mr-3">
+								<input
+									type="radio"
+									bind:group={surveyResponses.techComfort}
+									value="somewhat-comfortable"
+									class="mr-3"
+								/>
 								<span class="text-gray-900 dark:text-white">Somewhat Comfortable</span>
 							</label>
 							<label class="flex items-center">
-								<input type="radio" bind:group={surveyResponses.techComfort} value="neutral" class="mr-3">
+								<input
+									type="radio"
+									bind:group={surveyResponses.techComfort}
+									value="neutral"
+									class="mr-3"
+								/>
 								<span class="text-gray-900 dark:text-white">Neutral</span>
 							</label>
 							<label class="flex items-center">
-								<input type="radio" bind:group={surveyResponses.techComfort} value="somewhat-uncomfortable" class="mr-3">
+								<input
+									type="radio"
+									bind:group={surveyResponses.techComfort}
+									value="somewhat-uncomfortable"
+									class="mr-3"
+								/>
 								<span class="text-gray-900 dark:text-white">Somewhat Uncomfortable</span>
 							</label>
 							<label class="flex items-center">
-								<input type="radio" bind:group={surveyResponses.techComfort} value="very-uncomfortable" class="mr-3">
+								<input
+									type="radio"
+									bind:group={surveyResponses.techComfort}
+									value="very-uncomfortable"
+									class="mr-3"
+								/>
 								<span class="text-gray-900 dark:text-white">Very Uncomfortable</span>
 							</label>
 						</div>

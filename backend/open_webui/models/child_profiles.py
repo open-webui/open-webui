@@ -5,7 +5,16 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Index, Boolean, Integer, inspect
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    String,
+    Text,
+    Index,
+    Boolean,
+    Integer,
+    inspect,
+)
 from open_webui.internal.db import JSONField
 
 log = logging.getLogger(__name__)
@@ -17,15 +26,18 @@ log = logging.getLogger(__name__)
 # - Supports multiple children per parent
 ####################
 
+
 class ChildProfile(Base):
     __tablename__ = "child_profile"
-    
+
     id = Column(String, primary_key=True)
     user_id = Column(String, nullable=False)  # Link to parent user
     name = Column(String, nullable=False)  # Child's name
     child_age = Column(String, nullable=True)  # Age range (e.g., "5-7", "8-10")
     child_gender = Column(String, nullable=True)  # Gender (e.g., "Male", "Female")
-    child_characteristics = Column(Text, nullable=True)  # Personality/interests description
+    child_characteristics = Column(
+        Text, nullable=True
+    )  # Personality/interests description
     # parenting_style removed - now collected in exit survey (migration gg11hh22ii33)
 
     # Research fields (nullable for backward compatibility)
@@ -33,32 +45,42 @@ class ChildProfile(Base):
     child_has_ai_use = Column(String, nullable=True)  # 'yes' | 'no' | 'unsure'
     child_ai_use_contexts = Column(JSONField, nullable=True)  # list[str]
     parent_llm_monitoring_level = Column(String, nullable=True)  # enum-like string
-    
+
     # "Other" text fields for additional information
     child_gender_other = Column(Text, nullable=True)  # Text when gender is "Other"
-    child_ai_use_contexts_other = Column(Text, nullable=True)  # Text when contexts includes "other"
-    parent_llm_monitoring_other = Column(Text, nullable=True)  # Text when monitoring level is "other"
+    child_ai_use_contexts_other = Column(
+        Text, nullable=True
+    )  # Text when contexts includes "other"
+    parent_llm_monitoring_other = Column(
+        Text, nullable=True
+    )  # Text when monitoring level is "other"
 
     # Reset/attempt tracking
     attempt_number = Column(Integer, nullable=False, default=1)
     is_current = Column(Boolean, nullable=False, default=True)
     session_number = Column(BigInteger, nullable=False, default=1)
-    
+
     created_at = Column(BigInteger)  # When profile was created
     updated_at = Column(BigInteger)  # When profile was last updated
 
     # Indexes for efficient querying
     __table_args__ = (
-        Index('idx_child_profile_user_id', 'user_id'),
-        Index('idx_child_profile_created_at', 'created_at'),
-        Index('idx_child_profile_user_current', 'user_id', 'is_current'),
-        Index('idx_child_profile_attempt', 'user_id', 'id', 'attempt_number'),
-        Index('idx_child_profile_user_session_current', 'user_id', 'session_number', 'is_current'),
+        Index("idx_child_profile_user_id", "user_id"),
+        Index("idx_child_profile_created_at", "created_at"),
+        Index("idx_child_profile_user_current", "user_id", "is_current"),
+        Index("idx_child_profile_attempt", "user_id", "id", "attempt_number"),
+        Index(
+            "idx_child_profile_user_session_current",
+            "user_id",
+            "session_number",
+            "is_current",
+        ),
     )
+
 
 class ChildProfileModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: str
     user_id: str
     name: str
@@ -79,6 +101,7 @@ class ChildProfileModel(BaseModel):
     created_at: int
     updated_at: int
 
+
 class ChildProfileForm(BaseModel):
     name: str
     child_age: Optional[str] = None
@@ -95,15 +118,20 @@ class ChildProfileForm(BaseModel):
     parent_llm_monitoring_other: Optional[str] = None
     session_number: Optional[int] = None  # If None, defaults to 1 in insert function
 
+
 class ChildProfileTable:
     def insert_new_child_profile(
-        self, form_data: ChildProfileForm, user_id: str, session_number: int = 1, attempt_number: int = 1
+        self,
+        form_data: ChildProfileForm,
+        user_id: str,
+        session_number: int = 1,
+        attempt_number: int = 1,
     ) -> Optional[ChildProfileModel]:
         """Insert a new child profile into the database"""
         with get_db() as db:
             id = str(uuid.uuid4())
             ts = int(time.time_ns())
-            
+
             child_profile = ChildProfileModel(
                 **{
                     "id": id,
@@ -126,22 +154,36 @@ class ChildProfileTable:
                     "updated_at": ts,
                 }
             )
-            
+
             # Verify the table has the expected columns by inspecting the database
             # This helps catch schema mismatches early
             try:
                 inspector = inspect(db.bind)
-                db_columns = [col['name'] for col in inspector.get_columns('child_profile')]
-                required_columns = ['child_gender_other', 'child_ai_use_contexts_other', 'parent_llm_monitoring_other']
-                missing_columns = [col for col in required_columns if col not in db_columns]
+                db_columns = [
+                    col["name"] for col in inspector.get_columns("child_profile")
+                ]
+                required_columns = [
+                    "child_gender_other",
+                    "child_ai_use_contexts_other",
+                    "parent_llm_monitoring_other",
+                ]
+                missing_columns = [
+                    col for col in required_columns if col not in db_columns
+                ]
                 if missing_columns:
-                    log.error(f"Database table 'child_profile' is missing columns: {missing_columns}. "
-                             f"Available columns: {db_columns}. "
-                             f"Please run migrations: alembic upgrade head")
-                    raise ValueError(f"Database schema mismatch: missing columns {missing_columns}")
+                    log.error(
+                        f"Database table 'child_profile' is missing columns: {missing_columns}. "
+                        f"Available columns: {db_columns}. "
+                        f"Please run migrations: alembic upgrade head"
+                    )
+                    raise ValueError(
+                        f"Database schema mismatch: missing columns {missing_columns}"
+                    )
             except Exception as e:
-                log.warning(f"Could not verify table schema: {e}. Proceeding with insert...")
-            
+                log.warning(
+                    f"Could not verify table schema: {e}. Proceeding with insert..."
+                )
+
             result = ChildProfile(**child_profile.model_dump())
             db.add(result)
             db.commit()
@@ -153,20 +195,25 @@ class ChildProfileTable:
         with get_db() as db:
             profiles = (
                 db.query(ChildProfile)
-                .filter(ChildProfile.user_id == user_id, ChildProfile.is_current == True)
+                .filter(
+                    ChildProfile.user_id == user_id, ChildProfile.is_current == True
+                )
                 .order_by(ChildProfile.updated_at.desc())
                 .all()
             )
             return [ChildProfileModel.model_validate(profile) for profile in profiles]
 
-    def get_child_profile_by_id(self, profile_id: str, user_id: str) -> Optional[ChildProfileModel]:
+    def get_child_profile_by_id(
+        self, profile_id: str, user_id: str
+    ) -> Optional[ChildProfileModel]:
         """Get a specific child profile (verify ownership)"""
         with get_db() as db:
-            profile = db.query(ChildProfile).filter(
-                ChildProfile.id == profile_id,
-                ChildProfile.user_id == user_id
-            ).first()
-            
+            profile = (
+                db.query(ChildProfile)
+                .filter(ChildProfile.id == profile_id, ChildProfile.user_id == user_id)
+                .first()
+            )
+
             return ChildProfileModel.model_validate(profile) if profile else None
 
     def update_child_profile_by_id(
@@ -174,11 +221,12 @@ class ChildProfileTable:
     ) -> Optional[ChildProfileModel]:
         """Update a child profile (verify ownership)"""
         with get_db() as db:
-            profile = db.query(ChildProfile).filter(
-                ChildProfile.id == profile_id,
-                ChildProfile.user_id == user_id
-            ).first()
-            
+            profile = (
+                db.query(ChildProfile)
+                .filter(ChildProfile.id == profile_id, ChildProfile.user_id == user_id)
+                .first()
+            )
+
             if profile:
                 ts = int(time.time_ns())
                 profile.name = updated.name
@@ -188,26 +236,33 @@ class ChildProfileTable:
                 profile.is_only_child = updated.is_only_child
                 profile.child_has_ai_use = updated.child_has_ai_use
                 profile.child_ai_use_contexts = updated.child_ai_use_contexts
-                profile.parent_llm_monitoring_level = updated.parent_llm_monitoring_level
+                profile.parent_llm_monitoring_level = (
+                    updated.parent_llm_monitoring_level
+                )
                 profile.child_gender_other = updated.child_gender_other
-                profile.child_ai_use_contexts_other = updated.child_ai_use_contexts_other
-                profile.parent_llm_monitoring_other = updated.parent_llm_monitoring_other
+                profile.child_ai_use_contexts_other = (
+                    updated.child_ai_use_contexts_other
+                )
+                profile.parent_llm_monitoring_other = (
+                    updated.parent_llm_monitoring_other
+                )
                 profile.updated_at = ts
-                
+
                 db.commit()
                 db.refresh(profile)
                 return ChildProfileModel.model_validate(profile)
-            
+
             return None
 
     def delete_child_profile(self, profile_id: str, user_id: str) -> bool:
         """Delete a child profile (verify ownership)"""
         with get_db() as db:
-            profile = db.query(ChildProfile).filter(
-                ChildProfile.id == profile_id,
-                ChildProfile.user_id == user_id
-            ).first()
-            
+            profile = (
+                db.query(ChildProfile)
+                .filter(ChildProfile.id == profile_id, ChildProfile.user_id == user_id)
+                .first()
+            )
+
             if profile:
                 db.delete(profile)
                 db.commit()
@@ -219,7 +274,7 @@ class ChildProfileTable:
         with get_db() as db:
             total_profiles = db.query(ChildProfile).count()
             unique_parents = db.query(ChildProfile.user_id).distinct().count()
-            
+
             return {
                 "total_profiles": total_profiles,
                 "unique_parents": unique_parents,
@@ -229,7 +284,9 @@ class ChildProfileTable:
         with get_db() as db:
             profile = (
                 db.query(ChildProfile)
-                .filter(ChildProfile.user_id == user_id, ChildProfile.is_current == True)
+                .filter(
+                    ChildProfile.user_id == user_id, ChildProfile.is_current == True
+                )
                 .order_by(ChildProfile.created_at.desc())
                 .first()
             )
@@ -246,11 +303,15 @@ class ChildProfileTable:
             )
             return ChildProfileModel.model_validate(profile) if profile else None
 
-    def clone_current_profile_for_session(self, user_id: str, new_session_number: int) -> Optional[ChildProfileModel]:
+    def clone_current_profile_for_session(
+        self, user_id: str, new_session_number: int
+    ) -> Optional[ChildProfileModel]:
         with get_db() as db:
             current = (
                 db.query(ChildProfile)
-                .filter(ChildProfile.user_id == user_id, ChildProfile.is_current == True)
+                .filter(
+                    ChildProfile.user_id == user_id, ChildProfile.is_current == True
+                )
                 .order_by(ChildProfile.created_at.desc())
                 .first()
             )
@@ -285,6 +346,7 @@ class ChildProfileTable:
             db.commit()
             db.refresh(new_row)
             return ChildProfileModel.model_validate(new_row)
+
 
 # Global instance
 ChildProfiles = ChildProfileTable()

@@ -3,12 +3,20 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-import { models, settings, selectionModeEnabled, savedSelections, chatId as chatIdStore, latestUserMessageId, mobile } from '$lib/stores';
-import { selectionSyncService } from '$lib/services/selectionSync';
-import { getCurrentChildId } from '$lib/utils/childUtils';
+	import {
+		models,
+		settings,
+		selectionModeEnabled,
+		savedSelections,
+		chatId as chatIdStore,
+		latestUserMessageId,
+		mobile
+	} from '$lib/stores';
+	import { selectionSyncService } from '$lib/services/selectionSync';
+	import { getCurrentChildId } from '$lib/utils/childUtils';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -47,13 +55,13 @@ import { getCurrentChildId } from '$lib/utils/childUtils';
 	let showDeleteConfirm = false;
 
 	let messageIndexEdit = false;
-	
+
 	// Delete selection popup state
 	let showDeleteSelectionPopupState = false;
 	let deleteSelectionPopupElement;
 	let selectedTextToDelete = '';
 	let selectedMarkToDelete = null;
-	
+
 	// Edit selections popup state
 	let showEditSelectionsPopupState = false;
 	let editSelectionsPopupElement;
@@ -118,7 +126,9 @@ import { getCurrentChildId } from '$lib/utils/childUtils';
 
 	let contentContainerElement: HTMLDivElement;
 	const updateButtonPosition = (event) => {
-		const buttonsContainerElement = document.getElementById(`floating-buttons-${chatId}-${message.id}`);
+		const buttonsContainerElement = document.getElementById(
+			`floating-buttons-${chatId}-${message.id}`
+		);
 		if (
 			!contentContainerElement?.contains(event.target) &&
 			!buttonsContainerElement?.contains(event.target)
@@ -166,7 +176,9 @@ import { getCurrentChildId } from '$lib/utils/childUtils';
 	};
 
 	const closeFloatingButtons = () => {
-		const buttonsContainerElement = document.getElementById(`floating-buttons-${chatId}-${message.id}`);
+		const buttonsContainerElement = document.getElementById(
+			`floating-buttons-${chatId}-${message.id}`
+		);
 		if (buttonsContainerElement) {
 			buttonsContainerElement.style.display = 'none';
 		}
@@ -197,276 +209,280 @@ import { getCurrentChildId } from '$lib/utils/childUtils';
 		document.removeEventListener('keydown', keydownHandler);
 	}
 
-    // TEXT SELECTION: Save selected text from user message
-    const saveCurrentSelection = async () => {
-        const container = document.getElementById(`message-${message.id}`);
-        if (!container) return;
-        
-        const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) return;
-        
-        const range = selection.getRangeAt(0);
-        if (!container.contains(range.commonAncestorContainer)) return;
+	// TEXT SELECTION: Save selected text from user message
+	const saveCurrentSelection = async () => {
+		const container = document.getElementById(`message-${message.id}`);
+		if (!container) return;
 
-        const text = selection.toString();
-        if (!text.trim()) return;
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) return;
 
-        // Highlight selected text with <mark> element
-        const mark = document.createElement('mark');
-        mark.className = 'selection-highlight';
-        mark.textContent = text;
-        // Add click handler for selection interaction
-        mark.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleSelectionClick(mark, text);
-        });
-        range.deleteContents();
-        range.insertNode(mark);
-        selection.removeAllRanges();
+		const range = selection.getRangeAt(0);
+		if (!container.contains(range.commonAncestorContainer)) return;
 
-        // Only allow selection on the latest user message
-        if ($latestUserMessageId && $latestUserMessageId !== message.id) {
-            closeFloatingButtons();
-            return;
-        }
+		const text = selection.toString();
+		if (!text.trim()) return;
 
-        // Save to both localStorage and backend via sync service
-        const currentChatId = $chatIdStore;
-        if (!currentChatId) return;
-        
-        try {
-            await selectionSyncService.saveSelection({
-                chat_id: currentChatId,
-                message_id: message.id,
-                role: 'user',
-                selected_text: text,
-                child_id: getCurrentChildId() || undefined,
-                context: undefined,
-                meta: {
-                    timestamp: Date.now(),
-                    source: 'user_selection'
-                }
-            });
-        } catch (error) {
-            // Selection is still saved in localStorage, so user doesn't lose data
-        }
-    };
+		// Highlight selected text with <mark> element
+		const mark = document.createElement('mark');
+		mark.className = 'selection-highlight';
+		mark.textContent = text;
+		// Add click handler for selection interaction
+		mark.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			handleSelectionClick(mark, text);
+		});
+		range.deleteContents();
+		range.insertNode(mark);
+		selection.removeAllRanges();
 
-    // TEXT SELECTION: Re-apply saved selections by wrapping text with <mark> elements
-    function wrapFirstMatch(root, target) {
-        if (!root || !target || target.length === 0) return false;
-        
-        // Use TreeWalker to find text nodes containing the target text
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-        let node;
-        while ((node = walker.nextNode())) {
-            // Skip nodes already inside selection highlights
-            if (node.parentElement && node.parentElement.closest('mark.selection-highlight')) continue;
-            
-            const idx = node.data.indexOf(target);
-            if (idx !== -1) {
-                // Split text node and wrap target text with <mark> element
-                const mark = document.createElement('mark');
-                mark.className = 'selection-highlight';
-                mark.textContent = target;
-            // Add click handler for selection interaction
-            mark.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleSelectionClick(mark, target);
-            });
+		// Only allow selection on the latest user message
+		if ($latestUserMessageId && $latestUserMessageId !== message.id) {
+			closeFloatingButtons();
+			return;
+		}
 
-                const before = node.splitText(idx);
-                before.splitText(target.length);
-                before.parentNode.replaceChild(mark, before);
-                return true;
-            }
-        }
-        return false;
-    }
+		// Save to both localStorage and backend via sync service
+		const currentChatId = $chatIdStore;
+		if (!currentChatId) return;
 
-    // TEXT SELECTION: Re-apply saved selections by highlighting text with <mark> elements
-    function applySavedSelections() {
-        const root = contentContainerElement;
-        if (!root) return;
-        const currentChildId = getCurrentChildId();
-        const items = ($savedSelections || []).filter(
-            (s) => s.chatId === $chatIdStore && s.messageId === message.id && s.role === 'user' &&
-                   (s.childId === currentChildId || (!s.childId && !currentChildId))
-        );
-        for (const sel of items) {
-            // Avoid double-highlighting: only add marks for texts not yet wrapped
-            const already = Array.from(root.querySelectorAll('mark.selection-highlight'))
-                .some((m) => m.textContent === sel.text);
-            if (!already) {
-                wrapFirstMatch(root, sel.text);
-            }
-        }
-    }
+		try {
+			await selectionSyncService.saveSelection({
+				chat_id: currentChatId,
+				message_id: message.id,
+				role: 'user',
+				selected_text: text,
+				child_id: getCurrentChildId() || undefined,
+				context: undefined,
+				meta: {
+					timestamp: Date.now(),
+					source: 'user_selection'
+				}
+			});
+		} catch (error) {
+			// Selection is still saved in localStorage, so user doesn't lose data
+		}
+	};
 
-    onMount(async () => {
-        await tick();
-        applySavedSelections();
-        
-        // Listen for child profile changes to refresh selections
-        const handleRefreshSelections = () => {
-            // Clear existing selections first
-            const root = contentContainerElement;
-            if (root) {
-                const existingMarks = Array.from(root.querySelectorAll('mark.selection-highlight'));
-                existingMarks.forEach(mark => {
-                    const parent = mark.parentNode;
-                    if (parent) {
-                        parent.replaceChild(document.createTextNode(mark.textContent || ''), mark);
-                        parent.normalize();
-                    }
-                });
-            }
-            // Reapply selections with new child filter
-            setTimeout(() => {
-                applySavedSelections();
-            }, 50);
-        };
-        
-        window.addEventListener('refresh-selections', handleRefreshSelections);
-        
-        return () => {
-            window.removeEventListener('refresh-selections', handleRefreshSelections);
-        };
-    });
+	// TEXT SELECTION: Re-apply saved selections by wrapping text with <mark> elements
+	function wrapFirstMatch(root, target) {
+		if (!root || !target || target.length === 0) return false;
 
-    $: if ($savedSelections && message?.id && contentContainerElement) {
-        applySavedSelections();
-    }
+		// Use TreeWalker to find text nodes containing the target text
+		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+		let node;
+		while ((node = walker.nextNode())) {
+			// Skip nodes already inside selection highlights
+			if (node.parentElement && node.parentElement.closest('mark.selection-highlight')) continue;
 
-// Handle selection click based on current state
-const handleSelectionClick = (markElement, text) => {
-    // Check if this is the most recent user message
-    const isMostRecent = $latestUserMessageId === message.id;
-    
-    if (!isMostRecent) {
-        // Don't show any popup for selections in older messages
-        return;
-    }
-    
-    if ($selectionModeEnabled) {
-        // In selection mode, show delete popup
-        showDeleteSelectionPopup(markElement, text);
-    } else {
-        // Not in selection mode, show edit selections popup
-        showEditSelectionsPopup(markElement, text);
-    }
-};
+			const idx = node.data.indexOf(target);
+			if (idx !== -1) {
+				// Split text node and wrap target text with <mark> element
+				const mark = document.createElement('mark');
+				mark.className = 'selection-highlight';
+				mark.textContent = target;
+				// Add click handler for selection interaction
+				mark.addEventListener('click', (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					handleSelectionClick(mark, target);
+				});
 
-// Show delete selection popup
-const showDeleteSelectionPopup = (markElement, text) => {
-    selectedTextToDelete = text;
-    selectedMarkToDelete = markElement;
-    showDeleteSelectionPopupState = true;
-    
-    // Position the popup next to the selection like the Save button
-    setTimeout(() => {
-        if (deleteSelectionPopupElement && markElement && contentContainerElement) {
-            const markRect = markElement.getBoundingClientRect();
-            const parentRect = contentContainerElement.getBoundingClientRect();
-            
-            // Calculate position relative to the content container
-            const top = markRect.bottom - parentRect.top;
-            const left = markRect.left - parentRect.left;
-            
-            // Calculate space available on the right
-            const spaceOnRight = parentRect.width - left;
-            let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
-            
-            if (spaceOnRight < halfScreenWidth) {
-                const right = parentRect.right - markRect.right;
-                deleteSelectionPopupElement.style.right = `${right}px`;
-                deleteSelectionPopupElement.style.left = 'auto';
-            } else {
-                deleteSelectionPopupElement.style.left = `${left}px`;
-                deleteSelectionPopupElement.style.right = 'auto';
-            }
-            
-            deleteSelectionPopupElement.style.top = `${top + 5}px`;
-            
-            // Show the popup after positioning
-            deleteSelectionPopupElement.style.display = 'block';
-        }
-    }, 0);
-};
+				const before = node.splitText(idx);
+				before.splitText(target.length);
+				before.parentNode.replaceChild(mark, before);
+				return true;
+			}
+		}
+		return false;
+	}
 
-// Show edit selections popup
-const showEditSelectionsPopup = (markElement, text) => {
-    selectedTextToDelete = text;
-    selectedMarkToDelete = markElement;
-    showEditSelectionsPopupState = true;
-    
-    // Position the popup next to the selection like the Save button
-    setTimeout(() => {
-        if (editSelectionsPopupElement && markElement && contentContainerElement) {
-            const markRect = markElement.getBoundingClientRect();
-            const parentRect = contentContainerElement.getBoundingClientRect();
-            
-            // Calculate position relative to the content container
-            const top = markRect.bottom - parentRect.top;
-            const left = markRect.left - parentRect.left;
-            
-            // Calculate space available on the right
-            const spaceOnRight = parentRect.width - left;
-            let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
-            
-            if (spaceOnRight < halfScreenWidth) {
-                const right = parentRect.right - markRect.right;
-                editSelectionsPopupElement.style.right = `${right}px`;
-                editSelectionsPopupElement.style.left = 'auto';
-            } else {
-                editSelectionsPopupElement.style.left = `${left}px`;
-                editSelectionsPopupElement.style.right = 'auto';
-            }
-            
-            editSelectionsPopupElement.style.top = `${top + 5}px`;
-            
-            // Show the popup after positioning
-            editSelectionsPopupElement.style.display = 'block';
-        }
-    }, 0);
-};
+	// TEXT SELECTION: Re-apply saved selections by highlighting text with <mark> elements
+	function applySavedSelections() {
+		const root = contentContainerElement;
+		if (!root) return;
+		const currentChildId = getCurrentChildId();
+		const items = ($savedSelections || []).filter(
+			(s) =>
+				s.chatId === $chatIdStore &&
+				s.messageId === message.id &&
+				s.role === 'user' &&
+				(s.childId === currentChildId || (!s.childId && !currentChildId))
+		);
+		for (const sel of items) {
+			// Avoid double-highlighting: only add marks for texts not yet wrapped
+			const already = Array.from(root.querySelectorAll('mark.selection-highlight')).some(
+				(m) => m.textContent === sel.text
+			);
+			if (!already) {
+				wrapFirstMatch(root, sel.text);
+			}
+		}
+	}
 
-    // Delete a selection
-    const deleteSelection = async () => {
-        if (!selectedTextToDelete || !selectedMarkToDelete) return;
-        
-        // Remove from backend and localStorage using selectionSyncService
-        const currentChatId = $chatIdStore;
-        if (currentChatId) {
-            try {
-                await selectionSyncService.deleteSelection({
-                    chat_id: currentChatId,
-                    message_id: message.id,
-                    role: 'user',
-                    selected_text: selectedTextToDelete
-                });
-            } catch (error) {
-                console.error('Failed to delete selection from backend:', error);
-            }
-        }
-        
-        // Remove the mark element from DOM
-        if (selectedMarkToDelete && selectedMarkToDelete.parentNode) {
-            const parent = selectedMarkToDelete.parentNode;
-            const textNode = document.createTextNode(selectedTextToDelete);
-            parent.replaceChild(textNode, selectedMarkToDelete);
-            
-            // Merge adjacent text nodes
-            parent.normalize();
-        }
-        
-        // Close popup
-        showDeleteSelectionPopupState = false;
-        selectedTextToDelete = '';
-        selectedMarkToDelete = null;
-    };
+	onMount(async () => {
+		await tick();
+		applySavedSelections();
+
+		// Listen for child profile changes to refresh selections
+		const handleRefreshSelections = () => {
+			// Clear existing selections first
+			const root = contentContainerElement;
+			if (root) {
+				const existingMarks = Array.from(root.querySelectorAll('mark.selection-highlight'));
+				existingMarks.forEach((mark) => {
+					const parent = mark.parentNode;
+					if (parent) {
+						parent.replaceChild(document.createTextNode(mark.textContent || ''), mark);
+						parent.normalize();
+					}
+				});
+			}
+			// Reapply selections with new child filter
+			setTimeout(() => {
+				applySavedSelections();
+			}, 50);
+		};
+
+		window.addEventListener('refresh-selections', handleRefreshSelections);
+
+		return () => {
+			window.removeEventListener('refresh-selections', handleRefreshSelections);
+		};
+	});
+
+	$: if ($savedSelections && message?.id && contentContainerElement) {
+		applySavedSelections();
+	}
+
+	// Handle selection click based on current state
+	const handleSelectionClick = (markElement, text) => {
+		// Check if this is the most recent user message
+		const isMostRecent = $latestUserMessageId === message.id;
+
+		if (!isMostRecent) {
+			// Don't show any popup for selections in older messages
+			return;
+		}
+
+		if ($selectionModeEnabled) {
+			// In selection mode, show delete popup
+			showDeleteSelectionPopup(markElement, text);
+		} else {
+			// Not in selection mode, show edit selections popup
+			showEditSelectionsPopup(markElement, text);
+		}
+	};
+
+	// Show delete selection popup
+	const showDeleteSelectionPopup = (markElement, text) => {
+		selectedTextToDelete = text;
+		selectedMarkToDelete = markElement;
+		showDeleteSelectionPopupState = true;
+
+		// Position the popup next to the selection like the Save button
+		setTimeout(() => {
+			if (deleteSelectionPopupElement && markElement && contentContainerElement) {
+				const markRect = markElement.getBoundingClientRect();
+				const parentRect = contentContainerElement.getBoundingClientRect();
+
+				// Calculate position relative to the content container
+				const top = markRect.bottom - parentRect.top;
+				const left = markRect.left - parentRect.left;
+
+				// Calculate space available on the right
+				const spaceOnRight = parentRect.width - left;
+				let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
+
+				if (spaceOnRight < halfScreenWidth) {
+					const right = parentRect.right - markRect.right;
+					deleteSelectionPopupElement.style.right = `${right}px`;
+					deleteSelectionPopupElement.style.left = 'auto';
+				} else {
+					deleteSelectionPopupElement.style.left = `${left}px`;
+					deleteSelectionPopupElement.style.right = 'auto';
+				}
+
+				deleteSelectionPopupElement.style.top = `${top + 5}px`;
+
+				// Show the popup after positioning
+				deleteSelectionPopupElement.style.display = 'block';
+			}
+		}, 0);
+	};
+
+	// Show edit selections popup
+	const showEditSelectionsPopup = (markElement, text) => {
+		selectedTextToDelete = text;
+		selectedMarkToDelete = markElement;
+		showEditSelectionsPopupState = true;
+
+		// Position the popup next to the selection like the Save button
+		setTimeout(() => {
+			if (editSelectionsPopupElement && markElement && contentContainerElement) {
+				const markRect = markElement.getBoundingClientRect();
+				const parentRect = contentContainerElement.getBoundingClientRect();
+
+				// Calculate position relative to the content container
+				const top = markRect.bottom - parentRect.top;
+				const left = markRect.left - parentRect.left;
+
+				// Calculate space available on the right
+				const spaceOnRight = parentRect.width - left;
+				let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
+
+				if (spaceOnRight < halfScreenWidth) {
+					const right = parentRect.right - markRect.right;
+					editSelectionsPopupElement.style.right = `${right}px`;
+					editSelectionsPopupElement.style.left = 'auto';
+				} else {
+					editSelectionsPopupElement.style.left = `${left}px`;
+					editSelectionsPopupElement.style.right = 'auto';
+				}
+
+				editSelectionsPopupElement.style.top = `${top + 5}px`;
+
+				// Show the popup after positioning
+				editSelectionsPopupElement.style.display = 'block';
+			}
+		}, 0);
+	};
+
+	// Delete a selection
+	const deleteSelection = async () => {
+		if (!selectedTextToDelete || !selectedMarkToDelete) return;
+
+		// Remove from backend and localStorage using selectionSyncService
+		const currentChatId = $chatIdStore;
+		if (currentChatId) {
+			try {
+				await selectionSyncService.deleteSelection({
+					chat_id: currentChatId,
+					message_id: message.id,
+					role: 'user',
+					selected_text: selectedTextToDelete
+				});
+			} catch (error) {
+				console.error('Failed to delete selection from backend:', error);
+			}
+		}
+
+		// Remove the mark element from DOM
+		if (selectedMarkToDelete && selectedMarkToDelete.parentNode) {
+			const parent = selectedMarkToDelete.parentNode;
+			const textNode = document.createTextNode(selectedTextToDelete);
+			parent.replaceChild(textNode, selectedMarkToDelete);
+
+			// Merge adjacent text nodes
+			parent.normalize();
+		}
+
+		// Close popup
+		showDeleteSelectionPopupState = false;
+		selectedTextToDelete = '';
+		selectedMarkToDelete = null;
+	};
 </script>
 
 <DeleteConfirmDialog
@@ -485,10 +501,7 @@ const showEditSelectionsPopup = (markElement, text) => {
 	{#if !($settings?.chatBubble ?? true)}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
 			<ProfileImage
-				src={message.user
-					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
-						`${WEBUI_BASE_URL}/user.png`)
-					: (user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`)}
+				src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 				className={'size-8 user-message-profile-image'}
 			/>
 		</div>
@@ -552,11 +565,18 @@ const showEditSelectionsPopup = (markElement, text) => {
 		<div class="chat-{message.role} w-full min-w-full markdown-prose">
 			{#if edit !== true}
 				{#if message.files}
-					<div class="mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
+					<div
+						class="mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap"
+						dir={$settings?.chatDirection ?? 'auto'}
+					>
 						{#each message.files as file}
+							{@const fileUrl =
+								file.url?.startsWith('data') || file.url?.startsWith('http')
+									? file.url
+									: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 							<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
-								{#if file.type === 'image'}
-									<Image src={file.url} imageClassName=" max-h-96 rounded-lg" />
+								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+									<Image src={fileUrl} imageClassName=" max-h-96 rounded-lg" />
 								{:else}
 									<FileItem
 										item={file}
@@ -578,11 +598,15 @@ const showEditSelectionsPopup = (markElement, text) => {
 					{#if (editedFiles ?? []).length > 0}
 						<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
 							{#each editedFiles as file, fileIdx}
-								{#if file.type === 'image'}
+								{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+									{@const fileUrl =
+										file.url?.startsWith('data') || file.url?.startsWith('http')
+											? file.url
+											: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 									<div class=" relative group">
 										<div class="relative flex items-center">
 											<Image
-												src={file.url}
+												src={fileUrl}
 												alt="input"
 												imageClassName=" size-14 rounded-xl object-cover"
 											/>
@@ -698,7 +722,7 @@ const showEditSelectionsPopup = (markElement, text) => {
 					</div>
 				</div>
 			{:else if message.content !== ''}
-			<div class="w-full relative">
+				<div class="w-full relative">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
 							class="rounded-3xl {($settings?.chatBubble ?? true)
@@ -709,72 +733,76 @@ const showEditSelectionsPopup = (markElement, text) => {
 						>
 							{#if message.content}
 								<div bind:this={contentContainerElement}>
-								<Markdown
-									id={`${chatId}-${message.id}`}
-									content={message.content}
-									{editCodeBlock}
-									{topPadding}
-								/>
+									<Markdown
+										id={`${chatId}-${message.id}`}
+										content={message.content}
+										{editCodeBlock}
+										{topPadding}
+									/>
 								</div>
 							{/if}
 						</div>
 					</div>
 
-				{#if $selectionModeEnabled && allowTextSelection}
-					<div
-						id={`floating-buttons-${chatId}-${message.id}`}
-						class="absolute rounded-lg mt-1 text-xs z-9999"
-						style="display: none"
-					>
-						<div class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl">
-							<button
-								class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
-								on:click={saveCurrentSelection}
+					{#if $selectionModeEnabled && allowTextSelection}
+						<div
+							id={`floating-buttons-${chatId}-${message.id}`}
+							class="absolute rounded-lg mt-1 text-xs z-9999"
+							style="display: none"
+						>
+							<div
+								class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl"
 							>
-								{$i18n.t('Save')}
-							</button>
-		</div>
-	</div>
-{/if}
+								<button
+									class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+									on:click={saveCurrentSelection}
+								>
+									{$i18n.t('Save')}
+								</button>
+							</div>
+						</div>
+					{/if}
 
-<!-- Edit Selections Popup -->
-{#if showEditSelectionsPopupState}
-	<div
-		bind:this={editSelectionsPopupElement}
-		class="absolute rounded-lg mt-1 text-xs z-9999 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl p-1"
-		style="display: none;"
-	>
-		<div class="flex flex-row gap-0.5 shrink-0">
-			<button
-				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
-				on:click={() => {
-					// Trigger selection mode
-					selectionModeEnabled.set(true);
-					window.dispatchEvent(new CustomEvent('set-input-panel-state', {
-						detail: { state: 'selection' }
-					}));
-					// Close the popup
-					showEditSelectionsPopupState = false;
-					selectedTextToDelete = '';
-					selectedMarkToDelete = null;
-				}}
-			>
-				{$i18n.t('Edit Selections')}
-			</button>
-			<button
-				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
-				on:click={() => {
-					showEditSelectionsPopupState = false;
-					selectedTextToDelete = '';
-					selectedMarkToDelete = null;
-				}}
-			>
-				{$i18n.t('Cancel')}
-			</button>
-		</div>
-	</div>
-{/if}
-</div>
+					<!-- Edit Selections Popup -->
+					{#if showEditSelectionsPopupState}
+						<div
+							bind:this={editSelectionsPopupElement}
+							class="absolute rounded-lg mt-1 text-xs z-9999 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl p-1"
+							style="display: none;"
+						>
+							<div class="flex flex-row gap-0.5 shrink-0">
+								<button
+									class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+									on:click={() => {
+										// Trigger selection mode
+										selectionModeEnabled.set(true);
+										window.dispatchEvent(
+											new CustomEvent('set-input-panel-state', {
+												detail: { state: 'selection' }
+											})
+										);
+										// Close the popup
+										showEditSelectionsPopupState = false;
+										selectedTextToDelete = '';
+										selectedMarkToDelete = null;
+									}}
+								>
+									{$i18n.t('Edit Selections')}
+								</button>
+								<button
+									class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+									on:click={() => {
+										showEditSelectionsPopupState = false;
+										selectedTextToDelete = '';
+										selectedMarkToDelete = null;
+									}}
+								>
+									{$i18n.t('Cancel')}
+								</button>
+							</div>
+						</div>
+					{/if}
+				</div>
 			{/if}
 
 			{#if edit !== true}
@@ -917,9 +945,11 @@ const showEditSelectionsPopup = (markElement, text) => {
 									// Force the latest user message to be the target for selection
 									latestUserMessageId.set(message.id);
 									// Dispatch event to change input panel state
-									window.dispatchEvent(new CustomEvent('set-input-panel-state', {
-										detail: { state: 'selection' }
-									}));
+									window.dispatchEvent(
+										new CustomEvent('set-input-panel-state', {
+											detail: { state: 'selection' }
+										})
+									);
 								}}
 							>
 								<svg

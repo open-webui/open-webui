@@ -52,6 +52,7 @@ The moderation workflow uses two main panels that control the user experience:
 **Purpose**: Unified 4-step workflow for initial decision making
 
 **Visibility Conditions**:
+
 - Shown when: `!step4Completed && !markedNotApplicable && (initialDecisionStep >= 1 && initialDecisionStep <= 4) && (!isCustomScenario || customScenarioGenerated)`
 - Hidden when:
   - Scenario is completed (`step4Completed === true`)
@@ -60,6 +61,7 @@ The moderation workflow uses two main panels that control the user experience:
   - Custom scenario hasn't been generated yet
 
 **States**:
+
 - **Step 1**: Highlighting mode - User can drag to highlight concerning text
 - **Step 2**: Comprehension check - User answers "What is the child trying to accomplish?" and "What is the GenAI Chatbot mainly doing?"
 - **Step 3**: Pre-moderation judgment - User rates concern level (1-5) and decides if they would show to child (yes/no)
@@ -70,6 +72,7 @@ The moderation workflow uses two main panels that control the user experience:
 **Purpose**: Strategy selection and version management
 
 **Visibility Conditions**:
+
 - Shown when: `initialDecisionStep === 4 && confirmedVersionIndex === null && !markedNotApplicable && step3Completed`
 - Hidden when:
   - Not in Step 4
@@ -79,6 +82,7 @@ The moderation workflow uses two main panels that control the user experience:
   - Scenario is in an end state
 
 **Features**:
+
 - Strategy selection (up to 3 strategies from grouped categories)
 - Custom instruction input
 - Version creation and navigation
@@ -93,20 +97,24 @@ The moderation workflow follows a structured 4-step process:
 **Function**: `completeStep1(skipped: boolean)`
 
 **Actions**:
+
 - User can drag to highlight concerning text in prompt or response
 - Highlights stored in `highlightedTexts1` array
 - Text selections automatically saved to `/selections` endpoint
 - User can skip highlighting and proceed, or mark scenario as not applicable
 
 **Completion**:
+
 - `completeStep1(skipped: false)`: Proceeds to Step 2, saves highlights to backend
 - `completeStep1(skipped: true)`: Marks as not applicable, skips all remaining steps
 
 **Endpoints**:
+
 - `POST /selections` - Save highlighted text selections
 - `POST /moderation/sessions` - Save highlights with `version_number: 0`
 
 **Data Saved**:
+
 - `highlighted_texts`: Array of highlighted phrases
 - `initial_decision`: `undefined` (no decision yet) or `'not_applicable'` (if skipped)
 
@@ -115,18 +123,22 @@ The moderation workflow follows a structured 4-step process:
 **Function**: `completeStep2()`
 
 **Actions**:
+
 - User fills two required text fields:
   - `childAccomplish`: "What is the child trying to accomplish?"
   - `assistantDoing`: "What is the GenAI Chatbot mainly doing?"
 - Both fields must be filled to proceed
 
 **Completion**:
+
 - `completeStep2()`: Validates both fields, proceeds to Step 3
 
 **Endpoints**:
+
 - `POST /moderation/sessions` - Save comprehension check data
 
 **Data Saved**:
+
 - `session_metadata.child_accomplish`: User's answer
 - `session_metadata.assistant_doing`: User's answer
 - `highlighted_texts`: Preserved from Step 1
@@ -136,18 +148,22 @@ The moderation workflow follows a structured 4-step process:
 **Function**: `completeStep3()`
 
 **Actions**:
+
 - User answers two questions:
   - `concernLevel`: 1-5 Likert scale (concern level)
   - `wouldShowChild`: 'yes' | 'no' (would show to child)
 - Both questions must be answered to proceed
 
 **Completion**:
+
 - `completeStep3()`: Validates both fields, navigates to Step 4
 
 **Endpoints**:
+
 - `POST /moderation/sessions` - Save pre-moderation judgment
 
 **Data Saved**:
+
 - `concern_level`: 1-5 number (direct column)
 - `would_show_child`: 'yes' | 'no' (direct column)
 - `session_metadata.child_accomplish`: Re-saved for consistency
@@ -156,12 +172,14 @@ The moderation workflow follows a structured 4-step process:
 #### Step 4: Decision and Moderation (`initialDecisionStep === 4`)
 
 **Actions**:
+
 - User can:
   1. **Accept Original**: `acceptOriginalResponse()` - Accepts without moderation
   2. **Moderate**: Create moderated versions using moderation panel
   3. **Mark Not Applicable**: `markNotApplicable()` - Skip scenario (can be done from any step)
 
 **Moderation Panel Features** (when visible):
+
 - Select up to 3 moderation strategies from grouped options:
   - Refuse and Remove (4 options)
   - Investigate and Empathize (2 options)
@@ -176,22 +194,22 @@ The moderation workflow follows a structured 4-step process:
 - Confirm a version as final (`confirmCurrentVersion()`)
 
 **Endpoints**:
+
 - `POST /moderation/apply` - Generate moderated response
 - `POST /moderation/sessions` - Save each version (version_number: 1, 2, 3...)
 - `POST /moderation/sessions` - Save final decision with `is_final_version: true`
 
 **Data Saved**:
+
 - For accepted original:
   - `initial_decision`: 'accept_original'
   - `version_number`: 0
   - `is_final_version`: false (set to true on finalization)
-  
 - For moderated versions:
   - `strategies`: Array of strategy names
   - `custom_instructions`: Array of custom instruction texts
   - `refactored_response`: Generated moderated response
   - `version_number`: 1, 2, 3... (increments for each version)
-  
 - For confirmed version:
   - `is_final_version`: true
   - `initial_decision`: 'moderate' or 'accept_original'
@@ -211,46 +229,47 @@ The moderation workflow follows a structured 4-step process:
 
 ```typescript
 interface ScenarioState {
-  // Version management
-  versions: ModerationVersion[];
-  currentVersionIndex: number;
-  confirmedVersionIndex: number | null;
-  
-  // Highlighting
-  highlightedTexts1: string[];
-  
-  // Strategy selection
-  selectedModerations: Set<string>;
-  customInstructions: Array<{id: string, text: string}>;
-  
-  // UI state
-  showOriginal1: boolean;
-  showComparisonView: boolean;
-  hasInitialDecision: boolean;
-  acceptedOriginal: boolean;
-  markedNotApplicable: boolean;
-  attentionCheckSelected: boolean;
-  
-  // Unified initial decision flow
-  initialDecisionStep: 1 | 2 | 3 | 4;
-  step1Completed: boolean;
-  step2Completed: boolean;
-  step3Completed: boolean;
-  step4Completed: boolean;
-  childAccomplish: string; // Step 2: "What is the child trying to accomplish?"
-  assistantDoing: string; // Step 2: "What is the GenAI Chatbot mainly doing?"
-  initialDecisionChoice: 'accept_original' | 'moderate' | null;
-  concernLevel: number | null; // Step 3: 1-5 Likert scale
-  wouldShowChild: 'yes' | 'no' | null; // Step 3: Would show to child
-  
-  // Custom scenario
-  customPrompt?: string;
+	// Version management
+	versions: ModerationVersion[];
+	currentVersionIndex: number;
+	confirmedVersionIndex: number | null;
+
+	// Highlighting
+	highlightedTexts1: string[];
+
+	// Strategy selection
+	selectedModerations: Set<string>;
+	customInstructions: Array<{ id: string; text: string }>;
+
+	// UI state
+	showOriginal1: boolean;
+	showComparisonView: boolean;
+	hasInitialDecision: boolean;
+	acceptedOriginal: boolean;
+	markedNotApplicable: boolean;
+	attentionCheckSelected: boolean;
+
+	// Unified initial decision flow
+	initialDecisionStep: 1 | 2 | 3 | 4;
+	step1Completed: boolean;
+	step2Completed: boolean;
+	step3Completed: boolean;
+	step4Completed: boolean;
+	childAccomplish: string; // Step 2: "What is the child trying to accomplish?"
+	assistantDoing: string; // Step 2: "What is the GenAI Chatbot mainly doing?"
+	initialDecisionChoice: 'accept_original' | 'moderate' | null;
+	concernLevel: number | null; // Step 3: 1-5 Likert scale
+	wouldShowChild: 'yes' | 'no' | null; // Step 3: Would show to child
+
+	// Custom scenario
+	customPrompt?: string;
 }
 ```
 
 ### Completion States
 
 A scenario is **completed** when any of the following conditions are met:
+
 - `markedNotApplicable === true` (skipped)
 - `acceptedOriginal === true` (accepted original)
 - `confirmedVersionIndex !== null && confirmedVersionIndex >= 0` (confirmed moderated version)
@@ -272,13 +291,13 @@ A scenario is **completed** when any of the following conditions are met:
   - `custom_instructions`: JSON array of custom instruction texts
   - `highlighted_texts`: JSON array of highlighted phrases
   - `refactored_response`: Final moderated response text
-   - `session_metadata`: JSON object with:
-     - `child_accomplish`: Step 2 comprehension check answer
-     - `assistant_doing`: Step 2 comprehension check answer
-     - `decision`: Final decision type ('accept_original', 'moderate', 'not_applicable')
-     - `decided_at`: Timestamp when decision was made
-     - `highlights_saved_at`: Timestamp when highlights were saved
-     - `saved_at`: Timestamp when step data was saved
+  - `session_metadata`: JSON object with:
+    - `child_accomplish`: Step 2 comprehension check answer
+    - `assistant_doing`: Step 2 comprehension check answer
+    - `decision`: Final decision type ('accept_original', 'moderate', 'not_applicable')
+    - `decided_at`: Timestamp when decision was made
+    - `highlights_saved_at`: Timestamp when highlights were saved
+    - `saved_at`: Timestamp when step data was saved
 
 ### Save Operations
 
@@ -353,6 +372,7 @@ A scenario is **completed** when any of the following conditions are met:
 - State persists when navigating back - scenario shows as completed
 
 **Endpoint**: `POST /moderation/sessions`
+
 - `is_attention_check`: true
 - `attention_check_selected`: true
 - `attention_check_passed`: true
@@ -368,6 +388,7 @@ A scenario is **completed** when any of the following conditions are met:
 - Treated like any other scenario after generation - goes through same 4-step flow
 
 **Endpoint**: `POST /moderation/apply`
+
 - `moderation_types`: [] (empty - just generate response)
 - `child_prompt`: User's custom prompt
 
@@ -443,22 +464,22 @@ flowchart TD
     Step1 -->|Continue| Step2[Step 2: Comprehension Check]
     Step2 --> Step3[Step 3: Pre-Moderation Judgment]
     Step3 --> Step4[Step 4: Decision]
-    
+
     Step4 -->|Accept Original| AcceptOriginal[Accept Original Response]
     Step4 -->|Moderate| ModerationPanel[Moderation Panel]
     Step4 -->|Skip| NotApplicable
-    
+
     ModerationPanel --> SelectStrategies[Select Strategies]
     SelectStrategies --> ApplyModeration[Apply Moderation]
     ApplyModeration --> CreateVersion[Create Version]
     CreateVersion --> NavigateVersions[Navigate Versions]
     NavigateVersions -->|Create More| SelectStrategies
     NavigateVersions -->|Confirm| ConfirmVersion[Confirm Version]
-    
+
     AcceptOriginal --> Complete[Scenario Complete]
     NotApplicable --> Complete
     ConfirmVersion --> Complete
-    
+
     Complete -->|More Scenarios| Start
     Complete -->|All Done| Finalize[Finalize Moderation]
 ```
@@ -470,12 +491,14 @@ flowchart TD
 **Function**: `acceptOriginalResponse()`
 
 **Flow**:
+
 1. Sets `acceptedOriginal = true`, `confirmedVersionIndex = -1`
 2. Sets `step4Completed = true`
 3. Closes panels (`moderationPanelVisible = false`, `showInitialDecisionPane = false`)
 4. Saves to backend with `initial_decision: 'accept_original'`
 
 **Endpoint**: `POST /moderation/sessions`
+
 - `version_number`: 0
 - `initial_decision`: 'accept_original'
 - Includes all Step 2-3 data (concern_level, would_show_child, child_accomplish, assistant_doing)
@@ -485,12 +508,14 @@ flowchart TD
 **Function**: `markNotApplicable()` or `completeStep1(skipped: true)`
 
 **Flow**:
+
 1. Sets `markedNotApplicable = true`
 2. Sets all step completion flags to true
 3. Closes panels
 4. Saves to backend with `initial_decision: 'not_applicable'`
 
 **Endpoint**: `POST /moderation/sessions`
+
 - `version_number`: 0
 - `initial_decision`: 'not_applicable'
 - `concern_level`: undefined (if skipped early)
@@ -501,6 +526,7 @@ flowchart TD
 **Function**: `applySelectedModerations()`
 
 **Flow**:
+
 1. Validates at least one strategy selected
 2. Calls `/moderation/apply` to generate moderated response
 3. Creates new version in `versions` array
@@ -508,10 +534,12 @@ flowchart TD
 5. Saves to backend as new row with incremented `version_number`
 
 **Endpoints**:
+
 - `POST /moderation/apply` - Generate moderated response
 - `POST /moderation/sessions` - Save version (version_number: 1, 2, 3...)
 
 **Data Saved**:
+
 - `strategies`: Selected strategy names
 - `custom_instructions`: Custom instruction texts
 - `highlighted_texts`: User-highlighted phrases
@@ -523,13 +551,14 @@ flowchart TD
 **Function**: `confirmCurrentVersion()`
 
 **Flow**:
+
 1. Sets `confirmedVersionIndex` to current version
 2. Sets `step4Completed = true`
 3. Closes moderation panel
 4. Saves to backend with `is_final_version: true`
 
 **Endpoint**: `POST /moderation/sessions`
+
 - `is_final_version`: true
 - `initial_decision`: 'moderate' (if version) or 'accept_original' (if original)
 - `version_number`: 0 (original) or 1+ (moderated version)
-

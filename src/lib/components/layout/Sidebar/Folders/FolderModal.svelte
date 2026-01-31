@@ -8,7 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { user } from '$lib/stores';
+	import { user, config } from '$lib/stores';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
@@ -38,6 +38,16 @@
 
 		if ((data?.files ?? []).some((file) => file.status === 'uploading')) {
 			toast.error($i18n.t('Please wait until all files are uploaded.'));
+			loading = false;
+			return;
+		}
+
+		// Check folder max file count limit
+		const maxFileCount = $config?.features?.folder_max_file_count ?? '';
+		if (maxFileCount && (data?.files ?? []).length > maxFileCount) {
+			toast.error(
+				$i18n.t('Maximum number of files per folder is {{max}}.', { max: maxFileCount ?? 0 })
+			);
 			loading = false;
 			return;
 		}
@@ -198,7 +208,7 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-50 dark:border-gray-850 my-2.5 w-full" />
+					<hr class=" border-gray-50 dark:border-gray-850/30 my-2.5 w-full" />
 
 					{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
 						<div class="my-1">

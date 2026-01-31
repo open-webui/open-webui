@@ -21,14 +21,14 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "folder" in existing_tables:
         # Table already exists, just check if folder_id column exists in chat
         chat_columns = [col["name"] for col in inspector.get_columns("chat")]
         if "folder_id" not in chat_columns:
             op.add_column("chat", sa.Column("folder_id", sa.Text(), nullable=True))
         return
-    
+
     op.create_table(
         "folder",
         sa.Column("id", sa.Text(), nullable=False),

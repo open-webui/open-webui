@@ -15,18 +15,21 @@
 ## How to Compare with Another Computer
 
 ### Option 1: Recreate Environment
+
 ```bash
 # On the other computer, use the YAML file to recreate the environment
 conda env create -f open-webui-environment.yml
 ```
 
 ### Option 2: Compare Package Lists
+
 ```bash
 # Compare pip lists between computers
 diff open-webui-pip-list.txt other-computer-pip-list.txt
 ```
 
 ### Option 3: Check for Missing Packages
+
 ```bash
 # On the other computer, generate a pip list and compare
 conda activate open-webui

@@ -1,9 +1,9 @@
 /**
  * Scenario Bank Module
- * 
+ *
  * Loads and manages scenarios from the scenario bank CSV file.
  * Provides functions to randomly sample scenarios independent of child characteristics.
- * 
+ *
  * @module scenarioBank
  */
 
@@ -30,10 +30,10 @@ let cachedScenarioBank: ScenarioBankEntry[] | null = null;
 
 /**
  * Loads the scenario bank from CSV file.
- * 
+ *
  * Parses the scenario_bank.csv file and converts it to an array of ScenarioBankEntry objects.
  * Results are cached to avoid re-parsing on subsequent calls.
- * 
+ *
  * @returns {Promise<ScenarioBankEntry[]>} Array of scenario bank entries
  * @throws {Error} If the CSV file cannot be loaded or parsed
  */
@@ -51,14 +51,14 @@ export async function loadScenarioBank(): Promise<ScenarioBankEntry[]> {
 		}
 
 		const csvText = await response.text();
-		const lines = csvText.split('\n').filter(line => line.trim().length > 0);
-		
+		const lines = csvText.split('\n').filter((line) => line.trim().length > 0);
+
 		if (lines.length < 2) {
 			throw new Error('Scenario bank CSV file is empty or invalid');
 		}
 
 		// Parse header
-		const headers = lines[0].split(',').map(h => h.trim());
+		const headers = lines[0].split(',').map((h) => h.trim());
 		const scenarioBank: ScenarioBankEntry[] = [];
 
 		// Parse data rows
@@ -104,7 +104,7 @@ export async function loadScenarioBank(): Promise<ScenarioBankEntry[]> {
 		// Cache the loaded data
 		cachedScenarioBank = scenarioBank;
 		console.log(`✅ Loaded ${scenarioBank.length} scenarios from scenario bank`);
-		
+
 		return scenarioBank;
 	} catch (error) {
 		console.error('Error loading scenario bank:', error);
@@ -114,15 +114,15 @@ export async function loadScenarioBank(): Promise<ScenarioBankEntry[]> {
 
 /**
  * Randomly samples scenarios from the scenario bank.
- * 
+ *
  * Samples the specified number of scenarios without replacement, excluding
  * any scenarios that have already been seen (based on scenario_id).
- * 
+ *
  * @param {number} count - Number of scenarios to sample (default: 6)
  * @param {string[]} excludeIds - Array of scenario IDs to exclude from sampling
  * @returns {Promise<QAPair[]>} Array of randomly sampled Q&A pairs
  * @throws {Error} If scenario bank cannot be loaded or insufficient scenarios available
- * 
+ *
  * @example
  * // Sample 6 random scenarios, excluding already seen ones
  * const scenarios = await getRandomScenarios(6, ['A01P1', 'A02P2']);
@@ -136,16 +136,16 @@ export async function getRandomScenarios(
 
 	// Filter out excluded scenarios
 	const availableScenarios = scenarioBank.filter(
-		entry => !excludeIds.includes(entry.scenario_id)
+		(entry) => !excludeIds.includes(entry.scenario_id)
 	);
 
 	if (availableScenarios.length < count) {
 		console.warn(
 			`⚠️ Only ${availableScenarios.length} scenarios available, requested ${count}. ` +
-			`Returning all available scenarios.`
+				`Returning all available scenarios.`
 		);
 		// Return all available if we don't have enough
-		return availableScenarios.map(entry => ({
+		return availableScenarios.map((entry) => ({
 			question: entry.prompt,
 			response: entry.response
 		}));
@@ -162,7 +162,7 @@ export async function getRandomScenarios(
 	const selected = shuffled.slice(0, count);
 
 	// Convert to QAPair format
-	const qaPairs: QAPair[] = selected.map(entry => ({
+	const qaPairs: QAPair[] = selected.map((entry) => ({
 		question: entry.prompt,
 		response: entry.response
 	}));
@@ -173,7 +173,7 @@ export async function getRandomScenarios(
 
 /**
  * Clears the cached scenario bank data.
- * 
+ *
  * Useful for testing or when the scenario bank file has been updated.
  */
 export function clearScenarioBankCache(): void {

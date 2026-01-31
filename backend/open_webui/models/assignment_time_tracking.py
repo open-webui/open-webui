@@ -40,7 +40,9 @@ class AssignmentSessionActivityModel(BaseModel):
 
 
 class AssignmentSessionActivityTable:
-    def add_activity(self, form: AssignmentSessionActivityForm) -> AssignmentSessionActivityModel:
+    def add_activity(
+        self, form: AssignmentSessionActivityForm
+    ) -> AssignmentSessionActivityModel:
         with get_db() as db:
             ts = int(time.time() * 1000)
             # Fetch last cumulative for this user/session
@@ -71,6 +73,3 @@ class AssignmentSessionActivityTable:
 
 
 AssignmentSessionActivities = AssignmentSessionActivityTable()
-
-
-

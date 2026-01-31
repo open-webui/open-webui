@@ -12,7 +12,6 @@ from sqlalchemy.sql import table, column, select
 from sqlalchemy.engine.reflection import Inspector
 import json
 
-
 revision = "6a39f3d8e55c"
 down_revision = "c0fbf31ca0db"
 branch_labels = None
@@ -24,11 +23,11 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "knowledge" in existing_tables:
         print("Knowledge table already exists, skipping creation")
         return
-    
+
     # Creating the 'knowledge' table
     print("Creating knowledge table")
     knowledge_table = op.create_table(

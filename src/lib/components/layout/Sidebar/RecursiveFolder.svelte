@@ -24,8 +24,8 @@
 		getChatById,
 		getChatsByFolderId,
 		getChatListByFolderId,
-		importChat,
-		updateChatFolderIdById
+		updateChatFolderIdById,
+		importChats
 	} from '$lib/apis/chats';
 
 	import ChevronDown from '../../icons/ChevronDown.svelte';
@@ -51,6 +51,8 @@
 	export let shiftKey = false;
 
 	export let className = '';
+
+	export let deleteFolderContents = true;
 
 	export let parentDragged = false;
 
@@ -152,15 +154,16 @@
 									return null;
 								});
 								if (!chat && item) {
-									chat = await importChat(
-										localStorage.token,
-										item.chat,
-										item?.meta ?? {},
-										false,
-										null,
-										item?.created_at ?? null,
-										item?.updated_at ?? null
-									).catch((error) => {
+									chat = await importChats(localStorage.token, [
+										{
+											chat: item.chat,
+											meta: item?.meta ?? {},
+											pinned: false,
+											folder_id: null,
+											created_at: item?.created_at ?? null,
+											updated_at: item?.updated_at ?? null
+										}
+									]).catch((error) => {
 										toast.error(`${error}`);
 										return null;
 									});
@@ -246,11 +249,12 @@
 	};
 
 	onMount(async () => {
-		folderRegistry[folderId] = {
-			setFolderItems: () => setFolderItems()
-		};
-
 		open = folders[folderId].is_expanded;
+		folderRegistry[folderId] = {
+			setFolderItems: () => {
+				setFolderItems();
+			}
+		};
 		if (folderElement) {
 			folderElement.addEventListener('dragover', onDragOver);
 			folderElement.addEventListener('drop', onDrop);
@@ -286,10 +290,12 @@
 	let showDeleteConfirm = false;
 
 	const deleteHandler = async () => {
-		const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		const res = await deleteFolderById(localStorage.token, folderId, deleteFolderContents).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
 
 		if (res) {
 			toast.success($i18n.t('Folder deleted successfully'));
@@ -335,7 +341,7 @@
 				});
 
 				if (folder) {
-					selectedFolder.set(folder);
+					await selectedFolder.set(folder);
 				}
 			}
 			dispatch('update');
@@ -368,23 +374,14 @@
 				toast.error(`${error}`);
 				return [];
 			});
-
-			if ($selectedFolder?.id === folderId) {
-				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
-					toast.error(`${error}`);
-					return null;
-				});
-
-				if (folder) {
-					selectedFolder.set(folder);
-				}
-			}
 		} else {
 			chats = null;
 		}
 	};
 
-	$: setFolderItems(open);
+	$: if (open) {
+		setFolderItems();
+	}
 
 	const renameHandler = async () => {
 		console.log('Edit');
@@ -426,12 +423,22 @@
 		deleteHandler();
 	}}
 >
-	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
-		{@html DOMPurify.sanitize(
-			$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
+	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3 mb-2">
+		<!-- {$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
 				NAME: folders[folderId].name
-			})
-		)}
+			})} -->
+
+		{$i18n.t(`Are you sure you want to delete "{{NAME}}"?`, {
+			NAME: folders[folderId].name
+		})}
+	</div>
+
+	<div class="flex items-center gap-1.5">
+		<input type="checkbox" bind:checked={deleteFolderContents} />
+
+		<div class="text-xs text-gray-500">
+			{$i18n.t('Delete all contents inside this folder')}
+		</div>
 	</div>
 </DeleteConfirmDialog>
 
@@ -467,7 +474,7 @@
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="w-full group">
-			<button
+			<div
 				id="folder-{folderId}-button"
 				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
 				folderId
@@ -488,16 +495,16 @@
 					}
 
 					clickTimer = setTimeout(async () => {
-						await goto('/');
-
 						const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
 							toast.error(`${error}`);
 							return null;
 						});
 
 						if (folder) {
-							selectedFolder.set(folder);
+							await selectedFolder.set(folder);
 						}
+
+						await goto('/');
 
 						if ($mobile) {
 							showSidebar.set(!$showSidebar);
@@ -592,7 +599,7 @@
 						</div>
 					</FolderMenu>
 				</button>
-			</button>
+			</div>
 		</div>
 
 		<div slot="content" class="w-full">

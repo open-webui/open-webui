@@ -32,11 +32,13 @@ The script focuses on these tables for analysis:
 - PostgreSQL client tools (for custom format dumps): `pg_restore`
 
 Install dependencies:
+
 ```bash
 pip install pandas
 ```
 
 For PostgreSQL custom format dumps, install PostgreSQL client:
+
 - macOS: `brew install postgresql`
 - Ubuntu/Debian: `sudo apt-get install postgresql-client`
 - Or download from: https://www.postgresql.org/download/
@@ -50,6 +52,7 @@ python transform_dump_to_dataframes.py [dump_file_path]
 ```
 
 If no file path is provided, the script will look for:
+
 1. `~/Downloads/b078-20260113-215725.dump`
 2. `/workspace/heroku_psql_181025.dump`
 3. `./heroku_psql_181025.dump`
@@ -91,6 +94,7 @@ df_users = pd.read_csv('data_exports/user.csv')
 The script performs several cleaning and transformation operations:
 
 ### Common Transformations (All Tables)
+
 - Converts timestamp columns to datetime objects
 - Cleans string columns (removes null bytes, handles 'None' strings)
 - Parses JSON fields into Python dictionaries
@@ -98,23 +102,29 @@ The script performs several cleaning and transformation operations:
 ### Table-Specific Transformations
 
 #### User Table
+
 - Parses `info` and `settings` JSON fields
 
 #### Chat Table
+
 - Parses `chat` JSON field (contains message history)
 - Extracts message count from chat history
 - Parses `meta` JSON field
 
 #### Message Table
+
 - Parses `data` and `meta` JSON fields
 
 #### Selection Table
+
 - Parses `meta` JSON field
 
 #### Moderation Session Table
+
 - Parses JSON fields: `strategies`, `custom_instructions`, `highlighted_texts`, `refactored_response`, `session_metadata`
 
 #### Exit Quiz Table
+
 - Parses JSON fields: `answers`, `score`, `meta`
 
 ## Dump File Formats
@@ -152,6 +162,7 @@ If you get an error about `pg_restore` not being available:
 ### Memory Issues
 
 If the dump is very large:
+
 - The script processes tables one at a time
 - Consider filtering tables in the `RELEVANT_TABLES` list
 - Or use a machine with more RAM
@@ -159,6 +170,7 @@ If the dump is very large:
 ### Encoding Issues
 
 The script handles UTF-8 and Latin-1 encodings. If you encounter encoding errors:
+
 - The script will try to decode with error handling
 - Some special characters may be lost
 

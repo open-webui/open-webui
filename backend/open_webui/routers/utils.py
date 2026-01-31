@@ -14,11 +14,8 @@ from open_webui.utils.misc import get_gravatar_url
 from open_webui.utils.pdf_generator import PDFGenerator
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.env import SRC_LOG_LEVELS
-
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 router = APIRouter()
 
@@ -123,13 +120,4 @@ async def download_db(user=Depends(get_admin_user)):
         engine.url.database,
         media_type="application/octet-stream",
         filename="webui.db",
-    )
-
-
-@router.get("/litellm/config")
-async def download_litellm_config_yaml(user=Depends(get_admin_user)):
-    return FileResponse(
-        f"{DATA_DIR}/litellm/config.yaml",
-        media_type="application/octet-stream",
-        filename="config.yaml",
     )

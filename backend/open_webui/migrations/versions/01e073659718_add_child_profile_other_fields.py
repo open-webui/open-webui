@@ -22,23 +22,29 @@ def upgrade() -> None:
     # Add nullable columns for "Other" text fields to child_profile table
     # These columns store additional text when users select "Other" option
     # Make migration idempotent by checking if columns exist before adding them
-    
+
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
-    
+
     # Get existing columns in the child_profile table
     existing_columns = [col["name"] for col in inspector.get_columns("child_profile")]
-    
+
     with op.batch_alter_table("child_profile") as batch_op:
         # Only add columns that don't already exist
         if "child_gender_other" not in existing_columns:
-            batch_op.add_column(sa.Column("child_gender_other", sa.Text(), nullable=True))
-        
+            batch_op.add_column(
+                sa.Column("child_gender_other", sa.Text(), nullable=True)
+            )
+
         if "child_ai_use_contexts_other" not in existing_columns:
-            batch_op.add_column(sa.Column("child_ai_use_contexts_other", sa.Text(), nullable=True))
-        
+            batch_op.add_column(
+                sa.Column("child_ai_use_contexts_other", sa.Text(), nullable=True)
+            )
+
         if "parent_llm_monitoring_other" not in existing_columns:
-            batch_op.add_column(sa.Column("parent_llm_monitoring_other", sa.Text(), nullable=True))
+            batch_op.add_column(
+                sa.Column("parent_llm_monitoring_other", sa.Text(), nullable=True)
+            )
 
 
 def downgrade() -> None:
@@ -47,4 +53,3 @@ def downgrade() -> None:
         batch_op.drop_column("parent_llm_monitoring_other")
         batch_op.drop_column("child_ai_use_contexts_other")
         batch_op.drop_column("child_gender_other")
-

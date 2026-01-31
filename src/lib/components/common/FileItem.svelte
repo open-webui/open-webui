@@ -1,20 +1,22 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext } from 'svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+
 	import { formatFileSize } from '$lib/utils';
+	import { settings } from '$lib/stores';
 
 	import FileItemModal from './FileItemModal.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Spinner from './Spinner.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { settings } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-60';
 	export let colorClassName =
-		'bg-white dark:bg-gray-850 border border-gray-50 dark:border-gray-800';
+		'bg-white dark:bg-gray-850 border border-gray-50/30 dark:border-gray-800/30';
 	export let url: string | null = null;
 
 	export let dismissible = false;
@@ -33,6 +35,7 @@
 	import Database from '../icons/Database.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
 	import ChatBubble from '../icons/ChatBubble.svelte';
+	import Folder from '../icons/Folder.svelte';
 	let showModal = false;
 
 	const decodeString = (str: string) => {
@@ -54,12 +57,16 @@
 		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
-		if (item?.file?.data?.content || item?.type === 'file' || modal) {
+		if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
 			showModal = !showModal;
 		} else {
 			if (url) {
 				if (type === 'file') {
-					window.open(`${url}/content`, '_blank').focus();
+					if (url.startsWith('http')) {
+						window.open(`${url}/content`, '_blank').focus();
+					} else {
+						window.open(`${WEBUI_API_BASE_URL}/files/${url}/content`, '_blank').focus();
+					}
 				} else {
 					window.open(`${url}`, '_blank').focus();
 				}
@@ -115,6 +122,8 @@
 						<PageEdit />
 					{:else if type === 'chat'}
 						<ChatBubble />
+					{:else if type === 'folder'}
+						<Folder />
 					{:else}
 						<DocumentPage />
 					{/if}

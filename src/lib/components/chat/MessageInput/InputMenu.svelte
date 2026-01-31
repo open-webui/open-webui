@@ -56,6 +56,10 @@
 		fileUploadCapableModels.length === selectedModels.length &&
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
 
+	$: if (!fileUploadEnabled && files.length > 0) {
+		files = [];
+	}
+
 	const detectMobile = () => {
 		const userAgent = navigator.userAgent || navigator.vendor || window.opera;
 		return /android|iphone|ipad|ipod|windows phone/i.test(userAgent);
@@ -68,16 +72,6 @@
 			inputFilesHandler(inputFiles);
 		}
 	};
-
-	const init = async () => {
-		if ($knowledge === null) {
-			await knowledge.set(await getKnowledgeBases(localStorage.token));
-		}
-	};
-
-	$: if (show) {
-		init();
-	}
 
 	const onSelect = (item) => {
 		if (files.find((f) => f.id === item.id)) {
@@ -199,7 +193,9 @@
 						className="w-full"
 					>
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
+								? 'opacity-50'
+								: ''}"
 							on:click={() => {
 								if (fileUploadEnabled) {
 									showAttachWebpageModal = true;
@@ -243,37 +239,35 @@
 						</Tooltip>
 					{/if}
 
-					{#if ($knowledge ?? []).length > 0}
-						<Tooltip
-							content={fileUploadCapableModels.length !== selectedModels.length
-								? $i18n.t('Model(s) do not support file upload')
-								: !fileUploadEnabled
-									? $i18n.t('You do not have permission to upload files.')
-									: ''}
-							className="w-full"
+					<Tooltip
+						content={fileUploadCapableModels.length !== selectedModels.length
+							? $i18n.t('Model(s) do not support file upload')
+							: !fileUploadEnabled
+								? $i18n.t('You do not have permission to upload files.')
+								: ''}
+						className="w-full"
+					>
+						<button
+							class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+								? 'opacity-50'
+								: ''}"
+							on:click={() => {
+								tab = 'knowledge';
+							}}
 						>
-							<button
-								class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
-									? 'opacity-50'
-									: ''}"
-								on:click={() => {
-									tab = 'knowledge';
-								}}
-							>
-								<Database />
+							<Database />
 
-								<div class="flex items-center w-full justify-between">
-									<div class=" line-clamp-1">
-										{$i18n.t('Attach Knowledge')}
-									</div>
-
-									<div class="text-gray-500">
-										<ChevronRight />
-									</div>
+							<div class="flex items-center w-full justify-between">
+								<div class=" line-clamp-1">
+									{$i18n.t('Attach Knowledge')}
 								</div>
-							</button>
-						</Tooltip>
-					{/if}
+
+								<div class="text-gray-500">
+									<ChevronRight />
+								</div>
+							</div>
+						</button>
+					</Tooltip>
 
 					{#if ($chats ?? []).length > 0}
 						<Tooltip

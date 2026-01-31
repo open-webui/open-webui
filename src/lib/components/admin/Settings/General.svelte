@@ -10,6 +10,7 @@
 		updateLdapConfig,
 		updateLdapServer
 	} from '$lib/apis/auths';
+	import { getGroups } from '$lib/apis/groups';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -18,7 +19,11 @@
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { goto } from '$app/navigation';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Home from '$lib/components/icons/Home.svelte';
+	import { createNewChat, getChatList } from '$lib/apis/chats';
+	import { user, settings, models } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -32,6 +37,7 @@
 
 	let adminConfig = null;
 	let webhookUrl = '';
+	let groups = [];
 
 	// LDAP
 	let ENABLE_LDAP = false;
@@ -89,6 +95,26 @@
 		}
 	};
 
+	const navigateToChat = async () => {
+		try {
+			// Try to get the most recent chat and navigate directly to it
+			// This works for all user types including admins
+			const chatList = await getChatList(localStorage.token, 1);
+
+			if (chatList && chatList.length > 0) {
+				// Navigate directly to the most recent chat
+				window.location.href = `/c/${chatList[0].id}`;
+			} else {
+				// No chats exist, navigate to /parent and let the app handle it
+				window.location.href = '/parent';
+			}
+		} catch (error) {
+			console.error('Error navigating to chat:', error);
+			// Fallback: navigate to /parent
+			window.location.href = '/parent';
+		}
+	};
+
 	onMount(async () => {
 		if ($config?.features?.enable_version_update_check) {
 			checkForVersionUpdates();
@@ -104,6 +130,9 @@
 			})(),
 			(async () => {
 				LDAP_SERVER = await getLdapServer(localStorage.token);
+			})(),
+			(async () => {
+				groups = await getGroups(localStorage.token);
 			})()
 		]);
 
@@ -118,13 +147,13 @@
 		updateHandler();
 	}}
 >
-	<div class="mt-0.5 space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if adminConfig !== null}
 			<div class="">
 				<div class="mb-3.5">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5">
 						<div class=" mb-1 text-xs font-medium flex space-x-2 items-center">
@@ -280,9 +309,9 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Authentication')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Authentication')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Default User Role')}</div>
@@ -295,6 +324,22 @@
 								<option value="pending">{$i18n.t('pending')}</option>
 								<option value="user">{$i18n.t('user')}</option>
 								<option value="admin">{$i18n.t('admin')}</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Default Group')}</div>
+						<div class="flex items-center relative">
+							<select
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								bind:value={adminConfig.DEFAULT_GROUP_ID}
+								placeholder={$i18n.t('Select a group')}
+							>
+								<option value={''}>None</option>
+								{#each groups as group}
+									<option value={group.id}>{group.name}</option>
+								{/each}
 							</select>
 						</div>
 					</div>
@@ -312,6 +357,23 @@
 
 						<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} />
 					</div>
+
+					{#if adminConfig.SHOW_ADMIN_DETAILS}
+						<div class="mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('Admin Contact Email')}</div>
+							</div>
+
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="email"
+									placeholder={$i18n.t('Leave empty to use first admin user')}
+									bind:value={adminConfig.ADMIN_EMAIL}
+								/>
+							</div>
+						</div>
+					{/if}
 
 					<div class="mb-2.5">
 						<div class=" self-center text-xs font-medium mb-2">
@@ -338,31 +400,31 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full justify-between pr-2">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key')}</div>
+						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Keys')}</div>
 
-						<Switch bind:state={adminConfig.ENABLE_API_KEY} />
+						<Switch bind:state={adminConfig.ENABLE_API_KEYS} />
 					</div>
 
-					{#if adminConfig?.ENABLE_API_KEY}
+					{#if adminConfig?.ENABLE_API_KEYS}
 						<div class="mb-2.5 flex w-full justify-between pr-2">
 							<div class=" self-center text-xs font-medium">
 								{$i18n.t('API Key Endpoint Restrictions')}
 							</div>
 
-							<Switch bind:state={adminConfig.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS} />
+							<Switch bind:state={adminConfig.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS} />
 						</div>
 
-						{#if adminConfig?.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS}
-							<div class=" flex w-full flex-col pr-2">
+						{#if adminConfig?.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS}
+							<div class=" flex w-full flex-col pr-2 mb-2.5">
 								<div class=" text-xs font-medium">
 									{$i18n.t('Allowed Endpoints')}
 								</div>
 
 								<input
-									class="w-full mt-1 rounded-lg text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									class="w-full mt-1 text-sm dark:text-gray-300 bg-transparent outline-hidden"
 									type="text"
 									placeholder={`e.g.) /api/v1/messages, /api/v1/channels`}
-									bind:value={adminConfig.API_KEY_ALLOWED_ENDPOINTS}
+									bind:value={adminConfig.API_KEYS_ALLOWED_ENDPOINTS}
 								/>
 
 								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
@@ -399,6 +461,26 @@
 								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
 							>
 						</div>
+
+						{#if adminConfig.JWT_EXPIRES_IN === '-1'}
+							<div class="mt-2 text-xs">
+								<div
+									class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-3 py-2"
+								>
+									<div>
+										<span class=" font-medium">{$i18n.t('Warning')}:</span>
+										<span
+											><a
+												href="https://docs.openwebui.com/getting-started/env-configuration#jwt_expires_in"
+												target="_blank"
+												class=" underline"
+												>{$i18n.t('No expiration can pose security risks.')}
+											</a></span
+										>
+									</div>
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class=" space-y-3">
@@ -617,9 +699,9 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Features')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Features')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
@@ -634,6 +716,38 @@
 
 						<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
 					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Folders')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_FOLDERS} />
+					</div>
+
+					{#if adminConfig.ENABLE_FOLDERS}
+						<div class="mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">
+									{$i18n.t('Folder Max File Count')}
+								</div>
+							</div>
+
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="number"
+									min="0"
+									placeholder={$i18n.t('Leave empty for unlimited')}
+									bind:value={adminConfig.FOLDER_MAX_FILE_COUNT}
+								/>
+							</div>
+
+							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t('Maximum number of files allowed per folder.')}
+							</div>
+						</div>
+					{/if}
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
@@ -653,10 +767,26 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Memories')} ({$i18n.t('Beta')})
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
 							{$i18n.t('User Webhooks')}
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('User Status')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_USER_STATUS} />
 					</div>
 
 					<div class="mb-2.5">
@@ -709,12 +839,29 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
-		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
+	<div class="flex flex-col gap-3 pt-3">
+		<div class="border-t border-gray-100/30 dark:border-gray-850/30 pt-3">
+			<button
+				type="button"
+				class="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium text-sm flex items-center justify-center gap-2 no-underline text-black dark:text-white block text-center"
+				on:click|stopPropagation={async (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					// Navigate to chat interface - get existing chat or create new one
+					await navigateToChat();
+				}}
+			>
+				<Home className="size-5" strokeWidth="1.5" />
+				<span>Open WebUI</span>
+			</button>
+		</div>
+		<div class="flex justify-end text-sm font-medium">
+			<button
+				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				type="submit"
+			>
+				{$i18n.t('Save')}
+			</button>
+		</div>
 	</div>
 </form>

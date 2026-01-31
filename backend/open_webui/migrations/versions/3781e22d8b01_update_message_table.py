@@ -21,7 +21,7 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     # Add 'type' column to the 'channel' table if it doesn't exist
     if "channel" in existing_tables:
         channel_columns = [col["name"] for col in inspector.get_columns("channel")]
@@ -30,7 +30,7 @@ def upgrade():
                 "channel",
                 sa.Column("type", sa.Text(), nullable=True),
             )
-    
+
     # Add 'parent_id' column to the 'message' table if it doesn't exist
     if "message" in existing_tables:
         message_columns = [col["name"] for col in inspector.get_columns("message")]
@@ -39,7 +39,7 @@ def upgrade():
                 "message",
                 sa.Column("parent_id", sa.Text(), nullable=True),
             )
-    
+
     # Create 'message_reaction' table if it doesn't exist
     if "message_reaction" not in existing_tables:
         op.create_table(
@@ -50,7 +50,7 @@ def upgrade():
             sa.Column("name", sa.Text(), nullable=False),
             sa.Column("created_at", sa.BigInteger(), nullable=True),
         )
-    
+
     # Create 'channel_member' table if it doesn't exist
     if "channel_member" not in existing_tables:
         op.create_table(
@@ -67,22 +67,22 @@ def downgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     # Drop 'type' column from 'channel' table if it exists
     if "channel" in existing_tables:
         channel_columns = [col["name"] for col in inspector.get_columns("channel")]
         if "type" in channel_columns:
             op.drop_column("channel", "type")
-    
+
     # Drop 'parent_id' column from 'message' table if it exists
     if "message" in existing_tables:
         message_columns = [col["name"] for col in inspector.get_columns("message")]
         if "parent_id" in message_columns:
             op.drop_column("message", "parent_id")
-    
+
     # Drop tables if they exist
     if "message_reaction" in existing_tables:
         op.drop_table("message_reaction")
-    
+
     if "channel_member" in existing_tables:
         op.drop_table("channel_member")

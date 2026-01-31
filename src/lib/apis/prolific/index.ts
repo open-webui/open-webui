@@ -21,8 +21,8 @@ export interface ProlificAuthResponse {
 	};
 	session_number: number;
 	is_new_user: boolean;
-    new_child_id?: string | null;
-    has_exit_quiz?: boolean;
+	new_child_id?: string | null;
+	has_exit_quiz?: boolean;
 }
 
 export interface SessionInfo {

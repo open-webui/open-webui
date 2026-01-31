@@ -24,26 +24,34 @@ def upgrade() -> None:
     """
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
-    existing_columns = [col["name"] for col in inspector.get_columns("moderation_session")]
-    
+    existing_columns = [
+        col["name"] for col in inspector.get_columns("moderation_session")
+    ]
+
     with op.batch_alter_table("moderation_session") as batch_op:
         # Step 2 fields
         if "concern_reason" not in existing_columns:
             batch_op.add_column(sa.Column("concern_reason", sa.Text(), nullable=True))
-        
+
         # Step 3 fields
         if "satisfaction_level" not in existing_columns:
-            batch_op.add_column(sa.Column("satisfaction_level", sa.Integer(), nullable=True))
+            batch_op.add_column(
+                sa.Column("satisfaction_level", sa.Integer(), nullable=True)
+            )
         if "satisfaction_reason" not in existing_columns:
-            batch_op.add_column(sa.Column("satisfaction_reason", sa.Text(), nullable=True))
+            batch_op.add_column(
+                sa.Column("satisfaction_reason", sa.Text(), nullable=True)
+            )
         if "next_action" not in existing_columns:
             batch_op.add_column(sa.Column("next_action", sa.Text(), nullable=True))
-        
+
         # Timestamp fields
         if "decided_at" not in existing_columns:
             batch_op.add_column(sa.Column("decided_at", sa.BigInteger(), nullable=True))
         if "highlights_saved_at" not in existing_columns:
-            batch_op.add_column(sa.Column("highlights_saved_at", sa.BigInteger(), nullable=True))
+            batch_op.add_column(
+                sa.Column("highlights_saved_at", sa.BigInteger(), nullable=True)
+            )
         if "saved_at" not in existing_columns:
             batch_op.add_column(sa.Column("saved_at", sa.BigInteger(), nullable=True))
 
@@ -57,4 +65,3 @@ def downgrade() -> None:
         batch_op.drop_column("satisfaction_reason")
         batch_op.drop_column("satisfaction_level")
         batch_op.drop_column("concern_reason")
-

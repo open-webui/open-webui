@@ -14,6 +14,7 @@ dayjs.extend(isYesterday);
 dayjs.extend(localizedFormat);
 
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
+import type { SessionUser } from '$lib/stores';
 
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
@@ -32,7 +33,7 @@ function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export const replaceTokens = (content, sourceIds, char, user) => {
+export const replaceTokens = (content, char, user) => {
 	const tokens = [
 		{ regex: /{{char}}/gi, replacement: char },
 		{ regex: /{{user}}/gi, replacement: user },
@@ -66,16 +67,6 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 				segment = segment.replace(regex, replacement);
 			}
 		});
-
-		if (Array.isArray(sourceIds)) {
-			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
-				segment = segment.replace(
-					regex,
-					`<source_id data="${idx + 1}" title="${encodeURIComponent(sourceId)}" />`
-				);
-			});
-		}
 
 		return segment;
 	});
@@ -334,7 +325,8 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 			context.drawImage(img, 0, 0, width, height);
 
 			// Get compressed image URL
-			const compressedUrl = canvas.toDataURL();
+			const mimeType = imageUrl.match(/^data:([^;]+);/)?.[1];
+			const compressedUrl = canvas.toDataURL(mimeType);
 			resolve(compressedUrl);
 		};
 		img.onerror = (error) => reject(error);
@@ -880,7 +872,9 @@ export const processDetails = (content) => {
 				attributes[attributeMatch[1]] = attributeMatch[2];
 			}
 
-			content = content.replace(match, `"${attributes.result}"`);
+			if (attributes.result) {
+				content = content.replace(match, `"${attributes.result}"`);
+			}
 		}
 	}
 
@@ -901,8 +895,8 @@ export const extractSentences = (text: string) => {
 		return placeholder;
 	});
 
-	// Split the modified text into sentences based on common punctuation marks, avoiding these blocks
-	let sentences = text.split(/(?<=[.!?])\s+/);
+	// Split the modified text into sentences based on common punctuation marks or newlines, avoiding these blocks
+	let sentences = text.split(/(?<=[.!?])\s+|\n+/);
 
 	// Restore code blocks and process sentences
 	sentences = sentences.map((sentence) => {
@@ -994,23 +988,19 @@ export const getPromptVariables = (user_name, user_location) => {
 };
 
 // Replace known placeholders in a template with runtime values (user, time, locale)
-export const promptTemplate = (
-    template: string,
-    user_name?: string,
-    user_location?: string
-) => {
-    if (!template || typeof template !== 'string') return '';
-    const vars = getPromptVariables(user_name ?? '', user_location ?? '');
-    let out = template;
-    for (const [key, value] of Object.entries(vars)) {
-        try {
-            out = out.replaceAll(key, String(value ?? ''));
-        } catch {
-            // Fallback for older environments without replaceAll
-            out = out.split(key).join(String(value ?? ''));
-        }
-    }
-    return out;
+export const promptTemplate = (template: string, user_name?: string, user_location?: string) => {
+	if (!template || typeof template !== 'string') return '';
+	const vars = getPromptVariables(user_name ?? '', user_location ?? '');
+	let out = template;
+	for (const [key, value] of Object.entries(vars)) {
+		try {
+			out = out.replaceAll(key, String(value ?? ''));
+		} catch {
+			// Fallback for older environments without replaceAll
+			out = out.split(key).join(String(value ?? ''));
+		}
+	}
+	return out;
 };
 
 /**
@@ -1276,6 +1266,11 @@ function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
 export const convertOpenApiToToolPayload = (openApiSpec) => {
 	const toolPayload = [];
 
+	// Guard against invalid or non-OpenAPI specs (e.g., MCP-style configs)
+	if (!openApiSpec || !openApiSpec.paths) {
+		return toolPayload;
+	}
+
 	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
 		for (const [method, operation] of Object.entries(methods)) {
 			if (operation?.operationId) {
@@ -1490,9 +1485,9 @@ export const parseJsonValue = (value: string): any => {
 
 async function ensurePDFjsLoaded() {
 	if (!window.pdfjsLib) {
-        const pdfjs = await import('pdfjs-dist');
-        // Vite resolves ?url to an asset URL; use it directly
-        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+		const pdfjs = await import('pdfjs-dist');
+		// Vite resolves ?url to an asset URL; use it directly
+		pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 		if (!window.pdfjsLib) {
 			throw new Error('pdfjsLib is required for PDF extraction');
 		}
@@ -1547,12 +1542,29 @@ export const extractContentFromFile = async (file: File) => {
 		});
 	}
 
+	async function extractDocxText(file: File) {
+		const [arrayBuffer, { default: mammoth }] = await Promise.all([
+			file.arrayBuffer(),
+			import('mammoth')
+		]);
+		const result = await mammoth.extractRawText({ arrayBuffer });
+		return result.value; // plain text
+	}
+
 	const type = file.type || '';
 	const ext = getExtension(file.name);
 
 	// PDF check
 	if (type === 'application/pdf' || ext === '.pdf') {
 		return await extractPdfText(file);
+	}
+
+	// DOCX check
+	if (
+		type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+		ext === '.docx'
+	) {
+		return await extractDocxText(file);
 	}
 
 	// Text check (plain or common text-based)
@@ -1600,20 +1612,138 @@ export const decodeString = (str: string) => {
 	}
 };
 
-export const renderMermaidDiagram = async (code: string) => {
-	try {
-		const { default: mermaid } = await import('mermaid');
-		mermaid.initialize({
-			startOnLoad: true,
-			theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
-			securityLevel: 'loose'
-		});
-		if (await mermaid.parse(code)) {
-			const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
-			return svg;
-		}
-	} catch (error) {
-		console.log('Failed to render mermaid diagram:', error);
-		return '';
-	}
+export const initMermaid = async () => {
+	const { default: mermaid } = await import('mermaid');
+	mermaid.initialize({
+		startOnLoad: false, // Should be false when using render API
+		theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+		securityLevel: 'loose'
+	});
+	return mermaid;
 };
+
+export const renderMermaidDiagram = async (mermaid, code: string) => {
+	const parseResult = await mermaid.parse(code, { suppressErrors: false });
+	if (parseResult) {
+		const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+		return svg;
+	}
+	return '';
+};
+
+export const renderVegaVisualization = async (spec: string, i18n?: any) => {
+	const vega = await import('vega');
+	const parsedSpec = JSON.parse(spec);
+	let vegaSpec = parsedSpec;
+	if (parsedSpec.$schema && parsedSpec.$schema.includes('vega-lite')) {
+		const vegaLite = await import('vega-lite');
+		vegaSpec = vegaLite.compile(parsedSpec).spec;
+	}
+	const view = new vega.View(vega.parse(vegaSpec), { renderer: 'none' });
+	const svg = await view.toSVG();
+	return svg;
+};
+
+export const getCodeBlockContents = (content: string): object => {
+	const codeBlockContents = content.match(/```[\s\S]*?```/g);
+
+	let codeBlocks = [];
+
+	let htmlContent = '';
+	let cssContent = '';
+	let jsContent = '';
+
+	if (codeBlockContents) {
+		codeBlockContents.forEach((block) => {
+			const lang = block.split('\n')[0].replace('```', '').trim().toLowerCase();
+			const code = block.replace(/```[\s\S]*?\n/, '').replace(/```$/, '');
+			codeBlocks.push({ lang, code });
+		});
+
+		codeBlocks.forEach((block) => {
+			const { lang, code } = block;
+
+			if (lang === 'html') {
+				htmlContent += code + '\n';
+			} else if (lang === 'css') {
+				cssContent += code + '\n';
+			} else if (lang === 'javascript' || lang === 'js') {
+				jsContent += code + '\n';
+			}
+		});
+	} else {
+		const inlineHtml = content.match(/<html>[\s\S]*?<\/html>/gi);
+		const inlineCss = content.match(/<style>[\s\S]*?<\/style>/gi);
+		const inlineJs = content.match(/<script>[\s\S]*?<\/script>/gi);
+
+		if (inlineHtml) {
+			inlineHtml.forEach((block) => {
+				const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
+				htmlContent += content + '\n';
+			});
+		}
+		if (inlineCss) {
+			inlineCss.forEach((block) => {
+				const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
+				cssContent += content + '\n';
+			});
+		}
+		if (inlineJs) {
+			inlineJs.forEach((block) => {
+				const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
+				jsContent += content + '\n';
+			});
+		}
+	}
+
+	return {
+		codeBlocks: codeBlocks,
+		html: htmlContent.trim(),
+		css: cssContent.trim(),
+		js: jsContent.trim()
+	};
+};
+
+/**
+ * Determine user type based on role and STUDY_ID whitelist.
+ * Returns: "interviewee", "parent", "child", "admin", or "user"
+ */
+export async function getUserType(
+	user: SessionUser | null,
+	studyIdWhitelist: string[] = []
+): Promise<string> {
+	if (!user) return 'user';
+
+	if (user.role === 'admin') return 'admin';
+	if (user.role === 'child') return 'child';
+	if (user.role === 'parent') return 'parent';
+	if (user.role === 'interviewee') return 'interviewee';
+
+	// For users with role "user", check STUDY_ID against whitelist
+	// Check if user has parent_id (child account)
+	if ((user as any).parent_id) {
+		return 'child';
+	}
+
+	// If whitelist not provided, try to fetch it (for admin users viewing other users)
+	let whitelist = studyIdWhitelist;
+	if (whitelist.length === 0 && typeof window !== 'undefined' && localStorage.getItem('token')) {
+		try {
+			const { getIntervieweeWhitelist } = await import('$lib/apis/users');
+			const whitelistResponse = await getIntervieweeWhitelist(localStorage.token);
+			whitelist = whitelistResponse?.study_ids || [];
+		} catch (e) {
+			// If fetch fails, continue with empty whitelist
+			console.warn('Failed to fetch whitelist:', e);
+		}
+	}
+
+	// Check STUDY_ID against whitelist
+	const studyId = (user as any).study_id;
+	if (studyId && whitelist.includes(studyId.trim())) {
+		return 'interviewee';
+	}
+
+	// Default to parent for regular users
+	return 'parent';
+}

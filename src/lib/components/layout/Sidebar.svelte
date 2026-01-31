@@ -3,6 +3,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import {
 		user,
 		chats,
@@ -10,6 +11,7 @@
 		showSettings,
 		chatId,
 		tags,
+		folders as _folders,
 		showSidebar,
 		showSearch,
 		mobile,
@@ -22,374 +24,89 @@
 		socket,
 		config,
 		isApp,
-		models
+		models,
+		selectedFolder,
+		WEBUI_NAME,
+		sidebarWidth
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	import {
-		deleteChatById,
 		getChatList,
 		getAllTags,
-		getChatListBySearchText,
-		createNewChat,
 		getPinnedChatList,
 		toggleChatPinnedStatusById,
-		getChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
-		importChat
+		importChats,
+		createNewChat
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
-	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 	import Folder from '../common/Folder.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
-	import Home from '../icons/Home.svelte';
-	import MagnifyingGlass from '../icons/MagnifyingGlass.svelte';
+	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
-	import PersonalStore from '../personas/PersonalStore.svelte';
-	import { childProfileSync } from '$lib/services/childProfileSync';
-	import type { ChildProfile } from '$lib/apis/child-profiles';
+	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
+	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
+	import Note from '../icons/Note.svelte';
+	import { slide } from 'svelte/transition';
+	import HotkeyHint from '../common/HotkeyHint.svelte';
 
 	const BREAKPOINT = 768;
+
+	let scrollTop = 0;
 
 	let navElement;
 	let shiftKey = false;
 
 	let selectedChatId = null;
-	let showDropdown = false;
-	let showPinnedChat = true;
-
 	let showCreateChannel = false;
-	let showPersonalStore = false;
-	let currentPersonal = null;
 
 	// Pagination variables
 	let chatListLoading = false;
 	let allChatsLoaded = false;
 
+	let showCreateFolderModal = false;
+
+	let pinnedModels = [];
+
+	let showPinnedModels = false;
+	let showChannels = false;
+	let showFolders = false;
+
 	let folders = {};
+	let folderRegistry = {};
+
 	let newFolderId = null;
 
-	// Child profile state
-	let childProfiles: ChildProfile[] = [];
-	let currentChild: ChildProfile | null = null;
-	let selectedChildIndex: number = 0;
-
-	// Reactive statement to update currentChild when childProfiles or settings change
-	$: {
-		// IMPORTANT: Watch $settings.selectedChildId, NOT $user.settings.ui.selectedChildId
-		// The user store doesn't include settings data (only auth data from /auths/ endpoint).
-		// The settings store (populated from /users/user/settings) is the source of truth.
-		// Reference $settings store to make this reactive to settings changes
-		const _ = $settings?.selectedChildId;
-		
-		if (childProfiles && childProfiles.length > 0) {
-			const currentChildId = childProfileSync.getCurrentChildId();
-			if (currentChildId) {
-				const index = childProfiles.findIndex(child => child.id === currentChildId);
-				if (index !== -1) {
-					selectedChildIndex = index;
-					currentChild = childProfiles[index];
-				} else {
-					// Current child ID doesn't exist in profiles, use first available for display
-					selectedChildIndex = 0;
-					currentChild = childProfiles[0];
-					// Don't set currentChildId here - only read, never write from Sidebar
-				}
-			} else {
-				// No current child selected yet, use first available for display
-				selectedChildIndex = 0;
-				currentChild = childProfiles[0];
-				// Don't set currentChildId here - only read, never write from Sidebar
-			}
-		} else {
-			// No child profiles available
-			currentChild = null;
-			selectedChildIndex = 0;
-		}
-	}
-
-    // Assignment workflow state
-    let assignmentStep: number = 1; // 1: child-profile, 2: moderation-scenario, 3: exit-survey
-    let showAssignmentSetup: boolean = false;
-    let assignmentCompleted: boolean = false;
-    let moderationScenariosAccessed: boolean = false; // Track if user has accessed moderation scenarios
-    let instructionsCompleted: boolean = false;
-    let unlock_kids: boolean = false;
-    let unlock_moderation: boolean = false;
-    let unlock_exit: boolean = false;
-    let unlock_completion: boolean = false;
-
-    // Make assignment state reactive to localStorage changes
-    $: if (typeof window !== 'undefined') {
-        const storedStep = localStorage.getItem('assignmentStep');
-        if (storedStep) {
-            assignmentStep = parseInt(storedStep);
-        }
-        const moderationAccessed = localStorage.getItem('moderationScenariosAccessed');
-        moderationScenariosAccessed = moderationAccessed === 'true';
-        assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
-        instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
-        unlock_kids = localStorage.getItem('unlock_kids') === 'true';
-        unlock_moderation = localStorage.getItem('unlock_moderation') === 'true';
-        unlock_exit = localStorage.getItem('unlock_exit') === 'true';
-        unlock_completion = localStorage.getItem('unlock_completion') === 'true';
-    }
-
-    // Listen for state changes
-    onMount(() => {
-        // Initialize from localStorage
-        const storedStep = localStorage.getItem('assignmentStep');
-        if (storedStep) {
-            assignmentStep = parseInt(storedStep);
-        }
-        moderationScenariosAccessed = localStorage.getItem('moderationScenariosAccessed') === 'true';
-        assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
-        instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
-
-        const handleStorageChange = (e) => {
-            if (e.key === 'assignmentStep' && e.newValue) {
-                assignmentStep = parseInt(e.newValue);
-            }
-            if (e.key === 'moderationScenariosAccessed' && e.newValue) {
-                moderationScenariosAccessed = e.newValue === 'true';
-            }
-            if (e.key === 'assignmentCompleted' && e.newValue) {
-                assignmentCompleted = e.newValue === 'true';
-            }
-            if (e.key === 'instructionsCompleted' && e.newValue) {
-                instructionsCompleted = e.newValue === 'true';
-            }
-            if (e.key === 'unlock_kids' && e.newValue) {
-                unlock_kids = e.newValue === 'true';
-            }
-            if (e.key === 'unlock_moderation' && e.newValue) {
-                unlock_moderation = e.newValue === 'true';
-            }
-            if (e.key === 'unlock_exit' && e.newValue) {
-                unlock_exit = e.newValue === 'true';
-            }
-            if (e.key === 'unlock_completion' && e.newValue) {
-                unlock_completion = e.newValue === 'true';
-            }
-        };
-		
-        window.addEventListener('storage', handleStorageChange);
-
-        // Intra-tab updates via custom event
-        const handleWorkflowUpdated = () => {
-            const storedStepNow = localStorage.getItem('assignmentStep');
-            if (storedStepNow) {
-                assignmentStep = parseInt(storedStepNow);
-            }
-            moderationScenariosAccessed = localStorage.getItem('moderationScenariosAccessed') === 'true';
-            assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
-            instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
-            unlock_kids = localStorage.getItem('unlock_kids') === 'true';
-            unlock_moderation = localStorage.getItem('unlock_moderation') === 'true';
-            unlock_exit = localStorage.getItem('unlock_exit') === 'true';
-            unlock_completion = localStorage.getItem('unlock_completion') === 'true';
-        };
-        window.addEventListener('workflow-updated', handleWorkflowUpdated as EventListener);
-		
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('workflow-updated', handleWorkflowUpdated as EventListener);
-        };
-	});
-
-	// 加载当前选择的personal
-	const loadCurrentPersonal = () => {
-		const selectedId = localStorage.getItem('selectedPersonalId');
-		if (selectedId) {
-			const personals = JSON.parse(localStorage.getItem('personals') || '[]');
-			currentPersonal = personals.find(p => p.id === selectedId) || null;
-		}
-	};
-
-	const handlePersonalSelected = (event) => {
-		currentPersonal = event.detail;
-	};
-
-	// Child profile functions
-	const loadChildProfiles = async () => {
-		try {
-			console.log('Loading child profiles in sidebar...');
-			childProfiles = await childProfileSync.getChildProfiles();
-			// Ensure childProfiles is always an array
-			if (!childProfiles || !Array.isArray(childProfiles)) {
-				console.warn('Child profiles returned invalid value, defaulting to empty array');
-				childProfiles = [];
-			}
-			console.log('Loaded child profiles:', childProfiles);
-			const currentChildId = childProfileSync.getCurrentChildId();
-			console.log('Current child ID:', currentChildId);
-				
-				if (currentChildId && childProfiles.length > 0) {
-					const index = childProfiles.findIndex(child => child.id === currentChildId);
-					if (index !== -1) {
-					// Stored child ID exists in current profiles list, select it
-						selectedChildIndex = index;
-						currentChild = childProfiles[index];
-						console.log('Selected child:', currentChild);
-					} else {
-					// Stored child ID doesn't exist in current profiles (child is no longer current)
-					// Clear the stored selection and don't select any child
-					console.log('Stored child ID not found in current profiles, clearing selection');
-					try {
-						await childProfileSync.setCurrentChildId(null);
-					} catch (e) {
-						console.warn('Failed to clear selected child ID:', e);
-					}
-						selectedChildIndex = 0;
-					currentChild = null;
-					console.log('No child selected (stored child is no longer current)');
-					}
-				} else if (childProfiles.length > 0) {
-					// No current child selected, use the first one
-					selectedChildIndex = 0;
-					currentChild = childProfiles[0];
-					console.log('No current child, using first:', currentChild);
-			} else {
-				// No current children available
-				selectedChildIndex = 0;
-				currentChild = null;
-				console.log('No current children available');
-				}
-		} catch (error) {
-			console.error('Failed to load child profiles:', error);
-			childProfiles = [];
-			currentChild = null;
-		}
-	};
-
-
-	// Track the current role to avoid infinite loops
-	let lastKnownRole: string | null = '';
-	
-	// Reactive statement to reload child profiles when role changes
-	$: if (typeof window !== 'undefined') {
-		const currentRole = localStorage.getItem('selectedRole');
-		if (currentRole !== lastKnownRole) {
-			lastKnownRole = currentRole;
-			if (currentRole === 'kids') {
-				loadChildProfiles();
-				// Check if we need to show assignment setup
-				checkAssignmentSetup();
-			} else {
-				childProfiles = [];
-				currentChild = null;
-				selectedChildIndex = 0;
-			}
-		}
-	}
-
-	// Assignment workflow functions
-	function checkAssignmentSetup() {
-		// Check if user has completed child profile setup
-		const hasChildProfile = localStorage.getItem('assignmentStep') !== null;
-		const currentStep = localStorage.getItem('assignmentStep');
-		
-		if (!hasChildProfile || !currentStep) {
-			showAssignmentSetup = true;
-			assignmentStep = 1;
-		} else {
-			assignmentStep = parseInt(currentStep) || 1;
-		}
-	}
-
-	function proceedToNextStep() {
-		if (assignmentStep < 3) {
-			assignmentStep++;
-			localStorage.setItem('assignmentStep', assignmentStep.toString());
-		} else {
-			assignmentCompleted = true;
-			localStorage.setItem('assignmentCompleted', 'true');
-		}
-	}
-
-	function goToStep(step: number) {
-		// Allow navigation to step 1 if it's unlocked (instructionsCompleted && unlock_kids)
-		// Otherwise, only allow going to previous steps or current step
-		if (step === 1) {
-			const instructionsDone = localStorage.getItem('instructionsCompleted') === 'true';
-			const kidsUnlocked = localStorage.getItem('unlock_kids') === 'true';
-			if (instructionsDone && kidsUnlocked) {
-				assignmentStep = step;
-				goto(getStepRoute(step));
-				return;
-			}
-		}
-		
-		// For other steps, check current step from both localStorage and reactive state
-		const currentStep = Math.max(
-			parseInt(localStorage.getItem('assignmentStep') || '1'),
-			assignmentStep
-		);
-		if (step <= currentStep) {
-			assignmentStep = step;
-			goto(getStepRoute(step));
-		}
-	}
-
-	function getStepRoute(step: number): string {
-		switch (step) {
-			case 1: return '/kids/profile';
-			case 2: return '/moderation-scenario';
-			case 3: return '/exit-survey';
-			case 4: return '/completion';
-			default: return '/kids/profile';
-		}
-	}
-
-	function startAssignment() {
-		showAssignmentSetup = false;
-		localStorage.setItem('assignmentStep', '1');
-		assignmentStep = 1;
-		goto('/kids/profile');
-	}
-
-	// Function to update assignment step when user completes tasks
-	function updateAssignmentStep(step: number) {
-		localStorage.setItem('assignmentStep', step.toString());
-		assignmentStep = step;
-	}
-
-	// Listen for navigation events to update assignment progress
-	$: if (typeof window !== 'undefined') {
-		const currentPath = window.location.pathname;
-		if (currentPath === '/kids/profile' && assignmentStep < 2) {
-			updateAssignmentStep(1);
-		} else if (currentPath === '/moderation-scenario' && assignmentStep < 3) {
-			updateAssignmentStep(2);
-		} else if (currentPath === '/exit-survey' && assignmentStep < 4) {
-			updateAssignmentStep(3);
-		} else if (currentPath === '/completion') {
-			updateAssignmentStep(4);
-			assignmentCompleted = true;
-		}
+	$: if ($selectedFolder) {
+		initFolders();
 	}
 
 	const initFolders = async () => {
+		if ($config?.features?.enable_folders === false) {
+			return;
+		}
+
 		const folderList = await getFolders(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
 			return [];
 		});
+		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
 
 		folders = {};
 
@@ -425,8 +142,9 @@
 		}
 	};
 
-	const createFolder = async (name = 'Untitled') => {
-		if (name === '') {
+	const createFolder = async ({ name, data }) => {
+		name = name?.trim();
+		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
@@ -456,31 +174,62 @@
 			}
 		};
 
-		const res = await createNewFolder(localStorage.token, name).catch((error) => {
+		const res = await createNewFolder(localStorage.token, {
+			name,
+			data
+		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			newFolderId = res.id;
+			// newFolderId = res.id;
 			await initFolders();
+			showFolders = true;
 		}
 	};
 
 	const initChannels = async () => {
-		await channels.set(await getChannels(localStorage.token));
+		// default (none), group, dm type
+		const res = await getChannels(localStorage.token).catch((error) => {
+			return null;
+		});
+
+		if (res) {
+			await channels.set(
+				res.sort(
+					(a, b) =>
+						['', null, 'group', 'dm'].indexOf(a.type) - ['', null, 'group', 'dm'].indexOf(b.type)
+				)
+			);
+		}
 	};
 
 	const initChatList = async () => {
 		// Reset pagination variables
-		tags.set(await getAllTags(localStorage.token));
-		pinnedChats.set(await getPinnedChatList(localStorage.token));
-		initFolders();
-
+		console.log('initChatList');
 		currentChatPage.set(1);
 		allChatsLoaded = false;
+		scrollPaginationEnabled.set(false);
 
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		initFolders();
+		await Promise.all([
+			await (async () => {
+				console.log('Init tags');
+				const _tags = await getAllTags(localStorage.token);
+				tags.set(_tags);
+			})(),
+			await (async () => {
+				console.log('Init pinned chats');
+				const _pinnedChats = await getPinnedChatList(localStorage.token);
+				pinnedChats.set(_pinnedChats);
+			})(),
+			await (async () => {
+				console.log('Init chat list');
+				const _chats = await getChatList(localStorage.token, $currentChatPage);
+				await chats.set(_chats);
+			})()
+		]);
 
 		// Enable pagination
 		scrollPaginationEnabled.set(true);
@@ -507,7 +256,16 @@
 		for (const item of items) {
 			console.log(item);
 			if (item.chat) {
-				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
+				await importChats(localStorage.token, [
+					{
+						chat: item.chat,
+						meta: item?.meta ?? {},
+						pinned: pinned,
+						folder_id: folderId,
+						created_at: item?.created_at ?? null,
+						updated_at: item?.updated_at ?? null
+					}
+				]);
 			}
 		}
 
@@ -622,48 +380,106 @@
 		selectedChatId = null;
 	};
 
+	const MIN_WIDTH = 220;
+	const MAX_WIDTH = 480;
+
+	let isResizing = false;
+
+	let startWidth = 0;
+	let startClientX = 0;
+
+	const resizeStartHandler = (e: MouseEvent) => {
+		if ($mobile) return;
+		isResizing = true;
+
+		startClientX = e.clientX;
+		startWidth = $sidebarWidth ?? 260;
+
+		document.body.style.userSelect = 'none';
+	};
+
+	const resizeEndHandler = () => {
+		if (!isResizing) return;
+		isResizing = false;
+
+		document.body.style.userSelect = '';
+		localStorage.setItem('sidebarWidth', String($sidebarWidth));
+	};
+
+	const resizeSidebarHandler = (endClientX) => {
+		const dx = endClientX - startClientX;
+		const newSidebarWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
+
+		sidebarWidth.set(newSidebarWidth);
+		document.documentElement.style.setProperty('--sidebar-width', `${newSidebarWidth}px`);
+	};
+
+	let unsubscribers = [];
+
 	onMount(async () => {
-		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
-
-		mobile.subscribe((value) => {
-			if ($showSidebar && value) {
-				showSidebar.set(false);
+		try {
+			const width = Number(localStorage.getItem('sidebarWidth'));
+			if (!Number.isNaN(width) && width >= MIN_WIDTH && width <= MAX_WIDTH) {
+				sidebarWidth.set(width);
 			}
+		} catch {}
 
-			if ($showSidebar && !value) {
-				const navElement = document.getElementsByTagName('nav')[0];
-				if (navElement) {
-					navElement.style['-webkit-app-region'] = 'drag';
-				}
-			}
-
-			if (!$showSidebar && !value) {
-				showSidebar.set(true);
-			}
+		document.documentElement.style.setProperty('--sidebar-width', `${$sidebarWidth}px`);
+		sidebarWidth.subscribe((w) => {
+			document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
 		});
 
-		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
-		showSidebar.subscribe((value) => {
-			localStorage.sidebar = value;
+		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
-			// nav element is not available on the first render
-			const navElement = document.getElementsByTagName('nav')[0];
+		unsubscribers = [
+			mobile.subscribe((value) => {
+				if ($showSidebar && value) {
+					showSidebar.set(false);
+				}
 
-			if (navElement) {
-				if ($mobile) {
-					if (!value) {
+				if ($showSidebar && !value) {
+					const navElement = document.getElementsByTagName('nav')[0];
+					if (navElement) {
 						navElement.style['-webkit-app-region'] = 'drag';
-					} else {
-						navElement.style['-webkit-app-region'] = 'no-drag';
 					}
-				} else {
-					navElement.style['-webkit-app-region'] = 'drag';
 				}
-			}
-		});
+			}),
+			showSidebar.subscribe(async (value) => {
+				localStorage.sidebar = value;
 
-		await initChannels();
-		await initChatList();
+				// nav element is not available on the first render
+				const navElement = document.getElementsByTagName('nav')[0];
+
+				if (navElement) {
+					if ($mobile) {
+						if (!value) {
+							navElement.style['-webkit-app-region'] = 'drag';
+						} else {
+							navElement.style['-webkit-app-region'] = 'no-drag';
+						}
+					} else {
+						navElement.style['-webkit-app-region'] = 'drag';
+					}
+				}
+
+				if (value) {
+					// Only fetch channels if the feature is enabled and user has permission
+					if (
+						$config?.features?.enable_channels &&
+						($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
+					) {
+						await initChannels();
+					}
+					await initChatList();
+				}
+			}),
+			settings.subscribe((value) => {
+				if (pinnedModels != value?.pinnedModels ?? []) {
+					pinnedModels = value?.pinnedModels ?? [];
+					showPinnedModels = pinnedModels.length > 0;
+				}
+			})
+		];
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
@@ -679,21 +495,17 @@
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
-
-		loadCurrentPersonal();
-		await loadChildProfiles();
-		
-		// Listen for child profile changes
-		const handleChildProfileChange = () => {
-			loadChildProfiles();
-		};
-		window.addEventListener('child-profiles-updated', handleChildProfileChange);
-		
-		// Store the handler for cleanup
-		window._childProfileChangeHandler = handleChildProfileChange;
 	});
 
 	onDestroy(() => {
+		if (unsubscribers && unsubscribers.length > 0) {
+			unsubscribers.forEach((unsubscriber) => {
+				if (unsubscriber) {
+					unsubscriber();
+				}
+			});
+		}
+
 		window.removeEventListener('keydown', onKeyDown);
 		window.removeEventListener('keyup', onKeyUp);
 
@@ -701,11 +513,6 @@
 		window.removeEventListener('touchend', onTouchEnd);
 
 		window.removeEventListener('focus', onFocus);
-		
-		// Clean up child profile change listener
-		if (window._childProfileChangeHandler) {
-			window.removeEventListener('child-profiles-updated', window._childProfileChangeHandler);
-		}
 		window.removeEventListener('blur', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
@@ -714,6 +521,61 @@
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
+
+	const newChatHandler = async () => {
+		selectedChatId = null;
+		selectedFolder.set(null);
+
+		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+			await temporaryChatEnabled.set(true);
+		} else {
+			await temporaryChatEnabled.set(false);
+		}
+
+		// Check if we're already on a chat page
+		const currentPath = $page.url.pathname;
+		const isOnChatPage = currentPath.startsWith('/c/');
+
+		// If not on a chat page, try to navigate to an existing chat
+		if (!isOnChatPage) {
+			try {
+				// Try to get the most recent chat and navigate directly to it
+				// This works for all user types including admins
+				const chatList = await getChatList(localStorage.token, 1);
+
+				if (chatList && chatList.length > 0) {
+					// Navigate directly to the most recent chat
+					await goto(`/c/${chatList[0].id}`);
+				} else {
+					// No chats exist, navigate to /parent
+					await goto('/parent');
+				}
+			} catch (error) {
+				console.error('Error navigating to chat:', error);
+				// Fallback: navigate to /parent
+				await goto('/parent');
+			}
+		}
+
+		setTimeout(() => {
+			if ($mobile) {
+				showSidebar.set(false);
+			}
+		}, 0);
+	};
+
+	const itemClickHandler = async () => {
+		selectedChatId = null;
+		chatId.set('');
+
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+
+		await tick();
+	};
+
+	const isWindows = /Windows/i.test(navigator.userAgent);
 </script>
 
 <ArchivedChatsModal
@@ -725,10 +587,28 @@
 
 <ChannelModal
 	bind:show={showCreateChannel}
-	onSubmit={async ({ name, access_control }) => {
+	onSubmit={async ({ type, name, is_private, access_control, group_ids, user_ids }) => {
+		name = name?.trim();
+
+		if (type === 'dm') {
+			if (!user_ids || user_ids.length === 0) {
+				toast.error($i18n.t('Please select at least one user for Direct Message channel.'));
+				return;
+			}
+		} else {
+			if (!name) {
+				toast.error($i18n.t('Channel name cannot be empty.'));
+				return;
+			}
+		}
+
 		const res = await createNewChannel(localStorage.token, {
+			type: type,
 			name: name,
-			access_control: access_control
+			is_private: is_private,
+			access_control: access_control,
+			group_ids: group_ids,
+			user_ids: user_ids
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -738,13 +618,18 @@
 			$socket.emit('join-channels', { auth: { token: $user?.token } });
 			await initChannels();
 			showCreateChannel = false;
+			showChannels = true;
+			goto(`/channels/${res.id}`);
 		}
 	}}
 />
 
-<PersonalStore 
-	bind:open={showPersonalStore} 
-	on:personalSelected={handlePersonalSelected}
+<FolderModal
+	bind:show={showCreateFolderModal}
+	onSubmit={async (folder) => {
+		await createFolder(folder);
+		showCreateFolderModal = false;
+	}}
 />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -769,315 +654,682 @@
 	}}
 />
 
+<button
+	id="sidebar-new-chat-button"
+	class="hidden"
+	on:click={() => {
+		goto('/');
+		newChatHandler();
+	}}
+/>
 
-<!-- Assignment Overview Popup -->
-{#if showAssignmentSetup}
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-	<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
-		<div class="text-center mb-6">
-			<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-				Welcome to the AI Moderation Assignment
-			</h2>
-			<p class="text-gray-600 dark:text-gray-300 mb-6">
-				You'll be completing a 3-step assignment to help us understand how AI moderation works with children's conversations.
-			</p>
-		</div>
+<svelte:window
+	on:mousemove={(e) => {
+		if (!isResizing) return;
+		resizeSidebarHandler(e.clientX);
+	}}
+	on:mouseup={() => {
+		resizeEndHandler();
+	}}
+/>
 
-		<div class="space-y-4 mb-8">
-			<div class="flex items-center space-x-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-				<div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">1</div>
-				<div>
-					<h3 class="font-semibold text-gray-900 dark:text-white">Child Profile Setup</h3>
-					<p class="text-sm text-gray-600 dark:text-gray-300">Create and select a child profile for the assignment</p>
-				</div>
-			</div>
-			
-			<div class="flex items-center space-x-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-				<div class="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">2</div>
-				<div>
-					<h3 class="font-semibold text-gray-900 dark:text-white">Moderation Scenarios</h3>
-					<p class="text-sm text-gray-600 dark:text-gray-300">Review and moderate AI responses to children's questions</p>
-				</div>
-			</div>
-			
-			<div class="flex items-center space-x-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-				<div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">3</div>
-				<div>
-					<h3 class="font-semibold text-gray-900 dark:text-white">Exit Survey</h3>
-					<p class="text-sm text-gray-600 dark:text-gray-300">Provide feedback on your moderation experience</p>
-				</div>
-			</div>
-		</div>
-
-		<div class="text-center">
-			<button
-				on:click={startAssignment}
-				class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-			>
-				Start Assignment - Step 1
-			</button>
-		</div>
-	</div>
-</div>
-{/if}
-
-<div
-	bind:this={navElement}
-	id="sidebar"
-	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-		? 'md:relative w-[260px] max-w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} {$isApp
-		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
-        "
-	data-state={$showSidebar}
->
+{#if !$mobile && !$showSidebar}
 	<div
-		class="py-2 flex flex-col justify-start h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
-			? ''
-			: 'invisible'}"
+		class=" pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
+		id="sidebar"
 	>
-		<!-- Top element with hamburger menu, title, and fill space -->
-	<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 		<button
-			class="cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-			on:click={() => {
+			class="flex flex-col flex-1 {isWindows ? 'cursor-pointer' : 'cursor-[e-resize]'}"
+			on:click={async () => {
 				showSidebar.set(!$showSidebar);
 			}}
 		>
-			<div class="m-auto self-center">
-				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-5">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"></path>
-				</svg>
+			<div class="pb-1.5">
+				<Tooltip
+					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+					placement="right"
+				>
+					<button
+						class="flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group {isWindows
+							? 'cursor-pointer'
+							: 'cursor-[e-resize]'}"
+						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+					>
+						<div class=" self-center flex items-center justify-center size-9">
+							<img
+								src="{WEBUI_BASE_URL}/static/favicon.png"
+								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden"
+								alt=""
+							/>
+
+							<Sidebar className="size-5 hidden group-hover:flex" />
+						</div>
+					</button>
+				</Tooltip>
 			</div>
-		</button>
-		<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center">
-			Assignment Steps
-		</h3>
-		<div class="flex-1 min-h-0"></div>
-	</div>
 
-			<!-- Hidden New Chat button -->
-			<!--
-			<a
-				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
-				href="/"
-				draggable="false"
-				on:click={async () => {
-					selectedChatId = null;
+			<div class="-mt-[0.5px]">
+				<div class="">
+					<Tooltip content={$i18n.t('New Chat')} placement="right">
+						<a
+							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							href="/"
+							draggable="false"
+							on:click={async (e) => {
+								e.stopImmediatePropagation();
+								e.preventDefault();
 
-					await temporaryChatEnabled.set(false);
-					setTimeout(() => {
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}, 0);
-				}}
-			>
-				<div class="flex items-center">
-					<div class="self-center mx-1.5">
-						<img
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class="sidebar-new-chat-icon size-5 -translate-x-1.5 rounded-full"
-							alt="logo"
-						/>
-					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
-						{$i18n.t('New Chat')}
-					</div>
+								goto('/');
+								newChatHandler();
+							}}
+							aria-label={$i18n.t('New Chat')}
+						>
+							<div class=" self-center flex items-center justify-center size-9">
+								<PencilSquare className="size-4.5" />
+							</div>
+						</a>
+					</Tooltip>
 				</div>
 
 				<div>
-					<PencilSquare className=" size-5" strokeWidth="2" />
-				</div>
-			</a>
-			-->
+					<Tooltip content={$i18n.t('Search')} placement="right">
+						<button
+							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							on:click={(e) => {
+								e.stopImmediatePropagation();
+								e.preventDefault();
 
-
-		<!-- Hidden pinned models section -->
-		<!--
-		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-				<div class="mt-0.5">
-					{#each $settings.pinnedModels as modelId (modelId)}
-						{@const model = $models.find((model) => model.id === modelId)}
-						{#if model}
-							<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-								<a
-									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-									href="/?model={modelId}"
-									on:click={() => {
-										selectedChatId = null;
-										chatId.set('');
-
-										if ($mobile) {
-											showSidebar.set(false);
-										}
-									}}
-									draggable="false"
-								>
-									<div class="self-center shrink-0">
-										<img
-											crossorigin="anonymous"
-											src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-											class=" size-5 rounded-full -translate-x-[0.5px]"
-											alt="logo"
-										/>
-									</div>
-
-									<div class="flex self-center translate-y-[0.5px]">
-										<div class=" self-center font-medium text-sm font-primary line-clamp-1">
-											{model?.name ?? modelId}
-										</div>
-									</div>
-								</a>
-							</div>
-						{/if}
-					{/each}
-				</div>
-			{/if}
-		-->
-
-		<!-- Hidden channels section -->
-		<!--
-			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
-				<Folder
-					className="px-2 mt-0.5"
-					name={$i18n.t('Channels')}
-					dragAndDrop={false}
-					onAdd={async () => {
-						if ($user?.role === 'admin') {
-							await tick();
-
-							setTimeout(() => {
-								showCreateChannel = true;
-							}, 0);
-						}
-					}}
-					onAddLabel={$i18n.t('Create Channel')}
-				>
-					{#each $channels as channel}
-						<ChannelItem
-							{channel}
-							onUpdate={async () => {
-								await initChannels();
+								showSearch.set(true);
 							}}
-						/>
-					{/each}
-				</Folder>
-			{/if}
-		-->
+							draggable="false"
+							aria-label={$i18n.t('Search')}
+						>
+							<div class=" self-center flex items-center justify-center size-9">
+								<Search className="size-4.5" />
+							</div>
+						</button>
+					</Tooltip>
+				</div>
 
-		<!-- Hidden chat history section -->
-		{#if false}
-			<Folder
-				className="px-2 mt-0.5"
-				name={$i18n.t('Chats')}
-				onAdd={() => {
-					createFolder();
+				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+					<div class="">
+						<Tooltip content={$i18n.t('Notes')} placement="right">
+							<a
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/notes"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/notes');
+									itemClickHandler();
+								}}
+								draggable="false"
+								aria-label={$i18n.t('Notes')}
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<Note className="size-4.5" />
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
+
+				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+					<div class="">
+						<Tooltip content={$i18n.t('Workspace')} placement="right">
+							<a
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/workspace"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/workspace');
+									itemClickHandler();
+								}}
+								aria-label={$i18n.t('Workspace')}
+								draggable="false"
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-4.5"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
+										/>
+									</svg>
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
+			</div>
+		</button>
+
+		<div>
+			<div>
+				<div class=" py-2 flex justify-center items-center">
+					{#if $user !== undefined && $user !== null}
+						<UserMenu
+							role={$user?.role}
+							profile={$config?.features?.enable_user_status ?? true}
+							showActiveUsers={false}
+							on:show={(e) => {
+								if (e.detail === 'archived-chat') {
+									showArchivedChats.set(true);
+								}
+							}}
+						>
+							<div
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							>
+								<div class="self-center relative">
+									<img
+										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
+										class=" size-7 object-cover rounded-full"
+										alt={$i18n.t('Open User Profile Menu')}
+										aria-label={$i18n.t('Open User Profile Menu')}
+									/>
+
+									{#if $config?.features?.enable_user_status}
+										<div class="absolute -bottom-0.5 -right-0.5">
+											<span class="relative flex size-2.5">
+												<span
+													class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+												></span>
+												<span
+													class="relative inline-flex size-2.5 rounded-full {true
+														? 'bg-green-500'
+														: 'bg-gray-300 dark:bg-gray-700'} border-2 border-white dark:border-gray-900"
+												></span>
+											</span>
+										</div>
+									{/if}
+								</div>
+							</div>
+						</UserMenu>
+					{/if}
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- {$i18n.t('New Folder')} -->
+<!-- {$i18n.t('Pinned')} -->
+
+{#if $showSidebar}
+	<div
+		bind:this={navElement}
+		id="sidebar"
+		class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
+			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
+			: ' bg-transparent z-0 '} {$isApp
+			? `ml-[4.5rem] md:ml-0 `
+			: ' transition-all duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-0 left-0 overflow-x-hidden
+        "
+		transition:slide={{ duration: 250, axis: 'x' }}
+		data-state={$showSidebar}
+	>
+		<div
+			class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 {$showSidebar
+				? ''
+				: 'invisible'}"
+		>
+			<div
+				class="sidebar px-[0.5625rem] pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-3"
+			>
+				<a
+					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
+					href="/"
+					draggable="false"
+					on:click={newChatHandler}
+				>
+					<img
+						crossorigin="anonymous"
+						src="{WEBUI_BASE_URL}/static/favicon.png"
+						class="sidebar-new-chat-icon size-6 rounded-full"
+						alt=""
+					/>
+				</a>
+
+				<a href="/" class="flex flex-1 px-1.5" on:click={newChatHandler}>
+					<div
+						id="sidebar-webui-name"
+						class=" self-center font-medium text-gray-850 dark:text-white font-primary"
+					>
+						{$WEBUI_NAME}
+					</div>
+				</a>
+				<Tooltip
+					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+					placement="bottom"
+				>
+					<button
+						class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
+							? 'cursor-pointer'
+							: 'cursor-[w-resize]'}"
+						on:click={() => {
+							showSidebar.set(!$showSidebar);
+						}}
+						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+					>
+						<div class=" self-center p-1.5">
+							<Sidebar />
+						</div>
+					</button>
+				</Tooltip>
+
+				<div
+					class="{scrollTop > 0
+						? 'visible'
+						: 'invisible'} sidebar-bg-gradient-to-b bg-linear-to-b from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mb-6"
+				></div>
+			</div>
+
+			<div
+				class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-3 pb-3"
+				on:scroll={(e) => {
+					if (e.target.scrollTop === 0) {
+						scrollTop = 0;
+					} else {
+						scrollTop = e.target.scrollTop;
+					}
 				}}
-				onAddLabel={$i18n.t('New Folder')}
-				on:import={(e) => {
-					importChatHandler(e.detail);
-				}}
-				on:drop={async (e) => {
-					const { type, id, item } = e.detail;
+			>
+				<div class="pb-1.5">
+					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+						<a
+							id="sidebar-new-chat-button"
+							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							href="/"
+							draggable="false"
+							on:click={newChatHandler}
+							aria-label={$i18n.t('New Chat')}
+						>
+							<div class="self-center">
+								<PencilSquare className=" size-4.5" strokeWidth="2" />
+							</div>
 
-					if (type === 'chat') {
-						let chat = await getChatById(localStorage.token, id).catch((error) => {
-							return null;
-						});
-						if (!chat && item) {
-							chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
-						}
+							<div class="flex flex-1 self-center translate-y-[0.5px]">
+								<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
+							</div>
 
-						if (chat) {
-							console.log(chat);
-							if (chat.folder_id) {
-								const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
+							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
+						</a>
+					</div>
+
+					<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+						<button
+							id="sidebar-search-button"
+							class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							on:click={() => {
+								showSearch.set(true);
+							}}
+							draggable="false"
+							aria-label={$i18n.t('Search')}
+						>
+							<div class="self-center">
+								<Search strokeWidth="2" className="size-4.5" />
+							</div>
+
+							<div class="flex flex-1 self-center translate-y-[0.5px]">
+								<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
+							</div>
+							<HotkeyHint name="search" className=" group-hover:visible invisible" />
+						</button>
+					</div>
+
+					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-notes-button"
+								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								href="/notes"
+								on:click={itemClickHandler}
+								draggable="false"
+								aria-label={$i18n.t('Notes')}
+							>
+								<div class="self-center">
+									<Note className="size-4.5" strokeWidth="2" />
+								</div>
+
+								<div class="flex self-center translate-y-[0.5px]">
+									<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
+								</div>
+							</a>
+						</div>
+					{/if}
+
+					{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-workspace-button"
+								class="grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								href="/workspace"
+								on:click={itemClickHandler}
+								draggable="false"
+								aria-label={$i18n.t('Workspace')}
+							>
+								<div class="self-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="2"
+										stroke="currentColor"
+										class="size-4.5"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
+										/>
+									</svg>
+								</div>
+
+								<div class="flex self-center translate-y-[0.5px]">
+									<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
+								</div>
+							</a>
+						</div>
+					{/if}
+				</div>
+
+				{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
+					<Folder
+						id="sidebar-models"
+						bind:open={showPinnedModels}
+						className="px-2 mt-0.5"
+						name={$i18n.t('Models')}
+						chevron={false}
+						dragAndDrop={false}
+					>
+						<PinnedModelList bind:selectedChatId {shiftKey} />
+					</Folder>
+				{/if}
+
+				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))}
+					<Folder
+						id="sidebar-channels"
+						bind:open={showChannels}
+						className="px-2 mt-0.5"
+						name={$i18n.t('Channels')}
+						chevron={false}
+						dragAndDrop={false}
+						onAdd={$user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)
+							? async () => {
+									await tick();
+
+									setTimeout(() => {
+										showCreateChannel = true;
+									}, 0);
+								}
+							: null}
+						onAddLabel={$i18n.t('Create Channel')}
+					>
+						{#each $channels as channel, channelIdx (`${channel?.id}`)}
+							<ChannelItem
+								{channel}
+								onUpdate={async () => {
+									await initChannels();
+								}}
+							/>
+
+							{#if channelIdx < $channels.length - 1 && channel.type !== $channels[channelIdx + 1]?.type}<hr
+									class=" border-gray-100/40 dark:border-gray-800/10 my-1.5 w-full"
+								/>
+							{/if}
+						{/each}
+					</Folder>
+				{/if}
+
+				{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
+					<Folder
+						id="sidebar-folders"
+						bind:open={showFolders}
+						className="px-2 mt-0.5"
+						name={$i18n.t('Folders')}
+						chevron={false}
+						onAdd={() => {
+							showCreateFolderModal = true;
+						}}
+						onAddLabel={$i18n.t('New Folder')}
+						on:drop={async (e) => {
+							const { type, id, item } = e.detail;
+
+							if (type === 'folder') {
+								if (folders[id].parent_id === null) {
+									return;
+								}
+
+								const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
 									(error) => {
 										toast.error(`${error}`);
 										return null;
 									}
 								);
+
+								if (res) {
+									await initFolders();
+								}
 							}
-
-							if (chat.pinned) {
-								const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
-							}
-
-							initChatList();
-						}
-					} else if (type === 'folder') {
-						if (folders[id].parent_id === null) {
-							return;
-						}
-
-						const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
-							(error) => {
-								toast.error(`${error}`);
-								return null;
-							}
-						);
-
-						if (res) {
-							await initFolders();
-						}
-					}
-				}}
-			>
-				{#if $pinnedChats.length > 0}
-					<div class="flex flex-col space-y-1 rounded-xl">
-						<Folder
-							className=""
-							bind:open={showPinnedChat}
-							on:change={(e) => {
-								localStorage.setItem('showPinnedChat', e.detail);
-								console.log(e.detail);
+						}}
+					>
+						<Folders
+							bind:folderRegistry
+							{folders}
+							{shiftKey}
+							onDelete={(folderId) => {
+								selectedFolder.set(null);
+								initChatList();
+							}}
+							on:update={() => {
+								initChatList();
 							}}
 							on:import={(e) => {
-								importChatHandler(e.detail, true);
+								const { folderId, items } = e.detail;
+								importChatHandler(items, false, folderId);
 							}}
-							on:drop={async (e) => {
-								const { type, id, item } = e.detail;
+							on:change={async () => {
+								initChatList();
+							}}
+						/>
+					</Folder>
+				{/if}
 
-								if (type === 'chat') {
-									let chat = await getChatById(localStorage.token, id).catch((error) => {
-										return null;
-									});
-									if (!chat && item) {
-										chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+				<Folder
+					id="sidebar-chats"
+					className="px-2 mt-0.5"
+					name={$i18n.t('Chats')}
+					chevron={false}
+					on:change={async (e) => {
+						selectedFolder.set(null);
+					}}
+					on:import={(e) => {
+						importChatHandler(e.detail);
+					}}
+					on:drop={async (e) => {
+						const { type, id, item } = e.detail;
+
+						if (type === 'chat') {
+							let chat = await getChatById(localStorage.token, id).catch((error) => {
+								return null;
+							});
+							if (!chat && item) {
+								chat = await importChats(localStorage.token, [
+									{
+										chat: item.chat,
+										meta: item?.meta ?? {},
+										pinned: false,
+										folder_id: null,
+										created_at: item?.created_at ?? null,
+										updated_at: item?.updated_at ?? null
 									}
+								]);
+							}
 
-									if (chat) {
-										console.log(chat);
-										if (chat.folder_id) {
-											const res = await updateChatFolderIdById(
-												localStorage.token,
-												chat.id,
-												null
-											).catch((error) => {
-												toast.error(`${error}`);
+							if (chat) {
+								console.log(chat);
+								if (chat.folder_id) {
+									const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
+										(error) => {
+											toast.error(`${error}`);
+											return null;
+										}
+									);
+
+									folderRegistry[chat.folder_id]?.setFolderItems();
+								}
+
+								if (chat.pinned) {
+									const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
+								}
+
+								initChatList();
+							}
+						} else if (type === 'folder') {
+							if (folders[id].parent_id === null) {
+								return;
+							}
+
+							const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
+								(error) => {
+									toast.error(`${error}`);
+									return null;
+								}
+							);
+
+							if (res) {
+								await initFolders();
+							}
+						}
+					}}
+				>
+					{#if $pinnedChats.length > 0}
+						<div class="mb-1">
+							<div class="flex flex-col space-y-1 rounded-xl">
+								<Folder
+									id="sidebar-pinned-chats"
+									buttonClassName=" text-gray-500"
+									on:import={(e) => {
+										importChatHandler(e.detail, true);
+									}}
+									on:drop={async (e) => {
+										const { type, id, item } = e.detail;
+
+										if (type === 'chat') {
+											let chat = await getChatById(localStorage.token, id).catch((error) => {
 												return null;
 											});
-										}
+											if (!chat && item) {
+												chat = await importChats(localStorage.token, [
+													{
+														chat: item.chat,
+														meta: item?.meta ?? {},
+														pinned: false,
+														folder_id: null,
+														created_at: item?.created_at ?? null,
+														updated_at: item?.updated_at ?? null
+													}
+												]);
+											}
 
-										if (!chat.pinned) {
-											const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
-										}
+											if (chat) {
+												console.log(chat);
+												if (chat.folder_id) {
+													const res = await updateChatFolderIdById(
+														localStorage.token,
+														chat.id,
+														null
+													).catch((error) => {
+														toast.error(`${error}`);
+														return null;
+													});
+												}
 
-										initChatList();
-									}
-								}
-							}}
-							name={$i18n.t('Pinned')}
-						>
-							<div
-								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
-							>
-								{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
+												if (!chat.pinned) {
+													const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
+												}
+
+												initChatList();
+											}
+										}
+									}}
+									name={$i18n.t('Pinned')}
+								>
+									<div
+										class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900 text-gray-900 dark:text-gray-200"
+									>
+										{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
+											<ChatItem
+												className=""
+												id={chat.id}
+												title={chat.title}
+												{shiftKey}
+												selected={selectedChatId === chat.id}
+												on:select={() => {
+													selectedChatId = chat.id;
+												}}
+												on:unselect={() => {
+													selectedChatId = null;
+												}}
+												on:change={async () => {
+													initChatList();
+												}}
+												on:tag={(e) => {
+													const { type, name } = e.detail;
+													tagEventHandler(type, name, chat.id);
+												}}
+											/>
+										{/each}
+									</div>
+								</Folder>
+							</div>
+						</div>
+					{/if}
+
+					<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
+						<div class="pt-1.5">
+							{#if $chats}
+								{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
+									{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
+										<div
+											class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+											0
+												? ''
+												: 'pt-5'} pb-1.5"
+										>
+											{$i18n.t(chat.time_range)}
+											<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
+							{$i18n.t('Today')}
+							{$i18n.t('Yesterday')}
+							{$i18n.t('Previous 7 days')}
+							{$i18n.t('Previous 30 days')}
+							{$i18n.t('January')}
+							{$i18n.t('February')}
+							{$i18n.t('March')}
+							{$i18n.t('April')}
+							{$i18n.t('May')}
+							{$i18n.t('June')}
+							{$i18n.t('July')}
+							{$i18n.t('August')}
+							{$i18n.t('September')}
+							{$i18n.t('October')}
+							{$i18n.t('November')}
+							{$i18n.t('December')}
+							-->
+										</div>
+									{/if}
+
 									<ChatItem
 										className=""
 										id={chat.id}
@@ -1099,373 +1351,97 @@
 										}}
 									/>
 								{/each}
-							</div>
-						</Folder>
-					</div>
-				{/if}
 
-				{#if folders}
-					<Folders
-						{folders}
-						on:import={(e) => {
-							const { folderId, items } = e.detail;
-							importChatHandler(items, false, folderId);
-						}}
-						on:update={async (e) => {
-							initChatList();
-						}}
-						on:change={async () => {
-							initChatList();
-						}}
-					/>
-				{/if}
-
-				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
-					<div class="pt-1.5">
-						{#if $chats}
-							{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
-								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
-									<div
-										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
-										0
-											? ''
-											: 'pt-5'} pb-1.5"
+								{#if $scrollPaginationEnabled && !allChatsLoaded}
+									<Loader
+										on:visible={(e) => {
+											if (!chatListLoading) {
+												loadMoreChats();
+											}
+										}}
 									>
-										{$i18n.t(chat.time_range)}
-									</div>
+										<div
+											class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+										>
+											<Spinner className=" size-4" />
+											<div class=" ">{$i18n.t('Loading...')}</div>
+										</div>
+									</Loader>
 								{/if}
-
-								<ChatItem
-									className=""
-									id={chat.id}
-									title={chat.title}
-									{shiftKey}
-									selected={selectedChatId === chat.id}
-									on:select={() => {
-										selectedChatId = chat.id;
-									}}
-									on:unselect={() => {
-										selectedChatId = null;
-									}}
-									on:change={async () => {
-										initChatList();
-									}}
-									on:tag={(e) => {
-										const { type, name } = e.detail;
-										tagEventHandler(type, name, chat.id);
-									}}
-								/>
-							{/each}
-
-							{#if $scrollPaginationEnabled && !allChatsLoaded}
-								<Loader
-									on:visible={(e) => {
-										if (!chatListLoading) {
-											loadMoreChats();
-										}
-									}}
+							{:else}
+								<div
+									class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
 								>
-									<div
-										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
-									>
-										<Spinner className=" size-4" />
-										<div class=" ">Loading...</div>
-									</div>
-								</Loader>
+									<Spinner className=" size-4" />
+									<div class=" ">{$i18n.t('Loading...')}</div>
+								</div>
 							{/if}
-						{:else}
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-								<Spinner className=" size-4" />
-								<div class=" ">Loading...</div>
-							</div>
-						{/if}
-					</div>
-				</div>
-			</Folder>
-		{/if}
-
-		<div class="px-2">
-			<div class="flex flex-col font-primary">
-			<!-- Assignment Navigation - moved to bottom -->
-			{#if true}
-
-					<!-- Grey divider above instructions -->
-					<div class="px-4 py-2">
-						<div class="border-b border-gray-200 dark:border-gray-700"></div>
-					</div>
-
-					<!-- Instructions Tab -->
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-						<a
-							href="/assignment-instructions"
-							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								selectedChatId = null;
-								chatId.set('');
-
-								if ($mobile) {
-									showSidebar.set(false);
-								}
-							}}
-						>
-							<div class="self-center">
-								<div class="w-6 h-6 rounded-full flex items-center justify-center bg-gray-500 text-white">
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-									</svg>
-								</div>
-							</div>
-							<div class="flex self-center translate-y-[0.5px]">
-								<div class="font-medium text-sm font-primary">Instructions</div>
-							</div>
-						</a>
-					</div>
-
-					<!-- Grey divider below instructions and above assignment steps -->
-					<div class="px-4 py-2">
-						<div class="border-b border-gray-200 dark:border-gray-700"></div>
-					</div>
-
-					<!-- Step 1: Child Profile -->
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-						<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {(instructionsCompleted || (typeof window !== 'undefined' && localStorage.getItem('instructionsCompleted') === 'true')) && (unlock_kids || (typeof window !== 'undefined' && localStorage.getItem('unlock_kids') === 'true')) ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
-							<button
-								class="flex items-center space-x-3 flex-1"
-								on:click={() => {
-									// Save current moderation state before navigating
-									if (typeof window !== 'undefined') {
-										window.dispatchEvent(new CustomEvent('save-moderation-state'));
-									}
-									goToStep(1);
-								}}
-								disabled={!(instructionsCompleted || (typeof window !== 'undefined' && localStorage.getItem('instructionsCompleted') === 'true')) || !(unlock_kids || (typeof window !== 'undefined' && localStorage.getItem('unlock_kids') === 'true'))}
-							>
-								<div class="self-center">
-									<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
-										{#if assignmentStep > 1}
-											<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-												<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-											</svg>
-										{:else}
-											<span class="text-xs font-bold">1</span>
-										{/if}
-									</div>
-								</div>
-								<div class="flex self-center translate-y-[0.5px]">
-									<div class="font-medium text-sm font-primary">Child Profile</div>
-								</div>
-							</button>
-							
-							<!-- Hidden Edit button -->
-							<!--
-							<div class="flex space-x-1 ml-auto">
-								<a
-									href="/kids/profile"
-									on:click={() => {
-										selectedChatId = null;
-										chatId.set('');
-
-										if ($mobile) {
-											showSidebar.set(false);
-										}
-									}}
-									class="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-medium px-2 py-1 rounded hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
-									title="Edit Profile"
-								>
-									Edit
-								</a>
-							</div>
-							-->
 						</div>
 					</div>
-
-					<!-- Step 2: Review Scenarios -->
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-						<button
-							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {unlock_moderation ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
-							on:click={() => {
-								if (unlock_moderation) {
-									localStorage.setItem('moderationScenariosAccessed', 'true');
-									goto('/moderation-scenario');
-								}
-							}}
-							disabled={!unlock_moderation}
-						>
-							<div class="self-center">
-								<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 2 ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
-									{#if assignmentStep > 2}
-										<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-											<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-										</svg>
-									{:else}
-										<span class="text-xs font-bold">2</span>
-									{/if}
-								</div>
-							</div>
-							<div class="flex self-center translate-y-[0.5px]">
-								<div class="font-medium text-sm font-primary">Review Scenarios</div>
-							</div>
-						</button>
-					</div>
-
-					<!-- Step 3: Exit Survey -->
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-						<button
-							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {(assignmentStep >= 3 || unlock_exit) ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
-							on:click={() => {
-								if (assignmentStep >= 3 || unlock_exit) {
-									goto('/exit-survey');
-								}
-							}}
-							disabled={!(assignmentStep >= 3 || unlock_exit)}
-						>
-							<div class="self-center">
-								<div class="w-6 h-6 rounded-full flex items-center justify-center {(assignmentStep >= 3 || unlock_exit) ? 'bg-green-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
-									{#if assignmentCompleted || unlock_completion}
-										<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-											<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-										</svg>
-									{:else}
-										<span class="text-xs font-bold">3</span>
-									{/if}
-								</div>
-							</div>
-							<div class="flex self-center translate-y-[0.5px]">
-								<div class="font-medium text-sm font-primary">Exit Survey</div>
-							</div>
-						</button>
-					</div>
-
-			{/if}
+				</Folder>
 			</div>
-		</div>
 
-		<!-- Spacer to push user profile to bottom -->
-		<div class="flex-1 min-h-0"></div>
-
-		<div class="px-2">
-			<div class="flex flex-col font-primary">
-			
-			<!-- Child Profile Preview -->
-			{#if currentChild}
-				<div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-					<div class="flex items-center space-x-3">
-						<div class="flex-shrink-0">
-							<div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-								<span class="text-white font-semibold text-sm">
-									{currentChild.name?.charAt(0) || '👶'}
-								</span>
-							</div>
-						</div>
-						<div class="flex-1 min-w-0">
-							<p class="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
-								{currentChild.name}
-							</p>
-							<p class="text-xs text-blue-700 dark:text-blue-300">
-								Age: {currentChild.child_age || 'N/A'} • {currentChild.child_gender || 'N/A'}
-							</p>
-						</div>
-					</div>
-					<div class="mt-2 text-xs text-blue-600 dark:text-blue-400">
-						Survey participant
-					</div>
-				</div>
-			{/if}
-			
-			{#if $user !== undefined && $user !== null}
-				<UserMenu
-						role={$user?.role}
-						on:show={(e) => {
-							if (e.detail === 'archived-chat') {
-								showArchivedChats.set(true);
-							}
-						}}
-					>
-						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
+			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar">
+				<div
+					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
+				></div>
+				<div class="flex flex-col font-primary">
+					{#if $user !== undefined && $user !== null}
+						<UserMenu
+							role={$user?.role}
+							profile={$config?.features?.enable_user_status ?? true}
+							showActiveUsers={false}
+							on:show={(e) => {
+								if (e.detail === 'archived-chat') {
+									showArchivedChats.set(true);
+								}
 							}}
 						>
-							<div class=" self-center mr-3">
-								<img
-									src={$user?.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-full"
-									alt="User profile"
-								/>
-							</div>
-							<div class=" self-center font-medium">{$user?.name}</div>
-						</button>
-					</UserMenu>
-				{/if}
+							<div
+								class=" flex items-center rounded-2xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+							>
+								<div class=" self-center mr-3 relative">
+									<img
+										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
+										class=" size-7 object-cover rounded-full"
+										alt={$i18n.t('Open User Profile Menu')}
+										aria-label={$i18n.t('Open User Profile Menu')}
+									/>
 
-				<!-- Hidden character store -->
-				<!--
-				{#if currentPersonal}
-					<div class="current-personal" on:click={() => showPersonalStore = true}>
-						<span class="personal-avatar">{currentPersonal.avatar}</span>
-						<span class="personal-name">{currentPersonal.name}</span>
-						<span class="personal-prefix">"{currentPersonal.prefix}"</span>
-					</div>
-				{:else}
-					<div class="no-personal" on:click={() => showPersonalStore = true}>
-						<span class="personal-avatar">🎭</span>
-						<span class="personal-name">Choose Character</span>
-					</div>
-				{/if}
-				-->
+									{#if $config?.features?.enable_user_status}
+										<div class="absolute -bottom-0.5 -right-0.5">
+											<span class="relative flex size-2.5">
+												<span
+													class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+												></span>
+												<span
+													class="relative inline-flex size-2.5 rounded-full {true
+														? 'bg-green-500'
+														: 'bg-gray-300 dark:bg-gray-700'} border-2 border-white dark:border-gray-900"
+												></span>
+											</span>
+										</div>
+									{/if}
+								</div>
+								<div class=" self-center font-medium">{$user?.name}</div>
+							</div>
+						</UserMenu>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>
-</div>
 
-<style>
-	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
-		visibility: visible;
-	}
-	.scrollbar-hidden::-webkit-scrollbar-thumb {
-		visibility: hidden;
-	}
-
-	.current-personal,
-	.no-personal {
-		display: flex;
-		align-items: center;
-		padding: 0.75rem 1rem;
-		margin: 0.5rem 0;
-		border-radius: 8px;
-		cursor: pointer;
-		transition: all 0.2s;
-		background: rgba(102, 126, 234, 0.1);
-		border: 1px solid rgba(102, 126, 234, 0.2);
-	}
-
-	.current-personal:hover,
-	.no-personal:hover {
-		background: rgba(102, 126, 234, 0.15);
-		border-color: rgba(102, 126, 234, 0.3);
-	}
-
-	.personal-avatar {
-		font-size: 1.5rem;
-		margin-right: 0.75rem;
-	}
-
-	.personal-name {
-		font-weight: 500;
-		color: #495057;
-		margin-right: 0.5rem;
-	}
-
-	.personal-prefix {
-		font-size: 0.8rem;
-		color: #667eea;
-		font-style: italic;
-	}
-
-	.no-personal .personal-name {
-		color: #6c757d;
-	}
-</style>
+	{#if !$mobile}
+		<div
+			class="relative flex items-center justify-center group border-l border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800 transition z-20"
+			id="sidebar-resizer"
+			on:mousedown={resizeStartHandler}
+			role="separator"
+		>
+			<div
+				class=" absolute -left-1.5 -right-1.5 -top-0 -bottom-0 z-20 cursor-col-resize bg-transparent"
+			/>
+		</div>
+	{/if}
+{/if}

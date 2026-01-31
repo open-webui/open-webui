@@ -9,14 +9,11 @@
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
-	import { getFunctions } from '$lib/apis/functions';
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
-	import { getAllTags } from '$lib/apis/chats';
-	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
 	import { getUserSettings } from '$lib/apis/users';
+	import { getUserType } from '$lib/utils';
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -47,6 +44,7 @@
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { Shortcut, shortcuts } from '$lib/shortcuts';
 
 	const i18n = getContext('i18n');
 
@@ -56,210 +54,250 @@
 
 	let version;
 
+	const clearChatInputStorage = () => {
+		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
+		if (chatInputKeys.length > 0) {
+			chatInputKeys.forEach((key) => {
+				localStorage.removeItem(key);
+			});
+		}
+	};
+
+	const checkLocalDBChats = async () => {
+		try {
+			// Check if IndexedDB exists
+			DB = await openDB('Chats', 1);
+
+			if (!DB) {
+				return;
+			}
+
+			const chats = await DB.getAllFromIndex('chats', 'timestamp');
+			localDBChats = chats.map((item, idx) => chats[chats.length - 1 - idx]);
+
+			if (localDBChats.length === 0) {
+				await deleteDB('Chats');
+			}
+		} catch (error) {
+			// IndexedDB Not Found
+		}
+	};
+
+	const setUserSettings = async (cb: () => Promise<void>) => {
+		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
+			console.error(error);
+			return null;
+		});
+
+		if (!userSettings) {
+			try {
+				userSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+			} catch (e: unknown) {
+				console.error('Failed to parse settings from localStorage', e);
+				userSettings = {};
+			}
+		}
+
+		if (userSettings?.ui) {
+			settings.set(userSettings.ui);
+		}
+
+		if (cb) {
+			await cb();
+		}
+	};
+
+	const setModels = async () => {
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
+			)
+		);
+	};
+
+	const setToolServers = async () => {
+		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
+		toolServersData = toolServersData.filter((data) => {
+			if (!data || data.error) {
+				toast.error(
+					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+						URL: data?.url
+					})
+				);
+				return false;
+			}
+			return true;
+		});
+		toolServers.set(toolServersData);
+	};
+
+	const setBanners = async () => {
+		const bannersData = await getBanners(localStorage.token);
+		banners.set(bannersData);
+	};
+
+	const setTools = async () => {
+		const toolsData = await getTools(localStorage.token);
+		tools.set(toolsData);
+	};
+
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
 			await goto('/auth');
-		} else if (['user', 'admin'].includes($user?.role)) {
-			// Workflow navigation guard
-			await enforceWorkflowNavigation();
+			return;
+		}
+		if (!['user', 'admin'].includes($user?.role)) {
+			return;
+		}
 
-			try {
-				// Check if IndexedDB exists
-				DB = await openDB('Chats', 1);
+		// Workflow navigation guard (our custom logic)
+		await enforceWorkflowNavigation();
 
-				if (DB) {
-					const chats = await DB.getAllFromIndex('chats', 'timestamp');
-					localDBChats = chats.map((item, idx) => chats[chats.length - 1 - idx]);
+		try {
+			// Check if IndexedDB exists
+			DB = await openDB('Chats', 1);
+		} catch (error) {
+			// IndexedDB Not Found
+		}
 
-					if (localDBChats.length === 0) {
-						await deleteDB('Chats');
-					}
-				}
+		clearChatInputStorage();
+		await Promise.all([
+			checkLocalDBChats(),
+			setBanners(),
+			setTools(),
+			setUserSettings(async () => {
+				await Promise.all([setModels(), setToolServers()]);
+			})
+		]);
 
-				console.log(DB);
-			} catch (error) {
-				// IndexedDB Not Found
-			}
+		// Helper function to check if the pressed keys match the shortcut definition
+		const isShortcutMatch = (event: KeyboardEvent, shortcut): boolean => {
+			const keys = shortcut?.keys || [];
 
-			const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
-			if (chatInputKeys.length > 0) {
-				chatInputKeys.forEach((key) => {
-					localStorage.removeItem(key);
-				});
-			}
+			const normalized = keys.map((k) => k.toLowerCase());
+			const needCtrl = normalized.includes('ctrl') || normalized.includes('mod');
+			const needShift = normalized.includes('shift');
+			const needAlt = normalized.includes('alt');
 
-			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
-				console.error(error);
-				return null;
-			});
+			const mainKeys = normalized.filter((k) => !['ctrl', 'shift', 'alt', 'mod'].includes(k));
 
-			if (userSettings) {
-				settings.set(userSettings.ui);
-			} else {
-				let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
+			// Get the main key pressed
+			const keyPressed = event.key.toLowerCase();
 
-				try {
-					localStorageSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-				} catch (e: unknown) {
-					console.error('Failed to parse settings from localStorage', e);
-				}
+			// Check modifiers
+			if (needShift && !event.shiftKey) return false;
 
-				settings.set(localStorageSettings);
-			}
+			if (needCtrl && !(event.ctrlKey || event.metaKey)) return false;
+			if (!needCtrl && (event.ctrlKey || event.metaKey)) return false;
+			if (needAlt && !event.altKey) return false;
+			if (!needAlt && event.altKey) return false;
 
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-				)
-			);
+			if (mainKeys.length && !mainKeys.includes(keyPressed)) return false;
 
-			banners.set(await getBanners(localStorage.token));
-			tools.set(await getTools(localStorage.token));
+			return true;
+		};
 
-			let toolServersData = await getToolServersData($settings?.toolServers ?? []);
-			toolServersData = toolServersData.filter((data) => {
-				if (data.error) {
-					toast.error(
-						$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-							URL: data?.url
-						})
-					);
-					return false;
-				}
-				return true;
-			});
-			toolServers.set(toolServersData);
-
-			document.addEventListener('keydown', async function (event) {
-				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
-				// Check if the Shift key is pressed
-				const isShiftPressed = event.shiftKey;
-
-				// Check if Ctrl  + K is pressed
-				if (isCtrlPressed && event.key.toLowerCase() === 'k') {
+		const setupKeyboardShortcuts = () => {
+			document.addEventListener('keydown', async (event) => {
+				if (isShortcutMatch(event, shortcuts[Shortcut.SEARCH])) {
+					console.log('Shortcut triggered: SEARCH');
 					event.preventDefault();
-					console.log('search');
 					showSearch.set(!$showSearch);
-				}
-
-				// Check if Ctrl + Shift + O is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 'o') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_CHAT])) {
+					console.log('Shortcut triggered: NEW_CHAT');
 					event.preventDefault();
-					console.log('newChat');
 					document.getElementById('sidebar-new-chat-button')?.click();
-				}
-
-				// Check if Shift + Esc is pressed
-				if (isShiftPressed && event.key === 'Escape') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.FOCUS_INPUT])) {
+					console.log('Shortcut triggered: FOCUS_INPUT');
 					event.preventDefault();
-					console.log('focusInput');
 					document.getElementById('chat-input')?.focus();
-				}
-
-				// Check if Ctrl + Shift + ; is pressed
-				if (isCtrlPressed && isShiftPressed && event.key === ';') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.COPY_LAST_CODE_BLOCK])) {
+					console.log('Shortcut triggered: COPY_LAST_CODE_BLOCK');
 					event.preventDefault();
-					console.log('copyLastCodeBlock');
-					const button = [...document.getElementsByClassName('copy-code-button')]?.at(-1);
-					button?.click();
-				}
-
-				// Check if Ctrl + Shift + C is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 'c') {
+					[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.COPY_LAST_RESPONSE])) {
+					console.log('Shortcut triggered: COPY_LAST_RESPONSE');
 					event.preventDefault();
-					console.log('copyLastResponse');
-					const button = [...document.getElementsByClassName('copy-response-button')]?.at(-1);
-					console.log(button);
-					button?.click();
-				}
-
-				// Check if Ctrl + Shift + S is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 's') {
+					[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.TOGGLE_SIDEBAR])) {
+					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
-					console.log('toggleSidebar');
-					document.getElementById('sidebar-toggle-button')?.click();
-				}
-
-				// Check if Ctrl + Shift + Backspace is pressed
-				if (
-					isCtrlPressed &&
-					isShiftPressed &&
-					(event.key === 'Backspace' || event.key === 'Delete')
-				) {
+					showSidebar.set(!$showSidebar);
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.DELETE_CHAT])) {
+					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
-					console.log('deleteChat');
 					document.getElementById('delete-chat-button')?.click();
-				}
-
-				// Check if Ctrl + . is pressed
-				if (isCtrlPressed && event.key === '.') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.OPEN_SETTINGS])) {
+					console.log('Shortcut triggered: OPEN_SETTINGS');
 					event.preventDefault();
-					console.log('openSettings');
 					showSettings.set(!$showSettings);
-				}
-
-				// Check if Ctrl + / is pressed
-				if (isCtrlPressed && event.key === '/') {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.SHOW_SHORTCUTS])) {
+					console.log('Shortcut triggered: SHOW_SHORTCUTS');
 					event.preventDefault();
-
 					showShortcuts.set(!$showShortcuts);
-				}
-
-				// Check if Ctrl + Shift + ' is pressed
-				if (
-					isCtrlPressed &&
-					isShiftPressed &&
-					(event.key.toLowerCase() === `'` || event.key.toLowerCase() === `"`)
-				) {
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.CLOSE_MODAL])) {
+					console.log('Shortcut triggered: CLOSE_MODAL');
 					event.preventDefault();
-					console.log('temporaryChat');
-
+					showSettings.set(false);
+					showShortcuts.set(false);
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_TEMPORARY_CHAT])) {
+					console.log('Shortcut triggered: NEW_TEMPORARY_CHAT');
+					event.preventDefault();
 					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 						temporaryChatEnabled.set(true);
 					} else {
 						temporaryChatEnabled.set(!$temporaryChatEnabled);
 					}
-
 					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
-						newChatButton?.click();
+						document.getElementById('new-chat-button')?.click();
 					}, 0);
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.GENERATE_MESSAGE_PAIR])) {
+					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
+					event.preventDefault();
+					document.getElementById('generate-message-pair-button')?.click();
+				} else if (
+					isShortcutMatch(event, shortcuts[Shortcut.REGENERATE_RESPONSE]) &&
+					document.activeElement?.id === 'chat-input'
+				) {
+					console.log('Shortcut triggered: REGENERATE_RESPONSE');
+					event.preventDefault();
+					[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
 				}
 			});
+		};
+		setupKeyboardShortcuts();
 
-			// Disabled: What's New popup
-			// if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
-			// 	showChangelog.set($settings?.version !== $config.version);
-			// }
+		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
+			showChangelog.set($settings?.version !== $config.version);
+		}
 
-			if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
-				if ($page.url.searchParams.get('temporary-chat') === 'true') {
-					temporaryChatEnabled.set(true);
-				}
-
-				if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-					temporaryChatEnabled.set(true);
-				}
+		if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
+			if ($page.url.searchParams.get('temporary-chat') === 'true') {
+				temporaryChatEnabled.set(true);
 			}
 
-			// Disabled: Version update checking
-			// if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
-			// 	// Check if the user has dismissed the update toast in the last 24 hours
-			// 	if (localStorage.dismissedUpdateToast) {
-			// 		const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
-			// 		const now = new Date();
-
-			// 		if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
-			// 			checkForVersionUpdates();
-			// 		}
-			// 	} else {
-			// 		checkForVersionUpdates();
-			// 	}
-			// }
-			await tick();
+			if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+				temporaryChatEnabled.set(true);
+			}
 		}
+
+		// Check for version updates
+		if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
+			// Check if the user has dismissed the update toast in the last 24 hours
+			if (localStorage.dismissedUpdateToast) {
+				const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
+				const now = new Date();
+
+				if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
+					checkForVersionUpdates();
+				}
+			} else {
+				checkForVersionUpdates();
+			}
+		}
+		await tick();
 
 		loaded = true;
 	});
@@ -279,82 +317,84 @@
 		const assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '0'); // Start with 0 for new users
 		const assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
 		const instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
-		
+
 		// Check if this is a Prolific user
 		const isProlificUser = $user?.prolific_pid !== undefined && $user?.prolific_pid !== null;
 		const prolificSessionId = localStorage.getItem('prolificSessionId');
 		const prolificSessionNumber = parseInt(localStorage.getItem('prolificSessionNumber') || '1');
-		
-	// For Prolific users on new sessions, reset workflow to instructions
-	if (isProlificUser) {
-		// Check both URL parameter and localStorage for session ID
-		const urlSessionId = $page.url.searchParams.get('SESSION_ID');
-		const storageSessionId = localStorage.getItem('prolificSessionId');
-		const sessionIdToCheck = urlSessionId || storageSessionId;
-		
-		if (sessionIdToCheck) {
-			const lastSessionId = localStorage.getItem('lastProlificSessionId');
-			const isNewSession = lastSessionId && lastSessionId !== sessionIdToCheck;
-			
-		if (isNewSession) {
-			console.log('🔄 New Prolific session detected in layout, resetting workflow');
-			// New session - reset workflow state but preserve child profile
-			localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
-			localStorage.removeItem('assignmentStep');
-			localStorage.removeItem('assignmentCompleted');
-			localStorage.removeItem('moderationScenariosAccessed');
-			localStorage.removeItem('unlock_exit');
-			localStorage.removeItem('instructionsCompleted');
-			// Keep child profile data
-			
-		// Increment session number for all children
-		try {
-			// Get child profiles from cache (using the correct key from childProfileSync service)
-			const cached = localStorage.getItem('child-profiles-cache');
-			if (cached) {
-				const profiles = JSON.parse(cached);
-				if (Array.isArray(profiles) && profiles.length > 0) {
-					profiles.forEach((profile: any) => {
-						const childId = profile.id;
-						const sessionKey = `moderationSessionNumber_${childId}`;
-						const currentSession = parseInt(localStorage.getItem(sessionKey) || '1');
-						const newSession = currentSession + 1;
-						localStorage.setItem(sessionKey, String(newSession));
-						console.log(`Incremented session for child ${childId}: ${currentSession} -> ${newSession}`);
-					});
-				} else {
-					console.warn('No child profiles found in cache or cache is not an array');
+
+		// For Prolific users on new sessions, reset workflow to instructions
+		if (isProlificUser) {
+			// Check both URL parameter and localStorage for session ID
+			const urlSessionId = $page.url.searchParams.get('SESSION_ID');
+			const storageSessionId = localStorage.getItem('prolificSessionId');
+			const sessionIdToCheck = urlSessionId || storageSessionId;
+
+			if (sessionIdToCheck) {
+				const lastSessionId = localStorage.getItem('lastProlificSessionId');
+				const isNewSession = lastSessionId && lastSessionId !== sessionIdToCheck;
+
+				if (isNewSession) {
+					console.log('🔄 New Prolific session detected in layout, resetting workflow');
+					// New session - reset workflow state but preserve child profile
+					localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
+					localStorage.removeItem('assignmentStep');
+					localStorage.removeItem('assignmentCompleted');
+					localStorage.removeItem('moderationScenariosAccessed');
+					localStorage.removeItem('unlock_exit');
+					localStorage.removeItem('instructionsCompleted');
+					// Keep child profile data
+
+					// Increment session number for all children
+					try {
+						// Get child profiles from cache (using the correct key from childProfileSync service)
+						const cached = localStorage.getItem('child-profiles-cache');
+						if (cached) {
+							const profiles = JSON.parse(cached);
+							if (Array.isArray(profiles) && profiles.length > 0) {
+								profiles.forEach((profile: any) => {
+									const childId = profile.id;
+									const sessionKey = `moderationSessionNumber_${childId}`;
+									const currentSession = parseInt(localStorage.getItem(sessionKey) || '1');
+									const newSession = currentSession + 1;
+									localStorage.setItem(sessionKey, String(newSession));
+									console.log(
+										`Incremented session for child ${childId}: ${currentSession} -> ${newSession}`
+									);
+								});
+							} else {
+								console.warn('No child profiles found in cache or cache is not an array');
+							}
+						} else {
+							console.warn('child-profiles-cache not found in localStorage');
+						}
+					} catch (e) {
+						console.error('Error incrementing session numbers:', e);
+					}
+
+					// Redirect to instructions for new session
+					if (currentPath !== '/assignment-instructions') {
+						await goto('/assignment-instructions');
+						return;
+					}
+				} else if (!lastSessionId && sessionIdToCheck) {
+					// First time seeing a session ID, store it
+					localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
 				}
-			} else {
-				console.warn('child-profiles-cache not found in localStorage');
-			}
-		} catch (e) {
-			console.error('Error incrementing session numbers:', e);
-		}
-			
-			// Redirect to instructions for new session
-			if (currentPath !== '/assignment-instructions') {
-				await goto('/assignment-instructions');
-				return;
-			}
-		} else if (!lastSessionId && sessionIdToCheck) {
-				// First time seeing a session ID, store it
-				localStorage.setItem('lastProlificSessionId', sessionIdToCheck);
 			}
 		}
-	}
-		
+
 		// Prevent access to main chat page after assignment completion (except for admins)
 		if (currentPath === '/' && assignmentCompleted && $user?.role !== 'admin') {
 			await goto('/completion');
 			return;
 		}
-		
+
 		// Allow navigation to home/intro page for non-completed users
 		if (currentPath === '/') {
 			return;
 		}
-		
+
 		// Allow access to assignment instructions page
 		if (currentPath === '/assignment-instructions') {
 			return;
@@ -365,13 +405,36 @@
 			await goto('/assignment-instructions');
 			return;
 		}
-		
+
 		// Allow access to admin and workspace routes for admins
-		if ($user?.role === 'admin' && (currentPath.startsWith('/admin') || currentPath.startsWith('/workspace'))) {
+		if (
+			$user?.role === 'admin' &&
+			(currentPath.startsWith('/admin') || currentPath.startsWith('/workspace'))
+		) {
 			return;
 		}
 
-		// Define step-to-route mapping
+		// Determine user type
+		const userType = await getUserType($user);
+
+		// Allow parent users to access /parent freely
+		if (userType === 'parent' && currentPath.startsWith('/parent')) {
+			return;
+		}
+
+		// Allow child users to access / freely
+		if (userType === 'child' && currentPath === '/') {
+			return;
+		}
+
+		// Only enforce workflow steps for interviewee users
+		if (userType !== 'interviewee') {
+			// For parent/child users, don't enforce workflow steps
+			return;
+		}
+
+		// Define step-to-route mapping (for interviewees only)
+		// Skip step 2 (moderation-scenario) is handled by backend, but we still need the mapping
 		const stepRoutes: { [key: number]: string } = {
 			1: '/kids/profile',
 			2: '/moderation-scenario',
@@ -388,8 +451,8 @@
 		}
 
 		// Check if current route is allowed
-		const isAllowed = allowedRoutes.some(route => currentPath.startsWith(route));
-		
+		const isAllowed = allowedRoutes.some((route) => currentPath.startsWith(route));
+
 		// If not allowed, redirect to current step
 		if (!isAllowed && stepRoutes[assignmentStep]) {
 			await goto(stepRoutes[assignmentStep]);
@@ -441,7 +504,7 @@
 										{$i18n.t(
 											"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through"
 										)}
-										<span class="font-semibold dark:text-white"
+										<span class="font-medium dark:text-white"
 											>{$i18n.t('Settings')} > {$i18n.t('Chats')} > {$i18n.t('Import Chats')}</span
 										>. {$i18n.t(
 											'This ensures that your valuable conversations are securely saved to your backend database. Thank you!'
@@ -487,7 +550,7 @@
 				{:else}
 					<div
 						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
-							? '  md:max-w-[calc(100%-260px)]'
+							? '  md:max-w-[calc(100%-var(--sidebar-width))]'
 							: ' '}"
 					>
 						<Spinner className="size-5" />

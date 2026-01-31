@@ -8,7 +8,6 @@ from open_webui.utils.auth import get_verified_user
 from open_webui.models.exit_quiz import ExitQuizzes, ExitQuizModel, ExitQuizForm
 from open_webui.models.users import UserModel
 
-
 log = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -33,7 +32,9 @@ async def create_exit_quiz_response(
     try:
         res = ExitQuizzes.insert_new_response(form_data, current_user.id)
         if not res:
-            raise HTTPException(status_code=500, detail="Failed to create exit quiz response")
+            raise HTTPException(
+                status_code=500, detail="Failed to create exit quiz response"
+            )
         return ExitQuizResponse(**res.model_dump())
     except Exception as e:
         log.error(f"Error creating exit quiz response: {e}")
@@ -103,6 +104,3 @@ async def delete_exit_quiz_response(
     except Exception as e:
         log.error(f"Error deleting exit quiz response: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
-

@@ -6,13 +6,11 @@ from open_webui.retrieval.vector.main import (
     SearchResult,
 )
 from open_webui.config import S3_VECTOR_BUCKET_NAME, S3_VECTOR_REGION
-from open_webui.env import SRC_LOG_LEVELS
 from typing import List, Optional, Dict, Any, Union
 import logging
 import boto3
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class S3VectorClient(VectorDBBase):
@@ -117,15 +115,16 @@ class S3VectorClient(VectorDBBase):
 
     def has_collection(self, collection_name: str) -> bool:
         """
-        Check if a vector index (collection) exists in the S3 vector bucket.
+        Check if a vector index exists using direct lookup.
+        This avoids pagination issues with list_indexes() and is significantly faster.
         """
-
         try:
-            response = self.client.list_indexes(vectorBucketName=self.bucket_name)
-            indexes = response.get("indexes", [])
-            return any(idx.get("indexName") == collection_name for idx in indexes)
+            self.client.get_index(
+                vectorBucketName=self.bucket_name, indexName=collection_name
+            )
+            return True
         except Exception as e:
-            log.error(f"Error listing indexes: {e}")
+            log.error(f"Error checking if index '{collection_name}' exists: {e}")
             return False
 
     def delete_collection(self, collection_name: str) -> None:
@@ -296,7 +295,11 @@ class S3VectorClient(VectorDBBase):
             raise
 
     def search(
-        self, collection_name: str, vectors: List[List[Union[float, int]]], limit: int
+        self,
+        collection_name: str,
+        vectors: List[List[Union[float, int]]],
+        filter: Optional[dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         """
         Search for similar vectors in a collection using multiple query vectors.

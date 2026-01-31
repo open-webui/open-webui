@@ -90,6 +90,26 @@
 		}
 	);
 
+	const updateFuse = () => {
+		if (fuse) {
+			fuse.setCollection(
+				items.map((item) => {
+					const _item = {
+						...item,
+						modelName: item.model?.name,
+						tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
+						desc: item.model?.info?.meta?.description
+					};
+					return _item;
+				})
+			);
+		}
+	};
+
+	$: if (items) {
+		updateFuse();
+	}
+
 	$: filteredItems = (
 		searchValue
 			? fuse
@@ -101,7 +121,10 @@
 						if (selectedTag === '') {
 							return true;
 						}
-						return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
+
+						return (item.model?.tags ?? [])
+							.map((tag) => tag.name.toLowerCase())
+							.includes(selectedTag.toLowerCase());
 					})
 					.filter((item) => {
 						if (selectedConnectionType === '') {
@@ -119,7 +142,9 @@
 						if (selectedTag === '') {
 							return true;
 						}
-						return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
+						return (item.model?.tags ?? [])
+							.map((tag) => tag.name.toLowerCase())
+							.includes(selectedTag.toLowerCase());
 					})
 					.filter((item) => {
 						if (selectedConnectionType === '') {
@@ -295,8 +320,7 @@
 			tags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
 				.flatMap((item) => item.model?.tags ?? [])
-				.map((tag) => tag.name);
-
+				.map((tag) => tag.name.toLowerCase());
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}

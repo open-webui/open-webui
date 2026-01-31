@@ -33,14 +33,15 @@ let cachedData: {
 // Load all personality trait data
 export async function loadAllPersonalityData() {
 	if (Object.keys(cachedData).length === 0) {
-		const [agreeableness, conscientiousness, extraversion, neuroticism, openness] = await Promise.all([
-			loadJSONFile('agreeableness.json'),
-			loadJSONFile('conscientiousness.json'),
-			loadJSONFile('extraversion.json'),
-			loadJSONFile('neuroticism.json'),
-			loadJSONFile('openness.json')
-		]);
-		
+		const [agreeableness, conscientiousness, extraversion, neuroticism, openness] =
+			await Promise.all([
+				loadJSONFile('agreeableness.json'),
+				loadJSONFile('conscientiousness.json'),
+				loadJSONFile('extraversion.json'),
+				loadJSONFile('neuroticism.json'),
+				loadJSONFile('openness.json')
+			]);
+
 		cachedData = {
 			agreeableness,
 			conscientiousness,
@@ -49,7 +50,7 @@ export async function loadAllPersonalityData() {
 			openness
 		};
 	}
-	
+
 	return cachedData;
 }
 
@@ -57,10 +58,10 @@ export async function loadAllPersonalityData() {
 // Converts curly quotes (U+2019, U+2018, U+201C, U+201D) to straight quotes (U+0027, U+0022)
 function normalizeQuotes(str: string): string {
 	return str
-		.replace(/'/g, "'")  // Right single quotation mark (U+2019) → straight apostrophe
-		.replace(/'/g, "'")  // Left single quotation mark (U+2018) → straight apostrophe
-		.replace(/"/g, '"')  // Left double quotation mark (U+201C) → straight quote
-		.replace(/"/g, '"');  // Right double quotation mark (U+201D) → straight quote
+		.replace(/'/g, "'") // Right single quotation mark (U+2019) → straight apostrophe
+		.replace(/'/g, "'") // Left single quotation mark (U+2018) → straight apostrophe
+		.replace(/"/g, '"') // Left double quotation mark (U+201C) → straight quote
+		.replace(/"/g, '"'); // Right double quotation mark (U+201D) → straight quote
 }
 
 // Function to generate scenarios (Q&A pairs) from personality questions data
@@ -68,21 +69,21 @@ export async function generateScenariosFromPersonalityData(
 	selectedCharacteristics: string[]
 ): Promise<QAPair[]> {
 	const allScenarios: QAPair[] = [];
-	
+
 	if (!selectedCharacteristics || selectedCharacteristics.length === 0) {
 		console.warn('No characteristics selected for scenario generation');
 		return [];
 	}
-	
+
 	// Load all personality data
 	const personalityData = await loadAllPersonalityData();
-	
+
 	// For each selected characteristic, find Q&A pairs across all traits
 	for (const charName of selectedCharacteristics) {
 		const normalizedCharName = normalizeQuotes(charName);
 		let found = false;
 		let searchedTraits: string[] = [];
-		
+
 		// Search through all personality traits for the characteristic
 		const allTraits = [
 			{ name: 'agreeableness', data: personalityData.agreeableness },
@@ -91,10 +92,10 @@ export async function generateScenariosFromPersonalityData(
 			{ name: 'neuroticism', data: personalityData.neuroticism },
 			{ name: 'openness', data: personalityData.openness }
 		];
-		
+
 		for (const trait of allTraits) {
 			searchedTraits.push(trait.name);
-			
+
 			if (trait.data) {
 				// Try exact match first
 				if (trait.data[charName]) {
@@ -102,13 +103,15 @@ export async function generateScenariosFromPersonalityData(
 						question,
 						response
 					}));
-					
+
 					allScenarios.push(...qaPairs);
 					found = true;
-					console.log(`✓ Found characteristic "${charName}" in ${trait.name} (exact match): ${qaPairs.length} scenarios`);
+					console.log(
+						`✓ Found characteristic "${charName}" in ${trait.name} (exact match): ${qaPairs.length} scenarios`
+					);
 					break;
 				}
-				
+
 				// Try normalized match (handles apostrophe encoding mismatches)
 				for (const jsonKey of Object.keys(trait.data)) {
 					const normalizedJsonKey = normalizeQuotes(jsonKey);
@@ -117,34 +120,40 @@ export async function generateScenariosFromPersonalityData(
 							question,
 							response
 						}));
-						
+
 						allScenarios.push(...qaPairs);
 						found = true;
-						console.log(`✓ Found characteristic "${charName}" in ${trait.name} (normalized match, JSON key: "${jsonKey}"): ${qaPairs.length} scenarios`);
+						console.log(
+							`✓ Found characteristic "${charName}" in ${trait.name} (normalized match, JSON key: "${jsonKey}"): ${qaPairs.length} scenarios`
+						);
 						break;
 					}
 				}
-				
+
 				if (found) break;
 			}
 		}
-		
+
 		if (!found) {
-			console.warn(`✗ Characteristic "${charName}" not found in any trait. Searched: ${searchedTraits.join(', ')}`);
+			console.warn(
+				`✗ Characteristic "${charName}" not found in any trait. Searched: ${searchedTraits.join(', ')}`
+			);
 		}
 	}
-	
-	console.log(`Generated ${allScenarios.length} total scenarios from ${selectedCharacteristics.length} characteristics`);
-	
+
+	console.log(
+		`Generated ${allScenarios.length} total scenarios from ${selectedCharacteristics.length} characteristics`
+	);
+
 	// Shuffle the scenarios to ensure diversity
 	const shuffled = allScenarios.sort(() => Math.random() - 0.5);
-	
+
 	// ============================================================================
 	// SCENARIO LIMIT CONFIGURATION
 	// ============================================================================
 	// To change the number of scenarios returned, update the number below.
 	// Current limit: 5 scenarios
-	// 
+	//
 	// This is the total limit on scenarios returned. The function collects ALL Q&A pairs
 	// for each selected characteristic, shuffles them, and returns the first N to ensure
 	// users get diverse scenarios from their selected personality characteristics.
@@ -154,9 +163,11 @@ export async function generateScenariosFromPersonalityData(
 }
 
 // Legacy function for compatibility - returns only questions
-export async function getQuestionsFromCharacteristics(selectedCharacteristics: string[]): Promise<string[]> {
+export async function getQuestionsFromCharacteristics(
+	selectedCharacteristics: string[]
+): Promise<string[]> {
 	const scenarios = await generateScenariosFromPersonalityData(selectedCharacteristics);
-	return scenarios.map(s => s.question);
+	return scenarios.map((s) => s.question);
 }
 
 // Export for use in other files

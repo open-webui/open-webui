@@ -13,6 +13,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -362,6 +363,19 @@
 	let currentMessageId = null;
 	let currentUtterance = null;
 
+	// Get voice: model-specific > user settings > config default
+	const getVoiceId = () => {
+		// Check for model-specific TTS voice first
+		if (model?.info?.meta?.tts?.voice) {
+			return model.info.meta.tts.voice;
+		}
+		// Fall back to user settings or config default
+		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+			return $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice;
+		}
+		return $config?.audio?.tts?.voice;
+	};
+
 	const speakSpeechSynthesisHandler = (content) => {
 		if ($showCallOverlay) {
 			return new Promise((resolve) => {
@@ -371,12 +385,8 @@
 					if (voices.length > 0) {
 						clearInterval(getVoicesLoop);
 
-						const voice =
-							voices
-								?.filter(
-									(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-								)
-								?.at(0) ?? undefined;
+						const voiceId = getVoiceId();
+						const voice = voices?.filter((v) => v.voiceURI === voiceId)?.at(0) ?? undefined;
 
 						currentUtterance = new SpeechSynthesisUtterance(content);
 						currentUtterance.rate = $settings.audio?.tts?.playbackRate ?? 1;
@@ -467,30 +477,26 @@
 				}
 
 				if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-					const blob = await $TTSWorker
+					const url = await $TTSWorker
 						.generate({
 							text: content,
-							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+							voice: getVoiceId()
 						})
 						.catch((error) => {
 							console.error(error);
 							toast.error(`${error}`);
 						});
 
-					if (blob) {
-						audioCache.set(content, new Audio(blob));
+					if (url) {
+						audioCache.set(content, new Audio(url));
 					}
 				} else if ($config.audio.tts.engine !== '') {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							: $config?.audio?.tts?.voice,
-						content
-					).catch((error) => {
-						console.error(error);
-						return null;
-					});
+					const res = await synthesizeOpenAISpeech(localStorage.token, getVoiceId(), content).catch(
+						(error) => {
+							console.error(error);
+							return null;
+						}
+					);
 
 					if (res) {
 						const blob = await res.blob();
@@ -759,14 +765,8 @@
 								? ' size-16'
 								: rmsLevel * 100 > 1
 									? 'size-14'
-									: 'size-12'}  transition-all rounded-full {(model?.info?.meta
-							?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
-							? ' bg-cover bg-center bg-no-repeat'
-							: 'bg-black dark:bg-white'}  bg-black dark:bg-white"
-						style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
-						'/static/favicon.png'
-							? `background-image: url('${model?.info?.meta?.profile_image_url}');`
-							: ''}
+									: 'size-12'}  transition-all rounded-full bg-cover bg-center bg-no-repeat"
+						style={`background-image: url('${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}&voice=true');`}
 					/>
 				{/if}
 				<!-- navbar -->
@@ -841,14 +841,8 @@
 									? 'size-48'
 									: rmsLevel * 100 > 1
 										? 'size-44'
-										: 'size-40'}  transition-all rounded-full {(model?.info?.meta
-								?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
-								? ' bg-cover bg-center bg-no-repeat'
-								: 'bg-black dark:bg-white'} "
-							style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
-							'/static/favicon.png'
-								? `background-image: url('${model?.info?.meta?.profile_image_url}');`
-								: ''}
+										: 'size-40'} transition-all rounded-full bg-cover bg-center bg-no-repeat"
+							style={`background-image: url('${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}&voice=true');`}
 						/>
 					{/if}
 				</button>

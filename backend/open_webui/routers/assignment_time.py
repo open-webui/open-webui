@@ -22,7 +22,9 @@ class AssignmentSessionActivityPayload(BaseModel):
     active_ms_cumulative: int
 
 
-@router.post("/assignment/session-activity", response_model=AssignmentSessionActivityModel)
+@router.post(
+    "/assignment/session-activity", response_model=AssignmentSessionActivityModel
+)
 async def post_assignment_session_activity(
     payload: AssignmentSessionActivityPayload,
     user: UserModel = Depends(get_verified_user),
@@ -41,6 +43,3 @@ async def post_assignment_session_activity(
     except Exception as e:
         log.error(f"Error posting assignment session activity: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-
-

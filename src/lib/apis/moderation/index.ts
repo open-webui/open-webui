@@ -1,14 +1,14 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export interface ModerationRequest {
-	moderation_types: string[];  // Changed to array for multiple selections
+	moderation_types: string[]; // Changed to array for multiple selections
 	child_prompt?: string;
 	model?: string;
 	max_chars?: number;
 }
 
 export interface ModerationResponse {
-	moderation_types: string[];  // Updated to match Viki's new response structure
+	moderation_types: string[]; // Updated to match Viki's new response structure
 	refactored_response: string;
 	system_prompt_rule: string;
 	model: string;
@@ -16,163 +16,175 @@ export interface ModerationResponse {
 }
 
 export interface ModerationSessionPayload {
-  session_id?: string;  // For updates
-  user_id: string;
-  child_id: string;
-  scenario_index: number;
-  attempt_number: number;
-  version_number: number;
-  session_number?: number;
-  scenario_prompt: string;
-  original_response: string;
-  initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
-  concern_level?: number;
-  concern_reason?: string;
-  satisfaction_level?: number;
-  satisfaction_reason?: string;
-  next_action?: 'try_again' | 'move_on';
-  decided_at?: number;
-  highlights_saved_at?: number;
-  saved_at?: number;
-  strategies?: string[];
-  custom_instructions?: string[];  // Simplified from {id, text}[] to string[]
-  highlighted_texts?: Array<{text: string; start_offset?: number; end_offset?: number}>;
-  responseHighlightedHTML?: string;  // HTML with <mark> elements for response
-  promptHighlightedHTML?: string;     // HTML with <mark> elements for prompt
-  refactored_response?: string;
-  is_final_version?: boolean;
-  session_metadata?: Record<string, any>;
-  // Attention check tracking
-  is_attention_check?: boolean;
-  attention_check_selected?: boolean;
-  attention_check_passed?: boolean;
+	session_id?: string; // For updates
+	user_id: string;
+	child_id: string;
+	scenario_index: number;
+	attempt_number: number;
+	version_number: number;
+	session_number?: number;
+	scenario_prompt: string;
+	original_response: string;
+	initial_decision?: 'accept_original' | 'moderate' | 'not_applicable';
+	concern_level?: number;
+	concern_reason?: string;
+	satisfaction_level?: number;
+	satisfaction_reason?: string;
+	next_action?: 'try_again' | 'move_on';
+	decided_at?: number;
+	highlights_saved_at?: number;
+	saved_at?: number;
+	strategies?: string[];
+	custom_instructions?: string[]; // Simplified from {id, text}[] to string[]
+	highlighted_texts?: Array<{ text: string; start_offset?: number; end_offset?: number }>;
+	responseHighlightedHTML?: string; // HTML with <mark> elements for response
+	promptHighlightedHTML?: string; // HTML with <mark> elements for prompt
+	refactored_response?: string;
+	is_final_version?: boolean;
+	session_metadata?: Record<string, any>;
+	// Attention check tracking
+	is_attention_check?: boolean;
+	attention_check_selected?: boolean;
+	attention_check_passed?: boolean;
 }
 
 export interface ModerationSessionResponse {
-  id: string;
-  user_id: string;
-  child_id: string;
-  scenario_index: number;
-  attempt_number: number;
-  version_number: number;
-  session_number?: number;
-  scenario_prompt: string;
-  original_response: string;
-  initial_decision?: string;
-  is_final_version: boolean;
-  concern_level?: number;
-  concern_reason?: string;
-  satisfaction_level?: number;
-  satisfaction_reason?: string;
-  next_action?: string;
-  decided_at?: number;
-  highlights_saved_at?: number;
-  saved_at?: number;
-  strategies?: string[];
-  custom_instructions?: string[];
-  highlighted_texts?: Array<{text: string; start_offset?: number; end_offset?: number}>;
-  responseHighlightedHTML?: string;  // HTML with <mark> elements for response
-  promptHighlightedHTML?: string;     // HTML with <mark> elements for prompt
-  refactored_response?: string;
-  session_metadata?: Record<string, any>;
-  is_attention_check: boolean;
-  attention_check_selected: boolean;
-  attention_check_passed: boolean;
-  created_at: number;
-  updated_at: number;
+	id: string;
+	user_id: string;
+	child_id: string;
+	scenario_index: number;
+	attempt_number: number;
+	version_number: number;
+	session_number?: number;
+	scenario_prompt: string;
+	original_response: string;
+	initial_decision?: string;
+	is_final_version: boolean;
+	concern_level?: number;
+	concern_reason?: string;
+	satisfaction_level?: number;
+	satisfaction_reason?: string;
+	next_action?: string;
+	decided_at?: number;
+	highlights_saved_at?: number;
+	saved_at?: number;
+	strategies?: string[];
+	custom_instructions?: string[];
+	highlighted_texts?: Array<{ text: string; start_offset?: number; end_offset?: number }>;
+	responseHighlightedHTML?: string; // HTML with <mark> elements for response
+	promptHighlightedHTML?: string; // HTML with <mark> elements for prompt
+	refactored_response?: string;
+	session_metadata?: Record<string, any>;
+	is_attention_check: boolean;
+	attention_check_selected: boolean;
+	attention_check_passed: boolean;
+	created_at: number;
+	updated_at: number;
 }
 
 export interface SessionActivityPayload {
-  user_id: string;
-  child_id: string;
-  session_number: number;
-  active_ms_cumulative: number;
+	user_id: string;
+	child_id: string;
+	session_number: number;
+	active_ms_cumulative: number;
 }
 
 export interface SessionActivityResponse {
-  id: string;
-  user_id: string;
-  child_id: string;
-  session_number: number;
-  active_ms_delta: number;
-  cumulative_ms: number;
-  created_at: number;
+	id: string;
+	user_id: string;
+	child_id: string;
+	session_number: number;
+	active_ms_delta: number;
+	cumulative_ms: number;
+	created_at: number;
 }
 
-export const postSessionActivity = async (token: string, payload: SessionActivityPayload): Promise<SessionActivityResponse> => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/session-activity`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) throw await res.json();
-  return res.json();
+export const postSessionActivity = async (
+	token: string,
+	payload: SessionActivityPayload
+): Promise<SessionActivityResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/session-activity`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
 };
 
 // New simplified API functions
-export const saveModerationSession = async (token: string, payload: ModerationSessionPayload): Promise<ModerationSessionResponse> => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) throw await res.json();
-  return res.json();
+export const saveModerationSession = async (
+	token: string,
+	payload: ModerationSessionPayload
+): Promise<ModerationSessionResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
 };
 
-export const getModerationSessions = async (token: string, child_id?: string): Promise<ModerationSessionResponse[]> => {
-  const url = new URL(`${WEBUI_API_BASE_URL}/moderation/sessions`);
-  if (child_id) url.searchParams.set('child_id', child_id);
+export const getModerationSessions = async (
+	token: string,
+	child_id?: string
+): Promise<ModerationSessionResponse[]> => {
+	const url = new URL(`${WEBUI_API_BASE_URL}/moderation/sessions`);
+	if (child_id) url.searchParams.set('child_id', child_id);
 
-  const res = await fetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
-  });
-  if (!res.ok) throw await res.json();
-  return res.json();
+	const res = await fetch(url.toString(), {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
 };
 
-export const getModerationSession = async (token: string, session_id: string): Promise<ModerationSessionResponse> => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions/${session_id}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
-  });
-  if (!res.ok) throw await res.json();
-  return res.json();
+export const getModerationSession = async (
+	token: string,
+	session_id: string
+): Promise<ModerationSessionResponse> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions/${session_id}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
 };
 
 export const deleteModerationSession = async (token: string, session_id: string): Promise<void> => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions/${session_id}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
-  });
-  if (!res.ok) throw await res.json();
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/sessions/${session_id}`, {
+		method: 'DELETE',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
 };
 
 // Keep the existing moderation apply function for generating responses
 export const applyModeration = async (
 	token: string,
-	moderationTypes: string[],  // Standard moderation types
-	childPrompt: string,  // Required: child's prompt/question
-	customInstructions?: string[],  // Optional custom instruction texts
-	originalResponse?: string,  // For refactoring mode
-	highlightedTexts?: string[],  // Phrases parent flagged
-	childAge?: string  // Child's age for age-appropriate moderation
+	moderationTypes: string[], // Standard moderation types
+	childPrompt: string, // Required: child's prompt/question
+	customInstructions?: string[], // Optional custom instruction texts
+	originalResponse?: string, // For refactoring mode
+	highlightedTexts?: string[], // Phrases parent flagged
+	childAge?: string // Child's age for age-appropriate moderation
 ): Promise<ModerationResponse | null> => {
 	let error = null;
 
@@ -188,10 +200,10 @@ export const applyModeration = async (
 			// model: 'gpt-5.2-pro-2025-12-11',  // Commented out: using chat-latest instead
 			model: 'gpt-5.2-chat-latest',
 			max_chars: 600,
-			custom_instructions: customInstructions || [],  // Send custom instructions array
-			original_response: originalResponse || null,  // Optional: for refactoring mode
-			highlighted_texts: highlightedTexts || [],  // Optional: flagged texts
-			child_age: childAge || null  // Optional: child's age for "Tailor to Age Group" strategy
+			custom_instructions: customInstructions || [], // Send custom instructions array
+			original_response: originalResponse || null, // Optional: for refactoring mode
+			highlighted_texts: highlightedTexts || [], // Optional: flagged texts
+			child_age: childAge || null // Optional: child's age for "Tailor to Age Group" strategy
 		})
 	})
 		.then(async (res) => {
@@ -246,7 +258,7 @@ export interface ScenarioAssignRequest {
 	participant_id: string;
 	child_profile_id?: string;
 	assignment_position?: number;
-	alpha?: number;  // Weighted sampling alpha parameter (default: 1.0)
+	alpha?: number; // Weighted sampling alpha parameter (default: 1.0)
 }
 
 export interface ScenarioAssignResponse {
@@ -274,13 +286,13 @@ export interface ScenarioStatusUpdateRequest {
 export interface ScenarioStatusResponse {
 	status: string;
 	assignment_id: string;
-	issue_any?: number;  // For completed status
-	reassigned?: boolean;  // For abandoned status
-	new_assignment_id?: string;  // For abandoned status with reassignment
-	new_scenario_id?: string;  // For abandoned status with reassignment
-	new_prompt_text?: string;  // For abandoned status with reassignment
-	new_response_text?: string;  // For abandoned status with reassignment
-	message?: string;  // For abandoned status without reassignment
+	issue_any?: number; // For completed status
+	reassigned?: boolean; // For abandoned status
+	new_assignment_id?: string; // For abandoned status with reassignment
+	new_scenario_id?: string; // For abandoned status with reassignment
+	new_prompt_text?: string; // For abandoned status with reassignment
+	new_response_text?: string; // For abandoned status with reassignment
+	message?: string; // For abandoned status without reassignment
 }
 
 export interface HighlightCreateRequest {
@@ -337,14 +349,14 @@ export const startScenario = async (
 };
 
 export interface ScenarioDurationUpdateRequest {
-  assignment_id: string;
-  duration_seconds: number;
+	assignment_id: string;
+	duration_seconds: number;
 }
 
 export interface ScenarioDurationUpdateResponse {
-  status: string;
-  assignment_id: string;
-  duration_seconds: number;
+	status: string;
+	assignment_id: string;
+	duration_seconds: number;
 }
 
 export const updateScenarioDuration = async (

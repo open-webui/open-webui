@@ -57,7 +57,9 @@ class ExitQuizForm(BaseModel):
 
 
 class ExitQuizTable:
-    def insert_new_response(self, form_data: ExitQuizForm, user_id: str) -> Optional[ExitQuizModel]:
+    def insert_new_response(
+        self, form_data: ExitQuizForm, user_id: str
+    ) -> Optional[ExitQuizModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
             ts = int(time.time_ns())
@@ -83,9 +85,13 @@ class ExitQuizTable:
             db.refresh(row)
             return ExitQuizModel.model_validate(row) if row else None
 
-    def get_responses_by_user(self, user_id: str, child_id: Optional[str] = None) -> list[ExitQuizModel]:
+    def get_responses_by_user(
+        self, user_id: str, child_id: Optional[str] = None
+    ) -> list[ExitQuizModel]:
         with get_db() as db:
-            query = db.query(ExitQuizResponse).filter(ExitQuizResponse.user_id == user_id)
+            query = db.query(ExitQuizResponse).filter(
+                ExitQuizResponse.user_id == user_id
+            )
             if child_id:
                 query = query.filter(ExitQuizResponse.child_id == child_id)
             rows = query.order_by(ExitQuizResponse.created_at.desc()).all()
@@ -100,7 +106,9 @@ class ExitQuizTable:
             )
             return ExitQuizModel.model_validate(row) if row else None
 
-    def update_response_by_id(self, id: str, user_id: str, updated: ExitQuizForm) -> Optional[ExitQuizModel]:
+    def update_response_by_id(
+        self, id: str, user_id: str, updated: ExitQuizForm
+    ) -> Optional[ExitQuizModel]:
         with get_db() as db:
             row = (
                 db.query(ExitQuizResponse)
@@ -134,6 +142,3 @@ class ExitQuizTable:
 
 
 ExitQuizzes = ExitQuizTable()
-
-
-

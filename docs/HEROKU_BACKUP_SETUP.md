@@ -11,26 +11,31 @@
 ## Scheduled Commands
 
 ### View Current Backup Schedule
+
 ```bash
 heroku pg:backups:schedules --app contextquiz-openwebui-kidsgpt
 ```
 
 ### View All Backups
+
 ```bash
 heroku pg:backups --app contextquiz-openwebui-kidsgpt
 ```
 
 ### Create Manual Backup
+
 ```bash
 heroku pg:backups:capture --app contextquiz-openwebui-kidsgpt
 ```
 
 ### Download Backup
+
 ```bash
 heroku pg:backups:download --app contextquiz-openwebui-kidsgpt
 ```
 
 ### Restore from Backup
+
 ```bash
 heroku pg:backups:restore BACKUP_ID postgresql-opaque-40379 --app contextquiz-openwebui-kidsgpt
 ```
@@ -38,6 +43,7 @@ heroku pg:backups:restore BACKUP_ID postgresql-opaque-40379 --app contextquiz-op
 ## Important Notes
 
 ### Plan Limitations (Essential-0)
+
 - **No Automated Backups**: The `essential-0` plan does not support automatic daily backups
 - **Manual Backups Only**: Only manual backups can be created and scheduled
 - **No Continuous Protection**: Point-in-time recovery is not available
@@ -46,6 +52,7 @@ heroku pg:backups:restore BACKUP_ID postgresql-opaque-40379 --app contextquiz-op
 ### Upgrade Path for Automated Backups
 
 To enable true automated daily backups, consider upgrading to:
+
 - **Standard-0**: Includes daily automated backups with 7-day retention
 - **Premium-0**: Includes daily automated backups with 30-day retention + continuous protection
 
@@ -62,6 +69,7 @@ Since the current plan doesn't support automated backups, consider:
 ### Checking Backup Status
 
 Monitor your backups regularly:
+
 ```bash
 # View recent backups
 heroku pg:backups --app contextquiz-openwebui-kidsgpt
@@ -75,20 +83,25 @@ heroku pg:backups:info BACKUP_ID --app contextquiz-openwebui-kidsgpt
 To verify your backup system works correctly:
 
 1. **Create a test backup**:
+
    ```bash
    heroku pg:backups:capture --app contextquiz-openwebui-kidsgpt
    ```
 
 2. **Check backup status**:
+
    ```bash
    heroku pg:backups --app contextquiz-openwebui-kidsgpt
    ```
+
    Look for "Completed" status and note the backup ID (e.g., `b002`)
 
 3. **Get detailed backup info**:
+
    ```bash
    heroku pg:backups:info BACKUP_ID --app contextquiz-openwebui-kidsgpt
    ```
+
    Verify:
    - Status: `Completed`
    - Type: `Manual` or `Scheduled`
@@ -102,8 +115,9 @@ To verify your backup system works correctly:
    This downloads a `.dump` file you can inspect locally
 
 **Expected Results**:
+
 - ✅ Backup completes in under 1 minute (for small databases)
-- ✅ Status shows "Completed" 
+- ✅ Status shows "Completed"
 - ✅ All tables are backed up (see backup logs)
 - ✅ Backup size is significantly compressed
 - ✅ Backup ID is listed in backup history
@@ -120,4 +134,3 @@ To verify your backup system works correctly:
 - [Heroku Postgres Backups Documentation](https://devcenter.heroku.com/articles/heroku-postgres-backups)
 - [Heroku Scheduler](https://devcenter.heroku.com/articles/scheduler)
 - [Heroku Postgres Plans](https://devcenter.heroku.com/articles/heroku-postgres-plans)
-

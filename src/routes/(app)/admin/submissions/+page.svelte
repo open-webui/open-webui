@@ -5,26 +5,24 @@
 
 	import { user } from '$lib/stores';
 	import { getUserSubmissions, type UserSubmissionsResponse } from '$lib/apis/workflow';
-import { getAllUsers } from '$lib/apis/users';
+	import { getAllUsers } from '$lib/apis/users';
 
 	// State
 	let selectedUserId: string = '';
 	let submissionsData: UserSubmissionsResponse | null = null;
 	let users: any[] = [];
 	let loading = false;
- let error: string = '';
-
-
+	let error: string = '';
 
 	// State for expanded dropdowns/accordions
 	let expandedScenarios: Record<string, boolean> = {};
 	let expandedVersions: Record<string, boolean> = {};
-	
+
 	// Force reactivity with a counter
 	let expansionCounter = 0;
 
 	// Custom scenario detection
-	const CUSTOM_SCENARIO_MARKER = "[Create Your Own Scenario]";
+	const CUSTOM_SCENARIO_MARKER = '[Create Your Own Scenario]';
 
 	// Helpers to support multi-session displays (session_number optional)
 	const getSessionNumber = (obj: any) => Number(obj?.session_number);
@@ -53,19 +51,19 @@ import { getAllUsers } from '$lib/apis/users';
 			const childId = s.child_id || 'unknown';
 			(byChild[childId] ||= []).push(s);
 		}
-		
+
 		return Object.entries(byChild).map(([childId, sessions]) => {
 			// Lookup child name from profiles
 			const profile = childProfiles.find((p: any) => p.id === childId);
 			const childName = profile?.name || 'Unknown';
-			
+
 			// Then group by scenario within this child
 			const byScenario: Record<string, any[]> = {};
 			for (const s of sessions) {
 				const scenarioKey = `${s.scenario_index ?? -1}`;
 				(byScenario[scenarioKey] ||= []).push(s);
 			}
-			
+
 			const scenarios = Object.entries(byScenario).map(([k, list]) => {
 				const scenarioIndex = Number(k);
 				return {
@@ -76,25 +74,25 @@ import { getAllUsers } from '$lib/apis/users';
 					original_response: list[0]?.original_response || ''
 				};
 			});
-			
-		return {
-			child_id: childId,
-			child_name: childName,
-			scenarios: scenarios.sort((a, b) => a.scenario_index - b.scenario_index)
-		};
-	});
-};
 
-const isCustomScenario = (scenarioIndex: number, allScenarios: any[]) => {
-	// Custom scenarios are always the last scenario in the list
-	// They are typically at index 8 (after 8 personality-based scenarios)
-	// but can be at higher indices if there are more scenarios
-	if (allScenarios.length === 0) return false;
-	const maxIndex = Math.max(...allScenarios.map(s => s.scenario_index));
-	return scenarioIndex === maxIndex;
-};
+			return {
+				child_id: childId,
+				child_name: childName,
+				scenarios: scenarios.sort((a, b) => a.scenario_index - b.scenario_index)
+			};
+		});
+	};
 
-function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
+	const isCustomScenario = (scenarioIndex: number, allScenarios: any[]) => {
+		// Custom scenarios are always the last scenario in the list
+		// They are typically at index 8 (after 8 personality-based scenarios)
+		// but can be at higher indices if there are more scenarios
+		if (allScenarios.length === 0) return false;
+		const maxIndex = Math.max(...allScenarios.map((s) => s.scenario_index));
+		return scenarioIndex === maxIndex;
+	};
+
+	function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 		const key = `${childId}::${scenarioIndex}`;
 		const currentValue = expandedScenarios[key];
 		expandedScenarios = { ...expandedScenarios, [key]: !currentValue };
@@ -116,7 +114,7 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 		return expandedVersions[versionId] === true;
 	}
 
-		onMount(async () => {
+	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
 			return;
@@ -139,7 +137,7 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 		if (!selectedUserId) return;
 
 		loading = true;
-    error = '';
+		error = '';
 		submissionsData = null;
 
 		try {
@@ -148,8 +146,8 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 				submissionsData = await getUserSubmissions(token, selectedUserId);
 				toast.success('User submissions loaded successfully');
 			}
-    } catch (err: any) {
-      error = err?.message || 'Failed to load user submissions';
+		} catch (err: any) {
+			error = err?.message || 'Failed to load user submissions';
 			toast.error(error);
 		} finally {
 			loading = false;
@@ -192,41 +190,56 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 	};
 
 	const getSelectedUser = () => {
-		return users.find(u => u.id === selectedUserId);
+		return users.find((u) => u.id === selectedUserId);
 	};
 
 	const getAttentionCheckStats = (scenarios: any[]) => {
-		const attentionChecks = scenarios.flatMap(s => s.versions)
-			.filter(v => v.is_attention_check);
-		const passed = attentionChecks.filter(v => v.attention_check_passed).length;
+		const attentionChecks = scenarios
+			.flatMap((s) => s.versions)
+			.filter((v) => v.is_attention_check);
+		const passed = attentionChecks.filter((v) => v.attention_check_passed).length;
 		return { total: attentionChecks.length, passed };
 	};
 
 	const parseExitQuizAnswers = (answers: any) => {
 		if (!answers) return null;
-		
+
 		// Helper to format parenting style
 		const formatParentingStyle = (style: string) => {
 			if (!style) return 'Not answered';
 			const styles: Record<string, string> = {
-				'A': 'I set clear rules and follow through, but I explain my reasons, listen to my child\'s point of view, and encourage independence.',
-				'B': 'I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren\'t followed.',
-				'C': 'I\'m warm and supportive with few rules or demands; my child mostly sets their own routines and limits.',
-				'D': 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.',
-				'E': 'None of these fits me / It depends on the situation.',
+				A: "I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.",
+				B: "I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.",
+				C: "I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.",
+				D: 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.',
+				E: 'None of these fits me / It depends on the situation.',
 				// Legacy values for backward compatibility
-				'authoritative': 'I set clear rules and follow through, but I explain my reasons, listen to my child\'s point of view, and encourage independence.',
-				'authoritarian': 'I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren\'t followed.',
-				'permissive': 'I\'m warm and supportive with few rules or demands; my child mostly sets their own routines and limits.',
-				'neglectful': 'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.'
+				authoritative:
+					"I set clear rules and follow through, but I explain my reasons, listen to my child's point of view, and encourage independence.",
+				authoritarian:
+					"I set strict rules and expect obedience; I rarely negotiate and use firm consequences when rules aren't followed.",
+				permissive:
+					"I'm warm and supportive with few rules or demands; my child mostly sets their own routines and limits.",
+				neglectful:
+					'I give my child a lot of freedom and usually take a hands-off approach unless safety or basic needs require me to step in.'
 			};
 			return styles[style] || style;
 		};
-		
+
 		return {
-			genai_familiarity: answers['1'] || answers['genaiFamiliarity'] || answers['genai_familiarity'] || 'Not answered',
-			usage_frequency: answers['2'] || answers['genaiUsageFrequency'] || answers['usage_frequency'] || 'Not answered',
-			parenting_style: formatParentingStyle(answers['parentingStyle'] || answers['parenting_style']),
+			genai_familiarity:
+				answers['1'] ||
+				answers['genaiFamiliarity'] ||
+				answers['genai_familiarity'] ||
+				'Not answered',
+			usage_frequency:
+				answers['2'] ||
+				answers['genaiUsageFrequency'] ||
+				answers['usage_frequency'] ||
+				'Not answered',
+			parenting_style: formatParentingStyle(
+				answers['parentingStyle'] || answers['parenting_style']
+			),
 			raw: answers
 		};
 	};
@@ -238,7 +251,7 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 		const hours = Math.floor(totalSeconds / 3600);
 		const minutes = Math.floor((totalSeconds % 3600) / 60);
 		const seconds = totalSeconds % 60;
-		
+
 		if (hours > 0) {
 			return `${hours}h ${minutes}m ${seconds}s`;
 		} else if (minutes > 0) {
@@ -269,38 +282,41 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 			return 0;
 		}
 		const userId = submissionsData.user_info.id;
-		
+
 		// After migration, assignment time is tracked by session_number directly
 		// The backend returns keys as: {user_id}::{session_number}
 		// So we can do a direct lookup!
 		// Ensure sessionNumber is a number for consistent key matching
 		const sessionNum = Number(sessionNumber);
 		const key = `${userId}::${sessionNum}`;
-		
+
 		// Try direct lookup first
 		let value = submissionsData.assignment_time_totals[key];
-		
+
 		// If not found, try with session_number as string (defensive)
 		if (value === undefined || value === null) {
 			const keyAsString = `${userId}::${String(sessionNum)}`;
 			value = submissionsData.assignment_time_totals[keyAsString];
 		}
-		
+
 		// If still not found, try all keys to see if there's a match with different format
 		if (value === undefined || value === null) {
 			const allKeys = Object.keys(submissionsData.assignment_time_totals);
-			const matchingKey = allKeys.find(k => {
+			const matchingKey = allKeys.find((k) => {
 				const parts = k.split('::');
 				return parts.length === 2 && parts[0] === userId && Number(parts[1]) === sessionNum;
 			});
 			if (matchingKey) {
 				value = submissionsData.assignment_time_totals[matchingKey];
-				console.log('[Assignment Time] Found match with different key format:', { matchingKey, value });
+				console.log('[Assignment Time] Found match with different key format:', {
+					matchingKey,
+					value
+				});
 			}
 		}
-		
+
 		const finalValue = value || 0;
-		
+
 		console.log('[Assignment Time] Direct lookup by session_number:', {
 			sessionNumber,
 			sessionNum,
@@ -308,9 +324,12 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 			key,
 			value: finalValue,
 			allKeys: Object.keys(submissionsData.assignment_time_totals),
-			allEntries: Object.entries(submissionsData.assignment_time_totals).map(([k, v]) => ({ key: k, value: v }))
+			allEntries: Object.entries(submissionsData.assignment_time_totals).map(([k, v]) => ({
+				key: k,
+				value: v
+			}))
 		});
-		
+
 		return finalValue;
 	};
 
@@ -323,23 +342,23 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 
 	const groupAllDataBySession = () => {
 		if (!submissionsData) return [];
-		
+
 		// Get all unique session numbers from moderation sessions
 		const sessionNumbers = new Set<number>();
-		submissionsData.moderation_sessions.forEach(s => {
+		submissionsData.moderation_sessions.forEach((s) => {
 			const sn = getSessionNumber(s);
 			if (Number.isFinite(sn)) sessionNumbers.add(sn);
 		});
-		
+
 		// Also check child profiles and exit quiz for session numbers
-		submissionsData.child_profiles.forEach(p => {
+		submissionsData.child_profiles.forEach((p) => {
 			if (p.session_number) sessionNumbers.add(Number(p.session_number));
 		});
-		
+
 		// IMPORTANT: Also include session numbers from assignment_time_totals
 		// This ensures sessions with only assignment time data (but no moderation/child profiles yet) are shown
 		if (submissionsData.assignment_time_totals) {
-			Object.keys(submissionsData.assignment_time_totals).forEach(key => {
+			Object.keys(submissionsData.assignment_time_totals).forEach((key) => {
 				const parts = key.split('::');
 				if (parts.length === 2 && parts[0] === submissionsData.user_info?.id) {
 					const sessionNum = Number(parts[1]);
@@ -349,42 +368,54 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 				}
 			});
 		}
-		
+
 		// Sort sessions descending (latest first)
 		const sortedSessions = Array.from(sessionNumbers).sort((a, b) => b - a);
-		
+
 		console.log('[Session Grouping] All sessions found:', {
-			fromModeration: Array.from(new Set(submissionsData.moderation_sessions.map(s => getSessionNumber(s)).filter(Number.isFinite))),
-			fromChildProfiles: Array.from(new Set(submissionsData.child_profiles.map(p => p.session_number).filter(Boolean))),
-			fromAssignmentTime: submissionsData.assignment_time_totals ? Object.keys(submissionsData.assignment_time_totals).map(k => {
-				const parts = k.split('::');
-				return parts.length === 2 && parts[0] === submissionsData.user_info?.id ? Number(parts[1]) : null;
-			}).filter(Number.isFinite) : [],
+			fromModeration: Array.from(
+				new Set(
+					submissionsData.moderation_sessions
+						.map((s) => getSessionNumber(s))
+						.filter(Number.isFinite)
+				)
+			),
+			fromChildProfiles: Array.from(
+				new Set(submissionsData.child_profiles.map((p) => p.session_number).filter(Boolean))
+			),
+			fromAssignmentTime: submissionsData.assignment_time_totals
+				? Object.keys(submissionsData.assignment_time_totals)
+						.map((k) => {
+							const parts = k.split('::');
+							return parts.length === 2 && parts[0] === submissionsData.user_info?.id
+								? Number(parts[1])
+								: null;
+						})
+						.filter(Number.isFinite)
+				: [],
 			allUniqueSessions: sortedSessions,
 			totalSessions: sortedSessions.length
 		});
-		
-		return sortedSessions.map(sessionNum => {
+
+		return sortedSessions.map((sessionNum) => {
 			// Get child profiles for this session
 			const childProfiles = submissionsData.child_profiles.filter(
-				p => Number(p.session_number) === sessionNum
+				(p) => Number(p.session_number) === sessionNum
 			);
-			
+
 			// Get moderation sessions for this session
 			const moderationSessions = submissionsData.moderation_sessions.filter(
-				s => getSessionNumber(s) === sessionNum
+				(s) => getSessionNumber(s) === sessionNum
 			);
-			
+
 			// Get exit quiz responses for this session (match by child_id and attempt_number)
-			const exitQuizResponses = submissionsData.exit_quiz_responses.filter(
-				r => {
-					// Match if the child profile exists in this session and attempt matches
-					return childProfiles.some(p => 
-						p.id === r.child_id && Number(r.attempt_number) === sessionNum
-					);
-				}
-			);
-			
+			const exitQuizResponses = submissionsData.exit_quiz_responses.filter((r) => {
+				// Match if the child profile exists in this session and attempt matches
+				return childProfiles.some(
+					(p) => p.id === r.child_id && Number(r.attempt_number) === sessionNum
+				);
+			});
+
 			return {
 				session_number: sessionNum,
 				child_profiles: childProfiles,
@@ -422,7 +453,10 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 	<div class="flex-1 overflow-auto p-6">
 		<!-- User Selection -->
 		<div class="mb-6">
-			<label for="user-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+			<label
+				for="user-select"
+				class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+			>
 				Select User
 			</label>
 			<div class="flex gap-4">
@@ -450,7 +484,9 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 		</div>
 
 		{#if error}
-			<div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+			<div
+				class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+			>
 				<p class="text-red-800 dark:text-red-200">{error}</p>
 			</div>
 		{/if}
@@ -462,15 +498,21 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<div>
 						<span class="text-sm text-gray-600 dark:text-gray-400">Name:</span>
-						<p class="font-medium text-gray-900 dark:text-white">{submissionsData.user_info.name}</p>
+						<p class="font-medium text-gray-900 dark:text-white">
+							{submissionsData.user_info.name}
+						</p>
 					</div>
 					<div>
 						<span class="text-sm text-gray-600 dark:text-gray-400">Email:</span>
-						<p class="font-medium text-gray-900 dark:text-white">{submissionsData.user_info.email}</p>
+						<p class="font-medium text-gray-900 dark:text-white">
+							{submissionsData.user_info.email}
+						</p>
 					</div>
 					<div>
 						<span class="text-sm text-gray-600 dark:text-gray-400">User ID:</span>
-						<p class="font-medium text-gray-900 dark:text-white font-mono text-sm">{submissionsData.user_info.id}</p>
+						<p class="font-medium text-gray-900 dark:text-white font-mono text-sm">
+							{submissionsData.user_info.id}
+						</p>
 					</div>
 				</div>
 			</div>
@@ -479,12 +521,21 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 			<div class="space-y-6">
 				{#each groupAllDataBySession() as sessionData}
 					{@const totalAssignmentTime = getTotalSessionAssignmentTime(sessionData.session_number)}
-					{@const assignmentTimeByChild = getSessionAssignmentTimeByChild(sessionData.session_number)}
-					{@const _debug = console.log('[Assignment Time Display]', { sessionNumber: sessionData.session_number, totalAssignmentTime, formatted: formatTimeSpent(totalAssignmentTime) }) || true}
-					
+					{@const assignmentTimeByChild = getSessionAssignmentTimeByChild(
+						sessionData.session_number
+					)}
+					{@const _debug =
+						console.log('[Assignment Time Display]', {
+							sessionNumber: sessionData.session_number,
+							totalAssignmentTime,
+							formatted: formatTimeSpent(totalAssignmentTime)
+						}) || true}
+
 					<div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
 						<!-- Session Header -->
-						<div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-b border-gray-300 dark:border-gray-600">
+						<div
+							class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 border-b border-gray-300 dark:border-gray-600"
+						>
 							<div class="flex items-center justify-between">
 								<h2 class="text-xl font-bold text-gray-900 dark:text-white">
 									Session {sessionData.session_number}
@@ -498,20 +549,22 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 									</div>
 								</div>
 							</div>
-							
+
 							<!-- Per-Child Assignment Time Breakdown -->
 							{#if Object.keys(assignmentTimeByChild).length > 0}
 								<div class="mt-3 flex flex-wrap gap-2">
 									{#each Object.entries(assignmentTimeByChild) as [childId, ms]}
-										{@const childProfile = sessionData.child_profiles.find(p => p.id === childId)}
-										<span class="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded">
+										{@const childProfile = sessionData.child_profiles.find((p) => p.id === childId)}
+										<span
+											class="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded"
+										>
 											{childProfile?.name || childId}: {formatTimeSpent(ms)}
 										</span>
 									{/each}
 								</div>
 							{/if}
 						</div>
-						
+
 						<!-- Session Content -->
 						<div class="p-6 space-y-6">
 							<!-- Child Profiles in this session -->
@@ -520,69 +573,98 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 									Child Profiles ({sessionData.child_profiles.length})
 								</h3>
 								{#if sessionData.child_profiles.length === 0}
-									<p class="text-gray-500 dark:text-gray-400 italic">No child profiles in this session</p>
+									<p class="text-gray-500 dark:text-gray-400 italic">
+										No child profiles in this session
+									</p>
 								{:else}
 									<div class="space-y-3">
 										{#each sessionData.child_profiles as profile}
-								<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-									<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Name:</span>
-											<p class="font-medium text-gray-900 dark:text-white">{profile.name}</p>
-										</div>
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Age:</span>
-											<p class="text-gray-900 dark:text-white">{profile.child_age || 'Not specified'}</p>
-										</div>
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Gender:</span>
-											<p class="text-gray-900 dark:text-white">{profile.child_gender || 'Not specified'}</p>
-										</div>
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Attempt:</span>
-											<p class="text-gray-900 dark:text-white">{profile.attempt_number}</p>
-										</div>
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Session:</span>
-											<p class="text-gray-900 dark:text-white">{profile.session_number}</p>
-										</div>
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Only Child:</span>
-											<p class="text-gray-900 dark:text-white">
-												{profile.is_only_child === true ? 'Yes' : profile.is_only_child === false ? 'No' : 'Not specified'}
-											</p>
-										</div>
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Child AI Use:</span>
-											<p class="text-gray-900 dark:text-white">{profile.child_has_ai_use || 'Not specified'}</p>
-										</div>
-										{#if profile.child_ai_use_contexts && profile.child_ai_use_contexts.length > 0}
-											<div class="md:col-span-2">
-												<span class="text-sm text-gray-600 dark:text-gray-400">AI Use Contexts:</span>
-												<p class="text-gray-900 dark:text-white">{profile.child_ai_use_contexts.join(', ')}</p>
+											<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+												<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Name:</span>
+														<p class="font-medium text-gray-900 dark:text-white">{profile.name}</p>
+													</div>
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Age:</span>
+														<p class="text-gray-900 dark:text-white">
+															{profile.child_age || 'Not specified'}
+														</p>
+													</div>
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Gender:</span>
+														<p class="text-gray-900 dark:text-white">
+															{profile.child_gender || 'Not specified'}
+														</p>
+													</div>
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Attempt:</span>
+														<p class="text-gray-900 dark:text-white">{profile.attempt_number}</p>
+													</div>
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Session:</span>
+														<p class="text-gray-900 dark:text-white">{profile.session_number}</p>
+													</div>
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Only Child:</span
+														>
+														<p class="text-gray-900 dark:text-white">
+															{profile.is_only_child === true
+																? 'Yes'
+																: profile.is_only_child === false
+																	? 'No'
+																	: 'Not specified'}
+														</p>
+													</div>
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400"
+															>Child AI Use:</span
+														>
+														<p class="text-gray-900 dark:text-white">
+															{profile.child_has_ai_use || 'Not specified'}
+														</p>
+													</div>
+													{#if profile.child_ai_use_contexts && profile.child_ai_use_contexts.length > 0}
+														<div class="md:col-span-2">
+															<span class="text-sm text-gray-600 dark:text-gray-400"
+																>AI Use Contexts:</span
+															>
+															<p class="text-gray-900 dark:text-white">
+																{profile.child_ai_use_contexts.join(', ')}
+															</p>
+														</div>
+													{/if}
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400"
+															>Parent Monitoring Level:</span
+														>
+														<p class="text-gray-900 dark:text-white">
+															{profile.parent_llm_monitoring_level || 'Not specified'}
+														</p>
+													</div>
+													{#if profile.child_characteristics}
+														<div class="md:col-span-2">
+															<span class="text-sm text-gray-600 dark:text-gray-400"
+																>Characteristics:</span
+															>
+															<p class="text-gray-900 dark:text-white">
+																{profile.child_characteristics}
+															</p>
+														</div>
+													{/if}
+													<div class="md:col-span-2">
+														<span class="text-sm text-gray-600 dark:text-gray-400">Created:</span>
+														<p class="text-gray-900 dark:text-white">
+															{formatTimestamp(profile.created_at)}
+														</p>
+													</div>
+												</div>
 											</div>
-										{/if}
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Parent Monitoring Level:</span>
-											<p class="text-gray-900 dark:text-white">{profile.parent_llm_monitoring_level || 'Not specified'}</p>
-										</div>
-										{#if profile.child_characteristics}
-											<div class="md:col-span-2">
-												<span class="text-sm text-gray-600 dark:text-gray-400">Characteristics:</span>
-												<p class="text-gray-900 dark:text-white">{profile.child_characteristics}</p>
-											</div>
-										{/if}
-										<div class="md:col-span-2">
-											<span class="text-sm text-gray-600 dark:text-gray-400">Created:</span>
-											<p class="text-gray-900 dark:text-white">{formatTimestamp(profile.created_at)}</p>
-										</div>
-									</div>
-								</div>
-							{/each}
+										{/each}
 									</div>
 								{/if}
 							</div>
-							
+
 							<!-- Moderation Sessions in this session -->
 							<div>
 								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
@@ -594,21 +676,35 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 									<div class="mt-2 space-y-4">
 										{#each groupWithinSessionByChild(sessionData.moderation_sessions, sessionData.child_profiles) as childGroup}
 											{@const attnStats = getAttentionCheckStats(childGroup.scenarios)}
-											{@const timeSpent = getSessionTime(submissionsData.user_info.id, childGroup.child_id, sessionData.session_number)}
+											{@const timeSpent = getSessionTime(
+												submissionsData.user_info.id,
+												childGroup.child_id,
+												sessionData.session_number
+											)}
 											<div class="rounded border border-gray-200 dark:border-gray-700">
-												<div class="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 flex items-center justify-between">
+												<div
+													class="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 flex items-center justify-between"
+												>
 													<div class="flex items-center gap-2">
-														<span class="text-sm font-semibold text-gray-900 dark:text-white">Child: {childGroup.child_name} ({childGroup.child_id})</span>
-														<span class="px-2 py-0.5 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+														<span class="text-sm font-semibold text-gray-900 dark:text-white"
+															>Child: {childGroup.child_name} ({childGroup.child_id})</span
+														>
+														<span
+															class="px-2 py-0.5 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+														>
 															⏱️ {formatTimeSpent(timeSpent)}
 														</span>
 														{#if attnStats.total > 0}
 															{#if attnStats.passed === attnStats.total}
-																<span class="px-2 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+																<span
+																	class="px-2 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+																>
 																	Attention: {attnStats.passed}/{attnStats.total} passed
 																</span>
 															{:else}
-																<span class="px-2 py-0.5 text-xs rounded bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200">
+																<span
+																	class="px-2 py-0.5 text-xs rounded bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200"
+																>
 																	Attention: {attnStats.passed}/{attnStats.total} passed
 																</span>
 															{/if}
@@ -618,46 +714,83 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 												<div class="p-3 space-y-3">
 													{#each childGroup.scenarios as scenario}
 														<div class="rounded border border-gray-200 dark:border-gray-700">
-															<div class="px-3 py-2 bg-white dark:bg-gray-900 flex items-center justify-between">
+															<div
+																class="px-3 py-2 bg-white dark:bg-gray-900 flex items-center justify-between"
+															>
 																<div class="flex items-center gap-3 flex-1 min-w-0">
 																	<div class="flex items-center gap-2">
-																		<span class="text-sm font-medium text-gray-900 dark:text-white">Scenario {scenario.scenario_index}</span>
+																		<span class="text-sm font-medium text-gray-900 dark:text-white"
+																			>Scenario {scenario.scenario_index}</span
+																		>
 																		{#if isCustomScenario(scenario.scenario_index, childGroup.scenarios)}
-																			<span class="px-2 py-0.5 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+																			<span
+																				class="px-2 py-0.5 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+																			>
 																				Custom
 																			</span>
 																		{/if}
 																	</div>
 																	{#if scenario.scenario_prompt}
-																		<span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-md">
-																			{scenario.scenario_prompt.substring(0, 80)}{scenario.scenario_prompt.length > 80 ? '...' : ''}
+																		<span
+																			class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-md"
+																		>
+																			{scenario.scenario_prompt.substring(0, 80)}{scenario
+																				.scenario_prompt.length > 80
+																				? '...'
+																				: ''}
 																		</span>
 																	{/if}
 																</div>
 																<button
-																	on:click={() => toggleScenarioDropdown(childGroup.child_id, scenario.scenario_index)}
+																	on:click={() =>
+																		toggleScenarioDropdown(
+																			childGroup.child_id,
+																			scenario.scenario_index
+																		)}
 																	class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xs whitespace-nowrap ml-2"
 																>
-																	{isScenarioExpanded(childGroup.child_id, scenario.scenario_index) ? '▼' : '▶'} View Full Prompt
+																	{isScenarioExpanded(childGroup.child_id, scenario.scenario_index)
+																		? '▼'
+																		: '▶'} View Full Prompt
 																</button>
 															</div>
 															{#if isScenarioExpanded(childGroup.child_id, scenario.scenario_index) && expansionCounter >= 0}
-																<div class="px-3 py-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+																<div
+																	class="px-3 py-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
+																>
 																	<div class="mb-2">
-																		<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">
-																			{isCustomScenario(scenario.scenario_index, childGroup.scenarios) ? 'Custom Prompt:' : 'Scenario Prompt:'}
+																		<span
+																			class="text-xs font-semibold text-gray-700 dark:text-gray-300"
+																		>
+																			{isCustomScenario(
+																				scenario.scenario_index,
+																				childGroup.scenarios
+																			)
+																				? 'Custom Prompt:'
+																				: 'Scenario Prompt:'}
 																		</span>
-																		<p class="text-sm text-gray-900 dark:text-white mt-1">{scenario.scenario_prompt || 'No prompt available'}</p>
+																		<p class="text-sm text-gray-900 dark:text-white mt-1">
+																			{scenario.scenario_prompt || 'No prompt available'}
+																		</p>
 																	</div>
 																	<div>
-																		<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Original Response:</span>
-																		<p class="text-sm text-gray-900 dark:text-white mt-1">{scenario.original_response || 'No response available'}</p>
+																		<span
+																			class="text-xs font-semibold text-gray-700 dark:text-gray-300"
+																			>Original Response:</span
+																		>
+																		<p class="text-sm text-gray-900 dark:text-white mt-1">
+																			{scenario.original_response || 'No response available'}
+																		</p>
 																	</div>
 																</div>
 															{/if}
 															<div class="overflow-x-auto">
-																<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-																	<thead class="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-800">
+																<table
+																	class="w-full text-sm text-left text-gray-500 dark:text-gray-400"
+																>
+																	<thead
+																		class="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-800"
+																	>
 																		<tr>
 																			<th class="px-3 py-2">Attempt</th>
 																			<th class="px-3 py-2">Version</th>
@@ -670,20 +803,30 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 																	</thead>
 																	<tbody>
 																		{#each scenario.versions as row}
-																			<tr class="bg-white dark:bg-gray-900 border-t dark:border-gray-800">
+																			<tr
+																				class="bg-white dark:bg-gray-900 border-t dark:border-gray-800"
+																			>
 																				<td class="px-3 py-2">{row.attempt_number}</td>
 																				<td class="px-3 py-2">{row.version_number}</td>
 																				<td class="px-3 py-2">{row.initial_decision || 'N/A'}</td>
 																				<td class="px-3 py-2">
 																					{#if row.is_attention_check}
-																						<span class="text-yellow-600 dark:text-yellow-400">✓</span>
+																						<span class="text-yellow-600 dark:text-yellow-400"
+																							>✓</span
+																						>
 																					{/if}
 																				</td>
 																				<td class="px-3 py-2">
 																					{#if row.is_final_version}
-																						<span class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded">Final</span>
+																						<span
+																							class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded"
+																							>Final</span
+																						>
 																					{:else}
-																						<span class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded">Draft</span>
+																						<span
+																							class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded"
+																							>Draft</span
+																						>
 																					{/if}
 																				</td>
 																				<td class="px-3 py-2">{formatTimestamp(row.created_at)}</td>
@@ -701,19 +844,25 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 																					<td colspan="7" class="px-4 py-3">
 																						<div class="space-y-3">
 																							{#if row.is_attention_check}
-																								<div class="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
-																									<div class="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+																								<div
+																									class="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800"
+																								>
+																									<div
+																										class="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-2"
+																									>
 																										Attention Check
 																									</div>
 																									<div class="space-y-1 text-sm">
-																										<div>Selected "I read the instructions": 
+																										<div>
+																											Selected "I read the instructions":
 																											{#if row.attention_check_selected}
 																												<span class="text-green-600">✓ Yes</span>
 																											{:else}
 																												<span class="text-red-600">✗ No</span>
 																											{/if}
 																										</div>
-																										<div>Status: 
+																										<div>
+																											Status:
 																											{#if row.attention_check_passed}
 																												<span class="text-green-600">✓ PASSED</span>
 																											{:else}
@@ -725,48 +874,85 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 																							{/if}
 																							{#if row.strategies && row.strategies.length > 0}
 																								<div>
-																									<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Strategies:</span>
+																									<span
+																										class="text-xs font-semibold text-gray-700 dark:text-gray-300"
+																										>Strategies:</span
+																									>
 																									<ul class="mt-1 space-y-1">
 																										{#each row.strategies as strategy}
-																											<li class="text-sm text-gray-900 dark:text-white">• {strategy}</li>
+																											<li
+																												class="text-sm text-gray-900 dark:text-white"
+																											>
+																												• {strategy}
+																											</li>
 																										{/each}
 																									</ul>
 																								</div>
 																							{/if}
 																							{#if row.custom_instructions && row.custom_instructions.length > 0}
 																								<div>
-																									<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Custom Instructions:</span>
+																									<span
+																										class="text-xs font-semibold text-gray-700 dark:text-gray-300"
+																										>Custom Instructions:</span
+																									>
 																									<ul class="mt-1 space-y-1">
 																										{#each row.custom_instructions as instruction}
-																											<li class="text-sm text-gray-900 dark:text-white">• {instruction}</li>
+																											<li
+																												class="text-sm text-gray-900 dark:text-white"
+																											>
+																												• {instruction}
+																											</li>
 																										{/each}
 																									</ul>
 																								</div>
 																							{/if}
 																							{#if row.highlighted_texts && row.highlighted_texts.length > 0}
 																								<div>
-																									<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Highlighted Texts:</span>
+																									<span
+																										class="text-xs font-semibold text-gray-700 dark:text-gray-300"
+																										>Highlighted Texts:</span
+																									>
 																									<ul class="mt-1 space-y-1">
 																										{#each row.highlighted_texts as text}
-																											<li class="text-sm text-gray-900 dark:text-white">• {text}</li>
+																											<li
+																												class="text-sm text-gray-900 dark:text-white"
+																											>
+																												• {text}
+																											</li>
 																										{/each}
 																									</ul>
 																								</div>
 																							{/if}
 																							{#if row.refactored_response}
 																								<div>
-																									<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Refactored Response:</span>
-																									<p class="text-sm text-gray-900 dark:text-white mt-1">{row.refactored_response}</p>
+																									<span
+																										class="text-xs font-semibold text-gray-700 dark:text-gray-300"
+																										>Refactored Response:</span
+																									>
+																									<p
+																										class="text-sm text-gray-900 dark:text-white mt-1"
+																									>
+																										{row.refactored_response}
+																									</p>
 																								</div>
 																							{/if}
-																		{#if row.session_metadata && row.session_metadata.reflection}
-																			<div>
-																				<span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Reflection:</span>
-																				<p class="text-sm text-gray-900 dark:text-white mt-1 whitespace-pre-line">{row.session_metadata.reflection}</p>
-																			</div>
-																		{/if}
-																		{#if !row.strategies?.length && !row.custom_instructions?.length && !row.highlighted_texts?.length && !row.refactored_response && !(row.session_metadata && row.session_metadata.reflection)}
-																								<div class="text-xs text-gray-500 italic">No moderation details available for this version</div>
+																							{#if row.session_metadata && row.session_metadata.reflection}
+																								<div>
+																									<span
+																										class="text-xs font-semibold text-gray-700 dark:text-gray-300"
+																										>Reflection:</span
+																									>
+																									<p
+																										class="text-sm text-gray-900 dark:text-white mt-1 whitespace-pre-line"
+																									>
+																										{row.session_metadata.reflection}
+																									</p>
+																								</div>
+																							{/if}
+																							{#if !row.strategies?.length && !row.custom_instructions?.length && !row.highlighted_texts?.length && !row.refactored_response && !(row.session_metadata && row.session_metadata.reflection)}
+																								<div class="text-xs text-gray-500 italic">
+																									No moderation details available for this version
+																								</div>
 																							{/if}
 																						</div>
 																					</td>
@@ -784,7 +970,7 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 									</div>
 								{/if}
 							</div>
-							
+
 							<!-- Exit Quiz Responses in this session -->
 							<div>
 								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
@@ -795,59 +981,88 @@ function toggleScenarioDropdown(childId: string, scenarioIndex: number) {
 								{:else}
 									<div class="space-y-3">
 										{#each sessionData.exit_quiz_responses as response}
-								{@const parsed = parseExitQuizAnswers(response.answers)}
-								<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-									<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Child ID:</span>
-											<p class="font-mono text-sm text-gray-900 dark:text-white">{response.child_id}</p>
-										</div>
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Attempt:</span>
-											<p class="text-gray-900 dark:text-white">{response.attempt_number}</p>
-										</div>
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Created:</span>
-											<p class="text-gray-900 dark:text-white">{formatTimestamp(response.created_at)}</p>
-										</div>
-									</div>
+											{@const parsed = parseExitQuizAnswers(response.answers)}
+											<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+												<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Child ID:</span>
+														<p class="font-mono text-sm text-gray-900 dark:text-white">
+															{response.child_id}
+														</p>
+													</div>
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Attempt:</span>
+														<p class="text-gray-900 dark:text-white">{response.attempt_number}</p>
+													</div>
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Created:</span>
+														<p class="text-gray-900 dark:text-white">
+															{formatTimestamp(response.created_at)}
+														</p>
+													</div>
+												</div>
 
-									{#if parsed}
-										<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-											<div>
-												<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">GenAI Familiarity:</span>
-												<p class="text-gray-900 dark:text-white">{parsed.genai_familiarity}</p>
+												{#if parsed}
+													<div
+														class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800"
+													>
+														<div>
+															<span class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+																>GenAI Familiarity:</span
+															>
+															<p class="text-gray-900 dark:text-white">
+																{parsed.genai_familiarity}
+															</p>
+														</div>
+														<div>
+															<span class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+																>Usage Frequency:</span
+															>
+															<p class="text-gray-900 dark:text-white">{parsed.usage_frequency}</p>
+														</div>
+														<div>
+															<span class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+																>Parenting Style:</span
+															>
+															<p class="text-gray-900 dark:text-white">{parsed.parenting_style}</p>
+														</div>
+													</div>
+												{/if}
+
+												{#if response.score}
+													<div class="mb-4">
+														<span class="text-sm text-gray-600 dark:text-gray-400">Score:</span>
+														<pre
+															class="mt-1 p-2 bg-white dark:bg-gray-900 rounded text-xs overflow-x-auto">{JSON.stringify(
+																response.score,
+																null,
+																2
+															)}</pre>
+													</div>
+												{/if}
+
+												<div class="mb-4">
+													<span class="text-sm text-gray-600 dark:text-gray-400">Answers:</span>
+													<pre
+														class="mt-1 p-2 bg-white dark:bg-gray-900 rounded text-xs overflow-x-auto">{JSON.stringify(
+															response.answers,
+															null,
+															2
+														)}</pre>
+												</div>
+
+												{#if response.meta}
+													<div>
+														<span class="text-sm text-gray-600 dark:text-gray-400">Metadata:</span>
+														<pre
+															class="mt-1 p-2 bg-white dark:bg-gray-900 rounded text-xs overflow-x-auto">{JSON.stringify(
+																response.meta,
+																null,
+																2
+															)}</pre>
+													</div>
+												{/if}
 											</div>
-											<div>
-												<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Usage Frequency:</span>
-												<p class="text-gray-900 dark:text-white">{parsed.usage_frequency}</p>
-											</div>
-											<div>
-												<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Parenting Style:</span>
-												<p class="text-gray-900 dark:text-white">{parsed.parenting_style}</p>
-											</div>
-										</div>
-									{/if}
-									
-									{#if response.score}
-										<div class="mb-4">
-											<span class="text-sm text-gray-600 dark:text-gray-400">Score:</span>
-											<pre class="mt-1 p-2 bg-white dark:bg-gray-900 rounded text-xs overflow-x-auto">{JSON.stringify(response.score, null, 2)}</pre>
-										</div>
-									{/if}
-									
-									<div class="mb-4">
-										<span class="text-sm text-gray-600 dark:text-gray-400">Answers:</span>
-										<pre class="mt-1 p-2 bg-white dark:bg-gray-900 rounded text-xs overflow-x-auto">{JSON.stringify(response.answers, null, 2)}</pre>
-									</div>
-									
-									{#if response.meta}
-										<div>
-											<span class="text-sm text-gray-600 dark:text-gray-400">Metadata:</span>
-											<pre class="mt-1 p-2 bg-white dark:bg-gray-900 rounded text-xs overflow-x-auto">{JSON.stringify(response.meta, null, 2)}</pre>
-										</div>
-									{/if}
-								</div>
 										{/each}
 									</div>
 								{/if}

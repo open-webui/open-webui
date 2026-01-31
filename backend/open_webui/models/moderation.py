@@ -26,7 +26,9 @@ class ModerationSession(Base):
     original_response = Column(Text, nullable=False)
 
     # Initial decision and confirmation flags
-    initial_decision = Column(Text, nullable=True)  # 'accept_original' | 'moderate' | 'not_applicable'
+    initial_decision = Column(
+        Text, nullable=True
+    )  # 'accept_original' | 'moderate' | 'not_applicable'
     is_final_version = Column(Boolean, nullable=False, default=False)
 
     # Pre-moderation judgment fields (Step 2)
@@ -35,20 +37,28 @@ class ModerationSession(Base):
     # Note: would_show_child column was removed (migration 84b2215f7772) - it existed in DB but not in model
 
     # Step 3: Satisfaction check fields
-    satisfaction_level = Column(Integer, nullable=True)  # 1-5 Likert scale (1=Very Dissatisfied, 5=Very Satisfied)
-    satisfaction_reason = Column(Text, nullable=True)  # Step 3: Explanation of satisfaction
+    satisfaction_level = Column(
+        Integer, nullable=True
+    )  # 1-5 Likert scale (1=Very Dissatisfied, 5=Very Satisfied)
+    satisfaction_reason = Column(
+        Text, nullable=True
+    )  # Step 3: Explanation of satisfaction
     next_action = Column(Text, nullable=True)  # Step 3: 'try_again' | 'move_on'
 
     # Timestamps for tracking when actions occurred
     decided_at = Column(BigInteger, nullable=True)  # Timestamp when decision was made
-    highlights_saved_at = Column(BigInteger, nullable=True)  # Timestamp when highlights were saved
+    highlights_saved_at = Column(
+        BigInteger, nullable=True
+    )  # Timestamp when highlights were saved
     saved_at = Column(BigInteger, nullable=True)  # Timestamp when step data was saved
 
     strategies = Column(JSONField, nullable=True)  # Array of strategy names
     custom_instructions = Column(JSONField, nullable=True)  # Array of strings
     highlighted_texts = Column(JSONField, nullable=True)  # Array of strings
     refactored_response = Column(Text, nullable=True)  # Final moderated response
-    session_metadata = Column(JSONField, nullable=True)  # Any additional data (answers, etc.)
+    session_metadata = Column(
+        JSONField, nullable=True
+    )  # Any additional data (answers, etc.)
 
     # Attention check tracking
     is_attention_check = Column(Boolean, nullable=False, default=False)
@@ -62,7 +72,14 @@ class ModerationSession(Base):
         Index("idx_moderation_session_user_id", "user_id"),
         Index("idx_moderation_session_child_id", "child_id"),
         Index("idx_moderation_session_created_at", "created_at"),
-        Index("idx_mod_session_composite", "user_id", "child_id", "scenario_index", "attempt_number", "session_number"),
+        Index(
+            "idx_mod_session_composite",
+            "user_id",
+            "child_id",
+            "scenario_index",
+            "attempt_number",
+            "session_number",
+        ),
         Index("idx_mod_session_final", "user_id", "child_id", "is_final_version"),
         Index("idx_mod_session_user_session", "user_id", "session_number"),
     )
@@ -153,7 +170,11 @@ class ModerationSessionTable:
                     resolved_session_number = int(form.session_number)
                 except Exception:
                     resolved_session_number = None
-            if resolved_session_number is None and user and getattr(user, "session_number", None) is not None:
+            if (
+                resolved_session_number is None
+                and user
+                and getattr(user, "session_number", None) is not None
+            ):
                 try:
                     resolved_session_number = int(user.session_number)
                 except Exception:
@@ -198,7 +219,10 @@ class ModerationSessionTable:
                 if form.session_metadata:
                     if obj.session_metadata:
                         # Merge existing metadata with new metadata (new values take precedence)
-                        merged_metadata = {**obj.session_metadata, **form.session_metadata}
+                        merged_metadata = {
+                            **obj.session_metadata,
+                            **form.session_metadata,
+                        }
                         obj.session_metadata = merged_metadata
                     else:
                         obj.session_metadata = form.session_metadata
@@ -261,21 +285,30 @@ class ModerationSessionTable:
             db.refresh(obj)
             return ModerationSessionModel.model_validate(obj)
 
-    def get_sessions_by_user(self, user_id: str, child_id: Optional[str] = None) -> List[ModerationSessionModel]:
+    def get_sessions_by_user(
+        self, user_id: str, child_id: Optional[str] = None
+    ) -> List[ModerationSessionModel]:
         """Get all sessions for a user, optionally filtered by child_id"""
         with get_db() as db:
-            query = db.query(ModerationSession).filter(ModerationSession.user_id == user_id)
+            query = db.query(ModerationSession).filter(
+                ModerationSession.user_id == user_id
+            )
             if child_id:
                 query = query.filter(ModerationSession.child_id == child_id)
             rows = query.order_by(ModerationSession.created_at.desc()).all()
             return [ModerationSessionModel.model_validate(row) for row in rows]
 
-    def get_session_by_id(self, session_id: str, user_id: str) -> Optional[ModerationSessionModel]:
+    def get_session_by_id(
+        self, session_id: str, user_id: str
+    ) -> Optional[ModerationSessionModel]:
         """Get a specific session by ID, ensuring user ownership"""
         with get_db() as db:
             row = (
                 db.query(ModerationSession)
-                .filter(ModerationSession.id == session_id, ModerationSession.user_id == user_id)
+                .filter(
+                    ModerationSession.id == session_id,
+                    ModerationSession.user_id == user_id,
+                )
                 .first()
             )
             return ModerationSessionModel.model_validate(row) if row else None
@@ -285,7 +318,10 @@ class ModerationSessionTable:
         with get_db() as db:
             row = (
                 db.query(ModerationSession)
-                .filter(ModerationSession.id == session_id, ModerationSession.user_id == user_id)
+                .filter(
+                    ModerationSession.id == session_id,
+                    ModerationSession.user_id == user_id,
+                )
                 .first()
             )
             if not row:
@@ -293,6 +329,19 @@ class ModerationSessionTable:
             db.delete(row)
             db.commit()
             return True
+
+    def get_completed_scenario_indices(self, user_id: str) -> List[int]:
+        """Get list of scenario indices that have been completed (have a terminal decision)"""
+        sessions = self.get_sessions_by_user(user_id)
+        completed = set()
+        for session in sessions:
+            if session.initial_decision in (
+                "accept_original",
+                "moderate",
+                "not_applicable",
+            ):
+                completed.add(session.scenario_index)
+        return sorted(list(completed))
 
 
 ModerationSessions = ModerationSessionTable()
@@ -310,7 +359,12 @@ class ModerationSessionActivity(Base):
     created_at = Column(BigInteger, nullable=False)
 
     __table_args__ = (
-        Index("idx_mod_activity_user_child_session", "user_id", "child_id", "session_number"),
+        Index(
+            "idx_mod_activity_user_child_session",
+            "user_id",
+            "child_id",
+            "session_number",
+        ),
         Index("idx_mod_activity_created_at", "created_at"),
     )
 
@@ -335,7 +389,9 @@ class ModerationSessionActivityModel(BaseModel):
 
 
 class ModerationSessionActivityTable:
-    def add_activity(self, form: ModerationSessionActivityForm) -> ModerationSessionActivityModel:
+    def add_activity(
+        self, form: ModerationSessionActivityForm
+    ) -> ModerationSessionActivityModel:
         with get_db() as db:
             ts = int(time.time() * 1000)
             # Fetch last cumulative for this user/child/session

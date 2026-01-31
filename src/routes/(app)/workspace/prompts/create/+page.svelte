@@ -34,8 +34,9 @@
 
 	onMount(async () => {
 		window.addEventListener('message', async (event) => {
+			console.log(event);
 			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:5173'].includes(
+				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
 					event.origin
 				)
 			)
@@ -48,7 +49,7 @@
 				title: _prompt.title,
 				command: _prompt.command,
 				content: _prompt.content,
-				access_control: null
+				access_control: _prompt.access_control !== undefined ? _prompt.access_control : {}
 			};
 		});
 
@@ -67,7 +68,7 @@
 				title: _prompt.title,
 				command: _prompt.command,
 				content: _prompt.content,
-				access_control: null
+				access_control: _prompt.access_control !== undefined ? _prompt.access_control : {}
 			};
 		}
 	});

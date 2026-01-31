@@ -8,7 +8,7 @@
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
 
-    import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
+	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -49,7 +49,7 @@
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
-    import InputMenu from './MessageInput/InputMenu.svelte';
+	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import ToolServersModal from './ToolServersModal.svelte';
@@ -76,13 +76,13 @@
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
-    import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
-    import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
+	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
+	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 
-    // Selection panel props
-    export let mode: 'start' | 'done' = 'start';
-    export let instruction: string = '';
-    export let onPrimary: () => void = () => {};
+	// Selection panel props
+	export let mode: 'start' | 'done' = 'start';
+	export let instruction: string = '';
+	export let onPrimary: () => void = () => {};
 	import Knobs from '../icons/Knobs.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
 
@@ -95,13 +95,13 @@
 	export let autoScroll = false;
 	export let generating = false;
 
-export let atSelectedModel: Model | undefined = undefined;
-export let selectedModels: string[] = [];
+	export let atSelectedModel: Model | undefined = undefined;
+	export let selectedModels: string[] = [];
 
-let selectedModelIds: string[] = [];
-$: selectedModelIds = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
+	let selectedModelIds: string[] = [];
+	$: selectedModelIds = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
 
-export let history = { messages: {}, currentId: null };
+	export let history = { messages: {}, currentId: null };
 	export let taskIds = null;
 
 	export let prompt = '';
@@ -415,47 +415,61 @@ export let history = { messages: {}, currentId: null };
 	let user = null;
 	export let placeholder = '';
 
-let visionCapableModels: string[] = [];
-$: {
-    const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
-    visionCapableModels = list.filter((model) => ($models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision) ?? true);
-}
+	let visionCapableModels: string[] = [];
+	$: {
+		const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
+		visionCapableModels = list.filter(
+			(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+		);
+	}
 
-let fileUploadCapableModels: string[] = [];
-$: {
-    const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
-    fileUploadCapableModels = list.filter((model) => ($models.find((m) => m.id === model)?.info?.meta?.capabilities?.file_upload) ?? true);
-}
+	let fileUploadCapableModels: string[] = [];
+	$: {
+		const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
+		fileUploadCapableModels = list.filter(
+			(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.file_upload ?? true
+		);
+	}
 
-let webSearchCapableModels: string[] = [];
-$: {
-    const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
-    webSearchCapableModels = list.filter((model) => ($models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search) ?? true);
-}
+	let webSearchCapableModels: string[] = [];
+	$: {
+		const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
+		webSearchCapableModels = list.filter(
+			(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
+		);
+	}
 
-let imageGenerationCapableModels: string[] = [];
-$: {
-    const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
-    imageGenerationCapableModels = list.filter((model) => ($models.find((m) => m.id === model)?.info?.meta?.capabilities?.image_generation) ?? true);
-}
+	let imageGenerationCapableModels: string[] = [];
+	$: {
+		const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
+		imageGenerationCapableModels = list.filter(
+			(model) =>
+				$models.find((m) => m.id === model)?.info?.meta?.capabilities?.image_generation ?? true
+		);
+	}
 
-let codeInterpreterCapableModels: string[] = [];
-$: {
-    const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
-    codeInterpreterCapableModels = list.filter((model) => ($models.find((m) => m.id === model)?.info?.meta?.capabilities?.code_interpreter) ?? true);
-}
+	let codeInterpreterCapableModels: string[] = [];
+	$: {
+		const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
+		codeInterpreterCapableModels = list.filter(
+			(model) =>
+				$models.find((m) => m.id === model)?.info?.meta?.capabilities?.code_interpreter ?? true
+		);
+	}
 
-let toggleFilters: any[] = [];
-$: {
-    // Safe fallback: no filters in selection panels; preserve structure without errors
-    try {
-        const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
-        const all = list.map((id) => ($models.find((model) => model.id === id) || ({} as any))?.filters ?? []);
-        toggleFilters = all.length > 0 ? all[0] : [];
-    } catch {
-        toggleFilters = [];
-    }
-}
+	let toggleFilters: any[] = [];
+	$: {
+		// Safe fallback: no filters in selection panels; preserve structure without errors
+		try {
+			const list = atSelectedModel?.id ? [atSelectedModel.id] : (selectedModels ?? []);
+			const all = list.map(
+				(id) => ($models.find((model) => model.id === id) || ({} as any))?.filters ?? []
+			);
+			toggleFilters = all.length > 0 ? all[0] : [];
+		} catch {
+			toggleFilters = [];
+		}
+	}
 
 	let showToolsButton = false;
 	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
@@ -1198,119 +1212,119 @@ $: {
 										{#if suggestions}
 											{#key $settings?.richTextInput ?? true}
 												{#key $settings?.showFormattingToolbar ?? false}
-												<div class="relative">
-													<RichTextInput
-														bind:this={chatInputElement}
-														id="chat-input"
-														placeholder={instruction}
-														onChange={(e) => {
-															// prevent typing: ignore changes
-															prompt = '';
-														}}
-														json={true}
-														richText={$settings?.richTextInput ?? true}
-														messageInput={true}
-														showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
-														floatingMenuPlacement={'top-start'}
-														insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
-														shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
-															(!$mobile ||
-																!(
-																	'ontouchstart' in window ||
-																	navigator.maxTouchPoints > 0 ||
-																	navigator.msMaxTouchPoints > 0
-																))}
-														largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
-														autocomplete={false}
-														generateAutoCompletion={async (text) => {
-															if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
-																toast.error($i18n.t('Please select a model first.'));
-															}
+													<div class="relative">
+														<RichTextInput
+															bind:this={chatInputElement}
+															id="chat-input"
+															placeholder={instruction}
+															onChange={(e) => {
+																// prevent typing: ignore changes
+																prompt = '';
+															}}
+															json={true}
+															richText={$settings?.richTextInput ?? true}
+															messageInput={true}
+															showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
+															floatingMenuPlacement={'top-start'}
+															insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
+															shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
+																(!$mobile ||
+																	!(
+																		'ontouchstart' in window ||
+																		navigator.maxTouchPoints > 0 ||
+																		navigator.msMaxTouchPoints > 0
+																	))}
+															largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
+															autocomplete={false}
+															generateAutoCompletion={async (text) => {
+																if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
+																	toast.error($i18n.t('Please select a model first.'));
+																}
 
-															const res = await generateAutoCompletion(
-																localStorage.token,
-																selectedModelIds.at(0),
-																text,
-																history?.currentId
-																	? createMessagesList(history, history.currentId)
-																	: null
-															).catch((error) => {
-																console.log(error);
+																const res = await generateAutoCompletion(
+																	localStorage.token,
+																	selectedModelIds.at(0),
+																	text,
+																	history?.currentId
+																		? createMessagesList(history, history.currentId)
+																		: null
+																).catch((error) => {
+																	console.log(error);
 
-																return null;
-															});
+																	return null;
+																});
 
-															console.log(res);
-															return res;
-														}}
-                                                        suggestions={[]}
-														oncompositionstart={() => (isComposing = true)}
-														oncompositionend={(e) => {
-															compositionEndedAt = e.timeStamp;
-															isComposing = false;
-														}}
-														on:keydown={async (e) => {
-															e = e.detail.event;
-														// block all typing in selection modal
-														e.preventDefault();
-														return false;
-														}}
-													on:paste={async (e) => {
-															e = e.detail.event;
-															console.log(e);
+																console.log(res);
+																return res;
+															}}
+															suggestions={[]}
+															oncompositionstart={() => (isComposing = true)}
+															oncompositionend={(e) => {
+																compositionEndedAt = e.timeStamp;
+																isComposing = false;
+															}}
+															on:keydown={async (e) => {
+																e = e.detail.event;
+																// block all typing in selection modal
+																e.preventDefault();
+																return false;
+															}}
+															on:paste={async (e) => {
+																e = e.detail.event;
+																console.log(e);
 
-															const clipboardData = e.clipboardData || window.clipboardData;
+																const clipboardData = e.clipboardData || window.clipboardData;
 
-															if (clipboardData && clipboardData.items) {
-																for (const item of clipboardData.items) {
-																	if (item.type.indexOf('image') !== -1) {
-																		const blob = item.getAsFile();
-																		const reader = new FileReader();
+																if (clipboardData && clipboardData.items) {
+																	for (const item of clipboardData.items) {
+																		if (item.type.indexOf('image') !== -1) {
+																			const blob = item.getAsFile();
+																			const reader = new FileReader();
 
-																		reader.onload = function (e) {
-																			files = [
-																				...files,
-																				{
-																					type: 'image',
-																					url: `${e.target.result}`
-																				}
-																			];
-																		};
-
-																		reader.readAsDataURL(blob);
-																	} else if (item?.kind === 'file') {
-																		const file = item.getAsFile();
-																		if (file) {
-																			const _files = [file];
-																			await inputFilesHandler(_files);
-																			e.preventDefault();
-																		}
-																	} else if (item.type === 'text/plain') {
-																		if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
-																			const text = clipboardData.getData('text/plain');
-
-																			if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
-																				e.preventDefault();
-																				const blob = new Blob([text], { type: 'text/plain' });
-																				const file = new File(
-																					[blob],
-																					`Pasted_Text_${Date.now()}.txt`,
+																			reader.onload = function (e) {
+																				files = [
+																					...files,
 																					{
-																						type: 'text/plain'
+																						type: 'image',
+																						url: `${e.target.result}`
 																					}
-																				);
+																				];
+																			};
 
-																				await uploadFileHandler(file, true);
+																			reader.readAsDataURL(blob);
+																		} else if (item?.kind === 'file') {
+																			const file = item.getAsFile();
+																			if (file) {
+																				const _files = [file];
+																				await inputFilesHandler(_files);
+																				e.preventDefault();
+																			}
+																		} else if (item.type === 'text/plain') {
+																			if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
+																				const text = clipboardData.getData('text/plain');
+
+																				if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																					e.preventDefault();
+																					const blob = new Blob([text], { type: 'text/plain' });
+																					const file = new File(
+																						[blob],
+																						`Pasted_Text_${Date.now()}.txt`,
+																						{
+																							type: 'text/plain'
+																						}
+																					);
+
+																					await uploadFileHandler(file, true);
+																				}
 																			}
 																		}
 																	}
 																}
-															}
-														}}
-												/>
-												<!-- overlay to block pointer interactions while preserving layout -->
-												<div class="absolute inset-0" tabindex="0" aria-hidden="true"></div>
-												</div>
+															}}
+														/>
+														<!-- overlay to block pointer interactions while preserving layout -->
+														<div class="absolute inset-0" tabindex="0" aria-hidden="true"></div>
+													</div>
 												{/key}
 											{/key}
 										{/if}
@@ -1319,76 +1333,76 @@ $: {
 
 								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
-                                        <div class="invisible">
-                                        <InputMenu
-											bind:files
-											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
-											{fileUploadCapableModels}
-											{screenCaptureHandler}
-											{inputFilesHandler}
-											uploadFilesHandler={() => {
-												filesInputElement.click();
-											}}
-											uploadGoogleDriveHandler={async () => {
-												try {
-													const fileData = await createPicker();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from Google Drive');
+										<div class="invisible">
+											<InputMenu
+												bind:files
+												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+												{fileUploadCapableModels}
+												{screenCaptureHandler}
+												{inputFilesHandler}
+												uploadFilesHandler={() => {
+													filesInputElement.click();
+												}}
+												uploadGoogleDriveHandler={async () => {
+													try {
+														const fileData = await createPicker();
+														if (fileData) {
+															const file = new File([fileData.blob], fileData.name, {
+																type: fileData.blob.type
+															});
+															await uploadFileHandler(file);
+														} else {
+															console.log('No file was selected from Google Drive');
+														}
+													} catch (error) {
+														console.error('Google Drive Error:', error);
+														toast.error(
+															$i18n.t('Error accessing Google Drive: {{error}}', {
+																error: error.message
+															})
+														);
 													}
-												} catch (error) {
-													console.error('Google Drive Error:', error);
-													toast.error(
-														$i18n.t('Error accessing Google Drive: {{error}}', {
-															error: error.message
-														})
-													);
-												}
-											}}
-											uploadOneDriveHandler={async (authorityType) => {
-												try {
-													const fileData = await pickAndDownloadFile(authorityType);
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type || 'application/octet-stream'
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from OneDrive');
+												}}
+												uploadOneDriveHandler={async (authorityType) => {
+													try {
+														const fileData = await pickAndDownloadFile(authorityType);
+														if (fileData) {
+															const file = new File([fileData.blob], fileData.name, {
+																type: fileData.blob.type || 'application/octet-stream'
+															});
+															await uploadFileHandler(file);
+														} else {
+															console.log('No file was selected from OneDrive');
+														}
+													} catch (error) {
+														console.error('OneDrive Error:', error);
 													}
-												} catch (error) {
-													console.error('OneDrive Error:', error);
-												}
-											}}
-											onUpload={async (e) => {
-												dispatch('upload', e);
-											}}
-											onClose={async () => {
-												await tick();
+												}}
+												onUpload={async (e) => {
+													dispatch('upload', e);
+												}}
+												onClose={async () => {
+													await tick();
 
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
-											}}
-										>
-											<div
-												id="input-menu-button"
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+													const chatInput = document.getElementById('chat-input');
+													chatInput?.focus();
+												}}
 											>
-												<PlusAlt className="size-5.5" />
-											</div>
-                                        </InputMenu>
-                                        </div>
-
 												<div
-													class="invisible self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
-												/>
+													id="input-menu-button"
+													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+												>
+													<PlusAlt className="size-5.5" />
+												</div>
+											</InputMenu>
+										</div>
 
-                                        {#if false}
-                                            <IntegrationsMenu
+										<div
+											class="invisible self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
+										/>
+
+										{#if false}
+											<IntegrationsMenu
 												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 												{toggleFilters}
 												{showWebSearchButton}
@@ -1419,7 +1433,7 @@ $: {
 													<Component className="size-4.5" strokeWidth="1.5" />
 												</div>
 											</IntegrationsMenu>
-                                        {/if}
+										{/if}
 
 										{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}
 											<div class="ml-1 flex gap-1.5">
@@ -1440,7 +1454,7 @@ $: {
 										{/if}
 
 										<div class="ml-1 flex gap-1.5">
-                                        {#if false}
+											{#if false}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
 														COUNT: selectedToolIds.length
@@ -1463,7 +1477,7 @@ $: {
 												</Tooltip>
 											{/if}
 
-                                        {#each [] as _}
+											{#each [] as _}
 												{@const filter = toggleFilters.find((f) => f.id === filterId)}
 												{#if filter}
 													<Tooltip content={filter?.name} placement="top">
@@ -1502,7 +1516,7 @@ $: {
 												{/if}
 											{/each}
 
-                                        {#if false}
+											{#if false}
 												<Tooltip content={$i18n.t('Web Search')} placement="top">
 													<button
 														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
@@ -1520,7 +1534,7 @@ $: {
 												</Tooltip>
 											{/if}
 
-                                        {#if false}
+											{#if false}
 												<Tooltip content={$i18n.t('Image')} placement="top">
 													<button
 														on:click|preventDefault={() =>
@@ -1538,7 +1552,7 @@ $: {
 												</Tooltip>
 											{/if}
 
-                                        {#if false}
+											{#if false}
 												<Tooltip content={$i18n.t('Code Interpreter')} placement="top">
 													<button
 														aria-label={codeInterpreterEnabled
@@ -1566,21 +1580,23 @@ $: {
 										</div>
 									</div>
 
-                                    <div class="self-end flex space-x-1 mr-1 shrink-0">
-                                        <!-- Start/Done primary action in white styling (light mode) -->
-                                        <Tooltip content={mode === 'start' ? $i18n.t('Start selection') : $i18n.t('Done')}>
-                                            <button
-                                                class="bg-white border border-gray-100 dark:border-none dark:bg-white/20 hover:bg-gray-100 text-gray-800 dark:text-white transition rounded-full p-1.5 self-center pointer-events-auto"
-                                                type="button"
-                                                on:click={onPrimary}
-                                            >
-                                                <span class="text-sm font-medium">
-                                                    {mode === 'start' ? $i18n.t('Start selection') : $i18n.t('Done')}
-                                                </span>
-                                            </button>
-                                        </Tooltip>
+									<div class="self-end flex space-x-1 mr-1 shrink-0">
+										<!-- Start/Done primary action in white styling (light mode) -->
+										<Tooltip
+											content={mode === 'start' ? $i18n.t('Start selection') : $i18n.t('Done')}
+										>
+											<button
+												class="bg-white border border-gray-100 dark:border-none dark:bg-white/20 hover:bg-gray-100 text-gray-800 dark:text-white transition rounded-full p-1.5 self-center pointer-events-auto"
+												type="button"
+												on:click={onPrimary}
+											>
+												<span class="text-sm font-medium">
+													{mode === 'start' ? $i18n.t('Start selection') : $i18n.t('Done')}
+												</span>
+											</button>
+										</Tooltip>
 
-                                        {#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
+										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
@@ -1604,9 +1620,7 @@ $: {
 													</button>
 												</Tooltip>
 											</div>
-                                        {:else}
-                                            
-										{/if}
+										{:else}{/if}
 									</div>
 								</div>
 							</div>

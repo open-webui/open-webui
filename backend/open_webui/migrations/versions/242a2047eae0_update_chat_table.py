@@ -62,7 +62,9 @@ def upgrade():
                     # Convert text JSON to actual JSON object, assuming the text is in JSON format
                     json_data = json.loads(row.old_chat)
                 except json.JSONDecodeError:
-                    json_data = None  # Handle cases where the text cannot be converted to JSON
+                    json_data = (
+                        None  # Handle cases where the text cannot be converted to JSON
+                    )
 
                 connection.execute(
                     sa.update(chat_table)

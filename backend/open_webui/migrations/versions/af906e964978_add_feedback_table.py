@@ -22,10 +22,10 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "feedback" in existing_tables:
         return  # Table already exists, skip creation
-    
+
     # ### Create feedback table ###
     op.create_table(
         "feedback",

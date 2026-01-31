@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onDestroy } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType, t } from 'i18next';
@@ -15,8 +15,15 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-import { get } from 'svelte/store';
-import { config, models, settings, temporaryChatEnabled, TTSWorker, user, selectionModeEnabled, savedSelections, latestAssistantMessageId } from '$lib/stores';
+	import {
+		audioQueue,
+		config,
+		models,
+		settings,
+		temporaryChatEnabled,
+		TTSWorker,
+		user
+	} from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -29,7 +36,7 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 		removeDetails,
 		removeAllDetails
 	} from '$lib/utils';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -143,9 +150,10 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 	export let readOnly = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
-	export let allowTextSelection = false;
 
 	let citationsElement: HTMLDivElement;
+
+	let contentContainerElement: HTMLDivElement;
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
@@ -158,12 +166,10 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 
 	let messageIndexEdit = false;
 
-	let audioParts: Record<number, HTMLAudioElement | null> = {};
 	let speaking = false;
 	let speakingIdx: number | undefined;
 
 	let loadingSpeech = false;
-	let generatingImage = false;
 
 	let showRateComment = false;
 
@@ -180,52 +186,39 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 		}
 	};
 
-	const playAudio = (idx: number) => {
-		return new Promise<void>((res) => {
-			speakingIdx = idx;
-			const audio = audioParts[idx];
+	const stopAudio = () => {
+		try {
+			speechSynthesis.cancel();
+			$audioQueue.stop();
+		} catch {}
 
-			if (!audio) {
-				return res();
-			}
-
-			audio.play();
-			audio.onended = async () => {
-				await new Promise((r) => setTimeout(r, 300));
-
-				if (Object.keys(audioParts).length - 1 === idx) {
-					speaking = false;
-				}
-
-				res();
-			};
-		});
-	};
-
-	const toggleSpeakMessage = async () => {
 		if (speaking) {
-			try {
-				speechSynthesis.cancel();
-
-				if (speakingIdx !== undefined && audioParts[speakingIdx]) {
-					audioParts[speakingIdx]!.pause();
-					audioParts[speakingIdx]!.currentTime = 0;
-				}
-			} catch {}
-
 			speaking = false;
 			speakingIdx = undefined;
-			return;
 		}
+	};
 
+	const speak = async () => {
 		if (!(message?.content ?? '').trim().length) {
 			toast.info($i18n.t('No content to speak'));
 			return;
 		}
 
 		speaking = true;
-
 		const content = removeAllDetails(message.content);
+
+		// Get voice: model-specific > user settings > config default
+		const getVoiceId = () => {
+			// Check for model-specific TTS voice first
+			if (model?.info?.meta?.tts?.voice) {
+				return model.info.meta.tts.voice;
+			}
+			// Fall back to user settings or config default
+			if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+				return $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice;
+			}
+			return $config?.audio?.tts?.voice;
+		};
 
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
@@ -234,21 +227,17 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 				if (voices.length > 0) {
 					clearInterval(getVoicesLoop);
 
-					const voice =
-						voices
-							?.filter(
-								(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							)
-							?.at(0) ?? undefined;
+					const voiceId = getVoiceId();
+					const voice = voices?.filter((v) => v.voiceURI === voiceId)?.at(0) ?? undefined;
 
 					console.log(voice);
 
-					const speak = new SpeechSynthesisUtterance(content);
-					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
+					const speech = new SpeechSynthesisUtterance(content);
+					speech.rate = $settings.audio?.tts?.playbackRate ?? 1;
 
-					console.log(speak);
+					console.log(speech);
 
-					speak.onend = () => {
+					speech.onend = () => {
 						speaking = false;
 						if ($settings.conversationMode) {
 							document.getElementById('voice-input-button')?.click();
@@ -256,15 +245,21 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 					};
 
 					if (voice) {
-						speak.voice = voice;
+						speech.voice = voice;
 					}
 
-					speechSynthesis.speak(speak);
+					speechSynthesis.speak(speech);
 				}
 			}, 100);
 		} else {
-			loadingSpeech = true;
+			$audioQueue.setId(`${message.id}`);
+			$audioQueue.setPlaybackRate($settings.audio?.tts?.playbackRate ?? 1);
+			$audioQueue.onStopped = () => {
+				speaking = false;
+				speakingIdx = undefined;
+			};
 
+			loadingSpeech = true;
 			const messageContentParts: string[] = getMessageContentParts(
 				content,
 				$config?.audio?.tts?.split_on ?? 'punctuation'
@@ -279,17 +274,8 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 				return;
 			}
 
-			console.debug('Prepared message content for TTS', messageContentParts);
-
-			audioParts = messageContentParts.reduce(
-				(acc, _sentence, idx) => {
-					acc[idx] = null;
-					return acc;
-				},
-				{} as typeof audioParts
-			);
-
-			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
+			const voiceId = getVoiceId();
+			console.debug('Prepared message content for TTS', messageContentParts, 'voice:', voiceId);
 
 			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
 				if (!$TTSWorker) {
@@ -303,10 +289,10 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 				}
 
 				for (const [idx, sentence] of messageContentParts.entries()) {
-					const blob = await $TTSWorker
+					const url = await $TTSWorker
 						.generate({
 							text: sentence,
-							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+							voice: voiceId
 						})
 						.catch((error) => {
 							console.error(error);
@@ -316,40 +302,29 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 							loadingSpeech = false;
 						});
 
-					if (blob) {
-						const audio = new Audio(blob);
-						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-						audioParts[idx] = audio;
+					if (url && speaking) {
+						$audioQueue.enqueue(url);
 						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}
 			} else {
 				for (const [idx, sentence] of messageContentParts.entries()) {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
-						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							: $config?.audio?.tts?.voice,
-						sentence
-					).catch((error) => {
-						console.error(error);
-						toast.error(`${error}`);
+					const res = await synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch(
+						(error) => {
+							console.error(error);
+							toast.error(`${error}`);
 
-						speaking = false;
-						loadingSpeech = false;
-					});
+							speaking = false;
+							loadingSpeech = false;
+						}
+					);
 
-					if (res) {
+					if (res && speaking) {
 						const blob = await res.blob();
-						const blobUrl = URL.createObjectURL(blob);
-						const audio = new Audio(blobUrl);
-						audio.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+						const url = URL.createObjectURL(blob);
 
-						audioParts[idx] = audio;
+						$audioQueue.enqueue(url);
 						loadingSpeech = false;
-						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}
 			}
@@ -419,28 +394,6 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 		edit = false;
 		editedContent = '';
 		await tick();
-	};
-
-	const generateImage = async (message: MessageType) => {
-		generatingImage = true;
-		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
-			toast.error(`${error}`);
-		});
-		console.log(res);
-
-		if (res) {
-			const files = res.map((image) => ({
-				type: 'image',
-				url: `${image.url}`
-			}));
-
-			saveMessage(message.id, {
-				...message,
-				files: files
-			});
-		}
-
-		generatingImage = false;
 	};
 
 	let feedbackLoading = false;
@@ -573,26 +526,70 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 		})();
 	}
 
+	const buttonsWheelHandler = (event: WheelEvent) => {
+		if (buttonsContainerElement) {
+			if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
+				// If the container is not scrollable, horizontal scroll
+				return;
+			} else {
+				event.preventDefault();
+
+				if (event.deltaY !== 0) {
+					// Adjust horizontal scroll position based on vertical scroll
+					buttonsContainerElement.scrollLeft += event.deltaY;
+				}
+			}
+		}
+	};
+
+	const contentCopyHandler = (e) => {
+		if (contentContainerElement) {
+			e.preventDefault();
+			// Get the selected HTML
+			const selection = window.getSelection();
+			const range = selection.getRangeAt(0);
+			const tempDiv = document.createElement('div');
+
+			// Remove background, color, and font styles
+			tempDiv.appendChild(range.cloneContents());
+
+			tempDiv.querySelectorAll('table').forEach((table) => {
+				table.style.borderCollapse = 'collapse';
+				table.style.width = 'auto';
+				table.style.tableLayout = 'auto';
+			});
+
+			tempDiv.querySelectorAll('th').forEach((th) => {
+				th.style.whiteSpace = 'nowrap';
+				th.style.padding = '4px 8px';
+			});
+
+			// Put cleaned HTML + plain text into clipboard
+			e.clipboardData.setData('text/html', tempDiv.innerHTML);
+			e.clipboardData.setData('text/plain', selection.toString());
+		}
+	};
+
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
 
 		await tick();
 		if (buttonsContainerElement) {
-			console.log(buttonsContainerElement);
+			buttonsContainerElement.addEventListener('wheel', buttonsWheelHandler);
+		}
 
-			buttonsContainerElement.addEventListener('wheel', function (event) {
-				if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
-					// If the container is not scrollable, horizontal scroll
-					return;
-				} else {
-					event.preventDefault();
+		if (contentContainerElement) {
+			contentContainerElement.addEventListener('copy', contentCopyHandler);
+		}
+	});
 
-					if (event.deltaY !== 0) {
-						// Adjust horizontal scroll position based on vertical scroll
-						buttonsContainerElement.scrollLeft += event.deltaY;
-					}
-				}
-			});
+	onDestroy(() => {
+		if (buttonsContainerElement) {
+			buttonsContainerElement.removeEventListener('wheel', buttonsWheelHandler);
+		}
+
+		if (contentContainerElement) {
+			contentContainerElement.removeEventListener('copy', contentCopyHandler);
 		}
 	});
 </script>
@@ -613,10 +610,7 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 	>
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
 			<ProfileImage
-				src={model?.info?.meta?.profile_image_url ??
-					($i18n.language === 'dg-DG'
-						? `${WEBUI_BASE_URL}/doge.png`
-						: `${WEBUI_BASE_URL}/favicon.png`)}
+				src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
 				className={'size-8 assistant-message-profile-image'}
 			/>
 		</div>
@@ -624,7 +618,7 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1 text-black dark:text-white">
+					<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
 						{model?.name ?? message.model}
 					</span>
 				</Tooltip>
@@ -652,17 +646,17 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if model?.info?.meta?.capabilities?.status_updates ?? true}
-							<StatusHistory
-								statusHistory={message?.statusHistory}
-								expand={message?.content === ''}
-							/>
+							<StatusHistory statusHistory={message?.statusHistory} />
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
-							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+							<div
+								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
+								dir={$settings?.chatDirection ?? 'auto'}
+							>
 								{#each message.files as file}
 									<div>
-										{#if file.type === 'image'}
+										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
 											<Image src={file.url} alt={message.content} />
 										{:else}
 											<FileItem
@@ -687,7 +681,7 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 											src={embed}
 											allowScripts={true}
 											allowForms={true}
-											allowSameOrigin={true}
+											allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
 											allowPopups={true}
 										/>
 									</div>
@@ -696,7 +690,7 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 						{/if}
 
 						{#if edit === true}
-							<div class="w-full assistant-bubble rounded-3xl px-5 py-3 my-2">
+							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
 								<textarea
 									id="message-edit-{message.id}"
 									bind:this={editTextAreaElement}
@@ -756,72 +750,77 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 									</div>
 								</div>
 							</div>
-						{:else}
-							<div class="w-full flex flex-col relative" id="response-content-container">
-								{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
-									<Skeleton />
-								{:else if message.content && message.error !== true}
-									<!-- always show message contents even if there's an error -->
-									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-                                    <ContentRenderer
-										id={`${chatId}-${message.id}`}
-										messageId={message.id}
-										{history}
-										{selectedModels}
-										content={message.content}
-										sources={message.sources}
-                                        floatingButtons={false && !$selectionModeEnabled && message?.done &&
-                                            !readOnly &&
-                                            ($settings?.showFloatingActionButtons ?? true)}
-										save={!readOnly}
-										preview={!readOnly}
-										{editCodeBlock}
-										{topPadding}
-										{allowTextSelection}
-										done={($settings?.chatFadeStreamingText ?? true)
-											? (message?.done ?? false)
-											: true}
-										{model}
-										onTaskClick={async (e) => {
-											console.log(e);
-										}}
-										onSourceClick={async (id, idx) => {
-											console.log(id, idx);
-
-											if (citationsElement) {
-												citationsElement?.showSourceModal(idx - 1);
-											}
-										}}
-										onAddMessages={({ modelId, parentId, messages }) => {
-											addMessages({ modelId, parentId, messages });
-										}}
-										onSave={({ raw, oldContent, newContent }) => {
-											history.messages[message.id].content = history.messages[
-												message.id
-											].content.replace(raw, raw.replace(oldContent, newContent));
-
-											updateChat();
-										}}
-									/>
-								{/if}
-
-								{#if message?.error}
-									<Error content={message?.error?.content ?? message.content} />
-								{/if}
-
-								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations
-										bind:this={citationsElement}
-										id={message?.id}
-										sources={message?.sources ?? message?.citations}
-									/>
-								{/if}
-
-								{#if message.code_executions}
-									<CodeExecutions codeExecutions={message.code_executions} />
-								{/if}
-							</div>
 						{/if}
+
+						<div
+							bind:this={contentContainerElement}
+							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
+							id="response-content-container"
+						>
+							{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
+								<Skeleton />
+							{:else if message.content && message.error !== true}
+								<!-- always show message contents even if there's an error -->
+								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+								<ContentRenderer
+									id={`${chatId}-${message.id}`}
+									messageId={message.id}
+									{history}
+									{selectedModels}
+									content={message.content}
+									sources={message.sources}
+									floatingButtons={message?.done &&
+										!readOnly &&
+										($settings?.showFloatingActionButtons ?? true)}
+									save={!readOnly}
+									preview={!readOnly}
+									{editCodeBlock}
+									{topPadding}
+									done={($settings?.chatFadeStreamingText ?? true)
+										? (message?.done ?? false)
+										: true}
+									{model}
+									onTaskClick={async (e) => {
+										console.log(e);
+									}}
+									onSourceClick={async (id) => {
+										console.log(id);
+
+										if (citationsElement) {
+											citationsElement?.showSourceModal(id);
+										}
+									}}
+									onAddMessages={({ modelId, parentId, messages }) => {
+										addMessages({ modelId, parentId, messages });
+									}}
+									onSave={({ raw, oldContent, newContent }) => {
+										history.messages[message.id].content = history.messages[
+											message.id
+										].content.replace(raw, raw.replace(oldContent, newContent));
+
+										updateChat();
+									}}
+								/>
+							{/if}
+
+							{#if message?.error}
+								<Error content={message?.error?.content ?? message.content} />
+							{/if}
+
+							{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
+								<Citations
+									bind:this={citationsElement}
+									id={message?.id}
+									{chatId}
+									sources={message?.sources ?? message?.citations}
+									{readOnly}
+								/>
+							{/if}
+
+							{#if message.code_executions}
+								<CodeExecutions codeExecutions={message.code_executions} />
+							{/if}
+						</div>
 					</div>
 				</div>
 
@@ -928,9 +927,9 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 								</div>
 							{/if}
 
-                                {#if message.done}
-                                    {#if !readOnly}
-                                        {#if ($user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true) && false}
+							{#if message.done}
+								{#if !readOnly}
+									{#if $user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Edit')}
@@ -999,7 +998,11 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 											on:click={() => {
 												if (!loadingSpeech) {
-													toggleSpeakMessage();
+													if (speaking) {
+														stopAudio();
+													} else {
+														speak();
+													}
 												}
 											}}
 										>
@@ -1066,73 +1069,6 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 														stroke-linecap="round"
 														stroke-linejoin="round"
 														d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
-													/>
-												</svg>
-											{/if}
-										</button>
-									</Tooltip>
-								{/if}
-
-								{#if $config?.features.enable_image_generation && ($user?.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
-									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
-										<button
-											aria-label={$i18n.t('Generate Image')}
-											class="{isLastMessage || ($settings?.highContrastMode ?? false)
-												? 'visible'
-												: 'invisible group-hover:visible'}  p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-											on:click={() => {
-												if (!generatingImage) {
-													generateImage(message);
-												}
-											}}
-										>
-											{#if generatingImage}
-												<svg
-													aria-hidden="true"
-													class=" w-4 h-4"
-													fill="currentColor"
-													viewBox="0 0 24 24"
-													xmlns="http://www.w3.org/2000/svg"
-												>
-													<style>
-														.spinner_S1WN {
-															animation: spinner_MGfb 0.8s linear infinite;
-															animation-delay: -0.8s;
-														}
-
-														.spinner_Km9P {
-															animation-delay: -0.65s;
-														}
-
-														.spinner_JApP {
-															animation-delay: -0.5s;
-														}
-
-														@keyframes spinner_MGfb {
-															93.75%,
-															100% {
-																opacity: 0.2;
-															}
-														}
-													</style>
-													<circle class="spinner_S1WN" cx="4" cy="12" r="3" />
-													<circle class="spinner_S1WN spinner_Km9P" cx="12" cy="12" r="3" />
-													<circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" />
-												</svg>
-											{:else}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													aria-hidden="true"
-													viewBox="0 0 24 24"
-													stroke-width="2.3"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
 													/>
 												</svg>
 											{/if}
@@ -1411,44 +1347,6 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 										{/if}
 									{/if}
 
-									<!-- Edit Selection Button -->
-									{#if !$selectionModeEnabled && message.done}
-										<Tooltip content={$i18n.t('Edit Selection')} placement="bottom">
-											<button
-												type="button"
-												aria-label={$i18n.t('Edit Selection')}
-												class="{isLastMessage || ($settings?.highContrastMode ?? false)
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-												on:click={() => {
-													selectionModeEnabled.set(true);
-													// Force the latest assistant message to be the target for selection
-													latestAssistantMessageId.set(message.id);
-													// Dispatch event to change input panel state
-													window.dispatchEvent(new CustomEvent('set-input-panel-state', {
-														detail: { state: 'selection' }
-													}));
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													stroke="currentColor"
-													aria-hidden="true"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
-									{/if}
-
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
 										{#if siblings.length > 1}
 											<Tooltip content={$i18n.t('Delete')} placement="bottom">
@@ -1483,71 +1381,39 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 										{/if}
 									{/if}
 
-									{#if isLastMessage}
-										{#each model?.actions ?? [] as action}
-											<Tooltip content={action.name} placement="bottom">
-												<button
-													type="button"
-													aria-label={action.name}
-													class="{isLastMessage || ($settings?.highContrastMode ?? false)
-														? 'visible'
-														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-													on:click={() => {
-														actionMessage(action.id, message);
-													}}
-												>
-													{#if action?.icon}
-														<div class="size-4">
-															<img
-																src={action.icon}
-																class="w-4 h-4 {action.icon.includes('svg')
-																	? 'dark:invert-[80%]'
-																	: ''}"
-																style="fill: currentColor;"
-																alt={action.name}
-															/>
-														</div>
-													{:else}
-														<Sparkles strokeWidth="2.1" className="size-4" />
-													{/if}
-												</button>
-											</Tooltip>
-										{/each}
-									{/if}
+									{#each model?.actions ?? [] as action}
+										<Tooltip content={action.name} placement="bottom">
+											<button
+												type="button"
+												aria-label={action.name}
+												class="{isLastMessage || ($settings?.highContrastMode ?? false)
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													actionMessage(action.id, message);
+												}}
+											>
+												{#if action?.icon}
+													<div class="size-4">
+														<img
+															src={action.icon}
+															class="w-4 h-4 {action.icon.includes('svg')
+																? 'dark:invert-[80%]'
+																: ''}"
+															style="fill: currentColor;"
+															alt={action.name}
+														/>
+													</div>
+												{:else}
+													<Sparkles strokeWidth="2.1" className="size-4" />
+												{/if}
+											</button>
+										</Tooltip>
+									{/each}
 								{/if}
 							{/if}
 						{/if}
 					</div>
-
-					<!-- Selection instructions and Done button -->
-					{#if $selectionModeEnabled && isLastMessage && message.done}
-						<div class="border-2 border-blue-300 dark:border-blue-600 rounded-lg my-2 bg-blue-50/30 dark:bg-blue-900/10">
-							<div class="p-4">
-								<div class="flex justify-between items-center">
-									<div class="text-sm text-gray-600 dark:text-gray-400">
-										{$i18n.t('Select text in the chat that you would change, if any.')}
-									</div>
-									<button
-										class="bg-white border border-gray-100 dark:border-none dark:bg-white/20 hover:bg-gray-100 text-gray-800 dark:text-white transition rounded-full p-1.5 self-center pointer-events-auto"
-										type="button"
-										on:click|preventDefault={() => {
-											console.log('Done button clicked!');
-											const selections = get(savedSelections);
-											console.log('Current selections:', selections);
-											selectionModeEnabled.set(false);
-											// Switch back to message input
-											window.dispatchEvent(new CustomEvent('selection-done', {
-												detail: { selections }
-											}));
-											console.log('Selection-done event dispatched');
-										}}
-									>
-										<span class="text-sm font-medium">{$i18n.t('Done')}</span>
-									</button>
-								</div>
-							</div>
-						</div>
-					{/if}
 
 					{#if message.done && showRateComment}
 						<RateComment
@@ -1561,7 +1427,7 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 						/>
 					{/if}
 
-                    {#if false && !$selectionModeEnabled && (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
 						<div class="mt-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}

@@ -9,9 +9,11 @@ The scenario system manages the assignment and tracking of review scenarios for 
 ### Database Schema
 
 #### `scenarios` Table
+
 Canonical record for each scenario with metadata and counters.
 
 **Columns:**
+
 - `scenario_id` (PK): Unique identifier. For uploaded scenarios, uses UUID format (`scenario_{uuid}`). For scenarios loaded via script, uses content hash (`scenario_{hash}`).
 - `prompt_text`: The child's question/prompt
 - `response_text`: The AI model's response
@@ -31,9 +33,11 @@ Canonical record for each scenario with metadata and counters.
 - `updated_at`: Timestamp
 
 #### `scenario_assignments` Table
+
 One row per exposure to a scenario, tracking the assignment lifecycle.
 
 **Columns:**
+
 - `assignment_id` (PK): UUID
 - `participant_id`: User ID
 - `scenario_id` (FK): Reference to scenarios table
@@ -54,12 +58,15 @@ One row per exposure to a scenario, tracking the assignment lifecycle.
 - `skip_reason_text`: Optional text explanation
 
 **Constraints:**
+
 - Partial unique constraint: (participant_id, scenario_id, status) WHERE status != 'abandoned'
 
 #### `attention_check_scenarios` Table
+
 Attention check scenarios used for quality control.
 
 **Columns:**
+
 - `scenario_id` (PK): Unique identifier. For uploaded attention checks, uses UUID format (`ac_{uuid}`). When created via upsert, uses content hash (`ac_{hash}`).
 - `prompt_text`: Attention check question
 - `response_text`: Attention check response
@@ -75,9 +82,11 @@ Attention check scenarios used for quality control.
 - `updated_at`: Timestamp
 
 #### `selections` Table (Updated)
+
 Stores highlight spans with assignment tracking.
 
 **New Columns:**
+
 - `assignment_id` (FK): Reference to scenario_assignments
 - `start_offset`: Character offset where selection starts
 - `end_offset`: Character offset where selection ends
@@ -134,17 +143,20 @@ OR
 **Formula:** `p(s) ∝ 1/(n_s + 1)^α`
 
 Where:
+
 - `p(s)`: Probability of selecting scenario `s`
 - `n_s`: Number of times scenario `s` has been assigned (`n_assigned` counter)
 - `α`: Alpha parameter (default: 1.0, higher = more aggressive balancing)
 
 **Implementation:**
+
 1. Get eligible scenarios (exclude completed/skipped for participant, allow abandoned)
 2. Calculate weight for each: `weight = 1.0 / (n_assigned + 1)^alpha`
 3. Normalize to probabilities: `prob = weight / sum(weights)`
 4. Use cumulative distribution for weighted random selection
 
 **Example:**
+
 - Scenario A: n_assigned=0 → weight=1.0
 - Scenario B: n_assigned=1 → weight=0.5
 - Scenario C: n_assigned=2 → weight=0.33
@@ -156,162 +168,185 @@ Where:
 ### Participant Endpoints
 
 #### `POST /api/v1/moderation/scenarios/assign`
+
 Assign a scenario using weighted sampling.
 
 **Request:**
+
 ```json
 {
-  "participant_id": "user-id",
-  "child_profile_id": "child-id",
-  "assignment_position": 0,
-  "alpha": 1.0
+	"participant_id": "user-id",
+	"child_profile_id": "child-id",
+	"assignment_position": 0,
+	"alpha": 1.0
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "assignment_id": "uuid",
-  "scenario_id": "scenario_xxxx",
-  "prompt_text": "...",
-  "response_text": "...",
-  "assignment_position": 0,
-  "sampling_audit": {
-    "eligible_pool_size": 50,
-    "n_assigned_before": 0,
-    "weight": 1.0,
-    "sampling_prob": 0.02
-  }
+	"assignment_id": "uuid",
+	"scenario_id": "scenario_xxxx",
+	"prompt_text": "...",
+	"response_text": "...",
+	"assignment_position": 0,
+	"sampling_audit": {
+		"eligible_pool_size": 50,
+		"n_assigned_before": 0,
+		"weight": 1.0,
+		"sampling_prob": 0.02
+	}
 }
 ```
 
 #### `POST /api/v1/moderation/scenarios/start`
+
 Mark an assignment as started.
 
 **Request:**
+
 ```json
 {
-  "assignment_id": "uuid"
+	"assignment_id": "uuid"
 }
 ```
 
 #### `POST /api/v1/moderation/scenarios/complete`
+
 Mark an assignment as completed and calculate issue_any.
 
 **Request:**
+
 ```json
 {
-  "assignment_id": "uuid"
+	"assignment_id": "uuid"
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "status": "completed",
-  "assignment_id": "uuid",
-  "issue_any": 1
+	"status": "completed",
+	"assignment_id": "uuid",
+	"issue_any": 1
 }
 ```
 
 #### `POST /api/v1/moderation/scenarios/skip`
+
 Mark an assignment as skipped.
 
 **Request:**
+
 ```json
 {
-  "assignment_id": "uuid",
-  "skip_stage": "step1",
-  "skip_reason": "not_applicable",
-  "skip_reason_text": "Optional explanation"
+	"assignment_id": "uuid",
+	"skip_stage": "step1",
+	"skip_reason": "not_applicable",
+	"skip_reason_text": "Optional explanation"
 }
 ```
 
 #### `POST /api/v1/moderation/scenarios/abandon`
+
 Mark an assignment as abandoned and trigger reassignment.
 
 **Request:**
+
 ```json
 {
-  "assignment_id": "uuid"
+	"assignment_id": "uuid"
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "status": "abandoned",
-  "assignment_id": "uuid",
-  "reassigned": true,
-  "new_assignment_id": "uuid",
-  "new_scenario_id": "scenario_yyyy",
-  "new_prompt_text": "...",
-  "new_response_text": "..."
+	"status": "abandoned",
+	"assignment_id": "uuid",
+	"reassigned": true,
+	"new_assignment_id": "uuid",
+	"new_scenario_id": "scenario_yyyy",
+	"new_prompt_text": "...",
+	"new_response_text": "..."
 }
 ```
 
 #### `GET /api/v1/moderation/attention-checks/random`
+
 Get a random active attention check scenario.
 
 **Response:**
+
 ```json
 {
-  "scenario_id": "ac_xxxx",
-  "prompt_text": "...",
-  "response_text": "...",
-  "trait_theme": "attention_check",
-  "trait_phrase": "attention_check",
-  "sentiment": "neutral"
+	"scenario_id": "ac_xxxx",
+	"prompt_text": "...",
+	"response_text": "...",
+	"trait_theme": "attention_check",
+	"trait_phrase": "attention_check",
+	"sentiment": "neutral"
 }
 ```
 
 #### `POST /api/v1/moderation/highlights`
+
 Create a highlight span.
 
 **Request:**
+
 ```json
 {
-  "assignment_id": "uuid",
-  "selected_text": "example text",
-  "source": "response",
-  "start_offset": 10,
-  "end_offset": 22
+	"assignment_id": "uuid",
+	"selected_text": "example text",
+	"source": "response",
+	"start_offset": 10,
+	"end_offset": 22
 }
 ```
 
 #### `GET /api/v1/moderation/highlights/{assignment_id}`
+
 Get all highlights for an assignment.
 
 ### Admin Endpoints
 
 #### `POST /api/v1/admin/scenarios/upload`
+
 Upload scenarios from JSON file. Always creates new scenarios with UUID-based IDs (never updates existing).
 
 **Request:** Multipart form data
+
 - `file`: JSON file
 - `set_name`: Set name (default: "pilot")
 - `source`: Source identifier (default: "admin_upload")
 - `deactivate_previous`: Boolean (default: false) - If true, deactivates all existing active scenarios with the same `set_name` before uploading
 
 **Response:**
+
 ```json
 {
-  "status": "success",
-  "loaded": 45,
-  "updated": 0,
-  "deactivated_count": 12,
-  "errors": 0,
-  "total": 45,
-  "error_details": []
+	"status": "success",
+	"loaded": 45,
+	"updated": 0,
+	"deactivated_count": 12,
+	"errors": 0,
+	"total": 45,
+	"error_details": []
 }
 ```
 
 **Note:** Uploaded scenarios always get new UUID-based identifiers (`scenario_{uuid}`), so each upload creates entirely new records even if content is identical. Use `deactivate_previous=true` to automatically deactivate previous scenarios with the same set name.
 
 #### `GET /api/v1/admin/scenarios`
+
 List scenarios with filtering and pagination.
 
 **Query Parameters:**
+
 - `is_active`: Filter by active status
 - `trait`: Filter by trait
 - `polarity`: Filter by polarity
@@ -320,118 +355,137 @@ List scenarios with filtering and pagination.
 - `page_size`: Items per page (default: 50)
 
 #### `GET /api/v1/admin/scenarios/stats`
+
 Get aggregate statistics.
 
 **Response:**
+
 ```json
 {
-  "total_scenarios": 50,
-  "active_scenarios": 48,
-  "inactive_scenarios": 2,
-  "total_assignments": 250,
-  "total_completed": 180,
-  "total_skipped": 20,
-  "total_abandoned": 50
+	"total_scenarios": 50,
+	"active_scenarios": 48,
+	"inactive_scenarios": 2,
+	"total_assignments": 250,
+	"total_completed": 180,
+	"total_skipped": 20,
+	"total_abandoned": 50
 }
 ```
 
 #### `PATCH /api/v1/admin/scenarios/{scenario_id}`
+
 Update a scenario (e.g., toggle is_active).
 
 **Request:**
+
 ```json
 {
-  "is_active": false
+	"is_active": false
 }
 ```
 
 #### `GET /api/v1/admin/scenarios/set-names`
+
 Get all distinct set_name values for scenarios.
 
 **Response:**
+
 ```json
 {
-  "set_names": ["pilot", "scaled", "v1", null]
+	"set_names": ["pilot", "scaled", "v1", null]
 }
 ```
 
 #### `POST /api/v1/admin/scenarios/set-active-set`
+
 Set which set_name should be active. Activates all scenarios with that set_name and deactivates all others.
 
 **Request:**
+
 ```json
 {
-  "set_name": "pilot"  // or null to activate all scenarios
+	"set_name": "pilot" // or null to activate all scenarios
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "status": "success",
-  "activated": 45,
-  "deactivated": 12,
-  "set_name": "pilot"
+	"status": "success",
+	"activated": 45,
+	"deactivated": 12,
+	"set_name": "pilot"
 }
 ```
 
 #### `POST /api/v1/admin/attention-checks/upload`
+
 Upload attention check scenarios from JSON file. Always creates new attention checks with UUID-based IDs (never updates existing).
 
 **Request:** Multipart form data
+
 - `file`: JSON file
 - `set_name`: Set name (default: "default")
 - `source`: Source identifier (default: "admin_upload")
 - `deactivate_previous`: Boolean (default: false) - If true, deactivates all existing active attention checks with the same `set_name` before uploading
 
 **Response:**
+
 ```json
 {
-  "status": "success",
-  "loaded": 10,
-  "updated": 0,
-  "deactivated_count": 3,
-  "errors": 0,
-  "total": 10,
-  "error_details": []
+	"status": "success",
+	"loaded": 10,
+	"updated": 0,
+	"deactivated_count": 3,
+	"errors": 0,
+	"total": 10,
+	"error_details": []
 }
 ```
 
 **Note:** Uploaded attention checks always get new UUID-based identifiers (`ac_{uuid}`), so each upload creates entirely new records even if content is identical. Use `deactivate_previous=true` to automatically deactivate previous attention checks with the same set name.
 
 #### `GET /api/v1/admin/attention-checks`
+
 List attention check scenarios.
 
 #### `PATCH /api/v1/admin/attention-checks/{scenario_id}`
+
 Update an attention check scenario.
 
 #### `GET /api/v1/admin/attention-checks/set-names`
+
 Get all distinct set_name values for attention checks.
 
 **Response:**
+
 ```json
 {
-  "set_names": ["default", "v1", null]
+	"set_names": ["default", "v1", null]
 }
 ```
 
 #### `POST /api/v1/admin/attention-checks/set-active-set`
+
 Set which set_name should be active. Activates all attention checks with that set_name and deactivates all others.
 
 **Request:**
+
 ```json
 {
-  "set_name": "default"  // or null to activate all attention checks
+	"set_name": "default" // or null to activate all attention checks
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "status": "success",
-  "activated": 10,
-  "deactivated": 3,
-  "set_name": "default"
+	"status": "success",
+	"activated": 10,
+	"deactivated": 3,
+	"set_name": "default"
 }
 ```
 
@@ -447,16 +501,19 @@ Set which set_name should be active. Activates all attention checks with that se
 The admin panel allows you to control which set of scenarios or attention checks should be active at any given time.
 
 **For Scenarios:**
+
 1. In the "Scenarios" tab, find the "Active Scenario Set" section
 2. Select a set name from the dropdown (or "All sets active" to activate everything)
 3. Click "Apply Active Set" to activate all scenarios with that set name and deactivate all others
 
 **For Attention Checks:**
+
 1. In the "Attention Checks" tab, find the "Active Attention Check Set" section
 2. Select a set name from the dropdown (or "All sets active" to activate everything)
 3. Click "Apply Active Set" to activate all attention checks with that set name and deactivate all others
 
 **Note:** The active set selector only controls which scenarios/attention checks are active (`is_active` flag). It does NOT affect scenario selection logic, which already uses `is_active` for filtering. The `set_name` field is only used for:
+
 - Grouping scenarios/attention checks for batch deactivation
 - Admin panel filtering and management
 - Determining which set should be active
@@ -469,18 +526,20 @@ The admin panel allows you to control which set of scenarios or attention checks
 4. Select a JSON file matching the format:
 
 **Note:** Uploaded scenarios always get new UUID-based identifiers, so each upload creates entirely new records. If you want to replace old scenarios, use the deactivate checkbox.
-   ```json
-   [
-     {
-       "child_prompt": "...",
-       "model_response": "...",
-       "trait": "Agreeableness",
-       "polarity": "positive",
-       "prompt_style": "Should I",
-       "domain": "Friendship"
-     }
-   ]
-   ```
+
+```json
+[
+	{
+		"child_prompt": "...",
+		"model_response": "...",
+		"trait": "Agreeableness",
+		"polarity": "positive",
+		"prompt_style": "Should I",
+		"domain": "Friendship"
+	}
+]
+```
+
 4. File is processed and scenarios are created with new UUID-based IDs (uploaded scenarios always create new records)
 5. Success message shows counts of loaded/deactivated/errors
 
@@ -499,6 +558,7 @@ The admin panel allows you to control which set of scenarios or attention checks
 ### Attention Check Management
 
 Similar interface for managing attention check scenarios:
+
 - Upload JSON files with attention check data (always creates new records with UUID-based IDs)
 - Enter a **Set Name** when uploading (e.g., "default", "v1")
 - Option to deactivate previous attention checks with same set name before uploading
@@ -511,6 +571,7 @@ Similar interface for managing attention check scenarios:
 ### Loading Scenarios
 
 The frontend calls `loadRandomScenarios()` which:
+
 1. Checks for restored scenario package in localStorage
 2. If not found, calls `/moderation/scenarios/assign` 6 times (SCENARIOS_PER_SESSION)
 3. Stores assignment_ids in scenarioStates
@@ -520,6 +581,7 @@ The frontend calls `loadRandomScenarios()` which:
 ### Attention Check Integration
 
 Attention checks are loaded via:
+
 1. Call `GET /moderation/attention-checks/random` API
 2. Add instruction suffix to response
 3. Shuffle into scenario list (not at position 0 or last)
@@ -544,6 +606,7 @@ Attention checks are loaded via:
 ### Modifying Sampling Algorithm
 
 Edit `backend/open_webui/models/scenarios.py`:
+
 - `weighted_sample()` method: Modify weight calculation
 - `get_eligible_scenarios()`: Modify eligibility filtering
 
@@ -571,11 +634,13 @@ See `TESTING_SCENARIO_SELECTION.md` for comprehensive testing procedures.
 ### "No eligible scenarios available"
 
 **Causes:**
+
 - All scenarios completed/skipped for participant
 - No active/validated scenarios in database
 - Scenarios not loaded
 
 **Solutions:**
+
 - Check scenario counts: `SELECT COUNT(*) FROM scenarios WHERE is_active=1`
 - Load scenarios via admin panel or script
 - Reset participant's completed/skipped scenarios if testing
@@ -583,11 +648,13 @@ See `TESTING_SCENARIO_SELECTION.md` for comprehensive testing procedures.
 ### Weighted sampling seems uneven
 
 **Causes:**
+
 - Alpha parameter too low (less aggressive balancing)
 - Pool too small
 - Counters not incrementing correctly
 
 **Solutions:**
+
 - Increase alpha parameter (e.g., 2.0 for more aggressive balancing)
 - Check that counters increment atomically
 - Verify sampling audit fields in assignments table
@@ -595,11 +662,13 @@ See `TESTING_SCENARIO_SELECTION.md` for comprehensive testing procedures.
 ### Attention checks not loading
 
 **Causes:**
+
 - No active attention checks in database
 - API endpoint error
 - Authentication token missing
 
 **Solutions:**
+
 - Check attention check counts: `SELECT COUNT(*) FROM attention_check_scenarios WHERE is_active=1`
 - Upload attention checks via admin panel
 - Check browser console for API errors
@@ -609,14 +678,15 @@ See `TESTING_SCENARIO_SELECTION.md` for comprehensive testing procedures.
 ### From CSV to Database
 
 The system migrated from:
+
 - CSV files (`attention_check_bank.csv`, scenario bank CSV)
 - Frontend CSV parsing
 - LocalStorage-only scenario storage
 
 To:
+
 - Database tables (`scenarios`, `attention_check_scenarios`)
 - Backend API endpoints
 - Database-backed assignment tracking
 
 Old CSV files are no longer used. Use admin panel to upload JSON files instead.
-

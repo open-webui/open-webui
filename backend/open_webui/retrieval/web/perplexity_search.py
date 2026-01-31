@@ -3,11 +3,9 @@ from typing import Optional, Literal
 import requests
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.utils.headers import include_user_info_headers
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_perplexity_search(
@@ -15,6 +13,8 @@ def search_perplexity_search(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    api_url: str = "https://api.perplexity.ai/search",
+    user=None,
 ) -> list[SearchResult]:
     """Search using Perplexity API and return the results as a list of SearchResult objects.
 
@@ -23,6 +23,8 @@ def search_perplexity_search(
       query (str): The query to search for
       count (int): Maximum number of results to return
       filter_list (Optional[list[str]]): List of domains to filter results
+      api_url (str): Custom API URL (defaults to https://api.perplexity.ai/search)
+      user: Optional user object for forwarding user info headers
 
     """
 
@@ -30,8 +32,11 @@ def search_perplexity_search(
     if hasattr(api_key, "__str__"):
         api_key = str(api_key)
 
+    if hasattr(api_url, "__str__"):
+        api_url = str(api_url)
+
     try:
-        url = "https://api.perplexity.ai/search"
+        url = api_url
 
         # Create payload for the API call
         payload = {
@@ -43,6 +48,10 @@ def search_perplexity_search(
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
+
+        # Forward user info headers if user is provided
+        if user is not None:
+            headers = include_user_info_headers(headers, user)
 
         # Make the API request
         response = requests.request("POST", url, json=payload, headers=headers)

@@ -21,7 +21,7 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "folder" in existing_tables:
         folder_columns = [col["name"] for col in inspector.get_columns("folder")]
         if "data" not in folder_columns:
@@ -33,7 +33,7 @@ def downgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "folder" in existing_tables:
         folder_columns = [col["name"] for col in inspector.get_columns("folder")]
         if "data" in folder_columns:

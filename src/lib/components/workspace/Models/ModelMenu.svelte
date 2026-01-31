@@ -13,8 +13,10 @@
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
+	import Pin from '$lib/components/icons/Pin.svelte';
+	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 
-	import { config } from '$lib/stores';
+	import { config, user as currentUser, settings } from '$lib/stores';
 	import Link from '$lib/components/icons/Link.svelte';
 
 	const i18n = getContext('i18n');
@@ -22,12 +24,14 @@
 	export let user;
 	export let model;
 
+	export let editHandler: Function;
 	export let shareHandler: Function;
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
 	export let copyLinkHandler: Function;
 
 	export let hideHandler: Function;
+	export let pinModelHandler: Function;
 	export let deleteHandler: Function;
 	export let onClose: Function;
 
@@ -43,7 +47,14 @@
 	}}
 >
 	<Tooltip content={$i18n.t('More')}>
-		<slot />
+		<button
+			on:click={(e) => {
+				e.stopPropagation();
+				show = !show;
+			}}
+		>
+			<slot />
+		</button>
 	</Tooltip>
 
 	<div slot="content">
@@ -54,6 +65,16 @@
 			align="start"
 			transition={flyAndScale}
 		>
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				on:click={() => {
+					editHandler();
+				}}
+			>
+				<Pencil />
+				<div class="flex items-center">{$i18n.t('Edit')}</div>
+			</DropdownMenu.Item>
+
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
@@ -107,6 +128,40 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
+				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				on:click={() => {
+					pinModelHandler(model?.id);
+				}}
+			>
+				{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
+					<PinSlash />
+				{:else}
+					<Pin />
+				{/if}
+
+				<div class="flex items-center">
+					{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
+						{$i18n.t('Hide from Sidebar')}
+					{:else}
+						{$i18n.t('Keep in Sidebar')}
+					{/if}
+				</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				on:click={() => {
+					cloneHandler();
+				}}
+			>
+				<DocumentDuplicate />
+
+				<div class="flex items-center">{$i18n.t('Clone')}</div>
+			</DropdownMenu.Item>
+
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+
+			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
 					copyLinkHandler();
@@ -116,6 +171,19 @@
 
 				<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 			</DropdownMenu.Item>
+
+			{#if $currentUser?.role === 'admin' || $currentUser?.permissions?.workspace?.models_export}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+					on:click={() => {
+						exportHandler();
+					}}
+				>
+					<Download />
+
+					<div class="flex items-center">{$i18n.t('Export')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			{#if $config?.features.enable_community_sharing}
 				<DropdownMenu.Item
@@ -129,29 +197,7 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					cloneHandler();
-				}}
-			>
-				<DocumentDuplicate />
-
-				<div class="flex items-center">{$i18n.t('Clone')}</div>
-			</DropdownMenu.Item>
-
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					exportHandler();
-				}}
-			>
-				<Download />
-
-				<div class="flex items-center">{$i18n.t('Export')}</div>
-			</DropdownMenu.Item>
-
-			<hr class="border-gray-50 dark:border-gray-800 my-1" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"

@@ -29,7 +29,6 @@ from contextlib import suppress
 import peewee as pw
 from peewee_migrate import Migrator
 
-
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
@@ -40,7 +39,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     # Check if share_id column already exists before adding it
     # This prevents errors when the column was already added by Alembic migrations
     column_exists = False
-    
+
     try:
         if isinstance(database, pw.SqliteDatabase):
             # For SQLite, use PRAGMA table_info to check column existence
@@ -58,18 +57,21 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         # If checking fails, assume column doesn't exist and try to add it
         # The add_fields call will handle the error if column already exists
         column_exists = False
-    
+
     # Only add the column if it doesn't exist
     if not column_exists:
         try:
-    migrator.add_fields(
-        "chat", share_id=pw.CharField(max_length=255, null=True, unique=True)
-    )
+            migrator.add_fields(
+                "chat", share_id=pw.CharField(max_length=255, null=True, unique=True)
+            )
         except Exception as e:
             # If column already exists (e.g., added by Alembic), ignore the error
             # This makes the migration idempotent
             error_msg = str(e).lower()
-            if "duplicate column" not in error_msg and "already exists" not in error_msg:
+            if (
+                "duplicate column" not in error_msg
+                and "already exists" not in error_msg
+            ):
                 # Re-raise if it's a different error
                 raise
 

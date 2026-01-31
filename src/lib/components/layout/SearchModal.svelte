@@ -9,6 +9,7 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	import dayjs from '$lib/dayjs';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import calendar from 'dayjs/plugin/calendar';
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
@@ -18,13 +19,14 @@
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
 	dayjs.extend(calendar);
+	dayjs.extend(localizedFormat);
 
 	export let show = false;
 	export let onClose = () => {};
 
 	let actions = [
 		{
-			label: 'Start a new conversation',
+			label: $i18n.t('Start a new conversation'),
 			onClick: async () => {
 				await goto(`/${query ? `?q=${query}` : ''}`);
 				show = false;
@@ -56,12 +58,7 @@
 	}
 
 	const loadChatPreview = async (selectedIdx) => {
-		if (
-			!chatList ||
-			chatList.length === 0 ||
-			selectedIdx === null ||
-			chatList[selectedIdx] === undefined
-		) {
+		if (!chatList || chatList.length === 0 || selectedIdx === null) {
 			selectedChat = null;
 			messages = null;
 			history = null;
@@ -70,8 +67,11 @@
 		}
 
 		const selectedChatIdx = selectedIdx - actions.length;
-		if (selectedChatIdx < 0) {
+		if (selectedChatIdx < 0 || selectedChatIdx >= chatList.length) {
 			selectedChat = null;
+			messages = null;
+			history = null;
+			selectedModels = [''];
 			return;
 		}
 
@@ -231,9 +231,9 @@
 			($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
 				? [
 						{
-							label: 'Create a new note',
+							label: $i18n.t('Create a new note'),
 							onClick: async () => {
-								await goto(`/notes${query ? `?content=${query}` : ''}`);
+								await goto(`/notes?content=${query}`);
 								show = false;
 								onClose();
 							},
@@ -291,7 +291,7 @@
 			/>
 		</div>
 
-		<!-- <hr class="border-gray-50 dark:border-gray-850 my-1" /> -->
+		<!-- <hr class="border-gray-50 dark:border-gray-850/30 my-1" /> -->
 
 		<div class="flex px-4 pb-1">
 			<div
@@ -328,7 +328,7 @@
 				{/each}
 
 				{#if chatList}
-					<hr class="border-gray-50 dark:border-gray-850 my-3" />
+					<hr class="border-gray-50 dark:border-gray-850/30 my-3" />
 
 					{#if chatList.length === 0}
 						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
@@ -389,7 +389,16 @@
 							</div>
 
 							<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
-								{dayjs(chat?.updated_at * 1000).calendar()}
+								{$i18n.t(
+									dayjs(chat?.updated_at * 1000).calendar(null, {
+										sameDay: '[Today]',
+										nextDay: '[Tomorrow]',
+										nextWeek: 'dddd',
+										lastDay: '[Yesterday]',
+										lastWeek: '[Last] dddd',
+										sameElse: 'L' // use localized format, otherwise dayjs.calendar() defaults to DD/MM/YYYY
+									})
+								)}
 							</div>
 						</a>
 					{/each}

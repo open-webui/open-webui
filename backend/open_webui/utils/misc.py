@@ -6,15 +6,16 @@ import uuid
 import logging
 from datetime import timedelta
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence, Union
 import json
+import aiohttp
+import mimeparse
 
 
 import collections.abc
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def deep_update(d, u):
@@ -24,6 +25,49 @@ def deep_update(d, u):
         else:
             d[k] = v
     return d
+
+
+def get_allow_block_lists(filter_list):
+    allow_list = []
+    block_list = []
+
+    if filter_list:
+        for d in filter_list:
+            if d.startswith("!"):
+                # Domains starting with "!" → blocked
+                block_list.append(d[1:].strip())
+            else:
+                # Domains starting without "!" → allowed
+                allow_list.append(d.strip())
+
+    return allow_list, block_list
+
+
+def is_string_allowed(
+    string: Union[str, Sequence[str]], filter_list: Optional[list[str]] = None
+) -> bool:
+    """
+    Checks if a string is allowed based on the provided filter list.
+    :param string: The string or sequence of strings to check (e.g., domain or hostname).
+    :param filter_list: List of allowed/blocked strings. Strings starting with "!" are blocked.
+    :return: True if the string or sequence of strings is allowed, False otherwise.
+    """
+    if not filter_list:
+        return True
+
+    allow_list, block_list = get_allow_block_lists(filter_list)
+    strings = [string] if isinstance(string, str) else list(string)
+
+    # If allow list is non-empty, require domain to match one of them
+    if allow_list:
+        if not any(s.endswith(allowed) for s in strings for allowed in allow_list):
+            return False
+
+    # Block list always removes matches
+    if any(s.endswith(blocked) for s in strings for blocked in block_list):
+        return False
+
+    return True
 
 
 def get_message_list(messages_map, message_id):
@@ -134,6 +178,14 @@ def update_message_content(message: dict, content: str, append: bool = True) -> 
         else:
             message["content"] = f"{content}\n{message['content']}"
     return message
+
+
+def replace_system_message_content(content: str, messages: list[dict]) -> dict:
+    for message in messages:
+        if message["role"] == "system":
+            message["content"] = content
+            break
+    return messages
 
 
 def add_or_update_system_message(
@@ -321,6 +373,34 @@ def sanitize_filename(file_name):
     return final_file_name
 
 
+def sanitize_text_for_db(text: str) -> str:
+    """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
+    if not isinstance(text, str):
+        return text
+    # Remove null bytes
+    text = text.replace("\x00", "").replace("\u0000", "")
+    # Remove invalid UTF-8 surrogate characters that can cause encoding errors
+    # This handles cases where binary data or encoding issues introduced surrogates
+    try:
+        text = text.encode("utf-8", errors="surrogatepass").decode(
+            "utf-8", errors="ignore"
+        )
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        pass
+    return text
+
+
+def sanitize_data_for_db(obj):
+    """Recursively sanitize all strings in a data structure for database storage."""
+    if isinstance(obj, str):
+        return sanitize_text_for_db(obj)
+    elif isinstance(obj, dict):
+        return {k: sanitize_data_for_db(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_data_for_db(v) for v in obj]
+    return obj
+
+
 def extract_folders_after_data_docs(path):
     # Convert the path to a Path object if it's not already
     path = Path(path)
@@ -470,16 +550,18 @@ def parse_ollama_modelfile(model_text):
     return data
 
 
-def convert_logit_bias_input_to_json(user_input):
-    logit_bias_pairs = user_input.split(",")
-    logit_bias_json = {}
-    for pair in logit_bias_pairs:
-        token, bias = pair.split(":")
-        token = str(token.strip())
-        bias = int(bias.strip())
-        bias = 100 if bias > 100 else -100 if bias < -100 else bias
-        logit_bias_json[token] = bias
-    return json.dumps(logit_bias_json)
+def convert_logit_bias_input_to_json(user_input) -> Optional[str]:
+    if user_input:
+        logit_bias_pairs = user_input.split(",")
+        logit_bias_json = {}
+        for pair in logit_bias_pairs:
+            token, bias = pair.split(":")
+            token = str(token.strip())
+            bias = int(bias.strip())
+            bias = 100 if bias > 100 else -100 if bias < -100 else bias
+            logit_bias_json[token] = bias
+        return json.dumps(logit_bias_json)
+    return None
 
 
 def freeze(value):
@@ -523,3 +605,115 @@ def throttle(interval: float = 10.0):
         return wrapper
 
     return decorator
+
+
+def strict_match_mime_type(supported: list[str] | str, header: str) -> Optional[str]:
+    """
+    Strictly match the mime type with the supported mime types.
+
+    :param supported: The supported mime types.
+    :param header: The header to match.
+    :return: The matched mime type or None if no match is found.
+    """
+
+    try:
+        if isinstance(supported, str):
+            supported = supported.split(",")
+
+        supported = [s for s in supported if s.strip() and "/" in s]
+
+        if len(supported) == 0:
+            # Default to common types if none are specified
+            supported = ["audio/*", "video/webm"]
+
+        match = mimeparse.best_match(supported, header)
+        if not match:
+            return None
+
+        _, _, match_params = mimeparse.parse_mime_type(match)
+        _, _, header_params = mimeparse.parse_mime_type(header)
+        for k, v in match_params.items():
+            if header_params.get(k) != v:
+                return None
+
+        return match
+    except Exception as e:
+        log.exception(f"Failed to match mime type {header}: {e}")
+        return None
+
+
+def extract_urls(text: str) -> list[str]:
+    # Regex pattern to match URLs
+    url_pattern = re.compile(
+        r"(https?://[^\s]+)", re.IGNORECASE
+    )  # Matches http and https URLs
+    return url_pattern.findall(text)
+
+
+def stream_chunks_handler(stream: aiohttp.StreamReader):
+    """
+    Handle stream response chunks, supporting large data chunks that exceed the original 16kb limit.
+    When a single line exceeds max_buffer_size, returns an empty JSON string {} and skips subsequent data
+    until encountering normally sized data.
+
+    :param stream: The stream reader to handle.
+    :return: An async generator that yields the stream data.
+    """
+
+    max_buffer_size = CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+    if max_buffer_size is None or max_buffer_size <= 0:
+        return stream
+
+    async def yield_safe_stream_chunks():
+        buffer = b""
+        skip_mode = False
+
+        async for data, _ in stream.iter_chunks():
+            if not data:
+                continue
+
+            # In skip_mode, if buffer already exceeds the limit, clear it (it's part of an oversized line)
+            if skip_mode and len(buffer) > max_buffer_size:
+                buffer = b""
+
+            lines = (buffer + data).split(b"\n")
+
+            # Process complete lines (except the last possibly incomplete fragment)
+            for i in range(len(lines) - 1):
+                line = lines[i]
+
+                if skip_mode:
+                    # Skip mode: check if current line is small enough to exit skip mode
+                    if len(line) <= max_buffer_size:
+                        skip_mode = False
+                        yield line
+                    else:
+                        yield b"data: {}"
+                        yield b"\n"
+                else:
+                    # Normal mode: check if line exceeds limit
+                    if len(line) > max_buffer_size:
+                        skip_mode = True
+                        yield b"data: {}"
+                        yield b"\n"
+                        log.info(f"Skip mode triggered, line size: {len(line)}")
+                    else:
+                        yield line
+                        yield b"\n"
+
+            # Save the last incomplete fragment
+            buffer = lines[-1]
+
+            # Check if buffer exceeds limit
+            if not skip_mode and len(buffer) > max_buffer_size:
+                skip_mode = True
+                log.info(f"Skip mode triggered, buffer size: {len(buffer)}")
+                # Clear oversized buffer to prevent unlimited growth
+                buffer = b""
+
+        # Process remaining buffer data
+        if buffer and not skip_mode:
+            yield buffer
+            yield b"\n"
+
+    return yield_safe_stream_chunks()

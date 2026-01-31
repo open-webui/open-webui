@@ -20,13 +20,15 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "child_profile" in existing_tables:
-        child_profile_columns = [col["name"] for col in inspector.get_columns("child_profile")]
+        child_profile_columns = [
+            col["name"] for col in inspector.get_columns("child_profile")
+        ]
         if "parenting_style" in child_profile_columns:
             # Remove parenting_style column from child_profile table
             with op.batch_alter_table("child_profile") as batch_op:
-                batch_op.drop_column('parenting_style')
+                batch_op.drop_column("parenting_style")
 
 
 def downgrade() -> None:
@@ -34,10 +36,14 @@ def downgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "child_profile" in existing_tables:
-        child_profile_columns = [col["name"] for col in inspector.get_columns("child_profile")]
+        child_profile_columns = [
+            col["name"] for col in inspector.get_columns("child_profile")
+        ]
         if "parenting_style" not in child_profile_columns:
             # Add parenting_style column back for rollback
             with op.batch_alter_table("child_profile") as batch_op:
-                batch_op.add_column(sa.Column('parenting_style', sa.String(), nullable=True))
+                batch_op.add_column(
+                    sa.Column("parenting_style", sa.String(), nullable=True)
+                )

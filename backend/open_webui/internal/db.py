@@ -9,22 +9,23 @@ from open_webui.env import (
     OPEN_WEBUI_DIR,
     DATABASE_URL,
     DATABASE_SCHEMA,
-    SRC_LOG_LEVELS,
     DATABASE_POOL_MAX_OVERFLOW,
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
     DATABASE_ENABLE_SQLITE_WAL,
+    DATABASE_ENABLE_SESSION_SHARING,
+    ENABLE_DB_MIGRATIONS,
 )
+from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, event, types
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker, Session
 from sqlalchemy.pool import QueuePool, NullPool
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["DB"])
 
 
 class JSONField(types.TypeDecorator):
@@ -36,9 +37,6 @@ class JSONField(types.TypeDecorator):
 
     def process_result_value(self, value: Optional[_T], dialect: Dialect) -> Any:
         if value is not None:
-            # If value is already a dict/list (deserialized), return it as-is
-            if isinstance(value, (dict, list)):
-                return value
             return json.loads(value)
 
     def copy(self, **kw: Any) -> Self:
@@ -49,59 +47,47 @@ class JSONField(types.TypeDecorator):
 
     def python_value(self, value):
         if value is not None:
-            # If value is already a dict/list (deserialized), return it as-is
-            if isinstance(value, (dict, list)):
-                return value
             return json.loads(value)
 
 
-def is_alembic_detected(database_url: str) -> bool:
-    """
-    Check if Alembic migrations have been applied by detecting the alembic_version table.
-    
-    Returns True if Alembic is detected, False otherwise.
-    If detection fails, returns False (safe fallback to run Peewee migrations).
-    """
-    try:
-        import peewee as pw
-        
-        # Replace postgresql:// with postgres:// for Peewee compatibility
-        peewee_url = database_url.replace("postgresql://", "postgres://")
-        db = register_connection(peewee_url)
-        
-        try:
-            if isinstance(db, pw.SqliteDatabase):
-                # For SQLite, check sqlite_master for alembic_version table
-                cursor = db.execute_sql(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name='alembic_version'"
-                )
-                result = cursor.fetchone()
-                alembic_detected = result is not None
-            else:
-                # For PostgreSQL and other databases, query information_schema
-                cursor = db.execute_sql(
-                    "SELECT table_name FROM information_schema.tables "
-                    "WHERE table_name = 'alembic_version'"
-                )
-                result = cursor.fetchone()
-                alembic_detected = result is not None
-            
-            return alembic_detected
-        finally:
-            if not db.is_closed():
-                db.close()
-    except Exception as e:
-        # If detection fails, assume Alembic is not present (safe fallback)
-        log.debug(f"Could not detect Alembic version table: {e}")
-        return False
-
-
-# Peewee migrations are no longer used - we use Alembic exclusively
-# This function is kept for backward compatibility but does nothing
+# Workaround to handle the peewee migration
+# This is required to ensure the peewee migration is handled before the alembic migration
 def handle_peewee_migration(DATABASE_URL):
-    # Alembic is the only migration system now
-    log.debug("Skipping Peewee migrations - using Alembic exclusively")
-    return
+    # db = None
+    try:
+        # Replace the postgresql:// with postgres:// to handle the peewee migration
+        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
+        migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
+        router = Router(db, logger=log, migrate_dir=migrate_dir)
+        router.run()
+        db.close()
+
+    except Exception as e:
+        log.error(f"Failed to initialize the database connection: {e}")
+        log.warning(
+            "Hint: If your database password contains special characters, you may need to URL-encode it."
+        )
+        raise
+    finally:
+        # Properly closing the database connection
+        if db and not db.is_closed():
+            db.close()
+
+        # Assert if db connection has been closed
+        assert db.is_closed(), "Database connection is still open."
+
+
+if ENABLE_DB_MIGRATIONS:
+    try:
+        handle_peewee_migration(DATABASE_URL)
+    except Exception as e:
+        # Peewee migrations are a legacy/compatibility layer. On some SQLite dev DBs,
+        # these can fail due to schema drift or prior partially-applied migrations.
+        # Alembic migrations (run separately) are the source of truth in this repo.
+        if "sqlite" in (DATABASE_URL or "").lower():
+            log.warning("Peewee migrations failed on SQLite (continuing): %s", e)
+        else:
+            raise
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
@@ -116,8 +102,6 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite+sqlcipher://"):
 
     # Extract database path from SQLCipher URL
     db_path = SQLALCHEMY_DATABASE_URL.replace("sqlite+sqlcipher://", "")
-    if db_path.startswith("/"):
-        db_path = db_path[1:]  # Remove leading slash for relative paths
 
     # Create a custom creator function that uses sqlcipher3
     def create_sqlcipher_connection():
@@ -174,7 +158,7 @@ SessionLocal = sessionmaker(
 )
 metadata_obj = MetaData(schema=DATABASE_SCHEMA)
 Base = declarative_base(metadata=metadata_obj)
-Session = scoped_session(SessionLocal)
+ScopedSession = scoped_session(SessionLocal)
 
 
 def get_session():
@@ -186,3 +170,12 @@ def get_session():
 
 
 get_db = contextmanager(get_session)
+
+
+@contextmanager
+def get_db_context(db: Optional[Session] = None):
+    if isinstance(db, Session) and DATABASE_ENABLE_SESSION_SHARING:
+        yield db
+    else:
+        with get_db() as session:
+            yield session

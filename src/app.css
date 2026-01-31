@@ -30,8 +30,33 @@
 	font-display: swap;
 }
 
+/* --app-text-scale is updated via the UI Scale slider (Interface.svelte) */
+:root {
+	--app-text-scale: 1;
+}
+
 html {
 	word-break: break-word;
+	/* font-size scales the entire document via the same UI control */
+	font-size: calc(1rem * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item {
+	/* sidebar item sizing scales for the chat list entries */
+	min-height: calc(32px * var(--app-text-scale, 1));
+	padding-inline: calc(11px * var(--app-text-scale, 1));
+	padding-block: calc(6px * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item div[dir='auto'] {
+	/* chat title line height follows the text scale */
+	height: calc(20px * var(--app-text-scale, 1));
+	line-height: calc(20px * var(--app-text-scale, 1));
+}
+
+#sidebar-chat-item input {
+	/* editing state input height is kept in sync */
+	min-height: calc(20px * var(--app-text-scale, 1));
 }
 
 code {
@@ -129,8 +154,8 @@ li p {
 }
 
 ::-webkit-scrollbar {
-	height: 0.4rem;
-	width: 0.4rem;
+	height: 0.45rem;
+	width: 0.45rem;
 }
 
 ::-webkit-scrollbar-track {
@@ -150,6 +175,14 @@ select {
 	-moz-appearance: none;
 	/* for Chrome */
 	-webkit-appearance: none;
+}
+
+.dark select:not([class*='bg-transparent']) {
+	@apply bg-gray-900 text-gray-300;
+}
+
+.dark select option {
+	@apply bg-gray-850 text-white;
 }
 
 @keyframes shimmer {
@@ -595,7 +628,7 @@ input[type='number'] {
 
 /* Table styling for tiptap editors */
 .tiptap table {
-	@apply w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full;
+	@apply w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full;
 }
 
 .tiptap thead {
@@ -604,11 +637,11 @@ input[type='number'] {
 
 .tiptap th,
 .tiptap td {
-	@apply px-3 py-1.5 border border-gray-100 dark:border-gray-850;
+	@apply px-3 py-1.5 border border-gray-100/30 dark:border-gray-850/30;
 }
 
 .tiptap th {
-	@apply cursor-pointer text-left text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
+	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
 }
 
 .tiptap td {
@@ -621,10 +654,10 @@ input[type='number'] {
 
 /* KidsGPT Gradient Background Styles */
 :root {
-	--columbia-blue: #D2E9FA;
-	--columbia-blue-2: #CFE1FA;
-	--mimi-pink: #FED4DC;
-	--mimi-pink-2: #FEDEE4;
+	--columbia-blue: #d2e9fa;
+	--columbia-blue-2: #cfe1fa;
+	--mimi-pink: #fed4dc;
+	--mimi-pink-2: #fedee4;
 
 	/* Theme tokens aligned with system prompt accents */
 	--color-primary: 56 189 248; /* sky-400 */
@@ -636,14 +669,20 @@ input[type='number'] {
 
 /* Enhanced drop shadow for message input box */
 .message-input-container {
-	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 6px 20px rgba(0, 0, 0, 0.1), 0 3px 12px rgba(0, 0, 0, 0.08) !important;
+	box-shadow:
+		0 12px 40px rgba(0, 0, 0, 0.15),
+		0 6px 20px rgba(0, 0, 0, 0.1),
+		0 3px 12px rgba(0, 0, 0, 0.08) !important;
 	border: 1px solid rgba(0, 0, 0, 0.08) !important;
 	z-index: 10;
 	position: relative;
 }
 
 .dark .message-input-container {
-	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3), 0 3px 12px rgba(0, 0, 0, 0.2) !important;
+	box-shadow:
+		0 12px 40px rgba(0, 0, 0, 0.4),
+		0 6px 20px rgba(0, 0, 0, 0.3),
+		0 3px 12px rgba(0, 0, 0, 0.2) !important;
 	border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -664,7 +703,7 @@ input[type='number'] {
 
 /* Selection recording highlight */
 mark.selection-highlight {
-    @apply bg-yellow-200 dark:bg-yellow-800 text-black dark:text-white rounded px-0.5;
+	@apply bg-yellow-200 dark:bg-yellow-800 text-black dark:text-white rounded px-0.5;
 }
 
 .chat-side-bar {
@@ -723,7 +762,7 @@ mark.selection-highlight {
 	right: 0;
 	bottom: 0;
 	z-index: 0;
-	background: 
+	background:
 		radial-gradient(circle at 10% 20%, rgba(255, 99, 132, 0.3) 0%, transparent 50%),
 		radial-gradient(circle at 90% 30%, rgba(54, 162, 235, 0.3) 0%, transparent 50%),
 		radial-gradient(circle at 50% 80%, rgba(153, 102, 255, 0.3) 0%, transparent 50%),
@@ -754,7 +793,7 @@ mark.selection-highlight {
 }
 
 .dark .gradient-background {
-	background: 
+	background:
 		radial-gradient(circle at 10% 20%, rgba(255, 99, 132, 0.18) 0%, transparent 30%),
 		radial-gradient(circle at 90% 30%, rgba(54, 162, 235, 0.18) 0%, transparent 30%),
 		radial-gradient(circle at 50% 80%, rgba(153, 102, 255, 0.22) 0%, transparent 30%),
@@ -768,7 +807,9 @@ mark.selection-highlight {
 	padding: 12px 16px;
 	border-radius: 20px;
 	position: relative;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+	box-shadow:
+		0 4px 12px rgba(0, 0, 0, 0.15),
+		0 2px 8px rgba(0, 0, 0, 0.1);
 	word-break: break-word;
 	z-index: 10;
 	p {
@@ -782,7 +823,10 @@ mark.selection-highlight {
 	border-bottom-right-radius: 4px;
 	margin-left: auto;
 	max-width: 70vw;
-	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 3px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+	box-shadow:
+		0 6px 20px rgba(0, 0, 0, 0.15),
+		0 3px 12px rgba(0, 0, 0, 0.1),
+		0 2px 6px rgba(0, 0, 0, 0.08) !important;
 	border: 1px solid rgba(0, 0, 0, 0.08) !important;
 	* {
 		color: #000000 !important;
@@ -795,7 +839,10 @@ mark.selection-highlight {
 	border-bottom-left-radius: 4px;
 	margin-right: auto;
 	max-width: 70vw;
-	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 3px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+	box-shadow:
+		0 6px 20px rgba(0, 0, 0, 0.15),
+		0 3px 12px rgba(0, 0, 0, 0.1),
+		0 2px 6px rgba(0, 0, 0, 0.08) !important;
 	border: 1px solid rgba(0, 0, 0, 0.08) !important;
 	* {
 		color: #000000 !important;
@@ -803,7 +850,7 @@ mark.selection-highlight {
 }
 
 .dark .assistant-bubble {
-	background-color: #3A246B;
+	background-color: #3a246b;
 	color: white;
 	* {
 		color: white !important;
@@ -811,7 +858,7 @@ mark.selection-highlight {
 }
 
 .dark .user-bubble {
-	background-color: #10498C;
+	background-color: #10498c;
 	color: white;
 	* {
 		color: white !important;
@@ -825,7 +872,9 @@ mark.selection-highlight {
 	border-radius: 20px;
 	padding: 12px 16px;
 	margin-bottom: 8px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 1.5px 6px rgba(0,0,0,0.12);
+	box-shadow:
+		0 2px 8px rgba(0, 0, 0, 0.18),
+		0 1.5px 6px rgba(0, 0, 0, 0.12);
 	border-bottom-left-radius: 4px;
 	max-width: 90%;
 	* {
@@ -834,9 +883,13 @@ mark.selection-highlight {
 }
 
 .dark .chat-assistant {
-	background-color: #3A246B;
+	background-color: #3a246b;
 	color: white;
 	* {
 		color: white !important;
 	}
+}
+
+#note-content-container .ProseMirror {
+	padding-bottom: 2rem; /* space for the bottom toolbar */
 }

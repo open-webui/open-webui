@@ -24,7 +24,7 @@ def upgrade():
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "config" not in existing_tables:
         op.create_table(
             "config",
@@ -32,7 +32,10 @@ def upgrade():
             sa.Column("data", sa.JSON(), nullable=False),
             sa.Column("version", sa.Integer, nullable=False),
             sa.Column(
-                "created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()
+                "created_at",
+                sa.DateTime(),
+                nullable=False,
+                server_default=sa.func.now(),
             ),
             sa.Column(
                 "updated_at",
@@ -41,7 +44,7 @@ def upgrade():
                 server_default=sa.func.now(),
                 onupdate=sa.func.now(),
             ),
-    )
+        )
 
 
 def downgrade():

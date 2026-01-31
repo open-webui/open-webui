@@ -59,10 +59,18 @@ describe('Registration and Login', () => {
 
 		cy.get('input[type="email"]').clear().type(EMAIL);
 		cy.get('input[type="password"]').first().clear().type(PASSWORD);
-		cy.get('button').contains(/sign in/i).click();
+		cy.get('button')
+			.contains(/sign in/i)
+			.click();
 
 		cy.location('pathname', { timeout: 15000 }).should((path) => {
-			expect(['/kids/profile', '/moderation-scenario', '/exit-survey', '/completion', '/']).to.include(path);
+			expect([
+				'/kids/profile',
+				'/moderation-scenario',
+				'/exit-survey',
+				'/completion',
+				'/'
+			]).to.include(path);
 		});
 	});
 });

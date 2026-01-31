@@ -4,7 +4,7 @@ import { get } from 'svelte/store';
 
 /**
  * TEXT SELECTION: Service for syncing selections between localStorage and backend database
- * 
+ *
  * Handles:
  * - Syncing localStorage selections to backend when user is authenticated
  * - Restoring selections from backend when user logs in
@@ -13,325 +13,343 @@ import { get } from 'svelte/store';
  */
 
 class SelectionSyncService {
-  private readonly STORAGE_KEY = 'saved-selections';
-  private readonly SYNC_KEY = 'selections-synced';
-  private isOnline = true;
+	private readonly STORAGE_KEY = 'saved-selections';
+	private readonly SYNC_KEY = 'selections-synced';
+	private isOnline = true;
 
-  constructor() {
-    // Listen for online/offline events
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => {
-        this.isOnline = true;
-        this.syncToBackend();
-      });
-      
-      window.addEventListener('offline', () => {
-        this.isOnline = false;
-      });
-    }
-  }
+	constructor() {
+		// Listen for online/offline events
+		if (typeof window !== 'undefined') {
+			window.addEventListener('online', () => {
+				this.isOnline = true;
+				this.syncToBackend();
+			});
 
-  /**
-   * TEXT SELECTION: Save a selection to both localStorage and backend
-   */
-  async saveSelection(selection: SelectionForm): Promise<void> {
-    // Convert to local format for store
-    const localSelection = {
-      chatId: selection.chat_id,
-      messageId: selection.message_id,
-      role: selection.role,
-      text: selection.selected_text,
-      childId: selection.child_id
-    };
+			window.addEventListener('offline', () => {
+				this.isOnline = false;
+			});
+		}
+	}
 
-    // Update the store first (this will trigger localStorage save via subscription)
-    savedSelections.update(current => [...current, localSelection]);
+	/**
+	 * TEXT SELECTION: Save a selection to both localStorage and backend
+	 */
+	async saveSelection(selection: SelectionForm): Promise<void> {
+		// Convert to local format for store
+		const localSelection = {
+			chatId: selection.chat_id,
+			messageId: selection.message_id,
+			role: selection.role,
+			text: selection.selected_text,
+			childId: selection.child_id
+		};
 
-    // Try to save to backend if online and user is authenticated
-    if (this.isOnline && this.isUserAuthenticated()) {
-      try {
-        await selectionsAPI.createSelection(selection);
-      } catch (error) {
-        // Selection is still saved in localStorage, so user doesn't lose data
-      }
-    }
-  }
+		// Update the store first (this will trigger localStorage save via subscription)
+		savedSelections.update((current) => [...current, localSelection]);
 
-  /**
-   * TEXT SELECTION: Save multiple selections (for bulk sync)
-   */
-  async saveBulkSelections(selections: SelectionForm[]): Promise<void> {
-    // Convert to local format and update store (this will trigger localStorage save via subscription)
-    const localSelections = selections.map(selection => ({
-      chatId: selection.chat_id,
-      messageId: selection.message_id,
-      role: selection.role,
-      text: selection.selected_text,
-      childId: selection.child_id
-    }));
-    
-    savedSelections.update(current => [...current, ...localSelections]);
+		// Try to save to backend if online and user is authenticated
+		if (this.isOnline && this.isUserAuthenticated()) {
+			try {
+				await selectionsAPI.createSelection(selection);
+			} catch (error) {
+				// Selection is still saved in localStorage, so user doesn't lose data
+			}
+		}
+	}
 
-    // Try to save to backend
-    if (this.isOnline && this.isUserAuthenticated()) {
-      try {
-        await selectionsAPI.createBulkSelections(selections);
-      } catch (error) {
-        // Failed to sync - continue silently
-      }
-    }
-  }
+	/**
+	 * TEXT SELECTION: Save multiple selections (for bulk sync)
+	 */
+	async saveBulkSelections(selections: SelectionForm[]): Promise<void> {
+		// Convert to local format and update store (this will trigger localStorage save via subscription)
+		const localSelections = selections.map((selection) => ({
+			chatId: selection.chat_id,
+			messageId: selection.message_id,
+			role: selection.role,
+			text: selection.selected_text,
+			childId: selection.child_id
+		}));
 
-  /**
-   * TEXT SELECTION: Get selections for a specific chat (backend first, localStorage fallback)
-   */
-  async getChatSelections(chatId: string): Promise<{chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childId?: string}[]> {
-    // Try backend first if online and authenticated
-    if (this.isOnline && this.isUserAuthenticated()) {
-      try {
-        const backendSelections = await selectionsAPI.getChatSelections(chatId);
-        // Convert backend format to local format
-        return backendSelections.map(selection => ({
-          chatId: selection.chat_id,
-          messageId: selection.message_id,
-          role: selection.role,
-          text: selection.selected_text,
-          childId: selection.child_id
-        }));
-      } catch (error) {
-        // Failed to get from backend - fall back to localStorage
-      }
-    }
+		savedSelections.update((current) => [...current, ...localSelections]);
 
-    // Fallback to localStorage
-    return this.getFromLocalStorage(chatId);
-  }
+		// Try to save to backend
+		if (this.isOnline && this.isUserAuthenticated()) {
+			try {
+				await selectionsAPI.createBulkSelections(selections);
+			} catch (error) {
+				// Failed to sync - continue silently
+			}
+		}
+	}
 
-  /**
-   * TEXT SELECTION: Sync all localStorage selections to backend (with rate limiting)
-   */
-  async syncToBackend(): Promise<void> {
-    if (!this.isOnline || !this.isUserAuthenticated()) return;
+	/**
+	 * TEXT SELECTION: Get selections for a specific chat (backend first, localStorage fallback)
+	 */
+	async getChatSelections(chatId: string): Promise<
+		{
+			chatId: string;
+			messageId: string;
+			role: 'user' | 'assistant';
+			text: string;
+			childId?: string;
+		}[]
+	> {
+		// Try backend first if online and authenticated
+		if (this.isOnline && this.isUserAuthenticated()) {
+			try {
+				const backendSelections = await selectionsAPI.getChatSelections(chatId);
+				// Convert backend format to local format
+				return backendSelections.map((selection) => ({
+					chatId: selection.chat_id,
+					messageId: selection.message_id,
+					role: selection.role,
+					text: selection.selected_text,
+					childId: selection.child_id
+				}));
+			} catch (error) {
+				// Failed to get from backend - fall back to localStorage
+			}
+		}
 
-    const currentUser = get(user);
-    if (!currentUser) return;
+		// Fallback to localStorage
+		return this.getFromLocalStorage(chatId);
+	}
 
-    try {
-      // Rate limiting: only sync if it's been more than 5 minutes since last sync
-      const lastSync = localStorage.getItem(this.SYNC_KEY);
-      const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
-      const now = Date.now();
-      if (now - lastSyncTime < 5 * 60 * 1000) return;
+	/**
+	 * TEXT SELECTION: Sync all localStorage selections to backend (with rate limiting)
+	 */
+	async syncToBackend(): Promise<void> {
+		if (!this.isOnline || !this.isUserAuthenticated()) return;
 
-      // Get all selections from localStorage
-      const allSelections = this.getAllFromLocalStorage();
-      if (allSelections.length === 0) return;
+		const currentUser = get(user);
+		if (!currentUser) return;
 
-      // Convert to backend format
-      const backendSelections: SelectionForm[] = allSelections.map(selection => ({
-        chat_id: selection.chatId,
-        message_id: selection.messageId,
-        role: selection.role,
-        selected_text: selection.text,
-        context: undefined, // Could be enhanced to include context
-        meta: {
-          synced_from: 'localStorage',
-          original_timestamp: Date.now()
-        }
-      }));
+		try {
+			// Rate limiting: only sync if it's been more than 5 minutes since last sync
+			const lastSync = localStorage.getItem(this.SYNC_KEY);
+			const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
+			const now = Date.now();
+			if (now - lastSyncTime < 5 * 60 * 1000) return;
 
-      // Sync to backend
-      await selectionsAPI.createBulkSelections(backendSelections);
-      
-      // Mark as synced
-      localStorage.setItem(this.SYNC_KEY, now.toString());
+			// Get all selections from localStorage
+			const allSelections = this.getAllFromLocalStorage();
+			if (allSelections.length === 0) return;
 
-    } catch (error) {
-      // Failed to sync - continue silently
-    }
-  }
+			// Convert to backend format
+			const backendSelections: SelectionForm[] = allSelections.map((selection) => ({
+				chat_id: selection.chatId,
+				message_id: selection.messageId,
+				role: selection.role,
+				selected_text: selection.text,
+				context: undefined, // Could be enhanced to include context
+				meta: {
+					synced_from: 'localStorage',
+					original_timestamp: Date.now()
+				}
+			}));
 
-  /**
-   * Restore selections from backend to localStorage
-   */
-  async restoreFromBackend(): Promise<void> {
-    if (!this.isOnline || !this.isUserAuthenticated()) {
-      return;
-    }
+			// Sync to backend
+			await selectionsAPI.createBulkSelections(backendSelections);
 
-    try {
-      const backendSelections = await selectionsAPI.getUserSelections(1000);
-      
-      // Convert backend format to localStorage format
-      const localSelections: Record<string, SelectionForm[]> = {};
-      
-      backendSelections.forEach(selection => {
-        const localSelection = {
-          chatId: selection.chat_id,
-          messageId: selection.message_id,
-          role: selection.role,
-          text: selection.selected_text
-        };
+			// Mark as synced
+			localStorage.setItem(this.SYNC_KEY, now.toString());
+		} catch (error) {
+			// Failed to sync - continue silently
+		}
+	}
 
-        if (!localSelections[selection.chat_id]) {
-          localSelections[selection.chat_id] = [];
-        }
-        localSelections[selection.chat_id].push(localSelection);
-      });
+	/**
+	 * Restore selections from backend to localStorage
+	 */
+	async restoreFromBackend(): Promise<void> {
+		if (!this.isOnline || !this.isUserAuthenticated()) {
+			return;
+		}
 
-      // Save to localStorage
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(localSelections));
+		try {
+			const backendSelections = await selectionsAPI.getUserSelections(1000);
 
-    } catch (error) {
-      // Failed to restore - continue silently
-    }
-  }
+			// Convert backend format to localStorage format
+			const localSelections: Record<string, SelectionForm[]> = {};
 
-  /**
-   * Manually sync all localStorage selections to backend (useful for testing)
-   */
-  async manualSyncToBackend(): Promise<void> {
-    await this.syncToBackend();
-  }
+			backendSelections.forEach((selection) => {
+				const localSelection = {
+					chatId: selection.chat_id,
+					messageId: selection.message_id,
+					role: selection.role,
+					text: selection.selected_text
+				};
 
-  /**
-   * Clear all selections (both localStorage and backend)
-   */
-  async clearAllSelections(): Promise<void> {
-    // Clear localStorage
-    localStorage.removeItem(this.STORAGE_KEY);
-    localStorage.removeItem(this.SYNC_KEY);
+				if (!localSelections[selection.chat_id]) {
+					localSelections[selection.chat_id] = [];
+				}
+				localSelections[selection.chat_id].push(localSelection);
+			});
 
-    // Clear backend if online and authenticated
-    if (this.isOnline && this.isUserAuthenticated()) {
-      try {
-        const selections = await selectionsAPI.getUserSelections(1000);
-        // Delete each selection (this could be optimized with a bulk delete endpoint)
-        for (const selection of selections) {
-          await selectionsAPI.deleteSelection(selection.id);
-        }
-      } catch (error) {
-        // Failed to clear from backend - continue silently
-      }
-    }
-  }
+			// Save to localStorage
+			localStorage.setItem(this.STORAGE_KEY, JSON.stringify(localSelections));
+		} catch (error) {
+			// Failed to restore - continue silently
+		}
+	}
 
-  /**
-   * Delete a specific selection (both localStorage and backend)
-   */
-  async deleteSelection(selectionDetails: {
-    chat_id: string;
-    message_id: string;
-    role: 'user' | 'assistant';
-    selected_text: string;
-  }): Promise<void> {
-    // Remove from localStorage
-    try {
-      const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
-      if (existing[selectionDetails.chat_id]) {
-        existing[selectionDetails.chat_id] = existing[selectionDetails.chat_id].filter(
-          (selection: any) => 
-            !(selection.chatId === selectionDetails.chat_id &&
-              selection.messageId === selectionDetails.message_id &&
-              selection.role === selectionDetails.role &&
-              selection.text === selectionDetails.selected_text)
-        );
-        
-        // If no selections left for this chat, remove the chat entry
-        if (existing[selectionDetails.chat_id].length === 0) {
-          delete existing[selectionDetails.chat_id];
-        }
-        
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(existing));
-      }
-    } catch (error) {
-      // Failed to remove from localStorage - continue
-    }
+	/**
+	 * Manually sync all localStorage selections to backend (useful for testing)
+	 */
+	async manualSyncToBackend(): Promise<void> {
+		await this.syncToBackend();
+	}
 
-    // Also remove from the savedSelections store to keep it in sync
-    savedSelections.update(current => {
-      return current.filter(selection => 
-        !(selection.chatId === selectionDetails.chat_id &&
-          selection.messageId === selectionDetails.message_id &&
-          selection.role === selectionDetails.role &&
-          selection.text === selectionDetails.selected_text)
-      );
-    });
+	/**
+	 * Clear all selections (both localStorage and backend)
+	 */
+	async clearAllSelections(): Promise<void> {
+		// Clear localStorage
+		localStorage.removeItem(this.STORAGE_KEY);
+		localStorage.removeItem(this.SYNC_KEY);
 
-    // Remove from backend if online and authenticated
-    if (this.isOnline && this.isUserAuthenticated()) {
-      try {
-        const allSelections = await selectionsAPI.getUserSelections(1000);
-        const selectionToDelete = allSelections.find(selection => 
-          selection.chat_id === selectionDetails.chat_id &&
-          selection.message_id === selectionDetails.message_id &&
-          selection.role === selectionDetails.role &&
-          selection.selected_text === selectionDetails.selected_text
-        );
-        
-        if (selectionToDelete) {
-          await selectionsAPI.deleteSelection(selectionToDelete.id);
-        }
-      } catch (error) {
-        // Failed to delete from backend - continue silently
-      }
-    }
-  }
+		// Clear backend if online and authenticated
+		if (this.isOnline && this.isUserAuthenticated()) {
+			try {
+				const selections = await selectionsAPI.getUserSelections(1000);
+				// Delete each selection (this could be optimized with a bulk delete endpoint)
+				for (const selection of selections) {
+					await selectionsAPI.deleteSelection(selection.id);
+				}
+			} catch (error) {
+				// Failed to clear from backend - continue silently
+			}
+		}
+	}
 
-  // Private helper methods
+	/**
+	 * Delete a specific selection (both localStorage and backend)
+	 */
+	async deleteSelection(selectionDetails: {
+		chat_id: string;
+		message_id: string;
+		role: 'user' | 'assistant';
+		selected_text: string;
+	}): Promise<void> {
+		// Remove from localStorage
+		try {
+			const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+			if (existing[selectionDetails.chat_id]) {
+				existing[selectionDetails.chat_id] = existing[selectionDetails.chat_id].filter(
+					(selection: any) =>
+						!(
+							selection.chatId === selectionDetails.chat_id &&
+							selection.messageId === selectionDetails.message_id &&
+							selection.role === selectionDetails.role &&
+							selection.text === selectionDetails.selected_text
+						)
+				);
 
-  private isUserAuthenticated(): boolean {
-    const currentUser = get(user);
-    return currentUser !== null && currentUser !== undefined;
-  }
+				// If no selections left for this chat, remove the chat entry
+				if (existing[selectionDetails.chat_id].length === 0) {
+					delete existing[selectionDetails.chat_id];
+				}
 
-  private saveToLocalStorage(selection: SelectionForm): void {
-    try {
-      const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
-      
-      if (!existing[selection.chat_id]) {
-        existing[selection.chat_id] = [];
-      }
+				localStorage.setItem(this.STORAGE_KEY, JSON.stringify(existing));
+			}
+		} catch (error) {
+			// Failed to remove from localStorage - continue
+		}
 
-      // Convert to local format
-      const localSelection = {
-        chatId: selection.chat_id,
-        messageId: selection.message_id,
-        role: selection.role,
-        text: selection.selected_text,
-        childId: selection.child_id
-      };
+		// Also remove from the savedSelections store to keep it in sync
+		savedSelections.update((current) => {
+			return current.filter(
+				(selection) =>
+					!(
+						selection.chatId === selectionDetails.chat_id &&
+						selection.messageId === selectionDetails.message_id &&
+						selection.role === selectionDetails.role &&
+						selection.text === selectionDetails.selected_text
+					)
+			);
+		});
 
-      existing[selection.chat_id].push(localSelection);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(existing));
-    } catch (error) {
-      // Failed to save to localStorage - continue silently
-    }
-  }
+		// Remove from backend if online and authenticated
+		if (this.isOnline && this.isUserAuthenticated()) {
+			try {
+				const allSelections = await selectionsAPI.getUserSelections(1000);
+				const selectionToDelete = allSelections.find(
+					(selection) =>
+						selection.chat_id === selectionDetails.chat_id &&
+						selection.message_id === selectionDetails.message_id &&
+						selection.role === selectionDetails.role &&
+						selection.selected_text === selectionDetails.selected_text
+				);
 
-  private getFromLocalStorage(chatId: string): {chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childId?: string}[] {
-    try {
-      const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
-      return existing[chatId] || [];
-    } catch (error) {
-      return [];
-    }
-  }
+				if (selectionToDelete) {
+					await selectionsAPI.deleteSelection(selectionToDelete.id);
+				}
+			} catch (error) {
+				// Failed to delete from backend - continue silently
+			}
+		}
+	}
 
-  private getAllFromLocalStorage(): SelectionForm[] {
-    try {
-      const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
-      const allSelections: SelectionForm[] = [];
-      
-      Object.values(existing).forEach((chatSelections: any) => {
-        allSelections.push(...chatSelections);
-      });
-      
-      return allSelections;
-    } catch (error) {
-      return [];
-    }
-  }
+	// Private helper methods
+
+	private isUserAuthenticated(): boolean {
+		const currentUser = get(user);
+		return currentUser !== null && currentUser !== undefined;
+	}
+
+	private saveToLocalStorage(selection: SelectionForm): void {
+		try {
+			const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+
+			if (!existing[selection.chat_id]) {
+				existing[selection.chat_id] = [];
+			}
+
+			// Convert to local format
+			const localSelection = {
+				chatId: selection.chat_id,
+				messageId: selection.message_id,
+				role: selection.role,
+				text: selection.selected_text,
+				childId: selection.child_id
+			};
+
+			existing[selection.chat_id].push(localSelection);
+			localStorage.setItem(this.STORAGE_KEY, JSON.stringify(existing));
+		} catch (error) {
+			// Failed to save to localStorage - continue silently
+		}
+	}
+
+	private getFromLocalStorage(chatId: string): {
+		chatId: string;
+		messageId: string;
+		role: 'user' | 'assistant';
+		text: string;
+		childId?: string;
+	}[] {
+		try {
+			const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+			return existing[chatId] || [];
+		} catch (error) {
+			return [];
+		}
+	}
+
+	private getAllFromLocalStorage(): SelectionForm[] {
+		try {
+			const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+			const allSelections: SelectionForm[] = [];
+
+			Object.values(existing).forEach((chatSelections: any) => {
+				allSelections.push(...chatSelections);
+			});
+
+			return allSelections;
+		} catch (error) {
+			return [];
+		}
+	}
 }
 
 // Export singleton instance

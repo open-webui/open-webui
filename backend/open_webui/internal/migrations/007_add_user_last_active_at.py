@@ -29,7 +29,6 @@ from contextlib import suppress
 import peewee as pw
 from peewee_migrate import Migrator
 
-
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
@@ -37,29 +36,57 @@ with suppress(ImportError):
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
-    # Adding fields created_at and updated_at to the 'user' table
-    migrator.add_fields(
-        "user",
-        created_at=pw.BigIntegerField(null=True),  # Allow null for transition
-        updated_at=pw.BigIntegerField(null=True),  # Allow null for transition
-        last_active_at=pw.BigIntegerField(null=True),  # Allow null for transition
-    )
+    # Idempotent: skip if created_at already exists on user
+    try:
+        if isinstance(database, pw.SqliteDatabase):
+            cursor = database.execute_sql('PRAGMA table_info("user")')
+            columns = [row[1] for row in cursor.fetchall()]
+            if "created_at" in columns:
+                return
+        else:
+            cursor = database.execute_sql(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'user' AND column_name = 'created_at'"
+            )
+            if cursor.fetchone() is not None:
+                return
+    except Exception:
+        pass
 
-    # Populate the new fields from an existing 'timestamp' field
-    migrator.sql(
-        'UPDATE "user" SET created_at = timestamp, updated_at = timestamp, last_active_at = timestamp WHERE timestamp IS NOT NULL'
-    )
+    # Adding fields created_at, updated_at, last_active_at to the 'user' table
+    try:
+        migrator.add_fields(
+            "user",
+            created_at=pw.BigIntegerField(null=True),
+            updated_at=pw.BigIntegerField(null=True),
+            last_active_at=pw.BigIntegerField(null=True),
+        )
+    except Exception as e:
+        if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+            return
+        raise
 
-    # Now that the data has been copied, remove the original 'timestamp' field
-    migrator.remove_fields("user", "timestamp")
+    try:
+        migrator.sql(
+            'UPDATE "user" SET created_at = timestamp, updated_at = timestamp, last_active_at = timestamp WHERE timestamp IS NOT NULL'
+        )
+    except Exception:
+        pass
 
-    # Update the fields to be not null now that they are populated
-    migrator.change_fields(
-        "user",
-        created_at=pw.BigIntegerField(null=False),
-        updated_at=pw.BigIntegerField(null=False),
-        last_active_at=pw.BigIntegerField(null=False),
-    )
+    try:
+        migrator.remove_fields("user", "timestamp")
+    except Exception:
+        pass
+
+    try:
+        migrator.change_fields(
+            "user",
+            created_at=pw.BigIntegerField(null=False),
+            updated_at=pw.BigIntegerField(null=False),
+            last_active_at=pw.BigIntegerField(null=False),
+        )
+    except Exception:
+        pass
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):

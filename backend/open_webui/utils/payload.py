@@ -2,15 +2,21 @@ from open_webui.utils.task import prompt_template, prompt_variables_template
 from open_webui.utils.misc import (
     deep_update,
     add_or_update_system_message,
+    replace_system_message_content,
 )
 
 from typing import Callable, Optional
+import copy
 import json
 
 
 # inplace function: form_data is modified
 def apply_system_prompt_to_body(
-    system: Optional[str], form_data: dict, metadata: Optional[dict] = None, user=None
+    system: Optional[str],
+    form_data: dict,
+    metadata: Optional[dict] = None,
+    user=None,
+    replace: bool = False,
 ) -> dict:
     if not system:
         return form_data
@@ -24,9 +30,15 @@ def apply_system_prompt_to_body(
     # Legacy (API Usage)
     system = prompt_template(system, user)
 
-    form_data["messages"] = add_or_update_system_message(
-        system, form_data.get("messages", [])
-    )
+    if replace:
+        form_data["messages"] = replace_system_message_content(
+            system, form_data.get("messages", [])
+        )
+    else:
+        form_data["messages"] = add_or_update_system_message(
+            system, form_data.get("messages", [])
+        )
+
     return form_data
 
 
@@ -275,6 +287,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Returns:
         dict: A modified payload compatible with the Ollama API.
     """
+    openai_payload = copy.deepcopy(openai_payload)
     ollama_payload = {}
 
     # Mapping basic model and message details
@@ -285,6 +298,10 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     ollama_payload["stream"] = openai_payload.get("stream", False)
     if "tools" in openai_payload:
         ollama_payload["tools"] = openai_payload["tools"]
+
+    if "max_tokens" in openai_payload:
+        ollama_payload["num_predict"] = openai_payload["max_tokens"]
+        del openai_payload["max_tokens"]
 
     # If there are advanced parameters in the payload, format them in Ollama's options field
     if openai_payload.get("options"):

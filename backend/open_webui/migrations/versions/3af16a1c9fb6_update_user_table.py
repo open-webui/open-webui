@@ -24,7 +24,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "user" in existing_tables:
         user_columns = [col["name"] for col in inspector.get_columns("user")]
         columns_to_add = [
@@ -43,7 +43,7 @@ def downgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "user" in existing_tables:
         user_columns = [col["name"] for col in inspector.get_columns("user")]
         columns_to_drop = ["username", "bio", "gender", "date_of_birth"]

@@ -17,25 +17,30 @@ from pathlib import Path
 
 EXPECTED_MODEL = "gpt-5-nano"
 
+
 def check_file_for_model(filepath: Path, patterns: list[tuple[str, str]]) -> bool:
     """Check if file contains expected model in specified patterns."""
     try:
         content = filepath.read_text()
         all_passed = True
-        
+
         for pattern_name, pattern in patterns:
             matches = re.findall(pattern, content, re.DOTALL)
             if matches:
-                found_model = matches[0] if isinstance(matches[0], str) else matches[0][-1]
+                found_model = (
+                    matches[0] if isinstance(matches[0], str) else matches[0][-1]
+                )
                 if EXPECTED_MODEL in found_model:
                     print(f"  ✅ {pattern_name}: {EXPECTED_MODEL}")
                 else:
-                    print(f"  ❌ {pattern_name}: {found_model} (expected {EXPECTED_MODEL})")
+                    print(
+                        f"  ❌ {pattern_name}: {found_model} (expected {EXPECTED_MODEL})"
+                    )
                     all_passed = False
             else:
                 print(f"  ⚠️  {pattern_name}: Pattern not found")
                 all_passed = False
-        
+
         return all_passed
     except Exception as e:
         print(f"  ❌ Error reading file: {e}")
@@ -46,10 +51,10 @@ def main():
     print("=" * 70)
     print("🔍 GPT-5 Model Validation Check")
     print("=" * 70)
-    
+
     root = Path(__file__).parent
     all_checks_passed = True
-    
+
     # 1. Check Frontend API client
     print("\n📝 Frontend API Client (src/lib/apis/moderation/index.ts)")
     frontend_patterns = [
@@ -61,11 +66,14 @@ def main():
     else:
         print("  ❌ File not found")
         all_checks_passed = False
-    
+
     # 2. Check Backend Router
     print("\n📝 Backend Router (backend/open_webui/routers/moderation.py)")
     router_patterns = [
-        ("ModerationRequest model default", r'model:\s*Optional\[str\]\s*=\s*["\']([^"\']+)["\']'),
+        (
+            "ModerationRequest model default",
+            r'model:\s*Optional\[str\]\s*=\s*["\']([^"\']+)["\']',
+        ),
     ]
     router_file = root / "backend/open_webui/routers/moderation.py"
     if router_file.exists():
@@ -79,7 +87,7 @@ def main():
     else:
         print("  ❌ File not found")
         all_checks_passed = False
-    
+
     # 3. Check Backend Utility
     print("\n📝 Backend Utility (backend/open_webui/utils/moderation.py)")
     utility_file = root / "backend/open_webui/utils/moderation.py"
@@ -94,7 +102,7 @@ def main():
     else:
         print("  ❌ File not found")
         all_checks_passed = False
-    
+
     # Summary
     print("\n" + "=" * 70)
     if all_checks_passed:
@@ -105,7 +113,9 @@ def main():
         print("   3. Check backend logs for:")
         print("      🤖 Moderation request using model: gpt-5-nano")
         print("      🔍 [MODERATION] Calling OpenAI API with model: gpt-5-nano")
-        print("      ✅ [MODERATION] OpenAI API response received. Model used: gpt-5-nano")
+        print(
+            "      ✅ [MODERATION] OpenAI API response received. Model used: gpt-5-nano"
+        )
         return 0
     else:
         print("❌ SOME CHECKS FAILED - Review the output above")
@@ -114,4 +124,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-

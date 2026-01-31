@@ -28,7 +28,6 @@ from open_webui.env import AUDIT_LOG_LEVEL, MAX_BODY_LOG_SIZE
 from open_webui.utils.auth import get_current_user, get_http_authorization_cred
 from open_webui.models.users import UserModel
 
-
 if TYPE_CHECKING:
     from loguru import Logger
 
@@ -194,7 +193,7 @@ class AuditLoggingMiddleware:
         auth_header = request.headers.get("Authorization")
 
         try:
-            user = get_current_user(
+            user = await get_current_user(
                 request, None, None, get_http_authorization_cred(auth_header)
             )
             return user

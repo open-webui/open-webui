@@ -3,15 +3,14 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.internal.db import Base, get_db
+from sqlalchemy.orm import Session
+from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 
 
-from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, JSON, PrimaryKeyConstraint, Index
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 ####################
@@ -52,8 +51,10 @@ class TagChatIdForm(BaseModel):
 
 
 class TagTable:
-    def insert_new_tag(self, name: str, user_id: str) -> Optional[TagModel]:
-        with get_db() as db:
+    def insert_new_tag(
+        self, name: str, user_id: str, db: Optional[Session] = None
+    ) -> Optional[TagModel]:
+        with get_db_context(db) as db:
             id = name.replace(" ", "_").lower()
             tag = TagModel(**{"id": id, "user_id": user_id, "name": name})
             try:
@@ -70,27 +71,29 @@ class TagTable:
                 return None
 
     def get_tag_by_name_and_user_id(
-        self, name: str, user_id: str
+        self, name: str, user_id: str, db: Optional[Session] = None
     ) -> Optional[TagModel]:
         try:
             id = name.replace(" ", "_").lower()
-            with get_db() as db:
+            with get_db_context(db) as db:
                 tag = db.query(Tag).filter_by(id=id, user_id=user_id).first()
                 return TagModel.model_validate(tag)
         except Exception:
             return None
 
-    def get_tags_by_user_id(self, user_id: str) -> list[TagModel]:
-        with get_db() as db:
+    def get_tags_by_user_id(
+        self, user_id: str, db: Optional[Session] = None
+    ) -> list[TagModel]:
+        with get_db_context(db) as db:
             return [
                 TagModel.model_validate(tag)
                 for tag in (db.query(Tag).filter_by(user_id=user_id).all())
             ]
 
     def get_tags_by_ids_and_user_id(
-        self, ids: list[str], user_id: str
+        self, ids: list[str], user_id: str, db: Optional[Session] = None
     ) -> list[TagModel]:
-        with get_db() as db:
+        with get_db_context(db) as db:
             return [
                 TagModel.model_validate(tag)
                 for tag in (
@@ -98,9 +101,11 @@ class TagTable:
                 )
             ]
 
-    def delete_tag_by_name_and_user_id(self, name: str, user_id: str) -> bool:
+    def delete_tag_by_name_and_user_id(
+        self, name: str, user_id: str, db: Optional[Session] = None
+    ) -> bool:
         try:
-            with get_db() as db:
+            with get_db_context(db) as db:
                 id = name.replace(" ", "_").lower()
                 res = db.query(Tag).filter_by(id=id, user_id=user_id).delete()
                 log.debug(f"res: {res}")

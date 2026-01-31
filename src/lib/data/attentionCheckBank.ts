@@ -1,13 +1,16 @@
 /**
  * Attention Check Bank Module
- * 
+ *
  * Loads and manages attention check questions from the database via API.
  * Provides functions to randomly sample one attention check question.
- * 
+ *
  * @module attentionCheckBank
  */
 
-import { getRandomAttentionCheck as getRandomAttentionCheckAPI, type AttentionCheckResponse } from '$lib/apis/moderation';
+import {
+	getRandomAttentionCheck as getRandomAttentionCheckAPI,
+	type AttentionCheckResponse
+} from '$lib/apis/moderation';
 
 // Q&A Pair interface for attention checks (maintains backward compatibility)
 export interface AttentionCheckQAPair {
@@ -17,11 +20,11 @@ export interface AttentionCheckQAPair {
 
 /**
  * Randomly samples one attention check question from the database via API.
- * 
+ *
  * @param token - Authentication token for API calls
  * @returns {Promise<AttentionCheckQAPair | null>} A randomly sampled Q&A pair, or null if none available
  * @throws {Error} If API call fails (except 404 which returns null)
- * 
+ *
  * @example
  * // Get one random attention check question
  * const attentionCheck = await getRandomAttentionCheck(localStorage.token);
@@ -29,7 +32,7 @@ export interface AttentionCheckQAPair {
 export async function getRandomAttentionCheck(token: string): Promise<AttentionCheckQAPair | null> {
 	try {
 		const response: AttentionCheckResponse | null = await getRandomAttentionCheckAPI(token);
-		
+
 		if (!response) {
 			console.warn('⚠️ No attention check questions available');
 			return null;
@@ -49,7 +52,3 @@ export async function getRandomAttentionCheck(token: string): Promise<AttentionC
 		return null;
 	}
 }
-
-
-
-

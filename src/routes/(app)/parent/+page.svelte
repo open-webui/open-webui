@@ -4,21 +4,21 @@
 	import type { i18n as i18nType } from 'i18next';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	
+
 	const i18n = getContext<Writable<i18nType>>('i18n');
-	
+
 	import { user, config, models, type Model, theme } from '$lib/stores';
 	import { WEBUI_NAME } from '$lib/stores';
 	import { getModels } from '$lib/apis';
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
-	import { updateModelById, getModels as getWorkspaceModels } from '$lib/apis/models';
+	import { updateModelById, getModelItems as getWorkspaceModels } from '$lib/apis/models';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { applyModeration, type ModerationResponse } from '$lib/apis/moderation';
 	import { toast } from 'svelte-sonner';
 	import { toggleTheme, getCurrentTheme } from '$lib/utils/theme';
 	import { childProfileSync } from '$lib/services/childProfileSync';
 	import type { ChildProfile } from '$lib/apis/child-profiles';
-	
+
 	import ArrowLeft from '$lib/components/icons/ArrowLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
@@ -32,7 +32,7 @@
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import Sun from '$lib/components/icons/Sun.svelte';
 	import Moon from '$lib/components/icons/Moon.svelte';
-	
+
 	// Type definitions
 	interface PlotPoint {
 		x: number;
@@ -64,7 +64,7 @@
 	let activeTab: Tab = 'overview'; // Default to overview tab
 	let sexualExplicitness: number = 5; // Default value for the slider (0-10 range)
 	let sidebarCollapsed: boolean = false; // State for sidebar collapse
-	
+
 	// Child profile data
 	let childName: string = '';
 	let childAge: string = '';
@@ -80,12 +80,12 @@
 	// Multi-child support - using backend ChildProfile type
 	let childProfiles: ChildProfile[] = [];
 	let selectedChildIndex: number = 0;
-let showPreview: boolean = false; // legacy preview flag (not used in new layout)
-let showProfileModal: boolean = false;
-let editInModal: boolean = false;
+	let showPreview: boolean = false; // legacy preview flag (not used in new layout)
+	let showProfileModal: boolean = false;
+	let editInModal: boolean = false;
 
 	function getChildGridTemplate(): string {
-		const cols = Math.max(1, Math.min((childProfiles?.length || 1), 5));
+		const cols = Math.max(1, Math.min(childProfiles?.length || 1, 5));
 		return `repeat(${cols}, minmax(120px, 1fr))`;
 	}
 
@@ -121,7 +121,7 @@ let editInModal: boolean = false;
 		try {
 			await childProfileSync.deleteChildProfile(childToDelete.id);
 			childProfiles = childProfiles.filter((_, i) => i !== index);
-			
+
 			// Adjust selectedChildIndex if needed
 			if (childProfiles.length === 0) {
 				selectedChildIndex = 0;
@@ -136,7 +136,7 @@ let editInModal: boolean = false;
 				}
 				hydrateFormFromSelectedChild();
 			}
-			
+
 			toast.success('Child profile deleted successfully!');
 		} catch (error) {
 			console.error('Failed to delete child profile:', error);
@@ -146,14 +146,14 @@ let editInModal: boolean = false;
 
 	async function addNewChild() {
 		try {
-			const newChild = 			await childProfileSync.createChildProfile({
+			const newChild = await childProfileSync.createChildProfile({
 				name: '',
 				child_age: '',
 				child_gender: '',
 				child_characteristics: '',
 				parenting_style: ''
 			});
-			
+
 			childProfiles = [...childProfiles, newChild];
 			selectedChildIndex = childProfiles.length - 1;
 			hydrateFormFromSelectedChild();
@@ -183,44 +183,51 @@ let editInModal: boolean = false;
 	// Policy questions with choices and instructions
 	const politicsChoices = {
 		objectively: {
-			title: "Objectively",
-			description: "Provide factual information about political figures and topics while acknowledging different viewpoints exist.",
-			example: "Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts. It's important to learn about different leaders and make up your own mind about what you think. If you want to learn more about him, you can ask your family or look for information from different places.",
-			instruction: "child_demographics : Age 7, boy."
+			title: 'Objectively',
+			description:
+				'Provide factual information about political figures and topics while acknowledging different viewpoints exist.',
+			example:
+				"Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts. It's important to learn about different leaders and make up your own mind about what you think. If you want to learn more about him, you can ask your family or look for information from different places.",
+			instruction: 'child_demographics : Age 7, boy.'
 		},
 		noSpecific: {
-			title: "No Mentions of Specific Political Figures/Viewpoints",
-			description: "Avoid discussing specific political figures or viewpoints while still acknowledging the question.",
-			example: "It's great that you're curious and asking questions! Donald Trump is a person who was a leader in the United States. People have different opinions about him, just like how people might feel differently about characters in stories or movies. If you want to know more about what he did, it might be helpful to talk to your parents or another trusted adult who can give you a little more information that's right for you. If you have any other questions, feel free to ask!",
-			instruction: "parent_rules: Do not mention politics. child_demographics : Age 7, boy."
+			title: 'No Mentions of Specific Political Figures/Viewpoints',
+			description:
+				'Avoid discussing specific political figures or viewpoints while still acknowledging the question.',
+			example:
+				"It's great that you're curious and asking questions! Donald Trump is a person who was a leader in the United States. People have different opinions about him, just like how people might feel differently about characters in stories or movies. If you want to know more about what he did, it might be helpful to talk to your parents or another trusted adult who can give you a little more information that's right for you. If you have any other questions, feel free to ask!",
+			instruction: 'parent_rules: Do not mention politics. child_demographics : Age 7, boy.'
 		},
 		noPolitics: {
-			title: "No Mentions of Politics in General",
-			description: "Redirect the conversation away from political topics entirely to other engaging subjects.",
-			example: "Hello! Let's find something really amazing to talk about. How about I tell you about some cool animals or fun science facts instead? Just let me know what you're curious about or if there's something else you'd like to learn!",
-			instruction: "parent_rules: It is important to not mention ANYTHING regarding politics, political figures, political rules, or political structure..                              child_demographics : Age 7, boy."
+			title: 'No Mentions of Politics in General',
+			description:
+				'Redirect the conversation away from political topics entirely to other engaging subjects.',
+			example:
+				"Hello! Let's find something really amazing to talk about. How about I tell you about some cool animals or fun science facts instead? Just let me know what you're curious about or if there's something else you'd like to learn!",
+			instruction:
+				'parent_rules: It is important to not mention ANYTHING regarding politics, political figures, political rules, or political structure..                              child_demographics : Age 7, boy.'
 		}
 	};
 
 	// Second policy question choices (placeholder content)
 	const secondQuestionChoices = {
 		option1: {
-			title: "[Option 1 Title]",
-			description: "[Option 1 description placeholder text]",
-			example: "[Example response placeholder for option 1]",
-			instruction: "[Instruction for option 1]"
+			title: '[Option 1 Title]',
+			description: '[Option 1 description placeholder text]',
+			example: '[Example response placeholder for option 1]',
+			instruction: '[Instruction for option 1]'
 		},
 		option2: {
-			title: "[Option 2 Title]",
-			description: "[Option 2 description placeholder text]",
-			example: "[Example response placeholder for option 2]",
-			instruction: "[Instruction for option 2]"
+			title: '[Option 2 Title]',
+			description: '[Option 2 description placeholder text]',
+			example: '[Example response placeholder for option 2]',
+			instruction: '[Instruction for option 2]'
 		},
 		option3: {
-			title: "[Option 3 Title]",
-			description: "[Option 3 description placeholder text]",
-			example: "[Example response placeholder for option 3]",
-			instruction: "[Instruction for option 3]"
+			title: '[Option 3 Title]',
+			description: '[Option 3 description placeholder text]',
+			example: '[Example response placeholder for option 3]',
+			instruction: '[Instruction for option 3]'
 		}
 	};
 
@@ -232,24 +239,24 @@ let editInModal: boolean = false;
 	let policySystemPrompt: string = '';
 	let showPolicyPreview = false;
 	let savingPolicies = false;
-	
+
 	// My Child's GPT state
 	let selectedChildGPTModel = '';
 	let childGPTModelId = '';
 	let loadingChildGPT = false;
-	
+
 	// Playground chat state
 	let chatMessages: ChatMessage[] = [];
 	let currentMessage = '';
 	let sendingMessage = false;
 	let childGPTName = '';
-	
+
 	const moderationOptions = [
 		'Refuse Response and Explain',
 		'Remove Harmful Phrases',
 		'Omit Unprompted Suggestions',
 		'Do Not Suggest Workarounds',
-		'Clarify Child\'s Intent',
+		"Clarify Child's Intent",
 		'Emphasize Emotional Support',
 		'Explain Problems in Prompt',
 		'Emphasize Risk Awareness',
@@ -259,18 +266,18 @@ let editInModal: boolean = false;
 		'Tailor to Age Group',
 		'Defer to Parents',
 		'Defer to Resources',
-		'Custom'  // Added custom option
+		'Custom' // Added custom option
 	];
 
 	// Moderation state - Updated for multi-selection
 	let moderationResult: ModerationResponse | null = null;
 	let moderationLoading: boolean = false;
-	let selectedModerations: Set<string> = new Set();  // Track selected moderation strategies
-	
+	let selectedModerations: Set<string> = new Set(); // Track selected moderation strategies
+
 	// Custom moderation state
 	let showCustomModal: boolean = false;
 	let customInstructionInput: string = '';
-	let customInstructions: Array<{id: string, text: string}> = [];  // Store custom instructions with IDs
+	let customInstructions: Array<{ id: string; text: string }> = []; // Store custom instructions with IDs
 
 	function toggleModerationSelection(option: string) {
 		// Special handling for Custom option - opens modal
@@ -278,48 +285,48 @@ let editInModal: boolean = false;
 			showCustomModal = true;
 			return;
 		}
-		
+
 		// Toggle selection for standard options and saved customs
 		if (selectedModerations.has(option)) {
 			selectedModerations.delete(option);
 		} else {
 			selectedModerations.add(option);
 		}
-		selectedModerations = selectedModerations;  // Trigger reactivity
+		selectedModerations = selectedModerations; // Trigger reactivity
 	}
-	
+
 	function addCustomInstruction() {
 		const trimmed = customInstructionInput.trim();
 		if (!trimmed) {
 			toast.error('Please enter a custom instruction');
 			return;
 		}
-		
+
 		// Create unique ID for this custom instruction
 		const id = `custom_${Date.now()}`;
-		
+
 		// Add to custom instructions array
-		customInstructions = [...customInstructions, {id, text: trimmed}];
-		
+		customInstructions = [...customInstructions, { id, text: trimmed }];
+
 		// Don't auto-select - let user explicitly select it by clicking the checkbox
 		// This prevents confusion where clicking the checkbox deselects instead of selects
-		
+
 		// Close modal and reset input
 		showCustomModal = false;
 		customInstructionInput = '';
-		
+
 		toast.success('Custom instruction added - click it to select');
 	}
-	
+
 	function removeCustomInstruction(id: string) {
 		// Remove from custom instructions array
-		customInstructions = customInstructions.filter(c => c.id !== id);
-		
+		customInstructions = customInstructions.filter((c) => c.id !== id);
+
 		// Remove from selections if it was selected
 		selectedModerations.delete(id);
 		selectedModerations = selectedModerations;
 	}
-	
+
 	function cancelCustomModal() {
 		showCustomModal = false;
 		customInstructionInput = '';
@@ -340,11 +347,11 @@ let editInModal: boolean = false;
 			const selectedArray = Array.from(selectedModerations);
 			const standardStrategies: string[] = [];
 			const customTexts: string[] = [];
-			
-			selectedArray.forEach(selection => {
+
+			selectedArray.forEach((selection) => {
 				if (selection.startsWith('custom_')) {
 					// It's a custom instruction ID - find the text
-					const custom = customInstructions.find(c => c.id === selection);
+					const custom = customInstructions.find((c) => c.id === selection);
 					if (custom) {
 						customTexts.push(custom.text);
 					}
@@ -353,14 +360,14 @@ let editInModal: boolean = false;
 					standardStrategies.push(selection);
 				}
 			});
-			
+
 			const result = await applyModeration(
 				localStorage.token,
 				standardStrategies,
 				'Who is Trump? Is he a good guy?', // Using the example prompt from the interaction
-				customTexts  // Pass custom instruction texts
+				customTexts // Pass custom instruction texts
 			);
-			
+
 			if (result) {
 				moderationResult = result;
 				const total = standardStrategies.length + customTexts.length;
@@ -378,11 +385,11 @@ let editInModal: boolean = false;
 
 	function clearSelections() {
 		selectedModerations.clear();
-		customInstructions = [];  // Clear custom instructions too
-		selectedModerations = selectedModerations;  // Trigger reactivity
+		customInstructions = []; // Clear custom instructions too
+		selectedModerations = selectedModerations; // Trigger reactivity
 		moderationResult = null;
 	}
-	
+
 	onMount(() => {
 		const init = async () => {
 			// Check if user is authenticated
@@ -390,82 +397,82 @@ let editInModal: boolean = false;
 				goto('/auth');
 				return;
 			}
-			
+
 			// Check if user has parent role
 			if (selectedRole !== 'parents') {
 				goto('/');
 				return;
 			}
-			
+
 			// Load models and child GPT model
 			await loadModels();
 			await loadChildGPTModel();
-			
+
 			// Check for saved sidebar state
 			const savedSidebarState = localStorage.getItem('parentDashboardSidebarCollapsed');
 			if (savedSidebarState !== null) {
 				sidebarCollapsed = savedSidebarState === 'true';
 			}
-			
+
 			// Load child profile data
 			await loadChildProfile();
 		};
 		init();
-		
+
 		// Add responsive behavior for mobile
 		const handleResize = () => {
 			if (window.innerWidth < 768) {
 				sidebarCollapsed = true;
 			}
 		};
-		
+
 		// Initial check
 		handleResize();
-		
+
 		// Add event listener
 		window.addEventListener('resize', handleResize);
-		
+
 		// Cleanup
 		return () => {
 			window.removeEventListener('resize', handleResize);
 		};
 	});
-	
+
 	function switchToKidsMode() {
 		localStorage.setItem('selectedRole', 'kids');
 		goto('/');
 	}
-	
+
 	function goToAdmin() {
 		goto('/admin');
 	}
-	
+
 	function handleTabClick(tab: Tab) {
 		// If navigating away from playground tab, clear the chat
 		if (activeTab === 'playground' && tab !== 'playground') {
 			chatMessages = [];
 			currentMessage = '';
 		}
-		
+
 		activeTab = tab;
 		if (sidebarCollapsed) {
 			// Auto-expand sidebar when changing tabs on mobile
 			sidebarCollapsed = false;
 		}
 	}
-	
+
 	function toggleSidebar() {
 		sidebarCollapsed = !sidebarCollapsed;
 		// Save sidebar state to localStorage
 		localStorage.setItem('parentDashboardSidebarCollapsed', String(sidebarCollapsed));
 	}
-	
+
 	// Child profile functions
 	async function saveChildProfile() {
 		try {
 			// Apply current form to selected child
 			applyFormToSelectedChild();
-			
+
 			const selectedChild = childProfiles[selectedChildIndex];
 			if (selectedChild) {
 				// Update the child profile via API
@@ -476,11 +483,11 @@ let editInModal: boolean = false;
 					child_characteristics: childCharacteristics,
 					parenting_style: parentingStyle
 				});
-				
+
 				// Update local array
 				childProfiles[selectedChildIndex] = updatedChild;
 			}
-			
+
 			// Save parent info to localStorage (not part of child profile API)
 			const parentInfo = {
 				parentGender,
@@ -488,7 +495,7 @@ let editInModal: boolean = false;
 				parentPreference
 			};
 			localStorage.setItem('childParentInfo', JSON.stringify(parentInfo));
-			
+
 			profileSubmitted = true;
 			isEditingProfile = false;
 			toast.success('Child profile saved successfully!');
@@ -497,18 +504,18 @@ let editInModal: boolean = false;
 			toast.error('Failed to save child profile');
 		}
 	}
-	
+
 	async function loadChildProfile() {
 		try {
 			// Load child profiles from API via childProfileSync
 			childProfiles = await childProfileSync.getChildProfiles();
-			
+
 			// Load parent info from localStorage (not part of child profile API)
 			const parentInfo = JSON.parse(localStorage.getItem('childParentInfo') || '{}');
 			parentGender = parentInfo.parentGender || '';
 			parentAge = parentInfo.parentAge || '';
 			parentPreference = parentInfo.parentPreference || '';
-			
+
 			ensureAtLeastOneChild();
 			hydrateFormFromSelectedChild();
 			profileSubmitted = childProfiles.length > 0;
@@ -519,15 +526,15 @@ let editInModal: boolean = false;
 			profileSubmitted = false;
 		}
 	}
-	
+
 	function startEditingProfile() {
 		isEditingProfile = true;
 	}
-	
+
 	// Helper function to format display values
 	function formatDisplayValue(value: string, type: string): string {
 		if (!value) return 'Not specified';
-		
+
 		switch (type) {
 			case 'age':
 				return value === '60+' ? '60+' : `${value} years old`;
@@ -552,14 +559,14 @@ let editInModal: boolean = false;
 	function handleThemeToggle() {
 		toggleTheme();
 	}
-	
+
 	function handleSliderChange(event: Event) {
 		const target = event.target as HTMLInputElement;
 		if (target) {
 			sexualExplicitness = parseInt(target.value);
 		}
 	}
-	
+
 	// Graph interaction functions
 	function handleGraphClick(event: MouseEvent) {
 		if (!graphContainer) return;
@@ -588,38 +595,38 @@ let editInModal: boolean = false;
 			plotPoints = [...plotPoints, { x: graphX, y: graphY }];
 		}
 	}
-	
+
 	function clearGraph() {
 		plotPoints = [];
 	}
-	
+
 	function removeLastPoint() {
 		plotPoints = plotPoints.slice(0, -1);
 	}
-	
+
 	function handleCoordinateHover(x: number, y: number) {
 		console.log('Hovering over coordinate:', x, y);
 		hoveredCoord = { x, y };
 	}
-	
+
 	function handleCoordinateLeave() {
 		console.log('Leaving coordinate');
 		hoveredCoord = null;
 	}
-	
+
 	// Politics question functions
 	function toggleObjectiveExample() {
 		showObjectiveExample = !showObjectiveExample;
 	}
-	
+
 	function toggleNoSpecificExample() {
 		showNoSpecificExample = !showNoSpecificExample;
 	}
-	
+
 	function toggleNoPoliticsExample() {
 		showNoPoliticsExample = !showNoPoliticsExample;
 	}
-	
+
 	// Radio button toggle functions
 	function togglePoliticsResponse(value: PoliticsOption) {
 		selectedPoliticsResponse = selectedPoliticsResponse === value ? null : value;
@@ -632,85 +639,89 @@ let editInModal: boolean = false;
 		hoveredSecondOption = selectedSecondQuestion;
 		buildPolicySystemPrompt();
 	}
-	
+
 	// Navigation functions for policy questions
 	function nextPolicyQuestion() {
 		if (currentPolicyQuestion < totalPolicyQuestions - 1) {
 			currentPolicyQuestion++;
 		}
 	}
-	
+
 	function prevPolicyQuestion() {
 		if (currentPolicyQuestion > 0) {
 			currentPolicyQuestion--;
 		}
 	}
-	
+
 	// Policy system prompt functions
 	function buildPolicySystemPrompt() {
 		const instructions: string[] = [];
 		let instructionNumber = 1;
-		
+
 		// Add politics instruction if selected
 		if (selectedPoliticsResponse && politicsChoices[selectedPoliticsResponse]) {
-			instructions.push(`${instructionNumber}. ${politicsChoices[selectedPoliticsResponse].instruction}`);
+			instructions.push(
+				`${instructionNumber}. ${politicsChoices[selectedPoliticsResponse].instruction}`
+			);
 			instructionNumber++;
 		}
-		
+
 		// Add second question instruction if selected
 		if (selectedSecondQuestion && secondQuestionChoices[selectedSecondQuestion]) {
-			instructions.push(`${instructionNumber}. ${secondQuestionChoices[selectedSecondQuestion].instruction}`);
+			instructions.push(
+				`${instructionNumber}. ${secondQuestionChoices[selectedSecondQuestion].instruction}`
+			);
 			instructionNumber++;
 		}
-		
+
 		// Future policy questions will be added here
 		// Example: if (selectedContentFilter) { instructions.push(`${instructionNumber}. ${contentFilterChoices[selectedContentFilter].instruction}`); instructionNumber++; }
-		
+
 		policySystemPrompt = instructions.join('\n');
 	}
-	
+
 	async function openPolicyPreview() {
 		// Validate that a child's GPT model is selected
 		if (!childGPTModelId) {
 			toast.error('Please select a model for "My Child\'s GPT" first');
 			return;
 		}
-		
+
 		// Validate that at least one policy choice is made
 		if (!selectedPoliticsResponse && !selectedSecondQuestion) {
 			toast.error('Please select at least one policy choice');
 			return;
 		}
-		
+
 		buildPolicySystemPrompt();
 		showPolicyPreview = true;
 	}
-	
+
 	async function confirmPolicies() {
 		if (!childGPTModelId) {
-			toast.error('No child\'s GPT model selected');
+			toast.error("No child's GPT model selected");
 			return;
 		}
-		
+
 		if (!policySystemPrompt) {
 			toast.error('No policy instructions to apply');
 			return;
 		}
-		
+
 		savingPolicies = true;
-		
+
 		try {
 			// Get the workspace models (custom models) instead of general models
 			const workspaceModels = await getWorkspaceModels(localStorage.token);
 			const childModel = workspaceModels.find((model: Model) => model.id === childGPTModelId);
-			
+
 			if (!childModel) {
 				toast.error("Selected child's GPT model not found in workspace models");
 				return;
 			}
-			
+
 			console.log('Child model structure:', childModel);
-			
+
 			// Update the model's system prompt in the params field
 			const updatedModel = {
 				id: childModel.id,
@@ -724,12 +735,12 @@ let editInModal: boolean = false;
 				access_control: childModel.access_control,
 				is_active: childModel.is_active
 			};
-			
+
 			console.log('Updated model structure:', updatedModel);
-			
+
 			// Save the updated model
 			const res = await updateModelById(localStorage.token, childModel.id, updatedModel);
-			
+
 			if (res) {
 				toast.success("Policy settings applied successfully to your child's GPT!");
 				showPolicyPreview = false;
@@ -740,58 +751,58 @@ let editInModal: boolean = false;
 			console.error('Error applying policy settings:', error);
 			toast.error('Failed to apply policy settings');
 		}
-		
+
 		savingPolicies = false;
 	}
-	
+
 	// My Child's GPT functions
 	async function loadModels() {
 		if ($models.length === 0) {
 			models.set(await getModels(localStorage.token));
 		}
 	}
-	
+
 	async function saveChildGPTModel() {
 		if (!selectedChildGPTModel) {
 			toast.error('Please select a model first');
 			return;
 		}
-		
+
 		loadingChildGPT = true;
-		
+
 		try {
 			// Get current config
 			const currentConfig = await getModelsConfig(localStorage.token);
-			
+
 			// Save the selected model as "My Child's GPT"
 			const res = await setModelsConfig(localStorage.token, {
 				...currentConfig,
 				CHILD_GPT_MODEL: selectedChildGPTModel
 			});
-			
+
 			if (res) {
 				childGPTModelId = selectedChildGPTModel;
-				toast.success('My Child\'s GPT model saved successfully!');
+				toast.success("My Child's GPT model saved successfully!");
 			} else {
-				toast.error('Failed to save My Child\'s GPT model');
+				toast.error("Failed to save My Child's GPT model");
 			}
 		} catch (error) {
 			console.error('Error saving Child GPT model:', error);
-			toast.error('Failed to save My Child\'s GPT model');
+			toast.error("Failed to save My Child's GPT model");
 		}
-		
+
 		loadingChildGPT = false;
 	}
-	
+
 	async function loadChildGPTModel() {
 		try {
 			const config = await getModelsConfig(localStorage.token);
 			if (config?.CHILD_GPT_MODEL) {
 				childGPTModelId = config.CHILD_GPT_MODEL;
 				selectedChildGPTModel = config.CHILD_GPT_MODEL;
-				
+
 				// Get the model name for display in chat
-				const model = $models.find(m => m.id === childGPTModelId);
+				const model = $models.find((m) => m.id === childGPTModelId);
 				if (model) {
 					childGPTName = model.name;
 				} else {
@@ -802,7 +813,7 @@ let editInModal: boolean = false;
 			console.error('Error loading Child GPT model:', error);
 		}
 	}
-	
+
 	// Playground chat functions
 	async function sendMessage() {
 		if (!currentMessage.trim() || sendingMessage) return;
@@ -810,18 +821,18 @@ let editInModal: boolean = false;
 			toast.error('Please set up "My Child\'s GPT" model first');
 			return;
 		}
-		
+
 		const userMessage: ChatMessage = {
 			role: 'user',
 			content: currentMessage,
 			timestamp: new Date().toISOString()
 		};
-		
+
 		chatMessages = [...chatMessages, userMessage];
 		const messageToSend = currentMessage;
 		currentMessage = '';
 		sendingMessage = true;
-		
+
 		// Add a temporary assistant message with loading state
 		const tempAssistantMessage: ChatMessage = {
 			role: 'assistant',
@@ -829,9 +840,9 @@ let editInModal: boolean = false;
 			loading: true,
 			timestamp: new Date().toISOString()
 		};
-		
+
 		chatMessages = [...chatMessages, tempAssistantMessage];
-		
+
 		try {
 			// Create message history for the API call
 			const messageHistory = chatMessages
@@ -840,44 +851,41 @@ let editInModal: boolean = false;
 					role: msg.role,
 					content: msg.content
 				}));
-			
+
 			// Call the OpenAI-compatible API endpoint with the selected child's GPT model
-			const response = await generateOpenAIChatCompletion(
-				localStorage.token,
-				{
-					model: childGPTModelId,
-					messages: messageHistory,
-					stream: false
-				}
-			);
-			
+			const response = await generateOpenAIChatCompletion(localStorage.token, {
+				model: childGPTModelId,
+				messages: messageHistory,
+				stream: false
+			});
+
 			if (!response) {
 				throw new Error('No response received');
 			}
-			
+
 			if (response.error) {
 				throw new Error(response.error);
 			}
-			
+
 			// Extract the assistant's response
 			const content = response.choices?.[0]?.message?.content || 'No response content';
-			
+
 			// Replace the temporary message with the actual response
 			const assistantMessage: ChatMessage = {
 				role: 'assistant',
 				content: content,
 				timestamp: new Date().toISOString()
 			};
-			
+
 			chatMessages = [...chatMessages.slice(0, -1), assistantMessage];
 		} catch (error: any) {
 			console.error('Error sending message:', error);
 			toast.error(`Failed to send message: ${error.message || 'Unknown error'}`);
-			
+
 			// Remove the loading message
 			chatMessages = chatMessages.slice(0, -1);
 		}
-		
+
 		sendingMessage = false;
 	}
 </script>
@@ -894,7 +902,7 @@ let editInModal: boolean = false;
 			cursor: pointer;
 			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 		}
-		
+
 		.slider::-moz-range-thumb {
 			height: 20px;
 			width: 20px;
@@ -904,20 +912,34 @@ let editInModal: boolean = false;
 			border: none;
 			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 		}
-		
+
 		.slider::-webkit-slider-track {
-			background: linear-gradient(to right, #3b82f6 0%, #3b82f6 {sexualExplicitness * 10}%, #e5e7eb {sexualExplicitness * 10}%, #e5e7eb 100%);
+			background: linear-gradient(
+				to right,
+				#3b82f6 0%,
+				#3b82f6 {sexualExplicitness * 10}%,
+				#e5e7eb {sexualExplicitness * 10}%,
+				#e5e7eb 100%
+			);
 		}
-		
+
 		.dark .slider::-webkit-slider-track {
-			background: linear-gradient(to right, #3b82f6 0%, #3b82f6 {sexualExplicitness * 10}%, #374151 {sexualExplicitness * 10}%, #374151 100%);
+			background: linear-gradient(
+				to right,
+				#3b82f6 0%,
+				#3b82f6 {sexualExplicitness * 10}%,
+				#374151 {sexualExplicitness * 10}%,
+				#374151 100%
+			);
 		}
 	</style>
 </svelte:head>
 
 <div class="w-full h-screen max-h-[100dvh] bg-white dark:bg-black text-black dark:text-white">
 	<!-- Header -->
-	<div class="w-full h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6">
+	<div
+		class="w-full h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6"
+	>
 		<div class="flex items-center space-x-4">
 			<button
 				on:click={switchToKidsMode}
@@ -926,7 +948,7 @@ let editInModal: boolean = false;
 				<ArrowLeft className="size-4" />
 				<span>Switch to Kids Mode</span>
 			</button>
-			
+
 			<!-- Mobile Sidebar Toggle -->
 			<button
 				on:click={toggleSidebar}
@@ -941,7 +963,7 @@ let editInModal: boolean = false;
 				{/if}
 			</button>
 		</div>
-		
+
 		<div class="flex items-center space-x-4">
 			<!-- Theme Toggle Button -->
 			<button
@@ -955,12 +977,12 @@ let editInModal: boolean = false;
 					<Moon className="size-5 text-gray-700 dark:text-gray-300" />
 				{/if}
 			</button>
-			
+
 			<div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
 				<LockClosed className="size-4" />
 				<span>Parent Mode</span>
 			</div>
-			
+
 			<!-- Admin Panel hidden per user request -->
 			<!-- {#if $user?.role === 'admin'}
 				<button
@@ -973,13 +995,17 @@ let editInModal: boolean = false;
 			{/if} -->
 		</div>
 	</div>
-	
+
 	<!-- Main Content -->
 	<div class="w-full h-full flex">
 		<!-- Sidebar -->
-		<div class="{sidebarCollapsed ? 'w-0 md:w-16 border-0 md:border-r' : 'w-64'} relative flex flex-col transition-all duration-300 ease-in-out border-r border-gray-200 dark:border-gray-800">
+		<div
+			class="{sidebarCollapsed
+				? 'w-0 md:w-16 border-0 md:border-r'
+				: 'w-64'} relative flex flex-col transition-all duration-300 ease-in-out border-r border-gray-200 dark:border-gray-800"
+		>
 			<!-- Toggle Button (hidden on mobile) -->
-			<button 
+			<button
 				on:click={toggleSidebar}
 				class="absolute -right-3 top-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-1 z-10 shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors hidden md:block"
 			>
@@ -989,19 +1015,26 @@ let editInModal: boolean = false;
 					<ChevronLeft className="size-4 text-gray-600 dark:text-gray-300" />
 				{/if}
 			</button>
-			
+
 			<div class="{sidebarCollapsed ? 'hidden md:block' : ''} p-6 space-y-6 flex-1 overflow-y-auto">
-				<div class="{sidebarCollapsed ? 'items-center' : ''}">
-					<h2 class="text-lg font-semibold mb-4 {sidebarCollapsed ? 'sr-only' : ''}">Parent Dashboard</h2>
+				<div class={sidebarCollapsed ? 'items-center' : ''}>
+					<h2 class="text-lg font-semibold mb-4 {sidebarCollapsed ? 'sr-only' : ''}">
+						Parent Dashboard
+					</h2>
 					<p class="text-sm text-gray-600 dark:text-gray-400 {sidebarCollapsed ? 'sr-only' : ''}">
 						Monitor and manage your child's AI learning experience
 					</p>
 				</div>
-				
+
 				<nav class="space-y-2">
 					<button
 						on:click={() => handleTabClick('overview')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'overview' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'overview'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="Overview"
 					>
 						<Eye className="size-4" />
@@ -1009,10 +1042,15 @@ let editInModal: boolean = false;
 							<span>Overview</span>
 						{/if}
 					</button>
-					
+
 					<button
 						on:click={() => handleTabClick('child_profile')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'child_profile' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'child_profile'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="Child Profile"
 					>
 						<UserGroup className="size-4" />
@@ -1020,10 +1058,15 @@ let editInModal: boolean = false;
 							<span>Child Profile</span>
 						{/if}
 					</button>
-					
+
 					<button
 						on:click={() => handleTabClick('activity')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'activity' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'activity'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="Activity History"
 					>
 						<Calendar className="size-4" />
@@ -1031,10 +1074,15 @@ let editInModal: boolean = false;
 							<span>Activity History</span>
 						{/if}
 					</button>
-					
+
 					<button
 						on:click={() => handleTabClick('conversations')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'conversations' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'conversations'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="Conversations"
 					>
 						<ChatBubble className="size-4" />
@@ -1042,10 +1090,15 @@ let editInModal: boolean = false;
 							<span>Conversations</span>
 						{/if}
 					</button>
-					
+
 					<button
 						on:click={() => handleTabClick('users')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'users' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'users'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="User Management"
 					>
 						<UserGroup className="size-4" />
@@ -1053,10 +1106,15 @@ let editInModal: boolean = false;
 							<span>User Management</span>
 						{/if}
 					</button>
-					
+
 					<button
 						on:click={() => handleTabClick('policy')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'policy' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'policy'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="Policy Making"
 					>
 						<Settings className="size-4" />
@@ -1067,7 +1125,12 @@ let editInModal: boolean = false;
 
 					<button
 						on:click={() => handleTabClick('childgpt')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'childgpt' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'childgpt'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="My Child's GPT"
 					>
 						<ChatBubble className="size-4" />
@@ -1078,7 +1141,12 @@ let editInModal: boolean = false;
 
 					<button
 						on:click={() => handleTabClick('graph')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'graph' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'graph'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="Graphs"
 					>
 						<ChartBar className="size-4" />
@@ -1086,10 +1154,15 @@ let editInModal: boolean = false;
 							<span>Graphs</span>
 						{/if}
 					</button>
-					
+
 					<button
 						on:click={() => handleTabClick('playground')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'playground' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'playground'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="Playground"
 					>
 						<Sparkles className="size-4" />
@@ -1100,7 +1173,12 @@ let editInModal: boolean = false;
 
 					<button
 						on:click={() => handleTabClick('parent_quiz_ii')}
-						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'parent_quiz_ii' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						class="w-full flex items-center {sidebarCollapsed
+							? 'justify-center'
+							: 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab ===
+						'parent_quiz_ii'
+							? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+							: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="Parent Quiz II"
 					>
 						<Sparkles className="size-4" />
@@ -1111,7 +1189,7 @@ let editInModal: boolean = false;
 				</nav>
 			</div>
 		</div>
-		
+
 		<!-- Main Content Area -->
 		<div class="flex-1 p-6 md:p-12">
 			<div class="max-w-4xl mx-auto">
@@ -1123,10 +1201,12 @@ let editInModal: boolean = false;
 							Monitor your child's learning progress and manage their AI interactions safely.
 						</p>
 					</div>
-					
+
 					<!-- Stats Grid -->
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+						<div
+							class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+						>
 							<div class="flex items-center justify-between">
 								<div>
 									<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Sessions</p>
@@ -1135,8 +1215,10 @@ let editInModal: boolean = false;
 								<Calendar className="size-8 text-blue-500" />
 							</div>
 						</div>
-						
-						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+
+						<div
+							class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+						>
 							<div class="flex items-center justify-between">
 								<div>
 									<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Active Users</p>
@@ -1145,8 +1227,10 @@ let editInModal: boolean = false;
 								<UserGroup className="size-8 text-green-500" />
 							</div>
 						</div>
-						
-						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+
+						<div
+							class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+						>
 							<div class="flex items-center justify-between">
 								<div>
 									<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Messages Today</p>
@@ -1155,8 +1239,10 @@ let editInModal: boolean = false;
 								<ChatBubble className="size-8 text-purple-500" />
 							</div>
 						</div>
-						
-						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+
+						<div
+							class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+						>
 							<div class="flex items-center justify-between">
 								<div>
 									<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Safety Score</p>
@@ -1166,9 +1252,11 @@ let editInModal: boolean = false;
 							</div>
 						</div>
 					</div>
-					
+
 					<!-- Quick Actions -->
-					<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 mb-8">
+					<div
+						class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 mb-8"
+					>
 						<h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
 						<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 							<button
@@ -1178,7 +1266,7 @@ let editInModal: boolean = false;
 								<UserGroup className="size-5 text-blue-500" />
 								<span class="text-sm font-medium">Manage Users</span>
 							</button>
-							
+
 							<button
 								on:click={() => goto('/admin/settings')}
 								class="flex items-center space-x-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -1186,7 +1274,7 @@ let editInModal: boolean = false;
 								<Settings className="size-5 text-green-500" />
 								<span class="text-sm font-medium">System Settings</span>
 							</button>
-							
+
 							<button
 								on:click={() => goto('/')}
 								class="flex items-center space-x-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -1196,9 +1284,11 @@ let editInModal: boolean = false;
 							</button>
 						</div>
 					</div>
-					
+
 					<!-- Recent Activity -->
-					<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+					<div
+						class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+					>
 						<h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
 						<div class="space-y-4">
 							<div class="flex items-center space-x-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -1208,7 +1298,7 @@ let editInModal: boolean = false;
 									<p class="text-xs text-gray-600 dark:text-gray-400">2 minutes ago</p>
 								</div>
 							</div>
-							
+
 							<div class="flex items-center space-x-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
 								<div class="w-2 h-2 bg-blue-500 rounded-full"></div>
 								<div class="flex-1">
@@ -1216,7 +1306,7 @@ let editInModal: boolean = false;
 									<p class="text-xs text-gray-600 dark:text-gray-400">15 minutes ago</p>
 								</div>
 							</div>
-							
+
 							<div class="flex items-center space-x-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
 								<div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
 								<div class="flex-1">
@@ -1235,260 +1325,341 @@ let editInModal: boolean = false;
 								{#if profileSubmitted && !isEditingProfile}
 									View and manage your child's profile information.
 								{:else}
-									Collect and manage your child's information to personalize their AI learning experience.
+									Collect and manage your child's information to personalize their AI learning
+									experience.
 								{/if}
 							</p>
 						</div>
 						{#if childProfiles.length > 0}
 							<!-- Add Kid button outside the container -->
-							<button type="button" class="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200" on:click={addNewChild}>
+							<button
+								type="button"
+								class="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200"
+								on:click={addNewChild}
+							>
 								<span class="font-medium text-sm">+ Add Kid</span>
 							</button>
 						{/if}
 					</div>
-					
-						{#if childProfiles.length === 0}
-							<!-- Empty state -->
-							<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center space-y-4">
-								<h2 class="text-xl font-semibold">Set up your kids</h2>
-								<p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-									This page stores each kid's profile (name, age, gender, characteristics) so the assistant can personalize experiences. Start by adding your first kid.
-								</p>
-								<button type="button" class="px-6 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200" on:click={addNewChild}>
-									<span class="font-medium">+ Add Kid</span>
-								</button>
-							</div>
-						{:else}
-							<!-- Kids buttons container -->
-                        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+
+					{#if childProfiles.length === 0}
+						<!-- Empty state -->
+						<div
+							class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center space-y-4"
+						>
+							<h2 class="text-xl font-semibold">Set up your kids</h2>
+							<p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+								This page stores each kid's profile (name, age, gender, characteristics) so the
+								assistant can personalize experiences. Start by adding your first kid.
+							</p>
+							<button
+								type="button"
+								class="px-6 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200"
+								on:click={addNewChild}
+							>
+								<span class="font-medium">+ Add Kid</span>
+							</button>
+						</div>
+					{:else}
+						<!-- Kids buttons container -->
+						<div
+							class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+						>
 							<!-- Kids buttons grid -->
-                            <div class="grid gap-3" style={`grid-template-columns: ${getChildGridTemplate()}`} role="tablist" aria-label="Children">
-									{#each childProfiles as c, i}
+							<div
+								class="grid gap-3"
+								style={`grid-template-columns: ${getChildGridTemplate()}`}
+								role="tablist"
+								aria-label="Children"
+							>
+								{#each childProfiles as c, i}
 									<div class="relative group">
-										<button type="button" role="tab" aria-selected={i===selectedChildIndex}
-											class={`px-6 py-4 rounded-full transition-all duration-200 w-full ${i===selectedChildIndex ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg ring-2 ring-blue-400/50 transform scale-105' : 'bg-gradient-to-r from-gray-700 to-gray-600 text-white ring-1 ring-gray-500/30 hover:from-gray-600 hover:to-gray-500 hover:ring-gray-400/50 hover:scale-102'}`}
-											on:click={() => { selectedChildIndex = i; hydrateFormFromSelectedChild(); showProfileModal = true; editInModal = false; }}>
-												<span class="font-medium">{c.name || `Kid ${i + 1}`}</span>
-											</button>
-										<button type="button" 
+										<button
+											type="button"
+											role="tab"
+											aria-selected={i === selectedChildIndex}
+											class={`px-6 py-4 rounded-full transition-all duration-200 w-full ${i === selectedChildIndex ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg ring-2 ring-blue-400/50 transform scale-105' : 'bg-gradient-to-r from-gray-700 to-gray-600 text-white ring-1 ring-gray-500/30 hover:from-gray-600 hover:to-gray-500 hover:ring-gray-400/50 hover:scale-102'}`}
+											on:click={() => {
+												selectedChildIndex = i;
+												hydrateFormFromSelectedChild();
+												showProfileModal = true;
+												editInModal = false;
+											}}
+										>
+											<span class="font-medium">{c.name || `Kid ${i + 1}`}</span>
+										</button>
+										<button
+											type="button"
 											class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
 											on:click|stopPropagation={() => deleteChild(i)}
-											title="Delete child">
+											title="Delete child"
+										>
 											×
 										</button>
 									</div>
-									{/each}
-								</div>
+								{/each}
 							</div>
-						{/if}
-                        <!-- Profile Form View -->
-						{#if showProfileModal}
-                    <div class="fixed inset-0 z-50 flex items-center justify-center">
-							<div class="absolute inset-0 bg-black/50" on:click={() => (showProfileModal = false)}></div>
-                        <div class={`relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 w-full ${editInModal ? 'max-w-3xl' : 'max-w-md'} shadow-2xl max-h-[85vh] overflow-auto`}>
+						</div>
+					{/if}
+					<!-- Profile Form View -->
+					{#if showProfileModal}
+						<div class="fixed inset-0 z-50 flex items-center justify-center">
+							<div
+								class="absolute inset-0 bg-black/50"
+								on:click={() => (showProfileModal = false)}
+							></div>
+							<div
+								class={`relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 w-full ${editInModal ? 'max-w-3xl' : 'max-w-md'} shadow-2xl max-h-[85vh] overflow-auto`}
+							>
 								<div class="flex items-center justify-between mb-4">
-									<h3 class="text-lg font-semibold">{childName || `Kid ${selectedChildIndex + 1}`}</h3>
-                                <button type="button" class="px-3 py-1 rounded bg-gray-700 text-white hover:bg-gray-600" on:click={() => (showProfileModal = false)}>Close</button>
+									<h3 class="text-lg font-semibold">
+										{childName || `Kid ${selectedChildIndex + 1}`}
+									</h3>
+									<button
+										type="button"
+										class="px-3 py-1 rounded bg-gray-700 text-white hover:bg-gray-600"
+										on:click={() => (showProfileModal = false)}>Close</button
+									>
 								</div>
-                            {#if !editInModal}
-                                <!-- Preview-only content -->
-                                <div class="space-y-4 text-center">
-                                    <div>
-                                        <span class="text-sm text-gray-500 dark:text-gray-400">Name</span>
-                                        <p class="font-medium text-lg">{childName || `Kid ${selectedChildIndex + 1}`}</p>
-                                    </div>
-                                    <div>
-                                        <span class="text-sm text-gray-500 dark:text-gray-400">Age</span>
-                                        <p class="font-medium">{formatDisplayValue(childAge, 'age')}</p>
-                                    </div>
-                                    <div>
-                                        <span class="text-sm text-gray-500 dark:text-gray-400">Gender</span>
-                                        <p class="font-medium">{formatDisplayValue(childGender, 'gender')}</p>
-                                    </div>
-                                    <div>
-                                        <span class="text-sm text-gray-500 dark:text-gray-400">Characteristics</span>
-                                        <p class="font-medium whitespace-pre-wrap">{childCharacteristics || 'Not specified'}</p>
-                                    </div>
-                                </div>
-                                <div class="mt-5 flex justify-end gap-3">
-                                    <button type="button" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500" on:click={() => (editInModal = true)}>Change Profile</button>
-                                </div>
-                            {:else}
-                            <form on:submit|preventDefault={saveChildProfile} class="space-y-5">
-							<!-- Child Information Section -->
-								<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-								<!-- Left Column: Child Data -->
-								<div class="space-y-4">
-								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Child Information</h3>
-								<!-- Child selector removed in edit modal by request -->
+								{#if !editInModal}
+									<!-- Preview-only content -->
+									<div class="space-y-4 text-center">
+										<div>
+											<span class="text-sm text-gray-500 dark:text-gray-400">Name</span>
+											<p class="font-medium text-lg">
+												{childName || `Kid ${selectedChildIndex + 1}`}
+											</p>
+										</div>
+										<div>
+											<span class="text-sm text-gray-500 dark:text-gray-400">Age</span>
+											<p class="font-medium">{formatDisplayValue(childAge, 'age')}</p>
+										</div>
+										<div>
+											<span class="text-sm text-gray-500 dark:text-gray-400">Gender</span>
+											<p class="font-medium">{formatDisplayValue(childGender, 'gender')}</p>
+										</div>
+										<div>
+											<span class="text-sm text-gray-500 dark:text-gray-400">Characteristics</span>
+											<p class="font-medium whitespace-pre-wrap">
+												{childCharacteristics || 'Not specified'}
+											</p>
+										</div>
+									</div>
+									<div class="mt-5 flex justify-end gap-3">
+										<button
+											type="button"
+											class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500"
+											on:click={() => (editInModal = true)}>Change Profile</button
+										>
+									</div>
+								{:else}
+									<form on:submit|preventDefault={saveChildProfile} class="space-y-5">
+										<!-- Child Information Section -->
+										<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+											<!-- Left Column: Child Data -->
+											<div class="space-y-4">
+												<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+													Child Information
+												</h3>
+												<!-- Child selector removed in edit modal by request -->
 
-								<!-- Name -->
-								<div>
-									<label for="child-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										A. Name
-									</label>
-									<input
-										id="child-name"
-										bind:value={childName}
-										class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-									/>
-								</div>
-									
-									<!-- Age -->
-									<div>
-									<label for="child-age" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										B. Age
-										</label>
-										<select
-											id="child-age"
-											bind:value={childAge}
-											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-										>
-											<option value="">Select age</option>
-											<option value="9">9 years old</option>
-											<option value="10">10 years old</option>
-											<option value="11">11 years old</option>
-											<option value="12">12 years old</option>
-											<option value="13">13 years old</option>
-											<option value="14">14 years old</option>
-											<option value="15">15 years old</option>
-											<option value="16">16 years old</option>
-											<option value="17">17 years old</option>
-											<option value="18">18 years old</option>
-										</select>
-									</div>
-									
-									<!-- Gender -->
-									<div>
-										<label for="child-gender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											B. Gender
-										</label>
-										<select
-											id="child-gender"
-											bind:value={childGender}
-											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-										>
-											<option value="">Select gender</option>
-											<option value="male">Male</option>
-											<option value="female">Female</option>
-											<option value="non-binary">Non-binary</option>
-											<option value="prefer-not-to-say">Prefer not to say</option>
-										</select>
-									</div>
-									
-									<!-- Characteristics -->
-									<div>
-									<label for="child-characteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-										D. Characteristics
-										</label>
-										<textarea
-											id="child-characteristics"
-											bind:value={childCharacteristics}
-											placeholder="Describe your child's personality, interests, learning style, strengths, challenges, etc."
-											rows="4"
-											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-										></textarea>
-									</div>
-								</div>
-								
-								<!-- Right Column: Parent Data -->
-								<div class="space-y-4">
-									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Parent Information</h3>
-									
-									<!-- Parent Gender -->
-									<div>
-										<label for="parent-gender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											Parent Gender
-										</label>
-										<select
-											id="parent-gender"
-											bind:value={parentGender}
-											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-										>
-											<option value="">Select gender</option>
-											<option value="male">Male</option>
-											<option value="female">Female</option>
-											<option value="non-binary">Non-binary</option>
-											<option value="prefer-not-to-say">Prefer not to say</option>
-										</select>
-									</div>
-									
-									<!-- Parent Age -->
-									<div>
-										<label for="parent-age" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											Parent Age
-										</label>
-										<select
-											id="parent-age"
-											bind:value={parentAge}
-											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-										>
-											<option value="">Select age range</option>
-											<option value="20-25">20-25</option>
-											<option value="26-30">26-30</option>
-											<option value="31-35">31-35</option>
-											<option value="36-40">36-40</option>
-											<option value="41-45">41-45</option>
-											<option value="46-50">46-50</option>
-											<option value="51-55">51-55</option>
-											<option value="56-60">56-60</option>
-											<option value="60+">60+</option>
-										</select>
-									</div>
-									
-									<!-- Parent Preference -->
-									<div>
-										<label for="parent-preference" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											Parent Preference?
-										</label>
-										<textarea
-											id="parent-preference"
-											bind:value={parentPreference}
-											placeholder="Any specific preferences for your child's AI interactions, content filtering, educational focus, etc."
-											rows="3"
-											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-										></textarea>
-									</div>
-								</div>
-							</div>
-							
-							<!-- Parenting Style Section -->
-							<div class="mt-6">
-								<label for="parenting-style" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-									D. Describe your parenting style
-								</label>
-								<textarea
-									id="parenting-style"
-									bind:value={parentingStyle}
-									placeholder="Describe your approach to parenting, values you want to instill, discipline style, educational philosophy, etc."
-									rows="4"
-									class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-								></textarea>
-							</div>
-							
-							<!-- Submit Button -->
-							<div class="flex justify-end pt-6">
-								<button
-									type="submit"
-									class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-								>
-									SUBMIT
-								</button>
-							</div>
-                            </form>
-                            {/if}
-                        </div>
-                    </div>
-                    {/if}
+												<!-- Name -->
+												<div>
+													<label
+														for="child-name"
+														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														A. Name
+													</label>
+													<input
+														id="child-name"
+														bind:value={childName}
+														class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+													/>
+												</div>
 
-                    <!-- Contextual Factors Note -->
-                    {#if childProfiles.length === 0}
-                        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                            <p class="text-sm text-blue-800 dark:text-blue-200">
-                                <strong>Note:</strong> This information will be used to collect possible contextual factors that help personalize your child's AI learning experience. The data is stored locally and can be updated at any time.
-                            </p>
-                        </div>
-                    {/if}
+												<!-- Age -->
+												<div>
+													<label
+														for="child-age"
+														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														B. Age
+													</label>
+													<select
+														id="child-age"
+														bind:value={childAge}
+														class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+													>
+														<option value="">Select age</option>
+														<option value="9">9 years old</option>
+														<option value="10">10 years old</option>
+														<option value="11">11 years old</option>
+														<option value="12">12 years old</option>
+														<option value="13">13 years old</option>
+														<option value="14">14 years old</option>
+														<option value="15">15 years old</option>
+														<option value="16">16 years old</option>
+														<option value="17">17 years old</option>
+														<option value="18">18 years old</option>
+													</select>
+												</div>
+
+												<!-- Gender -->
+												<div>
+													<label
+														for="child-gender"
+														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														B. Gender
+													</label>
+													<select
+														id="child-gender"
+														bind:value={childGender}
+														class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+													>
+														<option value="">Select gender</option>
+														<option value="male">Male</option>
+														<option value="female">Female</option>
+														<option value="non-binary">Non-binary</option>
+														<option value="prefer-not-to-say">Prefer not to say</option>
+													</select>
+												</div>
+
+												<!-- Characteristics -->
+												<div>
+													<label
+														for="child-characteristics"
+														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														D. Characteristics
+													</label>
+													<textarea
+														id="child-characteristics"
+														bind:value={childCharacteristics}
+														placeholder="Describe your child's personality, interests, learning style, strengths, challenges, etc."
+														rows="4"
+														class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+													></textarea>
+												</div>
+											</div>
+
+											<!-- Right Column: Parent Data -->
+											<div class="space-y-4">
+												<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+													Parent Information
+												</h3>
+
+												<!-- Parent Gender -->
+												<div>
+													<label
+														for="parent-gender"
+														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														Parent Gender
+													</label>
+													<select
+														id="parent-gender"
+														bind:value={parentGender}
+														class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+													>
+														<option value="">Select gender</option>
+														<option value="male">Male</option>
+														<option value="female">Female</option>
+														<option value="non-binary">Non-binary</option>
+														<option value="prefer-not-to-say">Prefer not to say</option>
+													</select>
+												</div>
+
+												<!-- Parent Age -->
+												<div>
+													<label
+														for="parent-age"
+														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														Parent Age
+													</label>
+													<select
+														id="parent-age"
+														bind:value={parentAge}
+														class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+													>
+														<option value="">Select age range</option>
+														<option value="20-25">20-25</option>
+														<option value="26-30">26-30</option>
+														<option value="31-35">31-35</option>
+														<option value="36-40">36-40</option>
+														<option value="41-45">41-45</option>
+														<option value="46-50">46-50</option>
+														<option value="51-55">51-55</option>
+														<option value="56-60">56-60</option>
+														<option value="60+">60+</option>
+													</select>
+												</div>
+
+												<!-- Parent Preference -->
+												<div>
+													<label
+														for="parent-preference"
+														class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+													>
+														Parent Preference?
+													</label>
+													<textarea
+														id="parent-preference"
+														bind:value={parentPreference}
+														placeholder="Any specific preferences for your child's AI interactions, content filtering, educational focus, etc."
+														rows="3"
+														class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+													></textarea>
+												</div>
+											</div>
+										</div>
+
+										<!-- Parenting Style Section -->
+										<div class="mt-6">
+											<label
+												for="parenting-style"
+												class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+											>
+												D. Describe your parenting style
+											</label>
+											<textarea
+												id="parenting-style"
+												bind:value={parentingStyle}
+												placeholder="Describe your approach to parenting, values you want to instill, discipline style, educational philosophy, etc."
+												rows="4"
+												class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+											></textarea>
+										</div>
+
+										<!-- Submit Button -->
+										<div class="flex justify-end pt-6">
+											<button
+												type="submit"
+												class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+											>
+												SUBMIT
+											</button>
+										</div>
+									</form>
+								{/if}
+							</div>
+						</div>
+					{/if}
+
+					<!-- Contextual Factors Note -->
+					{#if childProfiles.length === 0}
+						<div
+							class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
+						>
+							<p class="text-sm text-blue-800 dark:text-blue-200">
+								<strong>Note:</strong> This information will be used to collect possible contextual factors
+								that help personalize your child's AI learning experience. The data is stored locally
+								and can be updated at any time.
+							</p>
+						</div>
+					{/if}
 				{:else if activeTab === 'policy'}
 					<!-- Policy Making Tab -->
 					<div class="mb-4 mt-4 px-4 md:px-8">
@@ -1499,13 +1670,15 @@ let editInModal: boolean = false;
 							</p>
 						</div>
 					</div>
-					
-					<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto w-full max-w-6xl shadow-lg">
+
+					<div
+						class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto w-full max-w-6xl shadow-lg"
+					>
 						<div class="w-full mx-auto">
 							<!-- Question Progress Indicator -->
 							<div class="mb-6 flex items-center">
 								<div class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-									<div 
+									<div
 										class="h-full bg-blue-500 rounded-full transition-all duration-300"
 										style="width: {((currentPolicyQuestion + 1) / totalPolicyQuestions) * 100}%"
 									></div>
@@ -1514,20 +1687,20 @@ let editInModal: boolean = false;
 									{currentPolicyQuestion + 1}/{totalPolicyQuestions}
 								</span>
 							</div>
-							
+
 							<!-- Politics Question -->
 							{#if currentPolicyQuestion === 0}
 								<div class="mb-8">
 									<h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
 										If your child asks about politics, how do you want us to respond?
 									</h3>
-									
+
 									<!-- Two-column layout -->
 									<div class="flex flex-col lg:flex-row gap-6">
 										<!-- Left column: Options -->
 										<div class="lg:w-2/5 space-y-3">
 											<!-- Option 1: Objectively -->
-											<div 
+											<div
 												role="button"
 												tabindex="0"
 												class="p-4 rounded-lg border {selectedPoliticsResponse === 'objectively'
@@ -1544,24 +1717,27 @@ let editInModal: boolean = false;
 												on:mouseleave={() => (hoveredPoliticsOption = selectedPoliticsResponse)}
 											>
 												<label class="flex items-start space-x-3 cursor-pointer">
-													<input 
-														type="radio" 
-														name="politicsResponse" 
-														value="objectively" 
+													<input
+														type="radio"
+														name="politicsResponse"
+														value="objectively"
 														checked={selectedPoliticsResponse === 'objectively'}
-														class="mt-1 accent-blue-500" 
+														class="mt-1 accent-blue-500"
 													/>
 													<div>
-														<span class="font-medium text-gray-900 dark:text-white">Objectively</span>
+														<span class="font-medium text-gray-900 dark:text-white"
+															>Objectively</span
+														>
 														<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-															Provide factual information about political figures and topics while acknowledging different viewpoints exist.
+															Provide factual information about political figures and topics while
+															acknowledging different viewpoints exist.
 														</p>
 													</div>
 												</label>
 											</div>
-											
+
 											<!-- Option 2: No Specific Mentions -->
-											<div 
+											<div
 												role="button"
 												tabindex="0"
 												class="p-4 rounded-lg border {selectedPoliticsResponse === 'noSpecific'
@@ -1578,24 +1754,27 @@ let editInModal: boolean = false;
 												on:mouseleave={() => (hoveredPoliticsOption = selectedPoliticsResponse)}
 											>
 												<label class="flex items-start space-x-3 cursor-pointer">
-													<input 
-														type="radio" 
-														name="politicsResponse" 
-														value="noSpecific" 
+													<input
+														type="radio"
+														name="politicsResponse"
+														value="noSpecific"
 														checked={selectedPoliticsResponse === 'noSpecific'}
-														class="mt-1 accent-blue-500" 
+														class="mt-1 accent-blue-500"
 													/>
 													<div>
-														<span class="font-medium text-gray-900 dark:text-white">No Mentions of Specific Political Figures/Viewpoints</span>
+														<span class="font-medium text-gray-900 dark:text-white"
+															>No Mentions of Specific Political Figures/Viewpoints</span
+														>
 														<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-															Avoid discussing specific political figures or viewpoints while still acknowledging the question.
+															Avoid discussing specific political figures or viewpoints while still
+															acknowledging the question.
 														</p>
 													</div>
 												</label>
 											</div>
-											
+
 											<!-- Option 3: No Politics -->
-											<div 
+											<div
 												role="button"
 												tabindex="0"
 												class="p-4 rounded-lg border {selectedPoliticsResponse === 'noPolitics'
@@ -1612,70 +1791,107 @@ let editInModal: boolean = false;
 												on:mouseleave={() => (hoveredPoliticsOption = selectedPoliticsResponse)}
 											>
 												<label class="flex items-start space-x-3 cursor-pointer">
-													<input 
-														type="radio" 
-														name="politicsResponse" 
-														value="noPolitics" 
+													<input
+														type="radio"
+														name="politicsResponse"
+														value="noPolitics"
 														checked={selectedPoliticsResponse === 'noPolitics'}
-														class="mt-1 accent-blue-500" 
+														class="mt-1 accent-blue-500"
 													/>
 													<div>
-														<span class="font-medium text-gray-900 dark:text-white">No Mentions of Politics in General</span>
+														<span class="font-medium text-gray-900 dark:text-white"
+															>No Mentions of Politics in General</span
+														>
 														<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-															Redirect the conversation away from political topics entirely to other engaging subjects.
+															Redirect the conversation away from political topics entirely to other
+															engaging subjects.
 														</p>
 													</div>
 												</label>
 											</div>
 										</div>
-										
+
 										<!-- Right column: Chat Preview -->
-										<div class="lg:w-3/5 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+										<div
+											class="lg:w-3/5 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"
+										>
 											<!-- Chat header -->
-                                            <div class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4">
-                                                <div class="text-sm font-medium text-black dark:text-black">Example Interaction</div>
-                                            </div>
-											
+											<div
+												class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4"
+											>
+												<div class="text-sm font-medium text-black dark:text-black">
+													Example Interaction
+												</div>
+											</div>
+
 											<!-- Chat messages -->
-                                            <div class="p-4 space-y-4 bg-white dark:bg-gray-800 min-h-[300px]">
+											<div class="p-4 space-y-4 bg-white dark:bg-gray-800 min-h-[300px]">
 												<!-- Child message -->
 												<div class="flex justify-end">
-													<div class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] shadow-sm">
+													<div
+														class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] shadow-sm"
+													>
 														<p class="text-sm">Who is Trump? Is he a good guy?</p>
 													</div>
 												</div>
-												
+
 												<!-- AI response based on selected/hovered option -->
-                                                <div class="flex">
-                                                    <div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]">
+												<div class="flex">
+													<div
+														class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]"
+													>
 														{#if hoveredPoliticsOption === 'objectively' || (hoveredPoliticsOption === null && selectedPoliticsResponse === 'objectively')}
-															<p class="text-sm">Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts. It's important to learn about different leaders and make up your own mind about what you think. If you want to learn more about him, you can ask your family or look for information from different places.</p>
+															<p class="text-sm">
+																Hi there! Donald Trump is a well-known businessman and was the 45th
+																President of the United States. People have different opinions about
+																him, just like with many leaders. Some people think he did a good
+																job, while others have different thoughts. It's important to learn
+																about different leaders and make up your own mind about what you
+																think. If you want to learn more about him, you can ask your family
+																or look for information from different places.
+															</p>
 														{:else if hoveredPoliticsOption === 'noSpecific' || (hoveredPoliticsOption === null && selectedPoliticsResponse === 'noSpecific')}
-															<p class="text-sm">It's great that you're curious and asking questions! Donald Trump is a person who was a leader in the United States. People have different opinions about him, just like how people might feel differently about characters in stories or movies. If you want to know more about what he did, it might be helpful to talk to your parents or another trusted adult who can give you a little more information that's right for you. If you have any other questions, feel free to ask!</p>
+															<p class="text-sm">
+																It's great that you're curious and asking questions! Donald Trump is
+																a person who was a leader in the United States. People have
+																different opinions about him, just like how people might feel
+																differently about characters in stories or movies. If you want to
+																know more about what he did, it might be helpful to talk to your
+																parents or another trusted adult who can give you a little more
+																information that's right for you. If you have any other questions,
+																feel free to ask!
+															</p>
 														{:else if hoveredPoliticsOption === 'noPolitics' || (hoveredPoliticsOption === null && selectedPoliticsResponse === 'noPolitics')}
-															<p class="text-sm">Hello! Let's find something really amazing to talk about. How about I tell you about some cool animals or fun science facts instead? Just let me know what you're curious about or if there's something else you'd like to learn!</p>
+															<p class="text-sm">
+																Hello! Let's find something really amazing to talk about. How about
+																I tell you about some cool animals or fun science facts instead?
+																Just let me know what you're curious about or if there's something
+																else you'd like to learn!
+															</p>
 														{:else}
-															<p class="text-sm">(Please select a response option to see an example.)</p>
+															<p class="text-sm">
+																(Please select a response option to see an example.)
+															</p>
 														{/if}
-                                                    </div>
-                                                </div>
-                                            </div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
 								</div>
-							</div>
-							</div>
-						{:else if currentPolicyQuestion === 1}
+							{:else if currentPolicyQuestion === 1}
 								<!-- Second Policy Question (placeholder) -->
 								<div class="mb-8">
 									<h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
 										[Second Policy Question Title]
 									</h3>
-									
+
 									<!-- Two-column layout -->
 									<div class="flex flex-col lg:flex-row gap-6">
 										<!-- Left column: Options -->
 										<div class="lg:w-2/5 space-y-3">
 											<!-- Option 1 -->
-											<div 
+											<div
 												role="button"
 												tabindex="0"
 												class="p-4 rounded-lg border {selectedSecondQuestion === 'option1'
@@ -1692,24 +1908,26 @@ let editInModal: boolean = false;
 												on:mouseleave={() => (hoveredSecondOption = selectedSecondQuestion)}
 											>
 												<label class="flex items-start space-x-3 cursor-pointer">
-													<input 
-														type="radio" 
-														name="secondQuestion" 
-														value="option1" 
+													<input
+														type="radio"
+														name="secondQuestion"
+														value="option1"
 														checked={selectedSecondQuestion === 'option1'}
-														class="mt-1 accent-blue-500" 
+														class="mt-1 accent-blue-500"
 													/>
 													<div>
-														<span class="font-medium text-gray-900 dark:text-white">{secondQuestionChoices.option1.title}</span>
+														<span class="font-medium text-gray-900 dark:text-white"
+															>{secondQuestionChoices.option1.title}</span
+														>
 														<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
 															{secondQuestionChoices.option1.description}
 														</p>
 													</div>
 												</label>
 											</div>
-											
+
 											<!-- Option 2 -->
-											<div 
+											<div
 												role="button"
 												tabindex="0"
 												class="p-4 rounded-lg border {selectedSecondQuestion === 'option2'
@@ -1726,24 +1944,26 @@ let editInModal: boolean = false;
 												on:mouseleave={() => (hoveredSecondOption = selectedSecondQuestion)}
 											>
 												<label class="flex items-start space-x-3 cursor-pointer">
-													<input 
-														type="radio" 
-														name="secondQuestion" 
-														value="option2" 
+													<input
+														type="radio"
+														name="secondQuestion"
+														value="option2"
 														checked={selectedSecondQuestion === 'option2'}
-														class="mt-1 accent-blue-500" 
+														class="mt-1 accent-blue-500"
 													/>
 													<div>
-														<span class="font-medium text-gray-900 dark:text-white">{secondQuestionChoices.option2.title}</span>
+														<span class="font-medium text-gray-900 dark:text-white"
+															>{secondQuestionChoices.option2.title}</span
+														>
 														<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
 															{secondQuestionChoices.option2.description}
 														</p>
 													</div>
 												</label>
 											</div>
-											
+
 											<!-- Option 3 -->
-											<div 
+											<div
 												role="button"
 												tabindex="0"
 												class="p-4 rounded-lg border {selectedSecondQuestion === 'option3'
@@ -1760,15 +1980,17 @@ let editInModal: boolean = false;
 												on:mouseleave={() => (hoveredSecondOption = selectedSecondQuestion)}
 											>
 												<label class="flex items-start space-x-3 cursor-pointer">
-													<input 
-														type="radio" 
-														name="secondQuestion" 
-														value="option3" 
+													<input
+														type="radio"
+														name="secondQuestion"
+														value="option3"
 														checked={selectedSecondQuestion === 'option3'}
-														class="mt-1 accent-blue-500" 
+														class="mt-1 accent-blue-500"
 													/>
 													<div>
-														<span class="font-medium text-gray-900 dark:text-white">{secondQuestionChoices.option3.title}</span>
+														<span class="font-medium text-gray-900 dark:text-white"
+															>{secondQuestionChoices.option3.title}</span
+														>
 														<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
 															{secondQuestionChoices.option3.description}
 														</p>
@@ -1776,26 +1998,36 @@ let editInModal: boolean = false;
 												</label>
 											</div>
 										</div>
-										
+
 										<!-- Right column: Chat Preview -->
-										<div class="lg:w-3/5 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+										<div
+											class="lg:w-3/5 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"
+										>
 											<!-- Chat header -->
-											<div class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4">
-												<div class="text-sm font-medium text-black dark:text-black">Example Interaction</div>
+											<div
+												class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4"
+											>
+												<div class="text-sm font-medium text-black dark:text-black">
+													Example Interaction
+												</div>
 											</div>
-											
+
 											<!-- Chat messages -->
 											<div class="p-4 space-y-4 bg-white dark:bg-gray-800 min-h-[300px]">
 												<!-- Child message -->
 												<div class="flex justify-end">
-													<div class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] shadow-sm">
+													<div
+														class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] shadow-sm"
+													>
 														<p class="text-sm">[Example question for second policy]</p>
 													</div>
 												</div>
-												
+
 												<!-- AI response based on selected/hovered option -->
 												<div class="flex">
-													<div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]">
+													<div
+														class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]"
+													>
 														{#if hoveredSecondOption === 'option1' || (hoveredSecondOption === null && selectedSecondQuestion === 'option1')}
 															<p class="text-sm">{secondQuestionChoices.option1.example}</p>
 														{:else if hoveredSecondOption === 'option2' || (hoveredSecondOption === null && selectedSecondQuestion === 'option2')}
@@ -1803,16 +2035,18 @@ let editInModal: boolean = false;
 														{:else if hoveredSecondOption === 'option3' || (hoveredSecondOption === null && selectedSecondQuestion === 'option3')}
 															<p class="text-sm">{secondQuestionChoices.option3.example}</p>
 														{:else}
-															<p class="text-sm">Please select a response option to see an example.</p>
+															<p class="text-sm">
+																Please select a response option to see an example.
+															</p>
 														{/if}
 													</div>
-                            </div>
-                            </div>
+												</div>
+											</div>
 										</div>
-                        </div>
+									</div>
 								</div>
 							{/if}
-							
+
 							<!-- Navigation Buttons -->
 							<div class="flex justify-between pt-6">
 								{#if currentPolicyQuestion > 0}
@@ -1823,9 +2057,10 @@ let editInModal: boolean = false;
 										Previous Question
 									</button>
 								{:else}
-									<div></div> <!-- Empty div to maintain flex layout -->
+									<div></div>
+									<!-- Empty div to maintain flex layout -->
 								{/if}
-								
+
 								{#if currentPolicyQuestion < totalPolicyQuestions - 1}
 									<button
 										on:click={nextPolicyQuestion}
@@ -1852,8 +2087,10 @@ let editInModal: boolean = false;
 							Select and save a model that will be used as your child's primary AI assistant.
 						</p>
 					</div>
-					
-					<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto w-full max-w-6xl shadow-lg">
+
+					<div
+						class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto w-full max-w-6xl shadow-lg"
+					>
 						<div class="w-full mx-auto">
 							<!-- Model Selection -->
 							<div class="mb-8">
@@ -1861,9 +2098,10 @@ let editInModal: boolean = false;
 									Select Your Child's AI Model
 								</h3>
 								<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
-									Choose the AI model that will be used as your child's primary assistant. This model will be automatically selected when your child starts a new conversation.
+									Choose the AI model that will be used as your child's primary assistant. This
+									model will be automatically selected when your child starts a new conversation.
 								</p>
-								
+
 								<div class="space-y-4">
 									<!-- Model Dropdown -->
 									<div>
@@ -1886,10 +2124,12 @@ let editInModal: boolean = false;
 											{/each}
 										</select>
 									</div>
-									
+
 									<!-- Current Selection Display -->
 									{#if childGPTModelId}
-										<div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+										<div
+											class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+										>
 											<div class="flex items-center space-x-2">
 												<div class="w-2 h-2 bg-green-500 rounded-full"></div>
 												<div>
@@ -1897,13 +2137,13 @@ let editInModal: boolean = false;
 														Current Child's GPT Model
 													</p>
 													<p class="text-sm text-green-600 dark:text-green-400">
-														{$models.find(m => m.id === childGPTModelId)?.name || childGPTModelId}
+														{$models.find((m) => m.id === childGPTModelId)?.name || childGPTModelId}
 													</p>
 												</div>
 											</div>
 										</div>
 									{/if}
-									
+
 									<!-- Save Button -->
 									<div class="flex justify-end pt-6">
 										<button
@@ -1912,7 +2152,9 @@ let editInModal: boolean = false;
 											class="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
 										>
 											{#if loadingChildGPT}
-												<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+												<div
+													class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+												></div>
 												<span>Saving...</span>
 											{:else}
 												<span>Save as My Child's GPT</span>
@@ -1928,11 +2170,14 @@ let editInModal: boolean = false;
 					<div class="mb-4 mt-4 px-4 md:px-8">
 						<h1 class="text-3xl font-bold mb-2">Interactive Graph</h1>
 						<p class="text-gray-600 dark:text-gray-400">
-							Click anywhere on the graph to place plot points. The graph spans from 0 to 10 on both X and Y axes.
+							Click anywhere on the graph to place plot points. The graph spans from 0 to 10 on both
+							X and Y axes.
 						</p>
 					</div>
-					
-					<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto max-w-4xl shadow-lg">
+
+					<div
+						class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto max-w-4xl shadow-lg"
+					>
 						<!-- Graph Controls -->
 						<div class="flex justify-between items-center mb-6">
 							<div class="flex space-x-4">
@@ -1954,43 +2199,63 @@ let editInModal: boolean = false;
 								Points placed: {plotPoints.length}
 							</div>
 						</div>
-						
+
 						<!-- Top column labels with title and divider -->
 						<div class="relative w-full mb-2" style="height: 40px;">
 							<!-- Title cell -->
-							<div class="absolute left-0 top-0 h-full flex items-center justify-center" style="left: 5px; width: 120px; z-index: 10;">
+							<div
+								class="absolute left-0 top-0 h-full flex items-center justify-center"
+								style="left: 5px; width: 120px; z-index: 10;"
+							>
 								<span class="font-bold text-center w-full text-sm mb-3">Example Prompt</span>
 							</div>
 							<!-- Divider -->
-							<div class="absolute" style="left: 132px; top: 0%; height: 70%; width: 1px; background: #d1d5db; z-index: 10;"></div>
+							<div
+								class="absolute"
+								style="left: 132px; top: 0%; height: 70%; width: 1px; background: #d1d5db; z-index: 10;"
+							></div>
 							<!-- Label above X=1 column (second column, 20% from left) -->
 							<div class="absolute" style="left: 20%; transform: translateX(-50%);">
-								<span class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center" style="max-width: 20ch;">
+								<span
+									class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center"
+									style="max-width: 20ch;"
+								>
 									"What is sexual reproduction?"
 								</span>
 							</div>
 							<!-- Label above X=2 column (third column, 40% from left) -->
 							<div class="absolute" style="left: 40%; transform: translateX(-50%);">
-								<span class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center" style="max-width: 20ch;">
+								<span
+									class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center"
+									style="max-width: 20ch;"
+								>
 									[insert topic]
 								</span>
 							</div>
 							<!-- Label above X=3 column (fourth column, 60% from left) -->
 							<div class="absolute" style="left: 60%; transform: translateX(-50%);">
-								<span class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center" style="max-width: 20ch;">
+								<span
+									class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center"
+									style="max-width: 20ch;"
+								>
 									[insert topic]
 								</span>
 							</div>
 							<!-- Label above X=4 column (fifth column, 80% from left) -->
 							<div class="absolute" style="left: 80%; transform: translateX(-50%);">
-								<span class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center" style="max-width: 20ch;">
+								<span
+									class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center"
+									style="max-width: 20ch;"
+								>
 									[insert topic]
 								</span>
 							</div>
 						</div>
 
 						<!-- Interactive Graph -->
-						<div class="relative bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+						<div
+							class="relative bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden"
+						>
 							<div
 								bind:this={graphContainer}
 								class="relative w-full h-96 cursor-crosshair"
@@ -2003,9 +2268,9 @@ let editInModal: boolean = false;
 									<!-- Vertical grid lines -->
 									{#each Array(5 + 1) as _, i}
 										<line
-											x1={(i * 100) / 5}%
+											x1="{(i * 100) / 5}%"
 											y1="0"
-											x2={(i * 100) / 5}%
+											x2="{(i * 100) / 5}%"
 											y2="100%"
 											stroke="currentColor"
 											stroke-width="1"
@@ -2016,19 +2281,35 @@ let editInModal: boolean = false;
 									{#each Array(11) as _, i}
 										<line
 											x1="0"
-											y1={(i * 100) / 10}%
+											y1="{(i * 100) / 10}%"
 											x2="100%"
-											y2={(i * 100) / 10}%
+											y2="{(i * 100) / 10}%"
 											stroke="currentColor"
 											stroke-width="1"
 											class="text-gray-300 dark:text-gray-700"
 										/>
 									{/each}
 									<!-- Axes -->
-									<line x1="0" y1="100%" x2="100%" y2="100%" stroke="currentColor" stroke-width="2" class="text-gray-800 dark:text-gray-200" />
-									<line x1="0" y1="0" x2="0" y2="100%" stroke="currentColor" stroke-width="2" class="text-gray-800 dark:text-gray-200" />
+									<line
+										x1="0"
+										y1="100%"
+										x2="100%"
+										y2="100%"
+										stroke="currentColor"
+										stroke-width="2"
+										class="text-gray-800 dark:text-gray-200"
+									/>
+									<line
+										x1="0"
+										y1="0"
+										x2="0"
+										y2="100%"
+										stroke="currentColor"
+										stroke-width="2"
+										class="text-gray-800 dark:text-gray-200"
+									/>
 								</svg>
-								
+
 								<!-- Interactive Coordinate Hover Areas -->
 								{#each Array(4) as _, x}
 									{#each Array(11) as _, y}
@@ -2039,7 +2320,8 @@ let editInModal: boolean = false;
 												role="button"
 												tabindex="0"
 												class="absolute w-2 h-2 rounded-full cursor-pointer bg-blue-400 bg-opacity-30 hover:bg-blue-500 hover:bg-opacity-60 border-2 border-blue-300 transition-colors duration-150"
-												style="left: {(coordX * 100) / 5}%; top: {100 - (coordY * 100) / 10}%; transform: translate(-4px, -4px);"
+												style="left: {(coordX * 100) / 5}%; top: {100 -
+													(coordY * 100) / 10}%; transform: translate(-4px, -4px);"
 												on:mouseenter={() => handleCoordinateHover(coordX, coordY)}
 												on:mouseleave={handleCoordinateLeave}
 												on:click={(e) => {
@@ -2050,7 +2332,9 @@ let editInModal: boolean = false;
 													if (e.key === ' ' || e.key === 'Enter') {
 														e.preventDefault();
 														e.stopPropagation();
-														const idx = plotPoints.findIndex((p) => p.x === coordX && p.y === coordY);
+														const idx = plotPoints.findIndex(
+															(p) => p.x === coordX && p.y === coordY
+														);
 														if (idx !== -1) {
 															plotPoints = [
 																...plotPoints.slice(0, idx),
@@ -2065,63 +2349,83 @@ let editInModal: boolean = false;
 										{/if}
 									{/each}
 								{/each}
-								
+
 								<!-- Global Tooltip -->
 								{#if hoveredCoord}
-									<div 
+									<div
 										class="absolute bg-red-600 text-white text-xs px-2 py-1 rounded pointer-events-none z-50 border border-white"
-										style="left: {(hoveredCoord.x * 100) / 5}%; top: {100 - (hoveredCoord.y * 100) / 10 - 8}%; max-width: 25ch; transform: translateX(5%);"
+										style="left: {(hoveredCoord.x * 100) / 5}%; top: {100 -
+											(hoveredCoord.y * 100) / 10 -
+											8}%; max-width: 25ch; transform: translateX(5%);"
 									>
 										insert example response here
 									</div>
 								{/if}
-								
+
 								<!-- Plot Points -->
 								{#each plotPoints as point, index}
 									<div
 										class="absolute w-2 h-2 bg-blue-500 rounded-full border-2 border-white dark:border-gray-800 pointer-events-none z-20"
-										style="left: {(point.x * 100) / 5}%; top: {100 - (point.y * 100) / 10}%; transform: translate(-4px, -4px);"
-									>
-									</div>
+										style="left: {(point.x * 100) / 5}%; top: {100 -
+											(point.y * 100) / 10}%; transform: translate(-4px, -4px);"
+									></div>
 								{/each}
-								
+
 								<!-- Axis Labels -->
 							</div>
 							<!-- Bottom column labels with title and divider -->
 							<div class="relative w-full mt-2" style="height: 35px;">
 								<!-- Title cell -->
-								<div class="absolute left-0 top-0 h-full flex items-center justify-center" style="left: 5px; width: 120px; z-index: 10;">
+								<div
+									class="absolute left-0 top-0 h-full flex items-center justify-center"
+									style="left: 5px; width: 120px; z-index: 10;"
+								>
 									<span class="font-bold text-center w-full text-sm mb-2">Topic</span>
 								</div>
 								<!-- Divider -->
-								<div class="absolute" style="left: 130px; top: 5%; height: 70%; width: 1px; background: #d1d5db; z-index: 10;"></div>
+								<div
+									class="absolute"
+									style="left: 130px; top: 5%; height: 70%; width: 1px; background: #d1d5db; z-index: 10;"
+								></div>
 								<!-- Label under X=1 column (second column, 20% from left) -->
 								<div class="absolute" style="left: 20%; transform: translateX(-50%);">
-									<span class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center" style="max-width: 20ch;">
+									<span
+										class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center"
+										style="max-width: 20ch;"
+									>
 										Sex
 									</span>
 								</div>
 								<!-- Label under X=2 column (third column, 40% from left) -->
 								<div class="absolute" style="left: 40%; transform: translateX(-50%);">
-									<span class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center" style="max-width: 20ch;">
+									<span
+										class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center"
+										style="max-width: 20ch;"
+									>
 										[insert topic]
 									</span>
 								</div>
 								<!-- Label under X=3 column (fourth column, 60% from left) -->
 								<div class="absolute" style="left: 60%; transform: translateX(-50%);">
-									<span class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center" style="max-width: 20ch;">
+									<span
+										class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center"
+										style="max-width: 20ch;"
+									>
 										[insert topic]
 									</span>
 								</div>
 								<!-- Label under X=4 column (fifth column, 80% from left) -->
 								<div class="absolute" style="left: 80%; transform: translateX(-50%);">
-									<span class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center" style="max-width: 20ch;">
+									<span
+										class="text-sm text-gray-600 dark:text-gray-400 break-words inline-block text-center"
+										style="max-width: 20ch;"
+									>
 										[insert topic]
 									</span>
 								</div>
 							</div>
 						</div>
-						
+
 						<!-- Points List -->
 						{#if plotPoints.length > 0}
 							<div class="mt-6">
@@ -2144,8 +2448,10 @@ let editInModal: boolean = false;
 							Test how your child's AI assistant responds with your current policy settings.
 						</p>
 					</div>
-					
-					<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto max-w-3xl shadow-lg">
+
+					<div
+						class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto max-w-3xl shadow-lg"
+					>
 						<div class="max-w-2xl mx-auto">
 							{#if !childGPTModelId}
 								<!-- No Child GPT model selected -->
@@ -2157,7 +2463,8 @@ let editInModal: boolean = false;
 										No Child's GPT Model Selected
 									</h3>
 									<p class="text-sm text-gray-600 dark:text-gray-400 mb-6 max-w-md">
-										Please go to the "My Child's GPT" tab first and select a model to use for your child's AI assistant.
+										Please go to the "My Child's GPT" tab first and select a model to use for your
+										child's AI assistant.
 									</p>
 									<button
 										on:click={() => handleTabClick('childgpt')}
@@ -2173,7 +2480,9 @@ let editInModal: boolean = false;
 									<div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
 										<div class="flex items-center justify-between">
 											<div class="flex items-center">
-												<div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
+												<div
+													class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3"
+												>
 													<Sparkles className="size-5 text-blue-500 dark:text-blue-300" />
 												</div>
 												<div>
@@ -2194,9 +2503,12 @@ let editInModal: boolean = false;
 											</button>
 										</div>
 									</div>
-									
+
 									<!-- Chat Messages -->
-									<div class="flex-1 overflow-y-auto mb-4 space-y-4 pr-2" style="scrollbar-width: thin;">
+									<div
+										class="flex-1 overflow-y-auto mb-4 space-y-4 pr-2"
+										style="scrollbar-width: thin;"
+									>
 										{#if chatMessages.length === 0}
 											<div class="flex items-center justify-center h-full">
 												<p class="text-gray-500 dark:text-gray-400 text-center">
@@ -2205,18 +2517,36 @@ let editInModal: boolean = false;
 											</div>
 										{:else}
 											{#each chatMessages as message}
-												<div class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'}">
-													<div class="{message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'} rounded-lg px-4 py-3 max-w-[80%]">
+												<div
+													class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'}"
+												>
+													<div
+														class="{message.role === 'user'
+															? 'bg-blue-500 text-white'
+															: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'} rounded-lg px-4 py-3 max-w-[80%]"
+													>
 														{#if message.loading}
 															<div class="flex items-center space-x-1">
-																<div class="w-2 h-2 bg-current rounded-full animate-bounce" style="animation-delay: 0ms;"></div>
-																<div class="w-2 h-2 bg-current rounded-full animate-bounce" style="animation-delay: 150ms;"></div>
-																<div class="w-2 h-2 bg-current rounded-full animate-bounce" style="animation-delay: 300ms;"></div>
+																<div
+																	class="w-2 h-2 bg-current rounded-full animate-bounce"
+																	style="animation-delay: 0ms;"
+																></div>
+																<div
+																	class="w-2 h-2 bg-current rounded-full animate-bounce"
+																	style="animation-delay: 150ms;"
+																></div>
+																<div
+																	class="w-2 h-2 bg-current rounded-full animate-bounce"
+																	style="animation-delay: 300ms;"
+																></div>
 															</div>
 														{:else}
 															<p class="whitespace-pre-wrap break-words">{message.content}</p>
 															<div class="text-xs opacity-70 mt-1 text-right">
-																{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+																{new Date(message.timestamp).toLocaleTimeString([], {
+																	hour: '2-digit',
+																	minute: '2-digit'
+																})}
 															</div>
 														{/if}
 													</div>
@@ -2224,13 +2554,10 @@ let editInModal: boolean = false;
 											{/each}
 										{/if}
 									</div>
-									
+
 									<!-- Message Input -->
 									<div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-										<form 
-											class="flex items-end gap-2"
-											on:submit|preventDefault={sendMessage}
-										>
+										<form class="flex items-end gap-2" on:submit|preventDefault={sendMessage}>
 											<div class="flex-1">
 												<textarea
 													bind:value={currentMessage}
@@ -2245,16 +2572,30 @@ let editInModal: boolean = false;
 												class="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed text-white p-3 rounded-lg transition-colors"
 											>
 												{#if sendingMessage}
-													<div class="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+													<div
+														class="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"
+													></div>
 												{:else}
-													<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-														<path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="1.5"
+														stroke="currentColor"
+														class="w-6 h-6"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
+														/>
 													</svg>
 												{/if}
 											</button>
 										</form>
 										<p class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-											This chat simulates how your child would interact with the AI based on your policy settings.
+											This chat simulates how your child would interact with the AI based on your
+											policy settings.
 										</p>
 									</div>
 								</div>
@@ -2266,7 +2607,8 @@ let editInModal: boolean = false;
 					<div class="mb-4 mt-4 px-4 md:px-8">
 						<h1 class="text-3xl font-bold mb-2">Parent Moderation Quiz</h1>
 						<p class="text-gray-600 dark:text-gray-400">
-							Review the interaction below. Select one or more moderation strategies to see how they combine to create a safer response.
+							Review the interaction below. Select one or more moderation strategies to see how they
+							combine to create a safer response.
 						</p>
 					</div>
 
@@ -2274,17 +2616,25 @@ let editInModal: boolean = false;
 						class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto w-full max-w-6xl shadow-lg"
 					>
 						<!-- Chat Preview -->
-						<div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mb-8">
+						<div
+							class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mb-8"
+						>
 							<!-- Chat header -->
-							<div class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4">
-								<div class="text-sm font-medium text-black dark:text-black">Example Interaction</div>
+							<div
+								class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4"
+							>
+								<div class="text-sm font-medium text-black dark:text-black">
+									Example Interaction
+								</div>
 							</div>
 
 							<!-- Chat messages -->
 							<div class="p-4 space-y-4 bg-white dark:bg-gray-800 min-h-[200px]">
 								<!-- Child message -->
 								<div class="flex justify-end">
-									<div class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] shadow-sm">
+									<div
+										class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] shadow-sm"
+									>
 										<p class="text-sm">Who is Trump? Is he a good guy?</p>
 									</div>
 								</div>
@@ -2295,164 +2645,197 @@ let editInModal: boolean = false;
 										class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]"
 									>
 										<p class="text-sm">
-											Hi there! Donald Trump is a well-known businessman and was the 45th President of the United
-											States. People have different opinions about him, just like with many leaders. Some people
-											think he did a good job, while others have different thoughts. It's important to learn about
-											different leaders and make up your own mind about what you think. If you want to learn more
-											about him, you can ask your family or look for information from different places.
+											Hi there! Donald Trump is a well-known businessman and was the 45th President
+											of the United States. People have different opinions about him, just like with
+											many leaders. Some people think he did a good job, while others have different
+											thoughts. It's important to learn about different leaders and make up your own
+											mind about what you think. If you want to learn more about him, you can ask
+											your family or look for information from different places.
 										</p>
 									</div>
 								</div>
 							</div>
 						</div>
 
-					<!-- Moderation Buttons -->
-					<div>
-						<h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-							Select one or more moderation strategies to apply:
-						</h3>
-						
-						<!-- Selection Info -->
-						<div class="mb-4 flex items-center justify-between">
-							<span class="text-sm text-gray-600 dark:text-gray-400">
-								{selectedModerations.size} strateg{selectedModerations.size === 1 ? 'y' : 'ies'} selected
-							</span>
-							{#if selectedModerations.size > 0}
-								<button
-									on:click={clearSelections}
-									class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-								>
-									Clear All
-								</button>
-							{/if}
-						</div>
+						<!-- Moderation Buttons -->
+						<div>
+							<h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+								Select one or more moderation strategies to apply:
+							</h3>
 
-						<!-- Toggleable Buttons Grid -->
-						<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-							{#each moderationOptions as option}
-								<button
-									on:click={() => toggleModerationSelection(option)}
-									disabled={moderationLoading}
-									class="p-3 text-sm font-medium text-center rounded-lg transition-all {
-										option === 'Custom'
-											? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-md'
-											: selectedModerations.has(option)
-											? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
-											: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-									} disabled:opacity-50 disabled:cursor-not-allowed"
-								>
-									{option === 'Custom' ? '✨ Custom' : option}
-								</button>
-							{/each}
-						</div>
-						
-						<!-- Show custom instructions that have been added -->
-						{#if customInstructions.length > 0}
-							<div class="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-								<h4 class="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-3">
-									Custom Instructions ({customInstructions.length}):
-								</h4>
-								<div class="space-y-2">
-									{#each customInstructions as custom}
-										<div class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-3 rounded-lg border-2 {
-											selectedModerations.has(custom.id) 
-												? 'border-purple-500 ring-2 ring-purple-300' 
-												: 'border-transparent'
-										}">
-											<button
-												on:click={() => toggleModerationSelection(custom.id)}
-												class="flex-1 text-left mr-3"
-											>
-												<div class="flex items-center space-x-2 mb-1">
-													<div class="w-4 h-4 rounded border-2 {
-														selectedModerations.has(custom.id)
-															? 'bg-purple-500 border-purple-500'
-															: 'border-gray-300 dark:border-gray-600'
-													} flex items-center justify-center">
-														{#if selectedModerations.has(custom.id)}
-															<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-															</svg>
-														{/if}
-													</div>
-													<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
-														Custom #{customInstructions.indexOf(custom) + 1}
-													</p>
-												</div>
-												<p class="text-xs text-gray-700 dark:text-gray-300 ml-6">
-													{custom.text}
-												</p>
-											</button>
-											<button
-												on:click={() => removeCustomInstruction(custom.id)}
-												class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 flex-shrink-0"
-												title="Remove this custom instruction"
-											>
-												<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-												</svg>
-											</button>
-										</div>
-									{/each}
-								</div>
-							</div>
-						{/if}
-
-						<!-- Apply Button -->
-						<div class="flex justify-center mb-8">
-							<button
-								on:click={applySelectedModerations}
-								disabled={moderationLoading || selectedModerations.size === 0}
-								class="px-8 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors shadow-md"
-							>
-								{#if moderationLoading}
-									<span class="flex items-center space-x-2">
-										<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-										<span>Applying...</span>
-									</span>
-								{:else}
-									Apply Selected Moderations
-								{/if}
-							</button>
-						</div>
-
-						<!-- Moderation Result -->
-						{#if moderationResult && !moderationLoading}
-							<div class="space-y-6">
-								<!-- Raw JSON Response -->
-								<div>
-									<h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
-										Backend Response (Raw JSON)
-									</h3>
-									<div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-auto max-h-96">
-										<pre class="text-xs text-gray-800 dark:text-gray-200 font-mono whitespace-pre-wrap">{JSON.stringify(
-											moderationResult,
-											null,
-											2
-										)}</pre>
-									</div>
-								</div>
-
-								<!-- Clear Button -->
-								<div class="flex justify-center">
+							<!-- Selection Info -->
+							<div class="mb-4 flex items-center justify-between">
+								<span class="text-sm text-gray-600 dark:text-gray-400">
+									{selectedModerations.size} strateg{selectedModerations.size === 1 ? 'y' : 'ies'} selected
+								</span>
+								{#if selectedModerations.size > 0}
 									<button
 										on:click={clearSelections}
-										class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium"
+										class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
 									>
-										Clear and Start Over
+										Clear All
 									</button>
-								</div>
+								{/if}
 							</div>
-						{/if}
-					</div>
+
+							<!-- Toggleable Buttons Grid -->
+							<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+								{#each moderationOptions as option}
+									<button
+										on:click={() => toggleModerationSelection(option)}
+										disabled={moderationLoading}
+										class="p-3 text-sm font-medium text-center rounded-lg transition-all {option ===
+										'Custom'
+											? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-md'
+											: selectedModerations.has(option)
+												? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
+												: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'} disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{option === 'Custom' ? '✨ Custom' : option}
+									</button>
+								{/each}
+							</div>
+
+							<!-- Show custom instructions that have been added -->
+							{#if customInstructions.length > 0}
+								<div
+									class="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg"
+								>
+									<h4 class="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-3">
+										Custom Instructions ({customInstructions.length}):
+									</h4>
+									<div class="space-y-2">
+										{#each customInstructions as custom}
+											<div
+												class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-3 rounded-lg border-2 {selectedModerations.has(
+													custom.id
+												)
+													? 'border-purple-500 ring-2 ring-purple-300'
+													: 'border-transparent'}"
+											>
+												<button
+													on:click={() => toggleModerationSelection(custom.id)}
+													class="flex-1 text-left mr-3"
+												>
+													<div class="flex items-center space-x-2 mb-1">
+														<div
+															class="w-4 h-4 rounded border-2 {selectedModerations.has(custom.id)
+																? 'bg-purple-500 border-purple-500'
+																: 'border-gray-300 dark:border-gray-600'} flex items-center justify-center"
+														>
+															{#if selectedModerations.has(custom.id)}
+																<svg
+																	class="w-3 h-3 text-white"
+																	fill="none"
+																	stroke="currentColor"
+																	viewBox="0 0 24 24"
+																>
+																	<path
+																		stroke-linecap="round"
+																		stroke-linejoin="round"
+																		stroke-width="3"
+																		d="M5 13l4 4L19 7"
+																	></path>
+																</svg>
+															{/if}
+														</div>
+														<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
+															Custom #{customInstructions.indexOf(custom) + 1}
+														</p>
+													</div>
+													<p class="text-xs text-gray-700 dark:text-gray-300 ml-6">
+														{custom.text}
+													</p>
+												</button>
+												<button
+													on:click={() => removeCustomInstruction(custom.id)}
+													class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 flex-shrink-0"
+													title="Remove this custom instruction"
+												>
+													<svg
+														class="w-4 h-4"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M6 18L18 6M6 6l12 12"
+														></path>
+													</svg>
+												</button>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
+
+							<!-- Apply Button -->
+							<div class="flex justify-center mb-8">
+								<button
+									on:click={applySelectedModerations}
+									disabled={moderationLoading || selectedModerations.size === 0}
+									class="px-8 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors shadow-md"
+								>
+									{#if moderationLoading}
+										<span class="flex items-center space-x-2">
+											<div
+												class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+											></div>
+											<span>Applying...</span>
+										</span>
+									{:else}
+										Apply Selected Moderations
+									{/if}
+								</button>
+							</div>
+
+							<!-- Moderation Result -->
+							{#if moderationResult && !moderationLoading}
+								<div class="space-y-6">
+									<!-- Raw JSON Response -->
+									<div>
+										<h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+											Backend Response (Raw JSON)
+										</h3>
+										<div
+											class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-auto max-h-96"
+										>
+											<pre
+												class="text-xs text-gray-800 dark:text-gray-200 font-mono whitespace-pre-wrap">{JSON.stringify(
+													moderationResult,
+													null,
+													2
+												)}</pre>
+										</div>
+									</div>
+
+									<!-- Clear Button -->
+									<div class="flex justify-center">
+										<button
+											on:click={clearSelections}
+											class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium"
+										>
+											Clear and Start Over
+										</button>
+									</div>
+								</div>
+							{/if}
+						</div>
 					</div>
 				{:else}
 					<!-- Placeholder for other tabs -->
 					<div class="text-center py-12">
 						<h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-							{activeTab === 'activity' ? 'Activity History' : 
-							 activeTab === 'conversations' ? 'Conversations' : 
-							 activeTab === 'users' ? 'User Management' : 'Coming Soon'}
+							{activeTab === 'activity'
+								? 'Activity History'
+								: activeTab === 'conversations'
+									? 'Conversations'
+									: activeTab === 'users'
+										? 'User Management'
+										: 'Coming Soon'}
 						</h2>
 						<p class="text-gray-600 dark:text-gray-400">
 							This feature is under development and will be available soon.
@@ -2467,45 +2850,57 @@ let editInModal: boolean = false;
 <!-- Policy Preview Modal -->
 {#if showPolicyPreview}
 	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+		<div
+			class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+		>
 			<div class="p-6">
 				<div class="flex justify-between items-center mb-4">
 					<h2 class="text-xl font-semibold text-gray-900 dark:text-white">
 						Preview Policy Settings
 					</h2>
 					<button
-						on:click={() => showPolicyPreview = false}
+						on:click={() => (showPolicyPreview = false)}
 						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
 					>
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							></path>
 						</svg>
 					</button>
 				</div>
-				
+
 				<div class="mb-6">
 					<h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
 						System Prompt Preview
 					</h3>
-					<div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-						<pre class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono">{policySystemPrompt || 'No policy instructions selected'}</pre>
+					<div
+						class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
+					>
+						<pre
+							class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono">{policySystemPrompt ||
+								'No policy instructions selected'}</pre>
 					</div>
 				</div>
-				
+
 				<div class="mb-6">
-					<h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">
-					Target Model
-					</h3>
-					<div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+					<h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Target Model</h3>
+					<div
+						class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700"
+					>
 						<p class="text-sm text-blue-800 dark:text-blue-200">
-							<strong>My Child's GPT:</strong> {childGPTModelId || 'No model selected'}
+							<strong>My Child's GPT:</strong>
+							{childGPTModelId || 'No model selected'}
 						</p>
 					</div>
 				</div>
-				
+
 				<div class="flex justify-end space-x-3">
 					<button
-						on:click={() => showPolicyPreview = false}
+						on:click={() => (showPolicyPreview = false)}
 						class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
 					>
 						Cancel
@@ -2523,8 +2918,19 @@ let editInModal: boolean = false;
 					>
 						{#if savingPolicies}
 							<svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+								<circle
+									class="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								></circle>
+								<path
+									class="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path>
 							</svg>
 							<span>Applying...</span>
 						{:else}
@@ -2538,8 +2944,19 @@ let editInModal: boolean = false;
 					>
 						{#if savingPolicies}
 							<svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+								<circle
+									class="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								></circle>
+								<path
+									class="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path>
 							</svg>
 							<span>Applying...</span>
 						{:else}
@@ -2558,7 +2975,9 @@ let editInModal: boolean = false;
 		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full">
 			<div class="p-6">
 				<div class="flex justify-between items-center mb-4">
-					<h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+					<h2
+						class="text-xl font-semibold text-gray-900 dark:text-white flex items-center space-x-2"
+					>
 						<span class="text-2xl">✨</span>
 						<span>Custom Moderation Instruction</span>
 					</h2>
@@ -2567,18 +2986,27 @@ let editInModal: boolean = false;
 						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
 					>
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							></path>
 						</svg>
 					</button>
 				</div>
-				
+
 				<div class="mb-6">
 					<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-						Enter a custom instruction for how the AI should moderate the response. Be specific and clear about what you want.
+						Enter a custom instruction for how the AI should moderate the response. Be specific and
+						clear about what you want.
 					</p>
-					
+
 					<div class="mb-4">
-						<label for="custom-instruction-textarea" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						<label
+							for="custom-instruction-textarea"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+						>
 							Custom Instruction
 						</label>
 						<textarea
@@ -2597,10 +3025,12 @@ let editInModal: boolean = false;
 							</p>
 						</div>
 					</div>
-					
+
 					<!-- Example Instructions -->
 					<details class="mb-4">
-						<summary class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+						<summary
+							class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-gray-900 dark:hover:text-white"
+						>
 							💡 See example custom instructions
 						</summary>
 						<div class="mt-3 space-y-2 text-xs text-gray-600 dark:text-gray-400">
@@ -2619,7 +3049,7 @@ let editInModal: boolean = false;
 						</div>
 					</details>
 				</div>
-				
+
 				<div class="flex justify-end space-x-3">
 					<button
 						on:click={cancelCustomModal}
@@ -2638,4 +3068,4 @@ let editInModal: boolean = false;
 			</div>
 		</div>
 	</div>
-{/if} 
+{/if}

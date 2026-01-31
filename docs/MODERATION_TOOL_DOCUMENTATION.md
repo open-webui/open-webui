@@ -22,6 +22,7 @@ The moderation system follows a structured workflow:
 ### Moderation Panel
 
 After choosing to moderate, users can:
+
 - Select up to 3 moderation strategies (standard + custom combined)
 - Add custom instructions via text input
 - Apply moderation to generate a new version
@@ -44,6 +45,7 @@ After choosing to moderate, users can:
 ### Frontend Functions (`src/routes/(app)/moderation-scenario/+page.svelte`)
 
 #### `applySelectedModerations()` (line ~2290)
+
 - **Purpose**: Calls backend API to generate a moderated response
 - **Process**:
   1. Separates standard strategies from custom instruction IDs
@@ -60,13 +62,15 @@ After choosing to moderate, users can:
   - `childAge`: Child's age (for age-appropriate tailoring)
 
 #### `navigateToVersion(direction: 'prev' | 'next')` (line ~1711)
+
 - **Purpose**: Navigate between version indices
-- **Behavior**: 
+- **Behavior**:
   - Prevents navigation if version is confirmed
   - Updates `currentVersionIndex` based on direction
   - Does not auto-populate moderation panel (keeps it clear)
 
 #### `confirmCurrentVersion()` (line ~1724)
+
 - **Purpose**: Mark a version as final choice
 - **Behavior**:
   - Sets `confirmedVersionIndex` to current version
@@ -75,6 +79,7 @@ After choosing to moderate, users can:
   - Can be called again to unconfirm (allows editing)
 
 #### `toggleModerationSelection(option: string)` (line ~1767)
+
 - **Purpose**: Select/deselect moderation strategies
 - **Special Handling**:
   - Custom option: Toggles custom input field
@@ -82,10 +87,12 @@ After choosing to moderate, users can:
   - Enforces limit of 3 strategies total (standard + custom)
 
 #### `getCurrentVersionResponse()` (line ~1746)
+
 - **Purpose**: Get response text for current version
 - **Returns**: Current version response or original if no version selected
 
 #### `acceptOriginalResponse()` (line ~1932)
+
 - **Purpose**: Accept original response (called from moderation panel, not Step 3)
 - **Behavior**:
   - Sets `hasInitialDecision = true`
@@ -96,10 +103,12 @@ After choosing to moderate, users can:
 - **Note**: This is different from Step 3 "Accept" button, which calls `saveStep3Decision('accept_original')` and still shows the moderation panel
 
 #### `startModerating()` (line ~1977)
+
 - **Status**: STALE - Commented out, no longer used
 - **Note**: DEPRECATED - No longer used in unified flow (highlighting now in Step 1)
 
 #### `loadScenario(index: number, forceReload: boolean)` (line ~1406)
+
 - **Purpose**: Load scenario state from localStorage
 - **Process**:
   1. Saves current state before switching (unless forcing reload)
@@ -109,6 +118,7 @@ After choosing to moderate, users can:
   5. Starts timer for the scenario
 
 #### `saveCurrentScenarioState()` (line ~1354)
+
 - **Purpose**: Persist state to localStorage
 - **Saves**: All state variables to `scenarioStates` Map
 - **Triggered**: On every state change (reactive statement at line ~2323)
@@ -116,6 +126,7 @@ After choosing to moderate, users can:
 ### Backend Functions
 
 #### `apply_moderation()` (`backend/open_webui/routers/moderation.py`)
+
 - **Purpose**: API endpoint for applying moderation
 - **Endpoint**: `POST /moderation/apply`
 - **Process**:
@@ -125,6 +136,7 @@ After choosing to moderate, users can:
   4. Returns moderation result
 
 #### `multi_moderations_openai()` (`backend/open_webui/utils/moderation.py`)
+
 - **Purpose**: Core moderation logic
 - **Modes**:
   - **Refactoring Mode**: When `original_response` provided, rewrites existing response
@@ -143,6 +155,7 @@ After choosing to moderate, users can:
 ### Key State Variables
 
 #### Version Management
+
 - **`versions[]`**: Array of `ModerationVersion` objects
   - Each version contains:
     - `response`: The moderated response text
@@ -160,11 +173,13 @@ After choosing to moderate, users can:
   - `number`: Index of confirmed version
 
 #### Display State
+
 - **`showOriginal1`**: Boolean toggle for viewing original vs moderated
   - `true`: Show original response with highlights
   - `false`: Show current moderated version
 
 #### User Input State
+
 - **`highlightedTexts1[]`**: Array of text selections from user
   - Stored as strings (the actual selected text)
   - Used to highlight concerns in original response
@@ -178,12 +193,14 @@ After choosing to moderate, users can:
   - IDs are prefixed with `custom_` and timestamp
 
 #### Decision State
+
 - **`hasInitialDecision`**: Whether user completed initial 3-step flow
 - **`acceptedOriginal`**: Whether user accepted original response
 - **`markedNotApplicable`**: Whether scenario was marked as not applicable
 - **`attentionCheckSelected`**: Whether attention check was selected
 
 #### Initial Decision Flow State
+
 - **`initialDecisionStep`**: Current step (1, 2, or 3)
 - **`step1Completed`**: Whether highlighting step completed
 - **`step2Completed`**: Whether reflection step completed
@@ -196,6 +213,7 @@ After choosing to moderate, users can:
 ### localStorage Persistence
 
 #### Child-Specific Keys
+
 - **`moderationScenarioStates_{childId}`**: Map of scenario index → ScenarioState
   - Persists all state for each scenario
   - Restored when loading scenario
@@ -215,16 +233,19 @@ After choosing to moderate, users can:
 ### Available Strategies (Grouped by Category)
 
 #### Refuse and Remove (4 options)
+
 1. **Refuse Response and Explain**: Decline to answer with child-friendly reason
 2. **Remove Harmful Phrases**: Avoid or replace harmful wording
 3. **Omit Unprompted Suggestions**: Only answer direct question, no extra tips
 4. **Do Not Suggest Workarounds**: Avoid offering workarounds or loopholes
 
 #### Investigate and Empathize (2 options)
+
 1. **Clarify Child's Intent**: Ask gentle clarifying question first
 2. **Emphasize Emotional Support**: Acknowledge feelings in warm, friendly tone
 
 #### Correct their Understanding (5 options)
+
 1. **Explain Problems in Prompt**: Gently explain why idea could be unsafe/problematic
 2. **Emphasize Risk Awareness**: Briefly mention age-appropriate risks
 3. **Redirect with Alternatives**: Redirect to safer, positive alternative
@@ -232,16 +253,20 @@ After choosing to moderate, users can:
 5. **Encourage Introspection**: Prompt child to self-reflect instead of direct answer
 
 #### Match their Age (1 option)
+
 1. **Tailor to Age Group**: Simplify language to be age-appropriate (uses child_age if provided)
 
 #### Defer to Support (2 options)
+
 1. **Defer to Parents**: Defer topic to parent/trusted adult
 2. **Defer to Resources**: Suggest appropriate real-world resource
 
 #### Attention Check (1 option)
+
 1. **I read the instructions**: Confirm careful reading of embedded instructions
 
 #### Custom (user-defined)
+
 - User can create custom instruction text
 - Stored with unique ID prefixed with `custom_`
 
@@ -279,21 +304,24 @@ After choosing to moderate, users can:
    - Customizes "Tailor to Age Group" if child_age provided
    - Uses **REFACTORING MODE** (since `original_response` provided)
    - Constructs system prompt:
+
      ```
      You are a child-friendly AI assisting with parent-guided moderation.
      You will be given a child's original prompt and the assistant's original response.
      Your job is to rewrite the response to follow ALL of the following parent-selected rules:
      [combined instructions]
-     
+
      Output STRICTLY as JSON (no extra text):
      { "refactored_response": string, "system_prompt_rule": string }
      Constraints: warm, child-friendly, concise; combined length ≤ 600 chars.
      ```
+
    - Calls OpenAI API with model `gpt-5.2-chat-latest` (using Chat Completions endpoint)
    - Parses JSON response
    - Returns `refactored_response` and `system_prompt_rule`
 
 5. **Frontend creates new `ModerationVersion` object**:
+
    ```typescript
    {
      response: result.refactored_response,
@@ -330,23 +358,26 @@ After choosing to moderate, users can:
 The displayed response is determined by:
 
 1. **Step 1 (Highlighting)**: Always shows original with highlights
+
    ```typescript
    if (showInitialDecisionPane && initialDecisionStep === 1) {
-     return getHighlightedHTML(originalResponse1, highlightedTexts1);
+   	return getHighlightedHTML(originalResponse1, highlightedTexts1);
    }
    ```
 
 2. **If `showOriginal1 === true`**: Shows original with highlighted concerns
+
    ```typescript
    if (showOriginal1) {
-     return getHighlightedHTML(originalResponse1, highlightedTexts1);
+   	return getHighlightedHTML(originalResponse1, highlightedTexts1);
    }
    ```
 
 3. **If `showOriginal1 === false`**: Shows current moderated version
+
    ```typescript
    if (currentVersionIndex >= 0 && currentVersionIndex < versions.length) {
-     return versions[currentVersionIndex].response;
+   	return versions[currentVersionIndex].response;
    }
    ```
 
@@ -358,31 +389,35 @@ The displayed response is determined by:
 ### Version Navigation UI (lines ~3475-3523)
 
 #### Toggle Button
+
 - **Text**: "View Original" when showing moderated, "View Moderated Version(s)" when showing original
 - **Action**: Toggles `showOriginal1`
 - **Behavior**: When switching back to moderated, ensures valid version index
 
 #### Navigation Arrows
-- **Previous Button**: 
+
+- **Previous Button**:
   - Disabled when: `currentVersionIndex <= 0`, version confirmed, or showing original
   - Decrements `currentVersionIndex`
-  
 - **Next Button**:
   - Disabled when: `currentVersionIndex >= versions.length - 1`, version confirmed, or showing original
   - Increments `currentVersionIndex`
 
 #### Version Counter
+
 - **Format**: `{currentVersionIndex + 1}/{versions.length}`
 - **Checkmark**: Shows `✓` prefix if current version is confirmed
 - **Display**: `{confirmedVersionIndex !== null && currentVersionIndex === confirmedVersionIndex ? '✓ ' : ''}{currentVersionIndex + 1}/{versions.length}`
 
 ### Highlighted Text Display
+
 - When `showOriginal1 === true` and `highlightedTexts1.length > 0`:
   - Shows "Highlighted Concerns" section below response
   - Displays each highlight as removable badge
   - Shows "Change/Add Highlighted Text" button if moderation panel visible
 
 ### Applied Strategies Display
+
 - When viewing moderated version (`!showOriginal1`):
   - Shows "Applied Strategies" section below response
   - Displays standard strategies as blue badges
@@ -393,6 +428,7 @@ The displayed response is determined by:
 ### Initial Decision (3-Step Flow)
 
 #### Step 1 - Highlight
+
 - **Purpose**: User highlights concerning text (optional)
 - **UI**: Text selection enabled on response bubble
 - **Actions**:
@@ -403,6 +439,7 @@ The displayed response is determined by:
   - "Skip Scenario" button (marks as not applicable)
 
 #### Step 2 - Reflect
+
 - **Purpose**: User enters reflection
 - **UI**: Two input fields:
   - "I feel...": Text input
@@ -413,10 +450,11 @@ The displayed response is determined by:
   - "Continue" button (disabled until both fields filled)
 
 #### Step 3 - Decide
+
 - **Purpose**: User makes initial decision
 - **UI**: Shows reflection summary, two large buttons
 - **Actions**:
-  - **"Accept" button**: 
+  - **"Accept" button**:
     - Calls `saveStep3Decision('accept_original')`
     - Sets `acceptedOriginal = true`
     - Saves with `initial_decision: 'accept_original'`
@@ -463,6 +501,7 @@ The displayed response is determined by:
 ### Immediate Saves
 
 #### Version Creation
+
 - Each version creation saves to backend via `saveModerationSession()`
 - **Payload includes**:
   - `version_number`: `currentVersionIndex + 1`
@@ -474,11 +513,13 @@ The displayed response is determined by:
   - `session_metadata`: Includes reflection, decision timestamp, version index
 
 #### State Persistence
+
 - State saved to localStorage on every change (reactive statement at line ~2323)
 - **Saves to**: `moderationScenarioStates_{childId}`
 - **Includes**: All state variables in `ScenarioState` interface
 
 #### Session Activity Tracking
+
 - Tracks active time spent on moderation session
 - Syncs every 30 seconds via `postSessionActivity()`
 - Uses idle threshold of 60 seconds
@@ -487,6 +528,7 @@ The displayed response is determined by:
 ### Finalization
 
 #### When All Scenarios Completed
+
 - `finalizeModeration()` called via `POST /workflow/moderation/finalize`
 - **Backend Process** (`backend/open_webui/routers/workflow.py`):
   1. Groups sessions by (child_id, scenario_index, attempt_number, session_number)
@@ -499,11 +541,11 @@ The displayed response is determined by:
 ### Response Bubble
 
 - **Location**: Main chat area, left-aligned
-- **Content**: 
+- **Content**:
   - Shows original or moderated response based on `showOriginal1` and `currentVersionIndex`
   - Highlights user-selected text when viewing original
   - Displays applied strategies below response when viewing moderated version
-- **Styling**: 
+- **Styling**:
   - Gray background (`bg-gray-100 dark:bg-gray-800`)
   - Rounded corners (`rounded-2xl rounded-tl-sm`)
   - Max width 80%
@@ -542,11 +584,13 @@ The displayed response is determined by:
 ### Attention Check
 
 #### Detection
+
 - One random scenario has attention check marker `<!--ATTN-CHECK-->`
 - Marker appended to response with instructions
 - `isAttentionCheckScenario` reactive variable detects marker
 
 #### Behavior
+
 - When user selects "I read the instructions" from Attention Check dropdown:
   1. Immediately saves attention check as passed to backend
   2. Sets `hasInitialDecision = true`
@@ -558,6 +602,7 @@ The displayed response is determined by:
   8. Shows success message: "✓ Passed attention check! Moving to next scenario..."
 
 #### Tracking
+
 - `attention_check_selected`: Whether option was selected
 - `attention_check_passed`: Whether check was passed (saved to database)
 - State persists when navigating back
@@ -565,6 +610,7 @@ The displayed response is determined by:
 ### Custom Scenario
 
 #### Generation
+
 - User can create custom prompt via input field
 - `generateCustomScenarioResponse()` function (line ~758):
   1. User enters custom prompt
@@ -574,6 +620,7 @@ The displayed response is determined by:
   5. Treated like any other scenario after generation
 
 #### State Management
+
 - `customScenarioPrompt`: User-entered prompt text
 - `customScenarioResponse`: Generated baseline response
 - `customScenarioGenerated`: Whether scenario has been generated
@@ -582,6 +629,7 @@ The displayed response is determined by:
 ### Not Applicable
 
 #### Marking
+
 - User can mark scenario as not applicable via "Skip Scenario" button
 - `markNotApplicable()` function (line ~1706):
   1. Sets `hasInitialDecision = true`
@@ -590,6 +638,7 @@ The displayed response is determined by:
   4. No moderation strategies applied
 
 #### Display
+
 - Shows "Marked as not applicable" indicator below response
 - "Undo" button allows unmarking
 
@@ -613,6 +662,7 @@ The default model is set to **`"gpt-5.2-chat-latest"`** in the following locatio
    - `applyModeration()` function: `model: 'gpt-5.2-chat-latest'` (in request body)
 
 **Note**: The model `gpt-5.2-chat-latest` uses the standard Chat Completions API endpoint. The API calls in `backend/open_webui/utils/moderation.py` use `client.chat.completions.create()` with:
+
 - `messages` parameter (array) containing system and user messages
 - Response parsing extracts text from `resp.choices[0].message.content`
 
@@ -653,4 +703,3 @@ The moderation tool provides a comprehensive workflow for parents to review and 
 - **Flexible Decision Flow**: Both "Accept" and "Moderate" decisions allow access to moderation panel
 
 The architecture separates concerns between frontend state management, API communication, and backend processing, ensuring a robust and maintainable system.
-

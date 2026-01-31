@@ -1,9 +1,6 @@
-import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
-
-import { parse } from 'yaml';
-import { toast } from 'svelte-sonner';
 
 export const getModels = async (
 	token: string = '',
@@ -316,7 +313,7 @@ export const getToolServerData = async (token: string, url: string) => {
 			// Check if URL ends with .yaml or .yml to determine format
 			if (url.toLowerCase().endsWith('.yaml') || url.toLowerCase().endsWith('.yml')) {
 				if (!res.ok) throw await res.text();
-				const text = await res.text();
+				const [text, { parse }] = await Promise.all([res.text(), import('yaml')]);
 				return parse(text);
 			} else {
 				if (!res.ok) throw await res.json();
@@ -382,6 +379,13 @@ export const getToolServersData = async (servers: object[]) => {
 					}
 
 					if (res) {
+						if (!res.paths) {
+							return {
+								error: 'Invalid OpenAPI spec',
+								url: server?.url
+							};
+						}
+
 						const { openapi, info, specs } = {
 							openapi: res,
 							info: res.info,
@@ -494,7 +498,10 @@ export const executeToolServer = async (
 			headers
 		};
 
-		if (['post', 'put', 'patch'].includes(httpMethod.toLowerCase()) && operation.requestBody) {
+		if (
+			['post', 'put', 'patch', 'delete'].includes(httpMethod.toLowerCase()) &&
+			operation.requestBody
+		) {
 			requestOptions.body = JSON.stringify(bodyParams);
 		}
 
@@ -1379,6 +1386,33 @@ export const getChangelog = async () => {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getVersion = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/version`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
 		}
 	})
 		.then(async (res) => {

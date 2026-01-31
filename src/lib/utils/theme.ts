@@ -62,13 +62,13 @@ export function getCurrentTheme(): string {
 
 export function getEffectiveTheme(): 'light' | 'dark' {
 	const currentTheme = getCurrentTheme();
-	
+
 	if (currentTheme === 'light') return 'light';
 	if (currentTheme === 'dark') return 'dark';
 	if (currentTheme === 'system') {
 		return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 	}
-	
+
 	// Default to dark for other themes
 	return 'dark';
-} 
+}

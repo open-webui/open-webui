@@ -10,8 +10,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.engine.reflection import Inspector
-
 
 # revision identifiers, used by Alembic.
 revision: str = "38d63c18f30f"
@@ -21,62 +19,61 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Check if table already exists (idempotent migration)
-    conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)
-    existing_tables = inspector.get_table_names()
-    
-    if "oauth_session" not in existing_tables:
-        # Create oauth_session table
-        op.create_table(
-            "oauth_session",
-            sa.Column("id", sa.Text(), nullable=False),
-            sa.Column("user_id", sa.Text(), nullable=False),
-            sa.Column("provider", sa.Text(), nullable=False),
-            sa.Column("token", sa.Text(), nullable=False),
-            sa.Column("expires_at", sa.BigInteger(), nullable=False),
-            sa.Column("created_at", sa.BigInteger(), nullable=False),
-            sa.Column("updated_at", sa.BigInteger(), nullable=False),
-            sa.PrimaryKeyConstraint("id"),
-            sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
-        )
+    # Ensure 'id' column in 'user' table is unique and primary key (ForeignKey constraint)
+    inspector = sa.inspect(op.get_bind())
+    columns = inspector.get_columns("user")
 
-        # Create indexes for better performance
-        op.create_index("idx_oauth_session_user_id", "oauth_session", ["user_id"])
-        op.create_index("idx_oauth_session_expires_at", "oauth_session", ["expires_at"])
-        op.create_index(
-            "idx_oauth_session_user_provider", "oauth_session", ["user_id", "provider"]
-        )
-    else:
-        # Table exists, check if indexes exist
-        existing_indexes = [idx["name"] for idx in inspector.get_indexes("oauth_session")]
-        indexes_to_create = [
-            ("idx_oauth_session_user_id", ["user_id"]),
-            ("idx_oauth_session_expires_at", ["expires_at"]),
-            ("idx_oauth_session_user_provider", ["user_id", "provider"]),
-        ]
-        for idx_name, columns in indexes_to_create:
-            if idx_name not in existing_indexes:
-                op.create_index(idx_name, "oauth_session", columns)
+    pk_columns = inspector.get_pk_constraint("user")["constrained_columns"]
+    id_column = next((col for col in columns if col["name"] == "id"), None)
+
+    if id_column and not id_column.get("unique", False):
+        unique_constraints = inspector.get_unique_constraints("user")
+        unique_columns = {tuple(u["column_names"]) for u in unique_constraints}
+
+        with op.batch_alter_table("user") as batch_op:
+            # If primary key is wrong, drop it
+            if pk_columns and pk_columns != ["id"]:
+                batch_op.drop_constraint(
+                    inspector.get_pk_constraint("user")["name"], type_="primary"
+                )
+
+            # Add unique constraint if missing
+            if ("id",) not in unique_columns:
+                batch_op.create_unique_constraint("uq_user_id", ["id"])
+
+            # Re-create correct primary key
+            batch_op.create_primary_key("pk_user_id", ["id"])
+
+    # Create oauth_session table
+    op.create_table(
+        "oauth_session",
+        sa.Column("id", sa.Text(), primary_key=True, nullable=False, unique=True),
+        sa.Column(
+            "user_id",
+            sa.Text(),
+            sa.ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("provider", sa.Text(), nullable=False),
+        sa.Column("token", sa.Text(), nullable=False),
+        sa.Column("expires_at", sa.BigInteger(), nullable=False),
+        sa.Column("created_at", sa.BigInteger(), nullable=False),
+        sa.Column("updated_at", sa.BigInteger(), nullable=False),
+    )
+
+    # Create indexes for better performance
+    op.create_index("idx_oauth_session_user_id", "oauth_session", ["user_id"])
+    op.create_index("idx_oauth_session_expires_at", "oauth_session", ["expires_at"])
+    op.create_index(
+        "idx_oauth_session_user_provider", "oauth_session", ["user_id", "provider"]
+    )
 
 
 def downgrade() -> None:
-    # Check if table exists before dropping
-    conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)
-    existing_tables = inspector.get_table_names()
-    
-    if "oauth_session" in existing_tables:
-        # Drop indexes first
-        existing_indexes = [idx["name"] for idx in inspector.get_indexes("oauth_session")]
-        indexes_to_drop = [
-            "idx_oauth_session_user_provider",
-            "idx_oauth_session_expires_at",
-            "idx_oauth_session_user_id",
-        ]
-        for idx_name in indexes_to_drop:
-            if idx_name in existing_indexes:
-                op.drop_index(idx_name, table_name="oauth_session")
+    # Drop indexes first
+    op.drop_index("idx_oauth_session_user_provider", table_name="oauth_session")
+    op.drop_index("idx_oauth_session_expires_at", table_name="oauth_session")
+    op.drop_index("idx_oauth_session_user_id", table_name="oauth_session")
 
-        # Drop the table
-        op.drop_table("oauth_session")
+    # Drop the table
+    op.drop_table("oauth_session")

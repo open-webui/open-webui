@@ -5,7 +5,10 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.moderation import multi_moderations_openai, generate_second_pass_prompt
+from open_webui.utils.moderation import (
+    multi_moderations_openai,
+    generate_second_pass_prompt,
+)
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +17,9 @@ router = APIRouter()
 
 class ModerationRequest(BaseModel):
     moderation_types: List[str]  # Standard moderation type names
-    child_prompt: Optional[str] = "Who is Trump? Is he a good guy?"  # Default example prompt
+    child_prompt: Optional[str] = (
+        "Who is Trump? Is he a good guy?"  # Default example prompt
+    )
     # model: Optional[str] = "gpt-5.2-pro-2025-12-11"  # Commented out: using chat-latest instead
     model: Optional[str] = "gpt-5.2-chat-latest"
     max_chars: Optional[int] = 600
@@ -33,41 +38,39 @@ class FollowUpPromptRequest(BaseModel):
 
 @router.post("/apply")
 async def apply_moderation(
-    request: Request,
-    form_data: ModerationRequest,
-    user=Depends(get_verified_user)
+    request: Request, form_data: ModerationRequest, user=Depends(get_verified_user)
 ):
     """
     Apply multiple moderation strategies to either:
     1. Generate a response (original_response=None)
     2. Refactor an existing response (original_response provided)
-    
+
     Based on notebook (3) iterative moderation design. Allows parents to select one or more
     moderation strategies that will be combined into a single refactored response.
     """
     try:
         # Log the model being used
         log.info(f"🤖 Moderation request using model: {form_data.model}")
-        
+
         # Get OpenAI API key from app state
         api_key = None
-        if hasattr(request.app.state.config, 'OPENAI_API_KEYS'):
+        if hasattr(request.app.state.config, "OPENAI_API_KEYS"):
             keys = request.app.state.config.OPENAI_API_KEYS
             if isinstance(keys, list) and len(keys) > 0:
                 api_key = keys[0]  # Use the first API key
-        
+
         # Fallback to environment variable if not found in config
         if not api_key:
             api_key = os.environ.get("OPENAI_API_KEY", "")
             if api_key:
                 log.info("Using OpenAI API key from environment variable")
-        
+
         if not api_key:
             raise HTTPException(
-                status_code=500, 
-                detail="OpenAI API key not configured. Please configure it in Admin Settings > Connections or set OPENAI_API_KEY environment variable."
+                status_code=500,
+                detail="OpenAI API key not configured. Please configure it in Admin Settings > Connections or set OPENAI_API_KEY environment variable.",
             )
-        
+
         # Call the moderation utility function with new parameters
         result = await multi_moderations_openai(
             child_prompt=form_data.child_prompt,
@@ -80,54 +83,56 @@ async def apply_moderation(
             custom_instructions=form_data.custom_instructions,
             child_age=form_data.child_age,
         )
-        
+
         mode = "refactoring" if form_data.original_response else "generation"
-        strategies_info = ', '.join(form_data.moderation_types)
+        strategies_info = ", ".join(form_data.moderation_types)
         if form_data.custom_instructions:
             strategies_info += f" + {len(form_data.custom_instructions)} custom"
-        log.info(f"Moderation applied ({mode} mode): {strategies_info} for user {user.id}")
-        
+        log.info(
+            f"Moderation applied ({mode} mode): {strategies_info} for user {user.id}"
+        )
+
         return result
-    
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         log.error(f"Error applying moderation: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to apply moderation: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to apply moderation: {str(e)}"
+        )
 
 
 @router.post("/generate-followup")
 async def generate_followup(
-    request: Request,
-    form_data: FollowUpPromptRequest,
-    user=Depends(get_verified_user)
+    request: Request, form_data: FollowUpPromptRequest, user=Depends(get_verified_user)
 ):
     """
     Generate a realistic follow-up question a child might ask based on
     their initial prompt and the refactored response they received.
-    
+
     Based on notebook (3) function 2.
     """
     try:
         # Get OpenAI API key from app state
         api_key = None
-        if hasattr(request.app.state.config, 'OPENAI_API_KEYS'):
+        if hasattr(request.app.state.config, "OPENAI_API_KEYS"):
             keys = request.app.state.config.OPENAI_API_KEYS
             if isinstance(keys, list) and len(keys) > 0:
                 api_key = keys[0]  # Use the first API key
-        
+
         # Fallback to environment variable if not found in config
         if not api_key:
             api_key = os.environ.get("OPENAI_API_KEY", "")
             if api_key:
                 log.info("Using OpenAI API key from environment variable")
-        
+
         if not api_key:
             raise HTTPException(
-                status_code=500, 
-                detail="OpenAI API key not configured. Please configure it in Admin Settings > Connections or set OPENAI_API_KEY environment variable."
+                status_code=500,
+                detail="OpenAI API key not configured. Please configure it in Admin Settings > Connections or set OPENAI_API_KEY environment variable.",
             )
-        
+
         # Generate follow-up prompt
         followup = await generate_second_pass_prompt(
             initial_prompt=form_data.initial_prompt,
@@ -135,15 +140,15 @@ async def generate_followup(
             api_key=api_key,
             model=form_data.model,
         )
-        
+
         log.info(f"Follow-up prompt generated for user {user.id}")
-        
+
         return {"child_followup_prompt": followup}
-    
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         log.error(f"Error generating follow-up: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate follow-up: {str(e)}")
-
-
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate follow-up: {str(e)}"
+        )

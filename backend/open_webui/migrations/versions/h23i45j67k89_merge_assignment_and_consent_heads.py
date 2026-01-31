@@ -24,4 +24,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Merge-only revision; no ops needed
     pass
-

@@ -29,57 +29,52 @@ from contextlib import suppress
 import peewee as pw
 from peewee_migrate import Migrator
 
-
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
+
+
+def _column_exists(database, table: str, column: str) -> bool:
+    try:
+        if isinstance(database, pw.SqliteDatabase):
+            cursor = database.execute_sql(f"PRAGMA table_info({table})")
+            return any(row[1] == column for row in cursor.fetchall())
+        cursor = database.execute_sql(
+            "SELECT 1 FROM information_schema.columns "
+            f"WHERE table_name = ? AND column_name = ?",
+            (table, column),
+        )
+        return cursor.fetchone() is not None
+    except Exception:
+        return False
 
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Write your migrations here."""
 
-    # Alter the tables with timestamps
-    migrator.change_fields(
-        "chatidtag",
-        timestamp=pw.BigIntegerField(),
-    )
-    migrator.change_fields(
-        "document",
-        timestamp=pw.BigIntegerField(),
-    )
-    migrator.change_fields(
-        "modelfile",
-        timestamp=pw.BigIntegerField(),
-    )
-    migrator.change_fields(
-        "prompt",
-        timestamp=pw.BigIntegerField(),
-    )
-    migrator.change_fields(
-        "user",
-        timestamp=pw.BigIntegerField(),
-    )
+    # Alter the tables with timestamps (skip if timestamp column was already removed)
+    if _column_exists(database, "chatidtag", "timestamp"):
+        migrator.change_fields("chatidtag", timestamp=pw.BigIntegerField())
+    if _column_exists(database, "document", "timestamp"):
+        migrator.change_fields("document", timestamp=pw.BigIntegerField())
+    if _column_exists(database, "modelfile", "timestamp"):
+        migrator.change_fields("modelfile", timestamp=pw.BigIntegerField())
+    if _column_exists(database, "prompt", "timestamp"):
+        migrator.change_fields("prompt", timestamp=pw.BigIntegerField())
+    if _column_exists(database, "user", "timestamp"):
+        migrator.change_fields("user", timestamp=pw.BigIntegerField())
     # Alter the tables with varchar to text where necessary
-    migrator.change_fields(
-        "auth",
-        password=pw.TextField(),
-    )
-    migrator.change_fields(
-        "chat",
-        title=pw.TextField(),
-    )
-    migrator.change_fields(
-        "document",
-        title=pw.TextField(),
-        filename=pw.TextField(),
-    )
-    migrator.change_fields(
-        "prompt",
-        title=pw.TextField(),
-    )
-    migrator.change_fields(
-        "user",
-        profile_image_url=pw.TextField(),
-    )
+    if _column_exists(database, "auth", "password"):
+        migrator.change_fields("auth", password=pw.TextField())
+    if _column_exists(database, "chat", "title"):
+        migrator.change_fields("chat", title=pw.TextField())
+    if _column_exists(database, "document", "title"):
+        migrator.change_fields("document", title=pw.TextField())
+    if _column_exists(database, "document", "filename"):
+        migrator.change_fields("document", filename=pw.TextField())
+    if _column_exists(database, "prompt", "title"):
+        migrator.change_fields("prompt", title=pw.TextField())
+    if _column_exists(database, "user", "profile_image_url"):
+        migrator.change_fields("user", profile_image_url=pw.TextField())
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):

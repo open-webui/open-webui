@@ -7,7 +7,6 @@ from typing import Optional
 import aiohttp
 from aiocache import cached
 import requests
-from urllib.parse import quote
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
@@ -20,6 +19,9 @@ from fastapi.responses import (
 )
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
+from sqlalchemy.orm import Session
+
+from open_webui.internal.db import get_session
 
 from open_webui.models.models import Models
 from open_webui.config import (
@@ -36,7 +38,6 @@ from open_webui.env import (
 from open_webui.models.users import UserModel
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
 
 
 from open_webui.utils.payload import (
@@ -45,14 +46,14 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
+    stream_chunks_handler,
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
-
+from open_webui.utils.headers import include_user_info_headers
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
 
 ##########################################
@@ -66,21 +67,16 @@ async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            headers = {
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+            }
+
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                headers = include_user_info_headers(headers, user)
+
             async with session.get(
                 url,
-                headers={
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
+                headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await response.json()
@@ -140,22 +136,12 @@ async def get_headers_and_cookies(
             if "openrouter.ai" in url
             else {}
         ),
-        **(
-            {
-                "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                "X-OpenWebUI-User-Id": user.id,
-                "X-OpenWebUI-User-Email": user.email,
-                "X-OpenWebUI-User-Role": user.role,
-                **(
-                    {"X-OpenWebUI-Chat-Id": metadata.get("chat_id")}
-                    if metadata and metadata.get("chat_id")
-                    else {}
-                ),
-            }
-            if ENABLE_FORWARD_USER_INFO_HEADERS
-            else {}
-        ),
     }
+
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers = include_user_info_headers(headers, user)
+        if metadata and metadata.get("chat_id"):
+            headers["X-OpenWebUI-Chat-Id"] = metadata.get("chat_id")
 
     token = None
     auth_type = config.get("auth_type")
@@ -189,6 +175,9 @@ async def get_headers_and_cookies(
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
+
+    if config.get("headers") and isinstance(config.get("headers"), dict):
+        headers = {**headers, **config.get("headers")}
 
     return headers, cookies
 
@@ -466,14 +455,14 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
     return responses
 
 
-async def get_filtered_models(models, user):
+async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("data", []):
-        model_info = Models.get_model_by_id(model["id"])
+        model_info = Models.get_model_by_id(model["id"], db=db)
         if model_info:
             if user.id == model_info.user_id or has_access(
-                user.id, type="read", access_control=model_info.access_control
+                user.id, type="read", access_control=model_info.access_control, db=db
             ):
                 filtered_models.append(model)
     return filtered_models
@@ -498,50 +487,55 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
             return response
         return None
 
-    def merge_models_lists(model_lists):
+    def is_supported_openai_models(model_id):
+        if any(
+            name in model_id
+            for name in [
+                "babbage",
+                "dall-e",
+                "davinci",
+                "embedding",
+                "tts",
+                "whisper",
+            ]
+        ):
+            return False
+        return True
+
+    def get_merged_models(model_lists):
         log.debug(f"merge_models_lists {model_lists}")
-        merged_list = []
+        models = {}
 
-        for idx, models in enumerate(model_lists):
-            if models is not None and "error" not in models:
+        for idx, model_list in enumerate(model_lists):
+            if model_list is not None and "error" not in model_list:
+                for model in model_list:
+                    model_id = model.get("id") or model.get("name")
 
-                merged_list.extend(
-                    [
-                        {
+                    if (
+                        "api.openai.com"
+                        in request.app.state.config.OPENAI_API_BASE_URLS[idx]
+                        and not is_supported_openai_models(model_id)
+                    ):
+                        # Skip unwanted OpenAI models
+                        continue
+
+                    if model_id and model_id not in models:
+                        models[model_id] = {
                             **model,
-                            "name": model.get("name", model["id"]),
+                            "name": model.get("name", model_id),
                             "owned_by": "openai",
                             "openai": model,
                             "connection_type": model.get("connection_type", "external"),
                             "urlIdx": idx,
                         }
-                        for model in models
-                        if (model.get("id") or model.get("name"))
-                        and (
-                            "api.openai.com"
-                            not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
-                            or not any(
-                                name in model["id"]
-                                for name in [
-                                    "babbage",
-                                    "dall-e",
-                                    "davinci",
-                                    "embedding",
-                                    "tts",
-                                    "whisper",
-                                ]
-                            )
-                        )
-                    ]
-                )
 
-        return merged_list
+        return models
 
-    models = {"data": merge_models_lists(map(extract_data, responses))}
+    models = get_merged_models(map(extract_data, responses))
     log.debug(f"models: {models}")
 
-    request.app.state.OPENAI_MODELS = {model["id"]: model for model in models["data"]}
-    return models
+    request.app.state.OPENAI_MODELS = models
+    return {"data": list(models.values())}
 
 
 @router.get("/models")
@@ -754,6 +748,7 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
         "response_format",
         "seed",
         "max_completion_tokens",
+        "reasoning_effort",
     }
 
     try:
@@ -804,6 +799,8 @@ async def generate_chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
+    bypass_system_prompt: bool = False,
+    db: Session = Depends(get_session),
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
@@ -812,32 +809,20 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
-    
-    # Remove internal Open WebUI fields that OpenAI doesn't recognize
-    payload.pop("urlIdx", None)
-    payload.pop("connection_type", None)
 
     model_id = form_data.get("model")
-    log.info(f"Looking for custom model: {model_id}")
-    log.info(f"Full form_data: {form_data}")
-    model_info = Models.get_model_by_id(model_id)
-    if model_info:
-        log.info(f"Custom model found: {model_id}, base_model_id: {model_info.base_model_id if hasattr(model_info, 'base_model_id') else 'None'}")
-    else:
-        log.info(f"No custom model found for: {model_id}")
-        # Let's see what models are available
-        try:
-            all_models = Models.get_all_models()
-            custom_models = [m for m in all_models if hasattr(m, 'user_id') and m.user_id]
-            log.info(f"Available custom models: {[m.id for m in custom_models]}")
-        except Exception as e:
-            log.info(f"Could not get available models: {e}")
+    model_info = Models.get_model_by_id(model_id, db=db)
 
     # Check model info and override the payload
     if model_info:
         if model_info.base_model_id:
-            payload["model"] = model_info.base_model_id
-            model_id = model_info.base_model_id
+            base_model_id = (
+                request.base_model_id
+                if hasattr(request, "base_model_id")
+                else model_info.base_model_id
+            )  # Use request's base_model_id if available
+            payload["model"] = base_model_id
+            model_id = base_model_id
 
         params = model_info.params.model_dump()
 
@@ -845,23 +830,18 @@ async def generate_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            
-            # Only apply model system prompt if there's no existing system message
-            # This allows playground system instructions to take precedence
-            if system and not (payload.get("messages") and payload["messages"] and payload["messages"][0].get("role") == "system"):
-                log.info(f"Applying custom model system prompt: {system[:100]}...")
-                payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
-            elif system:
-                log.info(f"Custom model has system prompt but not applying (existing system message): {system[:100]}...")
-            else:
-                log.info("No custom model system prompt found")
+            if not bypass_system_prompt:
+                payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
             if not (
                 user.id == model_info.user_id
                 or has_access(
-                    user.id, type="read", access_control=model_info.access_control
+                    user.id,
+                    type="read",
+                    access_control=model_info.access_control,
+                    db=db,
                 )
             ):
                 raise HTTPException(
@@ -876,35 +856,29 @@ async def generate_chat_completion(
             )
 
     await get_all_models(request, user=user)
-    # Always resolve to the base model ID if present
-    resolved_model_id = model_id
-    if model_info and hasattr(model_info, 'base_model_id') and model_info.base_model_id:
-        resolved_model_id = model_info.base_model_id
-    # Try to get urlIdx from form_data or model dict
-    urlIdx = None
-    model = None
-    if isinstance(form_data, dict) and "urlIdx" in form_data:
-        urlIdx = form_data["urlIdx"]
+    model = request.app.state.OPENAI_MODELS.get(model_id)
+    if model:
+        idx = model["urlIdx"]
     else:
-        model = request.app.state.OPENAI_MODELS.get(resolved_model_id)
-        if model and "urlIdx" in model:
-            urlIdx = model["urlIdx"]
-    if urlIdx is not None:
-        idx = int(urlIdx)
-    else:
-        model = request.app.state.OPENAI_MODELS.get(resolved_model_id)
-        if model and "urlIdx" in model:
-            idx = model["urlIdx"]
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail="Model not found",
-            )
-    # Always set model after idx is determined
-    model = request.app.state.OPENAI_MODELS.get(resolved_model_id)
+        raise HTTPException(
+            status_code=404,
+            detail="Model not found",
+        )
+
+    # Get the API config for the model
+    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+        str(idx),
+        request.app.state.config.OPENAI_API_CONFIGS.get(
+            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
+        ),  # Legacy support
+    )
+
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id:
+        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
     # Add user info to the payload if the model is a pipeline
-    if model and "pipeline" in model and model.get("pipeline"):
+    if "pipeline" in model and model.get("pipeline"):
         payload["user"] = {
             "name": user.name,
             "id": user.id,
@@ -912,34 +886,8 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
-    # For custom models based on direct models, ensure we use the correct API key
-    final_idx = idx
-    if model_info and model_info.base_model_id and model_info.base_model_id != model_id:
-        # Check if the base model is a direct model that requires a specific API key
-        base_model = request.app.state.OPENAI_MODELS.get(model_info.base_model_id)
-        if base_model and "urlIdx" in base_model:
-            # Use the API key from the base model's configuration
-            final_idx = base_model["urlIdx"]
-            url = request.app.state.config.OPENAI_API_BASE_URLS[final_idx]
-            key = request.app.state.config.OPENAI_API_KEYS[final_idx]
-        else:
-            url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-            key = request.app.state.config.OPENAI_API_KEYS[idx]
-    else:
-        url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-        key = request.app.state.config.OPENAI_API_KEYS[idx]
-
-    # Get the API config for the model using the final_idx
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(final_idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[final_idx], {}
-        ),  # Legacy support
-    )
-
-    prefix_id = api_config.get("prefix_id", None)
-    if prefix_id:
-        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
     if is_openai_reasoning_model(payload["model"]):
@@ -954,10 +902,11 @@ async def generate_chat_completion(
         del payload["max_tokens"]
 
     # Convert the modified body back to JSON
-    if "logit_bias" in payload:
-        payload["logit_bias"] = json.loads(
-            convert_logit_bias_input_to_json(payload["logit_bias"])
-        )
+    if "logit_bias" in payload and payload["logit_bias"]:
+        logit_bias = convert_logit_bias_input_to_json(payload["logit_bias"])
+
+        if logit_bias:
+            payload["logit_bias"] = json.loads(logit_bias)
 
     headers, cookies = await get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user
@@ -977,16 +926,6 @@ async def generate_chat_completion(
     else:
         request_url = f"{url}/chat/completions"
 
-    # Log the messages to see if system prompt is included BEFORE converting to JSON
-    if isinstance(payload, dict) and "messages" in payload:
-        messages = payload["messages"]
-        log.info(f"Messages being sent to OpenAI: {len(messages)} messages")
-        for i, msg in enumerate(messages):
-            if msg.get("role") == "system":
-                log.info(f"System message {i}: {msg.get('content', '')[:100]}...")
-            else:
-                log.info(f"Message {i} ({msg.get('role', 'unknown')}): {msg.get('content', '')[:50]}...")
-    
     payload = json.dumps(payload)
 
     r = None
@@ -995,8 +934,6 @@ async def generate_chat_completion(
     response = None
 
     try:
-        log.info(f"Using OpenAI URL: {url}, API Key: {key[:5]}... for model: {payload[:100]}...")
-        log.info(f"Request payload: {payload}")
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
@@ -1014,7 +951,7 @@ async def generate_chat_completion(
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
-                r.content,
+                stream_chunks_handler(r.content),
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(
@@ -1037,26 +974,6 @@ async def generate_chat_completion(
             return response
     except Exception as e:
         log.exception(e)
-
-        detail = None
-        if r is not None:
-            try:
-                error_response = await r.json()
-                log.error(f"OpenAI Error Response: {error_response}")
-                if "error" in error_response:
-                    detail = f"{error_response['error']['message'] if 'message' in error_response['error'] else error_response['error']}"
-            except Exception:
-                try:
-                    error_text = await r.text()
-                    log.error(f"OpenAI Error Text: {error_text}")
-                    detail = f"External: {error_text}"
-                except Exception:
-                    detail = f"External: {e}"
-        elif isinstance(response, dict):
-            if "error" in response:
-                detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
-        elif isinstance(response, str):
-            detail = response
 
         raise HTTPException(
             status_code=r.status if r else 500,

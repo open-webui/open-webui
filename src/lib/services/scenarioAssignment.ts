@@ -3,7 +3,7 @@ import { assignScenario, type ScenarioAssignResponse } from '$lib/apis/moderatio
 /**
  * Assign scenarios for a child profile in the background.
  * All assignments are stored in the database via the API - no localStorage needed.
- * 
+ *
  * @param childId - Child profile ID
  * @param participantId - User/participant ID
  * @param sessionNumber - Session number for this assignment
@@ -32,7 +32,9 @@ export async function assignScenariosForChild(
 				});
 				assignments.push(response);
 				successCount++;
-				console.log(`✅ Assigned scenario ${i + 1}/${scenariosPerSession} for child ${childId}: ${response.scenario_id}`);
+				console.log(
+					`✅ Assigned scenario ${i + 1}/${scenariosPerSession} for child ${childId}: ${response.scenario_id}`
+				);
 			} catch (error) {
 				console.error(`❌ Error assigning scenario ${i + 1}/${scenariosPerSession}:`, error);
 				// Continue with remaining assignments
@@ -42,7 +44,9 @@ export async function assignScenariosForChild(
 		// Assignments are automatically stored in database via assignScenario API
 		// No localStorage needed - will be retrieved from backend on scenario page load
 
-		console.log(`✅ Completed scenario assignment for child ${childId}: ${successCount}/${scenariosPerSession} successful`);
+		console.log(
+			`✅ Completed scenario assignment for child ${childId}: ${successCount}/${scenariosPerSession} successful`
+		);
 
 		return {
 			success: successCount === scenariosPerSession,
@@ -54,4 +58,3 @@ export async function assignScenariosForChild(
 		return { success: false, assignmentCount: successCount, assignments };
 	}
 }
-

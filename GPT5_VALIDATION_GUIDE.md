@@ -7,11 +7,13 @@ The system is now configured to use **GPT-5 (gpt-5-2025-08-07)** for all moderat
 ### Quick Validation
 
 Run the automated validation script:
+
 ```bash
 python validate_gpt5.py
 ```
 
 Expected output:
+
 ```
 ======================================================================
 🔍 GPT-5 Model Validation Check
@@ -35,19 +37,21 @@ Expected output:
 ## 📋 Changes Made
 
 ### 1. Frontend API Client
+
 **File:** `src/lib/apis/moderation/index.ts` (Line 129)
 
 ```typescript
 body: JSON.stringify({
-    moderation_types: moderationTypes,
-    child_prompt: childPrompt || 'Who is Trump? Is he a good guy?',
-    model: 'gpt-5-2025-08-07',  // ✅ Updated from gpt-4o-mini
-    max_chars: 600,
-    // ...
-})
+	moderation_types: moderationTypes,
+	child_prompt: childPrompt || 'Who is Trump? Is he a good guy?',
+	model: 'gpt-5-2025-08-07', // ✅ Updated from gpt-4o-mini
+	max_chars: 600
+	// ...
+});
 ```
 
 ### 2. Backend Router Defaults
+
 **File:** `backend/open_webui/routers/moderation.py` (Lines 17, 28)
 
 ```python
@@ -64,6 +68,7 @@ class FollowUpPromptRequest(BaseModel):
 ```
 
 ### 3. Backend Utility Defaults
+
 **File:** `backend/open_webui/utils/moderation.py` (Lines 37, 180)
 
 ```python
@@ -99,6 +104,7 @@ cd backend
 ```
 
 Or if using Docker:
+
 ```bash
 docker compose restart
 ```
@@ -108,16 +114,19 @@ docker compose restart
 When you make a moderation request in the UI, you should see these log messages:
 
 #### In Router (Entry Point)
+
 ```
 🤖 Moderation request using model: gpt-5-2025-08-07
 ```
 
 #### In Utility (Before API Call)
+
 ```
 🔍 [MODERATION] Calling OpenAI API with model: gpt-5-2025-08-07
 ```
 
 #### In Utility (After API Response)
+
 ```
 ✅ [MODERATION] OpenAI API response received. Model used: gpt-5-2025-08-07
 ```
@@ -142,12 +151,12 @@ When you make a moderation request in the UI, you should see these log messages:
 
 ### ❌ Potential Issues
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Validation script fails | Code not updated correctly | Re-run the update scripts |
-| Logs show `gpt-4o-mini` | Server not restarted | Restart backend server |
+| Issue                          | Cause                             | Solution                             |
+| ------------------------------ | --------------------------------- | ------------------------------------ |
+| Validation script fails        | Code not updated correctly        | Re-run the update scripts            |
+| Logs show `gpt-4o-mini`        | Server not restarted              | Restart backend server               |
 | OpenAI error "model not found" | API key doesn't have GPT-5 access | Contact OpenAI support or use gpt-4o |
-| No logs appear | Logging not configured | Check log level settings |
+| No logs appear                 | Logging not configured            | Check log level settings             |
 
 ---
 
@@ -204,6 +213,7 @@ When you make a moderation request in the UI, you should see these log messages:
 **Cause:** Your OpenAI API key might not have access to GPT-5 yet.
 
 **Solutions:**
+
 1. Verify GPT-5 access with OpenAI
 2. Use a different model (e.g., `gpt-4o-2024-11-20`)
 3. Update all three locations with the alternative model
@@ -213,6 +223,7 @@ When you make a moderation request in the UI, you should see these log messages:
 **Cause:** Backend not restarted or logging level too high.
 
 **Solutions:**
+
 1. Restart the backend server
 2. Check logging configuration in `backend/open_webui/config.py`
 3. Set log level to INFO or DEBUG
@@ -222,6 +233,7 @@ When you make a moderation request in the UI, you should see these log messages:
 **Cause:** Browser cache or dev server not restarted.
 
 **Solutions:**
+
 1. Hard refresh browser (Ctrl+Shift+R / Cmd+Shift+R)
 2. Clear browser cache
 3. Restart frontend dev server
@@ -248,4 +260,3 @@ Your system is now configured to use GPT-5 (gpt-5-2025-08-07) for all moderation
 - ✅ All custom moderation strategies
 
 The validation script and logging will help you verify that GPT-5 is being used correctly at runtime.
-

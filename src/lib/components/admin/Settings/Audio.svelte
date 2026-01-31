@@ -19,6 +19,7 @@
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -31,6 +32,7 @@
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
+	let TTS_OPENAI_PARAMS = '';
 	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_BASE_URL = '';
@@ -48,6 +50,9 @@
 	let STT_AZURE_BASE_URL = '';
 	let STT_AZURE_MAX_SPEAKERS = '';
 	let STT_DEEPGRAM_API_KEY = '';
+	let STT_MISTRAL_API_KEY = '';
+	let STT_MISTRAL_API_BASE_URL = '';
+	let STT_MISTRAL_USE_CHAT_COMPLETIONS = false;
 
 	let STT_WHISPER_MODEL_LOADING = false;
 
@@ -98,18 +103,28 @@
 	};
 
 	const updateConfigHandler = async () => {
+		let openaiParams = {};
+		try {
+			openaiParams = TTS_OPENAI_PARAMS ? JSON.parse(TTS_OPENAI_PARAMS) : {};
+			TTS_OPENAI_PARAMS = JSON.stringify(openaiParams, null, 2);
+		} catch (e) {
+			toast.error($i18n.t('Invalid JSON format for Parameters'));
+			return;
+		}
+
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				OPENAI_PARAMS: openaiParams,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: TTS_VOICE,
-				SPLIT_ON: TTS_SPLIT_ON,
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
-				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
+				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+				SPLIT_ON: TTS_SPLIT_ON
 			},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
@@ -123,7 +138,10 @@
 				AZURE_REGION: STT_AZURE_REGION,
 				AZURE_LOCALES: STT_AZURE_LOCALES,
 				AZURE_BASE_URL: STT_AZURE_BASE_URL,
-				AZURE_MAX_SPEAKERS: STT_AZURE_MAX_SPEAKERS
+				AZURE_MAX_SPEAKERS: STT_AZURE_MAX_SPEAKERS,
+				MISTRAL_API_KEY: STT_MISTRAL_API_KEY,
+				MISTRAL_API_BASE_URL: STT_MISTRAL_API_BASE_URL,
+				MISTRAL_USE_CHAT_COMPLETIONS: STT_MISTRAL_USE_CHAT_COMPLETIONS
 			}
 		});
 
@@ -146,6 +164,7 @@
 			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_OPENAI_PARAMS = JSON.stringify(res?.tts?.OPENAI_PARAMS ?? '', null, 2);
 			TTS_API_KEY = res.tts.API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
@@ -171,6 +190,9 @@
 			STT_AZURE_BASE_URL = res.stt.AZURE_BASE_URL;
 			STT_AZURE_MAX_SPEAKERS = res.stt.AZURE_MAX_SPEAKERS;
 			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
+			STT_MISTRAL_API_KEY = res.stt.MISTRAL_API_KEY;
+			STT_MISTRAL_API_BASE_URL = res.stt.MISTRAL_API_BASE_URL;
+			STT_MISTRAL_USE_CHAT_COMPLETIONS = res.stt.MISTRAL_USE_CHAT_COMPLETIONS;
 		}
 
 		await getVoices();
@@ -188,9 +210,9 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				{#if STT_ENGINE !== 'web'}
 					<div class="mb-2">
@@ -222,6 +244,7 @@
 							<option value="web">{$i18n.t('Web API')}</option>
 							<option value="deepgram">{$i18n.t('Deepgram')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
+							<option value="mistral">{$i18n.t('MistralAI')}</option>
 						</select>
 					</div>
 				</div>
@@ -240,7 +263,7 @@
 						</div>
 					</div>
 
-					<hr class="border-gray-100 dark:border-gray-850 my-2" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div>
 						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
@@ -266,7 +289,7 @@
 						</div>
 					</div>
 
-					<hr class="border-gray-100 dark:border-gray-850 my-2" />
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div>
 						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
@@ -300,7 +323,7 @@
 							/>
 						</div>
 
-						<hr class="border-gray-100 dark:border-gray-850 my-2" />
+						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div>
 							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Azure Region')}</div>
@@ -352,6 +375,67 @@
 									/>
 								</div>
 							</div>
+						</div>
+					</div>
+				{:else if STT_ENGINE === 'mistral'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full bg-transparent outline-hidden"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={STT_MISTRAL_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_MISTRAL_API_KEY} />
+						</div>
+					</div>
+
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div>
+						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={STT_MODEL}
+									placeholder="voxtral-mini-latest"
+								/>
+							</div>
+						</div>
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Leave empty to use the default model (voxtral-mini-latest).')}
+							<a
+								class=" hover:underline dark:text-gray-200 text-gray-800"
+								href="https://docs.mistral.ai/capabilities/audio_transcription"
+								target="_blank"
+							>
+								{$i18n.t('Learn more about Voxtral transcription.')}
+							</a>
+						</div>
+					</div>
+
+					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div>
+						<div class="flex items-center justify-between mb-2">
+							<div class="text-xs font-medium">{$i18n.t('Use Chat Completions API')}</div>
+							<label class="relative inline-flex items-center cursor-pointer">
+								<input
+									type="checkbox"
+									bind:checked={STT_MISTRAL_USE_CHAT_COMPLETIONS}
+									class="sr-only peer"
+								/>
+								<div
+									class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"
+								></div>
+							</label>
+						</div>
+						<div class="text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t(
+								'Use /v1/chat/completions endpoint instead of /v1/audio/transcriptions for potentially better accuracy.'
+							)}
 						</div>
 					</div>
 				{:else if STT_ENGINE === ''}
@@ -414,9 +498,9 @@
 			</div>
 
 			<div>
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="mb-2 py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
@@ -464,12 +548,7 @@
 				{:else if TTS_ENGINE === 'elevenlabs'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
-							<input
-								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								placeholder={$i18n.t('API Key')}
-								bind:value={TTS_API_KEY}
-								required
-							/>
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_API_KEY} required />
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'azure'}
@@ -478,7 +557,7 @@
 							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_API_KEY} required />
 						</div>
 
-						<hr class="border-gray-100 dark:border-gray-850 my-2" />
+						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div>
 							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Azure Region')}</div>
@@ -608,6 +687,22 @@
 												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
 											{/each}
 										</datalist>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="w-full">
+								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Additional Parameters')}</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<Textarea
+											className="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_OPENAI_PARAMS}
+											placeholder={$i18n.t('Enter additional parameters in JSON format')}
+											minSize={100}
+										/>
 									</div>
 								</div>
 							</div>

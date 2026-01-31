@@ -1,5 +1,5 @@
 <script>
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
@@ -33,6 +33,7 @@
 	import Banner from '$lib/components/common/Banner.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -96,11 +97,7 @@
 		}
 	};
 
-	$: if (page) {
-		getUserList();
-	}
-
-	$: if (query !== null && orderBy && direction) {
+	$: if (query !== null && page !== null && orderBy !== null && direction !== null) {
 		getUserList();
 	}
 </script>
@@ -112,19 +109,17 @@
 	}}
 />
 
-{#key selectedUser}
-	<EditUserModal
-		bind:show={showEditUserModal}
-		{selectedUser}
-		sessionUser={$user}
-		on:save={async () => {
-			getUserList();
-		}}
-	/>
-{/key}
-
 <AddUserModal
 	bind:show={showAddUserModal}
+	on:save={async () => {
+		getUserList();
+	}}
+/>
+
+<EditUserModal
+	bind:show={showEditUserModal}
+	{selectedUser}
+	sessionUser={$user}
 	on:save={async () => {
 		getUserList();
 	}}
@@ -156,27 +151,28 @@
 	<div
 		class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
 	>
-		<div class="flex md:self-center text-lg font-medium px-0.5">
+		<div class="flex md:self-center text-lg font-medium px-0.5 gap-2">
 			<div class="flex-shrink-0">
 				{$i18n.t('Users')}
 			</div>
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
-			{#if ($config?.license_metadata?.seats ?? null) !== null}
-				{#if total > $config?.license_metadata?.seats}
-					<span class="text-lg font-medium text-red-500"
-						>{total} of {$config?.license_metadata?.seats}
-						<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
-					>
+			<div>
+				{#if ($config?.license_metadata?.seats ?? null) !== null}
+					{#if total > $config?.license_metadata?.seats}
+						<span class="text-lg font-medium text-red-500"
+							>{total} of {$config?.license_metadata?.seats}
+							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
+						>
+					{:else}
+						<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+							>{total} of {$config?.license_metadata?.seats}
+							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
+						>
+					{/if}
 				{:else}
-					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-						>{total} of {$config?.license_metadata?.seats}
-						<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
-					>
+					<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
 				{/if}
-			{:else}
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
-			{/if}
+			</div>
 		</div>
 
 		<div class="flex gap-1">
@@ -222,7 +218,7 @@
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 					<th
 						scope="col"
 						class="px-2.5 py-2 cursor-pointer select-none"
@@ -343,7 +339,7 @@
 				</tr>
 			</thead>
 			<tbody class="">
-				{#each users as user, userIdx}
+				{#each users as user, userIdx (user.id)}
 					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
@@ -360,18 +356,27 @@
 							</button>
 						</td>
 						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
-							<div class="flex items-center">
-								<img
-									class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
-									src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
-									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
-									user.profile_image_url.startsWith('data:')
-										? user.profile_image_url
-										: `${WEBUI_BASE_URL}/user.png`}
-									alt="user"
-								/>
+							<div class="flex items-center gap-2">
+								<ProfilePreview {user} side="right" align="center" sideOffset={6}>
+									<img
+										class="rounded-full w-6 h-6 object-cover mr-0.5 flex-shrink-0"
+										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+										alt="user"
+									/>
+								</ProfilePreview>
 
 								<div class="font-medium truncate">{user.name}</div>
+
+								{#if user?.last_active_at && Date.now() / 1000 - user.last_active_at < 180}
+									<div>
+										<span class="relative flex size-1.5">
+											<span
+												class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+											></span>
+											<span class="relative inline-flex size-1.5 rounded-full bg-green-500"></span>
+										</span>
+									</div>
+								{/if}
 							</div>
 						</td>
 						<td class=" px-3 py-1"> {user.email} </td>
@@ -396,6 +401,33 @@
 											}}
 										>
 											<ChatBubbles />
+										</button>
+									</Tooltip>
+								{/if}
+
+								{#if (user.role === 'interviewee' || user.study_id) && user.role !== 'admin'}
+									<Tooltip content={$i18n.t('Scenario Quiz')}>
+										<button
+											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											on:click={async () => {
+												await goto(`/moderation-scenario?user_id=${user.id}`);
+											}}
+											title="Open Scenario Quiz"
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke-width="1.5"
+												stroke="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h11.25c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"
+												/>
+											</svg>
 										</button>
 									</Tooltip>
 								{/if}

@@ -8,11 +8,9 @@ from redis.asyncio import Redis
 from fastapi import Request
 from typing import Dict, List, Optional
 
-from open_webui.env import SRC_LOG_LEVELS, REDIS_KEY_PREFIX
-
+from open_webui.env import REDIS_KEY_PREFIX
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 # A dictionary to keep track of active tasks
 tasks: Dict[str, asyncio.Task] = {}
@@ -164,7 +162,10 @@ async def stop_task(redis, task_id: str):
         # Task successfully canceled
         return {"status": True, "message": f"Task {task_id} successfully stopped."}
 
-    return {"status": False, "message": f"Failed to stop task {task_id}."}
+    if task.cancelled() or task.done():
+        return {"status": True, "message": f"Task {task_id} successfully cancelled."}
+
+    return {"status": True, "message": f"Cancellation requested for {task_id}."}
 
 
 async def stop_item_tasks(redis: Redis, item_id: str):

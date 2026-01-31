@@ -37,7 +37,7 @@ from open_webui.utils.plugin import (
 from open_webui.utils.tools import get_tools
 from open_webui.utils.access_control import has_access
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL
 
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -51,10 +51,8 @@ from open_webui.utils.payload import (
     apply_system_prompt_to_body,
 )
 
-
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def get_function_module_by_id(request: Request, pipe_id: str):
@@ -287,10 +285,14 @@ async def generate_function_chat_completion(
         if params:
             system = params.pop("system", None)
             form_data = apply_model_params_to_body_openai(params, form_data)
-            
+
             # Only apply model system prompt if there's no existing system message
             # This allows playground system instructions to take precedence
-            if system and not (form_data.get("messages") and form_data["messages"] and form_data["messages"][0].get("role") == "system"):
+            if system and not (
+                form_data.get("messages")
+                and form_data["messages"]
+                and form_data["messages"][0].get("role") == "system"
+            ):
                 form_data = apply_model_system_prompt_to_body(
                     system, form_data, metadata, user
                 )

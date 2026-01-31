@@ -366,7 +366,7 @@
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
 			</DropdownMenu.Item>
 
-			<hr class="border-gray-50 dark:border-gray-800 my-1" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
@@ -393,7 +393,7 @@
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</DropdownMenu.Item>
 
-			{#if chatId}
+			{#if chatId && $folders.length > 0}
 				<DropdownMenu.Sub>
 					<DropdownMenu.SubTrigger
 						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"

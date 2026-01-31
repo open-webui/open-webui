@@ -13,13 +13,13 @@ class AttentionCheckQuestion(Base):
 
     id = Column(String, primary_key=True)
     prompt = Column(String, nullable=False)
-    options = Column(String, nullable=False)  # pipe-delimited options or JSON-serialized
+    options = Column(
+        String, nullable=False
+    )  # pipe-delimited options or JSON-serialized
     correct_option = Column(String, nullable=False)
     created_at = Column(BigInteger, nullable=False)
 
-    __table_args__ = (
-        Index("idx_acq_created_at", "created_at"),
-    )
+    __table_args__ = (Index("idx_acq_created_at", "created_at"),)
 
 
 class AttentionCheckResponse(Base):
@@ -71,10 +71,32 @@ class AttentionChecksTable:
                 return
             now = int(time.time() * 1000)
             defaults = [
-                ("Please select ‘Agree’ for this question.", ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"], "Agree"),
+                (
+                    "Please select ‘Agree’ for this question.",
+                    [
+                        "Strongly disagree",
+                        "Disagree",
+                        "Neutral",
+                        "Agree",
+                        "Strongly agree",
+                    ],
+                    "Agree",
+                ),
                 ("Choose the color Blue.", ["Red", "Green", "Blue", "Yellow"], "Blue"),
-                ("Select the third option to show you’re paying attention.", ["First option", "Second option", "Third option", "Fourth option"], "Third option"),
-                ("Pick ‘I read instructions carefully.’", ["I skim instructions", "I read instructions carefully", "I ignore instructions"], "I read instructions carefully"),
+                (
+                    "Select the third option to show you’re paying attention.",
+                    ["First option", "Second option", "Third option", "Fourth option"],
+                    "Third option",
+                ),
+                (
+                    "Pick ‘I read instructions carefully.’",
+                    [
+                        "I skim instructions",
+                        "I read instructions carefully",
+                        "I ignore instructions",
+                    ],
+                    "I read instructions carefully",
+                ),
             ]
             for prompt, opts, correct in defaults:
                 q = AttentionCheckQuestion(
@@ -89,15 +111,29 @@ class AttentionChecksTable:
 
     def list_questions(self) -> list[AttentionCheckQuestionModel]:
         with get_db() as db:
-            rows = db.query(AttentionCheckQuestion).order_by(AttentionCheckQuestion.created_at.asc()).all()
+            rows = (
+                db.query(AttentionCheckQuestion)
+                .order_by(AttentionCheckQuestion.created_at.asc())
+                .all()
+            )
             return [AttentionCheckQuestionModel.model_validate(r) for r in rows]
 
-    def insert_response(self, user_id: str, session_number: Optional[int], question_id: str, response: str) -> AttentionCheckResponseModel:
+    def insert_response(
+        self,
+        user_id: str,
+        session_number: Optional[int],
+        question_id: str,
+        response: str,
+    ) -> AttentionCheckResponseModel:
         with get_db() as db:
-            q = db.query(AttentionCheckQuestion).filter(AttentionCheckQuestion.id == question_id).first()
+            q = (
+                db.query(AttentionCheckQuestion)
+                .filter(AttentionCheckQuestion.id == question_id)
+                .first()
+            )
             if not q:
                 raise ValueError("Question not found")
-            is_passed = (response == q.correct_option)
+            is_passed = response == q.correct_option
             row = AttentionCheckResponse(
                 id=str(uuid.uuid4()),
                 user_id=user_id,
@@ -114,10 +150,13 @@ class AttentionChecksTable:
 
     def list_responses_by_user(self, user_id: str) -> list[AttentionCheckResponseModel]:
         with get_db() as db:
-            rows = db.query(AttentionCheckResponse).filter(AttentionCheckResponse.user_id == user_id).order_by(AttentionCheckResponse.created_at.desc()).all()
+            rows = (
+                db.query(AttentionCheckResponse)
+                .filter(AttentionCheckResponse.user_id == user_id)
+                .order_by(AttentionCheckResponse.created_at.desc())
+                .all()
+            )
             return [AttentionCheckResponseModel.model_validate(r) for r in rows]
 
 
 AttentionChecks = AttentionChecksTable()
-
-

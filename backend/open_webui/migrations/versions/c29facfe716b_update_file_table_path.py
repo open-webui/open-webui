@@ -12,7 +12,6 @@ import json
 from sqlalchemy.sql import table, column
 from sqlalchemy import String, Text, JSON, and_
 
-
 revision = "c29facfe716b"
 down_revision = "c69f45358db4"
 branch_labels = None
@@ -24,7 +23,7 @@ def upgrade():
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     file_columns = [col["name"] for col in inspector.get_columns("file")]
-    
+
     # 1. Add the `path` column to the "file" table.
     if "path" not in file_columns:
         op.add_column("file", sa.Column("path", sa.Text(), nullable=True))

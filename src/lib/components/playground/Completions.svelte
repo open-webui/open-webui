@@ -8,13 +8,11 @@
 	import { WEBUI_NAME, config, user, models, settings, showSidebar } from '$lib/stores';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
-
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
-
 
 	let text = '';
 
@@ -131,7 +129,7 @@
 						<textarea
 							id="text-completion-textarea"
 							bind:this={textCompletionAreaElement}
-							class="w-full h-full p-3 bg-transparent border border-gray-100 dark:border-gray-850 outline-hidden resize-none rounded-lg text-sm"
+							class="w-full h-full p-3 bg-transparent border border-gray-100/30 dark:border-gray-850/30 outline-hidden resize-none rounded-lg text-sm"
 							bind:value={text}
 							placeholder={$i18n.t("You're a helpful assistant.")}
 						/>

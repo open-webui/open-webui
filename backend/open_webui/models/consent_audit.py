@@ -62,7 +62,7 @@ class ConsentAuditTable:
         Returns existing record if one already exists for this user/session combination.
         """
         import uuid
-        
+
         with get_db() as db:
             # Idempotency check: if user has already given consent for this session, return existing record
             if form.consent_given and form.prolific_pid and form.session_id:
@@ -101,9 +101,7 @@ class ConsentAuditTable:
 
             return ConsentAuditModel.model_validate(obj)
 
-    def get_consent_records_by_user_id(
-        self, user_id: str
-    ) -> list[ConsentAuditModel]:
+    def get_consent_records_by_user_id(self, user_id: str) -> list[ConsentAuditModel]:
         with get_db() as db:
             records = (
                 db.query(ConsentAudit)
@@ -115,27 +113,3 @@ class ConsentAuditTable:
 
 
 ConsentAudits = ConsentAuditTable()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

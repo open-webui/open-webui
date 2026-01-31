@@ -20,15 +20,22 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "assignment_session_activity" in existing_tables:
-        existing_columns = [col["name"] for col in inspector.get_columns("assignment_session_activity")]
-        existing_indexes = [idx["name"] for idx in inspector.get_indexes("assignment_session_activity")]
-        
+        existing_columns = [
+            col["name"] for col in inspector.get_columns("assignment_session_activity")
+        ]
+        existing_indexes = [
+            idx["name"] for idx in inspector.get_indexes("assignment_session_activity")
+        ]
+
         # Drop index if it exists
         if "idx_assignment_activity_user_child_attempt" in existing_indexes:
-            op.drop_index("idx_assignment_activity_user_child_attempt", table_name="assignment_session_activity")
-        
+            op.drop_index(
+                "idx_assignment_activity_user_child_attempt",
+                table_name="assignment_session_activity",
+            )
+
         # Drop column if it exists
         if "child_id" in existing_columns:
             op.drop_column("assignment_session_activity", "child_id")
@@ -39,8 +46,13 @@ def downgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)
     existing_tables = inspector.get_table_names()
-    
+
     if "assignment_session_activity" in existing_tables:
-        existing_columns = [col["name"] for col in inspector.get_columns("assignment_session_activity")]
+        existing_columns = [
+            col["name"] for col in inspector.get_columns("assignment_session_activity")
+        ]
         if "child_id" not in existing_columns:
-            op.add_column("assignment_session_activity", sa.Column("child_id", sa.Text(), nullable=True))
+            op.add_column(
+                "assignment_session_activity",
+                sa.Column("child_id", sa.Text(), nullable=True),
+            )

@@ -15,6 +15,7 @@
 	export let edit = false;
 	export let prompt = null;
 	export let clone = false;
+	export let disabled = false;
 
 	const i18n = getContext('i18n');
 
@@ -40,6 +41,10 @@
 	}
 
 	const submitHandler = async () => {
+		if (disabled) {
+			toast.error($i18n.t('You do not have permission to edit this prompt.'));
+			return;
+		}
 		loading = true;
 
 		if (validateCommandString(command)) {
@@ -83,7 +88,8 @@
 	bind:show={showAccessControlModal}
 	bind:accessControl
 	accessRoles={['read', 'write']}
-	allowPublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
+	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
+	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
 />
 
 <div class="w-full max-h-full flex justify-center">
@@ -106,27 +112,34 @@
 				<div class="flex flex-col w-full">
 					<div class="flex items-center">
 						<input
-							class="text-2xl font-semibold w-full bg-transparent outline-hidden"
+							class="text-2xl font-medium w-full bg-transparent outline-hidden"
 							placeholder={$i18n.t('Title')}
 							bind:value={title}
 							required
+							{disabled}
 						/>
 
-						<div class="self-center shrink-0">
-							<button
-								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-								type="button"
-								on:click={() => {
-									showAccessControlModal = true;
-								}}
-							>
-								<LockClosed strokeWidth="2.5" className="size-3.5" />
+						{#if disabled}
+							<div class="text-xs shrink-0 text-gray-500">
+								{$i18n.t('Read Only')}
+							</div>
+						{:else}
+							<div class="self-center shrink-0">
+								<button
+									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+									type="button"
+									on:click={() => {
+										showAccessControlModal = true;
+									}}
+								>
+									<LockClosed strokeWidth="2.5" className="size-3.5" />
 
-								<div class="text-sm font-medium shrink-0">
-									{$i18n.t('Access')}
-								</div>
-							</button>
-						</div>
+									<div class="text-sm font-medium shrink-0">
+										{$i18n.t('Access')}
+									</div>
+								</button>
+							</div>
+						{/if}
 					</div>
 
 					<div class="flex gap-0.5 items-center text-xs text-gray-500">
@@ -137,7 +150,7 @@
 							bind:value={command}
 							on:input={handleCommandInput}
 							required
-							disabled={edit}
+							disabled={edit || disabled}
 						/>
 					</div>
 				</div>
@@ -146,17 +159,18 @@
 
 		<div class="my-2">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}</div>
+				<div class=" self-center text-sm font-medium">{$i18n.t('Prompt Content')}</div>
 			</div>
 
 			<div class="mt-2">
 				<div>
 					<Textarea
 						className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
-						placeholder={$i18n.t('Write a summary in 50 words that summarizes [topic or keyword].')}
+						placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
 						bind:value={content}
 						rows={6}
 						required
+						readonly={disabled}
 					/>
 				</div>
 
@@ -180,21 +194,22 @@
 		</div>
 
 		<div class="my-4 flex justify-end pb-20">
-			<button
-				class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-lg {loading
-					? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-					: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
-				type="submit"
-				disabled={loading}
-			>
-				<div class=" self-center font-medium">{$i18n.t('Save & Create')}</div>
-
-				{#if loading}
-					<div class="ml-1.5 self-center">
-						<Spinner />
-					</div>
-				{/if}
-			</button>
+			<Tooltip content={disabled ? $i18n.t('You do not have permission to save this prompt.') : ''}>
+				<button
+					class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-xl {loading || disabled
+						? ' cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+						: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+					type="submit"
+					disabled={loading || disabled}
+				>
+					<div class=" self-center font-medium">{$i18n.t('Save & Create')}</div>
+					{#if loading}
+						<div class="ml-1.5 self-center">
+							<Spinner />
+						</div>
+					{/if}
+				</button>
+			</Tooltip>
 		</div>
 	</form>
 </div>
