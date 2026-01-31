@@ -4,6 +4,9 @@
 
 This is to ensure large feature PRs are discussed with the community first, before starting work on it. If the community does not want this feature or it is not relevant for Open WebUI as a project, it can be identified in the discussion before working on the feature and submitting the PR.
 
+> [!TIP]
+> **Need help with PR workflow or GitHub tokens?** See our [Pull Request Workflow Guide](https://github.com/open-webui/open-webui/blob/main/docs/PULL_REQUEST_WORKFLOW.md) for detailed information about creating PRs, GitHub token setup, and troubleshooting.
+
 **Before submitting, make sure you've checked the following:**
 
 - [ ] **Target branch:** Verify that the pull request targets the `dev` branch. **Not targeting the `dev` branch will lead to immediate closure of the PR.**

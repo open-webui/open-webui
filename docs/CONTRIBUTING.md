@@ -55,6 +55,13 @@ We welcome pull requests. Before submitting one, please:
 > [!NOTE]
 > The Pull Request Template has various requirements outlined. Go through the PR-checklist one by one and ensure you completed all steps before submitting your PR for review (you can open it as draft otherwise!).
 
+> [!TIP]
+> **Need help with PR workflow or GitHub tokens?** See our detailed [Pull Request Workflow Guide](PULL_REQUEST_WORKFLOW.md) for comprehensive information about:
+> - Creating and managing pull requests
+> - GitHub Personal Access Token (PAT) requirements and setup
+> - Troubleshooting common PR issues
+> - CI/CD integration and token configuration
+
 ### 📚 Documentation & Tutorials
 
 Help us make Open WebUI more accessible by improving the documentation, writing tutorials, or creating guides on setting up and optimizing the Web UI.
