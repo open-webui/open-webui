@@ -1375,6 +1375,13 @@ async def check_url(request: Request, call_next):
     request.state.token = get_http_authorization_cred(
         request.headers.get("Authorization")
     )
+    # Fallback to cookie token for browser sessions
+    if request.state.token is None and request.cookies.get("token"):
+        from fastapi.security import HTTPAuthorizationCredentials
+        request.state.token = HTTPAuthorizationCredentials(
+            scheme="Bearer",
+            credentials=request.cookies.get("token")
+        )
 
     request.state.enable_api_keys = app.state.config.ENABLE_API_KEYS
     response = await call_next(request)
