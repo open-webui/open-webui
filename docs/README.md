@@ -4,6 +4,7 @@
 
 This directory contains project-specific documentation and guides:
 
+- **[PROJECT_CONTINUATION_GUIDE.md](PROJECT_CONTINUATION_GUIDE.md)** - ⭐ **START HERE** - Comprehensive project overview, features, tokens, workflows, and quick start guide
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - General contribution guidelines
 - **[PULL_REQUEST_WORKFLOW.md](PULL_REQUEST_WORKFLOW.md)** - Detailed PR workflow, GitHub token setup, and troubleshooting
 - **[CYPRESS_TEST_SETUP.md](CYPRESS_TEST_SETUP.md)** - Cypress testing setup and configuration
