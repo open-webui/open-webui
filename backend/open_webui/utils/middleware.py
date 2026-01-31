@@ -1835,6 +1835,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if name not in tools_dict:
                 tools_dict[name] = tool_dict
 
+    # Web search fallback when builtin_tools is disabled but web search is enabled
+    elif (
+        metadata.get("params", {}).get("function_calling") == "native"
+        and getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False)
+        and (
+            model.get("info", {}).get("meta", {}).get("capabilities") or {}
+        ).get("web_search", True)
+    ):
+        builtin_tools = get_builtin_tools(
+            request,
+            {
+                **extra_params,
+                "__event_emitter__": event_emitter,
+            },
+            features,
+            model,
+        )
+        for name in ("search_web", "fetch_url"):
+            if name in builtin_tools and name not in tools_dict:
+                tools_dict[name] = builtin_tools[name]
+
     if tools_dict:
         if metadata.get("params", {}).get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
