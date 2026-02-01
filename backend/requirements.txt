@@ -57,7 +57,7 @@ opensearch-py==3.1.0
 transformers==4.57.6
 sentence-transformers==5.2.2
 accelerate
-pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
+pyarrow==23.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.2 
 
 ftfy==6.3.1
