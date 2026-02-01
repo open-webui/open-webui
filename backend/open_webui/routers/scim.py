@@ -504,11 +504,16 @@ async def get_users(
             user = Users.get_user_by_email(email, db=db)
             users_list = [user] if user else []
             total = 1 if user else 0
-        elif "emails ineq" in filter:
+        elif "emails eq_ci" in filter:
             emails = filter.split('"')[1].split(",")
             user = Users.get_user_by_email(email, caseSensitive=False, db=db)
             users_list = [user] if user else []
-            total = 1 if user else 0          
+            total = 1 if user else 0  
+        elif "externalId eq" in filter:
+            externalId = filter.split('"')[1]
+            user = Users.get_user_by_oauth_sub(externalId, db=db)
+            users_list = [user] if user else []
+            total = 1 if user else 0
         else:
             response = Users.get_users(skip=skip, limit=limit, db=db)
             users_list = response["users"]
