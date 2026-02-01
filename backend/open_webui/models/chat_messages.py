@@ -269,6 +269,50 @@ class ChatMessageTable:
             results = query.group_by(ChatMessage.model_id).all()
             return {row.model_id: row.count for row in results}
 
+    def get_token_usage_by_model(
+        self,
+        start_date: Optional[int] = None,
+        end_date: Optional[int] = None,
+        db: Optional[Session] = None,
+    ) -> dict[str, dict]:
+        """Aggregate token usage by model. Works with SQLite and PostgreSQL."""
+        with get_db_context(db) as db:
+            query = db.query(
+                ChatMessage.model_id,
+                ChatMessage.usage,
+            ).filter(
+                ChatMessage.role == "assistant",
+                ChatMessage.model_id.isnot(None),
+                ChatMessage.usage.isnot(None),
+            )
+
+            if start_date:
+                query = query.filter(ChatMessage.created_at >= start_date)
+            if end_date:
+                query = query.filter(ChatMessage.created_at <= end_date)
+
+            results = query.all()
+
+            # Aggregate in Python for cross-database compatibility
+            usage_by_model: dict[str, dict] = {}
+            for model_id, usage in results:
+                if model_id not in usage_by_model:
+                    usage_by_model[model_id] = {
+                        "input_tokens": 0,
+                        "output_tokens": 0,
+                        "message_count": 0,
+                    }
+
+                usage_by_model[model_id]["input_tokens"] += usage.get("input_tokens") or 0
+                usage_by_model[model_id]["output_tokens"] += usage.get("output_tokens") or 0
+                usage_by_model[model_id]["message_count"] += 1
+
+            # Add total_tokens
+            for data in usage_by_model.values():
+                data["total_tokens"] = data["input_tokens"] + data["output_tokens"]
+
+            return usage_by_model
+
     def get_message_count_by_user(
         self,
         start_date: Optional[int] = None,

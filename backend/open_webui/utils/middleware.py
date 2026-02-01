@@ -3001,6 +3001,7 @@ async def process_chat_response(
                     "content": content,
                 }
             ]
+            usage = None
 
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
@@ -3122,11 +3123,11 @@ async def process_chat_response(
                                 else:
                                     choices = data.get("choices", [])
 
-                                    # 17421 - Normalize usage data to standard format
-                                    usage = data.get("usage", {}) or {}
-                                    usage.update(data.get("timings", {}))  # llama.cpp
-                                    if usage:
-                                        usage = normalize_usage(usage)
+                                    # Normalize usage data to standard format
+                                    raw_usage = data.get("usage", {}) or {}
+                                    raw_usage.update(data.get("timings", {}))  # llama.cpp
+                                    if raw_usage:
+                                        usage = normalize_usage(raw_usage)
                                         await event_emitter(
                                             {
                                                 "type": "chat:completion",
@@ -3924,7 +3925,14 @@ async def process_chat_response(
                         {
                             "content": serialize_output(output),
                             "output": output,
+                            **({"usage": usage} if usage else {}),
                         },
+                    )
+                elif usage:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {"usage": usage},
                     )
 
                 # Send a webhook notification if the user is not active
