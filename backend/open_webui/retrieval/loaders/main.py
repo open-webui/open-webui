@@ -22,6 +22,7 @@ from langchain_community.document_loaders import (
     YoutubeLoader,
 )
 from langchain_core.documents import Document
+from pypdf import PdfReader, PdfWriter
 
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 
@@ -190,6 +191,31 @@ class Loader:
     def load(
         self, filename: str, file_content_type: str, file_path: str
     ) -> list[Document]:
+        
+        if filename.lower().endswith(".pdf"):
+            try:
+                reader = PdfReader(file_path)
+                if reader.is_encrypted:
+                    log.info(f"Attempting to decrypt {filename}")
+                    password = self.kwargs.get("pdf_password") 
+                    
+                    if password:
+                        reader.decrypt(password)
+                        writer = PdfWriter()
+                        for page in reader.pages:
+                            writer.add_page(page)
+                        
+                        with open(file_path, "wb") as f:
+                            writer.write(f)
+                        log.info(f"Successfully decrypted {filename}")
+                    
+                    else:
+                        log.error(
+                            f"PDF is encrypted but no password was supplied for {filename}")
+
+            except Exception as e:
+                log.error(f"Failed to pre-process PDF: {e}")
+
         loader = self._get_loader(filename, file_content_type, file_path)
         docs = loader.load()
 

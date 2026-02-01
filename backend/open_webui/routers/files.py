@@ -285,6 +285,7 @@ def upload_file_handler(
                         "content_type": file.content_type,
                         "size": len(contents),
                         "data": file_metadata,
+                        "pdf_password": file_metadata.get("pdf_password")
                     },
                 }
             ),
