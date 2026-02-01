@@ -546,6 +546,14 @@ async def create_user(
     db: Session = Depends(get_session),
 ):
     """Create SCIM User"""
+    # Check if user already exists via externalID (matched via OIDC Subject Identifier)
+    existing_user = Users.get_user_by_oauth_sub(user_data.externalId, db=db)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"User with externalId {user_data.externalId} already exists (aka internal user {existing_user.email})",
+        )
+
     # Check if user already exists via email
     primaryemail = None
     for email in user_data.emails:
