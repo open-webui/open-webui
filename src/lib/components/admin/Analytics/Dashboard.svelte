@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
-	import { getSummary, getModelAnalytics, getUserAnalytics, getDailyStats } from '$lib/apis/analytics';
+	import { getSummary, getModelAnalytics, getUserAnalytics, getDailyStats, getTokenUsage } from '$lib/apis/analytics';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChartLine from './ChartLine.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { formatNumber } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -37,6 +38,8 @@
 	let modelStats: Array<{ model_id: string; count: number; name?: string }> = [];
 	let userStats: Array<{ user_id: string; name?: string; email?: string; count: number }> = [];
 	let dailyStats: Array<{ date: string; models: Record<string, number> }> = [];
+	let tokenStats: Record<string, { input_tokens: number; output_tokens: number; total_tokens: number }> = {};
+	let totalTokens = { input: 0, output: 0, total: 0 };
 
 	let loading = true;
 
@@ -69,11 +72,12 @@
 		try {
 			const { start, end } = getDateRange(selectedPeriod);
 			const granularity = selectedPeriod === '24h' ? 'hourly' : 'daily';
-			const [summaryRes, modelsRes, usersRes, dailyRes] = await Promise.all([
+			const [summaryRes, modelsRes, usersRes, dailyRes, tokensRes] = await Promise.all([
 				getSummary(localStorage.token, start, end),
 				getModelAnalytics(localStorage.token, start, end),
 				getUserAnalytics(localStorage.token, start, end, 50),
-				getDailyStats(localStorage.token, start, end, granularity)
+				getDailyStats(localStorage.token, start, end, granularity),
+				getTokenUsage(localStorage.token, start, end)
 			]);
 
 			summary = summaryRes ?? summary;
@@ -86,6 +90,23 @@
 
 			userStats = usersRes?.users ?? [];
 			dailyStats = dailyRes?.data ?? [];
+
+			// Process token data
+			if (tokensRes) {
+				tokenStats = {};
+				for (const m of tokensRes.models) {
+					tokenStats[m.model_id] = {
+						input_tokens: m.input_tokens,
+						output_tokens: m.output_tokens,
+						total_tokens: m.total_tokens
+					};
+				}
+				totalTokens = {
+					input: tokensRes.total_input_tokens,
+					output: tokensRes.total_output_tokens,
+					total: tokensRes.total_tokens
+				};
+			}
 		} catch (err) {
 			console.error('Dashboard load failed:', err);
 		}
@@ -140,6 +161,7 @@
 {#if !loading}
 	<div class="flex gap-3 text-xs text-gray-500 dark:text-gray-400 px-0.5 pb-2">
 		<span><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_messages.toLocaleString()}</span> {$i18n.t('messages')}</span>
+		<span><span class="font-medium text-gray-900 dark:text-gray-300">{formatNumber(totalTokens.total)}</span> {$i18n.t('tokens')}</span>
 		<span><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_chats.toLocaleString()}</span> {$i18n.t('chats')}</span>
 		<span><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_users}</span> {$i18n.t('users')}</span>
 	</div>
@@ -213,6 +235,7 @@
 									{/if}
 								</div>
 							</th>
+							<th scope="col" class="px-2.5 py-2 text-right">{$i18n.t('Tokens')}</th>
 							<th scope="col" class="px-2.5 py-2 text-right w-16">%</th>
 						</tr>
 					</thead>
@@ -231,13 +254,14 @@
 									</div>
 								</td>
 								<td class="px-3 py-1 text-right">{model.count.toLocaleString()}</td>
+								<td class="px-3 py-1 text-right">{formatNumber(tokenStats[model.model_id]?.total_tokens ?? 0)}</td>
 								<td class="px-3 py-1 text-right text-gray-400">
 									{totalModelMessages > 0 ? ((model.count / totalModelMessages) * 100).toFixed(1) : 0}%
 								</td>
 							</tr>
 						{/each}
 						{#if sortedModels.length === 0}
-							<tr><td colspan="4" class="px-3 py-2 text-center text-gray-400">{$i18n.t('No data')}</td></tr>
+							<tr><td colspan="5" class="px-3 py-2 text-center text-gray-400">{$i18n.t('No data')}</td></tr>
 						{/if}
 					</tbody>
 				</table>

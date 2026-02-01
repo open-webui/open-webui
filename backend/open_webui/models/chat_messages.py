@@ -1,3 +1,4 @@
+import json
 import time
 import uuid
 from typing import Any, Optional
@@ -279,11 +280,34 @@ class ChatMessageTable:
         end_date: Optional[int] = None,
         db: Optional[Session] = None,
     ) -> dict[str, dict]:
-        """Aggregate token usage by model. Works with SQLite and PostgreSQL."""
+        """Aggregate token usage by model using database-level aggregation."""
         with get_db_context(db) as db:
+            from sqlalchemy import func, cast, Integer
+
+            dialect = db.bind.dialect.name
+
+            if dialect == "sqlite":
+                input_tokens = cast(
+                    func.json_extract(ChatMessage.usage, "$.input_tokens"), Integer
+                )
+                output_tokens = cast(
+                    func.json_extract(ChatMessage.usage, "$.output_tokens"), Integer
+                )
+            elif dialect == "postgresql":
+                input_tokens = cast(
+                    ChatMessage.usage["input_tokens"].astext, Integer
+                )
+                output_tokens = cast(
+                    ChatMessage.usage["output_tokens"].astext, Integer
+                )
+            else:
+                raise NotImplementedError(f"Unsupported dialect: {dialect}")
+
             query = db.query(
                 ChatMessage.model_id,
-                ChatMessage.usage,
+                func.coalesce(func.sum(input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(output_tokens), 0).label("output_tokens"),
+                func.count(ChatMessage.id).label("message_count"),
             ).filter(
                 ChatMessage.role == "assistant",
                 ChatMessage.model_id.isnot(None),
@@ -295,27 +319,17 @@ class ChatMessageTable:
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
 
-            results = query.all()
+            results = query.group_by(ChatMessage.model_id).all()
 
-            # Aggregate in Python for cross-database compatibility
-            usage_by_model: dict[str, dict] = {}
-            for model_id, usage in results:
-                if model_id not in usage_by_model:
-                    usage_by_model[model_id] = {
-                        "input_tokens": 0,
-                        "output_tokens": 0,
-                        "message_count": 0,
-                    }
-
-                usage_by_model[model_id]["input_tokens"] += usage.get("input_tokens") or 0
-                usage_by_model[model_id]["output_tokens"] += usage.get("output_tokens") or 0
-                usage_by_model[model_id]["message_count"] += 1
-
-            # Add total_tokens
-            for data in usage_by_model.values():
-                data["total_tokens"] = data["input_tokens"] + data["output_tokens"]
-
-            return usage_by_model
+            return {
+                row.model_id: {
+                    "input_tokens": row.input_tokens,
+                    "output_tokens": row.output_tokens,
+                    "total_tokens": row.input_tokens + row.output_tokens,
+                    "message_count": row.message_count,
+                }
+                for row in results
+            }
 
     def get_message_count_by_user(
         self,

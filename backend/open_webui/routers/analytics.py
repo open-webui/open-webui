@@ -192,3 +192,46 @@ async def get_daily_stats(
             for date, models in sorted(counts.items())
         ]
     )
+
+
+class TokenUsageEntry(BaseModel):
+    model_id: str
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    message_count: int
+
+
+class TokenUsageResponse(BaseModel):
+    models: list[TokenUsageEntry]
+    total_input_tokens: int
+    total_output_tokens: int
+    total_tokens: int
+
+
+@router.get("/tokens", response_model=TokenUsageResponse)
+async def get_token_usage(
+    start_date: Optional[int] = Query(None),
+    end_date: Optional[int] = Query(None),
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    """Get token usage aggregated by model."""
+    usage = ChatMessages.get_token_usage_by_model(
+        start_date=start_date, end_date=end_date, db=db
+    )
+
+    models = [
+        TokenUsageEntry(model_id=model_id, **data)
+        for model_id, data in sorted(usage.items(), key=lambda x: -x[1]["total_tokens"])
+    ]
+
+    total_input = sum(m.input_tokens for m in models)
+    total_output = sum(m.output_tokens for m in models)
+
+    return TokenUsageResponse(
+        models=models,
+        total_input_tokens=total_input,
+        total_output_tokens=total_output,
+        total_tokens=total_input + total_output,
+    )

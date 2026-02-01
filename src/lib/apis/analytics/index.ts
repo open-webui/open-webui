@@ -193,3 +193,39 @@ export const getDailyStats = async (
 
     return res;
 };
+
+export const getTokenUsage = async (
+    token: string = '',
+    startDate: number | null = null,
+    endDate: number | null = null
+) => {
+    let error = null;
+
+    const searchParams = new URLSearchParams();
+    if (startDate) searchParams.append('start_date', startDate.toString());
+    if (endDate) searchParams.append('end_date', endDate.toString());
+
+    const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/tokens?${searchParams.toString()}`, {
+        method: 'GET',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${token}`
+        }
+    })
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            error = err.detail;
+            console.error(err);
+            return null;
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return res;
+};
