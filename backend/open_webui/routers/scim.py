@@ -546,11 +546,11 @@ async def create_user(
     db: Session = Depends(get_session),
 ):
     """Create SCIM User"""
-    # Check if user already exists
+    # Check if user already exists via email
     primaryemail = None
     for email in user_data.emails:
         if email.primary:
-            primaryemail = email.value.lower()
+            primaryemail = email.value.lower() #Specs say that email provisioning is case insenstive (assuming all emails in DB is lowercase)
             break
     existing_user = Users.get_user_by_email(primaryemail, db=db)
     if existing_user:
