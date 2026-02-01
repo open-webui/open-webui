@@ -547,11 +547,16 @@ async def create_user(
 ):
     """Create SCIM User"""
     # Check if user already exists
-    existing_user = Users.get_user_by_email(user_data.userName, db=db)
+    primaryemail = None
+    for email in user_data.emails:
+        if email.primary:
+            primaryemail = email.value
+            break
+    existing_user = Users.get_user_by_email(primaryemail, db=db)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"User with email {user_data.userName} already exists",
+            detail=f"User with email {primaryemail} already exists",
         )
 
     # Create user
