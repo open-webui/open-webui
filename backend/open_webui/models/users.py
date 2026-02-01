@@ -104,6 +104,13 @@ class UserModel(BaseModel):
     oauth: Optional[dict] = None
 
     def get_oauth_sub(self) -> Optional[str]:
+        """
+        Retrieves the 'sub' (subject) claim from the OIDC data within the user's OAuth information.
+        
+        :param self: The instance of the UserModel.
+        :return: The 'sub' claim as a string if available, otherwise None.
+        :rtype: str | None
+        """
         if self.oauth is None:
             return None
         return self.oauth.get("oidc", {}).get("sub", None)
