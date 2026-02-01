@@ -550,7 +550,7 @@ async def create_user(
     primaryemail = None
     for email in user_data.emails:
         if email.primary:
-            primaryemail = email.value
+            primaryemail = email.value.lower()
             break
     existing_user = Users.get_user_by_email(primaryemail, db=db)
     if existing_user:
