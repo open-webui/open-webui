@@ -311,11 +311,16 @@ class UsersTable:
             return None
 
     def get_user_by_email(
-        self, email: str, db: Optional[Session] = None
+        self, email: str, db: Optional[Session] = None, caseSensitive: bool = True
     ) -> Optional[UserModel]:
+        # Note that it is possible for capital letters to make it into the
+        # email attribute of the User Table via SCIM and OIDC
         try:
             with get_db_context(db) as db:
-                user = db.query(User).filter_by(email=email).first()
+                if caseSensitive:
+                    user = db.query(User).filter_by(email=email).first()
+                else:
+                    user = db.query(User).filter_by(email__iexact=email).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
