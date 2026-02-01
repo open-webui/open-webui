@@ -128,6 +128,86 @@ def get_content_from_message(message: dict) -> Optional[str]:
     return None
 
 
+def convert_output_to_messages(output: list) -> list[dict]:
+    """
+    Convert OR-aligned output items to OpenAI-format messages for LLM consumption.
+    
+    This is the inverse of convert_content_blocks_to_output() in middleware.py.
+    """
+    if not output or not isinstance(output, list):
+        return []
+    
+    messages = []
+    pending_tool_calls = []
+    pending_content = []
+    
+    for item in output:
+        item_type = item.get("type", "")
+        
+        if item_type == "message":
+            # Extract text from output_text content parts
+            content_parts = item.get("content", [])
+            text = ""
+            for part in content_parts:
+                if part.get("type") == "output_text":
+                    text += part.get("text", "")
+            if text:
+                pending_content.append(text)
+        
+        elif item_type == "function_call":
+            # Collect tool calls to batch into assistant message
+            pending_tool_calls.append({
+                "id": item.get("call_id", ""),
+                "type": "function",
+                "function": {
+                    "name": item.get("name", ""),
+                    "arguments": item.get("arguments", "{}"),
+                }
+            })
+        
+        elif item_type == "function_call_output":
+            # Flush any pending content/tool_calls before adding tool result
+            if pending_content or pending_tool_calls:
+                messages.append({
+                    "role": "assistant",
+                    "content": "\n".join(pending_content) if pending_content else "",
+                    **({"tool_calls": pending_tool_calls} if pending_tool_calls else {}),
+                })
+                pending_content = []
+                pending_tool_calls = []
+            
+            # Extract text from output content parts
+            output_parts = item.get("output", [])
+            content = ""
+            for part in output_parts:
+                if part.get("type") == "input_text":
+                    content += part.get("text", "")
+            
+            messages.append({
+                "role": "tool",
+                "tool_call_id": item.get("call_id", ""),
+                "content": content,
+            })
+        
+        elif item_type == "reasoning":
+            # Skip reasoning blocks for LLM messages
+            pass
+        
+        elif item_type.startswith("open_webui:"):
+            # Skip extension types
+            pass
+    
+    # Flush remaining content/tool_calls
+    if pending_content or pending_tool_calls:
+        messages.append({
+            "role": "assistant",
+            "content": "\n".join(pending_content) if pending_content else "",
+            **({"tool_calls": pending_tool_calls} if pending_tool_calls else {}),
+        })
+    
+    return messages
+
+
 def get_last_user_message(messages: list[dict]) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:

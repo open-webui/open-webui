@@ -36,6 +36,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.channels import Channels, ChannelMember, Channel
 from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
+from open_webui.utils.sanitize import strip_markdown_code_fences
 
 log = logging.getLogger(__name__)
 
@@ -370,6 +371,9 @@ async def execute_code(
         return json.dumps({"error": "Request context not available"})
 
     try:
+        # Strip markdown fences if model included them
+        code = strip_markdown_code_fences(code)
+
         # Import blocked modules from config (same as middleware)
         from open_webui.config import CODE_INTERPRETER_BLOCKED_MODULES
 
@@ -892,6 +896,7 @@ async def search_chats(
     end_timestamp: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
+    __chat_id__: str = None,
 ) -> str:
     """
     Search the user's previous chat conversations by title and message content.
@@ -921,6 +926,10 @@ async def search_chats(
 
         results = []
         for chat in chats:
+            # Skip the current chat to avoid showing it in search results
+            if __chat_id__ and chat.id == __chat_id__:
+                continue
+
             # Apply date filters (updated_at is in seconds)
             if start_timestamp and chat.updated_at < start_timestamp:
                 continue

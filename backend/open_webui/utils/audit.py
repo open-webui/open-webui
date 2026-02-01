@@ -221,7 +221,8 @@ class AuditLoggingMiddleware:
                 return False  # Do NOT skip logging for auth endpoints
 
         # Skip logging if the request is not authenticated
-        if not request.headers.get("authorization"):
+        # Check both Authorization header (API keys) and token cookie (browser sessions)
+        if not request.headers.get("authorization") and not request.cookies.get("token"):
             return True
 
         # match either /api/<resource>/...(for the endpoint /api/chat case) or /api/v1/<resource>/...

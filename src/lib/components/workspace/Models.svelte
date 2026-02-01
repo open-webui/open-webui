@@ -85,6 +85,8 @@
 	}
 
 	const getModelList = async () => {
+		if (!loaded) return;
+
 		try {
 			const res = await getWorkspaceModels(
 				localStorage.token,

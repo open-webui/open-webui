@@ -37,6 +37,8 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
+    ENABLE_OAUTH_TOKEN_EXCHANGE,
+    AIOHTTP_CLIENT_SESSION_SSL,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
@@ -45,6 +47,8 @@ from open_webui.config import (
     ENABLE_OAUTH_SIGNUP,
     ENABLE_LDAP,
     ENABLE_PASSWORD_AUTH,
+    OAUTH_PROVIDERS,
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
 )
 from pydantic import BaseModel
 
@@ -86,6 +90,63 @@ log = logging.getLogger(__name__)
 signin_rate_limiter = RateLimiter(
     redis_client=get_redis_client(), limit=5 * 3, window=60 * 3
 )
+
+
+def create_session_response(
+    request: Request, user, db, response: Response = None, set_cookie: bool = False
+) -> dict:
+    """
+    Create JWT token and build session response for a user.
+    Shared helper for signin, signup, ldap_auth, add_user, and token_exchange endpoints.
+    
+    Args:
+        request: FastAPI request object
+        user: User object
+        db: Database session
+        response: FastAPI response object (required if set_cookie is True)
+        set_cookie: Whether to set the auth cookie on the response
+    """
+    expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+    expires_at = None
+    if expires_delta:
+        expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=expires_delta,
+    )
+
+    if set_cookie and response:
+        datetime_expires_at = (
+            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+            if expires_at
+            else None
+        )
+        response.set_cookie(
+            key="token",
+            value=token,
+            expires=datetime_expires_at,
+            httponly=True,
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
+        )
+
+    user_permissions = get_permissions(
+        user.id, request.app.state.config.USER_PERMISSIONS, db=db
+    )
+
+    return {
+        "token": token,
+        "token_type": "Bearer",
+        "expires_at": expires_at,
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "profile_image_url": user.profile_image_url,
+        "permissions": user_permissions,
+    }
+
 
 ############################
 # GetSessionUser
@@ -482,36 +543,6 @@ async def ldap_auth(
             user = Auths.authenticate_user_by_email(email, db=db)
 
             if user:
-                expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
-                expires_at = None
-                if expires_delta:
-                    expires_at = int(time.time()) + int(expires_delta.total_seconds())
-
-                token = create_token(
-                    data={"id": user.id},
-                    expires_delta=expires_delta,
-                )
-
-                # Set the cookie token
-                response.set_cookie(
-                    key="token",
-                    value=token,
-                    expires=(
-                        datetime.datetime.fromtimestamp(
-                            expires_at, datetime.timezone.utc
-                        )
-                        if expires_at
-                        else None
-                    ),
-                    httponly=True,  # Ensures the cookie is not accessible via JavaScript
-                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                    secure=WEBUI_AUTH_COOKIE_SECURE,
-                )
-
-                user_permissions = get_permissions(
-                    user.id, request.app.state.config.USER_PERMISSIONS, db=db
-                )
-
                 if (
                     user.role != "admin"
                     and ENABLE_LDAP_GROUP_MANAGEMENT
@@ -527,17 +558,7 @@ async def ldap_auth(
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
 
-                return {
-                    "token": token,
-                    "token_type": "Bearer",
-                    "expires_at": expires_at,
-                    "id": user.id,
-                    "email": user.email,
-                    "name": user.name,
-                    "role": user.role,
-                    "profile_image_url": user.profile_image_url,
-                    "permissions": user_permissions,
-                }
+                return create_session_response(request, user, db, response, set_cookie=True)
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         else:
@@ -646,48 +667,7 @@ async def signin(
         )
 
     if user:
-
-        expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
-        expires_at = None
-        if expires_delta:
-            expires_at = int(time.time()) + int(expires_delta.total_seconds())
-
-        token = create_token(
-            data={"id": user.id},
-            expires_delta=expires_delta,
-        )
-
-        datetime_expires_at = (
-            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-            if expires_at
-            else None
-        )
-
-        # Set the cookie token
-        response.set_cookie(
-            key="token",
-            value=token,
-            expires=datetime_expires_at,
-            httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-            secure=WEBUI_AUTH_COOKIE_SECURE,
-        )
-
-        user_permissions = get_permissions(
-            user.id, request.app.state.config.USER_PERMISSIONS, db=db
-        )
-
-        return {
-            "token": token,
-            "token_type": "Bearer",
-            "expires_at": expires_at,
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "profile_image_url": user.profile_image_url,
-            "permissions": user_permissions,
-        }
+        return create_session_response(request, user, db, response, set_cookie=True)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
@@ -748,32 +728,6 @@ async def signup(
         )
 
         if user:
-            expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
-            expires_at = None
-            if expires_delta:
-                expires_at = int(time.time()) + int(expires_delta.total_seconds())
-
-            token = create_token(
-                data={"id": user.id},
-                expires_delta=expires_delta,
-            )
-
-            datetime_expires_at = (
-                datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-                if expires_at
-                else None
-            )
-
-            # Set the cookie token
-            response.set_cookie(
-                key="token",
-                value=token,
-                expires=datetime_expires_at,
-                httponly=True,  # Ensures the cookie is not accessible via JavaScript
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
-
             if request.app.state.config.WEBHOOK_URL:
                 await post_webhook(
                     request.app.state.WEBUI_NAME,
@@ -786,10 +740,6 @@ async def signup(
                     },
                 )
 
-            user_permissions = get_permissions(
-                user.id, request.app.state.config.USER_PERMISSIONS, db=db
-            )
-
             if not has_users:
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
@@ -800,17 +750,7 @@ async def signup(
                 db=db,
             )
 
-            return {
-                "token": token,
-                "token_type": "Bearer",
-                "expires_at": expires_at,
-                "id": user.id,
-                "email": user.email,
-                "name": user.name,
-                "role": user.role,
-                "profile_image_url": user.profile_image_url,
-                "permissions": user_permissions,
-            }
+            return create_session_response(request, user, db, response, set_cookie=True)
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
     except HTTPException:
@@ -1287,3 +1227,108 @@ async def get_api_key(
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+
+############################
+# Token Exchange
+############################
+
+
+class TokenExchangeForm(BaseModel):
+    token: str  # OAuth access token from external provider
+
+
+@router.post("/oauth/{provider}/token/exchange", response_model=SessionUserResponse)
+async def token_exchange(
+    request: Request,
+    response: Response,
+    provider: str,
+    form_data: TokenExchangeForm,
+    db: Session = Depends(get_session),
+):
+    """
+    Exchange an external OAuth provider token for an OpenWebUI JWT.
+    This endpoint is disabled by default. Set ENABLE_OAUTH_TOKEN_EXCHANGE=True to enable.
+    """
+    if not ENABLE_OAUTH_TOKEN_EXCHANGE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token exchange is disabled",
+        )
+
+    provider = provider.lower()
+
+    # Check if provider is configured
+    if provider not in OAUTH_PROVIDERS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Provider '{provider}' is not configured",
+        )
+    # Get the OAuth client for this provider
+    oauth_manager = request.app.state.oauth_manager
+    client = oauth_manager.get_client(provider)
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"OAuth client for '{provider}' not found",
+        )
+
+    # Validate the token by calling the userinfo endpoint
+    try:
+        token_data = {"access_token": form_data.token, "token_type": "Bearer"}
+        user_data = await client.userinfo(token=token_data)
+
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid token or unable to fetch user info",
+            )
+    except Exception as e:
+        log.warning(f"Token exchange failed for provider {provider}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token or unable to validate with provider",
+        )
+
+    # Extract user information from the token claims
+    email_claim = request.app.state.config.OAUTH_EMAIL_CLAIM
+    username_claim = request.app.state.config.OAUTH_USERNAME_CLAIM
+
+    # Get sub claim
+    sub = user_data.get(
+        request.app.state.config.OAUTH_SUB_CLAIM
+        or OAUTH_PROVIDERS[provider].get("sub_claim", "sub")
+    )
+    if not sub:
+        log.warning(f"Token exchange failed: sub claim missing from user data")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token missing required 'sub' claim",
+        )
+
+    email = user_data.get(email_claim, "")
+    if not email:
+        log.warning(f"Token exchange failed: email claim missing from user data")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token missing required email claim",
+        )
+    email = email.lower()
+
+    # Try to find the user by OAuth sub
+    user = Users.get_user_by_oauth_sub(provider, sub, db=db)
+
+    if not user and OAUTH_MERGE_ACCOUNTS_BY_EMAIL.value:
+        # Try to find by email if merge is enabled
+        user = Users.get_user_by_email(email, db=db)
+        if user:
+            # Link the OAuth sub to this user
+            Users.update_user_oauth_by_id(user.id, provider, sub, db=db)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User not found. Please sign in via the web interface first.",
+        )
+
+    return create_session_response(request, user, db)
