@@ -88,6 +88,7 @@
 	setContext('i18n', i18n);
 
 	const bc = new BroadcastChannel('active-tab-channel');
+	let visibilityChangeHandler = null;
 
 	let loaded = false;
 	let tokenTimer = null;
@@ -687,10 +688,14 @@
 		};
 
 		// Set yourself as the last active tab when this tab is focused
-		const handleVisibilityChange = () => {
+		visibilityChangeHandler = () => {
 			if (document.visibilityState === 'visible') {
 				isLastActiveTab.set(true); // This tab is now the active tab
-				bc.postMessage('active'); // Notify other tabs that this tab is active
+				try {
+					bc.postMessage('active'); // Notify other tabs that this tab is active
+				} catch (e) {
+					// Channel may be closed during teardown
+				}
 
 				// Check token expiry when the tab becomes active
 				checkTokenExpiry();
@@ -698,10 +703,10 @@
 		};
 
 		// Add event listener for visibility state changes
-		document.addEventListener('visibilitychange', handleVisibilityChange);
+		document.addEventListener('visibilitychange', visibilityChangeHandler);
 
 		// Call visibility change handler initially to set state on load
-		handleVisibilityChange();
+		visibilityChangeHandler();
 
 		theme.set(localStorage.theme);
 
@@ -735,25 +740,11 @@
 				const prolificPidFromUser = value.prolific_pid;
 				const prolificPidFromStorage = localStorage.getItem('prolificPid');
 
-				console.log('[CONSENT DEBUG] User subscription triggered:', {
-					prolificPidFromUser,
-					prolificPidFromStorage,
-					urlProlificPid,
-					consent_given: value.consent_given,
-					consent_given_type: typeof value.consent_given
-				});
-
 				const hasProlificPid = prolificPidFromUser || prolificPidFromStorage || urlProlificPid;
 				const needsConsent =
 					value.consent_given === null ||
 					value.consent_given === false ||
 					value.consent_given === undefined;
-
-				console.log('[CONSENT DEBUG] Subscription decision:', {
-					hasProlificPid,
-					needsConsent,
-					willShowModal: hasProlificPid && needsConsent
-				});
 
 				if (hasProlificPid && needsConsent) {
 					// Ensure Prolific IDs are in localStorage for consent submission
@@ -765,14 +756,9 @@
 						if (studyId) localStorage.setItem('prolificStudyId', studyId);
 						if (sessionId) localStorage.setItem('prolificSessionId', sessionId);
 					}
-					console.log('[CONSENT DEBUG] Subscription: Showing consent modal');
 					showConsentModal = true;
 				} else if (hasProlificPid && value.consent_given === true) {
-					// User has consented, ensure modal is hidden
-					console.log('[CONSENT DEBUG] Subscription: Hiding modal - consent already given');
 					showConsentModal = false;
-				} else {
-					console.log('[CONSENT DEBUG] Subscription: NOT showing modal - conditions not met');
 				}
 
 				$socket?.off('events', chatEventHandler);
@@ -803,7 +789,6 @@
 		let backendConfig = null;
 		try {
 			backendConfig = await getBackendConfig();
-			console.log('Backend config:', backendConfig);
 		} catch (error) {
 			console.error('Error loading backend config:', error);
 		}
@@ -852,25 +837,11 @@
 						const prolificPidFromUser = sessionUser.prolific_pid;
 						const prolificPidFromStorage = localStorage.getItem('prolificPid');
 
-						console.log('[CONSENT DEBUG] Checking consent requirement:', {
-							prolificPidFromUser,
-							prolificPidFromStorage,
-							urlProlificPid,
-							consent_given: sessionUser.consent_given,
-							consent_given_type: typeof sessionUser.consent_given
-						});
-
 						const hasProlificPid = prolificPidFromUser || prolificPidFromStorage || urlProlificPid;
 						const needsConsent =
 							sessionUser.consent_given === null ||
 							sessionUser.consent_given === false ||
 							sessionUser.consent_given === undefined;
-
-						console.log('[CONSENT DEBUG] Decision:', {
-							hasProlificPid,
-							needsConsent,
-							willShowModal: hasProlificPid && needsConsent
-						});
 
 						if (hasProlificPid && needsConsent) {
 							// Ensure Prolific IDs are in localStorage for consent submission
@@ -881,10 +852,7 @@
 								if (studyId) localStorage.setItem('prolificStudyId', studyId);
 								if (sessionId) localStorage.setItem('prolificSessionId', sessionId);
 							}
-							console.log('[CONSENT DEBUG] Showing consent modal');
 							showConsentModal = true;
-						} else {
-							console.log('[CONSENT DEBUG] NOT showing consent modal - conditions not met');
 						}
 					} else {
 						// Redirect Invalid Session User to /auth Page
@@ -1028,6 +996,9 @@
 
 	onDestroy(() => {
 		window.removeEventListener('message', windowMessageEventHandler);
+		if (visibilityChangeHandler) {
+			document.removeEventListener('visibilitychange', visibilityChangeHandler);
+		}
 		bc.close();
 	});
 </script>

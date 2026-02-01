@@ -324,6 +324,8 @@
 								<option value="pending">{$i18n.t('pending')}</option>
 								<option value="user">{$i18n.t('user')}</option>
 								<option value="admin">{$i18n.t('admin')}</option>
+								<option value="parent">{$i18n.t('parent')}</option>
+								<option value="child">{$i18n.t('child')}</option>
 							</select>
 						</div>
 					</div>

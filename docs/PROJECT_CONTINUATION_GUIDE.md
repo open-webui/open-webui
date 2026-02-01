@@ -446,6 +446,21 @@ The following Svelte/vite-plugin-svelte warnings were addressed to improve acces
 
 ---
 
+### Parent and Child Roles Added (2026-01-31)
+
+Parent and Child roles are now available in Admin user management. The backend already supported these roles; the frontend was updated to expose them.
+
+**Changes**:
+
+- **Add User modal** (`AddUserModal.svelte`): Added Parent and Child to role select; CSV import now accepts `parent` and `child` in the Role column
+- **Edit User modal** (`EditUserModal.svelte`): Added Parent and Child to role select
+- **Default User Role** (`General.svelte`): Added Parent and Child to Settings > Authentication > Default User Role
+- **i18n**: Added `parent`, `child`, `Parent`, `Child` translations to `en-US/translation.json`
+
+**Backend sync**: No backend changes required. Roles are passed through `POST /auths/add` and `PUT /users/...` to the database; `backend/open_webui/utils/auth.py` already accepts `parent` and `child` in `get_current_user`.
+
+---
+
 ### Recently Merged (2026-01-30)
 
 **PR #10: Feature: Separate Quiz Workflow** ✅ **COMPLETE**

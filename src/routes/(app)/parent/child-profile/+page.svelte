@@ -84,7 +84,7 @@
 							d="M15 19l-7-7 7-7"
 						></path>
 					</svg>
-					<span>Back to Dashboard</span>
+					<span>Back</span>
 				</button>
 				{#if profileSaved}
 					<button
@@ -102,10 +102,11 @@
 		</div>
 	</nav>
 
-	<!-- Child Profile Form Component (without research fields) -->
+	<!-- Child Profile Form Component (without research fields or personality traits) -->
 	<ChildProfileForm
 		showResearchFields={false}
 		requireResearchFields={false}
+		showPersonalityTraits={false}
 		onProfileCreated={handleProfileCreated}
 		onProfileSaved={handleProfileSaved}
 		onChildSelected={handleChildSelected}

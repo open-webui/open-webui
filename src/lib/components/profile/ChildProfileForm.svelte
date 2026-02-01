@@ -17,6 +17,7 @@
 	// Props
 	export let showResearchFields: boolean = false;
 	export let requireResearchFields: boolean = false;
+	export let showPersonalityTraits: boolean = true;
 	export let allowEmptyProfiles: boolean = true;
 	export let initialSelectedIndex: number = -1;
 
@@ -317,8 +318,11 @@
 		if (!childGender) {
 			return 'Please select a gender';
 		}
-		if (!childCharacteristics.trim()) {
+		if (showPersonalityTraits && !childCharacteristics.trim()) {
 			return 'Please enter additional characteristics & interests';
+		}
+		if (showPersonalityTraits && selectedSubCharacteristics.length === 0) {
+			return 'Please select at least one personality trait';
 		}
 
 		if (showResearchFields && requireResearchFields) {
@@ -890,7 +894,8 @@
 							{/if}
 						</div>
 
-						<!-- Personality Traits Selection -->
+						<!-- Personality Traits Selection (hidden when showPersonalityTraits is false) -->
+						{#if showPersonalityTraits}
 						<div>
 							<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 								Personality Traits <span class="text-red-500">*</span>
@@ -1015,6 +1020,7 @@
 								></textarea>
 							</div>
 						</div>
+						{/if}
 
 						<!-- Research Fields (Conditional) -->
 						{#if showResearchFields}

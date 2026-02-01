@@ -148,7 +148,7 @@
 			await goto('/auth');
 			return;
 		}
-		if (!['user', 'admin'].includes($user?.role)) {
+		if (!['user', 'admin', 'parent', 'child'].includes($user?.role)) {
 			return;
 		}
 
@@ -486,7 +486,7 @@
 		<div
 			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 		>
-			{#if !['user', 'admin'].includes($user?.role)}
+			{#if !['user', 'admin', 'parent', 'child'].includes($user?.role)}
 				<AccountPending />
 			{:else}
 				{#if localDBChats.length > 0}

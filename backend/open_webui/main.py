@@ -93,6 +93,7 @@ from open_webui.routers import (
     users,
     utils,
     scim,
+    child_profiles,
 )
 from open_webui.routers import workflow
 
@@ -1438,6 +1439,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profiles"])
 app.include_router(workflow.router, prefix="/api/v1", tags=["workflow"])
 
 # SCIM 2.0 API for identity management
