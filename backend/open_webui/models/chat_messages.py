@@ -331,6 +331,63 @@ class ChatMessageTable:
                 for row in results
             }
 
+    def get_token_usage_by_user(
+        self,
+        start_date: Optional[int] = None,
+        end_date: Optional[int] = None,
+        db: Optional[Session] = None,
+    ) -> dict[str, dict]:
+        """Aggregate token usage by user using database-level aggregation."""
+        with get_db_context(db) as db:
+            from sqlalchemy import func, cast, Integer
+
+            dialect = db.bind.dialect.name
+
+            if dialect == "sqlite":
+                input_tokens = cast(
+                    func.json_extract(ChatMessage.usage, "$.input_tokens"), Integer
+                )
+                output_tokens = cast(
+                    func.json_extract(ChatMessage.usage, "$.output_tokens"), Integer
+                )
+            elif dialect == "postgresql":
+                input_tokens = cast(
+                    ChatMessage.usage["input_tokens"].astext, Integer
+                )
+                output_tokens = cast(
+                    ChatMessage.usage["output_tokens"].astext, Integer
+                )
+            else:
+                raise NotImplementedError(f"Unsupported dialect: {dialect}")
+
+            query = db.query(
+                ChatMessage.user_id,
+                func.coalesce(func.sum(input_tokens), 0).label("input_tokens"),
+                func.coalesce(func.sum(output_tokens), 0).label("output_tokens"),
+                func.count(ChatMessage.id).label("message_count"),
+            ).filter(
+                ChatMessage.role == "assistant",
+                ChatMessage.user_id.isnot(None),
+                ChatMessage.usage.isnot(None),
+            )
+
+            if start_date:
+                query = query.filter(ChatMessage.created_at >= start_date)
+            if end_date:
+                query = query.filter(ChatMessage.created_at <= end_date)
+
+            results = query.group_by(ChatMessage.user_id).all()
+
+            return {
+                row.user_id: {
+                    "input_tokens": row.input_tokens,
+                    "output_tokens": row.output_tokens,
+                    "total_tokens": row.input_tokens + row.output_tokens,
+                    "message_count": row.message_count,
+                }
+                for row in results
+            }
+
     def get_message_count_by_user(
         self,
         start_date: Optional[int] = None,

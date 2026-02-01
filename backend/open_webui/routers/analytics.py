@@ -33,6 +33,9 @@ class UserAnalyticsEntry(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     count: int
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
 
 
 class UserAnalyticsResponse(BaseModel):
@@ -70,10 +73,13 @@ async def get_user_analytics(
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
-    """Get message counts per user with user info."""
+    """Get message counts and token usage per user with user info."""
     from open_webui.models.users import Users
     
     counts = ChatMessages.get_message_count_by_user(
+        start_date=start_date, end_date=end_date, db=db
+    )
+    token_usage = ChatMessages.get_token_usage_by_user(
         start_date=start_date, end_date=end_date, db=db
     )
     
@@ -84,11 +90,15 @@ async def get_user_analytics(
     users = []
     for user_id in top_user_ids:
         u = user_info.get(user_id)
+        tokens = token_usage.get(user_id, {})
         users.append(UserAnalyticsEntry(
             user_id=user_id,
             name=u.name if u else None,
             email=u.email if u else None,
-            count=counts[user_id]
+            count=counts[user_id],
+            input_tokens=tokens.get("input_tokens", 0),
+            output_tokens=tokens.get("output_tokens", 0),
+            total_tokens=tokens.get("total_tokens", 0),
         ))
     
     return UserAnalyticsResponse(users=users)

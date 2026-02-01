@@ -310,6 +310,7 @@
 									{/if}
 								</div>
 							</th>
+							<th scope="col" class="px-2.5 py-2 text-right">{$i18n.t('Tokens')}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -327,10 +328,11 @@
 									</div>
 								</td>
 								<td class="px-3 py-1 text-right">{user.count.toLocaleString()}</td>
+								<td class="px-3 py-1 text-right">{formatNumber(user.total_tokens ?? 0)}</td>
 							</tr>
 						{/each}
 						{#if sortedUsers.length === 0}
-							<tr><td colspan="3" class="px-3 py-2 text-center text-gray-400">{$i18n.t('No data')}</td></tr>
+							<tr><td colspan="4" class="px-3 py-2 text-center text-gray-400">{$i18n.t('No data')}</td></tr>
 						{/if}
 					</tbody>
 				</table>
