@@ -592,10 +592,8 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
 
                 return {"version": lowest_version["version"]}
             else:
-                raise HTTPException(
-                    status_code=500,
-                    detail=ERROR_MESSAGES.OLLAMA_NOT_FOUND,
-                )
+                # Ollama not running or unreachable — return 200 so frontend doesn't treat as fatal
+                return {"version": False}
         else:
             url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
 

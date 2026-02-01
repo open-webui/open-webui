@@ -74,7 +74,14 @@ async def get_all_base_models(request: Request, user: UserModel = None):
         openai_task, ollama_task, function_task
     )
 
-    return function_models + openai_models + ollama_models
+    base_models = function_models + openai_models + ollama_models
+    if len(base_models) == 0:
+        log.warning(
+            "No models loaded. Check: 1) .env at project root with OPENAI_API_KEY and/or "
+            "OLLAMA_BASE_URL (e.g. http://localhost:11434); 2) Backend restarted after editing .env; "
+            "3) Admin > Settings > Connections if config is stored in DB."
+        )
+    return base_models
 
 
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):

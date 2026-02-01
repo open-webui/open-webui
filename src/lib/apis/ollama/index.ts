@@ -171,8 +171,6 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 };
 
 export const getOllamaVersion = async (token: string, urlIdx?: number) => {
-	let error = null;
-
 	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
 		method: 'GET',
 		headers: {
@@ -182,22 +180,16 @@ export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const err = await res.json().catch(() => ({}));
+				throw err;
+			}
 			return res.json();
 		})
-		.catch((err) => {
-			console.error(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
+		.catch(() => {
+			// Ollama not running or unreachable — treat as no version, don't throw
+			return { version: false };
 		});
-
-	if (error) {
-		throw error;
-	}
 
 	return res?.version ?? false;
 };

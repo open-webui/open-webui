@@ -1,6 +1,6 @@
 # Project Continuation Guide
 
-**Last Updated**: 2026-01-30  
+**Last Updated**: 2026-01-31  
 **Project**: DSL KidsGPT Open WebUI  
 **Repository**: https://github.com/jjdrisco/DSL-kidsgpt-open-webui
 
@@ -427,6 +427,25 @@ python -m black . --exclude ".venv/|/venv/"
 
 ## Recent Changes & Context
 
+### Svelte Compiler Warnings Fixed (2026-01-31)
+
+The following Svelte/vite-plugin-svelte warnings were addressed to improve accessibility and code quality:
+
+| Issue | File | Fix Applied |
+|-------|------|-------------|
+| **a11y_consider_explicit_label** | `Message.svelte` | Added `aria-label={$i18n.t('Delete message')}` to icon-only delete button |
+| **a11y_consider_explicit_label** | `UserList.svelte` | Added `aria-label` to icon-only buttons (Chats, Edit User, Delete User) |
+| **element_invalid_self_closing_tag** | `auth/+page.svelte` | Changed `<div ... />` to `<div ...></div>` for drag-region |
+| **element_invalid_self_closing_tag** | `UserList.svelte` | Changed `<th ... />` to `<th ...></th>` for empty table header |
+| **css_unused_selector** | `EditUserModal.svelte` | Removed unused `.tabs`, `.tabs::-webkit-scrollbar`, `input[type='number']` and spin-button CSS (form has no number inputs or tabs) |
+
+**Pattern for similar fixes elsewhere**:
+- Icon-only buttons/links: add `aria-label` or `title` describing the action
+- Non-void HTML elements (`div`, `span`, `th`, etc.): use explicit closing tags `</tag>` instead of self-closing `/>`
+- Unused CSS: remove selectors that don't match any element in the component
+
+---
+
 ### Recently Merged (2026-01-30)
 
 **PR #10: Feature: Separate Quiz Workflow** ✅ **COMPLETE**
@@ -571,6 +590,36 @@ pip install -r requirements.txt
 lsof -i :8080
 ```
 
+**Problem**: `sqlite3.OperationalError: no such column: channel.is_private`
+
+The database is missing columns from the channel migration. Apply them manually (SQLite, default DB at `backend/data/webui.db`):
+
+```bash
+sqlite3 backend/data/webui.db "
+ALTER TABLE channel ADD COLUMN is_private BOOLEAN;
+ALTER TABLE channel ADD COLUMN archived_at BIGINT;
+ALTER TABLE channel ADD COLUMN archived_by TEXT;
+ALTER TABLE channel ADD COLUMN deleted_at BIGINT;
+ALTER TABLE channel ADD COLUMN deleted_by TEXT;
+ALTER TABLE channel ADD COLUMN updated_by TEXT;
+ALTER TABLE channel_member ADD COLUMN role TEXT;
+ALTER TABLE channel_member ADD COLUMN invited_by TEXT;
+ALTER TABLE channel_member ADD COLUMN invited_at BIGINT;
+"
+```
+(Ignore "duplicate column name" if a column already exists.)
+
+**Problem**: Model selector shows "Select a model" but no model choices
+
+Models come from **OpenAI** and/or **Ollama** as configured in the backend.
+
+1. **`.env` location**: The backend loads `.env` from the **project root** (the folder that contains `backend/` and `src/`). If your `.env` is inside `backend/`, move it to the project root.
+2. **Required variables** (in project root `.env`): `OPENAI_API_KEY=sk-...` for OpenAI models; `OLLAMA_BASE_URL=http://localhost:11434` for Ollama (and ensure Ollama is running). To use **OpenAI only**, set `ENABLE_OLLAMA_API=false` and `ENABLE_OPENAI_API=true`.
+3. **Default model**: Use a **plain comma-separated** value, e.g. `DEFAULT_MODELS=gpt-5.2-chat-latest` (no brackets or quotes around the value). The chat UI applies this when models load; if models load after the page, a reactive in `Chat.svelte` will set the selection to the default or first available model.
+4. **Restart the backend** after changing `.env`; config is read at startup.
+5. **If still empty**: Go to **Admin** → **Settings** → **Connections** and ensure at least one connection (OpenAI or Ollama) is enabled with a valid API key / URL. Settings saved there are stored in the DB and can override env.
+6. **Backend logs**: Look for `No models loaded. Check: ...` when opening the chat page to confirm the backend is not seeing any providers.
+
 **Problem**: Cypress tests fail
 
 ```bash
@@ -640,5 +689,5 @@ When starting work on this project:
 
 ---
 
-**Last Updated**: 2026-01-30  
+**Last Updated**: 2026-01-31  
 **Maintained By**: Project Contributors

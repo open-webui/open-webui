@@ -53,6 +53,7 @@
 	<div class=" pt-1">
 		<button
 			class=" group-hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300 transition"
+			aria-label={$i18n.t('Delete message')}
 			on:click={() => {
 				onDelete();
 			}}

@@ -4,6 +4,9 @@
 	import { user } from '$lib/stores';
 	import { getUserType } from '$lib/utils';
 	import { getWorkflowState } from '$lib/apis/workflow';
+	import Chat from '$lib/components/chat/Chat.svelte';
+
+	let showChat = false;
 
 	onMount(async () => {
 		if (!$user) {
@@ -20,12 +23,12 @@
 		}
 
 		if (userType === 'child') {
-			goto('/');
+			showChat = true;
 			return;
 		}
 
 		if (userType === 'admin') {
-			goto('/');
+			showChat = true;
 			return;
 		}
 
@@ -51,3 +54,7 @@
 		goto('/assignment-instructions');
 	});
 </script>
+
+{#if showChat}
+	<Chat />
+{/if}

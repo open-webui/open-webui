@@ -335,7 +335,7 @@
 						</div>
 					</th>
 
-					<th scope="col" class="px-2.5 py-2 text-right" />
+					<th scope="col" class="px-2.5 py-2 text-right"></th>
 				</tr>
 			</thead>
 			<tbody class="">
@@ -395,6 +395,7 @@
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											aria-label={$i18n.t('Chats')}
 											on:click={async () => {
 												showUserChatsModal = !showUserChatsModal;
 												selectedUser = user;
@@ -435,6 +436,7 @@
 								<Tooltip content={$i18n.t('Edit User')}>
 									<button
 										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										aria-label={$i18n.t('Edit User')}
 										on:click={async () => {
 											showEditUserModal = !showEditUserModal;
 											selectedUser = user;
@@ -461,6 +463,7 @@
 									<Tooltip content={$i18n.t('Delete User')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											aria-label={$i18n.t('Delete User')}
 											on:click={async () => {
 												showDeleteConfirmDialog = true;
 												selectedUser = user;
