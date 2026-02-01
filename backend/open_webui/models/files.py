@@ -2,12 +2,16 @@ import logging
 import time
 from typing import Optional
 
+
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
 
+
 log = logging.getLogger(__name__)
+
 
 ####################
 # Files DB Schema
@@ -178,8 +182,43 @@ class FilesTable:
                 return None
 
     def get_files(self, db: Optional[Session] = None) -> list[FileModel]:
+        """
+        Get all files without pagination (legacy method for backward compatibility).
+        """
         with get_db_context(db) as db:
             return [FileModel.model_validate(file) for file in db.query(File).all()]
+
+    def get_files_paginated(
+        self, skip: int = 0, limit: int = 50, db: Optional[Session] = None
+    ) -> dict:
+        """
+        Get all files with pagination.
+        
+        Args:
+            skip: Number of files to skip
+            limit: Maximum number of files to return
+            db: Optional database session
+            
+        Returns:
+            Dictionary with 'items' (list of FileModel) and 'total' (total count)
+        """
+        with get_db_context(db) as db:
+            # Get total count
+            total = db.query(func.count(File.id)).scalar()
+            
+            # Get paginated results
+            files = (
+                db.query(File)
+                .order_by(File.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+            
+            return {
+                "items": [FileModel.model_validate(file) for file in files],
+                "total": total,
+            }
 
     def check_access_by_user_id(
         self, id, user_id, permission="write", db: Optional[Session] = None
@@ -227,11 +266,48 @@ class FilesTable:
     def get_files_by_user_id(
         self, user_id: str, db: Optional[Session] = None
     ) -> list[FileModel]:
+        """
+        Get all files for a user without pagination (legacy method for backward compatibility).
+        """
         with get_db_context(db) as db:
             return [
                 FileModel.model_validate(file)
                 for file in db.query(File).filter_by(user_id=user_id).all()
             ]
+
+    def get_files_by_user_id_paginated(
+        self, user_id: str, skip: int = 0, limit: int = 50, db: Optional[Session] = None
+    ) -> dict:
+        """
+        Get files for a specific user with pagination.
+        
+        Args:
+            user_id: User ID to filter files
+            skip: Number of files to skip
+            limit: Maximum number of files to return
+            db: Optional database session
+            
+        Returns:
+            Dictionary with 'items' (list of FileModel) and 'total' (total count)
+        """
+        with get_db_context(db) as db:
+            # Get total count for this user
+            total = db.query(func.count(File.id)).filter_by(user_id=user_id).scalar()
+            
+            # Get paginated results
+            files = (
+                db.query(File)
+                .filter_by(user_id=user_id)
+                .order_by(File.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+            
+            return {
+                "items": [FileModel.model_validate(file) for file in files],
+                "total": total,
+            }
 
     @staticmethod
     def _glob_to_like_pattern(glob: str) -> str:
@@ -266,6 +342,8 @@ class FilesTable:
     ) -> list[FileModel]:
         """
         Search files with glob pattern matching, optional user filter, and pagination.
+        
+        Legacy method - returns only the list. Use search_files_paginated for total count.
 
         Args:
             user_id: Filter by user ID. If None, returns files for all users.
@@ -294,6 +372,55 @@ class FilesTable:
                 .limit(limit)
                 .all()
             ]
+
+    def search_files_paginated(
+        self,
+        user_id: Optional[str] = None,
+        filename: str = "*",
+        skip: int = 0,
+        limit: int = 100,
+        db: Optional[Session] = None,
+    ) -> dict:
+        """
+        Search files with glob pattern matching, optional user filter, and pagination.
+        Returns total count along with results.
+
+        Args:
+            user_id: Filter by user ID. If None, returns files for all users.
+            filename: Glob pattern to match filenames (e.g., "*.txt"). Default "*" matches all.
+            skip: Number of results to skip for pagination.
+            limit: Maximum number of results to return.
+            db: Optional database session.
+
+        Returns:
+            Dictionary with 'items' (list of FileModel) and 'total' (total count matching the filter)
+        """
+        with get_db_context(db) as db:
+            # Build base query
+            query = db.query(File)
+
+            if user_id:
+                query = query.filter_by(user_id=user_id)
+
+            pattern = self._glob_to_like_pattern(filename)
+            if pattern != "%":
+                query = query.filter(File.filename.ilike(pattern, escape="\\"))
+
+            # Get total count matching the filters
+            total = query.count()
+
+            # Get paginated results
+            files = (
+                query.order_by(File.updated_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+
+            return {
+                "items": [FileModel.model_validate(file) for file in files],
+                "total": total,
+            }
 
     def update_file_by_id(
         self, id: str, form_data: FileUpdateForm, db: Optional[Session] = None

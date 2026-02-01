@@ -44,13 +44,11 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
 
 
-
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 
 
 from open_webui.storage.provider import Storage
-
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -65,11 +63,25 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+############################
+# Constants
+############################
+
+PAGE_ITEM_COUNT = 50  # Default page size for pagination
+
+
+############################
+# Response Models
+############################
+
+class FileListResponse(BaseModel):
+    items: list[FileModelResponse]
+    total: int
+
 
 ############################
 # Check if the current user has access to a file through any knowledge bases the user may be in.
 ############################
-
 
 
 # TODO: Optimize this function to use the knowledge_file table for faster lookups.
@@ -87,7 +99,6 @@ def has_access_to_file(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-
     # Check if the file is associated with any knowledge bases the user has access to
     knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id, db=db)
     user_group_ids = {
@@ -99,7 +110,6 @@ def has_access_to_file(
         ):
             return True
 
-
     knowledge_base_id = file.meta.get("collection_name") if file.meta else None
     if knowledge_base_id:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(
@@ -109,12 +119,10 @@ def has_access_to_file(
             if knowledge_base.id == knowledge_base_id:
                 return True
 
-
     # Check if the file is associated with any channels the user has access to
     channels = Channels.get_channels_by_file_id_and_user_id(file_id, user.id, db=db)
     if access_type == "read" and channels:
         return True
-
 
     # Check if the file is associated with any chats the user has access to
     # TODO: Granular access control for chats
@@ -122,15 +130,12 @@ def has_access_to_file(
     if chats:
         return True
 
-
     return False
-
 
 
 ############################
 # Upload File
 ############################
-
 
 
 def process_uploaded_file(
@@ -149,7 +154,6 @@ def process_uploaded_file(
                     request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
                 )
 
-
                 if strict_match_mime_type(
                     stt_supported_content_types, file.content_type
                 ):
@@ -157,7 +161,6 @@ def process_uploaded_file(
                     result = transcribe(
                         request, file_path_processed, file_metadata, user
                     )
-
 
                     process_file(
                         request,
@@ -191,7 +194,6 @@ def process_uploaded_file(
                     db=db_session,
                 )
 
-
         except Exception as e:
             log.error(f"Error processing file: {file_item.id}")
             Files.update_file_data_by_id(
@@ -203,13 +205,11 @@ def process_uploaded_file(
                 db=db_session,
             )
 
-
     if db:
         _process_handler(db)
     else:
         with SessionLocal() as db_session:
             _process_handler(db_session)
-
 
 
 @router.post("/", response_model=FileModelResponse)
@@ -235,7 +235,6 @@ def upload_file(
     )
 
 
-
 def upload_file_handler(
     request: Request,
     file: UploadFile = File(...),
@@ -248,7 +247,6 @@ def upload_file_handler(
 ):
     log.info(f"file.content_type: {file.content_type} {process}")
 
-
     if isinstance(metadata, str):
         try:
             metadata = json.loads(metadata)
@@ -259,22 +257,18 @@ def upload_file_handler(
             )
     file_metadata = metadata if metadata else {}
 
-
     try:
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
-
 
         file_extension = os.path.splitext(filename)[1]
         # Remove the leading dot from the file extension
         file_extension = file_extension[1:] if file_extension else ""
 
-
         if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
             request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
                 ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
             ]
-
 
             if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
                 raise HTTPException(
@@ -283,7 +277,6 @@ def upload_file_handler(
                         f"File type {file_extension} is not allowed"
                     ),
                 )
-
 
         # replace filename with uuid
         id = str(uuid.uuid4())
@@ -299,7 +292,6 @@ def upload_file_handler(
                 "OpenWebUI-File-Id": id,
             },
         )
-
 
         file_item = Files.insert_new_file(
             user.id,
@@ -322,7 +314,6 @@ def upload_file_handler(
             db=db,
         )
 
-
         if "channel_id" in file_metadata:
             channel = Channels.get_channel_by_id_and_user_id(
                 file_metadata["channel_id"], user.id, db=db
@@ -331,7 +322,6 @@ def upload_file_handler(
                 Channels.add_file_to_channel_by_id(
                     channel.id, file_item.id, user.id, db=db
                 )
-
 
         if process:
             if background_tasks and process_in_background:
@@ -365,7 +355,6 @@ def upload_file_handler(
                     detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
                 )
 
-
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -374,33 +363,44 @@ def upload_file_handler(
         )
 
 
-
 ############################
 # List Files
 ############################
 
 
-
-@router.get("/", response_model=list[FileModelResponse])
+@router.get("/", response_model=FileListResponse)
 async def list_files(
     user=Depends(get_verified_user),
-    content: bool = Query(True),
+    content: bool = Query(True, description="Include file content in response"),
+    page: Optional[int] = Query(1, ge=1, description="Page number (starts at 1)"),
+    limit: Optional[int] = Query(PAGE_ITEM_COUNT, ge=1, le=200, description="Number of files per page"),
     db: Session = Depends(get_session),
 ):
+    """
+    List files with pagination support.
+    
+    - **page**: Page number (starts at 1)
+    - **limit**: Number of files per page (default: 50, max: 200)
+    - **content**: Include file content in response (default: true)
+    """
+    page = max(page, 1)
+    skip = (page - 1) * limit
+
     if user.role == "admin":
-        files = Files.get_files(db=db)
+        result = Files.get_files_paginated(skip=skip, limit=limit, db=db)
     else:
-        files = Files.get_files_by_user_id(user.id, db=db)
+        result = Files.get_files_by_user_id_paginated(user.id, skip=skip, limit=limit, db=db)
 
-
+    # Remove content if requested
     if not content:
-        for file in files:
-            if "content" in file.data:
+        for file in result["items"]:
+            if file.data and "content" in file.data:
                 del file.data["content"]
 
-
-    return files
-
+    return FileListResponse(
+        items=result["items"],
+        total=result["total"]
+    )
 
 
 ############################
@@ -408,32 +408,36 @@ async def list_files(
 ############################
 
 
-
-@router.get("/search", response_model=list[FileModelResponse])
+@router.get("/search", response_model=FileListResponse)
 async def search_files(
     filename: str = Query(
         ...,
         description="Filename pattern to search for. Supports wildcards such as '*.txt'",
     ),
-    content: bool = Query(True),
+    content: bool = Query(True, description="Include file content in response"),
     view_option: Optional[str] = Query(None, description="Option to control response content, e.g. 'metadata_only'"),
-    skip: int = Query(0, ge=0, description="Number of files to skip"),
-    limit: int = Query(
-        100, ge=1, le=1000, description="Maximum number of files to return"
-    ),
+    page: Optional[int] = Query(1, ge=1, description="Page number (starts at 1)"),
+    limit: Optional[int] = Query(PAGE_ITEM_COUNT, ge=1, le=200, description="Number of files per page"),
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
     """
-    Search for files by filename with support for wildcard patterns.
-    Uses SQL-based filtering with pagination for better performance.
+    Search for files by filename with support for wildcard patterns and pagination.
+    
+    - **filename**: Filename pattern (supports wildcards like *.txt)
+    - **page**: Page number (starts at 1)
+    - **limit**: Number of files per page (default: 50, max: 200)
+    - **content**: Include file content in response (default: true)
+    - **view_option**: Set to 'metadata_only' to exclude content
     """
+    page = max(page, 1)
+    skip = (page - 1) * limit
+
     # Determine user_id: null for admin (search all), user.id for regular users
     user_id = None if user.role == "admin" else user.id
 
-
     # Use optimized database query with pagination
-    files = Files.search_files(
+    result = Files.search_files_paginated(
         user_id=user_id,
         filename=filename,
         skip=skip,
@@ -441,8 +445,7 @@ async def search_files(
         db=db,
     )
 
-
-    if not files:
+    if not result["items"]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No files found matching the pattern.",
@@ -450,19 +453,19 @@ async def search_files(
 
     # Apply content stripping if content is False OR view_option is metadata_only
     if not content or view_option == "metadata_only":
-        for file in files:
+        for file in result["items"]:
             if file.data and "content" in file.data:
                 del file.data["content"]
 
-
-    return files
-
+    return FileListResponse(
+        items=result["items"],
+        total=result["total"]
+    )
 
 
 ############################
 # Delete All Files
 ############################
-
 
 
 @router.delete("/all")
@@ -489,11 +492,9 @@ async def delete_all_files(
         )
 
 
-
 ############################
 # Get File By Id
 ############################
-
 
 
 @router.get("/{id}", response_model=Optional[FileModel])
@@ -502,13 +503,11 @@ async def get_file_by_id(
 ):
     file = Files.get_file_by_id(id, db=db)
 
-
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
 
     if (
         file.user_id == user.id
@@ -523,7 +522,6 @@ async def get_file_by_id(
         )
 
 
-
 @router.get("/{id}/process/status")
 async def get_file_process_status(
     id: str,
@@ -533,13 +531,11 @@ async def get_file_process_status(
 ):
     file = Files.get_file_by_id(id, db=db)
 
-
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
 
     if (
         file.user_id == user.id
@@ -548,7 +544,6 @@ async def get_file_process_status(
     ):
         if stream:
             MAX_FILE_PROCESSING_DURATION = 3600 * 2
-
 
             async def event_stream(file_id):
                 # NOTE: We intentionally do NOT capture the request's db session here.
@@ -560,26 +555,22 @@ async def get_file_process_status(
                         data = file_item.model_dump().get("data", {})
                         status = data.get("status")
 
-
                         if status:
                             event = {"status": status}
                             if status == "failed":
                                 event["error"] = data.get("error")
 
-
-                            yield f"data: {json.dumps(event)}\n\n"
+                            yield f"data: {json.dumps(event)}\\n\\n"
                             if status in ("completed", "failed"):
                                 break
                         else:
                             # Legacy
                             break
                     else:
-                        yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
+                        yield f"data: {json.dumps({'status': 'not_found'})}\\n\\n"
                         break
 
-
                     await asyncio.sleep(1)
-
 
             return StreamingResponse(
                 event_stream(file.id),
@@ -594,11 +585,9 @@ async def get_file_process_status(
         )
 
 
-
 ############################
 # Get File Data Content By Id
 ############################
-
 
 
 @router.get("/{id}/data/content")
@@ -607,13 +596,11 @@ async def get_file_data_content_by_id(
 ):
     file = Files.get_file_by_id(id, db=db)
 
-
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
 
     if (
         file.user_id == user.id
@@ -628,16 +615,13 @@ async def get_file_data_content_by_id(
         )
 
 
-
 ############################
 # Update File Data Content By Id
 ############################
 
 
-
 class ContentForm(BaseModel):
     content: str
-
 
 
 @router.post("/{id}/data/content/update")
@@ -650,13 +634,11 @@ async def update_file_data_content_by_id(
 ):
     file = Files.get_file_by_id(id, db=db)
 
-
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
 
     if (
         file.user_id == user.id
@@ -674,7 +656,6 @@ async def update_file_data_content_by_id(
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
 
-
         return {"content": file.data.get("content", "")}
     else:
         raise HTTPException(
@@ -683,11 +664,9 @@ async def update_file_data_content_by_id(
         )
 
 
-
 ############################
 # Get File Content By Id
 ############################
-
 
 
 @router.get("/{id}/content")
@@ -699,13 +678,11 @@ async def get_file_content_by_id(
 ):
     file = Files.get_file_by_id(id, db=db)
 
-
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
 
     if (
         file.user_id == user.id
@@ -716,19 +693,16 @@ async def get_file_content_by_id(
             file_path = Storage.get_file(file.path)
             file_path = Path(file_path)
 
-
             # Check if the file already exists in the cache
             if file_path.is_file():
                 # Handle Unicode filenames
                 filename = file.meta.get("name", file.filename)
                 encoded_filename = quote(filename)  # RFC5987 encoding
 
-
                 content_type = file.meta.get("content_type")
                 filename = file.meta.get("name", file.filename)
                 encoded_filename = quote(filename)
                 headers = {}
-
 
                 if attachment:
                     headers["Content-Disposition"] = (
@@ -747,9 +721,7 @@ async def get_file_content_by_id(
                             f"attachment; filename*=UTF-8''{encoded_filename}"
                         )
 
-
                 return FileResponse(file_path, headers=headers, media_type=content_type)
-
 
             else:
                 raise HTTPException(
@@ -770,13 +742,11 @@ async def get_file_content_by_id(
         )
 
 
-
 @router.get("/{id}/content/html")
 async def get_html_file_content_by_id(
     id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     file = Files.get_file_by_id(id, db=db)
-
 
     if not file:
         raise HTTPException(
@@ -784,14 +754,12 @@ async def get_html_file_content_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-
     file_user = Users.get_user_by_id(file.user_id, db=db)
     if not file_user.role == "admin":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
 
     if (
         file.user_id == user.id
@@ -801,7 +769,6 @@ async def get_html_file_content_by_id(
         try:
             file_path = Storage.get_file(file.path)
             file_path = Path(file_path)
-
 
             # Check if the file already exists in the cache
             if file_path.is_file():
@@ -826,20 +793,17 @@ async def get_html_file_content_by_id(
         )
 
 
-
 @router.get("/{id}/content/{file_name}")
 async def get_file_content_by_id(
     id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     file = Files.get_file_by_id(id, db=db)
 
-
     if not file:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
 
     if (
         file.user_id == user.id
@@ -848,7 +812,6 @@ async def get_file_content_by_id(
     ):
         file_path = file.path
 
-
         # Handle Unicode filenames
         filename = file.meta.get("name", file.filename)
         encoded_filename = quote(filename)  # RFC5987 encoding
@@ -856,11 +819,9 @@ async def get_file_content_by_id(
             "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
         }
 
-
         if file_path:
             file_path = Storage.get_file(file_path)
             file_path = Path(file_path)
-
 
             # Check if the file already exists in the cache
             if file_path.is_file():
@@ -871,7 +832,7 @@ async def get_file_content_by_id(
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
         else:
-            # File path doesn’t exist, return the content as .txt if possible
+            # File path doesn't exist, return the content as .txt if possible
             file_content = file.content.get("content", "")
             file_name = file.filename
 
@@ -890,11 +851,9 @@ async def get_file_content_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-
 ############################
 # Delete File By Id
 ############################
-
 
 @router.delete("/{id}")
 async def delete_file_by_id(
