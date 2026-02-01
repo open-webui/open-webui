@@ -37,6 +37,7 @@ from open_webui.models.files import (
     FileForm,
     FileModel,
     FileModelResponse,
+    FileListResponse, 
     Files,
 )
 from open_webui.models.chats import Chats
@@ -68,15 +69,6 @@ router = APIRouter()
 ############################
 
 PAGE_ITEM_COUNT = 50  # Default page size for pagination
-
-
-############################
-# Response Models
-############################
-
-class FileListResponse(BaseModel):
-    items: list[FileModelResponse]
-    total: int
 
 
 ############################
