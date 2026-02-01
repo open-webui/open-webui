@@ -497,7 +497,9 @@ async def get_users(
     if filter:
         # Simple filter parsing - supports userName eq "email"
         # In production, you'd want a more robust filter parser
-        if "userName eq" in filter:
+        # Note: filter via email is case sensitive per filter
+        #       specs
+        if "emails eq" in filter:
             email = filter.split('"')[1]
             user = Users.get_user_by_email(email, db=db)
             users_list = [user] if user else []
