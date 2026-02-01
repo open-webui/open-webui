@@ -346,6 +346,7 @@ def user_to_scim(user: UserModel, request: Request, db=None) -> SCIMUser:
             ).isoformat(),
             location=f"{request.base_url}api/v1/scim/v2/Users/{user.id}",
         ),
+        externalId=user.get_oauth_sub()
     )
 
 
