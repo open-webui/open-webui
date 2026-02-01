@@ -3042,6 +3042,7 @@ async def process_chat_response(
                 async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal content_blocks
+                    nonlocal usage
 
                     response_tool_calls = []
 

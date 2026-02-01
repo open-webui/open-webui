@@ -140,9 +140,11 @@ class ChatMessageTable:
                     )
                 if "error" in data:
                     existing.error = data.get("error")
-                # Extract usage from info.usage if present
-                info = data.get("info", {})
-                usage = info.get("usage") if info else None
+                # Extract usage - check direct field first, then info.usage
+                usage = data.get("usage")
+                if not usage:
+                    info = data.get("info", {})
+                    usage = info.get("usage") if info else None
                 if usage:
                     existing.usage = usage
                 existing.updated_at = now
@@ -151,9 +153,11 @@ class ChatMessageTable:
                 return ChatMessageModel.model_validate(existing)
             else:
                 # Insert new
-                # Extract usage from info.usage if present
-                info = data.get("info", {})
-                usage = info.get("usage") if info else None
+                # Extract usage - check direct field first, then info.usage
+                usage = data.get("usage")
+                if not usage:
+                    info = data.get("info", {})
+                    usage = info.get("usage") if info else None
                 message = ChatMessage(
                     id=message_id,
                     chat_id=chat_id,
