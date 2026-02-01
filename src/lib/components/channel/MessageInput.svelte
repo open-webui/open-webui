@@ -147,6 +147,14 @@
 			text = text.replaceAll('{{USER_NAME}}', name);
 		}
 
+		if (text.includes('{{USER_EMAIL}}')) {
+			const email = sessionUser?.email || '';
+
+			if (email) {
+				text = text.replaceAll('{{USER_EMAIL}}', email);
+			}
+		}
+
 		if (text.includes('{{USER_BIO}}')) {
 			const bio = sessionUser?.bio || '';
 

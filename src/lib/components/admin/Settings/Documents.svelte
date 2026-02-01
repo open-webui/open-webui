@@ -362,6 +362,30 @@
 									</div>
 								</div>
 							</div>
+
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class=" self-center text-xs font-medium">
+										<Tooltip
+											content={$i18n.t(
+												'Page mode creates one document per page. Single mode combines all pages into one document for better chunking across page boundaries.'
+											)}
+											placement="top-start"
+										>
+											{$i18n.t('PDF Loader Mode')}
+										</Tooltip>
+									</div>
+									<div class="">
+										<select
+											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+											bind:value={RAGConfig.PDF_LOADER_MODE}
+										>
+											<option value="page">{$i18n.t('Page')}</option>
+											<option value="single">{$i18n.t('Single')}</option>
+										</select>
+									</div>
+								</div>
+							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<Tooltip
