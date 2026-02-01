@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.3] - 2026-01-30
+## [0.7.3] - 2026-02-01
 
 ### Added
 
@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧠 Memory updates are now up to 39% faster by eliminating redundant database queries. [#21013](https://github.com/open-webui/open-webui/pull/21013)
 - ⚙️ Filter function loading is now faster by batching database queries instead of fetching each function individually. [#21018](https://github.com/open-webui/open-webui/pull/21018)
 - 🔗 **PLACEHOLDER** Open WebUI now includes internal support for the Open Responses message format specification alongside the OpenAI API format, enabling richer representation of tool calls, reasoning steps, and code execution in message structures. [Commit](https://github.com/open-webui/open-webui/commit/d2c695eb11ddca9fc93499bb0c3fcafcff7099b5), [Commit](https://github.com/open-webui/open-webui/commit/90a057f4005c000bda6ff8703e13e529190af73a), [Commit](https://github.com/open-webui/open-webui/commit/0dc74a8a2e7adb76fb503ef0cd3c02daddd2f4bb)
+- ♿ Screen reader users now hear the password field label only once on the login page, improving form navigation for assistive technology users. [Commit](https://github.com/open-webui/open-webui/commit/1441d0d735c7a1470070b33327e1dd4dc5ca1131)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Catalan, Finnish, German, Japanese, Polish, Portuguese (Brazil), Simplified Chinese, Slovak, Spanish, and Traditional Chinese were enhanced and expanded.
 
@@ -76,13 +77,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔘 Pressing Enter after clicking delete buttons no longer incorrectly retriggers confirmation modals in Firefox. [Commit](https://github.com/open-webui/open-webui/commit/57a2024c58b9c674f2ae08eeb552994ef1796888)
 - 🔒 Users without write permissions are now properly prevented from editing tools, with a clear error message displayed when attempting unauthorized edits. [Commit](https://github.com/open-webui/open-webui/commit/85e92fe3b062ae669985c09495f6ff1baf8176ab), [Commit](https://github.com/open-webui/open-webui/commit/91faa9fd5a1cfc5d3ab531d2d91d28db52bcc702)
 - 🛡️ The "Allow Chat Valves" permission is now properly enforced in the integrations menu, preventing users from bypassing access restrictions. [#20691](https://github.com/open-webui/open-webui/pull/20691)
-- 📝 Audit logs now properly capture all user activity including browser-based sessions, not just API key requests. [#20651](https://github.com/open-webui/open-webui/issues/20651), [Commit](https://github.com/open-webui/open-webui/commit/86e6b2b68b85e958188881785495030de1a30402)
+- 📝 Audit logs now properly capture all user activity including browser-based sessions, not just API key requests. [#20651](https://github.com/open-webui/open-webui/issues/20651), [Commit](https://github.com/open-webui/open-webui/commit/86e6b2b68b85e958188881785495030de1a30402), [Commit](https://github.com/open-webui/open-webui/commit/ee5fd1246cb3f8f16ca5cbb24feeea43b7800dcb)
 - 🎨 Long model names and IDs in the admin panel now truncate properly to prevent visual overflow, with full names visible on hover. [#20696](https://github.com/open-webui/open-webui/pull/20696)
 - 👥 Filtering users in the admin panel now automatically resets to page 1, preventing empty results when searching from pages beyond the first. [#20723](https://github.com/open-webui/open-webui/pull/20723), [Commit](https://github.com/open-webui/open-webui/commit/be75bc506adb048ef11b1612c0e3662511c920d0)
 - 🔎 Searching for users by username now works correctly on Models, Knowledge, and Functions workspace pages, making it easier to find resources owned by specific users. [#20780](https://github.com/open-webui/open-webui/pull/20780)
 - 🗑️ Deleting files now properly removes associated knowledge base embeddings, preventing orphaned data from accumulating. [Commit](https://github.com/open-webui/open-webui/commit/93ed4ae2cda2f4311143e51f586aaa73b83a37a7)
 - 🧹 Memory leaks caused by event listeners not being cleaned up during navigation have been resolved. [#20913](https://github.com/open-webui/open-webui/pull/20913)
 - 🐳 Ollama can now be updated within Docker containers after adding a missing zstd dependency. [#20994](https://github.com/open-webui/open-webui/issues/20994), [#21052](https://github.com/open-webui/open-webui/pull/21052)
+- 📝 The prompts, knowledge, and models workspaces no longer make duplicate API requests when loading. [Commit](https://github.com/open-webui/open-webui/commit/ab5dfbda54664c9278b0d807ba06cad94edd798f), [Commit](https://github.com/open-webui/open-webui/commit/e5dbfc420dd3e7f6ba047a3e11584449ff0742b4)
 - 🛡️ External image loading now validates URLs before fetching to prevent SSRF attacks against local and private network addresses. [Commit](https://github.com/open-webui/open-webui/commit/ce50d9bac4f30b054b09a2fbda52569b73ea591c)
 
 ### Changed
