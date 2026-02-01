@@ -108,6 +108,7 @@ from open_webui.utils.filter import (
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.headers import include_user_info_headers
 
 
 from open_webui.config import (
@@ -126,6 +127,7 @@ from open_webui.env import (
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
     RAG_SYSTEM_CONTEXT,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
 )
 from open_webui.constants import TASKS
 
@@ -1745,6 +1747,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         for key, value in connection_headers.items():
                             headers[key] = value
 
+                    # Add user info headers if enabled
+                    if ENABLE_FORWARD_USER_INFO_HEADERS:
+                        headers = include_user_info_headers(headers, user)
+                        if metadata and metadata.get("chat_id"):
+                            headers["X-OpenWebUI-Chat-Id"] = metadata.get("chat_id")
+
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(
                         url=mcp_server_connection.get("url", ""),
@@ -1815,6 +1823,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 "__model__": models[task_model_id],
                 "__messages__": form_data["messages"],
                 "__files__": metadata.get("files", []),
+                "__metadata__": metadata,
             },
         )
 
