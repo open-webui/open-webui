@@ -72,7 +72,7 @@ msoffcrypto-tool==5.4.2
 nltk==3.9.2
 Markdown==3.10.1
 pypandoc==1.16.2
-pandas==2.3.3
+pandas==3.0.0
 openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.2
