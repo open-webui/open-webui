@@ -103,6 +103,13 @@ class UserModel(BaseModel):
 
     oauth: Optional[dict] = None
 
+    def get_oauth_sub(self) -> Optional[str]:
+        if self.oauth is None:
+            return None
+        return self.oauth.get("oidc", {}).get("sub", None)
+
+
+
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
