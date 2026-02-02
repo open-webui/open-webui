@@ -107,6 +107,7 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
+from open_webui.utils.response import normalize_usage
 from open_webui.utils.mcp.client import MCPClient
 
 
@@ -3362,6 +3363,7 @@ async def process_chat_response(
                     "content": content,
                 }
             ]
+            usage = None
 
             reasoning_tags_param = metadata.get("params", {}).get("reasoning_tags")
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
@@ -3402,6 +3404,7 @@ async def process_chat_response(
                 async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal content_blocks
+                    nonlocal usage
                     nonlocal output
 
                     response_tool_calls = []
@@ -3509,10 +3512,11 @@ async def process_chat_response(
                                 else:
                                     choices = data.get("choices", [])
 
-                                    # 17421
-                                    usage = data.get("usage", {}) or {}
-                                    usage.update(data.get("timings", {}))  # llama.cpp
-                                    if usage:
+                                    # Normalize usage data to standard format
+                                    raw_usage = data.get("usage", {}) or {}
+                                    raw_usage.update(data.get("timings", {}))  # llama.cpp
+                                    if raw_usage:
+                                        usage = normalize_usage(raw_usage)
                                         await event_emitter(
                                             {
                                                 "type": "chat:completion",
@@ -4310,7 +4314,14 @@ async def process_chat_response(
                         {
                             "content": serialize_output(output),
                             "output": output,
+                            **({"usage": usage} if usage else {}),
                         },
+                    )
+                elif usage:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {"usage": usage},
                     )
 
                 # Send a webhook notification if the user is not active
