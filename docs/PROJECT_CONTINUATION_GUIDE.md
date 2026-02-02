@@ -431,15 +431,16 @@ python -m black . --exclude ".venv/|/venv/"
 
 The following Svelte/vite-plugin-svelte warnings were addressed to improve accessibility and code quality:
 
-| Issue | File | Fix Applied |
-|-------|------|-------------|
-| **a11y_consider_explicit_label** | `Message.svelte` | Added `aria-label={$i18n.t('Delete message')}` to icon-only delete button |
-| **a11y_consider_explicit_label** | `UserList.svelte` | Added `aria-label` to icon-only buttons (Chats, Edit User, Delete User) |
-| **element_invalid_self_closing_tag** | `auth/+page.svelte` | Changed `<div ... />` to `<div ...></div>` for drag-region |
-| **element_invalid_self_closing_tag** | `UserList.svelte` | Changed `<th ... />` to `<th ...></th>` for empty table header |
-| **css_unused_selector** | `EditUserModal.svelte` | Removed unused `.tabs`, `.tabs::-webkit-scrollbar`, `input[type='number']` and spin-button CSS (form has no number inputs or tabs) |
+| Issue                                | File                   | Fix Applied                                                                                                                        |
+| ------------------------------------ | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **a11y_consider_explicit_label**     | `Message.svelte`       | Added `aria-label={$i18n.t('Delete message')}` to icon-only delete button                                                          |
+| **a11y_consider_explicit_label**     | `UserList.svelte`      | Added `aria-label` to icon-only buttons (Chats, Edit User, Delete User)                                                            |
+| **element_invalid_self_closing_tag** | `auth/+page.svelte`    | Changed `<div ... />` to `<div ...></div>` for drag-region                                                                         |
+| **element_invalid_self_closing_tag** | `UserList.svelte`      | Changed `<th ... />` to `<th ...></th>` for empty table header                                                                     |
+| **css_unused_selector**              | `EditUserModal.svelte` | Removed unused `.tabs`, `.tabs::-webkit-scrollbar`, `input[type='number']` and spin-button CSS (form has no number inputs or tabs) |
 
 **Pattern for similar fixes elsewhere**:
+
 - Icon-only buttons/links: add `aria-label` or `title` describing the action
 - Non-void HTML elements (`div`, `span`, `th`, etc.): use explicit closing tags `</tag>` instead of self-closing `/>`
 - Unused CSS: remove selectors that don't match any element in the component
@@ -658,6 +659,7 @@ ALTER TABLE channel_member ADD COLUMN invited_by TEXT;
 ALTER TABLE channel_member ADD COLUMN invited_at BIGINT;
 "
 ```
+
 (Ignore "duplicate column name" if a column already exists.)
 
 **Problem**: Model selector shows "Select a model" but no model choices

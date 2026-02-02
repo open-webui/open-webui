@@ -352,29 +352,6 @@
 									</div>
 								</div>
 							</div>
-
-							<!-- Characteristics -->
-							<div>
-								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-									Characteristics & Interests
-								</h3>
-								{#if currentChild.child_characteristics}
-									{@const cleanCharacteristics = cleanUpCharacteristics(
-										currentChild.child_characteristics
-									)}
-									<div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-										<p class="text-gray-700 dark:text-gray-300 leading-relaxed">
-											{cleanCharacteristics}
-										</p>
-									</div>
-								{:else}
-									<div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-										<p class="text-gray-500 dark:text-gray-400 italic">
-											No characteristics specified
-										</p>
-									</div>
-								{/if}
-							</div>
 						</div>
 
 						<!-- Personalization Note -->

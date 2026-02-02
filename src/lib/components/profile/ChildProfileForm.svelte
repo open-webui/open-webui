@@ -6,6 +6,8 @@
 	import type { ChildProfile } from '$lib/apis/child-profiles';
 	import { getChildProfiles } from '$lib/apis/child-profiles';
 	import { toast } from 'svelte-sonner';
+	import { createChildAccount } from '$lib/apis/users';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import {
 		personalityTraits,
 		type PersonalityTrait,
@@ -39,6 +41,8 @@
 	let childAge: string = '';
 	let childGender: string = '';
 	let childCharacteristics: string = '';
+	let childEmail: string = '';
+	let childPassword: string = '';
 
 	// Child quiz research fields (conditional)
 	let isOnlyChild: string = '';
@@ -290,6 +294,8 @@
 		childAge = '';
 		childGender = '';
 		childCharacteristics = '';
+		childEmail = '';
+		childPassword = '';
 		selectedSubCharacteristics = [];
 		expandedTraits = new Set();
 
@@ -323,6 +329,21 @@
 		}
 		if (showPersonalityTraits && selectedSubCharacteristics.length === 0) {
 			return 'Please select at least one personality trait';
+		}
+		// Email/password required only when creating new profile (account creation)
+		if (selectedChildIndex === -1) {
+			if (!childEmail.trim()) {
+				return 'Please enter an email address for the child account';
+			}
+			if (!childEmail.includes('@')) {
+				return 'Please enter a valid email address';
+			}
+			if (!childPassword.trim()) {
+				return 'Please enter a password for the child account';
+			}
+			if (childPassword.length < 6) {
+				return 'Password must be at least 6 characters long';
+			}
 		}
 
 		if (showResearchFields && requireResearchFields) {
@@ -388,6 +409,23 @@
 			}
 
 			const newChild = await childProfileSync.createChildProfile(profileData);
+
+			// Create child account
+			try {
+				const token = localStorage.getItem('token') || '';
+				await createChildAccount(token, {
+					name: childName,
+					email: childEmail,
+					password: childPassword
+				});
+			} catch (accountError) {
+				console.error('Failed to create child account:', accountError);
+				// Continue even if account creation fails - profile is already created
+				toast.warning(
+					'Child profile created, but account creation failed. Please create the account manually.'
+				);
+			}
+
 			childProfiles = [...childProfiles, newChild];
 			selectedChildIndex = childProfiles.length - 1;
 			showForm = true;
@@ -399,7 +437,7 @@
 				await onProfileCreated(newChild);
 			}
 
-			toast.success('Child profile created successfully!');
+			toast.success('Child profile and account created successfully!');
 		} catch (error) {
 			console.error('Failed to create child profile:', error);
 			let errorMessage = 'Failed to create child profile';
@@ -425,6 +463,8 @@
 			childAge = '';
 			childGender = '';
 			childCharacteristics = '';
+			childEmail = '';
+			childPassword = '';
 			selectedSubCharacteristics = [];
 			expandedTraits = new Set();
 		}
@@ -516,6 +556,23 @@
 				}
 
 				const newChild = await childProfileSync.createChildProfile(profileData);
+
+				// Create child account
+				try {
+					const token = localStorage.getItem('token') || '';
+					await createChildAccount(token, {
+						name: childName,
+						email: childEmail,
+						password: childPassword
+					});
+				} catch (accountError) {
+					console.error('Failed to create child account:', accountError);
+					// Continue even if account creation fails - profile is already created
+					toast.warning(
+						'Child profile created, but account creation failed. Please create the account manually.'
+					);
+				}
+
 				if (childProfiles.length === 0) {
 					childProfiles = [newChild];
 					selectedChildIndex = 0;
@@ -1023,6 +1080,60 @@
 							</div>
 						</div>
 						{/if}
+
+						<!-- Account Creation Section -->
+						<div class="pt-6 border-t border-gray-200 dark:border-gray-700">
+							<div class="mb-4">
+								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+									{$i18n.t('Child Account Creation')}
+								</h3>
+								<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+									{$i18n.t(
+										'When you create a child profile, a user account will also be created for your child. This account will allow your child to interact with the AI system.'
+									)}
+								</p>
+							</div>
+
+							<div class="space-y-4">
+								<div>
+									<label
+										for="childEmail"
+										class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+									>
+										{$i18n.t('Child Email Address')} <span class="text-red-500">*</span>
+									</label>
+									<input
+										type="email"
+										id="childEmail"
+										bind:value={childEmail}
+										placeholder={$i18n.t("Enter child's email address")}
+										class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+										required
+									/>
+								</div>
+
+								<div>
+									<label
+										for="childPassword"
+										class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+									>
+										{$i18n.t('Child Account Password')} <span class="text-red-500">*</span>
+									</label>
+									<SensitiveInput
+										type="password"
+										id="childPassword"
+										bind:value={childPassword}
+										placeholder={$i18n.t('Enter password for child account (min. 6 characters)')}
+										class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+										autocomplete="off"
+										required
+									/>
+									<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+										{$i18n.t('Password must be at least 6 characters long')}
+									</p>
+								</div>
+							</div>
+						</div>
 
 						<!-- Research Fields (Conditional) -->
 						{#if showResearchFields}

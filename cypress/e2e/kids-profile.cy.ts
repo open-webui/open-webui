@@ -61,6 +61,9 @@ describe('Quiz /kids/profile', () => {
 		cy.get('input#childName').type('TestChild');
 		cy.get('select#childAge').select('10 years old');
 		cy.get('select#childGender').select('Male');
+		cy.get('textarea#childCharacteristics').type('Test characteristics');
+		cy.get('input#childEmail').type('testchild@example.com');
+		cy.get('input#childPassword').type('testpass123');
 		// Do not fill Only Child, Child Has Used AI, Parent LLM Monitoring
 		cy.get('form')
 			.contains(/save|create|add/i)
@@ -87,6 +90,9 @@ describe('Quiz /kids/profile', () => {
 		cy.get('input#childName').type('ModalTest');
 		cy.get('select#childAge').select('11 years old');
 		cy.get('select#childGender').select('Female');
+		cy.get('textarea#childCharacteristics').type('Test characteristics for modal test');
+		cy.get('input#childEmail').type('modaltest@example.com');
+		cy.get('input#childPassword').type('testpass123');
 		// Research fields (required in quiz)
 		cy.contains('Only Child').parent().find('input[value=yes]').check({ force: true });
 		cy.contains('Child Has Used AI Tools').parent().find('input[value=no]').check({ force: true });
