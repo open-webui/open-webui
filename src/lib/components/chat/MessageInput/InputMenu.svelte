@@ -28,6 +28,7 @@
 	import Knowledge from './InputMenu/Knowledge.svelte';
 	import AttachWebpageModal from './AttachWebpageModal.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import PasswordModal from '$lib/components/chat/PasswordModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -38,6 +39,7 @@
 
 	export let screenCaptureHandler: Function;
 	export let uploadFilesHandler: Function;
+	export let uploadEncryptedFileHandler: Function;
 	export let inputFilesHandler: Function;
 
 	export let uploadGoogleDriveHandler: Function;
@@ -48,6 +50,7 @@
 
 	let show = false;
 	let tab = '';
+	let showPasswordModal = false;
 
 	let showAttachWebpageModal = false;
 
@@ -94,6 +97,13 @@
 	onSubmit={(e) => {
 		onUpload(e);
 	}}
+/>
+
+<PasswordModal
+    bind:show={showPasswordModal}
+    onSubmit={(password) => {
+        uploadEncryptedFileHandler(password);
+    }}
 />
 
 <!-- Hidden file input used to open the camera on mobile -->
@@ -150,6 +160,41 @@
 							<Clip />
 
 							<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+						</DropdownMenu.Item>
+					</Tooltip>
+
+					<Tooltip
+						content={fileUploadCapableModels.length !== selectedModels.length
+							? $i18n.t('Model(s) do not support file upload')
+							: !fileUploadEnabled
+								? $i18n.t('You do not have permission to upload files.')
+								: ''}
+						className="w-full"
+					>
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl {!fileUploadEnabled
+								? 'opacity-50'
+								: ''}"
+							on:click={() => {
+								if (fileUploadEnabled) {
+									showPasswordModal = true;
+								}
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+
+							<div class="line-clamp-1">{$i18n.t('Upload Encrypted File')}</div>
 						</DropdownMenu.Item>
 					</Tooltip>
 

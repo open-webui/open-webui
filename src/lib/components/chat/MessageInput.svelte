@@ -568,14 +568,13 @@
 		if (!$temporaryChatEnabled) {
 			try {
 				// If the file is an audio file, provide the language for STT.
-				let metadata = null;
+				let metadata = itemData;
+
 				if (
 					(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
 					$settings?.audio?.stt?.language
 				) {
-					metadata = {
-						language: $settings?.audio?.stt?.language
-					};
+					metadata.language = $settings?.audio?.stt?.language 
 				}
 
 				// During the file upload, file content is automatically extracted.
@@ -638,6 +637,24 @@
 				files = files;
 			}
 		}
+	};
+
+	const uploadEncryptedFileHandler = async (file, password) => {
+		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
+			toast.error($i18n.t('You do not have permission to upload files.'));
+			return null;
+		}
+
+		if (fileUploadCapableModels.length !== selectedModels.length) {
+			toast.error($i18n.t('Model(s) do not support file upload'));
+			return null;
+		}
+
+		// Call the regular upload handler with password in itemData
+		await uploadFileHandler(file, true, { 
+			encrypted: true, 
+			pdf_password: password 
+		});
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
@@ -1449,6 +1466,20 @@
 										{inputFilesHandler}
 										uploadFilesHandler={() => {
 											filesInputElement.click();
+										}}
+										uploadEncryptedFileHandler={(password) => {
+											currentEncryptedPassword = password;
+											const input = document.createElement('input');
+											input.type = 'file';
+											input.multiple = true;
+											input.onchange = async (e) => {
+												const files = Array.from(e.target.files);
+												for (const file of files) {
+													await uploadEncryptedFileHandler(file, password);
+												}
+												currentEncryptedPassword = null;
+											};
+											input.click();
 										}}
 										uploadGoogleDriveHandler={async () => {
 											try {
