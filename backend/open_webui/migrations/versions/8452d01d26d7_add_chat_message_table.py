@@ -124,6 +124,13 @@ def upgrade() -> None:
 
             timestamp = message.get("timestamp", now)
 
+            # Normalize timestamp: convert ms to seconds, validate range
+            if timestamp > 10_000_000_000:
+                timestamp = timestamp // 1000
+            # Must be after 2020 and not too far in the future
+            if timestamp < 1577836800 or timestamp > now + 86400:
+                timestamp = now
+
             try:
                 conn.execute(
                     sa.insert(chat_message_table).values(

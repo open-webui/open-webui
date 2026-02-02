@@ -19,6 +19,29 @@ from sqlalchemy import (
 )
 
 ####################
+# Helpers
+####################
+
+
+def _normalize_timestamp(timestamp: int) -> float:
+    """Normalize and validate timestamp. Returns current time if invalid."""
+    now = time.time()
+
+    # Convert milliseconds to seconds if needed
+    if timestamp > 10_000_000_000:
+        timestamp = timestamp / 1000
+
+    # Validate: must be after 2020 and not in the future (with 1 day tolerance)
+    min_valid = 1577836800  # 2020-01-01 00:00:00 UTC
+    max_valid = now + 86400  # 1 day in the future (clock skew tolerance)
+
+    if timestamp < min_valid or timestamp > max_valid:
+        return now
+
+    return timestamp
+
+
+####################
 # ChatMessage DB Schema
 ####################
 
@@ -455,15 +478,15 @@ class ChatMessageTable:
             # Group by date -> model -> count
             daily_counts: dict[str, dict[str, int]] = {}
             for timestamp, model_id in results:
-                date_str = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
+                date_str = datetime.fromtimestamp(_normalize_timestamp(timestamp)).strftime("%Y-%m-%d")
                 if date_str not in daily_counts:
                     daily_counts[date_str] = {}
                 daily_counts[date_str][model_id] = daily_counts[date_str].get(model_id, 0) + 1
 
             # Fill in missing days
             if start_date and end_date:
-                current = datetime.fromtimestamp(start_date)
-                end_dt = datetime.fromtimestamp(end_date)
+                current = datetime.fromtimestamp(_normalize_timestamp(start_date))
+                end_dt = datetime.fromtimestamp(_normalize_timestamp(end_date))
                 while current <= end_dt:
                     date_str = current.strftime("%Y-%m-%d")
                     if date_str not in daily_counts:
@@ -497,15 +520,15 @@ class ChatMessageTable:
             # Group by hour -> model -> count
             hourly_counts: dict[str, dict[str, int]] = {}
             for timestamp, model_id in results:
-                hour_str = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:00")
+                hour_str = datetime.fromtimestamp(_normalize_timestamp(timestamp)).strftime("%Y-%m-%d %H:00")
                 if hour_str not in hourly_counts:
                     hourly_counts[hour_str] = {}
                 hourly_counts[hour_str][model_id] = hourly_counts[hour_str].get(model_id, 0) + 1
 
             # Fill in missing hours
             if start_date and end_date:
-                current = datetime.fromtimestamp(start_date).replace(minute=0, second=0, microsecond=0)
-                end_dt = datetime.fromtimestamp(end_date)
+                current = datetime.fromtimestamp(_normalize_timestamp(start_date)).replace(minute=0, second=0, microsecond=0)
+                end_dt = datetime.fromtimestamp(_normalize_timestamp(end_date))
                 while current <= end_dt:
                     hour_str = current.strftime("%Y-%m-%d %H:00")
                     if hour_str not in hourly_counts:
