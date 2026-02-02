@@ -74,7 +74,7 @@ def upgrade() -> None:
         sa.column("user_id", sa.String()),
         sa.column("role", sa.String()),
         sa.column("parent_id", sa.String()),
-        sa.column("content", sa.Text()),
+        sa.column("content", sa.JSON()),
         sa.column("output", sa.JSON()),
         sa.column("model_id", sa.String()),
         sa.column("files", sa.JSON()),
@@ -95,6 +95,7 @@ def upgrade() -> None:
 
     now = int(time.time())
     messages_inserted = 0
+    messages_failed = 0
 
     for chat_row in chats:
         chat_id = chat_row[0]
@@ -131,6 +132,8 @@ def upgrade() -> None:
             if timestamp < 1577836800 or timestamp > now + 86400:
                 timestamp = now
 
+            # Use savepoint to allow individual insert failures without aborting transaction
+            savepoint = conn.begin_nested()
             try:
                 conn.execute(
                     sa.insert(chat_message_table).values(
@@ -152,12 +155,15 @@ def upgrade() -> None:
                         updated_at=timestamp,
                     )
                 )
+                savepoint.commit()
                 messages_inserted += 1
             except Exception as e:
+                savepoint.rollback()
+                messages_failed += 1
                 log.warning(f"Failed to insert message {message_id}: {e}")
                 continue
 
-    log.info(f"Backfilled {messages_inserted} messages into chat_message table")
+    log.info(f"Backfilled {messages_inserted} messages into chat_message table ({messages_failed} failed)")
 
 
 def downgrade() -> None:
