@@ -711,7 +711,12 @@
 
 			<div class="-mt-[0.5px]">
 				<div class="">
-					<Tooltip content={$user?.role === 'parent' ? $i18n.t('Test Children\'s Chat') : $i18n.t('New Chat')} placement="right">
+					<Tooltip
+						content={$user?.role === 'parent'
+							? $i18n.t("Test Children's Chat")
+							: $i18n.t('New Chat')}
+						placement="right"
+					>
 						<a
 							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							href="/"
@@ -723,7 +728,9 @@
 								goto('/');
 								newChatHandler();
 							}}
-							aria-label={$user?.role === 'parent' ? $i18n.t('Test Children\'s Chat') : $i18n.t('New Chat')}
+							aria-label={$user?.role === 'parent'
+								? $i18n.t("Test Children's Chat")
+								: $i18n.t('New Chat')}
 						>
 							<div class=" self-center flex items-center justify-center size-9">
 								<PencilSquare className="size-4.5" />
@@ -931,7 +938,7 @@
 						id="sidebar-webui-name"
 						class=" self-center font-medium text-gray-850 dark:text-white font-primary"
 					>
-						{$WEBUI_NAME}
+						DataSmithGPT
 					</div>
 				</a>
 				<Tooltip
@@ -978,14 +985,18 @@
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
-							aria-label={$user?.role === 'parent' ? $i18n.t('Test Children\'s Chat') : $i18n.t('New Chat')}
+							aria-label={$user?.role === 'parent'
+								? $i18n.t("Test Children's Chat")
+								: $i18n.t('New Chat')}
 						>
 							<div class="self-center">
 								<PencilSquare className=" size-4.5" strokeWidth="2" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$user?.role === 'parent' ? $i18n.t('Test Children\'s Chat') : $i18n.t('New Chat')}</div>
+								<div class=" self-center text-sm font-primary">
+									{$user?.role === 'parent' ? $i18n.t("Test Children's Chat") : $i18n.t('New Chat')}
+								</div>
 							</div>
 
 							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />

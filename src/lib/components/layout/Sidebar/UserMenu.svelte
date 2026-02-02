@@ -247,6 +247,8 @@
 			{@const isSurveyView =
 				$page.url.pathname.startsWith('/exit-survey') ||
 				$page.url.pathname.startsWith('/initial-survey')}
+			{@const isParentOrChild =
+				$user?.role === 'parent' || $user?.role === 'child' || ($user as any)?.parent_id}
 
 			{#if isSurveyView}
 				<DropdownMenu.Item
@@ -267,7 +269,7 @@
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Main View')}</div>
 				</DropdownMenu.Item>
-			{:else}
+			{:else if !isParentOrChild}
 				<DropdownMenu.Item
 					as="a"
 					href="/exit-survey"

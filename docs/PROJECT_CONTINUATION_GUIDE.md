@@ -769,6 +769,7 @@ Restart the backend after changes.
 **Problem**: Child or parent account gets 400 Bad Request or 403 Forbidden / "Model not found" when chatting
 
 The fix (2026-01-31) allows base models (e.g. gpt-5.2-chat-latest) for parent and child roles. Ensure the following files have the updated access control logic:
+
 - `backend/open_webui/utils/models.py`: `check_model_access` returns (allows access) when `model_info` is None
 - `backend/open_webui/main.py`: Parent and child can use `DEFAULT_MODELS` without access control
 - `backend/open_webui/routers/ollama.py` and `backend/open_webui/routers/openai.py`: Parent and child allowed in model-access checks (i.e. `user.role not in ("admin", "parent", "child")`)

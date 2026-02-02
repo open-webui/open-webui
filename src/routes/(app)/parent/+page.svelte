@@ -18,7 +18,6 @@
 	async function handleChildSelected(profile: ChildProfile, index: number) {
 		await childProfileSync.setCurrentChildId(profile.id);
 	}
-
 </script>
 
 <svelte:head>
