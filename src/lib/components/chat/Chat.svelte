@@ -135,16 +135,17 @@
 
 	// When models load after initNewChat ran with empty list, apply default or first model
 	$: if ($models.length > 0) {
-		const availableIds = $models
-			.filter((m) => !(m?.info?.meta?.hidden ?? false))
-			.map((m) => m.id);
+		const availableIds = $models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
 		const noValidSelection =
 			selectedModels.length === 0 ||
 			(selectedModels.length === 1 && selectedModels[0] === '') ||
 			selectedModels.every((id) => !id || !availableIds.includes(id));
 		if (noValidSelection && availableIds.length > 0) {
 			const defaultModels = $config?.default_models
-				? $config.default_models.split(',').map((s) => s.trim()).filter(Boolean)
+				? $config.default_models
+						.split(',')
+						.map((s) => s.trim())
+						.filter(Boolean)
 				: [];
 			const fromDefault = defaultModels.filter((id) => availableIds.includes(id));
 			selectedModels = fromDefault.length > 0 ? fromDefault : [availableIds[0]];
