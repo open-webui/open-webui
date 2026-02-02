@@ -222,7 +222,7 @@
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<!-- svelte-ignore a11y-click-events-have-key-events -->
 			<div
-				class="{buttonClassName} cursor-pointer"
+				class="{buttonClassName} {disabled ? '' : 'cursor-pointer'}"
 				on:pointerup={() => {
 					if (!disabled) {
 						open = !open;
@@ -270,13 +270,15 @@
 						{/if}
 					</div>
 
-					<div class="flex self-center translate-y-[1px]">
-						{#if open}
-							<ChevronUp strokeWidth="3.5" className="size-3.5" />
-						{:else}
-							<ChevronDown strokeWidth="3.5" className="size-3.5" />
-						{/if}
-					</div>
+					{#if !disabled}
+						<div class="flex self-center translate-y-[1px]">
+							{#if open}
+								<ChevronUp strokeWidth="3.5" className="size-3.5" />
+							{:else}
+								<ChevronDown strokeWidth="3.5" className="size-3.5" />
+							{/if}
+						</div>
+					{/if}
 				</div>
 			</div>
 		{:else}

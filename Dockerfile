@@ -128,7 +128,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential pandoc gcc netcat-openbsd curl jq \
     python3-dev \
-    ffmpeg libsm6 libxext6 \
+    ffmpeg libsm6 libxext6 zstd \
     && rm -rf /var/lib/apt/lists/*
 
 # install python dependencies

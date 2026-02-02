@@ -353,6 +353,9 @@ from open_webui.config import (
     EXTERNAL_WEB_SEARCH_API_KEY,
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
+    YANDEX_WEB_SEARCH_URL,
+    YANDEX_WEB_SEARCH_API_KEY,
+    YANDEX_WEB_SEARCH_CONFIG,
     # WebUI
     WEBUI_AUTH,
     WEBUI_NAME,
@@ -491,6 +494,7 @@ from open_webui.env import (
     WEBUI_ADMIN_EMAIL,
     WEBUI_ADMIN_PASSWORD,
     WEBUI_ADMIN_NAME,
+    ENABLE_EASTER_EGGS,
 )
 
 
@@ -1007,6 +1011,9 @@ app.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL
 app.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY
 app.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL
 app.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY
+app.state.config.YANDEX_WEB_SEARCH_URL = YANDEX_WEB_SEARCH_URL
+app.state.config.YANDEX_WEB_SEARCH_API_KEY = YANDEX_WEB_SEARCH_API_KEY
+app.state.config.YANDEX_WEB_SEARCH_CONFIG = YANDEX_WEB_SEARCH_CONFIG
 
 
 app.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL
@@ -1368,6 +1375,13 @@ async def check_url(request: Request, call_next):
     request.state.token = get_http_authorization_cred(
         request.headers.get("Authorization")
     )
+    # Fallback to cookie token for browser sessions
+    if request.state.token is None and request.cookies.get("token"):
+        from fastapi.security import HTTPAuthorizationCredentials
+        request.state.token = HTTPAuthorizationCredentials(
+            scheme="Bearer",
+            credentials=request.cookies.get("token")
+        )
 
     request.state.enable_api_keys = app.state.config.ENABLE_API_KEYS
     response = await call_next(request)
@@ -1932,6 +1946,7 @@ async def get_app_config(request: Request):
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
             "enable_public_active_users_count": ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
+            "enable_easter_eggs": ENABLE_EASTER_EGGS,
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,

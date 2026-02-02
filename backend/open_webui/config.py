@@ -257,7 +257,7 @@ class AppConfig:
             self._state[key].value = value
             self._state[key].save()
 
-            if self._redis:
+            if self._redis and ENABLE_PERSISTENT_CONFIG:
                 redis_key = f"{self._redis_key_prefix}:config:{key}"
                 self._redis.set(redis_key, json.dumps(self._state[key].value))
 
@@ -265,8 +265,8 @@ class AppConfig:
         if key not in self._state:
             raise AttributeError(f"Config key '{key}' not found")
 
-        # If Redis is available, check for an updated value
-        if self._redis:
+        # If Redis is available and persistent config is enabled, check for an updated value
+        if self._redis and ENABLE_PERSISTENT_CONFIG:
             redis_key = f"{self._redis_key_prefix}:config:{key}"
             redis_value = self._redis.get(redis_key)
 
@@ -3408,6 +3408,24 @@ EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
     "EXTERNAL_WEB_LOADER_API_KEY",
     "rag.web.loader.external_web_loader_api_key",
     os.environ.get("EXTERNAL_WEB_LOADER_API_KEY", ""),
+)
+
+YANDEX_WEB_SEARCH_URL = PersistentConfig(
+    "YANDEX_WEB_SEARCH_URL",
+    "rag.web.search.yandex_web_search_url",
+    os.environ.get("YANDEX_WEB_SEARCH_URL", ""),
+)
+
+YANDEX_WEB_SEARCH_API_KEY = PersistentConfig(
+    "YANDEX_WEB_SEARCH_API_KEY",
+    "rag.web.search.yandex_web_search_api_key",
+    os.environ.get("YANDEX_WEB_SEARCH_API_KEY", ""),
+)
+
+YANDEX_WEB_SEARCH_CONFIG = PersistentConfig(
+    "YANDEX_WEB_SEARCH_CONFIG",
+    "rag.web.search.yandex_web_search_config",
+    os.environ.get("YANDEX_WEB_SEARCH_CONFIG", ""),
 )
 
 ####################################

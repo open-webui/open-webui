@@ -116,6 +116,27 @@
 										}}
 									/>
 								</div>
+							{:else if valvesSpec.properties[property]?.input?.type === 'select' && valvesSpec.properties[property]?.input?.options}
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+									bind:value={valves[property]}
+									on:change={() => {
+										dispatch('change');
+									}}
+								>
+									<option value="" disabled>{valvesSpec.properties[property]?.description ?? $i18n.t('Select an option')}</option>
+									{#each valvesSpec.properties[property].input.options as option}
+										{#if typeof option === 'object' && option !== null}
+											<option value={option.value} selected={option.value === valves[property]}>
+												{option.label ?? option.value}
+											</option>
+										{:else}
+											<option value={option} selected={option === valves[property]}>
+												{option}
+											</option>
+										{/if}
+									{/each}
+								</select>
 							{:else if valvesSpec.properties[property]?.input?.type === 'color'}
 								<div class="flex items-center space-x-2">
 									<div class="relative size-6">

@@ -398,74 +398,87 @@ def get_builtin_tools(
     # Helper to get model capabilities (defaults to True if not specified)
     def get_model_capability(name: str, default: bool = True) -> bool:
         return (
-            model.get("info", {})
-            .get("meta", {})
-            .get("capabilities", {})
+            (model.get("info", {}).get("meta", {}).get("capabilities") or {})
             .get(name, default)
         )
 
-    # Time utilities - always available for date calculations
-    builtin_functions.extend([get_current_timestamp, calculate_timestamp])
+    # Helper to check if a builtin tool category is enabled via meta.builtinTools
+    # Defaults to True if not specified (backward compatible)
+    def is_builtin_tool_enabled(category: str) -> bool:
+        builtin_tools = model.get("info", {}).get("meta", {}).get("builtinTools", {})
+        return builtin_tools.get(category, True)
+
+    # Time utilities - available for date calculations
+    if is_builtin_tool_enabled("time"):
+        builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
     # Knowledge base tools - conditional injection based on model knowledge
     # If model has attached knowledge (any type), only provide query_knowledge_files
     # Otherwise, provide all KB browsing tools
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
-    if model_knowledge:
-        # Model has attached knowledge - only allow semantic search within it
-        builtin_functions.append(query_knowledge_files)
-    else:
-        # No model knowledge - allow full KB browsing
-        builtin_functions.extend(
-            [
-                list_knowledge_bases,
-                search_knowledge_bases,
-                query_knowledge_bases,
-                search_knowledge_files,
-                query_knowledge_files,
-                view_knowledge_file,
-            ]
-        )
+    if is_builtin_tool_enabled("knowledge"):
+        if model_knowledge:
+            # Model has attached knowledge - only allow semantic search within it
+            builtin_functions.append(query_knowledge_files)
+        else:
+            # No model knowledge - allow full KB browsing
+            builtin_functions.extend(
+                [
+                    list_knowledge_bases,
+                    search_knowledge_bases,
+                    query_knowledge_bases,
+                    search_knowledge_files,
+                    query_knowledge_files,
+                    view_knowledge_file,
+                ]
+            )
 
     # Chats tools - search and fetch user's chat history
-    builtin_functions.extend([search_chats, view_chat])
+    if is_builtin_tool_enabled("chats"):
+        builtin_functions.extend([search_chats, view_chat])
 
-    # Add memory tools if enabled for this chat
-    if features.get("memory"):
+    # Add memory tools if builtin category enabled AND enabled for this chat
+    if is_builtin_tool_enabled("memory") and features.get("memory"):
         builtin_functions.extend([search_memories, add_memory, replace_memory_content])
 
-    # Add web search tools if enabled globally AND model has web_search capability
-    if getattr(
-        request.app.state.config, "ENABLE_WEB_SEARCH", False
-    ) and get_model_capability("web_search"):
+    # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
+    if (
+        is_builtin_tool_enabled("web_search")
+        and getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False)
+        and get_model_capability("web_search")
+    ):
         builtin_functions.extend([search_web, fetch_url])
 
-    # Add image generation/edit tools if enabled globally AND model has image_generation capability
-    if getattr(
-        request.app.state.config, "ENABLE_IMAGE_GENERATION", False
-    ) and get_model_capability("image_generation"):
+    # Add image generation/edit tools if builtin category enabled AND enabled globally AND model has image_generation capability
+    if (
+        is_builtin_tool_enabled("image_generation")
+        and getattr(request.app.state.config, "ENABLE_IMAGE_GENERATION", False)
+        and get_model_capability("image_generation")
+    ):
         builtin_functions.append(generate_image)
-    if getattr(
-        request.app.state.config, "ENABLE_IMAGE_EDIT", False
-    ) and get_model_capability("image_generation"):
+    if (
+        is_builtin_tool_enabled("image_generation")
+        and getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False)
+        and get_model_capability("image_generation")
+    ):
         builtin_functions.append(edit_image)
 
-    # Add code interpreter tool if enabled globally AND model has code_interpreter capability
-    # Supports both pyodide (via frontend event call) and jupyter engines
+    # Add code interpreter tool if builtin category enabled AND enabled globally AND model has code_interpreter capability
     if (
-        getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", True)
+        is_builtin_tool_enabled("code_interpreter")
+        and getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", True)
         and get_model_capability("code_interpreter")
     ):
         builtin_functions.append(execute_code)
 
-    # Notes tools - search, view, create, and update user's notes (if notes enabled globally)
-    if getattr(request.app.state.config, "ENABLE_NOTES", False):
+    # Notes tools - search, view, create, and update user's notes (if builtin category enabled AND notes enabled globally)
+    if is_builtin_tool_enabled("notes") and getattr(request.app.state.config, "ENABLE_NOTES", False):
         builtin_functions.extend(
             [search_notes, view_note, write_note, replace_note_content]
         )
 
-    # Channels tools - search channels and messages (if channels enabled globally)
-    if getattr(request.app.state.config, "ENABLE_CHANNELS", False):
+    # Channels tools - search channels and messages (if builtin category enabled AND channels enabled globally)
+    if is_builtin_tool_enabled("channels") and getattr(request.app.state.config, "ENABLE_CHANNELS", False):
         builtin_functions.extend(
             [
                 search_channels,

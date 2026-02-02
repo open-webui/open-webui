@@ -11,12 +11,15 @@
 	export let outerClassName = 'flex flex-1 bg-transparent';
 	export let inputClassName = 'w-full text-sm py-0.5 bg-transparent';
 	export let showButtonClassName = 'pl-1.5  transition bg-transparent';
+	export let screenReader = true;
 
 	let show = false;
 </script>
 
 <div class={outerClassName}>
-	<label class="sr-only" for={id}>{placeholder || $i18n.t('Password')}</label>
+	{#if screenReader}
+		<label class="sr-only" for={id}>{placeholder || $i18n.t('Password')}</label>
+	{/if}
 	<input
 		{id}
 		class={`${inputClassName} ${show ? '' : 'password'} ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : ' outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-600'}`}
