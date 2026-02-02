@@ -137,7 +137,7 @@ def upgrade() -> None:
             try:
                 conn.execute(
                     sa.insert(chat_message_table).values(
-                        id=message_id,
+                        id=f"{chat_id}-{message_id}",
                         chat_id=chat_id,
                         user_id=user_id,
                         role=role,

@@ -137,7 +137,10 @@ class ChatMessageTable:
             now = int(time.time())
             timestamp = data.get("timestamp", now)
 
-            existing = db.get(ChatMessage, message_id)
+            # Use composite ID: {chat_id}-{message_id}
+            composite_id = f"{chat_id}-{message_id}"
+
+            existing = db.get(ChatMessage, composite_id)
             if existing:
                 # Update existing
                 if "role" in data:
@@ -183,7 +186,7 @@ class ChatMessageTable:
                     info = data.get("info", {})
                     usage = info.get("usage") if info else None
                 message = ChatMessage(
-                    id=message_id,
+                    id=composite_id,
                     chat_id=chat_id,
                     user_id=user_id,
                     role=data.get("role", "user"),
