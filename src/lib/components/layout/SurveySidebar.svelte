@@ -2,10 +2,41 @@
 	import { page } from '$app/stores';
 	import { showSidebar, user, mobile, WEBUI_NAME } from '$lib/stores';
 	import { getContext } from 'svelte';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { getWorkflowState } from '$lib/apis/workflow';
+	import DocumentChartBar from '$lib/components/icons/DocumentChartBar.svelte';
+	import { tick } from 'svelte';
 
 	const i18n = getContext('i18n');
+
+	let workflowProgress: {
+		has_child_profile: boolean;
+		moderation_completed_count: number;
+		moderation_total: number;
+		exit_survey_completed: boolean;
+	} | null = null;
+
+	let loadingProgress = true;
+
+	async function fetchWorkflowProgress() {
+		try {
+			if (!localStorage.token) return;
+			const state = await getWorkflowState(localStorage.token);
+			workflowProgress = state?.progress_by_section || null;
+		} catch (error) {
+			console.error('Failed to fetch workflow progress:', error);
+			workflowProgress = null;
+		} finally {
+			loadingProgress = false;
+		}
+	}
+
+	onMount(() => {
+		fetchWorkflowProgress();
+	});
 </script>
 
 {#if $showSidebar}
@@ -98,7 +129,127 @@
 					>
 						{$i18n.t('Survey Navigation')}
 					</div>
-					<!-- Survey navigation items can be added here if needed -->
+
+					<!-- Assignment Progress -->
+					{#if !loadingProgress && workflowProgress}
+						<div class="mb-6">
+							<div
+								class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3"
+							>
+								{$i18n.t('Assignment Progress')}
+							</div>
+							<div class="space-y-3">
+								<!-- Child Profile -->
+								<div class="flex items-center gap-2">
+									<div
+										class="size-5 rounded-full flex items-center justify-center {workflowProgress.has_child_profile
+											? 'bg-green-500'
+											: 'bg-gray-300 dark:bg-gray-600'}"
+									>
+										{#if workflowProgress.has_child_profile}
+											<svg
+												class="size-3 text-white"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M5 13l4 4L19 7"
+												></path>
+											</svg>
+										{/if}
+									</div>
+									<span class="text-sm text-gray-700 dark:text-gray-300">
+										{$i18n.t('Child Profile')}
+									</span>
+								</div>
+
+								<!-- Moderation -->
+								<div class="flex items-center gap-2">
+									<div
+										class="size-5 rounded-full flex items-center justify-center {workflowProgress.moderation_completed_count >=
+										workflowProgress.moderation_total
+											? 'bg-green-500'
+											: workflowProgress.moderation_completed_count > 0
+												? 'bg-yellow-500'
+												: 'bg-gray-300 dark:bg-gray-600'}"
+									>
+										{#if workflowProgress.moderation_completed_count >= workflowProgress.moderation_total}
+											<svg
+												class="size-3 text-white"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M5 13l4 4L19 7"
+												></path>
+											</svg>
+										{:else if workflowProgress.moderation_completed_count > 0}
+											<span class="text-xs text-white font-semibold">
+												{workflowProgress.moderation_completed_count}/{workflowProgress.moderation_total}
+											</span>
+										{/if}
+									</div>
+									<span class="text-sm text-gray-700 dark:text-gray-300">
+										{$i18n.t('Moderation')} ({workflowProgress.moderation_completed_count}/
+										{workflowProgress.moderation_total})
+									</span>
+								</div>
+
+								<!-- Exit Survey -->
+								<div class="flex items-center gap-2">
+									<div
+										class="size-5 rounded-full flex items-center justify-center {workflowProgress.exit_survey_completed
+											? 'bg-green-500'
+											: 'bg-gray-300 dark:bg-gray-600'}"
+									>
+										{#if workflowProgress.exit_survey_completed}
+											<svg
+												class="size-3 text-white"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M5 13l4 4L19 7"
+												></path>
+											</svg>
+										{/if}
+									</div>
+									<span class="text-sm text-gray-700 dark:text-gray-300">
+										{$i18n.t('Exit Survey')}
+									</span>
+								</div>
+							</div>
+						</div>
+					{/if}
+
+					<!-- Chat View Button -->
+					<button
+						class="flex items-center gap-3 w-full px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
+						on:click={async () => {
+							await goto('/');
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
+						}}
+					>
+						<div class="self-center">
+							<DocumentChartBar className="size-5" strokeWidth="1.5" />
+						</div>
+						<div class="self-center truncate text-sm">{$i18n.t('Chat View')}</div>
+					</button>
 				</div>
 			</div>
 		</div>
