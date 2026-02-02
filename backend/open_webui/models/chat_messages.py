@@ -317,11 +317,12 @@ class ChatMessageTable:
                     func.json_extract(ChatMessage.usage, "$.output_tokens"), Integer
                 )
             elif dialect == "postgresql":
+                # Use json_extract_path_text for PostgreSQL JSON columns
                 input_tokens = cast(
-                    ChatMessage.usage["input_tokens"].astext, Integer
+                    func.json_extract_path_text(ChatMessage.usage, "input_tokens"), Integer
                 )
                 output_tokens = cast(
-                    ChatMessage.usage["output_tokens"].astext, Integer
+                    func.json_extract_path_text(ChatMessage.usage, "output_tokens"), Integer
                 )
             else:
                 raise NotImplementedError(f"Unsupported dialect: {dialect}")
@@ -374,11 +375,12 @@ class ChatMessageTable:
                     func.json_extract(ChatMessage.usage, "$.output_tokens"), Integer
                 )
             elif dialect == "postgresql":
+                # Use json_extract_path_text for PostgreSQL JSON columns
                 input_tokens = cast(
-                    ChatMessage.usage["input_tokens"].astext, Integer
+                    func.json_extract_path_text(ChatMessage.usage, "input_tokens"), Integer
                 )
                 output_tokens = cast(
-                    ChatMessage.usage["output_tokens"].astext, Integer
+                    func.json_extract_path_text(ChatMessage.usage, "output_tokens"), Integer
                 )
             else:
                 raise NotImplementedError(f"Unsupported dialect: {dialect}")
