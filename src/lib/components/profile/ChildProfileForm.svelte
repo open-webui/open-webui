@@ -765,14 +765,16 @@
 							{childProfiles[selectedChildIndex]?.child_gender || 'Not specified'}
 						</p>
 					</div>
-					<div>
-						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-							Characteristics & Interests
+					{#if showPersonalityTraits}
+						<div>
+							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+								Characteristics & Interests
+							</div>
+							<p class="text-gray-900 dark:text-white whitespace-pre-wrap">
+								{childProfiles[selectedChildIndex]?.child_characteristics || 'Not specified'}
+							</p>
 						</div>
-						<p class="text-gray-900 dark:text-white whitespace-pre-wrap">
-							{childProfiles[selectedChildIndex]?.child_characteristics || 'Not specified'}
-						</p>
-					</div>
+					{/if}
 					{#if showResearchFields}
 						<div>
 							<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">

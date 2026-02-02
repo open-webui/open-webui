@@ -461,6 +461,42 @@ Parent and Child roles are now available in Admin user management. The backend a
 
 ---
 
+### Parent/Child Access and Parent Page Updates (2026-01-31)
+
+**Parent and child login access**:
+
+- **`(app)/+layout.svelte`**: Added `parent` and `child` to allowed roles so they can access the WebUI without the "Account Activation Pending" overlay. Previously only `user` and `admin` were allowed.
+
+**Parent page simplified**:
+
+- **`parent/+page.svelte`**: Replaced the multi-tab parent dashboard with a single "Add Child View" page using `ChildProfileForm`. Removed the View Chat button. Fixed navigation loop (parent users were previously redirected to `/` then back to `/parent` because of `selectedRole` check).
+
+**Add Child form**:
+
+- **`ChildProfileForm.svelte`**: Added `showPersonalityTraits` prop (default `true`). When `false`, hides personality traits and additional characteristics sections. Parent page passes `showPersonalityTraits={false}`.
+- **Sidebar** (`Sidebar.svelte`): For parent users, "New Chat" is now "Test Children's Chat".
+
+**Layout/console fixes**:
+
+- **`+layout.svelte`**: Removed CONSENT DEBUG logs; removed Backend config log; wrapped `BroadcastChannel.postMessage` in try/catch; added `visibilitychange` listener cleanup in `onDestroy` before closing channel to prevent "Channel is closed" errors.
+
+---
+
+### Child Profiles API Registration Fix (2026-01-31)
+
+The child profiles router existed at `backend/open_webui/routers/child_profiles.py` but was **not included** in `main.py`, causing 405 Method Not Allowed when creating child profiles from the Add Child View.
+
+**Fix**:
+
+- **`backend/open_webui/main.py`**: Added `child_profiles` to router imports and registered it with `app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profiles"])`.
+
+**Endpoints now available** (POST/GET/PUT/DELETE):
+
+- `/api/v1/child-profiles` — Create and list child profiles
+- `/api/v1/child-profiles/{profile_id}` — Get, update, delete a child profile
+
+---
+
 ### Recently Merged (2026-01-30)
 
 **PR #10: Feature: Separate Quiz Workflow** ✅ **COMPLETE**
@@ -634,6 +670,17 @@ Models come from **OpenAI** and/or **Ollama** as configured in the backend.
 4. **Restart the backend** after changing `.env`; config is read at startup.
 5. **If still empty**: Go to **Admin** → **Settings** → **Connections** and ensure at least one connection (OpenAI or Ollama) is enabled with a valid API key / URL. Settings saved there are stored in the DB and can override env.
 6. **Backend logs**: Look for `No models loaded. Check: ...` when opening the chat page to confirm the backend is not seeing any providers.
+
+**Problem**: Child profile creation fails with 405 Method Not Allowed
+
+The child profiles router must be included in `main.py`. Verify `child_profiles.router` is imported and registered:
+
+```python
+from open_webui.routers import (..., child_profiles, ...)
+app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profiles"])
+```
+
+Restart the backend after changes.
 
 **Problem**: Cypress tests fail
 

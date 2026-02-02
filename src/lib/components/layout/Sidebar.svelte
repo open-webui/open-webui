@@ -536,7 +536,7 @@
 		const currentPath = $page.url.pathname;
 		const isOnChatPage = currentPath.startsWith('/c/');
 
-		// If not on a chat page, try to navigate to an existing chat
+		// If not on a chat page, try to navigate to an existing chat or main chat
 		if (!isOnChatPage) {
 			try {
 				// Try to get the most recent chat and navigate directly to it
@@ -547,13 +547,13 @@
 					// Navigate directly to the most recent chat
 					await goto(`/c/${chatList[0].id}`);
 				} else {
-					// No chats exist, navigate to /parent
-					await goto('/parent');
+					// No chats exist, navigate to main chat interface at /
+					await goto('/');
 				}
 			} catch (error) {
 				console.error('Error navigating to chat:', error);
-				// Fallback: navigate to /parent
-				await goto('/parent');
+				// Fallback: navigate to main chat interface
+				await goto('/');
 			}
 		}
 
