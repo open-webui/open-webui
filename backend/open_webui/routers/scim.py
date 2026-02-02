@@ -513,9 +513,10 @@ async def get_users(
             total = 1 if user else 0  
         elif "externalId eq" in filter:
             externalId = filter.split('"')[1]
-            user = Users.get_user_by_oauth_sub(externalId, db=db)
-            users_list = [user] if user else []
-            total = 1 if user else 0
+            users_list = list()
+            for provider in OAUTH_PROVIDERS.keys():
+                users_list.append(Users.get_user_by_oauth_sub(provider,externalId, db=db))
+            total = len(users_list)
         else:
             response = Users.get_users(skip=skip, limit=limit, db=db)
             users_list = response["users"]
