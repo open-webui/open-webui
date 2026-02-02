@@ -25,6 +25,8 @@ from open_webui.utils.auth import (
 )
 from open_webui.constants import ERROR_MESSAGES
 
+from open_webui.config import OAUTH_PROVIDERS
+
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import get_session
@@ -560,15 +562,17 @@ async def create_user(
 ):
     """Create SCIM User"""
     # Check if user already exists via externalID (matched via OIDC Subject Identifier)
-    existing_user = Users.get_user_by_oauth_sub(user_data.externalId, db=db)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"User with externalId {user_data.externalId} already exists (aka internal user {existing_user.email})",
-        )
+    if user_data.externalId:
+        for provider in OAUTH_PROVIDERS.keys():
+            existing_user = Users.get_user_by_oauth_sub(provider,user_data.externalId or "", db=db)
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"User with externalId {user_data.externalId} already exists (aka internal user {existing_user.email})",
+                )
 
     # Check if user already exists via email
-    primaryemail = None
+    primaryemail:str= ""
     for email in user_data.emails:
         if email.primary:
             primaryemail = email.value.lower() #Specs say that email provisioning is case insenstive (assuming all emails in DB is lowercase)
