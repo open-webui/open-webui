@@ -5,10 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.3] - 2026-02-01
+## [0.8.0] - 2026-02-02
 
 ### Added
 
+- 🧪 Connections can now be configured to use OpenAI's experimental Responses API instead of Chat Completions, enabling native support for extended thinking, streaming reasoning tokens, and richer tool call handling for compatible providers. [Commit](https://github.com/open-webui/open-webui/commit/d2c695eb11ddca9fc93499bb0c3fcafcff7099b5), [Commit](https://github.com/open-webui/open-webui/commit/90a057f4005c000bda6ff8703e13e529190af73a), [Commit](https://github.com/open-webui/open-webui/commit/0dc74a8a2e7adb76fb503ef0cd3c02daddd2f4bb), [Commit](https://github.com/open-webui/open-webui/commit/ea9c58ea80646cef05e06d0beaf5e81cc2f78cb1), [Commit](https://github.com/open-webui/open-webui/commit/6ffce4bccdc13b8b61a8b286e34094c981932eda), [Commit](https://github.com/open-webui/open-webui/commit/6719558150920f570d8febe021da65903e53c976), [Commit](https://github.com/open-webui/open-webui/commit/117c091b95a1b1a76a31c31b97304bac289d6f18)
 - 📝 Prompts now include version control with full history tracking, allowing users to commit changes with messages, view past versions, compare differences between versions, and roll back to previous versions when needed. [#20945](https://github.com/open-webui/open-webui/pull/20945)
 - 🏷️ Prompts can now be organized with tags, and users can filter the prompt workspace by tag to quickly find related prompts across large collections. [#20945](https://github.com/open-webui/open-webui/pull/20945)
 - 🐍 Code execution now works with Native function calling mode, allowing models to autonomously run Python code for calculations, data analysis, and visualizations without requiring Default mode. [#20592](https://github.com/open-webui/open-webui/pull/20592), [Docs:#998](https://github.com/open-webui/docs/pull/998)
@@ -44,7 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💨 Bulk feedback deletion and group member removal are now 4-5x faster with optimized batch operations. [#21019](https://github.com/open-webui/open-webui/pull/21019)
 - 🧠 Memory updates are now up to 39% faster by eliminating redundant database queries. [#21013](https://github.com/open-webui/open-webui/pull/21013)
 - ⚙️ Filter function loading is now faster by batching database queries instead of fetching each function individually. [#21018](https://github.com/open-webui/open-webui/pull/21018)
-- 🔗 **PLACEHOLDER** Open WebUI now includes internal support for the Open Responses message format specification alongside the OpenAI API format, enabling richer representation of tool calls, reasoning steps, and code execution in message structures. [Commit](https://github.com/open-webui/open-webui/commit/d2c695eb11ddca9fc93499bb0c3fcafcff7099b5), [Commit](https://github.com/open-webui/open-webui/commit/90a057f4005c000bda6ff8703e13e529190af73a), [Commit](https://github.com/open-webui/open-webui/commit/0dc74a8a2e7adb76fb503ef0cd3c02daddd2f4bb)
 - ♿ Screen reader users now hear the password field label only once on the login page, improving form navigation for assistive technology users. [Commit](https://github.com/open-webui/open-webui/commit/1441d0d735c7a1470070b33327e1dd4dc5ca1131)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Catalan, Finnish, German, Japanese, Polish, Portuguese (Brazil), Simplified Chinese, Slovak, Spanish, and Traditional Chinese were enhanced and expanded.
