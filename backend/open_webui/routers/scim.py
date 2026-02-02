@@ -507,7 +507,7 @@ async def get_users(
             users_list = [user] if user else []
             total = 1 if user else 0
         elif "emails eq_ci" in filter:
-            emails = filter.split('"')[1].split(",")
+            email = filter.split('"')[1]
             user = Users.get_user_by_email(email, caseSensitive=False, db=db)
             users_list = [user] if user else []
             total = 1 if user else 0  
