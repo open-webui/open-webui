@@ -113,6 +113,7 @@ class UserModel(BaseModel):
         """
         if self.oauth is None:
             return None
+        # todo: Support different providers (Google, Github, etc.) rather than just generic OIDC
         return self.oauth.get("oidc", {}).get("sub", None)
 
 
