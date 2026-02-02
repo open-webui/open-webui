@@ -158,6 +158,8 @@ RUN pip3 install --no-cache-dir uv && \
 
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
+    apt-get update && \
+    apt-get install -y zstd curl && \
     date +%s > /tmp/ollama_build_hash && \
     echo "Cache broken at timestamp: `cat /tmp/ollama_build_hash`" && \
     curl -fsSL https://ollama.com/install.sh | sh && \
