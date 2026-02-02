@@ -12,7 +12,7 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-main-image:
+  build-ollama-image:
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -57,7 +57,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker images (default latest tag)
+      - name: Extract metadata for Docker images (ollama tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -68,8 +68,10 @@ jobs:
             type=sha,prefix=git-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=ollama
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
+            suffix=-ollama,onlatest=true
 
       - name: Extract metadata for Docker cache
         id: cache-meta
@@ -80,10 +82,10 @@ jobs:
             type=ref,event=branch
             ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
           flavor: |
-            prefix=cache-${{ matrix.platform }}-
+            prefix=cache-ollama-${{ matrix.platform }}-
             latest=false
 
-      - name: Build Docker image (latest)
+      - name: Build Docker image (ollama)
         uses: docker/build-push-action@v5
         id: build
         with:
@@ -96,6 +98,7 @@ jobs:
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
           build-args: |
             BUILD_HASH=${{ github.sha }}
+            USE_OLLAMA=true
 
       - name: Export digest
         run: |
@@ -106,7 +109,63 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-main-${{ env.PLATFORM_PAIR }}
+          name: digests-ollama-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
+
+  merge-ollama-images:
+    runs-on: ubuntu-latest
+    needs: [build-ollama-image]
+    steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
+      - name: Download digests
+        uses: actions/download-artifact@v5
+        with:
+          pattern: digests-ollama-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker images (default ollama tag)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=ollama
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+            suffix=-ollama,onlatest=true
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
