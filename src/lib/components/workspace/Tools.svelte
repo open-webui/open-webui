@@ -190,7 +190,7 @@
 						<Search className="size-4" />
 					</div>
 					<input
-						class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
+						class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
 						bind:value={query}
 						placeholder={$i18n.t('Search Tools')}
 					/>
@@ -198,7 +198,7 @@
 
 				<Tooltip content={$i18n.t('Create Tool')}>
 					<a
-						class="p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm hover:shadow-md"
+						class="p-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors shadow-sm hover:shadow-md"
 						href="/workspace/tools/create"
 					>
 						<Plus className="size-4" />
@@ -220,7 +220,7 @@
 					>
 						<div class="flex items-center gap-2 mb-2">
 							<span
-								class="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+								class="text-xs font-bold px-2 py-0.5 rounded-md uppercase bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
 							>
 								TOOL
 							</span>
@@ -437,7 +437,7 @@
 				</h2>
 
 				<a
-					class="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-xl hover:shadow-md transition-all group"
+					class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-emerald-900/20 border border-blue-200 dark:border-blue-800 rounded-xl hover:shadow-md transition-all group"
 					href="https://openwebui.com/#open-webui-community"
 					target="_blank"
 				>

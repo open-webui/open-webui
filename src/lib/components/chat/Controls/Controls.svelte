@@ -83,12 +83,12 @@
 					<div class="mt-3" slot="content">
 						<textarea
 							bind:value={params.system}
-							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
+							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
 							rows="4"
 							placeholder={$i18n.t('Enter system prompt')}
 						/>
 					</div>
-				</Collapsible>
+				</Collapsible> 
 			</div>
 
 			<!-- Advanced Params Section -->

@@ -271,342 +271,101 @@
 	}}
 >
 	{#if RAGConfig}
-		<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
+		<div class="space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5" style="padding-right: 4px;">
 			<div class="">
-				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
-
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
-					<div class="mb-2.5 flex flex-col w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class="self-center text-xs font-medium">
-								{$i18n.t('Content Extraction Engine')}
-							</div>
-							<div class="">
-								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
-								>
-									<option value="">{$i18n.t('Default')}</option>
-									<option value="tika">{$i18n.t('Tika')}</option>
-									<option value="docling">{$i18n.t('Docling')}</option>
-									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
-									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
-								</select>
-							</div>
-						</div>
-
-						{#if RAGConfig.CONTENT_EXTRACTION_ENGINE === ''}
-							<div class="flex w-full mt-1">
-								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
-										{$i18n.t('PDF Extract Images (OCR)')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} />
-									</div>
-								</div>
-							</div>
-						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
-							<div class="flex w-full mt-1">
-								<div class="flex-1 mr-2">
-									<input
-										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('Enter Tika Server URL')}
-										bind:value={RAGConfig.TIKA_SERVER_URL}
-									/>
-								</div>
-							</div>
-						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
-							<div class="flex w-full mt-1">
-								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Enter Docling Server URL')}
-									bind:value={RAGConfig.DOCLING_SERVER_URL}
-								/>
-							</div>
-						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
-							<div class="my-0.5 flex gap-2 pr-2">
-								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
-									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
-								/>
-								<SensitiveInput
-									placeholder={$i18n.t('Enter Document Intelligence Key')}
-									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_KEY}
-								/>
-							</div>
-						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
-							<div class="my-0.5 flex gap-2 pr-2">
-								<SensitiveInput
-									placeholder={$i18n.t('Enter Mistral API Key')}
-									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
-								/>
-							</div>
-						{/if}
+				<!-- General Section -->
+				<div class="mb-3" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
+					<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
+						<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #3b82f6, #8b5cf6); border-radius: 2px;"></div>
+						<div class="text-base font-medium" style="color: #1f2937; letter-spacing: -0.01em;">{$i18n.t('General')}</div>
 					</div>
 
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							<Tooltip content={$i18n.t('Full Context Mode')} placement="top-start">
-								{$i18n.t('Bypass Embedding and Retrieval')}
-							</Tooltip>
-						</div>
-						<div class="flex items-center relative">
-							<Tooltip
-								content={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL
-									? $i18n.t(
-											'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
-										)
-									: $i18n.t(
-											'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
-										)}
-							>
-								<Switch bind:state={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL} />
-							</Tooltip>
-						</div>
-					</div>
-
-					{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
-							<div class="flex items-center relative">
-								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-									bind:value={RAGConfig.TEXT_SPLITTER}
-								>
-									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
-									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-								</select>
-							</div>
-						</div>
-
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" flex gap-1.5 w-full">
-								<div class="  w-full justify-between">
-									<div class="self-center text-xs font-medium min-w-fit mb-1">
-										{$i18n.t('Chunk Size')}
-									</div>
-									<div class="self-center">
-										<input
-											class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-											type="number"
-											placeholder={$i18n.t('Enter Chunk Size')}
-											bind:value={RAGConfig.CHUNK_SIZE}
-											autocomplete="off"
-											min="0"
-										/>
-									</div>
+					<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
+						<!-- Content Extraction Engine -->
+						<div class="flex flex-col w-full justify-between" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+							<div class="flex w-full justify-between items-center">
+								<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
+									{$i18n.t('Content Extraction Engine')}
 								</div>
-
-								<div class="w-full">
-									<div class=" self-center text-xs font-medium min-w-fit mb-1">
-										{$i18n.t('Chunk Overlap')}
-									</div>
-
-									<div class="self-center">
-										<input
-											class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-											type="number"
-											placeholder={$i18n.t('Enter Chunk Overlap')}
-											bind:value={RAGConfig.CHUNK_OVERLAP}
-											autocomplete="off"
-											min="0"
-										/>
-									</div>
-								</div>
-							</div>
-						</div>
-					{/if}
-				</div>
-
-				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
-					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
-
-						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
-						<div class="  mb-2.5 flex flex-col w-full justify-between">
-							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
-									{$i18n.t('Embedding Model Engine')}
-								</div>
-								<div class="flex items-center relative">
+								<div class="">
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-										bind:value={embeddingEngine}
-										placeholder="Select an embedding model engine"
-										on:change={(e) => {
-											if (e.target.value === 'ollama') {
-												embeddingModel = '';
-											} else if (e.target.value === 'openai') {
-												embeddingModel = 'text-embedding-3-small';
-											} else if (e.target.value === '') {
-												embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
-											}
-										}}
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
+										style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
 									>
-										<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
-										<option value="ollama">{$i18n.t('Ollama')}</option>
-										<option value="openai">{$i18n.t('OpenAI')}</option>
+										<option value="">{$i18n.t('Default')}</option>
+										<option value="tika">{$i18n.t('Tika')}</option>
+										<option value="docling">{$i18n.t('Docling')}</option>
+										<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
+										<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
 									</select>
 								</div>
 							</div>
 
-							{#if embeddingEngine === 'openai'}
-								<div class="my-0.5 flex gap-2 pr-2">
-									<input
-										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('API Base URL')}
-										bind:value={OpenAIUrl}
-										required
-									/>
-
-									<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
+							{#if RAGConfig.CONTENT_EXTRACTION_ENGINE === ''}
+								<div class="flex w-full mt-2" style="padding-top: 8px;">
+									<div class="flex-1 flex justify-between">
+										<div class="self-center text-xs font-medium" style="color: #6b7280; font-size: 12px;">
+											{$i18n.t('PDF Extract Images (OCR)')}
+										</div>
+										<div class="flex items-center relative">
+											<Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} />
+										</div>
+									</div>
 								</div>
-							{:else if embeddingEngine === 'ollama'}
-								<div class="my-0.5 flex gap-2 pr-2">
+							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
+								<div class="flex w-full mt-2" style="padding-top: 8px;">
+									<div class="flex-1 mr-2">
+										<input
+											class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('Enter Tika Server URL')}
+											bind:value={RAGConfig.TIKA_SERVER_URL}
+											style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
+										/>
+									</div>
+								</div>
+							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
+								<div class="flex w-full mt-2" style="padding-top: 8px;">
 									<input
 										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-										placeholder={$i18n.t('API Base URL')}
-										bind:value={OllamaUrl}
-										required
+										placeholder={$i18n.t('Enter Docling Server URL')}
+										bind:value={RAGConfig.DOCLING_SERVER_URL}
+										style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
 									/>
-
+								</div>
+							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
+								<div class="my-0.5 flex gap-2 pr-2" style="padding-top: 8px; gap: 8px;">
+									<input
+										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+										placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
+										bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
+										style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
+									/>
 									<SensitiveInput
-										placeholder={$i18n.t('API Key')}
-										bind:value={OllamaKey}
-										required={false}
+										placeholder={$i18n.t('Enter Document Intelligence Key')}
+										bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_KEY}
+									/>
+								</div>
+							{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
+								<div class="my-0.5 flex gap-2 pr-2" style="padding-top: 8px;">
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Mistral API Key')}
+										bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
 									/>
 								</div>
 							{/if}
 						</div>
 
-						<div class="  mb-2.5 flex flex-col w-full">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Embedding Model')}</div>
-
-							<div class="">
-								{#if embeddingEngine === 'ollama'}
-									<div class="flex w-full">
-										<div class="flex-1 mr-2">
-											<input
-												class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-												bind:value={embeddingModel}
-												placeholder={$i18n.t('Set embedding model')}
-												required
-											/>
-										</div>
-									</div>
-								{:else}
-									<div class="flex w-full">
-										<div class="flex-1 mr-2">
-											<input
-												class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-												placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
-													model: embeddingModel.slice(-40)
-												})}
-												bind:value={embeddingModel}
-											/>
-										</div>
-
-										{#if embeddingEngine === ''}
-											<button
-												class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
-												on:click={() => {
-													embeddingModelUpdateHandler();
-												}}
-												disabled={updateEmbeddingModelLoading}
-											>
-												{#if updateEmbeddingModelLoading}
-													<div class="self-center">
-														<svg
-															class=" w-4 h-4"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															xmlns="http://www.w3.org/2000/svg"
-														>
-															<style>
-																.spinner_ajPY {
-																	transform-origin: center;
-																	animation: spinner_AtaB 0.75s infinite linear;
-																}
-
-																@keyframes spinner_AtaB {
-																	100% {
-																		transform: rotate(360deg);
-																	}
-																}
-															</style>
-															<path
-																d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-																opacity=".25"
-															/>
-															<path
-																d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-																class="spinner_ajPY"
-															/>
-														</svg>
-													</div>
-												{:else}
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
-														/>
-														<path
-															d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-														/>
-													</svg>
-												{/if}
-											</button>
-										{/if}
-									</div>
-								{/if}
+						<!-- Bypass Embedding and Retrieval -->
+						<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
+								<Tooltip content={$i18n.t('Full Context Mode')} placement="top-start">
+									{$i18n.t('Bypass Embedding and Retrieval')}
+								</Tooltip>
 							</div>
-
-							<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
-								{$i18n.t(
-									'Warning: If you update or change your embedding model, you will need to re-import all documents.'
-								)}
-							</div>
-						</div>
-
-						{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
-							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
-									{$i18n.t('Embedding Batch Size')}
-								</div>
-
-								<div class="">
-									<input
-										bind:value={embeddingBatchSize}
-										type="number"
-										class=" bg-transparent text-center w-14 outline-none"
-										min="-2"
-										max="16000"
-										step="1"
-									/>
-								</div>
-							</div>
-						{/if}
-					</div>
-
-					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
-
-						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
-						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
 							<div class="flex items-center relative">
 								<Tooltip
-									content={RAGConfig.RAG_FULL_CONTEXT
+									content={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL
 										? $i18n.t(
 												'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
 											)
@@ -614,310 +373,623 @@
 												'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
 											)}
 								>
-									<Switch bind:state={RAGConfig.RAG_FULL_CONTEXT} />
+									<Switch bind:state={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL} />
 								</Tooltip>
 							</div>
 						</div>
 
-						{#if !RAGConfig.RAG_FULL_CONTEXT}
-							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
+						{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+							<!-- Text Splitter -->
+							<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+								<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Text Splitter')}</div>
 								<div class="flex items-center relative">
-									<Switch
-										bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH}
-										on:change={() => {
-											submitHandler();
-										}}
-									/>
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										bind:value={RAGConfig.TEXT_SPLITTER}
+										style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
+									>
+										<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
+										<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
+									</select>
 								</div>
 							</div>
 
-							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
-								<div class="  mb-2.5 flex flex-col w-full">
-									<div class=" mb-1 text-xs font-medium">{$i18n.t('Reranking Model')}</div>
+							<!-- Chunk Size and Overlap -->
+							<div class="flex w-full justify-between" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+								<div class="flex gap-1.5 w-full" style="gap: 12px;">
+									<div class="w-full justify-between">
+										<div class="self-center text-xs font-medium min-w-fit mb-1" style="color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">
+											{$i18n.t('Chunk Size')}
+										</div>
+										<div class="self-center">
+											<input
+												class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="number"
+												placeholder={$i18n.t('Enter Chunk Size')}
+												bind:value={RAGConfig.CHUNK_SIZE}
+												autocomplete="off"
+												min="0"
+												style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
+											/>
+										</div>
+									</div>
 
-									<div class="">
+									<div class="w-full">
+										<div class="self-center text-xs font-medium min-w-fit mb-1" style="color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">
+											{$i18n.t('Chunk Overlap')}
+										</div>
+
+										<div class="self-center">
+											<input
+												class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="number"
+												placeholder={$i18n.t('Enter Chunk Overlap')}
+												bind:value={RAGConfig.CHUNK_OVERLAP}
+												autocomplete="off"
+												min="0"
+												style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+
+				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+					<!-- Embedding Section -->
+					<div class="mb-3" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
+						<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
+							<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #10b981, #06b6d4); border-radius: 2px;"></div>
+							<div class="text-base font-medium" style="color: #1f2937; letter-spacing: -0.01em;">{$i18n.t('Embedding')}</div>
+						</div>
+
+						<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
+							<!-- Embedding Model Engine -->
+							<div class="flex flex-col w-full justify-between" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+								<div class="flex w-full justify-between items-center">
+									<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
+										{$i18n.t('Embedding Model Engine')}
+									</div>
+									<div class="flex items-center relative">
+										<select
+											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+											bind:value={embeddingEngine}
+											placeholder="Select an embedding model engine"
+											on:change={(e) => {
+												if (e.target.value === 'ollama') {
+													embeddingModel = '';
+												} else if (e.target.value === 'openai') {
+													embeddingModel = 'text-embedding-3-small';
+												} else if (e.target.value === '') {
+													embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
+												}
+											}}
+											style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;"
+										>
+											<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
+											<option value="ollama">{$i18n.t('Ollama')}</option>
+											<option value="openai">{$i18n.t('OpenAI')}</option>
+										</select>
+									</div>
+								</div>
+
+								{#if embeddingEngine === 'openai'}
+									<div class="my-0.5 flex gap-2 pr-2" style="padding-top: 8px; gap: 8px;">
+										<input
+											class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('API Base URL')}
+											bind:value={OpenAIUrl}
+											required
+											style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
+										/>
+
+										<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
+									</div>
+								{:else if embeddingEngine === 'ollama'}
+									<div class="my-0.5 flex gap-2 pr-2" style="padding-top: 8px; gap: 8px;">
+										<input
+											class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+											placeholder={$i18n.t('API Base URL')}
+											bind:value={OllamaUrl}
+											required
+											style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
+										/>
+
+										<SensitiveInput
+											placeholder={$i18n.t('API Key')}
+											bind:value={OllamaKey}
+											required={false}
+										/>
+									</div>
+								{/if}
+							</div>
+
+							<!-- Embedding Model -->
+							<div class="flex flex-col w-full" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+								<div class="mb-1 text-xs font-medium" style="color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">{$i18n.t('Embedding Model')}</div>
+
+								<div class="">
+									{#if embeddingEngine === 'ollama'}
 										<div class="flex w-full">
 											<div class="flex-1 mr-2">
 												<input
 													class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-													placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
-														model: 'BAAI/bge-reranker-v2-m3'
-													})}
-													bind:value={rerankingModel}
+													bind:value={embeddingModel}
+													placeholder={$i18n.t('Set embedding model')}
+													required
+													style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
 												/>
 											</div>
-											<button
-												class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
-												on:click={() => {
-													rerankingModelUpdateHandler();
-												}}
-												disabled={updateRerankingModelLoading}
-											>
-												{#if updateRerankingModelLoading}
-													<div class="self-center">
-														<svg
-															class=" w-4 h-4"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															xmlns="http://www.w3.org/2000/svg"
-														>
-															<style>
-																.spinner_ajPY {
-																	transform-origin: center;
-																	animation: spinner_AtaB 0.75s infinite linear;
-																}
+										</div>
+									{:else}
+										<div class="flex w-full" style="gap: 8px;">
+											<div class="flex-1 mr-2">
+												<input
+													class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+													placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
+														model: embeddingModel.slice(-40)
+													})}
+													bind:value={embeddingModel}
+													style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
+												/>
+											</div>
 
-																@keyframes spinner_AtaB {
-																	100% {
-																		transform: rotate(360deg);
+											{#if embeddingEngine === ''}
+												<button
+													class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
+													on:click={() => {
+														embeddingModelUpdateHandler();
+													}}
+													disabled={updateEmbeddingModelLoading}
+													style="background: linear-gradient(135deg, #10b981, #06b6d4); color: white; border-radius: 8px; padding: 10px 14px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25); border: none;"
+												>
+													{#if updateEmbeddingModelLoading}
+														<div class="self-center">
+															<svg
+																class=" w-4 h-4"
+																viewBox="0 0 24 24"
+																fill="currentColor"
+																xmlns="http://www.w3.org/2000/svg"
+															>
+																<style>
+																	.spinner_ajPY {
+																		transform-origin: center;
+																		animation: spinner_AtaB 0.75s infinite linear;
 																	}
-																}
-															</style>
+
+																	@keyframes spinner_AtaB {
+																		100% {
+																			transform: rotate(360deg);
+																		}
+																	}
+																</style>
+																<path
+																	d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+																	opacity=".25"
+																/>
+																<path
+																	d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+																	class="spinner_ajPY"
+																/>
+															</svg>
+														</div>
+													{:else}
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="w-4 h-4"
+														>
 															<path
-																d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-																opacity=".25"
+																d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
 															/>
 															<path
-																d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-																class="spinner_ajPY"
+																d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
 															/>
 														</svg>
-													</div>
-												{:else}
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
-														/>
-														<path
-															d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-														/>
-													</svg>
-												{/if}
-											</button>
+													{/if}
+												</button>
+											{/if}
 										</div>
-									</div>
+									{/if}
 								</div>
-							{/if}
 
-							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
-								<div class="flex items-center relative">
-									<input
-										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-										type="number"
-										placeholder={$i18n.t('Enter Top K')}
-										bind:value={RAGConfig.TOP_K}
-										autocomplete="off"
-										min="0"
-									/>
+								<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500" style="line-height: 1.5; color: #f59e0b; background: #fffbeb; padding: 8px 12px; border-radius: 6px; margin-top: 8px; border-left: 3px solid #f59e0b;">
+									{$i18n.t(
+										'Warning: If you update or change your embedding model, you will need to re-import all documents.'
+									)}
 								</div>
 							</div>
 
-							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
-								<div class="mb-2.5 flex w-full justify-between">
-									<div class="self-center text-xs font-medium">{$i18n.t('Top K Reranker')}</div>
-									<div class="flex items-center relative">
+							{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
+								<!-- Embedding Batch Size -->
+								<div class="flex w-full justify-between items-center" style="padding: 8px 0;">
+									<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
+										{$i18n.t('Embedding Batch Size')}
+									</div>
+
+									<div class="">
 										<input
-											class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+											bind:value={embeddingBatchSize}
 											type="number"
-											placeholder={$i18n.t('Enter Top K Reranker')}
-											bind:value={RAGConfig.TOP_K_RERANKER}
-											autocomplete="off"
-											min="0"
+											class="bg-transparent text-center w-14 outline-none"
+											min="-2"
+											max="16000"
+											step="1"
+											style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px; transition: all 0.2s;"
 										/>
 									</div>
 								</div>
 							{/if}
+						</div>
+					</div>
 
-							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
-								<div class="  mb-2.5 flex flex-col w-full justify-between">
-									<div class=" flex w-full justify-between">
-										<div class=" self-center text-xs font-medium">
-											{$i18n.t('Relevance Threshold')}
+					<!-- Retrieval Section -->
+					<div class="mb-3" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
+						<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
+							<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #8b5cf6, #ec4899); border-radius: 2px;"></div>
+							<div class="text-base font-medium" style="color: #1f2937; letter-spacing: -0.01em;">{$i18n.t('Retrieval')}</div>
+						</div>
+
+						<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
+							<!-- Full Context Mode -->
+							<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+								<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Full Context Mode')}</div>
+								<div class="flex items-center relative">
+									<Tooltip
+										content={RAGConfig.RAG_FULL_CONTEXT
+											? $i18n.t(
+													'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
+												)
+											: $i18n.t(
+													'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
+												)}
+									>
+										<Switch bind:state={RAGConfig.RAG_FULL_CONTEXT} />
+									</Tooltip>
+								</div>
+							</div>
+
+							{#if !RAGConfig.RAG_FULL_CONTEXT}
+								<!-- Hybrid Search -->
+								<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+									<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Hybrid Search')}</div>
+									<div class="flex items-center relative">
+										<Switch
+											bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH}
+											on:change={() => {
+												submitHandler();
+											}}
+										/>
+									</div>
+								</div>
+
+								{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+									<!-- Reranking Model -->
+									<div class="flex flex-col w-full" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+										<div class="mb-1 text-xs font-medium" style="color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">{$i18n.t('Reranking Model')}</div>
+
+										<div class="">
+											<div class="flex w-full" style="gap: 8px;">
+												<div class="flex-1 mr-2">
+													<input
+														class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+														placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
+															model: 'BAAI/bge-reranker-v2-m3'
+														})}
+														bind:value={rerankingModel}
+														style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; transition: all 0.2s;"
+													/>
+												</div>
+												<button
+													class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
+													on:click={() => {
+														rerankingModelUpdateHandler();
+													}}
+													disabled={updateRerankingModelLoading}
+													style="background: linear-gradient(135deg, #8b5cf6, #ec4899); color: white; border-radius: 8px; padding: 10px 14px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.25); border: none;"
+												>
+													{#if updateRerankingModelLoading}
+														<div class="self-center">
+															<svg
+																class=" w-4 h-4"
+																viewBox="0 0 24 24"
+																fill="currentColor"
+																xmlns="http://www.w3.org/2000/svg"
+															>
+																<style>
+																	.spinner_ajPY {
+																		transform-origin: center;
+																		animation: spinner_AtaB 0.75s infinite linear;
+																	}
+
+																	@keyframes spinner_AtaB {
+																		100% {
+																			transform: rotate(360deg);
+																		}
+																	}
+																</style>
+																<path
+																	d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+																	opacity=".25"
+																/>
+																<path
+																	d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+																	class="spinner_ajPY"
+																/>
+															</svg>
+														</div>
+													{:else}
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="w-4 h-4"
+														>
+															<path
+																d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
+															/>
+															<path
+																d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
+															/>
+														</svg>
+													{/if}
+												</button>
+											</div>
 										</div>
+									</div>
+								{/if}
+
+								<!-- Top K -->
+								<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+									<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Top K')}</div>
+									<div class="flex items-center relative">
+										<input
+											class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+											type="number"
+											placeholder={$i18n.t('Enter Top K')}
+											bind:value={RAGConfig.TOP_K}
+											autocomplete="off"
+											min="0"
+											style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; width: 80px; text-align: center; transition: all 0.2s;"
+										/>
+									</div>
+								</div>
+
+								{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+									<!-- Top K Reranker -->
+									<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+										<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Top K Reranker')}</div>
 										<div class="flex items-center relative">
 											<input
 												class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
 												type="number"
-												step="0.01"
-												placeholder={$i18n.t('Enter Score')}
-												bind:value={RAGConfig.RELEVANCE_THRESHOLD}
+												placeholder={$i18n.t('Enter Top K Reranker')}
+												bind:value={RAGConfig.TOP_K_RERANKER}
 												autocomplete="off"
-												min="0.0"
-												title={$i18n.t(
-													'The score should be a value between 0.0 (0%) and 1.0 (100%).'
-												)}
+												min="0"
+												style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; width: 80px; text-align: center; transition: all 0.2s;"
 											/>
 										</div>
 									</div>
-									<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-										{$i18n.t(
-											'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
-										)}
-									</div>
-								</div>
-							{/if}
-						{/if}
 
-						<div class="  mb-2.5 flex flex-col w-full justify-between">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Template')}</div>
-							<div class="flex w-full items-center relative">
-								<Tooltip
-									content={$i18n.t(
-										'Leave empty to use the default prompt, or enter a custom prompt'
-									)}
-									placement="top-start"
-									className="w-full"
-								>
-									<Textarea
-										bind:value={RAGConfig.RAG_TEMPLATE}
-										placeholder={$i18n.t(
+									<!-- Relevance Threshold -->
+									<div class="flex flex-col w-full justify-between" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+										<div class="flex w-full justify-between items-center">
+											<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
+												{$i18n.t('Relevance Threshold')}
+											</div>
+											<div class="flex items-center relative">
+												<input
+													class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+													type="number"
+													step="0.01"
+													placeholder={$i18n.t('Enter Score')}
+													bind:value={RAGConfig.RELEVANCE_THRESHOLD}
+													autocomplete="off"
+													min="0.0"
+													title={$i18n.t(
+														'The score should be a value between 0.0 (0%) and 1.0 (100%).'
+													)}
+													style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; width: 80px; text-align: center; transition: all 0.2s;"
+												/>
+											</div>
+										</div>
+										<div class="mt-1 text-xs text-gray-400 dark:text-gray-500" style="line-height: 1.5; color: #6b7280; margin-top: 8px;">
+											{$i18n.t(
+												'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
+											)}
+										</div>
+									</div>
+								{/if}
+							{/if}
+
+							<!-- RAG Template -->
+							<div class="flex flex-col w-full justify-between" style="padding: 8px 0;">
+								<div class="mb-1 text-xs font-medium" style="color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;">{$i18n.t('RAG Template')}</div>
+								<div class="flex w-full items-center relative">
+									<Tooltip
+										content={$i18n.t(
 											'Leave empty to use the default prompt, or enter a custom prompt'
 										)}
-									/>
-								</Tooltip>
+										placement="top-start"
+										className="w-full"
+									>
+										<Textarea
+											bind:value={RAGConfig.RAG_TEMPLATE}
+											placeholder={$i18n.t(
+												'Leave empty to use the default prompt, or enter a custom prompt'
+											)}
+										/>
+									</Tooltip>
+								</div>
 							</div>
 						</div>
 					</div>
 				{/if}
 
-				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
-
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Size')}</div>
-						<div class="flex items-center relative">
-							<Tooltip
-								content={$i18n.t(
-									'The maximum file size in MB. If the file size exceeds this limit, the file will not be uploaded.'
-								)}
-								placement="top-start"
-							>
-								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-									type="number"
-									placeholder={$i18n.t('Leave empty for unlimited')}
-									bind:value={RAGConfig.FILE_MAX_SIZE}
-									autocomplete="off"
-									min="0"
-								/>
-							</Tooltip>
-						</div>
+				<!-- Files Section -->
+				<div class="mb-3" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
+					<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
+						<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #f59e0b, #f97316); border-radius: 2px;"></div>
+						<div class="text-base font-medium" style="color: #1f2937; letter-spacing: -0.01em;">{$i18n.t('Files')}</div>
 					</div>
 
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Count')}</div>
-						<div class="flex items-center relative">
-							<Tooltip
-								content={$i18n.t(
-									'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
-								)}
-								placement="top-start"
-							>
-								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-									type="number"
-									placeholder={$i18n.t('Leave empty for unlimited')}
-									bind:value={RAGConfig.FILE_MAX_COUNT}
-									autocomplete="off"
-									min="0"
-								/>
-							</Tooltip>
+					<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
+						<!-- Max Upload Size -->
+						<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Max Upload Size')}</div>
+							<div class="flex items-center relative">
+								<Tooltip
+									content={$i18n.t(
+										'The maximum file size in MB. If the file size exceeds this limit, the file will not be uploaded.'
+									)}
+									placement="top-start"
+								>
+									<input
+										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+										type="number"
+										placeholder={$i18n.t('Leave empty for unlimited')}
+										bind:value={RAGConfig.FILE_MAX_SIZE}
+										autocomplete="off"
+										min="0"
+										style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; width: 100px; text-align: center; transition: all 0.2s;"
+									/>
+								</Tooltip>
+							</div>
 						</div>
-					</div>
-				</div>
 
-				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
-
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Google Drive')}</div>
-						<div class="flex items-center relative">
-							<Switch bind:state={RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION} />
-						</div>
-					</div>
-
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('OneDrive')}</div>
-						<div class="flex items-center relative">
-							<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />
+						<!-- Max Upload Count -->
+						<div class="flex w-full justify-between items-center" style="padding: 8px 0;">
+							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Max Upload Count')}</div>
+							<div class="flex items-center relative">
+								<Tooltip
+									content={$i18n.t(
+										'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
+									)}
+									placement="top-start"
+								>
+									<input
+										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+										type="number"
+										placeholder={$i18n.t('Leave empty for unlimited')}
+										bind:value={RAGConfig.FILE_MAX_COUNT}
+										autocomplete="off"
+										min="0"
+										style="background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; padding: 6px 12px; width: 100px; text-align: center; transition: all 0.2s;"
+									/>
+								</Tooltip>
+							</div>
 						</div>
 					</div>
 				</div>
 
-				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
-
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Reset Upload Directory')}</div>
-						<div class="flex items-center relative">
-							<button
-								class="text-xs"
-								on:click={() => {
-									showResetUploadDirConfirm = true;
-								}}
-							>
-								{$i18n.t('Reset')}
-							</button>
-						</div>
+				<!-- Integration Section -->
+				<div class="mb-3" style="background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);">
+					<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
+						<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #06b6d4, #0ea5e9); border-radius: 2px;"></div>
+						<div class="text-base font-medium" style="color: #1f2937; letter-spacing: -0.01em;">{$i18n.t('Integration')}</div>
 					</div>
 
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Reset Vector Storage/Knowledge')}
+					<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
+						<!-- Google Drive -->
+						<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Google Drive')}</div>
+							<div class="flex items-center relative">
+								<Switch bind:state={RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION} />
+							</div>
 						</div>
-						<div class="flex items-center relative">
-							<button
-								class="text-xs"
-								on:click={() => {
-									showResetConfirm = true;
-								}}
-							>
-								{$i18n.t('Reset')}
-							</button>
+
+						<!-- OneDrive -->
+						<div class="flex w-full justify-between items-center" style="padding: 8px 0;">
+							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('OneDrive')}</div>
+							<div class="flex items-center relative">
+								<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />
+							</div>
 						</div>
 					</div>
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Reindex Knowledge Base Vectors')}
+				</div>
+
+				<!-- Danger Zone Section -->
+				<div class="mb-3" style="background: linear-gradient(to bottom, rgba(239, 68, 68, 0.05), transparent); border-radius: 12px; padding: 20px; border: 1px solid rgba(239, 68, 68, 0.2);">
+					<div class="mb-4" style="display: flex; align-items: center; gap: 8px;">
+						<div style="width: 4px; height: 24px; background: linear-gradient(to bottom, #ef4444, #dc2626); border-radius: 2px;"></div>
+						<div class="text-base font-medium" style="color: #dc2626; letter-spacing: -0.01em;">{$i18n.t('Danger Zone')}</div>
+					</div>
+
+					<div class="space-y-3" style="background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.2);">
+						<!-- Reset Upload Directory -->
+						<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">{$i18n.t('Reset Upload Directory')}</div>
+							<div class="flex items-center relative">
+								<button
+									class="text-xs"
+									on:click={() => {
+										showResetUploadDirConfirm = true;
+									}}
+									style="background: #fee2e2; color: #dc2626; padding: 6px 16px; border-radius: 6px; font-weight: 600; transition: all 0.2s; border: 1px solid rgba(220, 38, 38, 0.3);"
+								>
+									{$i18n.t('Reset')}
+								</button>
+							</div>
 						</div>
-						<div class="flex items-center relative">
-							<button
-								class="text-xs"
-								on:click={() => {
-									showReindexConfirm = true;
-								}}
-							>
-								{$i18n.t('Reindex')}
-							</button>
+
+						<!-- Reset Vector Storage -->
+						<div class="flex w-full justify-between items-center" style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);">
+							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
+								{$i18n.t('Reset Vector Storage/Knowledge')}
+							</div>
+							<div class="flex items-center relative">
+								<button
+									class="text-xs"
+									on:click={() => {
+										showResetConfirm = true;
+									}}
+									style="background: #fee2e2; color: #dc2626; padding: 6px 16px; border-radius: 6px; font-weight: 600; transition: all 0.2s; border: 1px solid rgba(220, 38, 38, 0.3);"
+								>
+									{$i18n.t('Reset')}
+								</button>
+							</div>
+						</div>
+
+						<!-- Reindex Knowledge Base -->
+						<div class="flex w-full justify-between items-center" style="padding: 8px 0;">
+							<div class="self-center text-xs font-medium" style="color: #374151; font-size: 13px;">
+								{$i18n.t('Reindex Knowledge Base Vectors')}
+							</div>
+							<div class="flex items-center relative">
+								<button
+									class="text-xs"
+									on:click={() => {
+										showReindexConfirm = true;
+									}}
+									style="background: #fef3c7; color: #d97706; padding: 6px 16px; border-radius: 6px; font-weight: 600; transition: all 0.2s; border: 1px solid rgba(217, 119, 6, 0.3);"
+								>
+									{$i18n.t('Reindex')}
+								</button>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
-		<div class="flex justify-end pt-3 text-sm font-medium">
+		<div class="flex justify-end pt-3 text-sm font-medium" style="border-top: 1px solid rgba(0,0,0,0.08); margin-top: 8px; padding-top: 16px;">
 			<button
 				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 				type="submit"
+				style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); padding: 10px 24px; font-weight: 600; transition: all 0.3s; border: none;"
 			>
 				{$i18n.t('Save')}
 			</button>
 		</div>
 	{:else}
 		<div class="flex items-center justify-center h-full">
-			<Spinner />
+			<div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+				<Spinner />
+				<div style="color: #6b7280; font-size: 13px; font-weight: 500;">Loading RAG configuration...</div>
+			</div>
 		</div>
 	{/if}
 </form>

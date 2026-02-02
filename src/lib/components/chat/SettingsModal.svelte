@@ -409,7 +409,7 @@
 						<button
 							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 							'general'
-								? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'general';
@@ -435,7 +435,7 @@
 						<button
 							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 							'interface'
-								? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'interface';
@@ -462,7 +462,7 @@
 							<button
 							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 							'connections'
-								? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'connections';
@@ -488,7 +488,7 @@
 							<button
 								class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 								'tools'
-									? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+									? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 									: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'tools';
@@ -515,7 +515,7 @@
 						<button
 							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 							'personalization'
-								? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'personalization';
@@ -530,7 +530,7 @@
 						<button
 							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 							'audio'
-								? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'audio';
@@ -557,7 +557,7 @@
 						<button
 							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 							'chats'
-								? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'chats';
@@ -583,7 +583,7 @@
 						<button
 							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 							'account'
-								? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'account';
@@ -609,7 +609,7 @@
 						<button
 							class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 							'about'
-								? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+								? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 								: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'about';
@@ -636,7 +636,7 @@
 							<button
 								class="px-4 py-3 min-w-fit flex-1 md:flex-none flex items-center gap-3 text-left transition-colors border-l-2 {selectedTab ===
 								'admin'
-									? 'bg-gray-100 dark:bg-gray-800 border-blue-500 text-gray-900 dark:text-white'
+									? 'bg-gray-100 dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-white'
 									: 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'}"
 								on:click={async () => {
 									await goto('/admin/settings');

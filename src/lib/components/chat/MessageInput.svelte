@@ -126,37 +126,26 @@
 
 	const screenCaptureHandler = async () => {
 		try {
-			// Request screen media
 			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
 				video: { cursor: 'never' },
 				audio: false
 			});
-			// Once the user selects a screen, temporarily create a video element
 			const video = document.createElement('video');
 			video.srcObject = mediaStream;
-			// Ensure the video loads without affecting user experience or tab switching
 			await video.play();
-			// Set up the canvas to match the video dimensions
 			const canvas = document.createElement('canvas');
 			canvas.width = video.videoWidth;
 			canvas.height = video.videoHeight;
-			// Grab a single frame from the video stream using the canvas
 			const context = canvas.getContext('2d');
 			context.drawImage(video, 0, 0, canvas.width, canvas.height);
-			// Stop all video tracks (stop screen sharing) after capturing the image
 			mediaStream.getTracks().forEach((track) => track.stop());
 
-			// bring back focus to this current tab, so that the user can see the screen capture
 			window.focus();
 
-			// Convert the canvas to a Base64 image URL
 			const imageUrl = canvas.toDataURL('image/png');
-			// Add the captured image to the files array to render it
 			files = [...files, { type: 'image', url: imageUrl }];
-			// Clean memory: Clear video srcObject
 			video.srcObject = null;
 		} catch (error) {
-			// Handle any errors (e.g., user cancels screen sharing)
 			console.error('Error capturing screen:', error);
 		}
 	};
@@ -190,7 +179,6 @@
 		files = [...files, fileItem];
 
 		try {
-			// During the file upload, file content is automatically extracted.
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
@@ -293,7 +281,6 @@
 	const onDragOver = (e) => {
 		e.preventDefault();
 
-		// Check if a file is being dragged.
 		if (e.dataTransfer?.types?.includes('Files')) {
 			dragged = true;
 		} else {
@@ -359,19 +346,19 @@
 
 {#if loaded}
 	<div class="w-full font-primary">
-		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
+		<div class="mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
-				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
+				class="flex flex-col px-6 {($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-6xl'} w-full"
+					: 'max-w-4xl'} w-full"
 			>
 				<div class="relative">
 					{#if autoScroll === false && history?.currentId}
 						<div
-							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
+							class="absolute -top-14 left-0 right-0 flex justify-center z-30 pointer-events-none"
 						>
 							<button
-								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+								class="group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full p-2.5 pointer-events-auto shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:border-gray-300 dark:hover:border-gray-500"
 								on:click={() => {
 									autoScroll = true;
 									scrollToBottom();
@@ -381,7 +368,7 @@
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 20 20"
 									fill="currentColor"
-									class="w-5 h-5"
+									class="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300"
 								>
 									<path
 										fill-rule="evenodd"
@@ -397,35 +384,36 @@
 				<div class="w-full relative">
 					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || ($settings?.webSearch ?? false) === 'always' || imageGenerationEnabled || codeInterpreterEnabled}
 						<div
-							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-linear-to-t from-white dark:from-gray-900 z-10"
+							class="px-4 pb-3 pt-2 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 via-white/95 dark:via-gray-900/95 to-transparent z-10"
 						>
 							{#if atSelectedModel !== undefined}
-								<div class="flex items-center justify-between w-full">
-									<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
-										<img
-											crossorigin="anonymous"
-											alt="model profile"
-											class="size-3.5 max-w-[28px] object-cover rounded-full"
-											src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
-												?.profile_image_url ??
-												($i18n.language === 'dg-DG'
-													? `/doge.png`
-													: `${WEBUI_BASE_URL}/static/favicon.png`)}
-										/>
-										<div class="translate-y-[0.5px]">
-											Talking to <span class=" font-medium">{atSelectedModel.name}</span>
+								<div class="flex items-center justify-between w-full bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/50 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-700 shadow-sm">
+									<div class="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200">
+										<div class="relative">
+											<img
+												crossorigin="anonymous"
+												alt="model profile"
+												class="size-5 rounded-full ring-2 ring-white dark:ring-gray-700 shadow-sm"
+												src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
+													?.profile_image_url ??
+													($i18n.language === 'dg-DG'
+														? `/doge.png`
+														: `${WEBUI_BASE_URL}/static/favicon.png`)}
+											/>
+											<div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+										</div>
+										<div class="font-medium">
+											Talking to <span class="font-semibold text-gray-900 dark:text-white">{atSelectedModel.name}</span>
 										</div>
 									</div>
-									<div>
-										<button
-											class="flex items-center dark:text-gray-500"
-											on:click={() => {
-												atSelectedModel = undefined;
-											}}
-										>
-											<XMark />
-										</button>
-									</div>
+									<button
+										class="flex items-center justify-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-all duration-200 p-1.5 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50"
+										on:click={() => {
+											atSelectedModel = undefined;
+										}}
+									>
+										<XMark className="w-4 h-4" />
+									</button>
 								</div>
 							{/if}
 						</div>
@@ -453,11 +441,11 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
+		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'}">
 			<div
 				class="{($settings?.widescreenMode ?? null)
-					? 'max-w-full'
-					: 'max-w-6xl'} px-2.5 mx-auto inset-x-0"
+					? 'max-w-full px-8'
+					: 'max-w-3xl'} px-6 mx-auto inset-x-0"
 			>
 				<div class="">
 					<input
@@ -503,30 +491,29 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex gap-1.5"
+							class="w-full flex gap-2.5"
 							on:submit|preventDefault={() => {
-								// check if selectedModels support image input
 								dispatch('submit', prompt);
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
+								class="flex-1 flex flex-col relative w-full rounded-3xl border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all duration-200 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
-									<div class="mx-2 mt-2.5 -mb-1 flex items-center flex-wrap gap-2">
+									<div class="mx-4 mt-4 mb-2 flex items-center flex-wrap gap-3">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
-												<div class=" relative group">
+												<div class="relative group">
 													<div class="relative flex items-center">
 														<Image
 															src={file.url}
 															alt="input"
-															imageClassName=" size-14 rounded-xl object-cover"
+															imageClassName="size-20 rounded-2xl object-cover ring-2 ring-gray-200 dark:ring-gray-600 shadow-md group-hover:shadow-lg transition-all duration-300"
 														/>
 														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
 															<Tooltip
-																className=" absolute top-1 left-1"
+																className="absolute top-2 left-2"
 																content={$i18n.t('{{ models }}', {
 																	models: [
 																		...(atSelectedModel ? [atSelectedModel] : selectedModels)
@@ -535,24 +522,26 @@
 																		.join(', ')
 																})}
 															>
-																<svg
-																	xmlns="http://www.w3.org/2000/svg"
-																	viewBox="0 0 24 24"
-																	fill="currentColor"
-																	class="size-4 fill-yellow-300"
-																>
-																	<path
-																		fill-rule="evenodd"
-																		d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-																		clip-rule="evenodd"
-																	/>
-																</svg>
+																<div class="bg-yellow-400 rounded-full p-1 shadow-md">
+																	<svg
+																		xmlns="http://www.w3.org/2000/svg"
+																		viewBox="0 0 24 24"
+																		fill="white"
+																		class="size-3.5"
+																	>
+																		<path
+																			fill-rule="evenodd"
+																			d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+																			clip-rule="evenodd"
+																		/>
+																	</svg>
+																</div>
 															</Tooltip>
 														{/if}
 													</div>
-													<div class=" absolute -top-1 -right-1">
+													<div class="absolute -top-2 -right-2">
 														<button
-															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+															class="bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-600 rounded-full shadow-md hover:shadow-lg group-hover:scale-110 transition-all duration-200 p-1"
 															type="button"
 															on:click={() => {
 																files.splice(fileIdx, 1);
@@ -584,12 +573,10 @@
 													on:dismiss={async () => {
 														if (file.type !== 'collection' && !file?.collection) {
 															if (file.id) {
-																// This will handle both file deletion and Chroma cleanup
 																await deleteFileById(localStorage.token, file.id);
 															}
 														}
 
-														// Remove from UI state
 														files.splice(fileIdx, 1);
 														files = files;
 													}}
@@ -602,10 +589,10 @@
 									</div>
 								{/if}
 
-								<div class="px-2.5">
+								<div class="px-4">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-4 px-2 resize-none h-fit max-h-40 overflow-auto"
 											id="chat-input-container"
 										>
 											<RichTextInput
@@ -650,7 +637,7 @@
 												on:keydown={async (e) => {
 													e = e.detail.event;
 
-													const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+													const isCtrlPressed = e.ctrlKey || e.metaKey;
 													const commandsContainerElement =
 														document.getElementById('commands-container');
 
@@ -658,13 +645,11 @@
 														stopResponse();
 													}
 
-													// Command/Ctrl + Shift + Enter to submit a message pair
 													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 														e.preventDefault();
 														createMessagePair(prompt);
 													}
 
-													// Check if Ctrl + R is pressed
 													if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
 														e.preventDefault();
 														console.log('regenerate');
@@ -750,10 +735,6 @@
 																return;
 															}
 
-															// Uses keyCode '13' for Enter key for chinese/japanese keyboards.
-															//
-															// Depending on the user's settings, it will send the message
-															// either when Enter is pressed or when Ctrl+Enter is pressed.
 															const enterPressed =
 																($settings?.ctrlEnterToSend ?? false)
 																	? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
@@ -824,13 +805,13 @@
 											id="chat-input"
 											dir="auto"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
+											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-4 px-2 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:compositionstart={() => (isComposing = true)}
 											on:compositionend={() => (isComposing = false)}
 											on:keydown={async (e) => {
-												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+												const isCtrlPressed = e.ctrlKey || e.metaKey;
 
 												const commandsContainerElement =
 													document.getElementById('commands-container');
@@ -839,13 +820,11 @@
 													stopResponse();
 												}
 
-												// Command/Ctrl + Shift + Enter to submit a message pair
 												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 													e.preventDefault();
 													createMessagePair(prompt);
 												}
 
-												// Check if Ctrl + R is pressed
 												if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
 													e.preventDefault();
 													console.log('regenerate');
@@ -933,7 +912,6 @@
 															return;
 														}
 
-														// Prevent Enter key from creating a new line
 														const isCtrlPressed = e.ctrlKey || e.metaKey;
 														const enterPressed =
 															($settings?.ctrlEnterToSend ?? false)
@@ -946,7 +924,6 @@
 															e.preventDefault();
 														}
 
-														// Submit the prompt when Enter key is pressed
 														if ((prompt !== '' || files.length > 0) && enterPressed) {
 															dispatch('submit', prompt);
 														}
@@ -972,7 +949,7 @@
 													}
 
 													e.target.style.height = '';
-													e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+													e.target.style.height = Math.min(e.target.scrollHeight, 240) + 'px';
 												}
 
 												if (e.key === 'Escape') {
@@ -1034,8 +1011,8 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-1 mb-2.5 mx-0.5 max-w-full" dir="ltr">
-									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%] gap-0.5">
+								<div class="grid grid-cols-[1fr_auto] mt-2 mb-4 mx-2 max-w-full items-end gap-3">
+									<div class="ml-2 self-end flex items-center flex-1 max-w-[80%] gap-2">
 										<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
@@ -1086,7 +1063,7 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
+												class="group bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 rounded-xl p-2.5 outline-hidden focus:outline-hidden"
 												type="button"
 												aria-label="More"
 											>
@@ -1094,7 +1071,7 @@
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 20 20"
 													fill="currentColor"
-													class="size-5"
+													class="size-5 transition-transform duration-200 group-hover:rotate-90"
 												>
 													<path
 														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
@@ -1103,7 +1080,7 @@
 											</button>
 										</InputMenu>
 
-										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
+										<div class="flex gap-2 items-center overflow-x-auto scrollbar-none flex-1">
 											{#if toolServers.length + selectedToolIds.length > 0}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
@@ -1111,16 +1088,15 @@
 													})}
 												>
 													<button
-														class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
+														class="group flex gap-2 items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl px-3 py-2 self-center transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
 														aria-label="Available Tools"
 														type="button"
 														on:click={() => {
 															showTools = !showTools;
 														}}
 													>
-														<Wrench className="size-4" strokeWidth="1.75" />
-
-														<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
+														<Wrench className="size-4 transition-transform duration-200 group-hover:rotate-12" strokeWidth="2" />
+														<span class="text-sm font-semibold">
 															{toolServers.length + selectedToolIds.length}
 														</span>
 													</button>
@@ -1133,16 +1109,17 @@
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {webSearchEnabled ||
+															class="group px-3 py-2 flex gap-2 items-center text-sm rounded-xl font-semibold transition-all duration-200 focus:outline-hidden max-w-full overflow-hidden border-2 {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-100 dark:bg-blue-500/20 border-blue-400/20 text-blue-500 dark:text-blue-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+																? 'bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-500/20 dark:to-blue-500/10 border-blue-400 dark:border-blue-500 text-blue-600 dark:text-blue-400 shadow-sm'
+																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'}"
 														>
-															<GlobeAlt className="size-5" strokeWidth="1.75" />
+															<GlobeAlt className="size-4 transition-transform duration-200 group-hover:scale-110" strokeWidth="2" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Web Search')}</span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis"
 															>
+																{$i18n.t('Web Search')}
+															</span>
 														</button>
 													</Tooltip>
 												{/if}
@@ -1153,15 +1130,16 @@
 															on:click|preventDefault={() =>
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {imageGenerationEnabled
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+															class="group px-3 py-2 flex gap-2 items-center text-sm rounded-xl font-semibold transition-all duration-200 focus:outline-hidden max-w-full overflow-hidden border-2 {imageGenerationEnabled
+																? 'bg-gradient-to-r from-purple-50 to-purple-100/50 dark:from-purple-500/20 dark:to-purple-500/10 border-purple-400 dark:border-purple-500 text-purple-600 dark:text-purple-400 shadow-sm'
+																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'}"
 														>
-															<Photo className="size-5" strokeWidth="1.75" />
+															<Photo className="size-4 transition-transform duration-200 group-hover:scale-110" strokeWidth="2" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Image')}</span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis"
 															>
+																{$i18n.t('Image')}
+															</span>
 														</button>
 													</Tooltip>
 												{/if}
@@ -1172,15 +1150,16 @@
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {codeInterpreterEnabled
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+															class="group px-3 py-2 flex gap-2 items-center text-sm rounded-xl font-semibold transition-all duration-200 focus:outline-hidden max-w-full overflow-hidden border-2 {codeInterpreterEnabled
+																? 'bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-500/20 dark:to-green-500/10 border-green-400 dark:border-green-500 text-green-600 dark:text-green-400 shadow-sm'
+																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white'}"
 														>
-															<CommandLine className="size-5" strokeWidth="1.75" />
+															<CommandLine className="size-4 transition-transform duration-200 group-hover:scale-110" strokeWidth="2" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Code Interpreter')}</span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis"
 															>
+																{$i18n.t('Code Interpreter')}
+															</span>
 														</button>
 													</Tooltip>
 												{/if}
@@ -1188,12 +1167,15 @@
 										</div>
 									</div>
 
-									<div class="self-end flex space-x-1 mr-1 shrink-0">
+									<div
+										class="self-end mr-2 shrink-0 relative flex items-center justify-end"
+										style="width: 100px; min-width: 100px;"
+									>
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
 													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
+													class="group text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 rounded-xl p-2.5 mr-1 self-center hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
 													type="button"
 													on:click={async () => {
 														try {
@@ -1227,7 +1209,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														viewBox="0 0 20 20"
 														fill="currentColor"
-														class="w-5 h-5 translate-y-[0.5px]"
+														class="w-5 h-5 transition-transform duration-200 group-hover:scale-110"
 													>
 														<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
 														<path
@@ -1239,10 +1221,10 @@
 										{/if}
 
 										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true)}
-											<div class=" flex items-center">
+											<div class="flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+														class="group bg-white hover:bg-orange-50 text-orange-600 dark:bg-orange-700 dark:text-orange dark:hover:bg-orange-600 transition-all duration-200 rounded-full p-3 shadow-lg hover:shadow-xl hover:scale-105"
 														on:click={() => {
 															stopResponse();
 														}}
@@ -1263,10 +1245,10 @@
 												</Tooltip>
 											</div>
 										{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
-											<div class=" flex items-center">
+											<div class="flex items-center">
 												<Tooltip content={$i18n.t('Call')}>
 													<button
-														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
+														class="group bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-400 dark:hover:to-orange-500 transition-all duration-200 rounded-full p-3 self-center shadow-lg hover:shadow-xl hover:scale-105"
 														type="button"
 														on:click={async () => {
 															if (selectedModels.length > 1) {
@@ -1282,12 +1264,10 @@
 
 																return;
 															}
-															// check if user has access to getUserMedia
 															try {
 																let stream = await navigator.mediaDevices.getUserMedia({
 																	audio: true
 																});
-																// If the user grants the permission, proceed to show the call overlay
 
 																if (stream) {
 																	const tracks = stream.getTracks();
@@ -1297,7 +1277,6 @@
 																stream = null;
 
 																if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-																	// If the user has not initialized the TTS worker, initialize it
 																	if (!$TTSWorker) {
 																		await TTSWorker.set(
 																			new KokoroWorker({
@@ -1312,7 +1291,6 @@
 																showCallOverlay.set(true);
 																showControls.set(true);
 															} catch (err) {
-																// If the user denies the permission or an error occurs, show an error message
 																toast.error(
 																	$i18n.t('Permission denied when accessing media devices')
 																);
@@ -1325,13 +1303,13 @@
 												</Tooltip>
 											</div>
 										{:else}
-											<div class=" flex items-center">
+											<div class="flex items-center">
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"
-														class="{!(prompt === '' && files.length === 0)
-															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+														class="group {!(prompt === '' && files.length === 0)
+															? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-400 dark:hover:to-orange-500 shadow-lg hover:shadow-xl hover:scale-105'
+															: 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'} transition-all duration-200 rounded-full p-3 self-center"
 														type="submit"
 														disabled={prompt === '' && files.length === 0}
 													>
@@ -1339,7 +1317,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 16 16"
 															fill="currentColor"
-															class="size-5"
+															class="size-5 transition-transform duration-200 {!(prompt === '' && files.length === 0) ? 'group-hover:-translate-y-0.5' : ''}"
 														>
 															<path
 																fill-rule="evenodd"

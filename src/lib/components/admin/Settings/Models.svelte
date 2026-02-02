@@ -224,89 +224,98 @@
 
 {#if models !== null}
 	{#if selectedModelId === null}
-		<div class="flex flex-col gap-1 mt-1.5 mb-2">
+		<!-- Header Section -->
+		<div class="flex flex-col gap-3 mt-1.5 mb-4">
 			<div class="flex justify-between items-center">
-				<div class="flex items-center md:self-center text-xl font-medium px-0.5">
-					{$i18n.t('Models')}
-					<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-						>{filteredModels.length}</span
-					>
+				<div class="flex items-center gap-3">
+					<h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Models')}
+					</h2>
+					<div class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800">
+						<span class="text-sm font-semibold text-blue-700 dark:text-blue-400">
+							{filteredModels.length}
+						</span>
+						<span class="text-xs text-blue-600 dark:text-blue-500">
+							{filteredModels.length === 1 ? 'model' : 'models'}
+						</span>
+					</div>
 				</div>
 
-				<div class="flex items-center gap-1.5">
+				<div class="flex items-center gap-2">
 					<Tooltip content={$i18n.t('Manage Models')}>
 						<button
-							class=" p-1 rounded-full flex gap-1 items-center"
+							class="p-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-sm"
 							type="button"
 							on:click={() => {
 								showManageModal = true;
 							}}
 						>
-							<ArrowDownTray />
+							<ArrowDownTray className="size-4" />
 						</button>
 					</Tooltip>
 
 					<Tooltip content={$i18n.t('Settings')}>
 						<button
-							class=" p-1 rounded-full flex gap-1 items-center"
+							class="p-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-sm"
 							type="button"
 							on:click={() => {
 								showConfigModal = true;
 							}}
 						>
-							<Cog6 />
+							<Cog6 className="size-4" />
 						</button>
 					</Tooltip>
 				</div>
 			</div>
 
-			<div class=" flex flex-1 items-center w-full space-x-2">
-				<div class="flex flex-1 items-center">
-					<div class=" self-center ml-1 mr-3">
-						<Search className="size-3.5" />
-					</div>
-					<input
-						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={searchValue}
-						placeholder={$i18n.t('Search Models')}
-					/>
+			<!-- Search Bar -->
+			<div class="relative">
+				<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+					<Search className="size-4 text-gray-400" />
 				</div>
+				<input
+					class="w-full pl-11 pr-4 py-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+					bind:value={searchValue}
+					placeholder={$i18n.t('Search Models')}
+				/>
 			</div>
 		</div>
 
-		<div class=" my-2 mb-5" id="model-list">
+		<!-- Models List -->
+		<div class="space-y-2 mb-5" id="model-list">
 			{#if models.length > 0}
 				{#each filteredModels as model, modelIdx (model.id)}
 					<div
-						class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition {model
+						class="group flex items-center gap-4 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:shadow-md transition-all duration-200 {model
 							?.meta?.hidden
-							? 'opacity-50 dark:opacity-50'
+							? 'opacity-60 dark:opacity-60'
 							: ''}"
 						id="model-item-{model.id}"
 					>
 						<button
-							class=" flex flex-1 text-left space-x-3.5 cursor-pointer w-full"
+							class="flex flex-1 items-center gap-4 text-left cursor-pointer min-w-0"
 							type="button"
 							on:click={() => {
 								selectedModelId = model.id;
 							}}
 						>
-							<div class=" self-center w-8">
+							<!-- Model Image -->
+							<div class="flex-shrink-0">
 								<div
-									class=" rounded-full object-cover {(model?.is_active ?? true)
+									class="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 {(model?.is_active ?? true)
 										? ''
-										: 'opacity-50 dark:opacity-50'} "
+										: 'opacity-50 grayscale'}"
 								>
 									<img
 										src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
-										alt="modelfile profile"
-										class=" rounded-full w-full h-auto object-cover"
+										alt="model profile"
+										class="w-full h-full object-cover"
 									/>
 								</div>
 							</div>
 
-							<div class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}">
+							<!-- Model Info -->
+							<div class="flex-1 min-w-0 {(model?.is_active ?? true) ? '' : 'opacity-60'}">
 								<Tooltip
 									content={marked.parse(
 										!!model?.meta?.description
@@ -315,42 +324,44 @@
 												? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
 												: model.id
 									)}
-									className=" w-fit"
+									className="w-fit"
 									placement="top-start"
 								>
-									<div class="  font-semibold line-clamp-1">{model.name}</div>
+									<h3 class="font-semibold text-gray-900 dark:text-gray-100 line-clamp-1 mb-1">
+										{model.name}
+									</h3>
 								</Tooltip>
-								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-									<span class=" line-clamp-1">
-										{!!model?.meta?.description
-											? model?.meta?.description
-											: model?.ollama?.digest
-												? `${model.id} (${model?.ollama?.digest})`
-												: model.id}
-									</span>
-								</div>
+								<p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+									{!!model?.meta?.description
+										? model?.meta?.description
+										: model?.ollama?.digest
+											? `${model.id} (${model?.ollama?.digest})`
+											: model.id}
+								</p>
 							</div>
 						</button>
-						<div class="flex flex-row gap-0.5 items-center self-center">
+
+						<!-- Action Buttons -->
+						<div class="flex items-center gap-1 flex-shrink-0">
 							{#if shiftKey}
 								<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 									<button
-										class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
 										type="button"
 										on:click={() => {
 											hideModelHandler(model);
 										}}
 									>
 										{#if model?.meta?.hidden}
-											<EyeSlash />
+											<EyeSlash className="size-4" />
 										{:else}
-											<Eye />
+											<Eye className="size-4" />
 										{/if}
 									</button>
 								</Tooltip>
 							{:else}
 								<button
-									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+									class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
 									type="button"
 									on:click={() => {
 										selectedModelId = model.id;
@@ -362,7 +373,7 @@
 										viewBox="0 0 24 24"
 										stroke-width="1.5"
 										stroke="currentColor"
-										class="w-4 h-4"
+										class="size-4"
 									>
 										<path
 											stroke-linecap="round"
@@ -384,14 +395,14 @@
 									onClose={() => {}}
 								>
 									<button
-										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
 										type="button"
 									>
-										<EllipsisHorizontal className="size-5" />
+										<EllipsisHorizontal className="size-4" />
 									</button>
 								</ModelMenu>
 
-								<div class="ml-1">
+								<div class="ml-2">
 									<Tooltip
 										content={(model?.is_active ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 									>
@@ -408,112 +419,104 @@
 					</div>
 				{/each}
 			{:else}
-				<div class="flex flex-col items-center justify-center w-full h-20">
-					<div class="text-gray-500 dark:text-gray-400 text-xs">
+				<div class="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl">
+					<svg class="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+					</svg>
+					<p class="text-gray-500 dark:text-gray-400 text-sm font-medium">
 						{$i18n.t('No models found')}
-					</div>
+					</p>
 				</div>
 			{/if}
 		</div>
 
+		<!-- Import/Export Section -->
 		{#if $user?.role === 'admin'}
-			<div class=" flex justify-end w-full mb-3">
-				<div class="flex space-x-1">
-					<input
-						id="models-import-input"
-						bind:this={modelsImportInputElement}
-						bind:files={importFiles}
-						type="file"
-						accept=".json"
-						hidden
-						on:change={() => {
-							console.log(importFiles);
+			<div class="flex justify-end gap-2 mb-3">
+				<input
+					id="models-import-input"
+					bind:this={modelsImportInputElement}
+					bind:files={importFiles}
+					type="file"
+					accept=".json"
+					hidden
+					on:change={() => {
+						console.log(importFiles);
 
-							let reader = new FileReader();
-							reader.onload = async (event) => {
-								let savedModels = JSON.parse(event.target.result);
-								console.log(savedModels);
+						let reader = new FileReader();
+						reader.onload = async (event) => {
+							let savedModels = JSON.parse(event.target.result);
+							console.log(savedModels);
 
-								for (const model of savedModels) {
-									if (Object.keys(model).includes('base_model_id')) {
-										if (model.base_model_id === null) {
-											upsertModelHandler(model);
-										}
-									} else {
-										if (model?.info ?? false) {
-											if (model.info.base_model_id === null) {
-												upsertModelHandler(model.info);
-											}
+							for (const model of savedModels) {
+								if (Object.keys(model).includes('base_model_id')) {
+									if (model.base_model_id === null) {
+										upsertModelHandler(model);
+									}
+								} else {
+									if (model?.info ?? false) {
+										if (model.info.base_model_id === null) {
+											upsertModelHandler(model.info);
 										}
 									}
 								}
+							}
 
-								await _models.set(
-									await getModels(
-										localStorage.token,
-										$config?.features?.enable_direct_connections &&
-											($settings?.directConnections ?? null)
-									)
-								);
-								init();
-							};
+							await _models.set(
+								await getModels(
+									localStorage.token,
+									$config?.features?.enable_direct_connections &&
+										($settings?.directConnections ?? null)
+								)
+							);
+							init();
+						};
 
-							reader.readAsText(importFiles[0]);
-						}}
-					/>
+						reader.readAsText(importFiles[0]);
+					}}
+				/>
 
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-						on:click={() => {
-							modelsImportInputElement.click();
-						}}
+				<button
+					class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+					on:click={() => {
+						modelsImportInputElement.click();
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="size-4"
 					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Import Presets')}
-						</div>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<span>{$i18n.t('Import Presets')}</span>
+				</button>
 
-						<div class=" self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-3.5 h-3.5"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
-					</button>
-
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-						on:click={async () => {
-							downloadModels(models);
-						}}
+				<button
+					class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+					on:click={async () => {
+						downloadModels(models);
+					}}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="size-4"
 					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Presets')}
-						</div>
-
-						<div class=" self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-3.5 h-3.5"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
-					</button>
-				</div>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<span>{$i18n.t('Export Presets')}</span>
+				</button>
 			</div>
 		{/if}
 	{:else}
@@ -532,7 +535,8 @@
 		/>
 	{/if}
 {:else}
-	<div class=" h-full w-full flex justify-center items-center">
-		<Spinner />
+	<div class="h-full w-full flex flex-col justify-center items-center gap-3">
+		<Spinner className="size-8" />
+		<p class="text-sm text-gray-500 dark:text-gray-400">{$i18n.t('Loading models...')}</p>
 	</div>
 {/if}

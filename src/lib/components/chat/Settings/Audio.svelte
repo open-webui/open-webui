@@ -437,7 +437,7 @@
 	<!-- Save Button -->
 	<div class="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
 		<button
-			class="px-6 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+			class="px-6 py-2.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
 			type="submit"
 		>
 			{$i18n.t('Save')}

@@ -387,4 +387,7 @@
 	}
 </script>
 
-<div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
+<div
+	bind:this={element}
+	class="relative w-full min-w-full min-h-[20px] max-h-[160px] overflow-y-auto {className}"
+/>

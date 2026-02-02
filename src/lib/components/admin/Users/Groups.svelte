@@ -126,23 +126,30 @@
 
 {#if loaded}
 	<AddGroupModal bind:show={showCreateGroupModal} onSubmit={addGroupHandler} />
-	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
-		<div class="flex md:self-center text-lg font-medium px-0.5">
-			{$i18n.t('Groups')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+	
+	<div class="mb-6 flex flex-col gap-4">
+		<!-- Header Section -->
+		<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+			<div class="flex items-center gap-3">
+				<div>
+					<h2 class="text-2xl font-semibold text-gray-900 dark:text-white">
+						{$i18n.t('Groups')}
+					</h2>
+					<p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+						{groups.length} {groups.length === 1 ? 'group' : 'groups'}
+					</p>
+				</div>
+			</div>
 
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{groups.length}</span>
-		</div>
-
-		<div class="flex gap-1">
-			<div class=" flex w-full space-x-2">
-				<div class="flex flex-1">
-					<div class=" self-center ml-1 mr-3">
+			<!-- Search and Create Section -->
+			<div class="flex gap-2">
+				<div class="relative flex-1 md:w-72">
+					<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
 							fill="currentColor"
-							class="w-4 h-4"
+							class="w-4 h-4 text-gray-400"
 						>
 							<path
 								fill-rule="evenodd"
@@ -152,73 +159,76 @@
 						</svg>
 					</div>
 					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						class="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all"
 						bind:value={search}
-						placeholder={$i18n.t('Search')}
+						placeholder={$i18n.t('Search groups...')}
 					/>
 				</div>
 
-				<div>
-					<Tooltip content={$i18n.t('Create Group')}>
-						<button
-							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
-							on:click={() => {
-								showCreateGroupModal = !showCreateGroupModal;
-							}}
-						>
-							<Plus className="size-3.5" />
-						</button>
-					</Tooltip>
-				</div>
+				<Tooltip content={$i18n.t('Create Group')}>
+					<button
+						class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-colors font-medium text-sm flex items-center gap-2 shadow-sm"
+						on:click={() => {
+							showCreateGroupModal = !showCreateGroupModal;
+						}}
+					>
+						<Plus className="size-4" />
+						<span class="hidden sm:inline">Create Group</span>
+					</button>
+				</Tooltip>
 			</div>
 		</div>
 	</div>
 
 	<div>
 		{#if filteredGroups.length === 0}
-			<div class="flex flex-col items-center justify-center h-40">
-				<div class=" text-xl font-medium">
+			<div class="flex flex-col items-center justify-center py-16 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+				<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4">
+					<UsersSolid className="size-8 text-blue-600 dark:text-blue-400" />
+				</div>
+				
+				<h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
 					{$i18n.t('Organize your users')}
-				</div>
+				</h3>
 
-				<div class="mt-1 text-sm dark:text-gray-300">
+				<p class="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
 					{$i18n.t('Use groups to group your users and assign permissions.')}
-				</div>
+				</p>
 
-				<div class="mt-3">
-					<button
-						class=" px-4 py-1.5 text-sm rounded-full bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition font-medium flex items-center space-x-1"
-						aria-label={$i18n.t('Create Group')}
-						on:click={() => {
-							showCreateGroupModal = true;
-						}}
-					>
-						{$i18n.t('Create Group')}
-					</button>
-				</div>
+				<button
+					class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-colors font-medium text-sm flex items-center gap-2 shadow-sm"
+					aria-label={$i18n.t('Create Group')}
+					on:click={() => {
+						showCreateGroupModal = true;
+					}}
+				>
+					<Plus className="size-4" />
+					{$i18n.t('Create Group')}
+				</button>
 			</div>
 		{:else}
-			<div>
-				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-bold">
-					<div class="w-full">Group</div>
-
-					<div class="w-full">Users</div>
-
-					<div class="w-full"></div>
+			<div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900 mb-4">
+				<!-- Table Header -->
+				<div class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3.5">
+					<div class="flex items-center gap-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+						<div class="flex-1">Group</div>
+						<div class="flex-1">Users</div>
+						<div class="w-24 text-right">Actions</div>
+					</div>
 				</div>
 
-				<hr class="mt-1.5 border-gray-100 dark:border-gray-850" />
-
-				{#each filteredGroups as group}
-					<div class="my-2">
-						<GroupItem {group} {users} {setGroups} />
-					</div>
-				{/each}
+				<!-- Groups List -->
+				<div class="divide-y divide-gray-200 dark:divide-gray-700">
+					{#each filteredGroups as group}
+						<div class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+							<GroupItem {group} {users} {setGroups} />
+						</div>
+					{/each}
+				</div>
 			</div>
 		{/if}
 
-		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
-
+		<!-- Default Permissions Card -->
 		<GroupModal
 			bind:show={showDefaultPermissionsModal}
 			tabs={['permissions']}
@@ -228,27 +238,28 @@
 		/>
 
 		<button
-			class="flex items-center justify-between rounded-lg w-full transition pt-1"
+			class="flex items-center justify-between rounded-xl w-full p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm group"
 			on:click={() => {
 				showDefaultPermissionsModal = true;
 			}}
 		>
-			<div class="flex items-center gap-2.5">
-				<div class="p-1.5 bg-black/5 dark:bg-white/10 rounded-full">
-					<UsersSolid className="size-4" />
+			<div class="flex items-center gap-3">
+				<div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors">
+					<UsersSolid className="size-5 text-blue-600 dark:text-blue-400" />
 				</div>
 
 				<div class="text-left">
-					<div class=" text-sm font-medium">{$i18n.t('Default permissions')}</div>
-
-					<div class="flex text-xs mt-0.5">
+					<div class="text-sm font-semibold text-gray-900 dark:text-white">
+						{$i18n.t('Default permissions')}
+					</div>
+					<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
 						{$i18n.t('applies to all users with the "user" role')}
 					</div>
 				</div>
 			</div>
 
-			<div>
-				<ChevronRight strokeWidth="2.5" />
+			<div class="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+				<ChevronRight strokeWidth="2.5" className="size-5" />
 			</div>
 		</button>
 	</div>

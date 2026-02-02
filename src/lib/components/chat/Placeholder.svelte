@@ -141,7 +141,7 @@
 		on:click={() => {
 			inputActive = true;
 			userInteracted = true;
-		}}
+		}}    
 		on:keydown={() => (userInteracted = true)}
 	>
 

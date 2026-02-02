@@ -10,6 +10,8 @@
 		temporaryChatEnabled
 	} from '$lib/stores';
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+	import { fade, slide } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
@@ -390,76 +392,203 @@
 
 <div class={className}>
 	{#if Object.keys(history?.messages ?? {}).length == 0}
-		<ChatPlaceholder
-			modelIds={selectedModels}
-			{atSelectedModel}
-			submitPrompt={async (p) => {
-				let text = p;
+		<div class="w-full h-full flex items-center justify-center" in:fade={{ duration: 300 }}>
+			<ChatPlaceholder
+				modelIds={selectedModels}
+				{atSelectedModel}
+				submitPrompt={async (p) => {
+					let text = p;
 
-				if (p.includes('{{CLIPBOARD}}')) {
-					const clipboardText = await navigator.clipboard.readText().catch((err) => {
-						toast.error($i18n.t('Failed to read clipboard contents'));
-						return '{{CLIPBOARD}}';
-					});
+					if (p.includes('{{CLIPBOARD}}')) {
+						const clipboardText = await navigator.clipboard.readText().catch((err) => {
+							toast.error($i18n.t('Failed to read clipboard contents'));
+							return '{{CLIPBOARD}}';
+						});
 
-					text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
-				}
+						text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
+					}
 
-				prompt = text;
-				await tick();
-			}}
-		/>
+					prompt = text;
+					await tick();
+				}}
+			/>
+		</div>
 	{:else}
-		<div class="w-full pt-2">
-			{#key chatId}
-				<div class="w-full">
-					{#if messages.at(0)?.parentId !== null}
-						<Loader
-							on:visible={(e) => {
-								console.log('visible');
-								if (!messagesLoading) {
-									loadMoreMessages();
-								}
-							}}
-						>
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-								<Spinner className=" size-4" />
-								<div class=" ">Loading...</div>
-							</div>
-						</Loader>
-					{/if}
+		<div class="w-full pt-2 flex justify-center" in:fade={{ duration: 300 }}>
+			<div class="{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-4xl'} w-full px-6">
+				{#key chatId}
+					<div class="w-full">
+						{#if messages.at(0)?.parentId !== null}
+							<Loader
+								on:visible={(e) => {
+									console.log('visible');
+									if (!messagesLoading) {
+										loadMoreMessages();
+									}
+								}}
+							>
+								<div 
+									class="w-full flex justify-center py-4 text-xs items-center gap-2.5 text-gray-500 dark:text-gray-400"
+									in:fade={{ duration: 200 }}
+								>
+									<Spinner className="size-4" />
+									<div class="font-medium animate-pulse">Loading more messages...</div>
+								</div>
+							</Loader>
+						{/if}
 
-					{#each messages as message, messageIdx (message.id)}
-						<Message
-							{chatId}
-							bind:history
-							messageId={message.id}
-							idx={messageIdx}
-							{user}
-							{gotoMessage}
-							{showPreviousMessage}
-							{showNextMessage}
-							{updateChat}
-							{editMessage}
-							{deleteMessage}
-							{rateMessage}
-							{actionMessage}
-							{saveMessage}
-							{submitMessage}
-							{regenerateResponse}
-							{continueResponse}
-							{mergeResponses}
-							{addMessages}
-							{triggerScroll}
-							{readOnly}
-						/>
-					{/each}
-				</div>
-				<div class="pb-12" />
-				{#if bottomPadding}
-					<div class="  pb-6" />
-				{/if}
-			{/key}
+						<div class="messages-list space-y-6">
+							{#each messages as message, messageIdx (message.id)}
+								<div 
+									class="message-item"
+									in:fade={{ duration: 250, delay: messageIdx * 30 }}
+									out:fade={{ duration: 150 }}
+								>
+									<Message
+										{chatId}
+										bind:history
+										messageId={message.id}
+										idx={messageIdx}
+										{user}
+										{gotoMessage}
+										{showPreviousMessage}
+										{showNextMessage}
+										{updateChat}
+										{editMessage}
+										{deleteMessage}
+										{rateMessage}
+										{actionMessage}
+										{saveMessage}
+										{submitMessage}
+										{regenerateResponse}
+										{continueResponse}
+										{mergeResponses}
+										{addMessages}
+										{triggerScroll}
+										{readOnly}
+									/>
+								</div>
+							{/each}
+						</div>
+					</div>
+					
+					<!-- Bottom spacing for better scroll experience -->
+					<div class="pb-16" />
+					{#if bottomPadding}
+						<div class="pb-8" />
+					{/if}
+				{/key}
+			</div>
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* Smooth scroll behavior with better performance */
+	:global(#messages-container) {
+		scroll-behavior: smooth;
+		-webkit-overflow-scrolling: touch;
+		will-change: scroll-position;
+	}
+
+	/* Messages list styling */
+	.messages-list {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+		padding-top: 0.5rem;
+	}
+
+	/* Individual message item */
+	.message-item {
+		position: relative;
+		width: 100%;
+		will-change: opacity, transform;
+		transform-origin: center top;
+	}
+
+	/* Smooth transitions for all interactive elements */
+	.message-item :global(*) {
+		transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+		transition-duration: 200ms;
+	}
+
+	/* Hover effects optimization */
+	.message-item:hover {
+		transform: translateZ(0);
+	}
+
+	/* Prevent layout shift during animations */
+	.messages-list {
+		min-height: 0;
+		contain: layout style paint;
+	}
+
+	/* Better spacing between messages */
+	.message-item + .message-item {
+		margin-top: 0;
+	}
+
+	/* Smooth appearance animation */
+	@keyframes messageAppear {
+		from {
+			opacity: 0;
+			transform: translateY(8px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+
+	/* Loading animation improvements */
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.6;
+		}
+	}
+
+	:global(.animate-pulse) {
+		animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	}
+
+	/* Optimize rendering performance */
+	.messages-list,
+	.message-item {
+		transform: translateZ(0);
+		backface-visibility: hidden;
+		perspective: 1000px;
+	}
+
+	/* Responsive spacing adjustments */
+	@media (max-width: 768px) {
+		.messages-list {
+			gap: 1.25rem;
+		}
+	}
+
+	/* Dark mode optimizations */
+	@media (prefers-color-scheme: dark) {
+		.message-item {
+			color-scheme: dark;
+		}
+	}
+
+	/* Reduce motion for accessibility */
+	@media (prefers-reduced-motion: reduce) {
+		.message-item,
+		.message-item :global(*) {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+		}
+		
+		:global(#messages-container) {
+			scroll-behavior: auto;
+		}
+	}
+</style>

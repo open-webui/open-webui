@@ -127,16 +127,17 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center font-primary">
+		<!-- Header -->
+		<div class="flex justify-between items-center px-6 pt-5 pb-4 border-b border-gray-200 dark:border-gray-800">
+			<h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
 				{#if edit}
 					{$i18n.t('Edit Arena Model')}
 				{:else}
 					{$i18n.t('Add Arena Model')}
 				{/if}
-			</div>
+			</h2>
 			<button
-				class="self-center"
+				class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
 				on:click={() => {
 					show = false;
 				}}
@@ -145,7 +146,7 @@
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
-					class="w-5 h-5"
+					class="w-5 h-5 text-gray-500 dark:text-gray-400"
 				>
 					<path
 						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
@@ -154,238 +155,250 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
-			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
+		<!-- Content -->
+		<div class="flex flex-col md:flex-row w-full px-6 py-5 dark:text-gray-200">
+			<div class="flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
-					class="flex flex-col w-full"
+					class="flex flex-col w-full space-y-5"
 					on:submit|preventDefault={() => {
 						submitHandler();
 					}}
 				>
-					<div class="px-1">
-						<div class="flex justify-center pb-3">
-							<input
-								bind:this={imageInputElement}
-								type="file"
-								hidden
-								accept="image/*"
-								on:change={(e) => {
-									const files = e.target.files ?? [];
-									let reader = new FileReader();
-									reader.onload = (event) => {
-										let originalImageUrl = `${event.target.result}`;
+					<!-- Profile Image Section -->
+					<div class="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
+						<input
+							bind:this={imageInputElement}
+							type="file"
+							hidden
+							accept="image/*"
+							on:change={(e) => {
+								const files = e.target.files ?? [];
+								let reader = new FileReader();
+								reader.onload = (event) => {
+									let originalImageUrl = `${event.target.result}`;
 
-										const img = new Image();
-										img.src = originalImageUrl;
+									const img = new Image();
+									img.src = originalImageUrl;
 
-										img.onload = function () {
-											const canvas = document.createElement('canvas');
-											const ctx = canvas.getContext('2d');
+									img.onload = function () {
+										const canvas = document.createElement('canvas');
+										const ctx = canvas.getContext('2d');
 
-											// Calculate the aspect ratio of the image
-											const aspectRatio = img.width / img.height;
+										// Calculate the aspect ratio of the image
+										const aspectRatio = img.width / img.height;
 
-											// Calculate the new width and height to fit within 250x250
-											let newWidth, newHeight;
-											if (aspectRatio > 1) {
-												newWidth = 250 * aspectRatio;
-												newHeight = 250;
-											} else {
-												newWidth = 250;
-												newHeight = 250 / aspectRatio;
-											}
+										// Calculate the new width and height to fit within 250x250
+										let newWidth, newHeight;
+										if (aspectRatio > 1) {
+											newWidth = 250 * aspectRatio;
+											newHeight = 250;
+										} else {
+											newWidth = 250;
+											newHeight = 250 / aspectRatio;
+										}
 
-											// Set the canvas size
-											canvas.width = 250;
-											canvas.height = 250;
+										// Set the canvas size
+										canvas.width = 250;
+										canvas.height = 250;
 
-											// Calculate the position to center the image
-											const offsetX = (250 - newWidth) / 2;
-											const offsetY = (250 - newHeight) / 2;
+										// Calculate the position to center the image
+										const offsetX = (250 - newWidth) / 2;
+										const offsetY = (250 - newHeight) / 2;
 
-											// Draw the image on the canvas
-											ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+										// Draw the image on the canvas
+										ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
 
-											// Get the base64 representation of the compressed image
-											const compressedSrc = canvas.toDataURL('image/jpeg');
+										// Get the base64 representation of the compressed image
+										const compressedSrc = canvas.toDataURL('image/jpeg');
 
-											// Display the compressed image
-											profileImageUrl = compressedSrc;
+										// Display the compressed image
+										profileImageUrl = compressedSrc;
 
-											e.target.files = null;
-										};
+										e.target.files = null;
 									};
+								};
 
-									if (
-										files.length > 0 &&
-										['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(
-											files[0]['type']
-										)
-									) {
-										reader.readAsDataURL(files[0]);
-									}
-								}}
-							/>
+								if (
+									files.length > 0 &&
+									['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(
+										files[0]['type']
+									)
+								) {
+									reader.readAsDataURL(files[0]);
+								}
+							}}
+						/>
 
-							<button
-								class="relative rounded-full w-fit h-fit shrink-0"
-								type="button"
-								on:click={() => {
-									imageInputElement.click();
-								}}
-							>
+						<button
+							class="relative group"
+							type="button"
+							on:click={() => {
+								imageInputElement.click();
+							}}
+						>
+							<div class="relative w-20 h-20 rounded-full overflow-hidden ring-4 ring-gray-200 dark:ring-gray-700 transition-all duration-200 group-hover:ring-blue-500">
 								<img
 									src={profileImageUrl}
-									class="size-16 rounded-full object-cover shrink-0"
+									class="w-full h-full object-cover"
 									alt="Profile"
 								/>
 
 								<div
-									class="absolute flex justify-center rounded-full bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden bg-gray-700 bg-fixed opacity-0 transition duration-300 ease-in-out hover:opacity-50"
+									class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
 								>
-									<div class="my-auto text-white">
-										<PencilSolid className="size-4" />
-									</div>
+									<PencilSolid className="size-5 text-white" />
 								</div>
+							</div>
+						</button>
+						<p class="text-xs text-gray-500 dark:text-gray-400">{$i18n.t('Click to change image')}</p>
+					</div>
+
+					<!-- Name and ID Section -->
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div class="space-y-2">
+							<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+								{$i18n.t('Name')}
+								<span class="text-red-500">*</span>
+							</label>
+							<input
+								class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+								type="text"
+								bind:value={name}
+								placeholder={$i18n.t('Model Name')}
+								autocomplete="off"
+								required
+							/>
+						</div>
+
+						<div class="space-y-2">
+							<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+								{$i18n.t('ID')}
+								<span class="text-red-500">*</span>
+							</label>
+							<input
+								class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+								type="text"
+								bind:value={id}
+								placeholder={$i18n.t('Model ID')}
+								autocomplete="off"
+								required
+								disabled={edit}
+							/>
+						</div>
+					</div>
+
+					<!-- Description Section -->
+					<div class="space-y-2">
+						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							{$i18n.t('Description')}
+						</label>
+						<input
+							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+							type="text"
+							bind:value={description}
+							placeholder={$i18n.t('Enter description')}
+							autocomplete="off"
+						/>
+					</div>
+
+					<!-- Access Control Section -->
+					<div class="space-y-2">
+						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							{$i18n.t('Access Control')}
+						</label>
+						<div class="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800">
+							<AccessControl bind:accessControl />
+						</div>
+					</div>
+
+					<!-- Models Section -->
+					<div class="space-y-3">
+						<div class="flex justify-between items-center">
+							<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+								{$i18n.t('Models')}
+							</label>
+							<button
+								class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 {filterMode === 'include' 
+									? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700' 
+									: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-700'}"
+								type="button"
+								on:click={() => {
+									filterMode = filterMode === 'include' ? 'exclude' : 'include';
+								}}
+							>
+								{#if filterMode === 'include'}
+									{$i18n.t('Include')}
+								{:else}
+									{$i18n.t('Exclude')}
+								{/if}
 							</button>
 						</div>
-						<div class="flex gap-2">
-							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</div>
 
-								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-										type="text"
-										bind:value={name}
-										placeholder={$i18n.t('Model Name')}
-										autocomplete="off"
-										required
-									/>
-								</div>
-							</div>
-
-							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('ID')}</div>
-
-								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-										type="text"
-										bind:value={id}
-										placeholder={$i18n.t('Model ID')}
-										autocomplete="off"
-										required
-										disabled={edit}
-									/>
-								</div>
-							</div>
-						</div>
-
-						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
-
-							<div class="flex-1">
-								<input
-									class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-									type="text"
-									bind:value={description}
-									placeholder={$i18n.t('Enter description')}
-									autocomplete="off"
-								/>
-							</div>
-						</div>
-
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-						<div class="my-2 -mx-2">
-							<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-								<AccessControl bind:accessControl />
-							</div>
-						</div>
-
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-						<div class="flex flex-col w-full">
-							<div class="mb-1 flex justify-between">
-								<div class="text-xs text-gray-500">{$i18n.t('Models')}</div>
-
-								<div>
-									<button
-										class=" text-xs text-gray-500"
-										type="button"
-										on:click={() => {
-											filterMode = filterMode === 'include' ? 'exclude' : 'include';
-										}}
-									>
-										{#if filterMode === 'include'}
-											{$i18n.t('Include')}
-										{:else}
-											{$i18n.t('Exclude')}
-										{/if}
-									</button>
-								</div>
-							</div>
-
+						<!-- Models List -->
+						<div class="min-h-[100px] p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg">
 							{#if modelIds.length > 0}
-								<div class="flex flex-col">
+								<div class="space-y-2">
 									{#each modelIds as modelId, modelIdx}
-										<div class=" flex gap-2 w-full justify-between items-center">
-											<div class=" text-sm flex-1 py-1 rounded-lg">
+										<div class="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 group hover:border-gray-300 dark:hover:border-gray-600 transition-colors duration-200">
+											<span class="text-sm text-gray-900 dark:text-gray-100 font-medium">
 												{$models.find((model) => model.id === modelId)?.name}
-											</div>
-											<div class="shrink-0">
-												<button
-													type="button"
-													on:click={() => {
-														modelIds = modelIds.filter((_, idx) => idx !== modelIdx);
-													}}
-												>
-													<Minus strokeWidth="2" className="size-3.5" />
-												</button>
-											</div>
+											</span>
+											<button
+												class="p-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-200"
+												type="button"
+												on:click={() => {
+													modelIds = modelIds.filter((_, idx) => idx !== modelIdx);
+												}}
+											>
+												<Minus strokeWidth="2" className="size-4" />
+											</button>
 										</div>
 									{/each}
 								</div>
 							{:else}
-								<div class="text-gray-500 text-xs text-center py-2">
-									{$i18n.t('Leave empty to include all models or select specific models')}
+								<div class="flex flex-col items-center justify-center py-6">
+									<svg class="w-12 h-12 text-gray-300 dark:text-gray-700 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+									</svg>
+									<p class="text-xs text-gray-500 dark:text-gray-400 text-center max-w-xs">
+										{$i18n.t('Leave empty to include all models or select specific models')}
+									</p>
 								</div>
 							{/if}
 						</div>
 
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-						<div class="flex items-center">
+						<!-- Add Model Section -->
+						<div class="flex gap-2">
 							<select
-								class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
-									? ''
-									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+								class="flex-1 px-3 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg {selectedModelId
+									? 'text-gray-900 dark:text-gray-100'
+									: 'text-gray-500 dark:text-gray-400'} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
 								bind:value={selectedModelId}
 							>
 								<option value="">{$i18n.t('Select a model')}</option>
 								{#each $models.filter((m) => m?.owned_by !== 'arena') as model}
-									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
+									<option value={model.id} class="bg-white dark:bg-gray-800">{model.name}</option>
 								{/each}
 							</select>
 
-							<div>
-								<button
-									type="button"
-									on:click={() => {
-										addModelHandler();
-									}}
-								>
-									<Plus className="size-3.5" strokeWidth="2" />
-								</button>
-							</div>
+							<button
+								class="flex-shrink-0 p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+								type="button"
+								disabled={!selectedModelId}
+								on:click={() => {
+									addModelHandler();
+								}}
+							>
+								<Plus className="size-5" strokeWidth="2" />
+							</button>
 						</div>
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+					<!-- Action Buttons -->
+					<div class="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
 						{#if edit}
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-4 py-2.5 text-sm font-medium bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 rounded-lg"
 								type="button"
 								on:click={() => {
 									showDeleteConfirmDialog = true;
@@ -396,40 +409,36 @@
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-								? ' cursor-not-allowed'
-								: ''}"
+							class="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white transition-all duration-200 rounded-lg shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
 							type="submit"
 							disabled={loading}
 						>
-							{$i18n.t('Save')}
+							<span>{$i18n.t('Save')}</span>
 
 							{#if loading}
-								<div class="ml-2 self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
+								<svg
+									class="w-4 h-4 animate-spin"
+									viewBox="0 0 24 24"
+									fill="currentColor"
+									xmlns="http://www.w3.org/2000/svg"
+									><style>
+										.spinner_ajPY {
+											transform-origin: center;
+											animation: spinner_AtaB 0.75s infinite linear;
+										}
+										@keyframes spinner_AtaB {
+											100% {
+												transform: rotate(360deg);
 											}
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/><path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/></svg
-									>
-								</div>
+										}
+									</style><path
+										d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+										opacity=".25"
+									/><path
+										d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+										class="spinner_ajPY"
+									/></svg
+								>
 							{/if}
 						</button>
 					</div>

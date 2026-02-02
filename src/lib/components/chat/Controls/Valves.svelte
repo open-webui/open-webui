@@ -153,7 +153,7 @@
 							{$i18n.t('Type')}
 						</label>
 						<select
-							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors cursor-pointer"
+							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-colors cursor-pointer"
 							bind:value={tab}
 							placeholder="Select"
 						>
@@ -174,7 +174,7 @@
 							{/if}
 						</label>
 						<select
-							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+							class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 							bind:value={selectedId}
 							on:change={async () => {
 								await tick();

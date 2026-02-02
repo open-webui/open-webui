@@ -268,147 +268,129 @@
 	});
 </script>
 
-<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
-	<div class="flex md:self-center text-lg font-medium px-0.5 shrink-0 items-center">
-		<div class=" gap-1">
+<div class="mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+	<div class="flex items-center gap-3">
+		<h2 class="text-2xl font-semibold text-gray-900 dark:text-white">
 			{$i18n.t('Leaderboard')}
-		</div>
-
-		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300 mr-1.5"
-			>{rankedModels.length}</span
-		>
+		</h2>
+		<span class="text-sm text-gray-500 dark:text-gray-400">
+			{rankedModels.length} {rankedModels.length === 1 ? 'model' : 'models'}
+		</span>
 	</div>
 
-	<div class=" flex space-x-2">
-		<Tooltip content={$i18n.t('Re-rank models by topic similarity')}>
-			<div class="flex flex-1">
-				<div class=" self-center ml-1 mr-3">
-					<MagnifyingGlass className="size-3" />
-				</div>
-				<input
-					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={query}
-					placeholder={$i18n.t('Search')}
-					on:focus={() => {
-						loadEmbeddingModel();
-					}}
-				/>
+	<Tooltip content={$i18n.t('Re-rank models by topic similarity')}>
+		<div class="relative md:w-64">
+			<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+				<MagnifyingGlass className="size-4 text-gray-400" />
 			</div>
-		</Tooltip>
-	</div>
+			<input
+				class="w-full pl-10 pr-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all"
+				bind:value={query}
+				placeholder={$i18n.t('Search by topic...')}
+				on:focus={() => {
+					loadEmbeddingModel();
+				}}
+			/>
+		</div>
+	</Tooltip>
 </div>
 
-<div
-	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
->
+<div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900 relative">
 	{#if loadingLeaderboard}
-		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
-			<div class="m-auto">
-				<Spinner />
-			</div>
+		<div class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 z-10">
+			<Spinner />
 		</div>
 	{/if}
+
 	{#if (rankedModels ?? []).length === 0}
-		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
+		<div class="text-center text-sm text-gray-500 dark:text-gray-400 py-12">
 			{$i18n.t('No models found')}
 		</div>
 	{:else}
-		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded {loadingLeaderboard
-				? 'opacity-20'
-				: ''}"
-		>
-			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
-			>
-				<tr class="">
-					<th scope="col" class="px-3 py-1.5 cursor-pointer select-none w-3">
-						{$i18n.t('RK')}
-					</th>
-					<th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
-						{$i18n.t('Model')}
-					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
-						{$i18n.t('Rating')}
-					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
-						{$i18n.t('Won')}
-					</th>
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-5">
-						{$i18n.t('Lost')}
-					</th>
-				</tr>
-			</thead>
-			<tbody class="">
-				{#each rankedModels as model, modelIdx (model.id)}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs group">
-						<td class="px-3 py-1.5 text-left font-medium text-gray-900 dark:text-white w-fit">
-							<div class=" line-clamp-1">
+		<div class="overflow-x-auto">
+			<table class="w-full">
+				<thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+					<tr>
+						<th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-16">
+							{$i18n.t('RK')}
+						</th>
+						<th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+							{$i18n.t('Model')}
+						</th>
+						<th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-24">
+							{$i18n.t('Rating')}
+						</th>
+						<th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-20">
+							{$i18n.t('Won')}
+						</th>
+						<th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider w-20">
+							{$i18n.t('Lost')}
+						</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+					{#each rankedModels as model, modelIdx (model.id)}
+						<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+							<td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
 								{model?.rating !== '-' ? modelIdx + 1 : '-'}
-							</div>
-						</td>
-						<td class="px-3 py-1.5 flex flex-col justify-center">
-							<div class="flex items-center gap-2">
-								<div class="shrink-0">
+							</td>
+							<td class="px-4 py-3">
+								<div class="flex items-center gap-3">
 									<img
 										src={model?.info?.meta?.profile_image_url ?? '/favicon.png'}
 										alt={model.name}
-										class="size-5 rounded-full object-cover shrink-0"
+										class="w-8 h-8 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
 									/>
+									<span class="text-sm font-medium text-gray-900 dark:text-white">
+										{model.name}
+									</span>
 								</div>
-
-								<div class="font-medium text-gray-800 dark:text-gray-200 pr-4">
-									{model.name}
-								</div>
-							</div>
-						</td>
-						<td class="px-3 py-1.5 text-right font-medium text-gray-900 dark:text-white w-max">
-							{model.rating}
-						</td>
-
-						<td class=" px-3 py-1.5 text-right font-semibold text-green-500">
-							<div class=" w-10">
+							</td>
+							<td class="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
+								{model.rating}
+							</td>
+							<td class="px-4 py-3 text-right text-sm font-semibold text-green-600 dark:text-green-400">
 								{#if model.stats.won === '-'}
 									-
 								{:else}
-									<span class="hidden group-hover:inline"
-										>{((model.stats.won / model.stats.count) * 100).toFixed(1)}%</span
-									>
-									<span class=" group-hover:hidden">{model.stats.won}</span>
+									<span class="hidden group-hover:inline">
+										{((model.stats.won / model.stats.count) * 100).toFixed(1)}%
+									</span>
+									<span class="group-hover:hidden">{model.stats.won}</span>
 								{/if}
-							</div>
-						</td>
-
-						<td class="px-3 py-1.5 text-right font-semibold text-red-500">
-							<div class=" w-10">
+							</td>
+							<td class="px-4 py-3 text-right text-sm font-semibold text-red-600 dark:text-red-400">
 								{#if model.stats.lost === '-'}
 									-
 								{:else}
-									<span class="hidden group-hover:inline"
-										>{((model.stats.lost / model.stats.count) * 100).toFixed(1)}%</span
-									>
-									<span class=" group-hover:hidden">{model.stats.lost}</span>
+									<span class="hidden group-hover:inline">
+										{((model.stats.lost / model.stats.count) * 100).toFixed(1)}%
+									</span>
+									<span class="group-hover:hidden">{model.stats.lost}</span>
 								{/if}
-							</div>
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 </div>
 
-<div class=" text-gray-500 text-xs mt-1.5 w-full flex justify-end">
-	<div class=" text-right">
-		<div class="line-clamp-1">
-			ⓘ {$i18n.t(
+<div class="mt-3 flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 flex-shrink-0 mt-0.5">
+		<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+	</svg>
+	<div>
+		<div>
+			{$i18n.t(
 				'The evaluation leaderboard is based on the Elo rating system and is updated in real-time.'
 			)}
 		</div>
-		{$i18n.t(
-			'The leaderboard is currently in beta, and we may adjust the rating calculations as we refine the algorithm.'
-		)}
+		<div class="mt-1">
+			{$i18n.t(
+				'The leaderboard is currently in beta, and we may adjust the rating calculations as we refine the algorithm.'
+			)}
+		</div>
 	</div>
 </div>

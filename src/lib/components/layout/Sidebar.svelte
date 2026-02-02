@@ -480,9 +480,7 @@
 
 {#if $showSidebar}
 	<div
-		class=" {$isApp
-			? ' ml-[4.5rem] md:ml-0'
-			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
+		class="sidebar-overlay {$isApp ? 'ml-[4.5rem] md:ml-0' : ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/70 backdrop-blur-sm w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain transition-opacity duration-300"
 		on:mousedown={() => {
 			showSidebar.set(!$showSidebar);
 		}}
@@ -492,33 +490,34 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
-	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-		? 'md:relative w-[260px] max-w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} {$isApp
-		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden border-r border-gray-200 dark:border-gray-800"
+	class="sidebar-container h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
+		? 'md:relative w-[280px] max-w-[280px] shadow-2xl md:shadow-none'
+		: '-translate-x-[280px] w-[0px]'} {$isApp
+		? 'ml-[4.5rem] md:ml-0'
+		: 'transition-all duration-300 ease-out'} shrink-0 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl text-gray-900 dark:text-gray-100 text-sm fixed z-50 top-0 left-0 overflow-x-hidden border-r border-gray-200/80 dark:border-gray-800/80"
 	data-state={$showSidebar}
 >
 	<div
-		class="py-3 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
+		class="py-3.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[280px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
-		<!-- Header with Menu Toggle and New Chat -->
-		<div class="px-2 flex items-center gap-2">
+		<!-- Enhanced Header -->
+		<div class="px-3 flex items-center gap-2.5">
 			<button
-				class="p-2 flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+				class="sidebar-toggle p-2.5 flex rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all duration-200 active:scale-95 group"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
+				aria-label="Toggle sidebar"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
 					viewBox="0 0 24 24"
-					stroke-width="2"
+					stroke-width="2.5"
 					stroke="currentColor"
-					class="size-5"
+					class="size-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors"
 				>
 					<path
 						stroke-linecap="round"
@@ -530,7 +529,9 @@
 
 			<a
 				id="sidebar-new-chat-button"
-				class="flex-1 flex items-center justify-between gap-2 rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors no-drag-region group"
+				class="new-chat-button flex-1 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 bg-gradient-to-br   
+				 hover:from-gray-100 hover:to-gray-100  
+				    transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98] no-drag-region group"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -545,28 +546,34 @@
 					}, 0);
 				}}
 			>
-				<div class="flex items-center gap-2 min-w-0">
-					<img
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class="size-5 rounded-full flex-shrink-0"
-						alt="logo"
-					/>
-					<span class="font-medium text-sm truncate">{$i18n.t('New Chat')}</span>
+				<div class="flex items-center gap-2.5 min-w-0">
+					<div class="flex-shrink-0 p-1.5 bg-white/80 dark:bg-gray-900/80 rounded-lg shadow-sm">
+						<img
+							crossorigin="anonymous"
+							src="{WEBUI_BASE_URL}/static/favicon.png"
+							class="size-4 rounded"
+							alt="logo"
+						/>
+					</div>
+					<span class="font-semibold text-sm truncate text-gray-900 dark:text-gray-100"
+						>{$i18n.t('New Chat')}</span
+					>
 				</div>
 
-				<PencilSquare
-					className="size-4 flex-shrink-0 text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors"
-					strokeWidth="2"
-				/>
+				<div class="flex-shrink-0 p-1 bg-white/50 dark:bg-gray-900/50 rounded-lg group-hover:bg-white/80 dark:group-hover:bg-gray-900/80 transition-colors">
+					<PencilSquare
+						className="size-4.5 text-orange-600 dark:text-orange-400"
+						strokeWidth="2.5"
+					/>
+				</div>
 			</a>
 		</div>
 
-		<!-- Workspace Link -->
+		<!-- Enhanced Workspace Link -->
 		{#if hasWorkspaceAccess}
-			<div class="px-2 mt-2">
+			<div class="px-3 mt-3">
 				<a
-					class="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors group"
+					class="workspace-link flex items-center gap-3 rounded-xl px-3.5 py-2.5 hover:bg-gradient-to-r hover:from-gray-100/80 hover:to-gray-50/80 dark:hover:from-gray-800/80 dark:hover:to-gray-900/80 transition-all duration-200 active:scale-[0.98] group border border-transparent hover:border-gray-200/50 dark:hover:border-gray-700/50"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -578,48 +585,52 @@
 					}}
 					draggable="false"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-						/>
-					</svg>
-					<span class="font-medium text-sm">{$i18n.t('Workspace')}</span>
+					<div class="flex-shrink-0 p-1.5 bg-gradient-to-br from-gray-100 to-gray-100 dark:from-gray-900/30 dark:to-gray-900/30 rounded-lg group-hover:from-gray-200 group-hover:to-gray-200 dark:group-hover:from-gray-800/40 dark:group-hover:to-gray-800/40 transition-all duration-200">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2.5"
+							stroke="currentColor"
+							class="size-4 text-gray-700 dark:text-gray-300"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
+							/>
+						</svg>
+					</div>
+					<span class="font-semibold text-sm">{$i18n.t('Workspace')}</span>
 				</a>
 			</div>
 		{/if}
 
-		<!-- Search Input -->
-		<div class="px-2 mt-3 relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
+		<!-- Enhanced Search Input -->
+		<div class="px-3 mt-3.5 relative {$temporaryChatEnabled ? 'opacity-30 pointer-events-none' : ''}">
 			{#if $temporaryChatEnabled}
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
-			<SearchInput
-				bind:value={search}
-				on:input={searchDebounceHandler}
-				placeholder={$i18n.t('Search')}
-				showClearButton={true}
-			/>
+			<div class="search-wrapper">
+				<SearchInput
+					bind:value={search}
+					on:input={searchDebounceHandler}
+					placeholder={$i18n.t('Search')}
+					showClearButton={true}
+				/>
+			</div>
 		</div>
 
-		<!-- Chat List -->
+		<!-- Enhanced Chat List with smoother scrolling -->
 		<div
-			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden mt-2 {$temporaryChatEnabled
-				? 'opacity-20'
-				: ''}"
+			class="chat-list-container relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden mt-3 {$temporaryChatEnabled
+				? 'opacity-30 pointer-events-none'
+				: ''} custom-scrollbar"
 		>
 			{#if hasChannelsEnabled && ($user?.role === 'admin' || $channels.length > 0) && !search}
 				<Folder
-					className="px-2"
+					className="px-3"
 					name={$i18n.t('Channels')}
 					dragAndDrop={false}
 					onAdd={async () => {
@@ -646,10 +657,10 @@
 
 			<Folder
 				collapsible={!search}
-				className="px-2 {hasChannelsEnabled &&
+				className="px-3 {hasChannelsEnabled &&
 				($user?.role === 'admin' || $channels.length > 0) &&
 				!search
-					? 'mt-2'
+					? 'mt-3'
 					: ''}"
 				name={$i18n.t('Chats')}
 				onAdd={() => {
@@ -758,7 +769,7 @@
 							name={$i18n.t('Pinned')}
 						>
 							<div
-								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-200 dark:border-gray-800"
+								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s-2 border-blue-200 dark:border-blue-800"
 							>
 								{#each pinnedChatList as chat, idx}
 									<ChatItem
@@ -803,16 +814,16 @@
 					/>
 				{/if}
 
-				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
+				<div class="flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
 					<div class="pt-1">
 						{#if $chats}
 							{#each renderChatList as chat, idx}
 								{#if chat.showTimeRange}
 									<div
-										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+										class="time-range-label w-full pl-3 text-xs font-bold uppercase tracking-wider text-gray-500/80 dark:text-gray-500/80 {idx ===
 										0
 											? ''
-											: 'pt-4'} pb-1.5"
+											: 'pt-5'} pb-2"
 									>
 										{$i18n.t(chat.time_range)}
 									</div>
@@ -849,19 +860,19 @@
 									}}
 								>
 									<div
-										class="w-full flex justify-center py-2 text-xs text-gray-500 dark:text-gray-400 items-center gap-2"
+										class="loading-indicator w-full flex justify-center py-4 text-xs text-gray-500 dark:text-gray-500 items-center gap-2.5"
 									>
 										<Spinner className="size-4" />
-										<span>Loading...</span>
+										<span class="font-medium">Loading more chats...</span>
 									</div>
 								</Loader>
 							{/if}
 						{:else}
 							<div
-								class="w-full flex justify-center py-4 text-xs text-gray-500 dark:text-gray-400 items-center gap-2"
+								class="loading-indicator w-full flex justify-center py-6 text-xs text-gray-500 dark:text-gray-500 items-center gap-2.5"
 							>
 								<Spinner className="size-4" />
-								<span>Loading...</span>
+								<span class="font-medium">Loading chats...</span>
 							</div>
 						{/if}
 					</div>
@@ -869,8 +880,8 @@
 			</Folder>
 		</div>
 
-		<!-- User Menu -->
-		<div class="px-2 mt-2 border-t border-gray-300 dark:border-gray-800 pt-2">
+		<!-- Enhanced User Menu -->
+		<div class="user-menu-container px-3 mt-3 border-t border-gray-200/80 dark:border-gray-800/80 pt-3">
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
@@ -882,16 +893,19 @@
 						}}
 					>
 						<button
-							class="flex items-center gap-2 rounded-xl py-2 px-2 w-full
-		   hover:bg-gray-200 dark:hover:bg-gray-900 transition"
+							class="user-profile-button flex items-center gap-3 rounded-xl py-2.5 px-3 w-full
+		   hover:bg-gradient-to-r hover:from-gray-100/80 hover:to-gray-50/80 dark:hover:from-gray-800/80 dark:hover:to-gray-900/80 transition-all duration-200 active:scale-[0.98] group border border-transparent hover:border-gray-200/50 dark:hover:border-gray-700/50"
 						>
-							<img
-								src={$user?.profile_image_url}
-								class="w-[35px] h-[35px] object-cover rounded-full flex-shrink-0"
-								alt="User profile"
-							/>
+							<div class="relative flex-shrink-0">
+								<img
+									src={$user?.profile_image_url}
+									class="w-9 h-9 object-cover rounded-full ring-2 ring-gray-200/50 dark:ring-gray-700/50 group-hover:ring-gray-300 dark:group-hover:ring-gray-600 transition-all duration-200"
+									alt="User profile"
+								/>
+								<div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-950"></div>
+							</div>
 
-							<div class="font-medium truncate">
+							<div class="font-semibold text-sm truncate flex-1 text-left">
 								{$user?.name}
 							</div>
 
@@ -899,9 +913,9 @@
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
 								viewBox="0 0 24 24"
-								stroke-width="2"
+								stroke-width="2.5"
 								stroke="currentColor"
-								class="ml-auto size-4 text-gray-600"
+								class="ml-auto size-4 text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-all group-hover:translate-x-0.5"
 							>
 								<path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6" />
 							</svg>
@@ -914,12 +928,114 @@
 </div>
 
 <style>
+	/* Custom scrollbar styling */
+	.custom-scrollbar::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-thumb {
+		background: rgba(156, 163, 175, 0.3);
+		border-radius: 3px;
+		transition: background 0.2s;
+	}
+
+	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+		background: rgba(156, 163, 175, 0.5);
+	}
+
+	:global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
+		background: rgba(75, 85, 99, 0.4);
+	}
+
+	:global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+		background: rgba(75, 85, 99, 0.6);
+	}
+
 	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
 	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
 	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 		visibility: visible;
 	}
+	
 	.scrollbar-hidden::-webkit-scrollbar-thumb {
 		visibility: hidden;
+	}
+
+	/* Smooth animations */
+	.sidebar-overlay {
+		animation: fadeIn 0.3s ease-out;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	/* Enhanced button interactions */
+	.sidebar-toggle:active,
+	.new-chat-button:active,
+	.workspace-link:active,
+	.user-profile-button:active {
+		transform: scale(0.98);
+	}
+
+	/* Loading indicator pulse */
+	.loading-indicator {
+		animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.7;
+		}
+	}
+
+	/* Time range label styling */
+	.time-range-label {
+		letter-spacing: 0.05em;
+	}
+
+	/* Glassmorphism effect for sidebar */
+	.sidebar-container {
+		backdrop-filter: blur(20px);
+		-webkit-backdrop-filter: blur(20px);
+	}
+
+	/* Search wrapper enhancement */
+	.search-wrapper {
+		position: relative;
+	}
+
+	.search-wrapper::after {
+		content: '';
+		position: absolute;
+		bottom: -8px;
+		left: 0;
+		right: 0;
+		height: 1px;
+		background: linear-gradient(90deg, 
+			transparent 0%, 
+			rgba(229, 231, 235, 0.5) 20%, 
+			rgba(229, 231, 235, 0.5) 80%, 
+			transparent 100%);
+	}
+
+	:global(.dark) .search-wrapper::after {
+		background: linear-gradient(90deg, 
+			transparent 0%, 
+			rgba(55, 65, 81, 0.5) 20%, 
+			rgba(55, 65, 81, 0.5) 80%, 
+			transparent 100%);
 	}
 </style>

@@ -126,7 +126,7 @@
 						<Search className="size-4" />
 					</div>
 					<input
-						class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
+						class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
 						bind:value={query}
 						placeholder={$i18n.t('Search Prompts')}
 					/>
@@ -134,10 +134,9 @@
 
 				<Tooltip content={$i18n.t('Create Prompt')}>
 					<a
-						class="p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm hover:shadow-md"
+						class="p-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors shadow-sm hover:shadow-md"
 						href="/workspace/prompts/create"
 					>
-					
 						<Plus className="size-4" />
 					</a>
 				</Tooltip>
@@ -150,6 +149,11 @@
 				<div
 					class="group bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200"
 				>
+					<span
+						class="text-xs font-bold px-2 py-0.5 rounded-md uppercase bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 margin-bottom-2 inline-block mb-2"
+					>
+						Prompt
+					</span>
 					<!-- Prompt Content -->
 					<a
 						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
@@ -164,7 +168,9 @@
 					</a>
 
 					<!-- Prompt Footer -->
-					<div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
+					<div
+						class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800"
+					>
 						<Tooltip
 							content={prompt?.user?.email ?? $i18n.t('Deleted User')}
 							className="flex-shrink-0"
@@ -328,8 +334,7 @@
 					{$i18n.t('Made by Open WebUI Community')}
 				</h2>
 				<a
-				
-					class="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-xl hover:shadow-md transition-all group"
+					class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-emerald-900/20 border border-blue-200 dark:border-blue-800 rounded-xl hover:shadow-md transition-all group"
 					href="https://openwebui.com/#open-webui-community"
 					target="_blank"
 				>

@@ -105,7 +105,7 @@
 						<Search className="size-4" />
 					</div>
 					<input
-						class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
+						class="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-transparent outline-none transition-all placeholder:text-gray-400"
 						bind:value={query}
 						placeholder={$i18n.t('Search Knowledge')}
 					/>
@@ -113,7 +113,7 @@
 
 				<Tooltip content={$i18n.t('Create Knowledge')}>
 					<button
-						class="p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm hover:shadow-md"
+						class="p-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors shadow-sm hover:shadow-md"
 						aria-label={$i18n.t('Create Knowledge')}
 						on:click={() => {
 							goto('/workspace/knowledge/create');
@@ -196,13 +196,13 @@
 		</div>
 
 		<!-- Info Message -->
-		<div class="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+		<div class="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-900/20 border border-gray-200 dark:border-orange-800 rounded-lg">
 			<div class="flex-shrink-0 mt-0.5">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
-					class="size-4 text-blue-600 dark:text-blue-400"
+					class="size-4 text-black-600 dark:text-blue-400"
 				>
 					<path
 						fill-rule="evenodd"
@@ -211,7 +211,7 @@
 					/>
 				</svg>
 			</div>
-			<p class="text-sm text-blue-800 dark:text-blue-300">
+			<p class="text-sm text-black-800 dark:text-blue-300">
 				{$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
 			</p>
 		</div>

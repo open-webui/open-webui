@@ -119,12 +119,13 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center font-primary">
+		<!-- Header -->
+		<div class="flex justify-between items-center px-6 pt-5 pb-4 border-b border-gray-200 dark:border-gray-800">
+			<h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
 				{$i18n.t('Settings')}
-			</div>
+			</h2>
 			<button
-				class="self-center"
+				class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
 				on:click={() => {
 					show = false;
 				}}
@@ -133,7 +134,7 @@
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
-					class="w-5 h-5"
+					class="w-5 h-5 text-gray-500 dark:text-gray-400"
 				>
 					<path
 						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
@@ -142,19 +143,24 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
-			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
+		<!-- Content -->
+		<div class="flex flex-col md:flex-row w-full px-6 py-5 dark:text-gray-200">
+			<div class="flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if config}
 					<form
-						class="flex flex-col w-full"
+						class="flex flex-col w-full space-y-5"
 						on:submit|preventDefault={() => {
 							submitHandler();
 						}}
 					>
-						<div>
-							<div class="flex flex-col w-full">
+						<!-- Reorder Models Section -->
+						<div class="space-y-3">
+							<div class="flex items-center justify-between">
+								<label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+									{$i18n.t('Reorder Models')}
+								</label>
 								<button
-									class="mb-1 flex gap-2"
+									class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
 									type="button"
 									on:click={() => {
 										sortKey = 'model';
@@ -176,139 +182,132 @@
 											});
 									}}
 								>
-									<div class="text-xs text-gray-500">{$i18n.t('Reorder Models')}</div>
-
+									<span>{sortKey === 'model' && sortOrder === 'asc' ? 'A-Z' : 'Z-A'}</span>
 									{#if sortKey === 'model'}
-										<span class="font-normal self-center">
-											{#if sortOrder === 'asc'}
-												<ChevronUp className="size-3" />
-											{:else}
-												<ChevronDown className="size-3" />
-											{/if}
-										</span>
+										{#if sortOrder === 'asc'}
+											<ChevronUp className="size-3.5" />
+										{:else}
+											<ChevronDown className="size-3.5" />
+										{/if}
 									{:else}
-										<span class="invisible">
-											<ChevronUp className="size-3" />
-										</span>
+										<ChevronUp className="size-3.5 opacity-30" />
 									{/if}
 								</button>
+							</div>
 
+							<div class="p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg">
 								<ModelList bind:modelIds />
 							</div>
 						</div>
 
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+						<!-- Default Models Section -->
+						<div class="space-y-3">
+							<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+								{$i18n.t('Default Models')}
+							</label>
 
-						<div>
-							<div class="flex flex-col w-full">
-								<div class="mb-1 flex justify-between">
-									<div class="text-xs text-gray-500">{$i18n.t('Default Models')}</div>
-								</div>
+							<!-- Select Dropdown -->
+							<select
+								class="w-full px-3 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg {selectedModelId
+									? 'text-gray-900 dark:text-gray-100'
+									: 'text-gray-500 dark:text-gray-400'} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+								bind:value={selectedModelId}
+							>
+								<option value="">{$i18n.t('Select a model')}</option>
+								{#each $models as model}
+									<option value={model.id} class="bg-white dark:bg-gray-800">{model.name}</option>
+								{/each}
+							</select>
 
-								<div class="flex items-center -mr-1">
-									<select
-										class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
-											? ''
-											: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-										bind:value={selectedModelId}
-									>
-										<option value="">{$i18n.t('Select a model')}</option>
-										{#each $models as model}
-											<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
-												>{model.name}</option
-											>
-										{/each}
-									</select>
-								</div>
-
-								<!-- <hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" /> -->
-
+							<!-- Selected Models List -->
+							<div class="min-h-[80px] p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg">
 								{#if defaultModelIds.length > 0}
-									<div class="flex flex-col">
+									<div class="space-y-2">
 										{#each defaultModelIds as modelId, modelIdx}
-											<div class=" flex gap-2 w-full justify-between items-center">
-												<div class=" text-sm flex-1 py-1 rounded-lg">
+											<div class="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 group hover:border-gray-300 dark:hover:border-gray-600 transition-colors duration-200">
+												<span class="text-sm text-gray-900 dark:text-gray-100 font-medium flex-1">
 													{$models.find((model) => model.id === modelId)?.name}
-												</div>
-												<div class="shrink-0">
-													<button
-														type="button"
-														on:click={() => {
-															defaultModelIds = defaultModelIds.filter(
-																(_, idx) => idx !== modelIdx
-															);
-														}}
-													>
-														<Minus strokeWidth="2" className="size-3.5" />
-													</button>
-												</div>
+												</span>
+												<button
+													class="p-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-200"
+													type="button"
+													on:click={() => {
+														defaultModelIds = defaultModelIds.filter(
+															(_, idx) => idx !== modelIdx
+														);
+													}}
+												>
+													<Minus strokeWidth="2" className="size-4" />
+												</button>
 											</div>
 										{/each}
 									</div>
 								{:else}
-									<div class="text-gray-500 text-xs text-center py-2">
-										{$i18n.t('No models selected')}
+									<div class="flex flex-col items-center justify-center py-4">
+										<svg class="w-10 h-10 text-gray-300 dark:text-gray-700 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+										</svg>
+										<p class="text-xs text-gray-500 dark:text-gray-400">
+											{$i18n.t('No models selected')}
+										</p>
 									</div>
 								{/if}
 							</div>
 						</div>
 
-						<div class="flex justify-between pt-3 text-sm font-medium gap-1.5">
+						<!-- Action Buttons -->
+						<div class="flex justify-between gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
 							<Tooltip content={$i18n.t('This will delete all models including custom models')}>
 								<button
-									class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+									class="px-4 py-2.5 text-sm font-medium bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 rounded-lg"
 									type="button"
 									on:click={() => {
 										showResetModal = true;
 									}}
 								>
-									<!-- {$i18n.t('Delete All Models')} -->
 									{$i18n.t('Reset All Models')}
 								</button>
 							</Tooltip>
 
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
-									? ' cursor-not-allowed'
-									: ''}"
+								class="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white transition-all duration-200 rounded-lg shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
 								type="submit"
 								disabled={loading}
 							>
-								{$i18n.t('Save')}
+								<span>{$i18n.t('Save')}</span>
 
 								{#if loading}
-									<div class="ml-2 self-center">
-										<svg
-											class=" w-4 h-4"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											xmlns="http://www.w3.org/2000/svg"
-											><style>
-												.spinner_ajPY {
-													transform-origin: center;
-													animation: spinner_AtaB 0.75s infinite linear;
+									<svg
+										class="w-4 h-4 animate-spin"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										xmlns="http://www.w3.org/2000/svg"
+										><style>
+											.spinner_ajPY {
+												transform-origin: center;
+												animation: spinner_AtaB 0.75s infinite linear;
+											}
+											@keyframes spinner_AtaB {
+												100% {
+													transform: rotate(360deg);
 												}
-												@keyframes spinner_AtaB {
-													100% {
-														transform: rotate(360deg);
-													}
-												}
-											</style><path
-												d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-												opacity=".25"
-											/><path
-												d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-												class="spinner_ajPY"
-											/></svg
-										>
-									</div>
+											}
+										</style><path
+											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+											opacity=".25"
+										/><path
+											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+											class="spinner_ajPY"
+										/></svg
+									>
 								{/if}
 							</button>
 						</div>
 					</form>
 				{:else}
-					<div>
-						<Spinner />
+					<div class="flex flex-col items-center justify-center py-8 gap-3">
+						<Spinner className="size-8" />
+						<p class="text-sm text-gray-500 dark:text-gray-400">{$i18n.t('Loading configuration...')}</p>
 					</div>
 				{/if}
 			</div>

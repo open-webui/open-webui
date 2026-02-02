@@ -106,115 +106,122 @@
 	};
 </script>
 
-<div class="mt-0.5 mb-2 gap-1 flex flex-row justify-between">
-	<div class="flex md:self-center text-lg font-medium px-0.5">
-		{$i18n.t('Feedback History')}
+<!-- Header Section with improved spacing and alignment -->
+<div class="mb-6">
+	<div class="flex items-center justify-between gap-4">
+		<div class="flex items-center gap-3">
+			<h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+				{$i18n.t('Feedback History')}
+			</h2>
+			<div class="h-6 w-px bg-gray-200 dark:bg-gray-700" />
+			<span class="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-full">
+				{feedbacks.length}
+			</span>
+		</div>
 
-		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{feedbacks.length}</span>
-	</div>
-
-	{#if feedbacks.length > 0}
-		<div>
+		{#if feedbacks.length > 0}
 			<Tooltip content={$i18n.t('Export')}>
 				<button
-					class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+					class="inline-flex items-center justify-center p-2.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750 transition-colors duration-200"
 					on:click={() => {
 						exportHandler();
 					}}
+					aria-label="Export feedbacks"
 				>
-					<ArrowDownTray className="size-3" />
+					<ArrowDownTray className="size-4 text-gray-700 dark:text-gray-300" />
 				</button>
 			</Tooltip>
-		</div>
-	{/if}
+		{/if}
+	</div>
 </div>
 
-<div
-	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
->
+<!-- Table Section with improved styling -->
+<div class="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900">
 	{#if (feedbacks ?? []).length === 0}
-		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
-			{$i18n.t('No feedbacks found')}
+		<div class="flex flex-col items-center justify-center py-16 px-4">
+			<div class="w-16 h-16 mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+				<svg class="w-8 h-8 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+				</svg>
+			</div>
+			<p class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+				{$i18n.t('No feedbacks found')}
+			</p>
+			<p class="text-xs text-gray-500 dark:text-gray-400">
+				Your feedback history will appear here
+			</p>
 		</div>
 	{:else}
-		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded-sm"
-		>
-			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
-			>
-				<tr class="">
-					<th scope="col" class="px-3 text-right cursor-pointer select-none w-0">
-						{$i18n.t('User')}
-					</th>
+		<div class="overflow-x-auto">
+			<table class="w-full text-sm">
+				<thead class="bg-gray-50 dark:bg-gray-850 border-b border-gray-200 dark:border-gray-800">
+					<tr>
+						<th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+							{$i18n.t('User')}
+						</th>
 
-					<th scope="col" class="px-3 pr-1.5 cursor-pointer select-none">
-						{$i18n.t('Models')}
-					</th>
+						<th scope="col" class="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+							{$i18n.t('Models')}
+						</th>
 
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
-						{$i18n.t('Result')}
-					</th>
+						<th scope="col" class="px-6 py-3.5 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+							{$i18n.t('Result')}
+						</th>
 
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0">
-						{$i18n.t('Updated At')}
-					</th>
+						<th scope="col" class="px-6 py-3.5 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+							{$i18n.t('Updated At')}
+						</th>
 
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0"> </th>
-				</tr>
-			</thead>
-			<tbody class="">
-				{#each paginatedFeedbacks as feedback (feedback.id)}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
-						<td class=" py-0.5 text-right font-semibold">
-							<div class="flex justify-center">
+						<th scope="col" class="px-6 py-3.5 w-12">
+							<span class="sr-only">Actions</span>
+						</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+					{#each paginatedFeedbacks as feedback (feedback.id)}
+						<tr class="hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors duration-150">
+							<td class="px-6 py-4 whitespace-nowrap">
 								<Tooltip content={feedback?.user?.name}>
-									<div class="shrink-0">
-										<img
-											src={feedback?.user?.profile_image_url ?? '/user.png'}
-											alt={feedback?.user?.name}
-											class="size-5 rounded-full object-cover shrink-0"
-										/>
+									<div class="flex items-center">
+										<div class="shrink-0">
+											<img
+												src={feedback?.user?.profile_image_url ?? '/user.png'}
+												alt={feedback?.user?.name}
+												class="size-8 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800"
+											/>
+										</div>
 									</div>
 								</Tooltip>
-							</div>
-						</td>
+							</td>
 
-						<td class=" py-1 pl-3 flex flex-col">
-							<div class="flex flex-col items-start gap-0.5 h-full">
-								<div class="flex flex-col h-full">
+							<td class="px-6 py-4">
+								<div class="flex flex-col gap-1">
 									{#if feedback.data?.sibling_model_ids}
-										<div class="font-semibold text-gray-600 dark:text-gray-400 flex-1">
+										<div class="font-medium text-gray-900 dark:text-gray-100">
 											{feedback.data?.model_id}
 										</div>
 
 										<Tooltip content={feedback.data.sibling_model_ids.join(', ')}>
-											<div class=" text-[0.65rem] text-gray-600 dark:text-gray-400 line-clamp-1">
+											<div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
 												{#if feedback.data.sibling_model_ids.length > 2}
-													<!-- {$i18n.t('and {{COUNT}} more')} -->
-													{feedback.data.sibling_model_ids.slice(0, 2).join(', ')}, {$i18n.t(
-														'and {{COUNT}} more',
-														{ COUNT: feedback.data.sibling_model_ids.length - 2 }
-													)}
+													{feedback.data.sibling_model_ids.slice(0, 2).join(', ')}, 
+													<span class="font-medium">
+														{$i18n.t('and {{COUNT}} more', { COUNT: feedback.data.sibling_model_ids.length - 2 })}
+													</span>
 												{:else}
 													{feedback.data.sibling_model_ids.join(', ')}
 												{/if}
 											</div>
 										</Tooltip>
 									{:else}
-										<div
-											class=" text-sm font-medium text-gray-600 dark:text-gray-400 flex-1 py-1.5"
-										>
+										<div class="font-medium text-gray-900 dark:text-gray-100">
 											{feedback.data?.model_id}
 										</div>
 									{/if}
 								</div>
-							</div>
-						</td>
-						<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
-							<div class=" flex justify-end">
+							</td>
+
+							<td class="px-6 py-4 whitespace-nowrap text-center">
 								{#if feedback.data.rating.toString() === '1'}
 									<Badge type="info" content={$i18n.t('Won')} />
 								{:else if feedback.data.rating.toString() === '0'}
@@ -222,64 +229,69 @@
 								{:else if feedback.data.rating.toString() === '-1'}
 									<Badge type="error" content={$i18n.t('Lost')} />
 								{/if}
-							</div>
-						</td>
+							</td>
 
-						<td class=" px-3 py-1 text-right font-medium">
-							{dayjs(feedback.updated_at * 1000).fromNow()}
-						</td>
+							<td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-600 dark:text-gray-400">
+								{dayjs(feedback.updated_at * 1000).fromNow()}
+							</td>
 
-						<td class=" px-3 py-1 text-right font-semibold">
-							<FeedbackMenu
-								on:delete={(e) => {
-									deleteFeedbackHandler(feedback.id);
-								}}
-							>
-								<button
-									class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+							<td class="px-6 py-4 whitespace-nowrap text-right">
+								<FeedbackMenu
+									on:delete={(e) => {
+										deleteFeedbackHandler(feedback.id);
+									}}
 								>
-									<EllipsisHorizontal />
-								</button>
-							</FeedbackMenu>
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+									<button
+										class="inline-flex items-center justify-center p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200"
+										aria-label="Open menu"
+									>
+										<EllipsisHorizontal />
+									</button>
+								</FeedbackMenu>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 </div>
 
+<!-- Community Share Section with improved layout -->
 {#if feedbacks.length > 0}
-	<div class=" flex flex-col justify-end w-full text-right gap-1">
-		<div class="line-clamp-1 text-gray-500 text-xs">
-			{$i18n.t('Help us create the best community leaderboard by sharing your feedback history!')}
-		</div>
+	<div class="mt-6 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-850 dark:to-gray-800 border border-blue-100 dark:border-gray-700">
+		<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+			<div class="flex-1">
+				<p class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+					Share with the Community
+				</p>
+				<p class="text-xs text-gray-600 dark:text-gray-400">
+					{$i18n.t('Help us create the best community leaderboard by sharing your feedback history!')}
+				</p>
+			</div>
 
-		<div class="flex space-x-1 ml-auto">
 			<Tooltip
 				content={$i18n.t(
 					'To protect your privacy, only ratings, model IDs, tags, and metadata are shared from your feedback—your chat logs remain private and are not included.'
 				)}
 			>
 				<button
-					class="flex text-xs items-center px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+					class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 transition-all duration-200 hover:shadow-sm whitespace-nowrap"
 					on:click={async () => {
 						shareHandler();
 					}}
 				>
-					<div class=" self-center mr-2 font-medium line-clamp-1">
-						{$i18n.t('Share to Open WebUI Community')}
-					</div>
-
-					<div class=" self-center">
-						<CloudArrowUp className="size-3" strokeWidth="3" />
-					</div>
+					<span>{$i18n.t('Share to Open WebUI Community')}</span>
+					<CloudArrowUp className="size-4" strokeWidth="2.5" />
 				</button>
 			</Tooltip>
 		</div>
 	</div>
 {/if}
 
+<!-- Pagination with improved spacing -->
 {#if feedbacks.length > 10}
-	<Pagination bind:page count={feedbacks.length} perPage={10} />
+	<div class="mt-6">
+		<Pagination bind:page count={feedbacks.length} perPage={10} />
+	</div>
 {/if}
