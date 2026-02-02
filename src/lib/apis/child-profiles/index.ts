@@ -29,6 +29,7 @@ export interface ChildProfile {
 	attempt_number?: number;
 	created_at: number;
 	updated_at: number;
+	child_email?: string;
 }
 
 export interface ChildProfileForm {
@@ -52,6 +53,7 @@ export interface ChildProfileForm {
 	child_ai_use_contexts_other?: string;
 	parent_llm_monitoring_other?: string;
 	session_number?: number; // Optional, backend will determine if not provided
+	child_email?: string;
 }
 
 export const getChildProfiles = async (token: string = '') => {

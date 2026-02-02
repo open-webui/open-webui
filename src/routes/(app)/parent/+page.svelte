@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { showSidebar, user } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { childProfileSync } from '$lib/services/childProfileSync';
@@ -21,16 +19,6 @@
 		await childProfileSync.setCurrentChildId(profile.id);
 	}
 
-	onMount(async () => {
-		if (!$user) {
-			goto('/auth');
-			return;
-		}
-		if ($user?.role !== 'parent') {
-			goto('/');
-			return;
-		}
-	});
 </script>
 
 <svelte:head>

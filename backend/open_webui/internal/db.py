@@ -77,17 +77,16 @@ def handle_peewee_migration(DATABASE_URL):
         assert db.is_closed(), "Database connection is still open."
 
 
-if ENABLE_DB_MIGRATIONS:
+# Skip Peewee migrations for SQLite - Alembic is the source of truth
+if ENABLE_DB_MIGRATIONS and "sqlite" not in (DATABASE_URL or "").lower():
     try:
         handle_peewee_migration(DATABASE_URL)
     except Exception as e:
-        # Peewee migrations are a legacy/compatibility layer. On some SQLite dev DBs,
-        # these can fail due to schema drift or prior partially-applied migrations.
-        # Alembic migrations (run separately) are the source of truth in this repo.
-        if "sqlite" in (DATABASE_URL or "").lower():
-            log.warning("Peewee migrations failed on SQLite (continuing): %s", e)
-        else:
-            raise
+        log.error(f"Failed to initialize the database connection: {e}")
+        log.warning(
+            "Hint: If your database password contains special characters, you may need to URL-encode it."
+        )
+        raise
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL

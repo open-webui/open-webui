@@ -1704,13 +1704,19 @@ export const getCodeBlockContents = (content: string): object => {
 	};
 };
 
+export interface GetUserTypeOptions {
+	/** When false, never call the admin-only interviewee-whitelist API (avoids 401 for non-admins). Default true. */
+	mayFetchWhitelist?: boolean;
+}
+
 /**
  * Determine user type based on role and STUDY_ID whitelist.
  * Returns: "interviewee", "parent", "child", "admin", or "user"
  */
 export async function getUserType(
 	user: SessionUser | null,
-	studyIdWhitelist: string[] = []
+	studyIdWhitelist: string[] = [],
+	options: GetUserTypeOptions = {}
 ): Promise<string> {
 	if (!user) return 'user';
 
@@ -1725,15 +1731,23 @@ export async function getUserType(
 		return 'child';
 	}
 
-	// If whitelist not provided, try to fetch it (for admin users viewing other users)
+	const { mayFetchWhitelist = true } = options;
+
+	// If whitelist not provided, try to fetch it (admin-only endpoint – only call when allowed)
 	let whitelist = studyIdWhitelist;
-	if (whitelist.length === 0 && typeof window !== 'undefined' && localStorage.getItem('token')) {
+	if (
+		whitelist.length === 0 &&
+		mayFetchWhitelist &&
+		typeof window !== 'undefined' &&
+		localStorage.getItem('token')
+	) {
 		try {
 			const { getIntervieweeWhitelist } = await import('$lib/apis/users');
 			const whitelistResponse = await getIntervieweeWhitelist(localStorage.token);
 			whitelist = whitelistResponse?.study_ids || [];
 		} catch (e) {
-			// If fetch fails, continue with empty whitelist
+			// 401 Unauthorized (or any fetch error): use empty whitelist so we don't propagate
+			whitelist = [];
 			console.warn('Failed to fetch whitelist:', e);
 		}
 	}

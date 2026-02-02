@@ -63,6 +63,9 @@ class ChildProfile(Base):
     created_at = Column(BigInteger)  # When profile was created
     updated_at = Column(BigInteger)  # When profile was last updated
 
+    # Child account email (stored for display; account created via /users/child)
+    child_email = Column(String, nullable=True)
+
     # Indexes for efficient querying
     __table_args__ = (
         Index("idx_child_profile_user_id", "user_id"),
@@ -100,6 +103,7 @@ class ChildProfileModel(BaseModel):
     session_number: int
     created_at: int
     updated_at: int
+    child_email: Optional[str] = None
 
 
 class ChildProfileForm(BaseModel):
@@ -117,6 +121,7 @@ class ChildProfileForm(BaseModel):
     child_ai_use_contexts_other: Optional[str] = None
     parent_llm_monitoring_other: Optional[str] = None
     session_number: Optional[int] = None  # If None, defaults to 1 in insert function
+    child_email: Optional[str] = None
 
 
 class ChildProfileTable:
@@ -147,6 +152,7 @@ class ChildProfileTable:
                     "child_gender_other": form_data.child_gender_other,
                     "child_ai_use_contexts_other": form_data.child_ai_use_contexts_other,
                     "parent_llm_monitoring_other": form_data.parent_llm_monitoring_other,
+                    "child_email": getattr(form_data, "child_email", None),
                     "attempt_number": attempt_number,
                     "is_current": True,
                     "session_number": session_number,
@@ -246,6 +252,7 @@ class ChildProfileTable:
                 profile.parent_llm_monitoring_other = (
                     updated.parent_llm_monitoring_other
                 )
+                profile.child_email = getattr(updated, "child_email", None)
                 profile.updated_at = ts
 
                 db.commit()
@@ -334,6 +341,7 @@ class ChildProfileTable:
                 child_gender_other=current.child_gender_other,
                 child_ai_use_contexts_other=current.child_ai_use_contexts_other,
                 parent_llm_monitoring_other=current.parent_llm_monitoring_other,
+                child_email=getattr(current, "child_email", None),
                 attempt_number=current.attempt_number,
                 is_current=True,
                 session_number=new_session_number,

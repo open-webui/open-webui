@@ -124,7 +124,7 @@
 
 	let chatIdUnsubscriber: Unsubscriber | undefined;
 
-	let selectedModels = [''];
+	let selectedModels = ['gpt-5.2-chat-latest'];
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
 	$: if (atSelectedModel !== undefined) {
@@ -133,24 +133,7 @@
 		selectedModelIds = selectedModels;
 	}
 
-	// When models load after initNewChat ran with empty list, apply default or first model
-	$: if ($models.length > 0) {
-		const availableIds = $models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
-		const noValidSelection =
-			selectedModels.length === 0 ||
-			(selectedModels.length === 1 && selectedModels[0] === '') ||
-			selectedModels.every((id) => !id || !availableIds.includes(id));
-		if (noValidSelection && availableIds.length > 0) {
-			const defaultModels = $config?.default_models
-				? $config.default_models
-						.split(',')
-						.map((s) => s.trim())
-						.filter(Boolean)
-				: [];
-			const fromDefault = defaultModels.filter((id) => availableIds.includes(id));
-			selectedModels = fromDefault.length > 0 ? fromDefault : [availableIds[0]];
-		}
-	}
+	// Model locked to gpt-5.2-chat-latest
 
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
@@ -640,15 +623,8 @@
 			}
 		});
 
-		selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
-			if (
-				folder?.data?.model_ids &&
-				JSON.stringify(selectedModels) !== JSON.stringify(folder.data.model_ids)
-			) {
-				selectedModels = folder.data.model_ids;
-
-				console.log('Set selectedModels from folder data:', selectedModels);
-			}
+		selectedFolderSubscribe = selectedFolder.subscribe(async () => {
+			selectedModels = ['gpt-5.2-chat-latest'];
 		});
 
 		const chatInput = document.getElementById('chat-input');
@@ -928,85 +904,7 @@
 			await temporaryChatEnabled.set(false);
 		}
 
-		const availableModels = $models
-			.filter((m) => !(m?.info?.meta?.hidden ?? false))
-			.map((m) => m.id);
-
-		const defaultModels = $config?.default_models ? $config?.default_models.split(',') : [];
-
-		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
-			const urlModels = (
-				$page.url.searchParams.get('models') ||
-				$page.url.searchParams.get('model') ||
-				''
-			)?.split(',');
-
-			if (urlModels.length === 1) {
-				if (!$models.find((m) => m.id === urlModels[0])) {
-					// Model not found; open model selector and prefill
-					const modelSelectorButton = document.getElementById('model-selector-0-button');
-					if (modelSelectorButton) {
-						modelSelectorButton.click();
-						await tick();
-
-						const modelSelectorInput = document.getElementById('model-search-input');
-						if (modelSelectorInput) {
-							modelSelectorInput.focus();
-							modelSelectorInput.value = urlModels[0];
-							modelSelectorInput.dispatchEvent(new Event('input'));
-						}
-					}
-				} else {
-					// Model found; set it as selected
-					selectedModels = urlModels;
-				}
-			} else {
-				// Multiple models; set as selected
-				selectedModels = urlModels;
-			}
-
-			// Unavailable models filtering
-			selectedModels = selectedModels.filter((modelId) =>
-				$models.map((m) => m.id).includes(modelId)
-			);
-		} else {
-			if ($selectedFolder?.data?.model_ids) {
-				// Set from folder model IDs
-				selectedModels = $selectedFolder?.data?.model_ids;
-			} else {
-				if (sessionStorage.selectedModels) {
-					// Set from session storage (temporary selection)
-					selectedModels = JSON.parse(sessionStorage.selectedModels);
-					sessionStorage.removeItem('selectedModels');
-				} else {
-					if ($settings?.models) {
-						// Set from user settings
-						selectedModels = $settings?.models;
-					} else if (defaultModels && defaultModels.length > 0) {
-						// Set from default models
-						selectedModels = defaultModels;
-					}
-				}
-			}
-
-			// Unavailable & hidden models filtering
-			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
-		}
-
-		// Ensure at least one model is selected
-		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			if (availableModels.length > 0) {
-				if (defaultModels && defaultModels.length > 0) {
-					// Set from default models
-					selectedModels = defaultModels.filter((modelId) => availableModels.includes(modelId));
-				}
-
-				// Set to first available model
-				selectedModels = [availableModels?.at(0) ?? ''];
-			} else {
-				selectedModels = [''];
-			}
-		}
+		selectedModels = ['gpt-5.2-chat-latest'];
 
 		await showControls.set(false);
 		await showCallOverlay.set(false);
@@ -1082,9 +980,7 @@
 			}
 		}
 
-		selectedModels = selectedModels.map((modelId) =>
-			$models.map((m) => m.id).includes(modelId) ? modelId : ''
-		);
+		selectedModels = ['gpt-5.2-chat-latest'];
 
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
@@ -1112,14 +1008,7 @@
 			if (chatContent) {
 				console.log(chatContent);
 
-				selectedModels =
-					(chatContent?.models ?? undefined) !== undefined
-						? chatContent.models
-						: [chatContent.models ?? ''];
-
-				if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
-					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
-				}
+				selectedModels = ['gpt-5.2-chat-latest'];
 
 				oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModels));
 
@@ -1575,14 +1464,6 @@
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
-
-		const _selectedModels = selectedModels.map((modelId) =>
-			$models.map((m) => m.id).includes(modelId) ? modelId : ''
-		);
-
-		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
-			selectedModels = _selectedModels;
-		}
 
 		if (userPrompt === '' && files.length === 0) {
 			toast.error($i18n.t('Please enter a prompt'));

@@ -831,6 +831,10 @@ async def create_child_account(
             detail="Failed to link child account to parent",
         )
 
+    # Ensure parent has role "parent" in DB (for Sidebar display)
+    if user.role == "user":
+        Users.update_user_role_by_id(user.id, "parent", db=db)
+
     return updated_user
 
 

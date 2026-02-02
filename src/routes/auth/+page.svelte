@@ -72,7 +72,9 @@
 
 			// Determine redirect path based on user type
 			if (!redirectPath) {
-				const userType = await getUserType(sessionUser);
+				const userType = await getUserType(sessionUser, [], {
+					mayFetchWhitelist: sessionUser?.role === 'admin'
+				});
 
 				// Route based on user type
 				if (userType === 'parent') {

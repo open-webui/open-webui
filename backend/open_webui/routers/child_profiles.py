@@ -45,6 +45,7 @@ class ChildProfileResponse(BaseModel):
     is_current: Optional[bool] = None
     created_at: int
     updated_at: int
+    child_email: Optional[str] = None
 
 
 class ChildProfileStatsResponse(BaseModel):

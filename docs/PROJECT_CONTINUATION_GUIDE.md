@@ -1,6 +1,6 @@
 # Project Continuation Guide
 
-**Last Updated**: 2026-01-31  
+**Last Updated**: 2026-02-02  
 **Project**: DSL KidsGPT Open WebUI  
 **Repository**: https://github.com/jjdrisco/DSL-kidsgpt-open-webui
 
@@ -498,6 +498,72 @@ The child profiles router existed at `backend/open_webui/routers/child_profiles.
 
 ---
 
+### Child Email Display Fix (2026-01-31)
+
+Email and password were showing "Not specified" in the Profile Information div because child profile and child user account are separate tables; email was resolved by name matching against `getChildAccounts()`, which could fail.
+
+**Fix**:
+
+- **Backend**: Added `child_email` column to `child_profile` table (migration `s55t66u77v88`). Updated `ChildProfile`, `ChildProfileModel`, `ChildProfileForm`, and `ChildProfileResponse` to include `child_email`. Insert and update logic now persist `child_email`.
+- **Frontend**: ChildProfileForm sends `child_email` when creating/updating profiles, hydrates it from the profile, and displays it. Display prefers `(profile).child_email` with `getChildEmailForProfile()` as fallback for existing profiles.
+- **Diagnostic script**: `backend/scripts/inspect_child_data.py` — Run to inspect child_profile vs user table linkage.
+
+**Run migration** (after fixing environment):
+
+```bash
+cd backend/open_webui && alembic upgrade head
+```
+
+---
+
+### Model Access for Parent and Child Roles (2026-01-31)
+
+Child and parent accounts were receiving 400 Bad Request or 403 Forbidden / "Model not found" when chatting because: (1) `check_model_access` rejected base models with no DB entry, (2) custom models in DEFAULT_MODELS had access control that excluded children, and (3) the Ollama and OpenAI routers only allowed admin for base models.
+
+**Fixes**:
+
+- **`backend/open_webui/utils/models.py`**: In `check_model_access`, when `model_info` is None (base model from OpenAI, Ollama, etc.), access is allowed.
+- **`backend/open_webui/main.py`**: Parent and child roles can use models listed in `DEFAULT_MODELS` without the access-control check. This lets children use the locked default model (e.g. gpt-5.2-chat-latest) even when it is a custom model with restricted access.
+- **`backend/open_webui/routers/ollama.py`**: In `/api/chat`, `/v1/completions`, and `/v1/chat/completions`, the check that raised 403 for non-admin users now allows `parent` and `child` (i.e. `user.role not in ("admin", "parent", "child")` before raising 403).
+- **`backend/open_webui/routers/openai.py`**: Same allowance in the chat-completion model-access check.
+
+---
+
+### Database Migrations (SQLite) and User Table Repair (2026-02-02)
+
+**Context**: On SQLite, Alembic is the source of truth for schema. Peewee migrations are skipped for SQLite to avoid conflicts and failures; several Alembic migrations were made idempotent so `alembic upgrade head` can complete even after partial runs.
+
+**What was fixed**:
+
+- **Peewee disabled for SQLite**: In `backend/open_webui/internal/db.py`, when `DATABASE_URL` is SQLite, `handle_peewee_migration` is no longer run. Only Alembic migrations apply.
+- **SQLite-safe migrations**: Migration `r44s55t66u77` (exit_quiz_question_key nullable) uses `op.batch_alter_table()` for SQLite. Migrations `b10670c03dd5` (user table / info & settings → JSON) and `90ef40d4714e` (channel columns) are idempotent (check for existing columns/tables before adding).
+- **User table column rename**: Migration `b10670c03dd5` converts `info`/`settings` from TEXT to JSON on SQLite by adding `*_json` columns, copying data, dropping the old column, then renaming. The rename step now uses raw SQL (`ALTER TABLE "user" RENAME COLUMN info_json TO info`) so it completes on SQLite.
+- **Repair migration**: If the rename step did not complete in the past, the `user` table can be left with `info_json`/`settings_json` and no `info`/`settings`, causing `no such column: user.info` at runtime. Migration **`u77v88w99x00`** repairs this by renaming `info_json` → `info` and `settings_json` → `settings` when those columns exist.
+
+**What you need to do**:
+
+- Run migrations from the same environment the backend uses (so the same database is updated):
+  ```bash
+  cd backend/open_webui && alembic upgrade head
+  ```
+- If the backend uses a custom `DATABASE_URL` (e.g. in project root `.env`), run the above from a shell that has that env loaded so the same DB is targeted. Current head revision after all fixes: **`u77v88w99x00`**.
+
+---
+
+### Parent Role in Database (2026-02-02)
+
+**Context**: The sidebar shows "Test Children's Chat" and "View Children" when the user is a parent. Previously this could depend on frontend-derived state; the backend is now the source of truth for role.
+
+**What was fixed**:
+
+- **On first child link**: When a user with role `user` links their first child via the "Add Child" flow, `create_child_account` in `backend/open_webui/routers/users.py` now sets that user’s role to `parent` in the database.
+- **Existing users**: Migration **`t66u77v88w99`** sets `role = 'parent'` for any user who has `role = 'user'` and is the `parent_id` of at least one other user.
+- **Frontend**: The sidebar uses `$user?.role === 'parent'` from the session (backend). The `getUserType` helper only calls the admin-only interviewee-whitelist API when `$user?.role === 'admin'` to avoid 401s. Layout navigation uses a re-entry guard so workflow enforcement does not loop.
+
+**No extra steps** if you run `alembic upgrade head`; the parent-role migration is part of the chain.
+
+---
+
 ### Recently Merged (2026-01-30)
 
 **PR #10: Feature: Separate Quiz Workflow** ✅ **COMPLETE**
@@ -642,9 +708,25 @@ pip install -r requirements.txt
 lsof -i :8080
 ```
 
+**Problem**: `sqlite3.OperationalError: no such column: user.info` (or backend returns 500 on `/api/config`)
+
+The `user` table has `info_json`/`settings_json` but the app expects `info`/`settings` (rename step from an earlier migration did not complete). Run the repair migration:
+
+```bash
+cd backend/open_webui && alembic upgrade head
+```
+
+This applies migration **u77v88w99x00**, which renames `info_json` → `info` and `settings_json` → `settings`. Restart the backend after running.
+
 **Problem**: `sqlite3.OperationalError: no such column: channel.is_private`
 
-The database is missing columns from the channel migration. Apply them manually (SQLite, default DB at `backend/data/webui.db`):
+The database is missing columns from the channel migration. **Preferred**: run Alembic (migrations are now idempotent):
+
+```bash
+cd backend/open_webui && alembic upgrade head
+```
+
+If you cannot run Alembic, you can apply the channel columns manually (SQLite, default DB at `backend/data/webui.db`):
 
 ```bash
 sqlite3 backend/data/webui.db "
@@ -683,6 +765,22 @@ app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profile
 ```
 
 Restart the backend after changes.
+
+**Problem**: Child or parent account gets 400 Bad Request or 403 Forbidden / "Model not found" when chatting
+
+The fix (2026-01-31) allows base models (e.g. gpt-5.2-chat-latest) for parent and child roles. Ensure the following files have the updated access control logic:
+- `backend/open_webui/utils/models.py`: `check_model_access` returns (allows access) when `model_info` is None
+- `backend/open_webui/main.py`: Parent and child can use `DEFAULT_MODELS` without access control
+- `backend/open_webui/routers/ollama.py` and `backend/open_webui/routers/openai.py`: Parent and child allowed in model-access checks (i.e. `user.role not in ("admin", "parent", "child")`)
+
+Restart the backend after changes.
+
+**Problem**: Email and password show "Not specified" in Profile Information
+
+1. **Run migration**: Ensure `child_email` column exists: `cd backend/open_webui && alembic upgrade head`
+2. **Diagnostic**: Run `python backend/scripts/inspect_child_data.py` to compare child_profile vs user tables (child accounts). Use `DB_ABS=path/to/webui.db` if needed.
+3. **New profiles**: Email is stored when creating a profile with the Account Creation section. Edit and save will persist it.
+4. **Existing profiles**: For profiles created before the fix, email may be empty; `getChildEmailForProfile()` fallback matches by name to child accounts. If no matching account exists, email stays "Not specified".
 
 **Problem**: Cypress tests fail
 
@@ -723,6 +821,7 @@ When starting work on this project:
   - [ ] Python 3.12+ installed
   - [ ] Dependencies installed (`npm install --legacy-peer-deps`, `pip install -r requirements.txt`)
   - [ ] `.env` file configured
+  - [ ] Database migrations applied: `cd backend/open_webui && alembic upgrade head` (use same env as backend so the same DB is updated)
 
 - [ ] **GitHub Access**
   - [ ] GitHub token created (Classic PAT with `repo` scope)
@@ -753,5 +852,5 @@ When starting work on this project:
 
 ---
 
-**Last Updated**: 2026-01-31  
+**Last Updated**: 2026-02-02  
 **Maintained By**: Project Contributors

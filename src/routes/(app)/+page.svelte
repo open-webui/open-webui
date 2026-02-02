@@ -15,7 +15,9 @@
 			return;
 		}
 
-		const userType = await getUserType($user);
+		const userType = await getUserType($user, [], {
+			mayFetchWhitelist: $user?.role === 'admin'
+		});
 
 		// Route based on user type
 		if (userType === 'parent') {

@@ -1581,9 +1581,23 @@ async def chat_completion(
             model = request.app.state.MODELS[model_id]
             model_info = Models.get_model_by_id(model_id)
 
+            # Parent and child can use DEFAULT_MODELS without access control check
+            default_model_ids = [
+                m.strip()
+                for m in (request.app.state.config.DEFAULT_MODELS or "").split(",")
+                if m.strip()
+            ]
+            skip_access_check = (
+                user.role in ("parent", "child")
+                and model_id
+                and model_id in default_model_ids
+            )
+
             # Check if user has access to the model
-            if not BYPASS_MODEL_ACCESS_CONTROL and (
-                user.role != "admin" or not BYPASS_ADMIN_ACCESS_CONTROL
+            if (
+                not skip_access_check
+                and not BYPASS_MODEL_ACCESS_CONTROL
+                and (user.role != "admin" or not BYPASS_ADMIN_ACCESS_CONTROL)
             ):
                 try:
                     check_model_access(user, model)

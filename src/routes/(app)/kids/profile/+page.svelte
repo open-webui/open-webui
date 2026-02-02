@@ -668,7 +668,9 @@
 	}
 
 	async function proceedToNextStep() {
-		const userType = await getUserType($user);
+		const userType = await getUserType($user, [], {
+			mayFetchWhitelist: $user?.role === 'admin'
+		});
 
 		if (userType === 'interviewee') {
 			localStorage.setItem('assignmentStep', '2');

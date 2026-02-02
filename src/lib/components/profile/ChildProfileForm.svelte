@@ -6,7 +6,7 @@
 	import type { ChildProfile } from '$lib/apis/child-profiles';
 	import { getChildProfiles } from '$lib/apis/child-profiles';
 	import { toast } from 'svelte-sonner';
-	import { createChildAccount } from '$lib/apis/users';
+	import { createChildAccount, getChildAccounts } from '$lib/apis/users';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import {
 		personalityTraits,
@@ -61,6 +61,7 @@
 
 	// Multi-child support
 	let childProfiles: ChildProfile[] = [];
+	let childAccounts: { id: string; name: string; email?: string }[] = [];
 	let selectedChildIndex: number = initialSelectedIndex;
 	let showForm: boolean = false;
 	let isEditing: boolean = false;
@@ -166,6 +167,8 @@
 			parentLLMMonitoringOther = (sel as any)?.parent_llm_monitoring_other || '';
 		}
 
+		childEmail = (sel as any)?.child_email ?? '';
+
 		// Parse personality traits from stored characteristics
 		if (sel?.child_characteristics) {
 			const characteristics = sel.child_characteristics;
@@ -249,6 +252,7 @@
 			(sel as any).child_ai_use_contexts_other = childAIUseContextsOther || null;
 			(sel as any).parent_llm_monitoring_other = parentLLMMonitoringOther || null;
 		}
+		(sel as any).child_email = childEmail;
 	}
 
 	async function deleteChild(index: number) {
@@ -393,7 +397,8 @@
 				name: childName,
 				child_age: childAge,
 				child_gender: childGender === 'Other' ? 'Other' : childGender,
-				child_characteristics: combinedCharacteristics
+				child_characteristics: combinedCharacteristics,
+				child_email: childEmail || undefined
 			};
 
 			if (showResearchFields) {
@@ -418,6 +423,8 @@
 					email: childEmail,
 					password: childPassword
 				});
+				const accounts = await getChildAccounts(token);
+				childAccounts = Array.isArray(accounts) ? accounts : childAccounts;
 			} catch (accountError) {
 				console.error('Failed to create child account:', accountError);
 				// Continue even if account creation fails - profile is already created
@@ -491,6 +498,12 @@
 			if (!childProfiles || !Array.isArray(childProfiles)) {
 				childProfiles = [];
 			}
+			try {
+				const accounts = await getChildAccounts(localStorage.token || '');
+				childAccounts = Array.isArray(accounts) ? accounts : [];
+			} catch {
+				childAccounts = [];
+			}
 
 			if (childProfiles.length > 0) {
 				const currentChildId = childProfileSync.getCurrentChildId();
@@ -540,7 +553,8 @@
 					name: childName,
 					child_age: childAge,
 					child_gender: childGender === 'Other' ? 'Other' : childGender,
-					child_characteristics: combinedCharacteristics
+					child_characteristics: combinedCharacteristics,
+					child_email: childEmail || undefined
 				};
 
 				if (showResearchFields) {
@@ -565,6 +579,8 @@
 						email: childEmail,
 						password: childPassword
 					});
+					const accounts = await getChildAccounts(token);
+					childAccounts = Array.isArray(accounts) ? accounts : childAccounts;
 				} catch (accountError) {
 					console.error('Failed to create child account:', accountError);
 					// Continue even if account creation fails - profile is already created
@@ -602,7 +618,8 @@
 						name: childName,
 						child_age: childAge,
 						child_gender: childGender,
-						child_characteristics: combinedCharacteristics
+						child_characteristics: combinedCharacteristics,
+						child_email: childEmail || undefined
 					};
 
 					if (showResearchFields) {
@@ -673,6 +690,14 @@
 		} else {
 			console.warn('Cannot start editing: no valid child selected');
 		}
+	}
+
+	function getChildEmailForProfile(profile: ChildProfile | undefined): string {
+		if (!profile?.name) return '';
+		const match = childAccounts.find(
+			(acc) => acc.name?.toLowerCase().trim() === profile.name?.toLowerCase().trim()
+		);
+		return match?.email ?? '';
 	}
 
 	function joinContextsForDisplay(): string {
@@ -821,6 +846,56 @@
 						<p class="text-gray-900 dark:text-white">
 							{childProfiles[selectedChildIndex]?.child_gender || 'Not specified'}
 						</p>
+					</div>
+					<div>
+						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+							Email
+						</div>
+						<p class="text-gray-900 dark:text-white">
+							{(childProfiles[selectedChildIndex] as any)?.child_email ||
+								getChildEmailForProfile(childProfiles[selectedChildIndex]) ||
+								'Not specified'}
+						</p>
+					</div>
+					<div>
+						<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+							Password
+						</div>
+						<div class="flex items-center gap-2">
+							<p class="text-gray-900 dark:text-white">
+								{(childProfiles[selectedChildIndex] as any)?.child_email ||
+								getChildEmailForProfile(childProfiles[selectedChildIndex])
+									? '••••••••'
+									: 'Not set'}
+							</p>
+							{#if (childProfiles[selectedChildIndex] as any)?.child_email ||
+								getChildEmailForProfile(childProfiles[selectedChildIndex])}
+								<button
+									type="button"
+									class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+									aria-label={$i18n.t('View password')}
+									on:click={() =>
+										toast.info(
+											$i18n.t('Passwords are stored securely and cannot be displayed.')
+										)}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 16 16"
+										fill="currentColor"
+										class="size-4"
+										aria-hidden="true"
+									>
+										<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+										<path
+											fill-rule="evenodd"
+											d="M1.38 8.28a.87.87 0 0 1 0-.566 7.003 7.003 0 0 1 13.238.006.87.87 0 0 1 0 .566A7.003 7.003 0 0 1 1.379 8.28ZM11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</button>
+							{/if}
+						</div>
 					</div>
 					{#if showPersonalityTraits}
 						<div>

@@ -59,6 +59,7 @@
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Search from '../icons/Search.svelte';
+	import UserGroup from '../icons/UserGroup.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
@@ -751,6 +752,30 @@
 					</Tooltip>
 				</div>
 
+				{#if $user?.role === 'parent'}
+					<div class="">
+						<Tooltip content={$i18n.t('View Children')} placement="right">
+							<a
+								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/parent"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/parent');
+									itemClickHandler();
+								}}
+								draggable="false"
+								aria-label={$i18n.t('View Children')}
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<UserGroup className="size-4.5" />
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
+
 				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 					<div class="">
 						<Tooltip content={$i18n.t('Notes')} placement="right">
@@ -987,6 +1012,27 @@
 							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
 					</div>
+
+					{#if $user?.role === 'parent'}
+						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
+							<a
+								id="sidebar-view-children-button"
+								class="group grow flex items-center space-x-3 rounded-2xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+								href="/parent"
+								on:click={itemClickHandler}
+								draggable="false"
+								aria-label={$i18n.t('View Children')}
+							>
+								<div class="self-center">
+									<UserGroup className="size-4.5" strokeWidth="2" />
+								</div>
+
+								<div class="flex flex-1 self-center translate-y-[0.5px]">
+									<div class=" self-center text-sm font-primary">{$i18n.t('View Children')}</div>
+								</div>
+							</a>
+						</div>
+					{/if}
 
 					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">

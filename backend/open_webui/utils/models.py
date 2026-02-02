@@ -430,7 +430,9 @@ def check_model_access(user, model, db=None):
     else:
         model_info = Models.get_model_by_id(model.get("id"), db=db)
         if not model_info:
-            raise Exception("Model not found")
+            # Base model from provider (OpenAI, Ollama, etc.) - no DB entry.
+            # Available to all authenticated users including parent and child roles.
+            return
         elif not (
             user.id == model_info.user_id
             or has_access(
@@ -441,7 +443,8 @@ def check_model_access(user, model, db=None):
 
 
 def get_filtered_models(models, user, db=None):
-    # Filter out models that the user does not have access to
+    # Filter out models that the user does not have access to.
+    # Parent and child roles fall through to else and get the full model list.
     if (
         user.role == "user"
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)

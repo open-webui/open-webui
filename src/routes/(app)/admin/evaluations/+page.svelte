@@ -1,12 +1,7 @@
 <script>
-	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
-
-	import Evaluations from '$lib/components/admin/Evaluations.svelte';
-
-	onMount(() => {
-		goto('/admin/evaluations/leaderboard');
-	});
+	// Redirect to default tab is handled in +page.js load(); this component is not rendered when redirecting.
 </script>
 
-<Evaluations />
+<svelte:head>
+	<title>Evaluations</title>
+</svelte:head>

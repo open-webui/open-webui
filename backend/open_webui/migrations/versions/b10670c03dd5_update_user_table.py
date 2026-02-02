@@ -60,35 +60,53 @@ def _drop_sqlite_indexes_for_column(table_name, column_name, conn):
 def _convert_column_to_json(table: str, column: str):
     conn = op.get_bind()
     dialect = conn.dialect.name
+    inspector = Inspector.from_engine(conn)
+
+    # Check existing columns for idempotency
+    existing_columns = [col["name"] for col in inspector.get_columns(table)]
+    has_original = column in existing_columns
+    has_temp = f"{column}_json" in existing_columns
 
     # SQLite cannot ALTER COLUMN → must recreate column
     if dialect == "sqlite":
-        # 1. Add temporary column
-        op.add_column(table, sa.Column(f"{column}_json", sa.JSON(), nullable=True))
+        # If column is already JSON (no original text column, no temp column), skip
+        if has_original and not has_temp:
+            # Check if it's already JSON type by inspecting column type
+            col_info = next((c for c in inspector.get_columns(table) if c["name"] == column), None)
+            if col_info and "JSON" in str(col_info.get("type", "")).upper():
+                return  # Already converted
 
-        # 2. Load old data
-        rows = conn.execute(sa.text(f'SELECT id, {column} FROM "{table}"')).fetchall()
+        # 1. Add temporary column if it doesn't exist
+        if not has_temp:
+            op.add_column(table, sa.Column(f"{column}_json", sa.JSON(), nullable=True))
 
-        for row in rows:
-            uid, raw = row
-            if raw is None:
-                parsed = None
-            else:
-                try:
-                    parsed = json.loads(raw)
-                except Exception:
-                    parsed = None  # fallback safe behavior
+        # 2. Load old data and migrate (only if original column still exists)
+        if has_original:
+            rows = conn.execute(sa.text(f'SELECT id, {column} FROM "{table}"')).fetchall()
 
-            conn.execute(
-                sa.text(f'UPDATE "{table}" SET {column}_json = :val WHERE id = :id'),
-                {"val": json.dumps(parsed) if parsed else None, "id": uid},
-            )
+            for row in rows:
+                uid, raw = row
+                if raw is None:
+                    parsed = None
+                else:
+                    try:
+                        parsed = json.loads(raw)
+                    except Exception:
+                        parsed = None  # fallback safe behavior
 
-        # 3. Drop old TEXT column
-        op.drop_column(table, column)
+                conn.execute(
+                    sa.text(f'UPDATE "{table}" SET {column}_json = :val WHERE id = :id'),
+                    {"val": json.dumps(parsed) if parsed else None, "id": uid},
+                )
 
-        # 4. Rename new JSON column → original name
-        op.alter_column(table, f"{column}_json", new_column_name=column)
+            # 3. Drop old TEXT column
+            op.drop_column(table, column)
+
+        # 4. Rename new JSON column → original name (refresh columns list)
+        # Use raw SQL on SQLite so RENAME COLUMN completes (op.alter_column can fail on some SQLite builds)
+        existing_columns = [col["name"] for col in inspector.get_columns(table)]
+        if f"{column}_json" in existing_columns and column not in existing_columns:
+            op.execute(sa.text(f'ALTER TABLE "{table}" RENAME COLUMN {column}_json TO {column}'))
 
     else:
         # PostgreSQL supports direct CAST
@@ -175,67 +193,93 @@ def upgrade() -> None:
     # Convert settings (TEXT/JSONField) → JSON
     _convert_column_to_json("user", "settings")
 
-    op.create_table(
-        "api_key",
-        sa.Column("id", sa.Text(), primary_key=True, unique=True),
-        sa.Column("user_id", sa.Text(), sa.ForeignKey("user.id", ondelete="CASCADE")),
-        sa.Column("key", sa.Text(), unique=True, nullable=False),
-        sa.Column("data", sa.JSON(), nullable=True),
-        sa.Column("expires_at", sa.BigInteger(), nullable=True),
-        sa.Column("last_used_at", sa.BigInteger(), nullable=True),
-        sa.Column("created_at", sa.BigInteger(), nullable=False),
-        sa.Column("updated_at", sa.BigInteger(), nullable=False),
-    )
+    # Re-check existing tables after column conversions
+    existing_tables = inspector.get_table_names()
+
+    if "api_key" not in existing_tables:
+        op.create_table(
+            "api_key",
+            sa.Column("id", sa.Text(), primary_key=True, unique=True),
+            sa.Column("user_id", sa.Text(), sa.ForeignKey("user.id", ondelete="CASCADE")),
+            sa.Column("key", sa.Text(), unique=True, nullable=False),
+            sa.Column("data", sa.JSON(), nullable=True),
+            sa.Column("expires_at", sa.BigInteger(), nullable=True),
+            sa.Column("last_used_at", sa.BigInteger(), nullable=True),
+            sa.Column("created_at", sa.BigInteger(), nullable=False),
+            sa.Column("updated_at", sa.BigInteger(), nullable=False),
+        )
 
     conn = op.get_bind()
-    users = conn.execute(
-        sa.text('SELECT id, oauth_sub FROM "user" WHERE oauth_sub IS NOT NULL')
-    ).fetchall()
 
-    for uid, oauth_sub in users:
-        if oauth_sub:
-            # Example formats supported:
-            #   provider@sub
-            #   plain sub (stored as {"oidc": {"sub": sub}})
-            if "@" in oauth_sub:
-                provider, sub = oauth_sub.split("@", 1)
-            else:
-                provider, sub = "oidc", oauth_sub
+    # Re-check user columns for idempotency
+    user_columns = [col["name"] for col in inspector.get_columns("user")]
 
-            oauth_json = json.dumps({provider: {"sub": sub}})
-            conn.execute(
-                sa.text('UPDATE "user" SET oauth = :oauth WHERE id = :id'),
-                {"oauth": oauth_json, "id": uid},
-            )
+    # Migrate oauth_sub to oauth JSON (only if oauth_sub still exists)
+    if "oauth_sub" in user_columns:
+        users = conn.execute(
+            sa.text('SELECT id, oauth_sub FROM "user" WHERE oauth_sub IS NOT NULL')
+        ).fetchall()
 
-    users_with_keys = conn.execute(
-        sa.text('SELECT id, api_key FROM "user" WHERE api_key IS NOT NULL')
-    ).fetchall()
-    now = int(time.time())
+        for uid, oauth_sub in users:
+            if oauth_sub:
+                # Example formats supported:
+                #   provider@sub
+                #   plain sub (stored as {"oidc": {"sub": sub}})
+                if "@" in oauth_sub:
+                    provider, sub = oauth_sub.split("@", 1)
+                else:
+                    provider, sub = "oidc", oauth_sub
 
-    for uid, api_key in users_with_keys:
-        if api_key:
-            conn.execute(
-                sa.text("""
-                    INSERT INTO api_key (id, user_id, key, created_at, updated_at)
-                    VALUES (:id, :user_id, :key, :created_at, :updated_at)
-                """),
-                {
-                    "id": f"key_{uid}",
-                    "user_id": uid,
-                    "key": api_key,
-                    "created_at": now,
-                    "updated_at": now,
-                },
-            )
+                oauth_json = json.dumps({provider: {"sub": sub}})
+                conn.execute(
+                    sa.text('UPDATE "user" SET oauth = :oauth WHERE id = :id'),
+                    {"oauth": oauth_json, "id": uid},
+                )
 
-    if conn.dialect.name == "sqlite":
-        _drop_sqlite_indexes_for_column("user", "api_key", conn)
-        _drop_sqlite_indexes_for_column("user", "oauth_sub", conn)
+    # Migrate api_key to api_key table (only if api_key column still exists)
+    if "api_key" in user_columns:
+        users_with_keys = conn.execute(
+            sa.text('SELECT id, api_key FROM "user" WHERE api_key IS NOT NULL')
+        ).fetchall()
+        now = int(time.time())
 
-    with op.batch_alter_table("user") as batch_op:
-        batch_op.drop_column("api_key")
-        batch_op.drop_column("oauth_sub")
+        for uid, api_key in users_with_keys:
+            if api_key:
+                # Check if key already exists to avoid duplicates
+                existing = conn.execute(
+                    sa.text("SELECT id FROM api_key WHERE user_id = :user_id"),
+                    {"user_id": uid},
+                ).fetchone()
+                if not existing:
+                    conn.execute(
+                        sa.text("""
+                            INSERT INTO api_key (id, user_id, key, created_at, updated_at)
+                            VALUES (:id, :user_id, :key, :created_at, :updated_at)
+                        """),
+                        {
+                            "id": f"key_{uid}",
+                            "user_id": uid,
+                            "key": api_key,
+                            "created_at": now,
+                            "updated_at": now,
+                        },
+                    )
+
+    # Drop old columns (only if they still exist)
+    columns_to_drop = []
+    if "api_key" in user_columns:
+        columns_to_drop.append("api_key")
+    if "oauth_sub" in user_columns:
+        columns_to_drop.append("oauth_sub")
+
+    if columns_to_drop:
+        if conn.dialect.name == "sqlite":
+            for col in columns_to_drop:
+                _drop_sqlite_indexes_for_column("user", col, conn)
+
+        with op.batch_alter_table("user") as batch_op:
+            for col in columns_to_drop:
+                batch_op.drop_column(col)
 
 
 def downgrade() -> None:

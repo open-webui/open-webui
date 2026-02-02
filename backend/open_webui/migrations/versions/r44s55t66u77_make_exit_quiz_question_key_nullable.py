@@ -30,8 +30,9 @@ def upgrade() -> None:
 
         # Check if question_key column exists and is not nullable
         if "question_key" in exit_quiz_columns:
-            # Make question_key nullable
-            op.alter_column("exit_quiz_response", "question_key", nullable=True)
+            # Make question_key nullable (use batch for SQLite compatibility)
+            with op.batch_alter_table("exit_quiz_response") as batch_op:
+                batch_op.alter_column("question_key", nullable=True)
 
 
 def downgrade() -> None:
@@ -54,5 +55,6 @@ def downgrade() -> None:
                 WHERE question_key IS NULL
             """)
 
-            # Then make it NOT NULL
-            op.alter_column("exit_quiz_response", "question_key", nullable=False)
+            # Then make it NOT NULL (use batch for SQLite compatibility)
+            with op.batch_alter_table("exit_quiz_response") as batch_op:
+                batch_op.alter_column("question_key", nullable=False)
