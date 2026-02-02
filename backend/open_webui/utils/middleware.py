@@ -321,7 +321,7 @@ def serialize_output(output: list) -> str:
             tool_outputs[item.get("call_id")] = item
 
     # Second pass: render items in order
-    for item in output:
+    for idx, item in enumerate(output):
         item_type = item.get("type", "")
 
         if item_type == "message":
@@ -372,6 +372,10 @@ def serialize_output(output: list) -> str:
             duration = item.get("duration")
             status = item.get("status", "in_progress")
 
+            # Infer completion: if this reasoning item is NOT the last item,
+            # render as done (a subsequent item means reasoning is complete)
+            is_last_item = idx == len(output) - 1
+
             if content and not content.endswith("\n"):
                 content += "\n"
 
@@ -382,10 +386,11 @@ def serialize_output(output: list) -> str:
                 )
             )
 
-            if status == "completed" or duration is not None:
+            if status == "completed" or duration is not None or not is_last_item:
                 content = f'{content}<details type="reasoning" done="true" duration="{duration or 0}">\n<summary>Thought for {duration or 0} seconds</summary>\n{display}\n</details>\n'
             else:
                 content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{display}\n</details>\n'
+
 
         elif item_type == "open_webui:code_interpreter":
             content_stripped, original_whitespace = split_content_and_whitespace(
