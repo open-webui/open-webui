@@ -1065,7 +1065,7 @@ async def model_response_handler(request, channel, message, user, db=None):
                         f"{username}: {replace_mentions(thread_message.content)}"
                     )
 
-                    thread_message_files = thread_message.data.get("files", [])
+                    thread_message_files = (thread_message.data or {}).get("files", [])
                     for file in thread_message_files:
                         if file.get("type", "") == "image":
                             images.append(file.get("url", ""))
