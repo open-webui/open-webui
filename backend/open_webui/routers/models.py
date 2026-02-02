@@ -343,10 +343,8 @@ async def get_model_by_id(
 
 
 @router.get("/model/profile/image")
-def get_model_profile_image(
-    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
-    model = Models.get_model_by_id(id, db=db)
+def get_model_profile_image(id: str, user=Depends(get_verified_user)):
+    model = Models.get_model_by_id(id)
 
     if model:
         etag = f'"{model.updated_at}"' if model.updated_at else None

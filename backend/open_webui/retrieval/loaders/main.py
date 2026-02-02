@@ -143,7 +143,7 @@ class DoclingLoader:
         with open(self.file_path, "rb") as f:
             headers = {}
             if self.api_key:
-                headers["X-Api-Key"] = f"Bearer {self.api_key}"
+                headers["X-Api-Key"] = f"{self.api_key}"
 
             r = requests.post(
                 f"{self.url}/v1/convert/file",
@@ -361,7 +361,9 @@ class Loader:
         else:
             if file_ext == "pdf":
                 loader = PyPDFLoader(
-                    file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
+                    file_path,
+                    extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
+                    mode=self.kwargs.get("PDF_LOADER_MODE", "page"),
                 )
             elif file_ext == "csv":
                 loader = CSVLoader(file_path, autodetect_encoding=True)

@@ -794,6 +794,79 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     return url, payload
 
 
+def convert_to_responses_payload(payload: dict) -> dict:
+    """
+    Convert Chat Completions payload to Responses API format.
+    
+    Chat Completions: { messages: [{role, content}], ... }
+    Responses API: { input: [{type: "message", role, content: [...]}], instructions: "system" }
+    """
+    messages = payload.pop("messages", [])
+    
+    system_content = ""
+    input_items = []
+    
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        
+        # Check for stored output items (from previous Responses API turn)
+        stored_output = msg.get("output")
+        if stored_output and isinstance(stored_output, list):
+            input_items.extend(stored_output)
+            continue
+        
+        if role == "system":
+            if isinstance(content, str):
+                system_content = content
+            elif isinstance(content, list):
+                system_content = "\n".join(p.get("text", "") for p in content if p.get("type") == "text")
+            continue
+        
+        # Convert content format
+        text_type = "output_text" if role == "assistant" else "input_text"
+        
+        if isinstance(content, str):
+            content_parts = [{"type": text_type, "text": content}]
+        elif isinstance(content, list):
+            content_parts = []
+            for part in content:
+                if part.get("type") == "text":
+                    content_parts.append({"type": text_type, "text": part.get("text", "")})
+                elif part.get("type") == "image_url":
+                    url_data = part.get("image_url", {})
+                    url = url_data.get("url", "") if isinstance(url_data, dict) else url_data
+                    content_parts.append({"type": "input_image", "image_url": url})
+        else:
+            content_parts = [{"type": text_type, "text": str(content)}]
+        
+        input_items.append({
+            "type": "message",
+            "role": role,
+            "content": content_parts
+        })
+    
+    responses_payload = {**payload, "input": input_items}
+    
+    if system_content:
+        responses_payload["instructions"] = system_content
+    
+    if "max_tokens" in responses_payload:
+        responses_payload["max_output_tokens"] = responses_payload.pop("max_tokens")
+    
+    return responses_payload
+
+
+
+def convert_responses_result(response: dict) -> dict:
+    """
+    Convert non-streaming Responses API result.
+    Just add done flag - pass through raw response, frontend handles output.
+    """
+    response["done"] = True
+    return response
+
+
 @router.post("/chat/completions")
 async def generate_chat_completion(
     request: Request,
@@ -801,8 +874,11 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
     bypass_system_prompt: bool = False,
-    db: Session = Depends(get_session),
 ):
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Database operations (get_model_by_id, has_access) manage their own short-lived sessions.
+    # This prevents holding a connection during the entire LLM call (30-60+ seconds),
+    # which would exhaust the connection pool under concurrent load.
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -812,7 +888,7 @@ async def generate_chat_completion(
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id, db=db)
+    model_info = Models.get_model_by_id(model_id)
 
     # Check model info and override the payload
     if model_info:
@@ -842,7 +918,6 @@ async def generate_chat_completion(
                     user.id,
                     type="read",
                     access_control=model_info.access_control,
-                    db=db,
                 )
             ):
                 raise HTTPException(
@@ -913,6 +988,8 @@ async def generate_chat_completion(
         request, url, key, api_config, metadata, user=user
     )
 
+    is_responses = api_config.get("api_type") == "responses"
+
     if api_config.get("azure", False):
         api_version = api_config.get("api_version", "2023-03-15-preview")
         request_url, payload = convert_to_azure_payload(url, payload, api_version)
@@ -923,9 +1000,18 @@ async def generate_chat_completion(
             headers["api-key"] = key
 
         headers["api-version"] = api_version
-        request_url = f"{request_url}/chat/completions?api-version={api_version}"
+        
+        if is_responses:
+            payload = convert_to_responses_payload(payload)
+            request_url = f"{request_url}/responses?api-version={api_version}"
+        else:
+            request_url = f"{request_url}/chat/completions?api-version={api_version}"
     else:
-        request_url = f"{url}/chat/completions"
+        if is_responses:
+            payload = convert_to_responses_payload(payload)
+            request_url = f"{url}/responses"
+        else:
+            request_url = f"{url}/chat/completions"
 
     payload = json.dumps(payload)
 
@@ -971,6 +1057,10 @@ async def generate_chat_completion(
                     return JSONResponse(status_code=r.status, content=response)
                 else:
                     return PlainTextResponse(status_code=r.status, content=response)
+
+            # Convert Responses API result to simple format
+            if is_responses and isinstance(response, dict):
+                response = convert_responses_result(response)
 
             return response
     except Exception as e:
