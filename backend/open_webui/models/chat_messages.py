@@ -12,7 +12,6 @@ from sqlalchemy import (
     Boolean,
     Column,
     ForeignKey,
-    String,
     Text,
     JSON,
     Index,
@@ -50,22 +49,22 @@ class ChatMessage(Base):
     __tablename__ = "chat_message"
 
     # Identity
-    id = Column(String, primary_key=True)
+    id = Column(Text, primary_key=True)
     chat_id = Column(
-        String, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False, index=True
+        Text, ForeignKey("chat.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    user_id = Column(String, index=True)
+    user_id = Column(Text, index=True)
 
     # Structure
-    role = Column(String, nullable=False)  # user, assistant, system
-    parent_id = Column(String, nullable=True)
+    role = Column(Text, nullable=False)  # user, assistant, system
+    parent_id = Column(Text, nullable=True)
 
     # Content
     content = Column(JSON, nullable=True)  # Can be str or list of blocks
     output = Column(JSON, nullable=True)
 
     # Model (for assistant messages)
-    model_id = Column(String, nullable=True, index=True)
+    model_id = Column(Text, nullable=True, index=True)
 
     # Attachments
     files = Column(JSON, nullable=True)
