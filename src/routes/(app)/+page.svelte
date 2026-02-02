@@ -4,6 +4,7 @@
 	import { user } from '$lib/stores';
 	import { getUserType } from '$lib/utils';
 	import { getWorkflowState } from '$lib/apis/workflow';
+	import { getChildProfiles } from '$lib/apis/child-profiles';
 	import Chat from '$lib/components/chat/Chat.svelte';
 
 	let showChat = false;
@@ -18,6 +19,15 @@
 
 		// Route based on user type
 		if (userType === 'parent') {
+			try {
+				const profiles = await getChildProfiles(localStorage.token);
+				if (profiles && profiles.length > 0) {
+					showChat = true;
+					return;
+				}
+			} catch (e) {
+				// On error, send to /parent to add children
+			}
 			goto('/parent');
 			return;
 		}

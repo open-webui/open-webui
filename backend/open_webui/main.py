@@ -2017,7 +2017,7 @@ async def get_app_config(request: Request):
                     else {}
                 ),
             }
-            if user is not None and (user.role in ["admin", "user"])
+            if user is not None and (user.role in ["admin", "user", "parent", "child"])
             else {
                 **(
                     {
