@@ -243,6 +243,7 @@ class UsersTable:
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
+        username: Optional[str] = None,
         oauth: Optional[dict] = None,
         db: Optional[Session] = None,
     ) -> Optional[UserModel]:
@@ -257,6 +258,7 @@ class UsersTable:
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
+                    "username": username,
                     "oauth": oauth,
                 }
             )
