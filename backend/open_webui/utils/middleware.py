@@ -391,7 +391,6 @@ def serialize_output(output: list) -> str:
             else:
                 content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{display}\n</details>\n'
 
-
         elif item_type == "open_webui:code_interpreter":
             content_stripped, original_whitespace = split_content_and_whitespace(
                 content
@@ -3484,9 +3483,6 @@ async def process_chat_response(
                                     )
                                 # Check for Responses API events (type field starts with "response.")
                                 elif data.get("type", "").startswith("response."):
-
-                                    print(data)
-
                                     output, response_metadata = (
                                         handle_responses_streaming_event(data, output)
                                     )
@@ -3496,7 +3492,8 @@ async def process_chat_response(
                                         "content": serialize_output(output),
                                     }
 
-                                    print(processed_data)
+                                    # print(data)
+                                    # print(processed_data)
 
                                     # Merge any metadata (usage, done, etc.)
                                     if response_metadata:
