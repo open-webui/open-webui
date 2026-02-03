@@ -60,6 +60,8 @@ from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.retrievers import BaseRetriever
 
 
+MAX_CONCURRENT_EMBEDDING_REQUESTS = 50
+
 def is_youtube_url(url: str) -> bool:
     youtube_regex = r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$"
     return re.match(youtube_regex, url) is not None
@@ -836,11 +838,16 @@ def get_embedding_function(
                     log.debug(
                         f"generate_multiple_async: Processing {len(batches)} batches in parallel"
                     )
-                    # Execute all batches in parallel
-                    tasks = [
-                        embedding_function(batch, prefix=prefix, user=user)
-                        for batch in batches
-                    ]
+                    
+                    # Limit concurrent embedding requests to avoid rate limiting
+                    embedding_semaphore = asyncio.Semaphore(MAX_CONCURRENT_EMBEDDING_REQUESTS)
+
+                    async def _embed_batch(batch):
+                        async with embedding_semaphore:
+                            return await embedding_function(batch, prefix=prefix, user=user)
+
+                    # Execute batches with semaphore limiting concurrency
+                    tasks = [_embed_batch(batch) for batch in batches]
                     batch_results = await asyncio.gather(*tasks)
                 else:
                     log.debug(
