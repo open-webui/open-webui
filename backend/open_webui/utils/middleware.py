@@ -27,6 +27,96 @@ from starlette.responses import Response, StreamingResponse, JSONResponse
 from open_webui.utils.misc import is_string_allowed
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.chats import Chats
+
+# === Tool calls reconstruction from history ===
+# Parses <details type="tool_calls"> from assistant messages in chat history
+# and reconstructs proper OpenAI tool_calls/tool message format to prevent
+# model hallucinations when continuing tool-using conversations.
+_DETAILS_TC_RE = re.compile(
+    r'<details\s+type="tool_calls"\s+([^>]*)>\s*<summary>[^<]*</summary>\s*</details>',
+    re.IGNORECASE | re.DOTALL,
+)
+_DETAILS_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
+_DETAILS_TC_SPLIT_RE = re.compile(
+    r'(<details\s+type="tool_calls"\s+[^>]*>\s*<summary>[^<]*</summary>\s*</details>)',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _decode_detail_attr(value: str) -> Any:
+    """Reverse html.escape(json.dumps(x)) encoding."""
+    if not value:
+        return ""
+    try:
+        return json.loads(html.unescape(value))
+    except (json.JSONDecodeError, TypeError):
+        return html.unescape(value)
+
+
+def reconstruct_tool_messages(messages: list) -> list:
+    """Parse <details type='tool_calls'> in assistant content into proper OpenAI messages.
+
+    For each assistant message containing tool_calls details:
+    - Extracts tool call info from HTML attributes (id, name, arguments, result)
+    - Creates assistant message with tool_calls field
+    - Creates tool role messages with results
+    - Remaining text becomes a separate assistant message
+
+    Messages without tool_calls pass through unchanged.
+    """
+    log = logging.getLogger(__name__)
+    log.debug("[TOOL_CALL_FIX] Processing %d messages", len(messages))
+    tc_count = 0
+    out = []
+    for msg in messages:
+        role = msg.get("role", "")
+        content = msg.get("content", "")
+        if role != "assistant" or not isinstance(content, str) or not _DETAILS_TC_RE.search(content):
+            out.append(msg)
+            continue
+
+        segments = _DETAILS_TC_SPLIT_RE.split(content)
+        i, pending = 0, ""
+        while i < len(segments):
+            seg = segments[i]
+            if _DETAILS_TC_RE.match(seg):
+                tcs, results = [], []
+                while i < len(segments) and _DETAILS_TC_RE.match(segments[i]):
+                    attrs = dict(_DETAILS_ATTR_RE.findall(segments[i]))
+                    tc_id = attrs.get("id", "")
+                    args = _decode_detail_attr(attrs.get("arguments", ""))
+                    tcs.append({
+                        "id": tc_id, "type": "function",
+                        "function": {
+                            "name": attrs.get("name", ""),
+                            "arguments": args if isinstance(args, str) else json.dumps(args),
+                        }
+                    })
+                    if attrs.get("done") == "true" and attrs.get("result"):
+                        res = _decode_detail_attr(attrs["result"])
+                        results.append({
+                            "role": "tool", "tool_call_id": tc_id,
+                            "content": res if isinstance(res, str) else json.dumps(res),
+                        })
+                    i += 1
+                    if i < len(segments) and not _DETAILS_TC_RE.match(segments[i]):
+                        if segments[i].strip() == "":
+                            i += 1
+                        else:
+                            break
+                out.append({"role": "assistant", "content": pending.strip(), "tool_calls": tcs})
+                pending = ""
+                out.extend(results)
+                tc_count += len(tcs)
+            else:
+                pending += seg
+                i += 1
+        if pending.strip():
+            out.append({"role": "assistant", "content": pending.strip()})
+    if tc_count > 0:
+        log.info("[TOOL_CALL_FIX] Reconstructed %d tool_call(s), messages %d -> %d", tc_count, len(messages), len(out))
+    return out
+# === End tool calls reconstruction ===
 from open_webui.models.folders import Folders
 from open_webui.models.users import Users
 from open_webui.socket.main import (
@@ -1900,6 +1990,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 },
             }
         )
+
+    # Reconstruct tool_calls/tool messages from <details> tags in history
+    # to prevent model hallucinations when continuing tool-using conversations
+    form_data["messages"] = reconstruct_tool_messages(form_data["messages"])
 
     return form_data, metadata, events
 
