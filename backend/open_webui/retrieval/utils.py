@@ -60,8 +60,6 @@ from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.retrievers import BaseRetriever
 
 
-MAX_CONCURRENT_EMBEDDING_REQUESTS = 50
-
 def is_youtube_url(url: str) -> bool:
     youtube_regex = r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$"
     return re.match(youtube_regex, url) is not None
@@ -797,6 +795,7 @@ def get_embedding_function(
     embedding_batch_size,
     azure_api_version=None,
     enable_async=True,
+    max_concurrent=0,
 ) -> Awaitable:
     if embedding_engine == "":
         # Sentence transformers: CPU-bound sync operation
@@ -835,19 +834,26 @@ def get_embedding_function(
                 ]
 
                 if enable_async:
-                    log.debug(
-                        f"generate_multiple_async: Processing {len(batches)} batches in parallel"
-                    )
-                    
-                    # Limit concurrent embedding requests to avoid rate limiting
-                    embedding_semaphore = asyncio.Semaphore(MAX_CONCURRENT_EMBEDDING_REQUESTS)
+                    if max_concurrent > 0:
+                        log.debug(
+                            f"generate_multiple_async: Processing {len(batches)} batches with max {max_concurrent} concurrent"
+                        )
+                        # Limit concurrent embedding requests to avoid rate limiting
+                        embedding_semaphore = asyncio.Semaphore(max_concurrent)
 
-                    async def _embed_batch(batch):
-                        async with embedding_semaphore:
-                            return await embedding_function(batch, prefix=prefix, user=user)
+                        async def _embed_batch(batch):
+                            async with embedding_semaphore:
+                                return await embedding_function(batch, prefix=prefix, user=user)
 
-                    # Execute batches with semaphore limiting concurrency
-                    tasks = [_embed_batch(batch) for batch in batches]
+                        tasks = [_embed_batch(batch) for batch in batches]
+                    else:
+                        log.debug(
+                            f"generate_multiple_async: Processing {len(batches)} batches in parallel (unlimited)"
+                        )
+                        tasks = [
+                            embedding_function(batch, prefix=prefix, user=user)
+                            for batch in batches
+                        ]
                     batch_results = await asyncio.gather(*tasks)
                 else:
                     log.debug(
