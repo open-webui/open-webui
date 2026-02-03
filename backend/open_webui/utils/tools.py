@@ -413,15 +413,21 @@ def get_builtin_tools(
         builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
     # Knowledge base tools - conditional injection based on model knowledge
-    # If model has attached knowledge (any type), only provide query_knowledge_files
-    # Otherwise, provide all KB browsing tools
+    # If model has attached knowledge (any type, excluding full-context items),
+    # only provide query_knowledge_files. Otherwise, provide all KB browsing tools.
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
+    # Full-context items are injected directly into the conversation and notes
+    # are always full context by nature (never chunked/vectorized). 
+    has_searchable_knowledge = any(
+        item.get("context") != "full" and item.get("type") not in ("note", None)
+        for item in model_knowledge
+    ) if model_knowledge else False
     if is_builtin_tool_enabled("knowledge"):
-        if model_knowledge:
-            # Model has attached knowledge - only allow semantic search within it
+        if has_searchable_knowledge:
+            # Model has non-full-context knowledge - only allow semantic search within it
             builtin_functions.append(query_knowledge_files)
         else:
-            # No model knowledge - allow full KB browsing
+            # No searchable model knowledge - allow full KB browsing
             builtin_functions.extend(
                 [
                     list_knowledge_bases,

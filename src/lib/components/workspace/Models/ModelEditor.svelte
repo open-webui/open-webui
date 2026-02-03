@@ -277,14 +277,16 @@
 					return {
 						id: item.collection_name,
 						name: item.name,
-						legacy: true
+						legacy: true,
+						...(item?.context ? { context: item.context } : {})
 					};
 				} else if (item?.collection_names) {
 					return {
 						name: item.name,
 						type: 'collection',
 						collection_names: item.collection_names,
-						legacy: true
+						legacy: true,
+						...(item?.context ? { context: item.context } : {})
 					};
 				} else {
 					return item;

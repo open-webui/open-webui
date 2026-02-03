@@ -1518,46 +1518,60 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     user_message = get_last_user_message(form_data["messages"])
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
 
-    if (
-        model_knowledge
-        and metadata.get("params", {}).get("function_calling") != "native"
-    ):
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "knowledge_search",
-                    "query": user_message,
-                    "done": False,
-                },
-            }
-        )
-
-        knowledge_files = []
-        for item in model_knowledge:
+    if model_knowledge:
+        # Helper function to convert knowledge items, preserving the context property
+        def convert_knowledge_item(item):
             if item.get("collection_name"):
-                knowledge_files.append(
-                    {
-                        "id": item.get("collection_name"),
-                        "name": item.get("name"),
-                        "legacy": True,
-                    }
-                )
+                return {
+                    "id": item.get("collection_name"),
+                    "name": item.get("name"),
+                    "legacy": True,
+                    **({"context": item.get("context")} if item.get("context") else {}),
+                }
             elif item.get("collection_names"):
-                knowledge_files.append(
+                return {
+                    "name": item.get("name"),
+                    "type": "collection",
+                    "collection_names": item.get("collection_names"),
+                    "legacy": True,
+                    **({"context": item.get("context")} if item.get("context") else {}),
+                }
+            else:
+                return item
+
+        # Convert all items and separate full-context from non-full-context
+        knowledge_files = [convert_knowledge_item(item) for item in model_knowledge]
+        full_context_files = [f for f in knowledge_files if f.get("context") == "full"]
+        # Notes are always full context by nature (never chunked/vectorized),
+        # so treat them the same as full-context items regardless of the toggle.
+        note_files = [f for f in knowledge_files if f.get("type") == "note" and f.get("context") != "full"]
+        non_full_context_files = [f for f in knowledge_files if f.get("context") != "full" and f.get("type") != "note"]
+
+        is_native_fc = metadata.get("params", {}).get("function_calling") == "native"
+
+        # Always add full-context items and notes (bypass RAG entirely).
+        # Only add non-full-context items when NOT using native function calling.
+        files_to_add = full_context_files.copy()
+        files_to_add.extend(note_files)
+        if not is_native_fc:
+            files_to_add.extend(non_full_context_files)
+
+        if files_to_add:
+            # Only emit knowledge_search status if we have non-full-context items to search
+            if non_full_context_files and not is_native_fc:
+                await event_emitter(
                     {
-                        "name": item.get("name"),
-                        "type": "collection",
-                        "collection_names": item.get("collection_names"),
-                        "legacy": True,
+                        "type": "status",
+                        "data": {
+                            "action": "knowledge_search",
+                            "query": user_message,
+                            "done": False,
+                        },
                     }
                 )
-            else:
-                knowledge_files.append(item)
-
-        files = form_data.get("files", [])
-        files.extend(knowledge_files)
-        form_data["files"] = files
+            files = form_data.get("files", [])
+            files.extend(files_to_add)
+            form_data["files"] = files
 
     variables = form_data.pop("variables", None)
 

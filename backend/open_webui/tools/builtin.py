@@ -1645,29 +1645,70 @@ async def query_knowledge_files(
         collection_names = []
         note_results = []  # Notes aren't vectorized, handle separately
 
-        # If model has attached knowledge, use those
+        # Track attached files and whether model has attached KBs
+        attached_file_collections = []
+        attached_kb_collections = []
+        has_model_kbs = False
+
         if __model_knowledge__:
             for item in __model_knowledge__:
+                # Skip full-context items - their content is already in the conversation
+                if item.get("context") == "full":
+                    continue
+
                 item_type = item.get("type")
                 item_id = item.get("id")
 
                 if item_type == "collection":
-                    # Knowledge base - use KB ID as collection name
-                    knowledge = Knowledges.get_knowledge_by_id(item_id)
-                    if knowledge and (
-                        user_role == "admin"
-                        or knowledge.user_id == user_id
-                        or has_access(
-                            user_id, "read", knowledge.access_control, user_group_ids
-                        )
-                    ):
-                        collection_names.append(item_id)
+                    if item.get("collection_names"):
+                        # Legacy format with multiple collection names
+                        for cname in item.get("collection_names"):
+                            attached_kb_collections.append(cname)
+                        has_model_kbs = True
+                    elif item_id:
+                        # Standard KB - verify access
+                        knowledge = Knowledges.get_knowledge_by_id(item_id)
+                        if knowledge and (
+                            user_role == "admin"
+                            or knowledge.user_id == user_id
+                            or has_access(
+                                user_id, "read", knowledge.access_control, user_group_ids
+                            )
+                        ):
+                            attached_kb_collections.append(item_id)
+                            has_model_kbs = True
 
                 elif item_type == "file":
-                    # Individual file - use file-{id} as collection name
-                    file = Files.get_file_by_id(item_id)
-                    if file and (user_role == "admin" or file.user_id == user_id):
-                        collection_names.append(f"file-{item_id}")
+                    file_id = (
+                        item_id
+                        or item.get("file_id")
+                        or (
+                            item.get("file", {})
+                            if isinstance(item.get("file"), dict)
+                            else {}
+                        ).get("id")
+                    )
+                    file_collection = None
+
+                    item_collection = item.get("collection_name")
+                    if isinstance(item_collection, str) and item_collection.startswith(
+                        "file-"
+                    ):
+                        file_collection = item_collection
+                    elif isinstance(item_id, str) and item_id.startswith("file-"):
+                        # Legacy or malformed payloads may store collection name in "id"
+                        file_collection = item_id
+                    elif file_id:
+                        file = Files.get_file_by_id(file_id)
+                        if file:
+                            file_collection = f"file-{file_id}"
+
+                    if file_collection:
+                        attached_file_collections.append(file_collection)
+                    else:
+                        log.warning(
+                            f"query_knowledge_files: file '{file_id or item_id}' not found in DB"
+                        )
 
                 elif item_type == "note":
                     # Note - always return full content as context
@@ -1687,31 +1728,52 @@ async def query_knowledge_files(
                             }
                         )
 
-        elif knowledge_ids:
-            # User specified specific KBs
-            for knowledge_id in knowledge_ids:
-                knowledge = Knowledges.get_knowledge_by_id(knowledge_id)
-                if knowledge and (
-                    user_role == "admin"
-                    or knowledge.user_id == user_id
-                    or has_access(
-                        user_id, "read", knowledge.access_control, user_group_ids
-                    )
-                ):
-                    collection_names.append(knowledge_id)
-        else:
-            # No model knowledge and no specific IDs - search all accessible KBs
-            result = Knowledges.search_knowledge_bases(
-                user_id,
-                filter={
-                    "query": "",
-                    "user_id": user_id,
-                    "group_ids": user_group_ids,
-                },
-                skip=0,
-                limit=50,
-            )
-            collection_names = [knowledge_base.id for knowledge_base in result.items]
+                elif not item_type and item_id:
+                    # Legacy knowledge item without a 'type' field.
+                    if isinstance(item_id, str) and item_id.startswith("file-"):
+                        attached_file_collections.append(item_id)
+                    else:
+                        legacy_file = Files.get_file_by_id(item_id)
+                        if legacy_file:
+                            attached_file_collections.append(f"file-{item_id}")
+                        else:
+                            attached_kb_collections.append(item_id)
+                            has_model_kbs = True
+
+        # Attached files and KBs define the search scope
+        collection_names.extend(attached_file_collections)
+        collection_names.extend(attached_kb_collections)
+
+        # If the model has ANY attached knowledge (files, KBs, or legacy items),
+        # that defines the search scope - don't search outside it.
+        # Only fall through to broader searches when nothing is attached.
+        has_scoped_knowledge = has_model_kbs or bool(attached_file_collections)
+        if not has_scoped_knowledge:
+            if knowledge_ids:
+                # No model knowledge - LLM specified specific KBs to search
+                for knowledge_id in knowledge_ids:
+                    knowledge = Knowledges.get_knowledge_by_id(knowledge_id)
+                    if knowledge and (
+                        user_role == "admin"
+                        or knowledge.user_id == user_id
+                        or has_access(
+                            user_id, "read", knowledge.access_control, user_group_ids
+                        )
+                    ):
+                        collection_names.append(knowledge_id)
+            else:
+                # No attached knowledge at all - search all accessible KBs
+                result = Knowledges.search_knowledge_bases(
+                    user_id,
+                    filter={
+                        "query": "",
+                        "user_id": user_id,
+                        "group_ids": user_group_ids,
+                    },
+                    skip=0,
+                    limit=50,
+                )
+                collection_names.extend([knowledge_base.id for knowledge_base in result.items])
 
         chunks = []
 
