@@ -68,6 +68,7 @@ from open_webui.socket.main import (
     get_models_in_use,
 )
 from open_webui.routers import (
+    analytics,
     audio,
     images,
     ollama,
@@ -1458,6 +1459,9 @@ app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
 app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])
 app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
+)
+app.include_router(
+    analytics.router, prefix="/api/v1/analytics", tags=["analytics"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 

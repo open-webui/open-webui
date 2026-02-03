@@ -21,7 +21,7 @@ dependencies = [
     "authlib==1.6.6",
 
     "requests==2.32.5",
-    "aiohttp==3.13.2" # do not update to 3.13.3 - broken,
+    "aiohttp==3.13.2", # do not update to 3.13.3 - broken
     "async-timeout",
     "aiocache",
     "aiofiles",
