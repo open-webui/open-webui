@@ -509,9 +509,9 @@
 					</div>
 					<!-- Scrollable content -->
 					<div
-						class="bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-100 dark:border-gray-800 h-full overflow-y-auto"
+						class="bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-100/50 dark:border-gray-850/50 h-full overflow-y-auto"
 					>
-						<pre class="text-sm whitespace-pre-wrap font-mono pr-8">{selectedHistoryEntry?.snapshot
+						<pre class="text-xs whitespace-pre-wrap font-mono pr-8">{selectedHistoryEntry?.snapshot
 								?.content || content}</pre>
 					</div>
 				</div>
@@ -623,10 +623,10 @@
 					<div class="flex">
 						<!-- Content -->
 						<button
-							class="flex-1 text-left px-3.5 py-2 mb-1 rounded-xl transition group
+							class="flex-1 text-left px-3.5 py-2 mb-1 rounded-2xl transition group
 								{selectedHistoryEntry?.id === entry.id
-								? 'bg-gray-50 dark:bg-gray-850'
-								: 'hover:bg-gray-50 dark:hover:bg-gray-850'}"
+								? 'bg-gray-100/50 dark:bg-gray-850/50'
+								: 'hover:bg-gray-100/50 dark:hover:bg-gray-850/50'}"
 							on:click={() => (selectedHistoryEntry = entry)}
 						>
 							<!-- Commit Message -->
