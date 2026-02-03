@@ -857,33 +857,16 @@ export const removeDetails = (content, types) => {
 };
 
 export const removeAllDetails = (content) => {
+	// Preserve tool_calls details for backend reconstruction
 	return replaceOutsideCode(content, (segment) => {
-		return segment.replace(/<details[^>]*>.*?<\/details>/gis, '');
+		return segment.replace(/<details(?![^>]*type="tool_calls")[^>]*>.*?<\/details>/gis, '');
 	});
 };
 
 export const processDetails = (content) => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter']);
-
-	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to a string
-	const detailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
-	const matches = content.match(detailsRegex);
-	if (matches) {
-		for (const match of matches) {
-			const attributesRegex = /(\w+)="([^"]*)"/g;
-			const attributes = {};
-			let attributeMatch;
-			while ((attributeMatch = attributesRegex.exec(match)) !== null) {
-				attributes[attributeMatch[1]] = attributeMatch[2];
-			}
-
-			if (attributes.result) {
-				content = content.replace(match, `"${attributes.result}"`);
-			}
-		}
-	}
-
-	return content;
+	// Only remove reasoning and code_interpreter details
+	// Preserve tool_calls details for backend reconstruction
+	return removeDetails(content, ['reasoning', 'code_interpreter']);
 };
 
 // This regular expression matches code blocks marked by triple backticks

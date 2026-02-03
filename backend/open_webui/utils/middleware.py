@@ -148,6 +148,136 @@ DEFAULT_REASONING_TAGS = [
 DEFAULT_SOLUTION_TAGS = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 DEFAULT_CODE_INTERPRETER_TAGS = [("<code_interpreter>", "</code_interpreter>")]
 
+# Regex patterns for parsing tool_calls from <details> tags in chat history
+_TOOL_CALLS_DETAILS_RE = re.compile(
+    r'<details\s+type="tool_calls"\s+([^>]*)>\s*<summary>[^<]*</summary>\s*</details>',
+    re.IGNORECASE | re.DOTALL,
+)
+_TOOL_CALLS_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
+_TOOL_CALLS_SPLIT_RE = re.compile(
+    r'(<details\s+type="tool_calls"\s+[^>]*>\s*<summary>[^<]*</summary>\s*</details>)',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _decode_html_attr(value: str) -> Any:
+    """Decode HTML-escaped JSON attribute value."""
+    if not value:
+        return ""
+    try:
+        return json.loads(html.unescape(value))
+    except (json.JSONDecodeError, TypeError):
+        return html.unescape(value)
+
+
+def reconstruct_tool_messages(messages: list[dict]) -> list[dict]:
+    """
+    Parse <details type="tool_calls"> in assistant content into proper OpenAI messages.
+
+    When chat history is sent from frontend, tool call results are embedded as HTML
+    <details> tags in assistant message content. This function reconstructs the proper
+    OpenAI message format with tool_calls field and tool role messages.
+
+    This prevents models from hallucinating/faking tool calls as text after seeing
+    the pattern in chat history.
+
+    Args:
+        messages: List of chat messages from frontend.
+
+    Returns:
+        List of messages with tool_calls properly reconstructed.
+    """
+    reconstructed_count = 0
+    result = []
+
+    for msg in messages:
+        role = msg.get("role", "")
+        content = msg.get("content", "")
+
+        # Pass through non-assistant messages or those without tool_calls details
+        if (
+            role != "assistant"
+            or not isinstance(content, str)
+            or not _TOOL_CALLS_DETAILS_RE.search(content)
+        ):
+            result.append(msg)
+            continue
+
+        # Split content by tool_calls details tags
+        segments = _TOOL_CALLS_SPLIT_RE.split(content)
+        idx = 0
+        pending_text = ""
+
+        while idx < len(segments):
+            segment = segments[idx]
+
+            if _TOOL_CALLS_DETAILS_RE.match(segment):
+                # Collect consecutive tool_calls
+                tool_calls = []
+                tool_results = []
+
+                while idx < len(segments) and _TOOL_CALLS_DETAILS_RE.match(segments[idx]):
+                    attrs = dict(_TOOL_CALLS_ATTR_RE.findall(segments[idx]))
+                    tool_call_id = attrs.get("id", "")
+                    arguments = _decode_html_attr(attrs.get("arguments", ""))
+
+                    tool_calls.append({
+                        "id": tool_call_id,
+                        "type": "function",
+                        "function": {
+                            "name": attrs.get("name", ""),
+                            "arguments": (
+                                arguments if isinstance(arguments, str) else json.dumps(arguments)
+                            ),
+                        },
+                    })
+
+                    # Add tool result if present
+                    if attrs.get("done") == "true" and attrs.get("result"):
+                        tool_result = _decode_html_attr(attrs["result"])
+                        tool_results.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call_id,
+                            "content": (
+                                tool_result if isinstance(tool_result, str) else json.dumps(tool_result)
+                            ),
+                        })
+
+                    idx += 1
+                    # Skip empty segments between tool_calls
+                    if idx < len(segments) and not _TOOL_CALLS_DETAILS_RE.match(segments[idx]):
+                        if segments[idx].strip() == "":
+                            idx += 1
+                        else:
+                            break
+
+                # Add assistant message with tool_calls
+                result.append({
+                    "role": "assistant",
+                    "content": pending_text.strip(),
+                    "tool_calls": tool_calls,
+                })
+                pending_text = ""
+                result.extend(tool_results)
+                reconstructed_count += len(tool_calls)
+            else:
+                pending_text += segment
+                idx += 1
+
+        # Add remaining text as assistant message
+        if pending_text.strip():
+            result.append({"role": "assistant", "content": pending_text.strip()})
+
+    if reconstructed_count > 0:
+        log.debug(
+            "Reconstructed %d tool_call(s) from history, messages %d -> %d",
+            reconstructed_count,
+            len(messages),
+            len(result),
+        )
+
+    return result
+
 
 def output_id(prefix: str) -> str:
     """Generate OR-style ID: prefix + 24-char hex UUID."""
@@ -2397,6 +2527,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 },
             }
         )
+
+    # Reconstruct tool_calls/tool messages from <details> tags in history
+    # to prevent model hallucinations when continuing tool-using conversations
+    form_data["messages"] = reconstruct_tool_messages(form_data["messages"])
 
     return form_data, metadata, events
 
