@@ -2,11 +2,12 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, user } from '$lib/stores';
+	import { models, tools, functions, user, config } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
+	import { getVoices } from '$lib/apis/audio';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -110,6 +111,8 @@
 	let actionIds = [];
 	let accessControl = {};
 	let tts = { voice: '' };
+	let ttsEngine = '';
+	let voices: SpeechSynthesisVoice[] | Array<{ id: string; name: string }> = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -234,6 +237,25 @@
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
+
+		ttsEngine = $config?.audio?.tts?.engine ?? '';
+
+		if (ttsEngine === '') {
+			const getVoicesLoop = setInterval(() => {
+				const browserVoices = speechSynthesis.getVoices();
+				if (browserVoices.length > 0) {
+					clearInterval(getVoicesLoop);
+					voices = browserVoices;
+				}
+			}, 100);
+		} else {
+			const voicesRes = await getVoices(localStorage.token).catch((e) => {
+				toast.error(`${e}`);
+			});
+			if (voicesRes?.voices) {
+				voices = voicesRes.voices;
+			}
+		}
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -798,17 +820,38 @@
 					{/if}
 
 					<div class="my-2">
-						<div class="flex w-full justify-between mb-1">
-							<div class="self-center text-xs font-medium text-gray-500">
-								{$i18n.t('TTS Voice')}
+						<div class="flex gap-2">
+							<div class="w-full md:w-1/2">
+								<div class="mb-1.5 text-xs font-medium text-gray-500">
+									{$i18n.t('TTS Voice')}
+								</div>
+								{#if ttsEngine === ''}
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={tts.voice}
+									>
+										<option value="">{$i18n.t('Default')}</option>
+										{#each voices as voice}
+											<option value={voice.voiceURI} class="bg-gray-100 dark:bg-gray-700">
+												{voice.name}
+											</option>
+										{/each}
+									</select>
+								{:else}
+									<input
+										list="tts-voice-list"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={tts.voice}
+										placeholder={$i18n.t('Select a voice')}
+									/>
+									<datalist id="tts-voice-list">
+										{#each voices as voice}
+											<option value={voice.id}>{voice.name}</option>
+										{/each}
+									</datalist>
+								{/if}
 							</div>
 						</div>
-						<input
-							class="w-full text-sm bg-transparent outline-hidden"
-							type="text"
-							bind:value={tts.voice}
-							placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
-						/>
 					</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
