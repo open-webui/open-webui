@@ -4060,7 +4060,7 @@ async def process_chat_response(
                         await event_emitter({"type": "source", "data": source})
 
                     # Apply source context to messages for model
-                    if tool_call_sources:
+                    if tool_call_sources and metadata.get("params", {}).get("function_calling") != "native":
                         user_msg = get_last_user_message(form_data["messages"])
                         if user_msg:
                             form_data["messages"] = apply_source_context_to_messages(
