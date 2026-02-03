@@ -40,6 +40,9 @@ log = logging.getLogger(__name__)
 IMAGE_CACHE_DIR = CACHE_DIR / "image" / "generations"
 IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+# Regex to match gpt-image models (starts with gpt-image- or contains /gpt-image-)
+rx_gpt_image = re.compile(r"^(.*/)?gpt-image-.*$")
+
 router = APIRouter()
 
 
@@ -200,7 +203,7 @@ async def update_config(
     set_image_model(request, form_data.IMAGE_GENERATION_MODEL)
     if (
         form_data.IMAGE_SIZE == "auto"
-        and not form_data.IMAGE_GENERATION_MODEL.startswith("gpt-image")
+        and not rx_gpt_image.match(form_data.IMAGE_GENERATION_MODEL)
     ):
         raise HTTPException(
             status_code=400,
@@ -609,9 +612,7 @@ async def image_generations(
                 ),
                 **(
                     {}
-                    if request.app.state.config.IMAGE_GENERATION_MODEL.startswith(
-                        "gpt-image"
-                    )
+                    if rx_gpt_image.match(request.app.state.config.IMAGE_GENERATION_MODEL)
                     else {"response_format": "b64_json"}
                 ),
                 **(
@@ -945,7 +946,7 @@ async def image_edits(
                 **({"size": size} if size else {}),
                 **(
                     {}
-                    if request.app.state.config.IMAGE_EDIT_MODEL.startswith("gpt-image")
+                    if rx_gpt_image.match(request.app.state.config.IMAGE_EDIT_MODEL)
                     else {"response_format": "b64_json"}
                 ),
             }
