@@ -5,11 +5,21 @@
 
 	export let id;
 	export let token;
-	export let sourceIds = [];
+	export let sourceIds: (string | { name: string; url?: string | null })[] = [];
 	export let onClick: Function = () => {};
 
 	let containerElement;
 	let openPreview = false;
+
+	// Helper to get source info from sourceIds array (handles both string and object formats)
+	function getSourceInfo(index: number): { name: string; url: string | null } {
+		const source = sourceIds[index];
+		if (!source) return { name: 'N/A', url: null };
+		if (typeof source === 'string') {
+			return { name: source, url: null };
+		}
+		return { name: source.name ?? 'N/A', url: source.url ?? null };
+	}
 
 	// Helper function to return only the domain from a URL
 	function getDomain(url: string): string {
@@ -41,10 +51,12 @@
 
 {#if sourceIds}
 	{#if (token?.ids ?? []).length == 1}
-		{@const id = token.ids[0]}
-		{@const identifier = token.citationIdentifiers ? token.citationIdentifiers[0] : id - 1}
-		<Source id={identifier} title={sourceIds[id - 1]} {onClick} />
+		{@const tokenId = token.ids[0]}
+		{@const identifier = token.citationIdentifiers ? token.citationIdentifiers[0] : tokenId - 1}
+		{@const sourceInfo = getSourceInfo(tokenId - 1)}
+		<Source id={identifier} title={sourceInfo.name} url={sourceInfo.url} {onClick} />
 	{:else}
+		{@const firstSourceInfo = getSourceInfo(token.ids[0] - 1)}
 		<LinkPreview.Root openDelay={0} bind:open={openPreview}>
 			<LinkPreview.Trigger>
 				<button
@@ -54,7 +66,7 @@
 					}}
 				>
 					<span class="line-clamp-1">
-						{getDisplayTitle(formattedTitle(decodeString(sourceIds[token.ids[0] - 1])))}
+						{getDisplayTitle(formattedTitle(decodeString(firstSourceInfo.name)))}
 						<span class="dark:text-white/50 text-black/50">+{(token?.ids ?? []).length - 1}</span>
 					</span>
 				</button>
@@ -68,10 +80,11 @@
 			>
 				<div class="bg-gray-50 dark:bg-gray-850 rounded-xl p-1 cursor-pointer">
 					{#each token.citationIdentifiers ?? token.ids as identifier}
-						{@const id =
+						{@const tokenId =
 							typeof identifier === 'string' ? parseInt(identifier.split('#')[0]) : identifier}
+						{@const sourceInfo = getSourceInfo(tokenId - 1)}
 						<div class="">
-							<Source id={identifier} title={sourceIds[id - 1]} {onClick} />
+							<Source id={identifier} title={sourceInfo.name} url={sourceInfo.url} {onClick} />
 						</div>
 					{/each}
 				</div>

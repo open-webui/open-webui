@@ -421,7 +421,7 @@
 					} else {
 						// Regular source.
 						if (message?.sources) {
-							message.sources.push(data);
+							message.sources = [...message.sources, data];
 						} else {
 							message.sources = [data];
 						}

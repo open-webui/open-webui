@@ -58,7 +58,7 @@
 	})();
 </script>
 
-{#key id}
+{#key `${id}-${sourceIds.length}`}
 	<MarkdownTokens
 		{tokens}
 		{id}
