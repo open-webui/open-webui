@@ -418,7 +418,7 @@
 				<div class="mt-1.5">
 					<Tooltip content={$i18n.t('Click to copy ID')}>
 						<button
-							class="text-xs text-gray-500 font-mono bg-gray-50 dark:bg-gray-850 px-2 py-1 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							class="text-xs text-gray-500 font-mono px-2 py-1 rounded-lg cursor-pointer hover:underline transition"
 							on:click={() => {
 								copyToClipboard(prompt.id);
 								toast.success($i18n.t('ID copied to clipboard'));
@@ -465,7 +465,7 @@
 						</div>
 						{#if selectedHistoryEntry}
 							<span
-								class="text-xs text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded"
+								class="text-xs text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-1.5 rounded"
 							>
 								{selectedHistoryEntry.id.slice(0, 7)}
 							</span>
