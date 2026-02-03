@@ -699,7 +699,9 @@ def convert_openapi_to_tool_payload(openapi_spec):
 
                 # Extract path and query parameters
                 for param in operation.get("parameters", []):
-                    param_name = param["name"]
+                    param_name = param.get("name")
+                    if not param_name:
+                        continue
                     param_schema = param.get("schema", {})
                     description = param_schema.get("description", "")
                     if not description:
