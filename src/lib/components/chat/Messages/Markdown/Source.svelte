@@ -8,12 +8,10 @@
 
 	export let onClick: Function = () => {};
 
-	// Handler for click - opens URL in new tab if available, otherwise calls onClick
+	// Handler for click - opens URL in new tab if available
 	function handleClick() {
 		if (url) {
 			window.open(url, '_blank');
-		} else {
-			onClick(id);
 		}
 	}
 
