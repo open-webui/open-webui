@@ -2,5 +2,8 @@ build:
   docker:
     web: Dockerfile
 
+release:
+  command: cd open_webui && python -m alembic upgrade head
+
 run:
   web: uvicorn open_webui.main:app --host 0.0.0.0 --port $PORT
