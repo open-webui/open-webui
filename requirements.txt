@@ -21,6 +21,9 @@ aiofiles
 starlette-compress==1.6.0
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
+python-mimeparse==2.0.0
+pytz
+anyio
 
 sqlalchemy==2.0.38
 alembic==1.14.0
@@ -54,11 +57,18 @@ anthropic
 google-genai==1.38.0
 google-generativeai==0.8.5
 
-langchain==0.3.27
-langchain-community==0.3.29
+langchain==1.2.0
+langchain-community==0.4.1
+langchain-classic==1.0.1
+langchain-text-splitters==1.1.0
 
 fake-useragent==2.2.0
 # chromadb removed for Heroku slug size - use VECTOR_DB=pgvector
+huggingface_hub
+PyYAML
+websocket-client
+websockets
+chardet==5.2.0
 opensearch-py==2.8.0
 
 pymilvus==2.5.0
@@ -77,8 +87,8 @@ einops==0.8.1
 
 # colbert-ai==0.2.21 # REMOVED: Too heavy for Heroku
 
-ftfy==6.2.3
-pypdf==6.0.0
+ftfy==6.3.1
+pypdf==6.5.0
 fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
