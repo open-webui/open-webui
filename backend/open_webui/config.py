@@ -3450,6 +3450,12 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
     os.getenv("IMAGE_GENERATION_MODEL", ""),
 )
 
+# Regex pattern for models that support IMAGE_SIZE = "auto".
+IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN = os.getenv("IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN", "^gpt-image")
+
+# Regex pattern for models that return URLs instead of base64 data.
+IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN = os.getenv("IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN", "^gpt-image")
+
 IMAGE_SIZE = PersistentConfig(
     "IMAGE_SIZE", "image_generation.size", os.getenv("IMAGE_SIZE", "512x512")
 )
