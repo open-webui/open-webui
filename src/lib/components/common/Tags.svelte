@@ -19,7 +19,7 @@
 	};
 </script>
 
-<div class="flex flex-wrap items-center gap-1.5 w-full">
+<div class="flex flex-wrap items-center gap-1 w-full">
 	<TagList
 		{tags}
 		on:delete={(e) => {
@@ -29,8 +29,10 @@
 
 	<input
 		bind:value={inputValue}
-		class="flex-1 min-w-24 px-1 text-xs bg-transparent outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
-		placeholder={$i18n.t('Type to add tag...')}
+		class="flex-1 min-w-24 {tags.length > 0
+			? 'px-0.5'
+			: ''} text-xs bg-transparent outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+		placeholder={$i18n.t('Add a tag...')}
 		on:keydown={(event) => {
 			if (event.key === 'Enter' || event.key === ' ') {
 				event.preventDefault();
