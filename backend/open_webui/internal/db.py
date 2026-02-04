@@ -17,7 +17,7 @@ from open_webui.env import (
     DATABASE_ENABLE_SESSION_SHARING,
     ENABLE_DB_MIGRATIONS,
 )
-from peewee_migrate import Router
+# Peewee migrations removed - using Alembic only
 from sqlalchemy import Dialect, create_engine, MetaData, event, types
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker, Session
@@ -50,61 +50,7 @@ class JSONField(types.TypeDecorator):
             return json.loads(value)
 
 
-# Workaround to handle the peewee migration
-# This is required to ensure the peewee migration is handled before the alembic migration
-def handle_peewee_migration(DATABASE_URL):
-    # db = None
-    try:
-        # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
-        # Rollback any aborted transactions before running migrations
-        try:
-            db.rollback()
-        except:
-            pass
-        migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
-        router = Router(db, logger=log, migrate_dir=migrate_dir)
-        router.run()
-        db.close()
-
-    except Exception as e:
-        log.error(f"Failed to initialize the database connection: {e}")
-        log.warning(
-            "Hint: If your database password contains special characters, you may need to URL-encode it."
-        )
-        # Try to rollback and close connection on error
-        try:
-            if 'db' in locals() and db and not db.is_closed():
-                db.rollback()
-                db.close()
-        except:
-            pass
-        raise
-    finally:
-        # Properly closing the database connection
-        if 'db' in locals() and db and not db.is_closed():
-            try:
-                db.rollback()
-            except:
-                pass
-            db.close()
-
-        # Assert if db connection has been closed
-        if 'db' in locals() and db:
-            assert db.is_closed(), "Database connection is still open."
-
-
-# Skip Peewee migrations - Alembic is the source of truth
-# Peewee migrations disabled - using Alembic only for all database types
-# if ENABLE_DB_MIGRATIONS and "sqlite" not in (DATABASE_URL or "").lower():
-#     try:
-#         handle_peewee_migration(DATABASE_URL)
-#     except Exception as e:
-#         log.error(f"Failed to initialize the database connection: {e}")
-#         log.warning(
-#             "Hint: If your database password contains special characters, you may need to URL-encode it."
-#         )
-#         raise
+# Peewee migrations completely removed - using Alembic only for all database migrations
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
