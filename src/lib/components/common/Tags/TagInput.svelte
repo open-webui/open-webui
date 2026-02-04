@@ -35,6 +35,7 @@
 				list="tagOptions"
 				on:keydown={(event) => {
 					if (event.key === 'Enter') {
+						event.preventDefault();
 						addTagHandler();
 					}
 				}}
