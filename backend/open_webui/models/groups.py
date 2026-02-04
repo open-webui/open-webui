@@ -154,7 +154,13 @@ class GroupTable:
 
     def get_groups(self, filter, db: Optional[Session] = None) -> list[GroupResponse]:
         with get_db_context(db) as db:
-            query = db.query(Group)
+            # Start with a query that includes member count via a left join and aggregate
+            query = db.query(
+                Group,
+                func.count(GroupMember.id).label("member_count")
+            ).outerjoin(
+                GroupMember, GroupMember.group_id == Group.id
+            )
 
             if filter:
                 if "query" in filter:
@@ -200,21 +206,20 @@ class GroupTable:
                 else:
                     # Only apply member_id filter when share filter is NOT present
                     if "member_id" in filter:
-                        query = query.join(
-                            GroupMember, GroupMember.group_id == Group.id
-                        ).filter(GroupMember.user_id == filter["member_id"])
+                        query = query.filter(GroupMember.user_id == filter["member_id"])
 
-            groups = query.order_by(Group.updated_at.desc()).all()
+            # Group by Group.id to collapse member counts
+            query = query.group_by(Group.id).order_by(Group.updated_at.desc())
+            results = query.all()
+            
             return [
                 GroupResponse.model_validate(
                     {
                         **GroupModel.model_validate(group).model_dump(),
-                        "member_count": self.get_group_member_count_by_id(
-                            group.id, db=db
-                        ),
+                        "member_count": member_count,
                     }
                 )
-                for group in groups
+                for group, member_count in results
             ]
 
     def search_groups(
@@ -225,15 +230,19 @@ class GroupTable:
         db: Optional[Session] = None,
     ) -> GroupListResponse:
         with get_db_context(db) as db:
-            query = db.query(Group)
+            # Create query with member count aggregation
+            query = db.query(
+                Group,
+                func.count(GroupMember.id).label("member_count")
+            ).outerjoin(
+                GroupMember, GroupMember.group_id == Group.id
+            )
 
             if filter:
                 if "query" in filter:
                     query = query.filter(Group.name.ilike(f"%{filter['query']}%"))
                 if "member_id" in filter:
-                    query = query.join(
-                        GroupMember, GroupMember.group_id == Group.id
-                    ).filter(GroupMember.user_id == filter["member_id"])
+                    query = query.filter(GroupMember.user_id == filter["member_id"])
 
                 if "share" in filter:
                     #  'share' is stored in data JSON, support both sqlite and postgres
@@ -243,17 +252,21 @@ class GroupTable:
                         Group.data.op("->>")("share") == str(share_value)
                     )
 
+            # Group by Group.id to collapse member counts
+            query = query.group_by(Group.id)
             total = query.count()
             query = query.order_by(Group.updated_at.desc())
-            groups = query.offset(skip).limit(limit).all()
+            results = query.offset(skip).limit(limit).all()
 
             return {
                 "items": [
                     GroupResponse.model_validate(
-                        **GroupModel.model_validate(group).model_dump(),
-                        member_count=self.get_group_member_count_by_id(group.id, db=db),
+                        {
+                            **GroupModel.model_validate(group).model_dump(),
+                            "member_count": member_count,
+                        }
                     )
-                    for group in groups
+                    for group, member_count in results
                 ],
                 "total": total,
             }
