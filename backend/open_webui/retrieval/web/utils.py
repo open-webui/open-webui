@@ -21,8 +21,15 @@ from fastapi.concurrency import run_in_threadpool
 import aiohttp
 import certifi
 import validators
-from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoader
-from langchain_community.document_loaders.base import BaseLoader
+try:
+    from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoader
+    from langchain_community.document_loaders.base import BaseLoader
+    LANGCHAIN_COMMUNITY_AVAILABLE = True
+except ImportError:
+    PlaywrightURLLoader = None
+    WebBaseLoader = None
+    BaseLoader = object  # Fallback base for loaders
+    LANGCHAIN_COMMUNITY_AVAILABLE = False
 from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.tavily import TavilyLoader
@@ -432,225 +439,235 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 raise e
 
 
-class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessingMixin):
-    """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
+if LANGCHAIN_COMMUNITY_AVAILABLE:
 
-    Attributes:
-        web_paths (List[str]): List of URLs to load.
-        verify_ssl (bool): If True, verify SSL certificates.
-        trust_env (bool): If True, use proxy settings from environment variables.
-        requests_per_second (Optional[float]): Number of requests per second to limit to.
-        continue_on_failure (bool): If True, continue loading other URLs on failure.
-        headless (bool): If True, the browser will run in headless mode.
-        proxy (dict): Proxy override settings for the Playwright session.
-        playwright_ws_url (Optional[str]): WebSocket endpoint URI for remote browser connection.
-        playwright_timeout (Optional[int]): Maximum operation time in milliseconds.
-    """
+    class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessingMixin):
+        """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
 
-    def __init__(
-        self,
-        web_paths: List[str],
-        verify_ssl: bool = True,
-        trust_env: bool = False,
-        requests_per_second: Optional[float] = None,
-        continue_on_failure: bool = True,
-        headless: bool = True,
-        remove_selectors: Optional[List[str]] = None,
-        proxy: Optional[Dict[str, str]] = None,
-        playwright_ws_url: Optional[str] = None,
-        playwright_timeout: Optional[int] = 10000,
-    ):
-        """Initialize with additional safety parameters and remote browser support."""
-
-        proxy_server = proxy.get("server") if proxy else None
-        if trust_env and not proxy_server:
-            env_proxies = urllib.request.getproxies()
-            env_proxy_server = env_proxies.get("https") or env_proxies.get("http")
-            if env_proxy_server:
-                if proxy:
-                    proxy["server"] = env_proxy_server
-                else:
-                    proxy = {"server": env_proxy_server}
-
-        # We'll set headless to False if using playwright_ws_url since it's handled by the remote browser
-        super().__init__(
-            urls=web_paths,
-            continue_on_failure=continue_on_failure,
-            headless=headless if playwright_ws_url is None else False,
-            remove_selectors=remove_selectors,
-            proxy=proxy,
-        )
-        self.verify_ssl = verify_ssl
-        self.requests_per_second = requests_per_second
-        self.last_request_time = None
-        self.playwright_ws_url = playwright_ws_url
-        self.trust_env = trust_env
-        self.playwright_timeout = playwright_timeout
-
-    def lazy_load(self) -> Iterator[Document]:
-        """Safely load URLs synchronously with support for remote browser."""
-        from playwright.sync_api import sync_playwright
-
-        with sync_playwright() as p:
-            # Use remote browser if ws_endpoint is provided, otherwise use local browser
-            if self.playwright_ws_url:
-                browser = p.chromium.connect(self.playwright_ws_url)
-            else:
-                browser = p.chromium.launch(headless=self.headless, proxy=self.proxy)
-
-            for url in self.urls:
-                try:
-                    self._safe_process_url_sync(url)
-                    page = browser.new_page()
-                    response = page.goto(url, timeout=self.playwright_timeout)
-                    if response is None:
-                        raise ValueError(f"page.goto() returned None for url {url}")
-
-                    text = self.evaluator.evaluate(page, browser, response)
-                    metadata = {"source": url}
-                    yield Document(page_content=text, metadata=metadata)
-                except Exception as e:
-                    if self.continue_on_failure:
-                        log.exception(f"Error loading {url}: {e}")
-                        continue
-                    raise e
-            browser.close()
-
-    async def alazy_load(self) -> AsyncIterator[Document]:
-        """Safely load URLs asynchronously with support for remote browser."""
-        from playwright.async_api import async_playwright
-
-        async with async_playwright() as p:
-            # Use remote browser if ws_endpoint is provided, otherwise use local browser
-            if self.playwright_ws_url:
-                browser = await p.chromium.connect(self.playwright_ws_url)
-            else:
-                browser = await p.chromium.launch(
-                    headless=self.headless, proxy=self.proxy
-                )
-
-            for url in self.urls:
-                try:
-                    await self._safe_process_url(url)
-                    page = await browser.new_page()
-                    response = await page.goto(url, timeout=self.playwright_timeout)
-                    if response is None:
-                        raise ValueError(f"page.goto() returned None for url {url}")
-
-                    text = await self.evaluator.evaluate_async(page, browser, response)
-                    metadata = {"source": url}
-                    yield Document(page_content=text, metadata=metadata)
-                except Exception as e:
-                    if self.continue_on_failure:
-                        log.exception(f"Error loading {url}: {e}")
-                        continue
-                    raise e
-            await browser.close()
-
-
-class SafeWebBaseLoader(WebBaseLoader):
-    """WebBaseLoader with enhanced error handling for URLs."""
-
-    def __init__(self, trust_env: bool = False, *args, **kwargs):
-        """Initialize SafeWebBaseLoader
-        Args:
-            trust_env (bool, optional): set to True if using proxy to make web requests, for example
-                using http(s)_proxy environment variables. Defaults to False.
+        Attributes:
+            web_paths (List[str]): List of URLs to load.
+            verify_ssl (bool): If True, verify SSL certificates.
+            trust_env (bool): If True, use proxy settings from environment variables.
+            requests_per_second (Optional[float]): Number of requests per second to limit to.
+            continue_on_failure (bool): If True, continue loading other URLs on failure.
+            headless (bool): If True, the browser will run in headless mode.
+            proxy (dict): Proxy override settings for the Playwright session.
+            playwright_ws_url (Optional[str]): WebSocket endpoint URI for remote browser connection.
+            playwright_timeout (Optional[int]): Maximum operation time in milliseconds.
         """
-        super().__init__(*args, **kwargs)
-        self.trust_env = trust_env
 
-    async def _fetch(
-        self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5
-    ) -> str:
-        async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
-            for i in range(retries):
-                try:
-                    kwargs: Dict = dict(
-                        headers=self.session.headers,
-                        cookies=self.session.cookies.get_dict(),
-                    )
-                    if not self.session.verify:
-                        kwargs["ssl"] = False
+        def __init__(
+                self,
+            web_paths: List[str],
+            verify_ssl: bool = True,
+            trust_env: bool = False,
+            requests_per_second: Optional[float] = None,
+            continue_on_failure: bool = True,
+            headless: bool = True,
+            remove_selectors: Optional[List[str]] = None,
+            proxy: Optional[Dict[str, str]] = None,
+            playwright_ws_url: Optional[str] = None,
+            playwright_timeout: Optional[int] = 10000,
+        ):
+            """Initialize with additional safety parameters and remote browser support."""
 
-                    async with session.get(
-                        url,
-                        **(self.requests_kwargs | kwargs),
-                        allow_redirects=False,
-                    ) as response:
-                        if self.raise_for_status:
-                            response.raise_for_status()
-                        return await response.text()
-                except aiohttp.ClientConnectionError as e:
-                    if i == retries - 1:
-                        raise
+            proxy_server = proxy.get("server") if proxy else None
+            if trust_env and not proxy_server:
+                env_proxies = urllib.request.getproxies()
+                env_proxy_server = env_proxies.get("https") or env_proxies.get("http")
+                if env_proxy_server:
+                    if proxy:
+                        proxy["server"] = env_proxy_server
                     else:
-                        log.warning(
-                            f"Error fetching {url} with attempt "
-                            f"{i + 1}/{retries}: {e}. Retrying..."
-                        )
-                        await asyncio.sleep(cooldown * backoff**i)
-        raise ValueError("retry count exceeded")
+                        proxy = {"server": env_proxy_server}
 
-    def _unpack_fetch_results(
-        self, results: Any, urls: List[str], parser: Union[str, None] = None
-    ) -> List[Any]:
-        """Unpack fetch results into BeautifulSoup objects."""
-        from bs4 import BeautifulSoup
+            # We'll set headless to False if using playwright_ws_url since it's handled by the remote browser
+            super().__init__(
+                urls=web_paths,
+                continue_on_failure=continue_on_failure,
+                headless=headless if playwright_ws_url is None else False,
+                remove_selectors=remove_selectors,
+                proxy=proxy,
+            )
+            self.verify_ssl = verify_ssl
+            self.requests_per_second = requests_per_second
+            self.last_request_time = None
+            self.playwright_ws_url = playwright_ws_url
+            self.trust_env = trust_env
+            self.playwright_timeout = playwright_timeout
 
-        final_results = []
-        for i, result in enumerate(results):
-            url = urls[i]
-            if parser is None:
-                if url.endswith(".xml"):
-                    parser = "xml"
+        def lazy_load(self) -> Iterator[Document]:
+            """Safely load URLs synchronously with support for remote browser."""
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as p:
+                # Use remote browser if ws_endpoint is provided, otherwise use local browser
+                if self.playwright_ws_url:
+                    browser = p.chromium.connect(self.playwright_ws_url)
                 else:
-                    parser = self.default_parser
-                self._check_parser(parser)
-            final_results.append(BeautifulSoup(result, parser, **self.bs_kwargs))
-        return final_results
+                    browser = p.chromium.launch(headless=self.headless, proxy=self.proxy)
 
-    async def ascrape_all(
-        self, urls: List[str], parser: Union[str, None] = None
-    ) -> List[Any]:
-        """Async fetch all urls, then return soups for all results."""
-        results = await self.fetch_all(urls)
-        return self._unpack_fetch_results(results, urls, parser=parser)
+                for url in self.urls:
+                    try:
+                        self._safe_process_url_sync(url)
+                        page = browser.new_page()
+                        response = page.goto(url, timeout=self.playwright_timeout)
+                        if response is None:
+                            raise ValueError(f"page.goto() returned None for url {url}")
 
-    def lazy_load(self) -> Iterator[Document]:
-        """Lazy load text from the url(s) in web_path with error handling."""
-        for path in self.web_paths:
-            try:
-                soup = self._scrape(path, bs_kwargs=self.bs_kwargs)
+                        text = self.evaluator.evaluate(page, browser, response)
+                        metadata = {"source": url}
+                        yield Document(page_content=text, metadata=metadata)
+                    except Exception as e:
+                        if self.continue_on_failure:
+                            log.exception(f"Error loading {url}: {e}")
+                            continue
+                        raise e
+                browser.close()
+
+        async def alazy_load(self) -> AsyncIterator[Document]:
+            """Safely load URLs asynchronously with support for remote browser."""
+            from playwright.async_api import async_playwright
+
+            async with async_playwright() as p:
+                # Use remote browser if ws_endpoint is provided, otherwise use local browser
+                if self.playwright_ws_url:
+                    browser = await p.chromium.connect(self.playwright_ws_url)
+                else:
+                    browser = await p.chromium.launch(
+                        headless=self.headless, proxy=self.proxy
+                    )
+
+                for url in self.urls:
+                    try:
+                        await self._safe_process_url(url)
+                        page = await browser.new_page()
+                        response = await page.goto(url, timeout=self.playwright_timeout)
+                        if response is None:
+                            raise ValueError(f"page.goto() returned None for url {url}")
+
+                        text = await self.evaluator.evaluate_async(page, browser, response)
+                        metadata = {"source": url}
+                        yield Document(page_content=text, metadata=metadata)
+                    except Exception as e:
+                        if self.continue_on_failure:
+                            log.exception(f"Error loading {url}: {e}")
+                            continue
+                        raise e
+                await browser.close()
+
+else:
+    SafePlaywrightURLLoader = None
+
+
+if LANGCHAIN_COMMUNITY_AVAILABLE:
+
+    class SafeWebBaseLoader(WebBaseLoader):
+        """WebBaseLoader with enhanced error handling for URLs."""
+
+        def __init__(self, trust_env: bool = False, *args, **kwargs):
+            """Initialize SafeWebBaseLoader
+            Args:
+                trust_env (bool, optional): set to True if using proxy to make web requests, for example
+                    using http(s)_proxy environment variables. Defaults to False.
+            """
+            super().__init__(*args, **kwargs)
+            self.trust_env = trust_env
+
+        async def _fetch(
+            self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5
+        ) -> str:
+            async with aiohttp.ClientSession(trust_env=self.trust_env) as session:
+                for i in range(retries):
+                    try:
+                        kwargs: Dict = dict(
+                            headers=self.session.headers,
+                            cookies=self.session.cookies.get_dict(),
+                        )
+                        if not self.session.verify:
+                            kwargs["ssl"] = False
+
+                        async with session.get(
+                            url,
+                            **(self.requests_kwargs | kwargs),
+                            allow_redirects=False,
+                        ) as response:
+                            if self.raise_for_status:
+                                response.raise_for_status()
+                            return await response.text()
+                    except aiohttp.ClientConnectionError as e:
+                        if i == retries - 1:
+                            raise
+                        else:
+                            log.warning(
+                                f"Error fetching {url} with attempt "
+                                f"{i + 1}/{retries}: {e}. Retrying..."
+                            )
+                            await asyncio.sleep(cooldown * backoff**i)
+            raise ValueError("retry count exceeded")
+
+        def _unpack_fetch_results(
+            self, results: Any, urls: List[str], parser: Union[str, None] = None
+        ) -> List[Any]:
+            """Unpack fetch results into BeautifulSoup objects."""
+            from bs4 import BeautifulSoup
+
+            final_results = []
+            for i, result in enumerate(results):
+                url = urls[i]
+                if parser is None:
+                    if url.endswith(".xml"):
+                        parser = "xml"
+                    else:
+                        parser = self.default_parser
+                    self._check_parser(parser)
+                final_results.append(BeautifulSoup(result, parser, **self.bs_kwargs))
+            return final_results
+
+        async def ascrape_all(
+            self, urls: List[str], parser: Union[str, None] = None
+        ) -> List[Any]:
+            """Async fetch all urls, then return soups for all results."""
+            results = await self.fetch_all(urls)
+            return self._unpack_fetch_results(results, urls, parser=parser)
+
+        def lazy_load(self) -> Iterator[Document]:
+            """Lazy load text from the url(s) in web_path with error handling."""
+            for path in self.web_paths:
+                try:
+                    soup = self._scrape(path, bs_kwargs=self.bs_kwargs)
+                    text = soup.get_text(**self.bs_get_text_kwargs)
+
+                    # Build metadata
+                    metadata = extract_metadata(soup, path)
+
+                    yield Document(page_content=text, metadata=metadata)
+                except Exception as e:
+                    # Log the error and continue with the next URL
+                    log.exception(f"Error loading {path}: {e}")
+
+        async def alazy_load(self) -> AsyncIterator[Document]:
+            """Async lazy load text from the url(s) in web_path."""
+            results = await self.ascrape_all(self.web_paths)
+            for path, soup in zip(self.web_paths, results):
                 text = soup.get_text(**self.bs_get_text_kwargs)
-
-                # Build metadata
-                metadata = extract_metadata(soup, path)
-
+                metadata = {"source": path}
+                if title := soup.find("title"):
+                    metadata["title"] = title.get_text()
+                if description := soup.find("meta", attrs={"name": "description"}):
+                    metadata["description"] = description.get(
+                        "content", "No description found."
+                    )
+                if html := soup.find("html"):
+                    metadata["language"] = html.get("lang", "No language found.")
                 yield Document(page_content=text, metadata=metadata)
-            except Exception as e:
-                # Log the error and continue with the next URL
-                log.exception(f"Error loading {path}: {e}")
 
-    async def alazy_load(self) -> AsyncIterator[Document]:
-        """Async lazy load text from the url(s) in web_path."""
-        results = await self.ascrape_all(self.web_paths)
-        for path, soup in zip(self.web_paths, results):
-            text = soup.get_text(**self.bs_get_text_kwargs)
-            metadata = {"source": path}
-            if title := soup.find("title"):
-                metadata["title"] = title.get_text()
-            if description := soup.find("meta", attrs={"name": "description"}):
-                metadata["description"] = description.get(
-                    "content", "No description found."
-                )
-            if html := soup.find("html"):
-                metadata["language"] = html.get("lang", "No language found.")
-            yield Document(page_content=text, metadata=metadata)
+        async def aload(self) -> list[Document]:
+            """Load data into Document objects."""
+            return [document async for document in self.alazy_load()]
 
-    async def aload(self) -> list[Document]:
-        """Load data into Document objects."""
-        return [document async for document in self.alazy_load()]
+else:
+    SafeWebBaseLoader = None
 
 
 def get_web_loader(
@@ -659,6 +676,15 @@ def get_web_loader(
     requests_per_second: int = 2,
     trust_env: bool = False,
 ):
+    if not LANGCHAIN_COMMUNITY_AVAILABLE and WEB_LOADER_ENGINE.value in (
+        "",
+        "safe_web",
+        "playwright",
+    ):
+        raise ImportError(
+            "Web loading requires langchain-community. Install with: pip install langchain-community"
+        )
+
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
 

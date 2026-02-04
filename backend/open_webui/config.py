@@ -2186,7 +2186,7 @@ Ensure that the tools are effectively utilized to achieve the highest-quality an
 # Vector Database
 ####################################
 
-VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
+VECTOR_DB = os.environ.get("VECTOR_DB", "pgvector")
 
 # Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"

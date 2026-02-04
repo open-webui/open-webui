@@ -16,7 +16,14 @@ from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
     EnsembleRetriever,
 )
-from langchain_community.retrievers import BM25Retriever
+
+try:
+    from langchain_community.retrievers import BM25Retriever
+    BM25Retriever_AVAILABLE = True
+except ImportError:
+    BM25Retriever = None
+    BM25Retriever_AVAILABLE = False
+
 from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
@@ -246,11 +253,12 @@ async def query_doc_with_hybrid_search(
             else collection_result.documents[0]
         )
 
-        bm25_retriever = BM25Retriever.from_texts(
-            texts=bm25_texts,
-            metadatas=collection_result.metadatas[0],
-        )
-        bm25_retriever.k = k
+        if not BM25Retriever_AVAILABLE and hybrid_bm25_weight > 0:
+            log.warning(
+                "BM25 hybrid search requires langchain-community. "
+                "Falling back to vector-only search."
+            )
+            hybrid_bm25_weight = 0
 
         vector_search_retriever = VectorSearchRetriever(
             collection_name=collection_name,
@@ -262,15 +270,21 @@ async def query_doc_with_hybrid_search(
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[vector_search_retriever], weights=[1.0]
             )
-        elif hybrid_bm25_weight >= 1:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever], weights=[1.0]
-            )
         else:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever, vector_search_retriever],
-                weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
+            bm25_retriever = BM25Retriever.from_texts(
+                texts=bm25_texts,
+                metadatas=collection_result.metadatas[0],
             )
+            bm25_retriever.k = k
+            if hybrid_bm25_weight >= 1:
+                ensemble_retriever = EnsembleRetriever(
+                    retrievers=[bm25_retriever], weights=[1.0]
+                )
+            else:
+                ensemble_retriever = EnsembleRetriever(
+                    retrievers=[bm25_retriever, vector_search_retriever],
+                    weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
+                )
 
         compressor = RerankCompressor(
             embedding_function=embedding_function,
