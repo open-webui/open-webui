@@ -315,3 +315,4 @@ data/webui.db
 
 # i18n locale overrides (local edits)
 src/lib/i18n/locales/uz-Latn-UZ/translation.json
+# Trigger new build
