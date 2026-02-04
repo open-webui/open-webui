@@ -1,5 +1,4 @@
 <script lang="ts">
-	import TagInput from './Tags/TagInput.svelte';
 	import TagList from './Tags/TagList.svelte';
 	import { getContext, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -8,9 +7,19 @@
 
 	export let tags = [];
 	export let suggestionTags = [];
+
+	let inputValue = '';
+
+	const addTag = () => {
+		const value = inputValue.trim();
+		if (value !== '') {
+			dispatch('add', value);
+			inputValue = '';
+		}
+	};
 </script>
 
-<ul class="flex flex-row flex-wrap gap-[0.3rem] line-clamp-1">
+<div class="flex flex-wrap items-center gap-1.5 w-full">
 	<TagList
 		{tags}
 		on:delete={(e) => {
@@ -18,11 +27,15 @@
 		}}
 	/>
 
-	<TagInput
-		label={tags.length == 0 ? $i18n.t('Add Tags') : ''}
-		{suggestionTags}
-		on:add={(e) => {
-			dispatch('add', e.detail);
+	<input
+		bind:value={inputValue}
+		class="flex-1 min-w-24 px-1 text-xs bg-transparent outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+		placeholder={$i18n.t('Type to add tag...')}
+		on:keydown={(event) => {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+				addTag();
+			}
 		}}
 	/>
-</ul>
+</div>
