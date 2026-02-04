@@ -1,7 +1,6 @@
 import inspect
 import logging
 import re
-import inspect
 import aiohttp
 import asyncio
 import yaml
