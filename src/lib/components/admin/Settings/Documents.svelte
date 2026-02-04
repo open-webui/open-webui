@@ -42,7 +42,7 @@
 	let RAG_EMBEDDING_MODEL = '';
 	let RAG_EMBEDDING_BATCH_SIZE = 1;
 	let ENABLE_ASYNC_EMBEDDING = true;
-	let RAG_EMBEDDING_MAX_CONCURRENT = 0;
+	let RAG_MAX_CONCURRENT_EMBEDDING = 0;
 
 	let rerankingModel = '';
 
@@ -106,7 +106,7 @@
 			RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING,
-			RAG_EMBEDDING_MAX_CONCURRENT
+			RAG_MAX_CONCURRENT_EMBEDDING
 		});
 
 		updateEmbeddingModelLoading = true;
@@ -115,7 +115,7 @@
 			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
-			RAG_EMBEDDING_MAX_CONCURRENT: RAG_EMBEDDING_MAX_CONCURRENT,
+			RAG_MAX_CONCURRENT_EMBEDDING: RAG_MAX_CONCURRENT_EMBEDDING,
 			ollama_config: {
 				key: OllamaKey,
 				url: OllamaUrl
@@ -244,7 +244,7 @@
 			RAG_EMBEDDING_MODEL = embeddingConfig.RAG_EMBEDDING_MODEL;
 			RAG_EMBEDDING_BATCH_SIZE = embeddingConfig.RAG_EMBEDDING_BATCH_SIZE ?? 1;
 			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
-			RAG_EMBEDDING_MAX_CONCURRENT = embeddingConfig.RAG_EMBEDDING_MAX_CONCURRENT ?? 0;
+			RAG_MAX_CONCURRENT_EMBEDDING = embeddingConfig.RAG_MAX_CONCURRENT_EMBEDDING ?? 0;
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
@@ -1063,7 +1063,7 @@
 
 								<div class="">
 									<input
-										bind:value={RAG_EMBEDDING_MAX_CONCURRENT}
+										bind:value={RAG_MAX_CONCURRENT_EMBEDDING}
 										type="number"
 										class=" bg-transparent text-center w-14 outline-none"
 										min="0"
