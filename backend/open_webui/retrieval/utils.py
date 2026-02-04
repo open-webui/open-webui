@@ -17,12 +17,7 @@ from langchain_classic.retrievers import (
     EnsembleRetriever,
 )
 
-try:
-    from langchain_community.retrievers import BM25Retriever
-    BM25Retriever_AVAILABLE = True
-except ImportError:
-    BM25Retriever = None
-    BM25Retriever_AVAILABLE = False
+from langchain_community.retrievers import BM25Retriever
 
 from langchain_core.documents import Document
 
@@ -252,13 +247,6 @@ async def query_doc_with_hybrid_search(
             if enable_enriched_texts
             else collection_result.documents[0]
         )
-
-        if not BM25Retriever_AVAILABLE and hybrid_bm25_weight > 0:
-            log.warning(
-                "BM25 hybrid search requires langchain-community. "
-                "Falling back to vector-only search."
-            )
-            hybrid_bm25_weight = 0
 
         vector_search_retriever = VectorSearchRetriever(
             collection_name=collection_name,

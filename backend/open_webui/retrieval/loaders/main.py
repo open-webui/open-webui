@@ -6,75 +6,22 @@ import json
 
 from azure.identity import DefaultAzureCredential
 
-try:
-    from langchain_community.document_loaders import (
-        AzureAIDocumentIntelligenceLoader,
-        BSHTMLLoader,
-        CSVLoader,
-        Docx2txtLoader,
-        OutlookMessageLoader,
-        PyPDFLoader,
-        TextLoader,
-        UnstructuredEPubLoader,
-        UnstructuredExcelLoader,
-        UnstructuredODTLoader,
-        UnstructuredPowerPointLoader,
-        UnstructuredRSTLoader,
-        UnstructuredXMLLoader,
-        YoutubeLoader,
-    )
-    LANGCHAIN_COMMUNITY_AVAILABLE = True
-except ImportError:
-    LANGCHAIN_COMMUNITY_AVAILABLE = False
-    # Minimal fallbacks for PDF and text (using pypdf and built-in open)
-    from langchain_core.documents import Document
-
-    class _SimpleTextLoader:
-        def __init__(self, file_path: str, autodetect_encoding: bool = True):
-            self.file_path = file_path
-
-        def load(self):
-            with open(self.file_path, encoding="utf-8", errors="replace") as f:
-                return [Document(page_content=f.read(), metadata={})]
-
-    class _SimplePyPDFLoader:
-        def __init__(self, file_path: str, extract_images: bool = False):
-            self.file_path = file_path
-
-        def load(self):
-            from pypdf import PdfReader
-
-            reader = PdfReader(self.file_path)
-            return [
-                Document(page_content=page.extract_text() or "", metadata={"page": i + 1})
-                for i, page in enumerate(reader.pages)
-            ]
-
-    TextLoader = _SimpleTextLoader
-    PyPDFLoader = _SimplePyPDFLoader
-    # Unavailable loaders - raise when load() is called
-    class _UnavailableLoader:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def load(self):
-            raise ImportError(
-                "This document loader requires langchain-community. "
-                "Install with: pip install langchain-community"
-            )
-
-    AzureAIDocumentIntelligenceLoader = _UnavailableLoader
-    BSHTMLLoader = _UnavailableLoader
-    CSVLoader = _UnavailableLoader
-    Docx2txtLoader = _UnavailableLoader
-    OutlookMessageLoader = _UnavailableLoader
-    UnstructuredEPubLoader = _UnavailableLoader
-    UnstructuredExcelLoader = _UnavailableLoader
-    UnstructuredODTLoader = _UnavailableLoader
-    UnstructuredPowerPointLoader = _UnavailableLoader
-    UnstructuredRSTLoader = _UnavailableLoader
-    UnstructuredXMLLoader = _UnavailableLoader
-    YoutubeLoader = _UnavailableLoader
+from langchain_community.document_loaders import (
+    AzureAIDocumentIntelligenceLoader,
+    BSHTMLLoader,
+    CSVLoader,
+    Docx2txtLoader,
+    OutlookMessageLoader,
+    PyPDFLoader,
+    TextLoader,
+    UnstructuredEPubLoader,
+    UnstructuredExcelLoader,
+    UnstructuredODTLoader,
+    UnstructuredPowerPointLoader,
+    UnstructuredRSTLoader,
+    UnstructuredXMLLoader,
+    YoutubeLoader,
+)
 
 from langchain_core.documents import Document
 
