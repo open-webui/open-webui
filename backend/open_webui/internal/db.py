@@ -57,6 +57,11 @@ def handle_peewee_migration(DATABASE_URL):
     try:
         # Replace the postgresql:// with postgres:// to handle the peewee migration
         db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
+        # Rollback any aborted transactions before running migrations
+        try:
+            db.rollback()
+        except:
+            pass
         migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
         router = Router(db, logger=log, migrate_dir=migrate_dir)
         router.run()
@@ -67,14 +72,26 @@ def handle_peewee_migration(DATABASE_URL):
         log.warning(
             "Hint: If your database password contains special characters, you may need to URL-encode it."
         )
+        # Try to rollback and close connection on error
+        try:
+            if 'db' in locals() and db and not db.is_closed():
+                db.rollback()
+                db.close()
+        except:
+            pass
         raise
     finally:
         # Properly closing the database connection
-        if db and not db.is_closed():
+        if 'db' in locals() and db and not db.is_closed():
+            try:
+                db.rollback()
+            except:
+                pass
             db.close()
 
         # Assert if db connection has been closed
-        assert db.is_closed(), "Database connection is still open."
+        if 'db' in locals() and db:
+            assert db.is_closed(), "Database connection is still open."
 
 
 # Skip Peewee migrations for SQLite - Alembic is the source of truth
