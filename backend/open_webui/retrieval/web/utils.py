@@ -246,7 +246,13 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             self.params,
         )
         try:
-            from firecrawl import FirecrawlApp
+            try:
+                from firecrawl import FirecrawlApp
+            except ImportError as ie:
+                raise RuntimeError(
+                    "FireCrawl web loader requires the firecrawl package. "
+                    "Install with: pip install firecrawl-py"
+                ) from ie
 
             firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
             result = firecrawl.batch_scrape(
@@ -287,7 +293,13 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             self.params,
         )
         try:
-            from firecrawl import FirecrawlApp
+            try:
+                from firecrawl import FirecrawlApp
+            except ImportError as ie:
+                raise RuntimeError(
+                    "FireCrawl web loader requires the firecrawl package. "
+                    "Install with: pip install firecrawl-py"
+                ) from ie
 
             firecrawl = FirecrawlApp(api_key=self.api_key, api_url=self.api_url)
             result = firecrawl.batch_scrape(

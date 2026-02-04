@@ -39,7 +39,7 @@ psycopg2-binary==2.9.10
 pgvector==0.4.1
 
 PyMySQL==1.1.1
-boto3==1.40.5
+# boto3 # REMOVED: Lazy import - install if using STORAGE_PROVIDER=s3
 
 APScheduler==3.10.4
 RestrictedPython==8.0
@@ -105,7 +105,7 @@ validators==0.35.0
 psutil
 sentencepiece
 soundfile==0.13.1
-azure-ai-documentintelligence==1.0.2
+# azure-ai-documentintelligence # REMOVED: Lazy import - install if using document_intelligence loader
 
 pillow==11.3.0
 # opencv-python-headless==4.11.0.86 # REMOVED: Too heavy for Heroku
@@ -120,7 +120,7 @@ youtube-transcript-api==1.2.2
 pytube==15.0.0
 
 pydub
-ddgs==9.0.0
+# ddgs # REMOVED: Lazy import - install if using DuckDuckGo search
 
 ## Google Drive
 google-api-python-client
@@ -132,30 +132,28 @@ google-auth-oauthlib
 # pytest~=8.4.1 # REMOVED: Not needed for production
 # pytest-docker~=3.1.1 # REMOVED: Not needed for production
 
-googleapis-common-protos==1.70.0
-google-cloud-storage==2.19.0
+# googleapis-common-protos # REMOVED: Lazy import - install if using STORAGE_PROVIDER=gcs
+# google-cloud-storage # REMOVED: Lazy import - install if using STORAGE_PROVIDER=gcs
 
-azure-identity==1.25.0
-azure-storage-blob==12.24.1
+# azure-identity # REMOVED: Lazy import - install if using STORAGE_PROVIDER=azure or document_intelligence
+# azure-storage-blob # REMOVED: Lazy import - install if using STORAGE_PROVIDER=azure
 
 ## LDAP
 ldap3==2.9.1
 
-## Firecrawl
-firecrawl-py==1.12.0
+# firecrawl-py # REMOVED: Lazy import - install if using WEB_LOADER_ENGINE=firecrawl
 
-# Sougou API SDK(Tencentcloud SDK)
-tencentcloud-sdk-python==3.0.1336
+# tencentcloud-sdk-python # REMOVED: Lazy import - install if using Sogou search
 
-## Trace
-opentelemetry-api==1.36.0
-opentelemetry-sdk==1.36.0
-opentelemetry-exporter-otlp==1.36.0
-opentelemetry-instrumentation==0.57b0
-opentelemetry-instrumentation-fastapi==0.57b0
-opentelemetry-instrumentation-sqlalchemy==0.57b0
-opentelemetry-instrumentation-redis==0.57b0
-opentelemetry-instrumentation-requests==0.57b0
-opentelemetry-instrumentation-logging==0.57b0
-opentelemetry-instrumentation-httpx==0.57b0
-opentelemetry-instrumentation-aiohttp-client==0.57b0
+# OpenTelemetry - REMOVED: Lazy import - install if ENABLE_OTEL=true
+# opentelemetry-api
+# opentelemetry-sdk
+# opentelemetry-exporter-otlp
+# opentelemetry-instrumentation
+# opentelemetry-instrumentation-fastapi
+# opentelemetry-instrumentation-sqlalchemy
+# opentelemetry-instrumentation-redis
+# opentelemetry-instrumentation-requests
+# opentelemetry-instrumentation-logging
+# opentelemetry-instrumentation-httpx
+# opentelemetry-instrumentation-aiohttp-client

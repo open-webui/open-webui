@@ -4,10 +4,14 @@ import ftfy
 import sys
 import json
 
-from azure.identity import DefaultAzureCredential
+try:
+    from azure.identity import DefaultAzureCredential
+    from langchain_community.document_loaders import AzureAIDocumentIntelligenceLoader
+except ImportError:
+    DefaultAzureCredential = None
+    AzureAIDocumentIntelligenceLoader = None
 
 from langchain_community.document_loaders import (
-    AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
     CSVLoader,
     Docx2txtLoader,
@@ -316,6 +320,11 @@ class Loader:
                 ]
             )
         ):
+            if AzureAIDocumentIntelligenceLoader is None:
+                raise RuntimeError(
+                    "Azure Document Intelligence requires azure-identity and azure-ai-documentintelligence. "
+                    "Install with: pip install azure-identity azure-ai-documentintelligence"
+                )
             if self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != "":
                 loader = AzureAIDocumentIntelligenceLoader(
                     file_path=file_path,
@@ -324,6 +333,11 @@ class Loader:
                     api_model=self.kwargs.get("DOCUMENT_INTELLIGENCE_MODEL"),
                 )
             else:
+                if DefaultAzureCredential is None:
+                    raise RuntimeError(
+                        "Azure Document Intelligence with DefaultAzureCredential requires azure-identity. "
+                        "Install with: pip install azure-identity"
+                    )
                 loader = AzureAIDocumentIntelligenceLoader(
                     file_path=file_path,
                     api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),

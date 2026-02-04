@@ -15,13 +15,20 @@ def search_sougou(
     count: int,
     filter_list: Optional[List[str]] = None,
 ) -> List[SearchResult]:
-    from tencentcloud.common.common_client import CommonClient
-    from tencentcloud.common import credential
-    from tencentcloud.common.exception.tencent_cloud_sdk_exception import (
-        TencentCloudSDKException,
-    )
-    from tencentcloud.common.profile.client_profile import ClientProfile
-    from tencentcloud.common.profile.http_profile import HttpProfile
+    try:
+        from tencentcloud.common.common_client import CommonClient
+        from tencentcloud.common import credential
+        from tencentcloud.common.exception.tencent_cloud_sdk_exception import (
+            TencentCloudSDKException,
+        )
+        from tencentcloud.common.profile.client_profile import ClientProfile
+        from tencentcloud.common.profile.http_profile import HttpProfile
+    except ImportError:
+        log.error(
+            "Sogou/Tencent search requires tencentcloud-sdk-python. "
+            "Install with: pip install tencentcloud-sdk-python"
+        )
+        return []
 
     try:
         cred = credential.Credential(sougou_api_sid, sougou_api_sk)

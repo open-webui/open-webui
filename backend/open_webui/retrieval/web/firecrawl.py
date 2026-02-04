@@ -14,7 +14,13 @@ def search_firecrawl(
     filter_list: Optional[List[str]] = None,
 ) -> List[SearchResult]:
     try:
-        from firecrawl import FirecrawlApp
+        try:
+            from firecrawl import FirecrawlApp
+        except ImportError as ie:
+            raise RuntimeError(
+                "FireCrawl search requires the firecrawl package. "
+                "Install with: pip install firecrawl-py"
+            ) from ie
 
         firecrawl = FirecrawlApp(api_key=firecrawl_api_key, api_url=firecrawl_url)
         response = firecrawl.search(

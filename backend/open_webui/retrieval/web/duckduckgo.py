@@ -2,8 +2,13 @@ import logging
 from typing import Optional
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from ddgs import DDGS
-from ddgs.exceptions import RatelimitException
+
+try:
+    from ddgs import DDGS
+    from ddgs.exceptions import RatelimitException
+except ImportError:
+    DDGS = None
+    RatelimitException = None
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +30,12 @@ def search_duckduckgo(
     Returns:
         list[SearchResult]: A list of search results
     """
+    if DDGS is None:
+        raise RuntimeError(
+            "DuckDuckGo search requires the duckduckgo-search package. "
+            "Install with: pip install duckduckgo-search"
+        )
+
     # Use the DDGS context manager to create a DDGS object
     search_results = []
     with DDGS() as ddgs:
