@@ -18,3 +18,65 @@ coverage/
 *.swp
 *.swo
 *~
+
+# Data exports and analysis (not needed at runtime)
+data-exports/
+stat_analysis/
+data_cleaning_notebook.ipynb
+
+# Database dumps and archives
+*.dump
+*.sql
+heroku_psql_181025.dump
+ContextBased_Prompt_Generation.zip
+webui 2.db
+
+# Docker (using buildpacks, not container deploy)
+Dockerfile
+docker-compose*.yaml
+docker-compose*.yml
+
+# CI/CD and GitHub
+.github/
+
+# Build and utility scripts
+Makefile
+run-compose.sh
+run-navigation-tests.sh
+run-ollama-docker.sh
+update_ollama_models.sh
+confirm_remove.sh
+inspect_dump.py
+transform_dump_to_dataframes.py
+export_study_data.py
+export_moderation_direct.py
+contribution_stats.py
+
+# Documentation and meta files
+*.ipynb
+conda-system-info.txt
+deployment-summary.txt
+open-webui-environment-summary.md
+environment-comparison-report.md
+LICENSE_HISTORY
+PR_DESCRIPTION.md
+PR_SUMMARY.md
+README_DUMP_TRANSFORMATION.md
+TESTING_SCENARIO_SELECTION.md
+TOKEN_ISSUE_DIAGNOSIS.md
+WORKFLOW_STATE_ANALYSIS.md
+GITHUB_TOKEN_PERMISSIONS_GUIDE.md
+GPT5_VALIDATION_GUIDE.md
+CONTRIBUTOR_LICENSE_AGREEMENT
+
+# Test config
+cypress.config.ts
+
+# Backend unit tests
+backend/open_webui/test/
+
+# Retrieval test data (mock search responses)
+backend/open_webui/retrieval/web/testdata/
+
+# Demo videos (can be large; serve from CDN if needed)
+static/video/
