@@ -111,7 +111,7 @@ class ChatMessageModel(BaseModel):
     embeds: Optional[list] = None
     done: bool = True
     status_history: Optional[list] = None
-    error: Optional[dict] = None
+    error: Optional[dict | str] = None
     usage: Optional[dict] = None
     created_at: int
     updated_at: int
@@ -269,6 +269,36 @@ class ChatMessageTable:
             )
             return [ChatMessageModel.model_validate(message) for message in messages]
 
+    def get_chat_ids_by_model_id(
+        self,
+        model_id: str,
+        start_date: Optional[int] = None,
+        end_date: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 50,
+        db: Optional[Session] = None,
+    ) -> list[str]:
+        """Get distinct chat_ids that used a specific model."""
+        from sqlalchemy import distinct
+
+        with get_db_context(db) as db:
+            query = db.query(distinct(ChatMessage.chat_id)).filter(
+                ChatMessage.model_id == model_id
+            )
+            if start_date:
+                query = query.filter(ChatMessage.created_at >= start_date)
+            if end_date:
+                query = query.filter(ChatMessage.created_at <= end_date)
+
+            # Order by most recent message in each chat
+            chat_ids = (
+                query.order_by(ChatMessage.created_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+            return [chat_id for (chat_id,) in chat_ids]
+
     def delete_messages_by_chat_id(
         self, chat_id: str, db: Optional[Session] = None
     ) -> bool:
@@ -282,19 +312,28 @@ class ChatMessageTable:
         self,
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, int]:
         with get_db_context(db) as db:
             from sqlalchemy import func
+            from open_webui.models.groups import GroupMember
 
             query = db.query(
                 ChatMessage.model_id, func.count(ChatMessage.id).label("count")
-            ).filter(ChatMessage.role == "assistant", ChatMessage.model_id.isnot(None))
+            ).filter(
+                ChatMessage.role == "assistant",
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
+            )
 
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.group_by(ChatMessage.model_id).all()
             return {row.model_id: row.count for row in results}
@@ -303,11 +342,13 @@ class ChatMessageTable:
         self,
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, dict]:
         """Aggregate token usage by model using database-level aggregation."""
         with get_db_context(db) as db:
             from sqlalchemy import func, cast, Integer
+            from open_webui.models.groups import GroupMember
 
             dialect = db.bind.dialect.name
 
@@ -338,12 +379,16 @@ class ChatMessageTable:
                 ChatMessage.role == "assistant",
                 ChatMessage.model_id.isnot(None),
                 ChatMessage.usage.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
             )
 
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.group_by(ChatMessage.model_id).all()
 
@@ -396,6 +441,7 @@ class ChatMessageTable:
                 ChatMessage.role == "assistant",
                 ChatMessage.user_id.isnot(None),
                 ChatMessage.usage.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
             )
 
             if start_date:
@@ -419,19 +465,24 @@ class ChatMessageTable:
         self,
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, int]:
         with get_db_context(db) as db:
             from sqlalchemy import func
+            from open_webui.models.groups import GroupMember
 
             query = db.query(
                 ChatMessage.user_id, func.count(ChatMessage.id).label("count")
-            )
+            ).filter(~ChatMessage.user_id.like("shared-%"))
 
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.group_by(ChatMessage.user_id).all()
             return {row.user_id: row.count for row in results}
@@ -440,19 +491,24 @@ class ChatMessageTable:
         self,
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, int]:
         with get_db_context(db) as db:
             from sqlalchemy import func
+            from open_webui.models.groups import GroupMember
 
             query = db.query(
                 ChatMessage.chat_id, func.count(ChatMessage.id).label("count")
-            )
+            ).filter(~ChatMessage.user_id.like("shared-%"))
 
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.group_by(ChatMessage.chat_id).all()
             return {row.chat_id: row.count for row in results}
@@ -461,21 +517,27 @@ class ChatMessageTable:
         self,
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
+        group_id: Optional[str] = None,
         db: Optional[Session] = None,
     ) -> dict[str, dict[str, int]]:
         """Get message counts grouped by day and model."""
         with get_db_context(db) as db:
             from datetime import datetime, timedelta
+            from open_webui.models.groups import GroupMember
 
             query = db.query(ChatMessage.created_at, ChatMessage.model_id).filter(
                 ChatMessage.role == "assistant",
-                ChatMessage.model_id.isnot(None)
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
             )
 
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
+            if group_id:
+                group_users = db.query(GroupMember.user_id).filter(GroupMember.group_id == group_id).subquery()
+                query = query.filter(ChatMessage.user_id.in_(group_users))
 
             results = query.all()
 
@@ -511,7 +573,8 @@ class ChatMessageTable:
 
             query = db.query(ChatMessage.created_at, ChatMessage.model_id).filter(
                 ChatMessage.role == "assistant",
-                ChatMessage.model_id.isnot(None)
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
             )
 
             if start_date:

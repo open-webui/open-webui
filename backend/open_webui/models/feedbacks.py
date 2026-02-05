@@ -191,6 +191,23 @@ class FeedbackTable:
         except Exception:
             return None
 
+    def get_feedbacks_by_chat_id(
+        self, chat_id: str, db: Optional[Session] = None
+    ) -> list[FeedbackModel]:
+        """Get all feedbacks for a specific chat."""
+        try:
+            with get_db_context(db) as db:
+                # meta.chat_id stores the chat reference
+                feedbacks = (
+                    db.query(Feedback)
+                    .filter(Feedback.meta["chat_id"].as_string() == chat_id)
+                    .order_by(Feedback.created_at.desc())
+                    .all()
+                )
+                return [FeedbackModel.model_validate(fb) for fb in feedbacks]
+        except Exception:
+            return []
+
     def get_feedback_items(
         self,
         filter: dict = {},

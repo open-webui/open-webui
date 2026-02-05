@@ -479,7 +479,6 @@ def handle_responses_streaming_event(
                 pass
             else:
                 item["content"].append(part)
-                item["content"].append(part)
             return new_output, None
         return current_output, None
 
@@ -1926,22 +1925,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)
 
-    oauth_token = None
-    try:
-        if request.cookies.get("oauth_session_id", None):
-            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                user.id,
-                request.cookies.get("oauth_session_id", None),
-            )
-    except Exception as e:
-        log.error(f"Error getting OAuth token: {e}")
-
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
-        "__oauth_token__": oauth_token,
+        "__oauth_token__": await get_system_oauth_token(request, user),
         "__request__": request,
         "__model__": model,
         "__chat_id__": metadata.get("chat_id"),
@@ -2401,190 +2390,220 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     return form_data, metadata, events
 
 
-async def process_chat_response(
-    request, response, form_data, user, metadata, model, events, tasks
+def get_event_emitter_and_caller(metadata):
+    event_emitter = None
+    event_caller = None
+    if (
+        "session_id" in metadata
+        and metadata["session_id"]
+        and "chat_id" in metadata
+        and metadata["chat_id"]
+        and "message_id" in metadata
+        and metadata["message_id"]
+    ):
+        event_emitter = get_event_emitter(metadata)
+        event_caller = get_event_call(metadata)
+    return event_emitter, event_caller
+
+
+def build_chat_response_context(
+    request, form_data, user, model, metadata, tasks, events
 ):
-    async def background_tasks_handler():
-        message = None
-        messages = []
+    event_emitter, event_caller = get_event_emitter_and_caller(metadata)
+    return {
+        "request": request,
+        "form_data": form_data,
+        "user": user,
+        "model": model,
+        "metadata": metadata,
+        "tasks": tasks,
+        "events": events,
+        "event_emitter": event_emitter,
+        "event_caller": event_caller,
+    }
 
-        if "chat_id" in metadata and not metadata["chat_id"].startswith("local:"):
-            messages_map = Chats.get_messages_map_by_chat_id(metadata["chat_id"])
-            message = messages_map.get(metadata["message_id"]) if messages_map else None
 
-            message_list = get_message_list(messages_map, metadata["message_id"])
+def get_response_data(response):
+    if isinstance(response, list) and len(response) == 1:
+        # If the response is a single-item list, unwrap it #17213
+        response = response[0]
 
-            # Remove details tags and files from the messages.
-            # as get_message_list creates a new list, it does not affect
-            # the original messages outside of this handler
-
-            messages = []
-            for message in message_list:
-                content = message.get("content", "")
-                if isinstance(content, list):
-                    for item in content:
-                        if item.get("type") == "text":
-                            content = item["text"]
-                            break
-
-                if isinstance(content, str):
-                    content = re.sub(
-                        r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
-                        "",
-                        content,
-                        flags=re.S | re.I,
-                    ).strip()
-
-                messages.append(
-                    {
-                        **message,
-                        "role": message.get(
-                            "role", "assistant"
-                        ),  # Safe fallback for missing role
-                        "content": content,
-                    }
-                )
+    if isinstance(response, JSONResponse):
+        if isinstance(response.body, bytes):
+            try:
+                response_data = json.loads(response.body.decode("utf-8", "replace"))
+            except json.JSONDecodeError:
+                response_data = {"error": {"detail": "Invalid JSON response"}}
         else:
-            # Local temp chat, get the model and message from the form_data
-            message = get_last_user_message_item(form_data.get("messages", []))
-            messages = form_data.get("messages", [])
-            if message:
-                message["model"] = form_data.get("model")
+            response_data = response
+    elif isinstance(response, dict):
+        response_data = response
+    else:
+        response_data = None
 
-        if message and "model" in message:
-            if tasks and messages:
-                if (
-                    TASKS.FOLLOW_UP_GENERATION in tasks
-                    and tasks[TASKS.FOLLOW_UP_GENERATION]
-                ):
-                    res = await generate_follow_ups(
-                        request,
-                        {
-                            "model": message["model"],
-                            "messages": messages,
-                            "message_id": metadata["message_id"],
-                            "chat_id": metadata["chat_id"],
-                        },
-                        user,
-                    )
+    return response, response_data
 
-                    if res and isinstance(res, dict):
-                        if len(res.get("choices", [])) == 1:
-                            response_message = res.get("choices", [])[0].get(
-                                "message", {}
-                            )
 
-                            follow_ups_string = response_message.get(
-                                "content"
-                            ) or response_message.get("reasoning_content", "")
-                        else:
-                            follow_ups_string = ""
+def merge_events_into_response(response_data, events):
+    if events and isinstance(events, list):
+        extra_response = {}
+        for event in events:
+            if isinstance(event, dict):
+                extra_response.update(event)
+            else:
+                extra_response[event] = True
 
-                        follow_ups_string = follow_ups_string[
-                            follow_ups_string.find("{") : follow_ups_string.rfind("}")
-                            + 1
-                        ]
+        return {
+            **extra_response,
+            **response_data,
+        }
+    return response_data
 
-                        try:
-                            follow_ups = json.loads(follow_ups_string).get(
-                                "follow_ups", []
-                            )
-                            await event_emitter(
-                                {
-                                    "type": "chat:message:follow_ups",
-                                    "data": {
-                                        "follow_ups": follow_ups,
-                                    },
-                                }
-                            )
 
-                            if not metadata.get("chat_id", "").startswith("local:"):
-                                Chats.upsert_message_to_chat_by_id_and_message_id(
-                                    metadata["chat_id"],
-                                    metadata["message_id"],
-                                    {
-                                        "followUps": follow_ups,
-                                    },
-                                )
+def build_response_object(response, response_data):
+    if isinstance(response, dict):
+        return response_data
+    if isinstance(response, JSONResponse):
+        return JSONResponse(
+            content=response_data,
+            headers=response.headers,
+            status_code=response.status_code,
+        )
+    return response
 
-                        except Exception as e:
-                            pass
 
-                if not metadata.get("chat_id", "").startswith(
-                    "local:"
-                ):  # Only update titles and tags for non-temp chats
-                    if TASKS.TITLE_GENERATION in tasks:
-                        user_message = get_last_user_message(messages)
-                        if user_message and len(user_message) > 100:
-                            user_message = user_message[:100] + "..."
+async def get_system_oauth_token(request, user):
+    oauth_token = None
+    try:
+        if request.cookies.get("oauth_session_id", None):
+            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                user.id,
+                request.cookies.get("oauth_session_id", None),
+            )
+    except Exception as e:
+        log.error(f"Error getting OAuth token: {e}")
+    return oauth_token
 
-                        title = None
-                        if tasks[TASKS.TITLE_GENERATION]:
-                            res = await generate_title(
-                                request,
-                                {
-                                    "model": message["model"],
-                                    "messages": messages,
-                                    "chat_id": metadata["chat_id"],
+
+async def background_tasks_handler(ctx):
+    request = ctx["request"]
+    form_data = ctx["form_data"]
+    user = ctx["user"]
+    metadata = ctx["metadata"]
+    tasks = ctx["tasks"]
+    event_emitter = ctx["event_emitter"]
+
+    message = None
+    messages = []
+
+    if "chat_id" in metadata and not metadata["chat_id"].startswith("local:"):
+        messages_map = Chats.get_messages_map_by_chat_id(metadata["chat_id"])
+        message = messages_map.get(metadata["message_id"]) if messages_map else None
+
+        message_list = get_message_list(messages_map, metadata["message_id"])
+
+        # Remove details tags and files from the messages.
+        # as get_message_list creates a new list, it does not affect
+        # the original messages outside of this handler
+
+        messages = []
+        for message in message_list:
+            content = message.get("content", "")
+            if isinstance(content, list):
+                for item in content:
+                    if item.get("type") == "text":
+                        content = item["text"]
+                        break
+
+            if isinstance(content, str):
+                content = re.sub(
+                    r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
+                    "",
+                    content,
+                    flags=re.S | re.I,
+                ).strip()
+
+            messages.append(
+                {
+                    **message,
+                    "role": message.get(
+                        "role", "assistant"
+                    ),  # Safe fallback for missing role
+                    "content": content,
+                }
+            )
+    else:
+        # Local temp chat, get the model and message from the form_data
+        message = get_last_user_message_item(form_data.get("messages", []))
+        messages = form_data.get("messages", [])
+        if message:
+            message["model"] = form_data.get("model")
+
+    if message and "model" in message:
+        if tasks and messages:
+            if (
+                TASKS.FOLLOW_UP_GENERATION in tasks
+                and tasks[TASKS.FOLLOW_UP_GENERATION]
+            ):
+                res = await generate_follow_ups(
+                    request,
+                    {
+                        "model": message["model"],
+                        "messages": messages,
+                        "message_id": metadata["message_id"],
+                        "chat_id": metadata["chat_id"],
+                    },
+                    user,
+                )
+
+                if res and isinstance(res, dict):
+                    if len(res.get("choices", [])) == 1:
+                        response_message = res.get("choices", [])[0].get("message", {})
+
+                        follow_ups_string = response_message.get(
+                            "content"
+                        ) or response_message.get("reasoning_content", "")
+                    else:
+                        follow_ups_string = ""
+
+                    follow_ups_string = follow_ups_string[
+                        follow_ups_string.find("{") : follow_ups_string.rfind("}") + 1
+                    ]
+
+                    try:
+                        follow_ups = json.loads(follow_ups_string).get("follow_ups", [])
+                        await event_emitter(
+                            {
+                                "type": "chat:message:follow_ups",
+                                "data": {
+                                    "follow_ups": follow_ups,
                                 },
-                                user,
-                            )
+                            }
+                        )
 
-                            if res and isinstance(res, dict):
-                                if len(res.get("choices", [])) == 1:
-                                    response_message = res.get("choices", [])[0].get(
-                                        "message", {}
-                                    )
-
-                                    title_string = (
-                                        response_message.get("content")
-                                        or response_message.get(
-                                            "reasoning_content",
-                                        )
-                                        or message.get("content", user_message)
-                                    )
-                                else:
-                                    title_string = ""
-
-                                title_string = title_string[
-                                    title_string.find("{") : title_string.rfind("}") + 1
-                                ]
-
-                                try:
-                                    title = json.loads(title_string).get(
-                                        "title", user_message
-                                    )
-                                except Exception as e:
-                                    title = ""
-
-                                if not title:
-                                    title = messages[0].get("content", user_message)
-
-                                Chats.update_chat_title_by_id(
-                                    metadata["chat_id"], title
-                                )
-
-                                await event_emitter(
-                                    {
-                                        "type": "chat:title",
-                                        "data": title,
-                                    }
-                                )
-
-                        if title == None and len(messages) == 2:
-                            title = messages[0].get("content", user_message)
-
-                            Chats.update_chat_title_by_id(metadata["chat_id"], title)
-
-                            await event_emitter(
+                        if not metadata.get("chat_id", "").startswith("local:"):
+                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata["chat_id"],
+                                metadata["message_id"],
                                 {
-                                    "type": "chat:title",
-                                    "data": message.get("content", user_message),
-                                }
+                                    "followUps": follow_ups,
+                                },
                             )
 
-                    if TASKS.TAGS_GENERATION in tasks and tasks[TASKS.TAGS_GENERATION]:
-                        res = await generate_chat_tags(
+                    except Exception as e:
+                        pass
+
+            if not metadata.get("chat_id", "").startswith(
+                "local:"
+            ):  # Only update titles and tags for non-temp chats
+                if TASKS.TITLE_GENERATION in tasks:
+                    user_message = get_last_user_message(messages)
+                    if user_message and len(user_message) > 100:
+                        user_message = user_message[:100] + "..."
+
+                    title = None
+                    if tasks[TASKS.TITLE_GENERATION]:
+                        res = await generate_title(
                             request,
                             {
                                 "model": message["model"],
@@ -2600,234 +2619,242 @@ async def process_chat_response(
                                     "message", {}
                                 )
 
-                                tags_string = response_message.get(
-                                    "content"
-                                ) or response_message.get("reasoning_content", "")
+                                title_string = (
+                                    response_message.get("content")
+                                    or response_message.get(
+                                        "reasoning_content",
+                                    )
+                                    or message.get("content", user_message)
+                                )
                             else:
-                                tags_string = ""
+                                title_string = ""
 
-                            tags_string = tags_string[
-                                tags_string.find("{") : tags_string.rfind("}") + 1
+                            title_string = title_string[
+                                title_string.find("{") : title_string.rfind("}") + 1
                             ]
 
                             try:
-                                tags = json.loads(tags_string).get("tags", [])
-                                Chats.update_chat_tags_by_id(
-                                    metadata["chat_id"], tags, user
-                                )
-
-                                await event_emitter(
-                                    {
-                                        "type": "chat:tags",
-                                        "data": tags,
-                                    }
+                                title = json.loads(title_string).get(
+                                    "title", user_message
                                 )
                             except Exception as e:
-                                pass
+                                title = ""
 
-    event_emitter = None
-    event_caller = None
-    if (
-        "session_id" in metadata
-        and metadata["session_id"]
-        and "chat_id" in metadata
-        and metadata["chat_id"]
-        and "message_id" in metadata
-        and metadata["message_id"]
-    ):
-        event_emitter = get_event_emitter(metadata)
-        event_caller = get_event_call(metadata)
+                            if not title:
+                                title = messages[0].get("content", user_message)
 
-    # Non-streaming response
-    if not isinstance(response, StreamingResponse):
-        if event_emitter:
-            try:
-                if isinstance(response, dict) or isinstance(response, JSONResponse):
-                    if isinstance(response, list) and len(response) == 1:
-                        # If the response is a single-item list, unwrap it #17213
-                        response = response[0]
+                            Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
-                    if isinstance(response, JSONResponse) and isinstance(
-                        response.body, bytes
-                    ):
-                        try:
-                            response_data = json.loads(
-                                response.body.decode("utf-8", "replace")
+                            await event_emitter(
+                                {
+                                    "type": "chat:title",
+                                    "data": title,
+                                }
                             )
-                        except json.JSONDecodeError:
-                            response_data = {
-                                "error": {"detail": "Invalid JSON response"}
+
+                    if title == None and len(messages) == 2:
+                        title = messages[0].get("content", user_message)
+
+                        Chats.update_chat_title_by_id(metadata["chat_id"], title)
+
+                        await event_emitter(
+                            {
+                                "type": "chat:title",
+                                "data": message.get("content", user_message),
                             }
-                    else:
-                        response_data = response
+                        )
 
-                    if "error" in response_data:
-                        error = response_data.get("error")
+                if TASKS.TAGS_GENERATION in tasks and tasks[TASKS.TAGS_GENERATION]:
+                    res = await generate_chat_tags(
+                        request,
+                        {
+                            "model": message["model"],
+                            "messages": messages,
+                            "chat_id": metadata["chat_id"],
+                        },
+                        user,
+                    )
 
-                        if isinstance(error, dict):
-                            error = error.get("detail", error)
+                    if res and isinstance(res, dict):
+                        if len(res.get("choices", [])) == 1:
+                            response_message = res.get("choices", [])[0].get(
+                                "message", {}
+                            )
+
+                            tags_string = response_message.get(
+                                "content"
+                            ) or response_message.get("reasoning_content", "")
                         else:
-                            error = str(error)
+                            tags_string = ""
 
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
-                            {
-                                "error": {"content": error},
+                        tags_string = tags_string[
+                            tags_string.find("{") : tags_string.rfind("}") + 1
+                        ]
+
+                        try:
+                            tags = json.loads(tags_string).get("tags", [])
+                            Chats.update_chat_tags_by_id(
+                                metadata["chat_id"], tags, user
+                            )
+
+                            await event_emitter(
+                                {
+                                    "type": "chat:tags",
+                                    "data": tags,
+                                }
+                            )
+                        except Exception as e:
+                            pass
+
+
+async def non_streaming_chat_response_handler(response, ctx):
+    request = ctx["request"]
+
+    user = ctx["user"]
+    metadata = ctx["metadata"]
+    events = ctx["events"]
+
+    event_emitter = ctx["event_emitter"]
+
+    response, response_data = get_response_data(response)
+    if response_data is None:
+        return response
+
+    if event_emitter:
+        try:
+            if "error" in response_data:
+                error = response_data.get("error")
+
+                if isinstance(error, dict):
+                    error = error.get("detail", error)
+                else:
+                    error = str(error)
+
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "error": {"content": error},
+                    },
+                )
+                if isinstance(error, str) or isinstance(error, dict):
+                    await event_emitter(
+                        {
+                            "type": "chat:message:error",
+                            "data": {"error": {"content": error}},
+                        }
+                    )
+
+            if "selected_model_id" in response_data:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "selectedModelId": response_data["selected_model_id"],
+                    },
+                )
+
+            choices = response_data.get("choices", [])
+            if choices and choices[0].get("message", {}).get("content"):
+                content = response_data["choices"][0]["message"]["content"]
+
+                if content:
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": response_data,
+                        }
+                    )
+
+                    title = Chats.get_chat_title_by_id(metadata["chat_id"])
+
+                    # Use output from backend if provided (OR-compliant backends)
+                    response_output = response_data.get("output")
+
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": {
+                                "done": True,
+                                "content": content,
+                                **(
+                                    {"output": response_output}
+                                    if response_output
+                                    else {}
+                                ),
+                                "title": title,
                             },
-                        )
-                        if isinstance(error, str) or isinstance(error, dict):
-                            await event_emitter(
+                        }
+                    )
+
+                    # Save message in the database
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "role": "assistant",
+                            "content": content,
+                            **({"output": response_output} if response_output else {}),
+                        },
+                    )
+
+                    # Send a webhook notification if the user is not active
+                    if not Users.is_user_active(user.id):
+                        webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                        if webhook_url:
+                            await post_webhook(
+                                request.app.state.WEBUI_NAME,
+                                webhook_url,
+                                f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
                                 {
-                                    "type": "chat:message:error",
-                                    "data": {"error": {"content": error}},
-                                }
-                            )
-
-                    if "selected_model_id" in response_data:
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
-                            {
-                                "selectedModelId": response_data["selected_model_id"],
-                            },
-                        )
-
-                    choices = response_data.get("choices", [])
-                    if choices and choices[0].get("message", {}).get("content"):
-                        content = response_data["choices"][0]["message"]["content"]
-
-                        if content:
-                            await event_emitter(
-                                {
-                                    "type": "chat:completion",
-                                    "data": response_data,
-                                }
-                            )
-
-                            title = Chats.get_chat_title_by_id(metadata["chat_id"])
-
-                            # Use output from backend if provided (OR-compliant backends)
-                            response_output = response_data.get("output")
-
-                            await event_emitter(
-                                {
-                                    "type": "chat:completion",
-                                    "data": {
-                                        "done": True,
-                                        "content": content,
-                                        **(
-                                            {"output": response_output}
-                                            if response_output
-                                            else {}
-                                        ),
-                                        "title": title,
-                                    },
-                                }
-                            )
-
-                            # Save message in the database
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata["chat_id"],
-                                metadata["message_id"],
-                                {
-                                    "role": "assistant",
-                                    "content": content,
-                                    **(
-                                        {"output": response_output}
-                                        if response_output
-                                        else {}
-                                    ),
+                                    "action": "chat",
+                                    "message": content,
+                                    "title": title,
+                                    "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
                                 },
                             )
 
-                            # Send a webhook notification if the user is not active
-                            if not Users.is_user_active(user.id):
-                                webhook_url = Users.get_user_webhook_url_by_id(user.id)
-                                if webhook_url:
-                                    await post_webhook(
-                                        request.app.state.WEBUI_NAME,
-                                        webhook_url,
-                                        f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
-                                        {
-                                            "action": "chat",
-                                            "message": content,
-                                            "title": title,
-                                            "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
-                                        },
-                                    )
+                    await background_tasks_handler(ctx)
 
-                            await background_tasks_handler()
+            response = build_response_object(
+                response, merge_events_into_response(response_data, events)
+            )
+        except Exception as e:
+            log.debug(f"Error occurred while processing request: {e}")
+            pass
 
-                    if events and isinstance(events, list):
-                        extra_response = {}
-                        for event in events:
-                            if isinstance(event, dict):
-                                extra_response.update(event)
-                            else:
-                                extra_response[event] = True
-
-                        response_data = {
-                            **extra_response,
-                            **response_data,
-                        }
-
-                    if isinstance(response, dict):
-                        response = response_data
-                    if isinstance(response, JSONResponse):
-                        response = JSONResponse(
-                            content=response_data,
-                            headers=response.headers,
-                            status_code=response.status_code,
-                        )
-
-            except Exception as e:
-                log.debug(f"Error occurred while processing request: {e}")
-                pass
-
-            return response
-        else:
-            if events and isinstance(events, list) and isinstance(response, dict):
-                extra_response = {}
-                for event in events:
-                    if isinstance(event, dict):
-                        extra_response.update(event)
-                    else:
-                        extra_response[event] = True
-
-                response = {
-                    **extra_response,
-                    **response,
-                }
-
-            return response
-
-    # Non standard response
-    if not any(
-        content_type in response.headers["Content-Type"]
-        for content_type in ["text/event-stream", "application/x-ndjson"]
-    ):
         return response
 
-    oauth_token = None
-    try:
-        if request.cookies.get("oauth_session_id", None):
-            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                user.id,
-                request.cookies.get("oauth_session_id", None),
-            )
-    except Exception as e:
-        log.error(f"Error getting OAuth token: {e}")
+    if isinstance(response, dict):
+        response = merge_events_into_response(response_data, events)
+
+    return response
+
+
+async def streaming_chat_response_handler(response, ctx):
+    request = ctx["request"]
+
+    form_data = ctx["form_data"]
+
+    user = ctx["user"]
+    model = ctx["model"]
+
+    metadata = ctx["metadata"]
+    events = ctx["events"]
+
+    event_emitter = ctx["event_emitter"]
+    event_caller = ctx["event_caller"]
 
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
-        "__oauth_token__": oauth_token,
+        "__oauth_token__": await get_system_oauth_token(request, user),
         "__request__": request,
         "__model__": model,
     }
+
     filter_functions = [
         Functions.get_function_by_id(filter_id)
         for filter_id in get_sorted_filter_ids(
@@ -2835,7 +2862,7 @@ async def process_chat_response(
         )
     ]
 
-    # Streaming response
+    # Standard streaming response handler
     if event_emitter and event_caller:
         task_id = str(uuid4())  # Create a unique task ID.
         model_id = form_data.get("model", "")
@@ -3514,7 +3541,9 @@ async def process_chat_response(
 
                                     # Normalize usage data to standard format
                                     raw_usage = data.get("usage", {}) or {}
-                                    raw_usage.update(data.get("timings", {}))  # llama.cpp
+                                    raw_usage.update(
+                                        data.get("timings", {})
+                                    )  # llama.cpp
                                     if raw_usage:
                                         usage = normalize_usage(raw_usage)
                                         await event_emitter(
@@ -4144,9 +4173,9 @@ async def process_chat_response(
                                     blocking_code = textwrap.dedent(
                                         f"""
                                         import builtins
-
+    
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
-
+    
                                         _real_import = builtins.__import__
                                         def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
                                             if name.split('.')[0] in BLOCKED_MODULES:
@@ -4156,7 +4185,7 @@ async def process_chat_response(
                                                         f"Direct import of module {{name}} is restricted."
                                                     )
                                             return _real_import(name, globals, locals, fromlist, level)
-
+    
                                         builtins.__import__ = restricted_import
                                     """
                                     )
@@ -4347,7 +4376,7 @@ async def process_chat_response(
                     }
                 )
 
-                await background_tasks_handler()
+                await background_tasks_handler(ctx)
             except asyncio.CancelledError:
                 log.warning("Task was cancelled!")
                 await event_emitter({"type": "chat:tasks:cancel"})
@@ -4404,3 +4433,19 @@ async def process_chat_response(
             headers=dict(response.headers),
             background=response.background,
         )
+
+
+async def process_chat_response(response, ctx):
+    # Non-streaming response
+    if not isinstance(response, StreamingResponse):
+        return await non_streaming_chat_response_handler(response, ctx)
+
+    # Non standard response
+    if not any(
+        content_type in response.headers["Content-Type"]
+        for content_type in ["text/event-stream", "application/x-ndjson"]
+    ):
+        return response
+
+    # Streaming response
+    return await streaming_chat_response_handler(response, ctx)
