@@ -229,3 +229,79 @@ export const getTokenUsage = async (
 
     return res;
 };
+
+export const getModelChats = async (
+    token: string = '',
+    modelId: string,
+    startDate: number | null = null,
+    endDate: number | null = null,
+    skip: number = 0,
+    limit: number = 50
+) => {
+    let error = null;
+
+    const searchParams = new URLSearchParams();
+    if (startDate) searchParams.append('start_date', startDate.toString());
+    if (endDate) searchParams.append('end_date', endDate.toString());
+    if (skip) searchParams.append('skip', skip.toString());
+    if (limit) searchParams.append('limit', limit.toString());
+
+    const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/models/${encodeURIComponent(modelId)}/chats?${searchParams.toString()}`, {
+        method: 'GET',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${token}`
+        }
+    })
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            error = err.detail;
+            console.error(err);
+            return null;
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return res;
+};
+
+export const getModelOverview = async (
+    token: string = '',
+    modelId: string,
+    days: number = 30
+) => {
+    let error = null;
+
+    const searchParams = new URLSearchParams();
+    searchParams.append('days', days.toString());
+
+    const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/models/${encodeURIComponent(modelId)}/overview?${searchParams.toString()}`, {
+        method: 'GET',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${token}`
+        }
+    })
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            error = err.detail;
+            console.error(err);
+            return null;
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return res;
+};

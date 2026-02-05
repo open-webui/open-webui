@@ -6,8 +6,10 @@
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChartLine from './ChartLine.svelte';
+	import AnalyticsModelModal from './AnalyticsModelModal.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { formatNumber } from '$lib/utils';
+	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
 
@@ -42,6 +44,10 @@
 	let totalTokens = { input: 0, output: 0, total: 0 };
 
 	let loading = true;
+
+	// Selected model for drill-down
+	let selectedModel: { id: string; name: string } | null = null;
+	let showModelModal = false;
 
 	// Sorting
 	let modelOrderBy = 'count';
@@ -157,6 +163,14 @@
 	</select>
 </div>
 
+<!-- Model Details Modal -->
+<AnalyticsModelModal
+	bind:show={showModelModal}
+	model={selectedModel}
+	startDate={getDateRange(selectedPeriod).start}
+	endDate={getDateRange(selectedPeriod).end}
+/>
+
 <!-- Summary stats -->
 {#if !loading}
 	<div class="flex gap-3 text-xs text-gray-500 dark:text-gray-400 px-0.5 pb-2">
@@ -241,7 +255,10 @@
 					</thead>
 					<tbody>
 						{#each sortedModels as model, idx (model.model_id)}
-							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<tr
+							class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+							on:click={() => { selectedModel = { id: model.model_id, name: model.name }; showModelModal = true; }}
+						>
 								<td class="px-3 py-1 text-gray-400">{idx + 1}</td>
 								<td class="px-3 py-1 font-medium text-gray-900 dark:text-white">
 									<div class="flex items-center gap-2">

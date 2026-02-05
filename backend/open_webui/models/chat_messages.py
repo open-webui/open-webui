@@ -111,7 +111,7 @@ class ChatMessageModel(BaseModel):
     embeds: Optional[list] = None
     done: bool = True
     status_history: Optional[list] = None
-    error: Optional[dict] = None
+    error: Optional[dict | str] = None
     usage: Optional[dict] = None
     created_at: int
     updated_at: int
@@ -269,6 +269,36 @@ class ChatMessageTable:
             )
             return [ChatMessageModel.model_validate(message) for message in messages]
 
+    def get_chat_ids_by_model_id(
+        self,
+        model_id: str,
+        start_date: Optional[int] = None,
+        end_date: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 50,
+        db: Optional[Session] = None,
+    ) -> list[str]:
+        """Get distinct chat_ids that used a specific model."""
+        from sqlalchemy import distinct
+
+        with get_db_context(db) as db:
+            query = db.query(distinct(ChatMessage.chat_id)).filter(
+                ChatMessage.model_id == model_id
+            )
+            if start_date:
+                query = query.filter(ChatMessage.created_at >= start_date)
+            if end_date:
+                query = query.filter(ChatMessage.created_at <= end_date)
+
+            # Order by most recent message in each chat
+            chat_ids = (
+                query.order_by(ChatMessage.created_at.desc())
+                .offset(skip)
+                .limit(limit)
+                .all()
+            )
+            return [chat_id for (chat_id,) in chat_ids]
+
     def delete_messages_by_chat_id(
         self, chat_id: str, db: Optional[Session] = None
     ) -> bool:
@@ -289,7 +319,11 @@ class ChatMessageTable:
 
             query = db.query(
                 ChatMessage.model_id, func.count(ChatMessage.id).label("count")
-            ).filter(ChatMessage.role == "assistant", ChatMessage.model_id.isnot(None))
+            ).filter(
+                ChatMessage.role == "assistant",
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
+            )
 
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
@@ -338,6 +372,7 @@ class ChatMessageTable:
                 ChatMessage.role == "assistant",
                 ChatMessage.model_id.isnot(None),
                 ChatMessage.usage.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
             )
 
             if start_date:
@@ -396,6 +431,7 @@ class ChatMessageTable:
                 ChatMessage.role == "assistant",
                 ChatMessage.user_id.isnot(None),
                 ChatMessage.usage.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
             )
 
             if start_date:
@@ -426,7 +462,7 @@ class ChatMessageTable:
 
             query = db.query(
                 ChatMessage.user_id, func.count(ChatMessage.id).label("count")
-            )
+            ).filter(~ChatMessage.user_id.like("shared-%"))
 
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
@@ -447,7 +483,7 @@ class ChatMessageTable:
 
             query = db.query(
                 ChatMessage.chat_id, func.count(ChatMessage.id).label("count")
-            )
+            ).filter(~ChatMessage.user_id.like("shared-%"))
 
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
@@ -469,7 +505,8 @@ class ChatMessageTable:
 
             query = db.query(ChatMessage.created_at, ChatMessage.model_id).filter(
                 ChatMessage.role == "assistant",
-                ChatMessage.model_id.isnot(None)
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
             )
 
             if start_date:
@@ -511,7 +548,8 @@ class ChatMessageTable:
 
             query = db.query(ChatMessage.created_at, ChatMessage.model_id).filter(
                 ChatMessage.role == "assistant",
-                ChatMessage.model_id.isnot(None)
+                ChatMessage.model_id.isnot(None),
+                ~ChatMessage.user_id.like("shared-%"),
             )
 
             if start_date:
