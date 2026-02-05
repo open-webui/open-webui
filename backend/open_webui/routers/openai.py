@@ -8,8 +8,6 @@ import aiohttp
 from aiocache import cached
 import requests
 
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-
 from fastapi import Depends, HTTPException, Request, APIRouter
 from fastapi.responses import (
     FileResponse,
@@ -187,6 +185,13 @@ def get_microsoft_entra_id_access_token():
     Get Microsoft Entra ID access token using DefaultAzureCredential for Azure OpenAI.
     Returns the token string or None if authentication fails.
     """
+    try:
+        from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+    except ImportError:
+        log.error(
+            "azure-identity package not installed. Install with: pip install azure-identity"
+        )
+        return None
     try:
         token_provider = get_bearer_token_provider(
             DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
