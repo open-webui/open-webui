@@ -1653,21 +1653,27 @@
 
 		// Check if there are pending tasks (more reliable than lastMessage.done)
 		if (taskIds !== null && taskIds.length > 0) {
-			// Tasks pending - queue the message instead of blocking
-			const _files = JSON.parse(JSON.stringify(files));
-			messageQueue = [
-				...messageQueue,
-				{
-					id: uuidv4(),
-					prompt: userPrompt,
-					files: _files
-				}
-			];
-			// Clear input
-			messageInput?.setText('');
-			prompt = '';
-			files = [];
-			return;
+			if ($settings?.enableMessageQueue ?? true) {
+				// Queue the message
+				const _files = JSON.parse(JSON.stringify(files));
+				messageQueue = [
+					...messageQueue,
+					{
+						id: uuidv4(),
+						prompt: userPrompt,
+						files: _files
+					}
+				];
+				// Clear input
+				messageInput?.setText('');
+				prompt = '';
+				files = [];
+				return;
+			} else {
+				// Interrupt: stop current generation and proceed
+				await stopResponse();
+				await tick();
+			}
 		}
 
 		if (history?.currentId) {
