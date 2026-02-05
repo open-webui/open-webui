@@ -7,14 +7,15 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChartLine from './ChartLine.svelte';
 	import AnalyticsModelModal from './AnalyticsModelModal.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { formatNumber } from '$lib/utils';
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
 
-	// Time period
-	let selectedPeriod = '7d';
+	// Time period - persist in localStorage
+	let selectedPeriod = (typeof localStorage !== 'undefined' && localStorage.getItem('analyticsPeriod')) || '7d';
 	const periods = [
 		{ value: '24h', label: 'Last 24 hours' },
 		{ value: '7d', label: 'Last 7 days' },
@@ -145,6 +146,11 @@
 
 	$: totalModelMessages = modelStats.reduce((sum, m) => sum + m.count, 0);
 
+	// Persist period selection
+	$: if (typeof localStorage !== 'undefined' && selectedPeriod) {
+		localStorage.setItem('analyticsPeriod', selectedPeriod);
+	}
+
 	onMount(loadDashboard);
 </script>
 
@@ -175,7 +181,9 @@
 {#if !loading}
 	<div class="flex gap-3 text-xs text-gray-500 dark:text-gray-400 px-0.5 pb-2">
 		<span><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_messages.toLocaleString()}</span> {$i18n.t('messages')}</span>
-		<span><span class="font-medium text-gray-900 dark:text-gray-300">{formatNumber(totalTokens.total)}</span> {$i18n.t('tokens')}</span>
+		<Tooltip content={$i18n.t('Token counts are estimates and may not reflect actual API usage')}>
+			<span class="cursor-help"><span class="font-medium text-gray-900 dark:text-gray-300">{formatNumber(totalTokens.total)}</span> {$i18n.t('tokens')}</span>
+		</Tooltip>
 		<span><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_chats.toLocaleString()}</span> {$i18n.t('chats')}</span>
 		<span><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_users}</span> {$i18n.t('users')}</span>
 	</div>
