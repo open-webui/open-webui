@@ -90,6 +90,7 @@
 	import { goto } from '$app/navigation';
 	import InputModal from '../common/InputModal.svelte';
 	import Expand from '../icons/Expand.svelte';
+	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -120,6 +121,11 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+
+	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
+	export let onQueueSendNow: (id: string) => void = () => {};
+	export let onQueueEdit: (id: string) => void = () => {};
+	export let onQueueDelete: (id: string) => void = () => {};
 
 	let inputContent = null;
 
@@ -1121,6 +1127,23 @@
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
 						/>
+
+						<!-- Queued messages display -->
+						{#if messageQueue.length > 0}
+							<div
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-gray-900/60 border border-gray-800/50 overflow-hidden"
+							>
+								{#each messageQueue as queuedMessage (queuedMessage.id)}
+									<QueuedMessageItem
+										id={queuedMessage.id}
+										content={queuedMessage.prompt}
+										onSendNow={onQueueSendNow}
+										onEdit={onQueueEdit}
+										onDelete={onQueueDelete}
+									/>
+								{/each}
+							</div>
+						{/if}
 
 						<div
 							id="message-input-container"
