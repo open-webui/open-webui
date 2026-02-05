@@ -43,9 +43,12 @@ Uses Heroku buildpacks. **Node.js must run before Python** to build the frontend
 # Add Node.js first (builds frontend), then Python
 heroku buildpacks:add --index 1 heroku/nodejs -a YOUR_APP_NAME
 heroku buildpacks:add heroku/python -a YOUR_APP_NAME
+heroku config:set NPM_CONFIG_PRODUCTION=false -a YOUR_APP_NAME  # Required: installs devDependencies for vite build
 heroku addons:create heroku-postgresql:essential-0
 git push heroku main
 ```
+
+**Important**: `NPM_CONFIG_PRODUCTION=false` ensures devDependencies (vite, svelte, etc.) are installed for the frontend build.
 
 **Key files**: `Procfile`, `app.json`, `requirements.txt` (root)
 

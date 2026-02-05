@@ -28,20 +28,18 @@ git push heroku main
 
 If you still get 404, verify the Docker build completes (no frontend build failures in `heroku logs`).
 
-### Option B: Buildpack Stack
+### Option B: Buildpack Stack (May Not Run Node on Heroku-24)
 
-If your app uses **buildpacks** (heroku-22 or similar), the frontend must be built by the Node.js buildpack before Python runs. Add the Node.js buildpack **first**:
+If your app uses **buildpacks** (heroku-22, heroku-24), the frontend must be built by the Node.js buildpack before Python runs. Add the Node.js buildpack **first**:
 
 ```bash
 heroku buildpacks:add --index 1 heroku/nodejs -a YOUR_APP_NAME
 heroku buildpacks:add heroku/python -a YOUR_APP_NAME
-```
-
-The Node.js buildpack will run `npm install` and `npm run build`, creating the `build/` directory. Redeploy:
-
-```bash
+heroku config:set NPM_CONFIG_PRODUCTION=false -a YOUR_APP_NAME
 git push heroku main
 ```
+
+**Note**: On Heroku-24, the build may run only the Python buildpack even when Node is listed first. If you still get 404 after redeploying, **switch to Container stack** (Option A) for a reliable fix.
 
 ### Verify Your Stack
 
