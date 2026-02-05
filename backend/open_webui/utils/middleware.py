@@ -127,7 +127,10 @@ from open_webui.env import (
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
     RAG_SYSTEM_CONTEXT,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
 )
+from open_webui.utils.headers import include_user_info_headers
 from open_webui.constants import TASKS
 
 
@@ -2206,6 +2209,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     if connection_headers and isinstance(connection_headers, dict):
                         for key, value in connection_headers.items():
                             headers[key] = value
+
+                    # Add user info headers if enabled
+                    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                        headers = include_user_info_headers(headers, user)
+                        if metadata and metadata.get("chat_id"):
+                            headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get("chat_id")
 
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(

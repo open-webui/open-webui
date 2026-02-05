@@ -23,6 +23,7 @@ from open_webui.models.users import UserModel
 
 from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
 )
 
 from fastapi import (
@@ -137,7 +138,7 @@ async def send_post_request(
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
             if metadata and metadata.get("chat_id"):
-                headers["X-OpenWebUI-Chat-Id"] = metadata.get("chat_id")
+                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get("chat_id")
 
         r = await session.post(
             url,

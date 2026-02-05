@@ -45,7 +45,10 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
 )
+from open_webui.utils.headers import include_user_info_headers
 from open_webui.tools.builtin import (
     search_web,
     fetch_url,
@@ -334,6 +337,13 @@ async def get_tools(
                         if connection_headers and isinstance(connection_headers, dict):
                             for key, value in connection_headers.items():
                                 headers[key] = value
+
+                        # Add user info headers if enabled
+                        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                            headers = include_user_info_headers(headers, user)
+                            metadata = extra_params.get("__metadata__", {})
+                            if metadata and metadata.get("chat_id"):
+                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get("chat_id")
 
                         def make_tool_function(
                             function_name, tool_server_data, headers
