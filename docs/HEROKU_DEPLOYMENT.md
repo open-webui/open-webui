@@ -178,6 +178,17 @@ To reduce slug size and memory, several packages were removed from `requirements
 | R14 Memory quota exceeded | Too many workers or heavy imports | `WEB_CONCURRENCY=1`, lazy imports |
 | Migration fails (UndefinedTable, InvalidTableDefinition) | Release phase or migration script | Procfile release, migration `38d63c18f30f` |
 | CORS errors in browser | `CORS_ALLOW_ORIGIN='*'` in production | Set explicit origins |
+| `npm ci` "Missing from lock file" | package.json and package-lock.json out of sync | See [Lockfile Sync](#lockfile-sync) below |
+
+### Lockfile Sync
+
+When Heroku fails with `npm ci can only install packages when your package.json and package-lock.json are in sync` and lists "Missing from lock file" packages:
+
+1. **Regenerate the lockfile**: Delete `package-lock.json` and `node_modules`, then run `npm install`.
+2. **Pin npm version**: Use `engines.npm: "10.x"` in package.json to match Node 20.x (Heroku uses npm 10.x with Node 20).
+3. **Commit and redeploy**: `git add package-lock.json package.json && git commit -m "Sync lockfile" && git push heroku main`.
+
+If it still fails (platform-specific optional deps), regenerate the lockfile in a Linux environment (e.g. Docker: `docker run --rm -v $(pwd):/app -w /app node:20 npm install`).
 
 ### Verify Stack and Buildpacks
 
