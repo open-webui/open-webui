@@ -194,6 +194,12 @@ ENABLE_FORWARD_USER_INFO_HEADERS = (
     os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
 )
 
+# Header names for user info forwarding (customizable via environment variables)
+FORWARD_USER_INFO_HEADER_NAME = os.environ.get("FORWARD_USER_INFO_HEADER_NAME", "X-OpenWebUI-User-Name")
+FORWARD_USER_INFO_HEADER_ID = os.environ.get("FORWARD_USER_INFO_HEADER_ID", "X-OpenWebUI-User-Id")
+FORWARD_USER_INFO_HEADER_EMAIL = os.environ.get("FORWARD_USER_INFO_HEADER_EMAIL", "X-OpenWebUI-User-Email")
+FORWARD_USER_INFO_HEADER_ROLE = os.environ.get("FORWARD_USER_INFO_HEADER_ROLE", "X-OpenWebUI-User-Role")
+
 # Experimental feature, may be removed in future
 ENABLE_STAR_SESSIONS_MIDDLEWARE = (
     os.environ.get("ENABLE_STAR_SESSIONS_MIDDLEWARE", "False").lower() == "true"
