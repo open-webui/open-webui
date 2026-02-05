@@ -1925,22 +1925,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)
 
-    oauth_token = None
-    try:
-        if request.cookies.get("oauth_session_id", None):
-            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                user.id,
-                request.cookies.get("oauth_session_id", None),
-            )
-    except Exception as e:
-        log.error(f"Error getting OAuth token: {e}")
-
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
-        "__oauth_token__": oauth_token,
+        "__oauth_token__": await get_system_oauth_token(request, user),
         "__request__": request,
         "__model__": model,
         "__chat_id__": metadata.get("chat_id"),
@@ -2482,6 +2472,19 @@ def build_response_object(response, response_data):
     return response
 
 
+async def get_system_oauth_token(request, user):
+    oauth_token = None
+    try:
+        if request.cookies.get("oauth_session_id", None):
+            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                user.id,
+                request.cookies.get("oauth_session_id", None),
+            )
+    except Exception as e:
+        log.error(f"Error getting OAuth token: {e}")
+    return oauth_token
+
+
 async def background_tasks_handler(ctx):
     request = ctx["request"]
     form_data = ctx["form_data"]
@@ -2842,22 +2845,12 @@ async def streaming_chat_response_handler(response, ctx):
     event_emitter = ctx["event_emitter"]
     event_caller = ctx["event_caller"]
 
-    oauth_token = None
-    try:
-        if request.cookies.get("oauth_session_id", None):
-            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
-                user.id,
-                request.cookies.get("oauth_session_id", None),
-            )
-    except Exception as e:
-        log.error(f"Error getting OAuth token: {e}")
-
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
-        "__oauth_token__": oauth_token,
+        "__oauth_token__": await get_system_oauth_token(request, user),
         "__request__": request,
         "__model__": model,
     }
