@@ -88,9 +88,11 @@ def upgrade() -> None:
         sa.column("updated_at", sa.BigInteger()),
     )
 
-    # Fetch all chats
+    # Fetch all chats (excluding shared chats which contain 'shared' in id)
     chats = conn.execute(
-        sa.select(chat_table.c.id, chat_table.c.user_id, chat_table.c.chat)
+        sa.select(chat_table.c.id, chat_table.c.user_id, chat_table.c.chat).where(
+            ~chat_table.c.id.like("%shared%")
+        )
     ).fetchall()
 
     now = int(time.time())
