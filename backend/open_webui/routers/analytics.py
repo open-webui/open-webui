@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from open_webui.models.chat_messages import ChatMessages, ChatMessageModel
 from open_webui.models.chats import Chats
+from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 from open_webui.models.feedbacks import Feedbacks
 from open_webui.utils.auth import get_admin_user
@@ -56,12 +57,13 @@ class UserAnalyticsResponse(BaseModel):
 async def get_model_analytics(
     start_date: Optional[int] = Query(None, description="Start timestamp (epoch)"),
     end_date: Optional[int] = Query(None, description="End timestamp (epoch)"),
+    group_id: Optional[str] = Query(None, description="Filter by user group ID"),
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
     """Get message counts per model."""
     counts = ChatMessages.get_message_count_by_model(
-        start_date=start_date, end_date=end_date, db=db
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
     models = [
         ModelAnalyticsEntry(model_id=model_id, count=count)
@@ -74,15 +76,14 @@ async def get_model_analytics(
 async def get_user_analytics(
     start_date: Optional[int] = Query(None, description="Start timestamp (epoch)"),
     end_date: Optional[int] = Query(None, description="End timestamp (epoch)"),
+    group_id: Optional[str] = Query(None, description="Filter by user group ID"),
     limit: int = Query(50, description="Max users to return"),
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
     """Get message counts and token usage per user with user info."""
-    from open_webui.models.users import Users
-    
     counts = ChatMessages.get_message_count_by_user(
-        start_date=start_date, end_date=end_date, db=db
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
     token_usage = ChatMessages.get_token_usage_by_user(
         start_date=start_date, end_date=end_date, db=db
@@ -153,18 +154,19 @@ class SummaryResponse(BaseModel):
 async def get_summary(
     start_date: Optional[int] = Query(None, description="Start timestamp (epoch)"),
     end_date: Optional[int] = Query(None, description="End timestamp (epoch)"),
+    group_id: Optional[str] = Query(None, description="Filter by user group ID"),
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
     """Get summary statistics for the dashboard."""
     model_counts = ChatMessages.get_message_count_by_model(
-        start_date=start_date, end_date=end_date, db=db
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
     user_counts = ChatMessages.get_message_count_by_user(
-        start_date=start_date, end_date=end_date, db=db
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
     chat_counts = ChatMessages.get_message_count_by_chat(
-        start_date=start_date, end_date=end_date, db=db
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
     
     return SummaryResponse(
@@ -188,6 +190,7 @@ class DailyStatsResponse(BaseModel):
 async def get_daily_stats(
     start_date: Optional[int] = Query(None, description="Start timestamp (epoch)"),
     end_date: Optional[int] = Query(None, description="End timestamp (epoch)"),
+    group_id: Optional[str] = Query(None, description="Filter by user group ID"),
     granularity: str = Query("daily", description="Granularity: 'hourly' or 'daily'"),
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
@@ -199,7 +202,7 @@ async def get_daily_stats(
         )
     else:
         counts = ChatMessages.get_daily_message_counts_by_model(
-            start_date=start_date, end_date=end_date, db=db
+            start_date=start_date, end_date=end_date, group_id=group_id, db=db
         )
     return DailyStatsResponse(
         data=[
@@ -228,12 +231,13 @@ class TokenUsageResponse(BaseModel):
 async def get_token_usage(
     start_date: Optional[int] = Query(None),
     end_date: Optional[int] = Query(None),
+    group_id: Optional[str] = Query(None, description="Filter by user group ID"),
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
     """Get token usage aggregated by model."""
     usage = ChatMessages.get_token_usage_by_model(
-        start_date=start_date, end_date=end_date, db=db
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
 
     models = [

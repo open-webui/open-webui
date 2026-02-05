@@ -3,13 +3,15 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 export const getModelAnalytics = async (
     token: string = '',
     startDate: number | null = null,
-    endDate: number | null = null
+    endDate: number | null = null,
+    groupId: string | null = null
 ) => {
     let error = null;
 
     const searchParams = new URLSearchParams();
     if (startDate) searchParams.append('start_date', startDate.toString());
     if (endDate) searchParams.append('end_date', endDate.toString());
+    if (groupId) searchParams.append('group_id', groupId);
 
     const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/models?${searchParams.toString()}`, {
         method: 'GET',
@@ -40,7 +42,8 @@ export const getUserAnalytics = async (
     token: string = '',
     startDate: number | null = null,
     endDate: number | null = null,
-    limit: number = 50
+    limit: number = 50,
+    groupId: string | null = null
 ) => {
     let error = null;
 
@@ -48,6 +51,7 @@ export const getUserAnalytics = async (
     if (startDate) searchParams.append('start_date', startDate.toString());
     if (endDate) searchParams.append('end_date', endDate.toString());
     if (limit) searchParams.append('limit', limit.toString());
+    if (groupId) searchParams.append('group_id', groupId);
 
     const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/users?${searchParams.toString()}`, {
         method: 'GET',
@@ -123,13 +127,15 @@ export const getMessages = async (
 export const getSummary = async (
     token: string = '',
     startDate: number | null = null,
-    endDate: number | null = null
+    endDate: number | null = null,
+    groupId: string | null = null
 ) => {
     let error = null;
 
     const searchParams = new URLSearchParams();
     if (startDate) searchParams.append('start_date', startDate.toString());
     if (endDate) searchParams.append('end_date', endDate.toString());
+    if (groupId) searchParams.append('group_id', groupId);
 
     const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/summary?${searchParams.toString()}`, {
         method: 'GET',
@@ -160,7 +166,8 @@ export const getDailyStats = async (
     token: string = '',
     startDate: number | null = null,
     endDate: number | null = null,
-    granularity: 'hourly' | 'daily' = 'daily'
+    granularity: 'hourly' | 'daily' = 'daily',
+    groupId: string | null = null
 ) => {
     let error = null;
 
@@ -168,6 +175,7 @@ export const getDailyStats = async (
     if (startDate) searchParams.append('start_date', startDate.toString());
     if (endDate) searchParams.append('end_date', endDate.toString());
     searchParams.append('granularity', granularity);
+    if (groupId) searchParams.append('group_id', groupId);
 
     const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/daily?${searchParams.toString()}`, {
         method: 'GET',
@@ -197,13 +205,15 @@ export const getDailyStats = async (
 export const getTokenUsage = async (
     token: string = '',
     startDate: number | null = null,
-    endDate: number | null = null
+    endDate: number | null = null,
+    groupId: string | null = null
 ) => {
     let error = null;
 
     const searchParams = new URLSearchParams();
     if (startDate) searchParams.append('start_date', startDate.toString());
     if (endDate) searchParams.append('end_date', endDate.toString());
+    if (groupId) searchParams.append('group_id', groupId);
 
     const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/tokens?${searchParams.toString()}`, {
         method: 'GET',

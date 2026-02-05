@@ -2,6 +2,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
 	import { getSummary, getModelAnalytics, getUserAnalytics, getDailyStats, getTokenUsage } from '$lib/apis/analytics';
+	import { getGroups } from '$lib/apis/groups';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -23,6 +24,10 @@
 		{ value: '90d', label: 'Last 90 days' },
 		{ value: 'all', label: 'All time' }
 	];
+
+	// User group filter
+	let groups: Array<{ id: string; name: string }> = [];
+	let selectedGroupId: string | null = null;
 
 	const getDateRange = (period: string): { start: number | null; end: number | null } => {
 		const now = Math.floor(Date.now() / 1000);
@@ -80,11 +85,11 @@
 			const { start, end } = getDateRange(selectedPeriod);
 			const granularity = selectedPeriod === '24h' ? 'hourly' : 'daily';
 			const [summaryRes, modelsRes, usersRes, dailyRes, tokensRes] = await Promise.all([
-				getSummary(localStorage.token, start, end),
-				getModelAnalytics(localStorage.token, start, end),
-				getUserAnalytics(localStorage.token, start, end, 50),
-				getDailyStats(localStorage.token, start, end, granularity),
-				getTokenUsage(localStorage.token, start, end)
+				getSummary(localStorage.token, start, end, selectedGroupId),
+				getModelAnalytics(localStorage.token, start, end, selectedGroupId),
+				getUserAnalytics(localStorage.token, start, end, 50, selectedGroupId),
+				getDailyStats(localStorage.token, start, end, granularity, selectedGroupId),
+				getTokenUsage(localStorage.token, start, end, selectedGroupId)
 			]);
 
 			summary = summaryRes ?? summary;
@@ -120,9 +125,19 @@
 		loading = false;
 	};
 
-	$: if (selectedPeriod) {
+	$: if (selectedPeriod || selectedGroupId !== undefined) {
 		loadDashboard();
 	}
+
+	onMount(async () => {
+		// Load groups for filter
+		try {
+			const res = await getGroups(localStorage.token);
+			groups = res ?? [];
+		} catch (e) {
+			console.error('Failed to load groups:', e);
+		}
+	});
 
 	$: sortedModels = [...modelStats].sort((a, b) => {
 		if (modelOrderBy === 'name') {
@@ -159,14 +174,27 @@
 	<div class="text-lg font-medium px-0.5">
 		{$i18n.t('Analytics')}
 	</div>
-	<select
-		bind:value={selectedPeriod}
-		class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
-	>
-		{#each periods as period}
-			<option value={period.value}>{$i18n.t(period.label)}</option>
-		{/each}
-	</select>
+	<div class="flex items-center gap-2">
+		{#if groups.length > 0}
+			<select
+				bind:value={selectedGroupId}
+				class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
+			>
+				<option value={null}>{$i18n.t('All Users')}</option>
+				{#each groups as group}
+					<option value={group.id}>{group.name}</option>
+				{/each}
+			</select>
+		{/if}
+		<select
+			bind:value={selectedPeriod}
+			class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
+		>
+			{#each periods as period}
+				<option value={period.value}>{$i18n.t(period.label)}</option>
+			{/each}
+		</select>
+	</div>
 </div>
 
 <!-- Model Details Modal -->
