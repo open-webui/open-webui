@@ -88,10 +88,10 @@ def upgrade() -> None:
         sa.column("updated_at", sa.BigInteger()),
     )
 
-    # Fetch all chats (excluding shared chats which contain 'shared' in id)
+    # Fetch all chats (excluding shared chats which have user_id starting with 'shared-')
     chats = conn.execute(
         sa.select(chat_table.c.id, chat_table.c.user_id, chat_table.c.chat).where(
-            ~chat_table.c.id.like("%shared%")
+            ~chat_table.c.user_id.like("shared-%")
         )
     ).fetchall()
 
