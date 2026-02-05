@@ -166,6 +166,20 @@ To reduce slug size and memory, several packages were removed from `requirements
 - **Fix**: Set `CORS_ALLOW_ORIGIN` to explicit origins:  
   `heroku config:set CORS_ALLOW_ORIGIN="https://yourapp.herokuapp.com;http://localhost:8080"`
 
+### 7. JavaScript Heap Out of Memory (OOM) During Build
+
+- **Symptom**: Build fails with `FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory` during `npm run build`.
+- **Cause**: The build runs `pyodide:fetch` (loads Pyodide in Node – memory-heavy) and `vite build` (large SvelteKit app). Combined, they exceed Node's default heap (~1.5–2GB).
+- **Fix**: Increase Node heap via Heroku config:
+  ```bash
+  heroku config:set NODE_OPTIONS="--max-old-space-size=4096" -a YOUR_APP_NAME
+  ```
+- **Alternative**: If config var doesn't take effect during build, edit `package.json`:
+  ```json
+  "build": "NODE_OPTIONS=--max-old-space-size=4096 npm run pyodide:fetch && NODE_OPTIONS=--max-old-space-size=4096 vite build"
+  ```
+- **Note**: `WEB_CONCURRENCY` and `MALLOC_ARENA_MAX` apply to the Python runtime, not the Node build. Do not change them to fix build OOM.
+
 ---
 
 ## Troubleshooting
@@ -178,6 +192,7 @@ To reduce slug size and memory, several packages were removed from `requirements
 | R14 Memory quota exceeded | Too many workers or heavy imports | `WEB_CONCURRENCY=1`, lazy imports |
 | Migration fails (UndefinedTable, InvalidTableDefinition) | Release phase or migration script | Procfile release, migration `38d63c18f30f` |
 | CORS errors in browser | `CORS_ALLOW_ORIGIN='*'` in production | Set explicit origins |
+| **Node OOM during build** | `npm run build` exceeds heap limit | Set `NODE_OPTIONS=--max-old-space-size=4096` |
 | `npm ci` "Missing from lock file" | package.json and package-lock.json out of sync | See [Lockfile Sync](#lockfile-sync) below |
 
 ### Lockfile Sync

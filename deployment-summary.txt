@@ -51,6 +51,12 @@ Removed from requirements.txt to reduce slug size and memory:
 
 Code uses lazy imports; clear errors when feature used without package.
 
+CURRENT BLOCKER: NODE OOM DURING BUILD
+--------------------------------------
+Build fails with "JavaScript heap out of memory" during npm run build.
+FIX: heroku config:set NODE_OPTIONS="--max-old-space-size=4096" -a dsl-kidsgpt-pilot
+See docs/HEROKU_DEPLOYMENT.md and DEPLOYMENT_AGENT_PROMPT.md.
+
 CRITICAL FIXES APPLIED (2026-02)
 --------------------------------
 1. azure.identity in routers/openai.py: Top-level import caused ModuleNotFoundError
