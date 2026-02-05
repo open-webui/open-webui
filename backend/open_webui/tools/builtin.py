@@ -1593,8 +1593,7 @@ async def query_knowledge_files(
     __model_knowledge__: list[dict] = None,
 ) -> str:
     """
-    Search knowledge base files using semantic/vector search. This should be your first
-    choice for finding information before searching the web. Searches across collections (KBs),
+    Search knowledge base files using semantic/vector search. Searches across collections (KBs),
     individual files, and notes that the user has access to.
 
     :param query: The search query to find semantically relevant content
