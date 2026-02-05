@@ -411,11 +411,13 @@ python -m black . --exclude ".venv/|/venv/"
 
 ### Infrastructure Documentation
 
-| Document                 | Location                      | Description                      |
-| ------------------------ | ----------------------------- | -------------------------------- |
-| **Heroku Backup Setup**  | `docs/HEROKU_BACKUP_SETUP.md` | Heroku deployment and backup     |
-| **Apache Configuration** | `docs/apache.md`              | Apache server setup              |
-| **Security Guidelines**  | `docs/SECURITY.md`            | Security practices and reporting |
+| Document                  | Location                      | Description                                     |
+| ------------------------- | ----------------------------- | ----------------------------------------------- |
+| **Heroku Deployment**     | `docs/HEROKU_DEPLOYMENT.md`   | Full Heroku guide, debugging history, troubleshooting |
+| **Heroku 404 Fix**        | `docs/HEROKU_404_FIX.md`      | Fix 404 on root and frontend routes             |
+| **Heroku Backup Setup**   | `docs/HEROKU_BACKUP_SETUP.md` | Heroku deployment and backup                    |
+| **Apache Configuration**  | `docs/apache.md`              | Apache server setup                             |
+| **Security Guidelines**   | `docs/SECURITY.md`            | Security practices and reporting                |
 
 ### Additional Resources
 
@@ -526,6 +528,24 @@ Child and parent accounts were receiving 400 Bad Request or 403 Forbidden / "Mod
 - **`backend/open_webui/main.py`**: Parent and child roles can use models listed in `DEFAULT_MODELS` without the access-control check. This lets children use the locked default model (e.g. gpt-5.2-chat-latest) even when it is a custom model with restricted access.
 - **`backend/open_webui/routers/ollama.py`**: In `/api/chat`, `/v1/completions`, and `/v1/chat/completions`, the check that raised 403 for non-admin users now allows `parent` and `child` (i.e. `user.role not in ("admin", "parent", "child")` before raising 403).
 - **`backend/open_webui/routers/openai.py`**: Same allowance in the chat-completion model-access check.
+
+---
+
+### Heroku Deployment Fixes (2026-02-05)
+
+**Context**: Multiple debugging sessions to deploy and run on Heroku (slug size, imports, 404, CORS).
+
+**Key fixes**:
+
+1. **azure.identity import**: `routers/openai.py` had top-level import; when azure packages were removed for slug size, app crashed with `ModuleNotFoundError`. Moved import into `get_microsoft_entra_id_access_token()` with lazy import.
+
+2. **404 on / and /parents**: Buildpack apps (e.g. dsl-kidsgpt-pilot) had only heroku/python; frontend was never built. Added heroku/nodejs buildpack **before** heroku/python so `npm run build` runs.
+
+3. **Optional packages**: boto3, google-cloud-storage, azure-*, firecrawl, ddgs, tencentcloud, opentelemetry removed from requirements.txt; code uses lazy imports. Install only if feature is needed.
+
+4. **CORS**: Set `CORS_ALLOW_ORIGIN` to explicit origins (not `*`) for production.
+
+**Documentation**: See `docs/HEROKU_DEPLOYMENT.md` and `docs/HEROKU_404_FIX.md`.
 
 ---
 

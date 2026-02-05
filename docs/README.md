@@ -5,12 +5,15 @@
 This directory contains project-specific documentation and guides:
 
 - **[PROJECT_CONTINUATION_GUIDE.md](PROJECT_CONTINUATION_GUIDE.md)** - ⭐ **START HERE** - Comprehensive project overview, features, tokens, workflows, and quick start guide
+- **[PROJECT_CONTEXT_EXPORT.md](../PROJECT_CONTEXT_EXPORT.md)** - Export of context for continuing work (Heroku, key files, debugging)
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - General contribution guidelines
 - **[PULL_REQUEST_WORKFLOW.md](PULL_REQUEST_WORKFLOW.md)** - Detailed PR workflow, GitHub token setup, and troubleshooting
 - **[CYPRESS_TEST_SETUP.md](CYPRESS_TEST_SETUP.md)** - Cypress testing setup and configuration
 - **[MODERATION_SURVEY_FLOW.md](MODERATION_SURVEY_FLOW.md)** - Moderation and survey flow documentation
 - **[SCENARIO_SYSTEM.md](SCENARIO_SYSTEM.md)** - Scenario system documentation
 - **[SECURITY.md](SECURITY.md)** - Security guidelines and reporting
+- **[HEROKU_DEPLOYMENT.md](HEROKU_DEPLOYMENT.md)** - Heroku deployment guide, debugging history, and troubleshooting
+- **[HEROKU_404_FIX.md](HEROKU_404_FIX.md)** - Fix 404 on root and frontend routes
 
 ## Project Workflow
 
