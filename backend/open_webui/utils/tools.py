@@ -697,9 +697,10 @@ def convert_openapi_to_tool_payload(openapi_spec):
                     "parameters": {"type": "object", "properties": {}, "required": []},
                 }
 
-                # Extract path and query parameters
                 for param in operation.get("parameters", []):
-                    param_name = param["name"]
+                    param_name = param.get("name")
+                    if not param_name:
+                        continue
                     param_schema = param.get("schema", {})
                     description = param_schema.get("description", "")
                     if not description:
@@ -971,8 +972,10 @@ async def execute_tool_server(
         body_params = {}
 
         for param in operation.get("parameters", []):
-            param_name = param["name"]
-            param_in = param["in"]
+            param_name = param.get("name")
+            if not param_name:
+                continue
+            param_in = param.get("in")
             if param_name in params:
                 if param_in == "path":
                     path_params[param_name] = params[param_name]
