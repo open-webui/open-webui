@@ -1,6 +1,4 @@
 <script lang="ts">
-	import type { WorkBook } from 'xlsx';
-
 	import { getContext, onMount, tick } from 'svelte';
 
 	import { formatFileSize, getLineCount } from '$lib/utils';
@@ -32,12 +30,23 @@
 	let isExcel = false;
 
 	let selectedTab = '';
-	let excelWorkbook: WorkBook | null = null;
+	let excelWorkbook: import('exceljs').Workbook | null = null;
+	let csvData: string[][] | null = null;
 	let excelSheetNames: string[] = [];
 	let selectedSheet = '';
 	let excelHtml = '';
 	let excelError = '';
 	let rowCount = 0;
+
+	/** Escape HTML for safe display in table cells */
+	function escapeHtml(s: string): string {
+		return s
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#039;');
+	}
 
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
@@ -92,12 +101,33 @@
 	const loadExcelContent = async () => {
 		try {
 			excelError = '';
-			const [arrayBuffer, { read }] = await Promise.all([
-				getFileContentById(item.id),
-				import('xlsx')
-			]);
-			excelWorkbook = read(arrayBuffer, { type: 'array' });
-			excelSheetNames = excelWorkbook.SheetNames;
+			excelWorkbook = null;
+			csvData = null;
+			const arrayBuffer = await getFileContentById(item.id);
+			const ext = (item?.name ?? '').toLowerCase().split('.').pop() ?? '';
+
+			if (ext === 'xls') {
+				excelError = $i18n.t('Legacy .xls format is not supported. Please use .xlsx or .csv.');
+				return;
+			}
+
+			if (ext === 'csv') {
+				const Papa = await import('papaparse');
+				const text = new TextDecoder().decode(arrayBuffer);
+				const result = Papa.parse<string[]>(text);
+				csvData = result.data?.length ? result.data : [[]];
+				excelSheetNames = ['Sheet1'];
+				selectedSheet = 'Sheet1';
+				await renderExcelSheet();
+				return;
+			}
+
+			// .xlsx
+			const ExcelJS = await import('exceljs');
+			const workbook = new ExcelJS.Workbook();
+			await workbook.xlsx.load(arrayBuffer as ArrayBuffer);
+			excelWorkbook = workbook;
+			excelSheetNames = workbook.worksheets.map((ws) => ws.name);
 
 			if (excelSheetNames.length > 0) {
 				selectedSheet = excelSheetNames[0];
@@ -110,22 +140,50 @@
 	};
 
 	const renderExcelSheet = async () => {
+		if (csvData) {
+			rowCount = csvData.length;
+			const rows = csvData;
+			let html = '<table id="excel-table">';
+			rows.forEach((row, rowIdx) => {
+				const tag = rowIdx === 0 ? 'th' : 'td';
+				html += '<tr>';
+				(row || []).forEach((cell) => {
+					html += `<${tag}>${escapeHtml(String(cell ?? ''))}</${tag}>`;
+				});
+				html += '</tr>';
+			});
+			html += '</table>';
+			excelHtml = html;
+			return;
+		}
+
 		if (!excelWorkbook || !selectedSheet) return;
 
-		const worksheet = excelWorkbook.Sheets[selectedSheet];
-		// Calculate row count
-		const XLSX = await import('xlsx');
-		const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
-		rowCount = range.e.r - range.s.r + 1;
+		const worksheet = excelWorkbook.getWorksheet(selectedSheet);
+		if (!worksheet) return;
 
-		excelHtml = XLSX.utils.sheet_to_html(worksheet, {
-			id: 'excel-table',
-			editable: false,
-			header: ''
+		rowCount = worksheet.rowCount ?? 0;
+		let html = '<table id="excel-table">';
+		worksheet.eachRow((row, rowNum) => {
+			const tag = rowNum === 1 ? 'th' : 'td';
+			html += '<tr>';
+			row.eachCell({ includeEmpty: true }, (cell) => {
+				const val = cell.value;
+				const text =
+					val == null
+						? ''
+						: typeof val === 'object' && 'text' in val
+							? String((val as { text: string }).text ?? '')
+							: String(val);
+				html += `<${tag}>${escapeHtml(text)}</${tag}>`;
+			});
+			html += '</tr>';
 		});
+		html += '</table>';
+		excelHtml = html;
 	};
 
-	$: if (selectedSheet && excelWorkbook) {
+	$: if (selectedSheet && (excelWorkbook || csvData)) {
 		renderExcelSheet();
 	}
 
