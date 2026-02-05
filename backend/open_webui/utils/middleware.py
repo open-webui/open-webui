@@ -2400,7 +2400,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     return form_data, metadata, events
 
 
-async def background_tasks_handler(request, form_data, user, metadata, tasks):
+def get_event_emitter_and_caller(metadata):
     event_emitter = None
     event_caller = None
     if (
@@ -2413,6 +2413,11 @@ async def background_tasks_handler(request, form_data, user, metadata, tasks):
     ):
         event_emitter = get_event_emitter(metadata)
         event_caller = get_event_call(metadata)
+    return event_emitter, event_caller
+
+
+async def background_tasks_handler(request, form_data, user, metadata, tasks):
+    event_emitter, event_caller = get_event_emitter_and_caller(metadata)
 
     message = None
     messages = []
@@ -2631,18 +2636,7 @@ async def background_tasks_handler(request, form_data, user, metadata, tasks):
 async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
-    event_emitter = None
-    event_caller = None
-    if (
-        "session_id" in metadata
-        and metadata["session_id"]
-        and "chat_id" in metadata
-        and metadata["chat_id"]
-        and "message_id" in metadata
-        and metadata["message_id"]
-    ):
-        event_emitter = get_event_emitter(metadata)
-        event_caller = get_event_call(metadata)
+    event_emitter, event_caller = get_event_emitter_and_caller(metadata)
 
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
