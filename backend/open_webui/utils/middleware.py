@@ -479,7 +479,6 @@ def handle_responses_streaming_event(
                 pass
             else:
                 item["content"].append(part)
-                item["content"].append(part)
             return new_output, None
         return current_output, None
 
