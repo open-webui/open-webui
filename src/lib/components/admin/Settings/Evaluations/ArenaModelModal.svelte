@@ -4,7 +4,7 @@
 	const dispatch = createEventDispatcher();
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { models } from '$lib/stores';
+	import { models, theme } from '$lib/stores';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
@@ -34,7 +34,9 @@
 		}
 	};
 
-	let profileImageUrl = '/favicon.png';
+	$: faviconUrl = `/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`;
+
+	let profileImageUrl = `/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`;
 	let description = '';
 
 	let selectedModelId = '';
@@ -90,7 +92,7 @@
 
 		name = '';
 		id = '';
-		profileImageUrl = '/favicon.png';
+		profileImageUrl = faviconUrl;
 		description = '';
 		modelIds = [];
 		selectedModelId = '';

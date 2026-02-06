@@ -11,7 +11,7 @@
 	import { goto } from '$app/navigation';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, config, mobile, models as _models, settings, theme, user } from '$lib/stores';
 	import {
 		createNewModel,
 		deleteModelById,
@@ -256,7 +256,7 @@
 								: 'opacity-50 dark:opacity-50'} "
 						>
 							<img
-								src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
+								src={model?.meta?.profile_image_url ?? `/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`}
 								alt="modelfile profile"
 								class=" rounded-full w-full h-auto object-cover"
 							/>

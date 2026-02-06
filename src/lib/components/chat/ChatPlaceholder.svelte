@@ -2,7 +2,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { marked } from 'marked';
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import { config, user, models as _models, temporaryChatEnabled, theme } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
@@ -55,7 +55,7 @@
 								src={model?.info?.meta?.profile_image_url ??
 									($i18n.language === 'dg-DG'
 										? `/doge.png`
-										: `${WEBUI_BASE_URL}/static/favicon.png`)}
+										: `${WEBUI_BASE_URL}/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`)}
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-100 dark:border-none"
 								alt="logo"
 								draggable="false"

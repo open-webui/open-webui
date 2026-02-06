@@ -20,7 +20,8 @@
 		channels,
 		socket,
 		config,
-		isApp
+		isApp,
+		theme
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -528,7 +529,7 @@
 					<div class="self-center mx-1.5">
 						<img
 							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
+							src="{WEBUI_BASE_URL}/static/{['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png"
 							class=" size-5 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>

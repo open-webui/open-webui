@@ -19,7 +19,8 @@
 		mobile,
 		temporaryChatEnabled,
 		settings,
-		config
+		config,
+		theme
 	} from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
@@ -501,7 +502,7 @@
 												placement="top-start"
 											>
 												<img
-													src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+													src={item.model?.info?.meta?.profile_image_url ?? `/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`}
 													alt="Model"
 													class="rounded-full size-5 flex items-center mr-2"
 												/>

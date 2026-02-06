@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { settings, playingNotificationSound, isLastActiveTab } from '$lib/stores';
+	import { settings, playingNotificationSound, isLastActiveTab, theme } from '$lib/stores';
 	import DOMPurify from 'dompurify';
 
 	import { marked } from 'marked';
@@ -38,7 +38,7 @@
 	}}
 >
 	<div class="shrink-0 self-top -translate-y-0.5">
-		<img src={'/static/favicon.png'} alt="favicon" class="size-7 rounded-full" />
+		<img src={`/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`} alt="favicon" class="size-7 rounded-full" />
 	</div>
 
 	<div>
