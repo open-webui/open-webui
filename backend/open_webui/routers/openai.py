@@ -545,6 +545,9 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 async def get_models(
     request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)
 ):
+    if not request.app.state.config.ENABLE_OPENAI_API:
+        raise HTTPException(status_code=503, detail="OpenAI API is disabled")
+
     models = {
         "data": [],
     }
