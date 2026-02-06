@@ -5,6 +5,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { theme } from '$lib/stores';
 	import { resolveTheme } from '$lib/utils/theme';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -23,6 +24,9 @@
 	let formModelPatterns = '';
 	let formPriority = 50;
 	let formIsActive = true;
+
+	let showDeleteConfirmDialog = false;
+	let deleteProviderId: string | null = null;
 
 	// JSON editor state
 	let jsonValidationError = '';
@@ -190,10 +194,6 @@
 	};
 
 	const deleteProvider = async (providerId: string) => {
-		if (!confirm($i18n.t('Are you sure you want to delete this provider?'))) {
-			return;
-		}
-
 		try {
 			const res = await fetch(`${WEBUI_API_BASE_URL}/providers/${providerId}/delete`, {
 				method: 'DELETE',
@@ -309,7 +309,7 @@
 							</button>
 							<button
 								class="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded transition"
-								on:click={() => deleteProvider(provider.id)}
+								on:click={() => { deleteProviderId = provider.id; showDeleteConfirmDialog = true; }}
 							>
 								{$i18n.t('Delete')}
 							</button>
@@ -324,9 +324,8 @@
 {#if showEditModal}
 	<div
 		class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-		on:click={closeEditModal}
 		on:keydown={(e) => e.key === 'Escape' && closeEditModal()}
-		role="button"
+		role="dialog"
 		tabindex="0"
 	>
 		<div
@@ -353,6 +352,7 @@
 						<input
 							type="text"
 							bind:value={formId}
+							on:input={() => { formId = formId.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'); }}
 							disabled={editingProvider !== null}
 							required
 							placeholder="openai"
@@ -550,3 +550,13 @@
 		</div>
 	</div>
 {/if}
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	on:confirm={() => {
+		if (deleteProviderId) {
+			deleteProvider(deleteProviderId);
+			deleteProviderId = null;
+		}
+	}}
+/>
