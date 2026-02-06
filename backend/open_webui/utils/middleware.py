@@ -1745,6 +1745,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         for key, value in connection_headers.items():
                             headers[key] = value
 
+                    # Inject chat/message IDs for event emitter support
+                    if metadata.get("chat_id"):
+                        headers["X-Open-WebUI-Chat-Id"] = metadata["chat_id"]
+                    if metadata.get("message_id"):
+                        headers["X-Open-WebUI-Message-Id"] = metadata["message_id"]
+
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(
                         url=mcp_server_connection.get("url", ""),

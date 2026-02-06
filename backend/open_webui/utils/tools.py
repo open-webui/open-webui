@@ -335,6 +335,12 @@ async def get_tools(
                             for key, value in connection_headers.items():
                                 headers[key] = value
 
+                        # Inject chat/message IDs for event emitter support
+                        if extra_params.get("__chat_id__"):
+                            headers["X-Open-WebUI-Chat-Id"] = extra_params["__chat_id__"]
+                        if extra_params.get("__message_id__"):
+                            headers["X-Open-WebUI-Message-Id"] = extra_params["__message_id__"]
+
                         def make_tool_function(
                             function_name, tool_server_data, headers
                         ):
