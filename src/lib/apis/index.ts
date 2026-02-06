@@ -1363,17 +1363,49 @@ export const getBackendConfig = async () => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const errorData = await res.json().catch(() => ({}));
+				throw errorData;
+			}
 			return res.json();
 		})
-		.catch((err) => {
-			console.error(err);
+		.catch(async (err) => {
+			console.error('Error fetching backend config:', err);
+			
+			// Import here to avoid circular dependencies
+			const { isAuthRedirectError, handleAuthRedirect } = await import('$lib/utils');
+			
+			// Check if this is an authentication redirect error (CORS-blocked redirect)
+			if (isAuthRedirectError(err)) {
+				// Try to get signout redirect URL from localStorage if available
+				// (it might have been stored from a previous successful config fetch)
+				const storedSignoutUrl = localStorage.getItem('signout_redirect_url');
+				
+				// Handle the auth redirect - this will redirect the browser
+				handleAuthRedirect(storedSignoutUrl);
+				
+				// Return a special error that indicates auth redirect
+				// The caller should handle this by not showing an error page
+				const authRedirectError = new Error('AUTH_REDIRECT');
+				(authRedirectError as any).isAuthRedirect = true;
+				throw authRedirectError;
+			}
+			
 			error = err;
 			return null;
 		});
 
 	if (error) {
+		// Re-throw auth redirect errors as-is so caller can handle them
+		if ((error as any)?.isAuthRedirect) {
+			throw error;
+		}
 		throw error;
+	}
+
+	// Store signout redirect URL if available for future use
+	if (res?.features?.auth_trusted_header && res?.features?.signout_redirect_url) {
+		localStorage.setItem('signout_redirect_url', res.features.signout_redirect_url);
 	}
 
 	return res;

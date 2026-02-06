@@ -1155,6 +1155,65 @@ export const getUserTimezone = () => {
 	return Intl.DateTimeFormat().resolvedOptions().timeZone;
 };
 
+/**
+ * Detects if a fetch error is likely due to an authentication redirect being blocked by CORS.
+ * This happens when a reverse proxy redirects unauthenticated requests to an external login page,
+ * but browsers block the redirect in fetch requests due to CORS policy.
+ *
+ * @param error - The error object from a failed fetch request
+ * @returns true if the error indicates a CORS-blocked authentication redirect
+ */
+export const isAuthRedirectError = (error: any): boolean => {
+	if (!error) return false;
+
+	const errorMessage = error?.message || error?.toString() || '';
+	const errorName = error?.name || '';
+
+	// Check for CORS errors related to redirects
+	if (
+		errorMessage.includes('CORS') ||
+		errorMessage.includes('Access-Control-Allow-Origin') ||
+		errorMessage.includes('redirected from') ||
+		errorName === 'TypeError' ||
+		errorName === 'NetworkError'
+	) {
+		// Check for network failure errors that occur when redirects are blocked
+		if (
+			errorMessage.includes('ERR_FAILED') ||
+			errorMessage.includes('Failed to fetch') ||
+			errorMessage.includes('NetworkError') ||
+			errorMessage.includes('Network request failed')
+		) {
+			return true;
+		}
+	}
+
+	// Check if it's a fetch error with status 0 (often indicates CORS/network issue)
+	if (error?.status === 0 || (error?.ok === false && !error?.status)) {
+		return true;
+	}
+
+	return false;
+};
+
+/**
+ * Handles authentication redirect errors by redirecting the browser to trigger
+ * the reverse proxy's authentication flow. Uses window.location.href which
+ * allows redirects (unlike fetch).
+ *
+ * @param signoutRedirectUrl - Optional signout redirect URL from config
+ */
+export const handleAuthRedirect = (signoutRedirectUrl?: string | null): void => {
+	if (signoutRedirectUrl) {
+		// Use the configured signout redirect URL if available
+		window.location.href = signoutRedirectUrl;
+	} else {
+		// Reload the current page to trigger reverse proxy redirect
+		// The reverse proxy will handle redirecting to the login page
+		window.location.href = window.location.href;
+	}
+};
+
 // Get the weekday
 export const getWeekday = () => {
 	const date = new Date();

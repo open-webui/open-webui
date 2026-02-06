@@ -1963,6 +1963,13 @@ async def get_app_config(request: Request):
                 if user is not None
                 else {}
             ),
+            **(
+                {
+                    "signout_redirect_url": app.state.WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+                }
+                if app.state.WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+                else {}
+            ),
         },
         **(
             {

@@ -742,12 +742,29 @@
 		});
 
 		let backendConfig = null;
+		let isAuthRedirect = false;
 		try {
 			backendConfig = await getBackendConfig();
 			console.log('Backend config:', backendConfig);
-		} catch (error) {
+		} catch (error: any) {
+			// Check if this is an authentication redirect error
+			// In this case, getBackendConfig has already handled the redirect,
+			// so we should not show an error page
+			if (error?.isAuthRedirect || error?.message === 'AUTH_REDIRECT') {
+				isAuthRedirect = true;
+				console.log('Authentication redirect detected, redirecting...');
+				// The redirect is already handled in getBackendConfig via handleAuthRedirect
+				// Just return early to prevent showing error page
+				return;
+			}
 			console.error('Error loading backend config:', error);
 		}
+		
+		// If auth redirect was triggered, don't continue initialization
+		if (isAuthRedirect) {
+			return;
+		}
+		
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
 
@@ -757,7 +774,7 @@
 			const browserLanguages = navigator.languages
 				? navigator.languages
 				: [navigator.language || navigator.userLanguage];
-			const lang = backendConfig.default_locale
+			const lang = backendConfig?.default_locale
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
 			changeLanguage(lang);
@@ -800,7 +817,10 @@
 			}
 		} else {
 			// Redirect to /error when Backend Not Detected
-			await goto(`/error`);
+			// Only if it's not an auth redirect (which is already handled)
+			if (!isAuthRedirect) {
+				await goto(`/error`);
+			}
 		}
 
 		await tick();
