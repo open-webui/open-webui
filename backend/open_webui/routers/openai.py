@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
+from open_webui.models.chats import Chats
 from open_webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
@@ -747,6 +748,18 @@ async def generate_chat_completion(
             return response
     except Exception as e:
         log.exception(e)
+
+        # 將錯誤保存到 chat history（如果有 metadata）
+        if metadata and metadata.get("chat_id") and metadata.get("message_id"):
+            error_message = str(e)
+            if isinstance(e, aiohttp.ClientError):
+                error_message = f"Pipeline connection error: {str(e)}"
+
+            Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata["chat_id"],
+                metadata["message_id"],
+                {"error": {"content": error_message}},
+            )
 
         detail = None
         if isinstance(response, dict):
