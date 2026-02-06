@@ -10,11 +10,31 @@
 	export let chatId = '';
 
 	export let sources = [];
+	export let content = ''; // Message content to extract cited indices
 	export let readOnly = false;
 
 	let citations = [];
 	let showPercentage = false;
 	let showRelevance = true;
+
+	// Extract all citation indices from the message content (e.g., [1], [2,3], [4#section])
+	function extractCitedIndices(text: string): Set<number> {
+		const indices = new Set<number>();
+		// Match citation patterns like [1], [1,2], [1#foo], etc.
+		const regex = /\[(\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\]/g;
+		let match;
+		while ((match = regex.exec(text)) !== null) {
+			// Split by comma and extract numbers
+			const parts = match[1].split(',').map((p) => p.trim());
+			parts.forEach((part) => {
+				const numMatch = /^(\d+)/.exec(part);
+				if (numMatch) {
+					indices.add(parseInt(numMatch[1], 10));
+				}
+			});
+		}
+		return indices;
+	}
 
 	let citationModal = null;
 
@@ -96,43 +116,88 @@
 	}
 
 	$: {
-		citations = sources.reduce((acc, source) => {
+		// Extract which source indices are actually cited in the message content
+		const citedIndices = extractCitedIndices(content);
+
+		// Build a flat list of all source chunks with their original indices
+		// Each source in 'sources' array contains document chunks - we need to track the overall index
+		let allChunks: { sourceIdx: number; chunkIdx: number; source: any }[] = [];
+		let chunkIndex = 0;
+		sources.forEach((source, sourceIdx) => {
+			if (Object.keys(source).length === 0) return;
+			const docCount = source?.document?.length ?? 0;
+			for (let i = 0; i < docCount; i++) {
+				allChunks.push({
+					sourceIdx,
+					chunkIdx: i,
+					source,
+					overallIndex: chunkIndex + 1 // 1-based index for citation matching
+				});
+				chunkIndex++;
+			}
+		});
+
+		// If content has citations, filter to only show cited sources
+		// Otherwise show all (for backward compatibility or when content is empty)
+		let filteredSources = sources;
+		if (citedIndices.size > 0) {
+			// Get the set of source indices that were cited
+			const citedSourceIndices = new Set<number>();
+			allChunks.forEach((chunk) => {
+				if (citedIndices.has(chunk.overallIndex)) {
+					citedSourceIndices.add(chunk.sourceIdx);
+				}
+			});
+			filteredSources = sources.filter((_, idx) => citedSourceIndices.has(idx));
+		}
+
+		// Group citations by document (source.id) rather than by chunk
+		// This ensures multiple chunks from the same document appear as a single entry
+		citations = filteredSources.reduce((acc, source) => {
 			if (Object.keys(source).length === 0) {
 				return acc;
 			}
 
-			source?.document?.forEach((document, index) => {
-				const metadata = source?.metadata?.[index];
-				const distance = source?.distances?.[index];
+			// Use source.id as the grouping key (document level)
+			const documentId = source?.source?.id ?? 'N/A';
+			const existingSource = acc.find((item) => item.id === documentId);
 
-				// Within the same citation there could be multiple documents
-				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
-				let _source = source?.source;
+			if (existingSource) {
+				// Add documents and metadata from this source to existing entry
+				source?.document?.forEach((document, index) => {
+					const metadata = source?.metadata?.[index];
+					const distance = source?.distances?.[index];
 
-				if (metadata?.name) {
-					_source = { ..._source, name: metadata.name };
-				}
-
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					_source = { ..._source, name: id, url: id };
-				}
-
-				const existingSource = acc.find((item) => item.id === id);
-
-				if (existingSource) {
 					existingSource.document.push(document);
-					existingSource.metadata.push(metadata);
+					if (metadata) existingSource.metadata.push(metadata);
 					if (distance !== undefined) existingSource.distances.push(distance);
-				} else {
-					acc.push({
-						id: id,
-						source: _source,
-						document: [document],
-						metadata: metadata ? [metadata] : [],
-						distances: distance !== undefined ? [distance] : []
-					});
-				}
-			});
+				});
+			} else {
+				// Create new entry for this document
+				let _source = source?.source ?? {};
+
+				// Collect all documents and metadata from this source
+				const documents: string[] = [];
+				const metadatas: any[] = [];
+				const distances: number[] = [];
+
+				source?.document?.forEach((document, index) => {
+					const metadata = source?.metadata?.[index];
+					const distance = source?.distances?.[index];
+
+					documents.push(document);
+					if (metadata) metadatas.push(metadata);
+					if (distance !== undefined) distances.push(distance);
+				});
+
+				acc.push({
+					id: documentId,
+					source: _source,
+					document: documents,
+					metadata: metadatas,
+					distances: distances
+				});
+			}
 
 			return acc;
 		}, []);
@@ -199,8 +264,13 @@
 					id={`source-${id}-${idx + 1}`}
 					class="no-toggle outline-hidden flex dark:text-gray-300 bg-transparent text-gray-600 rounded-xl gap-1.5 items-center"
 					on:click={() => {
-						showCitationModal = true;
-						selectedCitation = citation;
+						// Open document URL in new tab if available, otherwise show modal
+						if (citation?.source?.url) {
+							window.open(citation.source.url, '_blank');
+						} else {
+							showCitationModal = true;
+							selectedCitation = citation;
+						}
 					}}
 				>
 					<div class=" font-medium bg-gray-50 dark:bg-gray-850 rounded-md px-1">

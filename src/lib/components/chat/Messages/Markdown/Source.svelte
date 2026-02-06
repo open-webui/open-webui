@@ -4,8 +4,16 @@
 	export let id;
 
 	export let title: string = 'N/A';
+	export let url: string | null = null;
 
 	export let onClick: Function = () => {};
+
+	// Handler for click - opens URL in new tab if available
+	function handleClick() {
+		if (url) {
+			window.open(url, '_blank');
+		}
+	}
 
 	// Helper function to return only the domain from a URL
 	function getDomain(url: string): string {
@@ -38,9 +46,7 @@
 {#if title !== 'N/A'}
 	<button
 		class="text-[10px] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl"
-		on:click={() => {
-			onClick(id);
-		}}
+		on:click={handleClick}
 	>
 		<span class="line-clamp-1">
 			{getDisplayTitle(formattedTitle(decodeString(title)))}

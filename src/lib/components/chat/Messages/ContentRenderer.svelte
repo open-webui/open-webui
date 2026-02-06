@@ -147,31 +147,29 @@
 			let ids = [];
 			source.document.forEach((document, index) => {
 				if (model?.info?.meta?.capabilities?.citations == false) {
-					ids.push('N/A');
+					ids.push({ name: 'N/A', url: null });
 					return ids;
 				}
 
 				const metadata = source.metadata?.[index];
 				const id = metadata?.source ?? 'N/A';
+				const url = metadata?.url ?? null;
 
+				let name;
 				if (metadata?.name) {
-					ids.push(metadata.name);
-					return ids;
-				}
-
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					ids.push(id);
+					name = metadata.name;
+				} else if (id.startsWith('http://') || id.startsWith('https://')) {
+					name = id;
 				} else {
-					ids.push(source?.source?.name ?? id);
+					name = source?.source?.name ?? id;
 				}
 
+				ids.push({ name, url });
 				return ids;
 			});
 
 			acc = [...acc, ...ids];
-
-			// remove duplicates
-			return acc.filter((item, index) => acc.indexOf(item) === index);
+			return acc;
 		}, [])}
 		{onSourceClick}
 		{onTaskClick}

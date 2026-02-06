@@ -813,6 +813,7 @@
 									id={message?.id}
 									{chatId}
 									sources={message?.sources ?? message?.citations}
+									content={message?.content ?? ''}
 									{readOnly}
 								/>
 							{/if}
