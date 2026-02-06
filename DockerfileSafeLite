@@ -1,0 +1,183 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# DockerfileSafeLite - Lightweight hardened build for hyperscaler deployments
+# =============================================================================
+# This is a minimal image WITHOUT:
+# - CUDA support
+# - Local embedding models (sentence-transformers)
+# - Local whisper models (faster-whisper)
+# - Ollama integration
+# - Heavy ML dependencies
+#
+# Designed for hyperscaler users who use external APIs for embeddings/LLMs.
+# =============================================================================
+# Uses:
+# - dhi.io/bun:1.3-debian13-dev for frontend build
+# - dhi.io/python:3.11.14-debian13-dev for backend build
+# - dhi.io/uv:0.9-debian13 for fast Python dependency installation
+# - dhi.io/python:3.11.14-debian13 for runtime (hardened, no shell)
+# =============================================================================
+
+ARG BUILD_HASH=dev-build
+
+# =============================================================================
+# Stage 1: Frontend build with Bun
+# =============================================================================
+FROM --platform=$BUILDPLATFORM dhi.io/bun:1.3-debian13-dev AS frontend-build
+ARG BUILD_HASH
+
+WORKDIR /app
+
+# Install git for build hash (Debian-based, use apt-get)
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
+# Install dependencies
+COPY package.json bun.lock* package-lock.json* ./
+RUN bun install --frozen-lockfile || bun install
+
+# Copy source
+COPY . .
+ENV APP_BUILD_HASH=${BUILD_HASH}
+
+# Increase memory limit for build to avoid OOM errors
+ENV NODE_OPTIONS="--max-old-space-size=3072"
+
+# Split build into separate steps to reduce peak memory usage
+# Step 1: Fetch pyodide (separate step to free memory before vite build)
+RUN bun run pyodide:fetch
+
+# Step 2: Run vite build
+RUN bunx --bun vite build
+
+# =============================================================================
+# Stage 2: Backend build with Python + uv (Lite - no heavy ML deps)
+# =============================================================================
+FROM dhi.io/python:3.11.14-debian13-dev AS backend-build
+
+# Copy uv from the uv image for fast dependency installation
+COPY --from=dhi.io/uv:0.9-debian13 /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/
+
+WORKDIR /app/backend
+
+# Install minimal build dependencies (no ffmpeg, no heavy libs)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git build-essential gcc g++ \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+ENV VIRTUAL_ENV="/app/.venv"
+
+# Copy requirements
+COPY ./backend/requirements.txt ./requirements-full.txt
+
+# Create lite requirements by filtering out heavy ML dependencies
+# Remove: torch*, sentence-transformers, faster-whisper, accelerate, transformers,
+# onnxruntime, opencv-python*, rapidocr*, colbert-ai, einops, sentencepiece, soundfile, pydub, av
+RUN cat requirements-full.txt | grep -v -E "^torch" | \
+    grep -v -E "^sentence-transformers" | \
+    grep -v -E "^faster-whisper" | \
+    grep -v -E "^accelerate" | \
+    grep -v -E "^transformers" | \
+    grep -v -E "^onnxruntime" | \
+    grep -v -E "^opencv-python" | \
+    grep -v -E "^rapidocr" | \
+    grep -v -E "^colbert-ai" | \
+    grep -v -E "^einops" | \
+    grep -v -E "^sentencepiece" | \
+    grep -v -E "^av==" | \
+    grep -v -E "^pyarrow" > requirements.txt
+
+# Install dependencies with uv (much faster than pip)
+# Note: Some packages may have torch as optional dependency, they'll work without it
+RUN uv pip install -r requirements.txt
+
+# Create cache directories (empty for lite version)
+RUN mkdir -p /app/backend/data/cache/whisper/models \
+    /app/backend/data/cache/embedding/models \
+    /app/backend/data/cache/tiktoken
+
+# Pre-download only tiktoken (lightweight)
+RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')" || true
+
+# Create chroma telemetry disable file
+RUN mkdir -p /app/.cache/chroma && \
+    echo -n 00000000-0000-0000-0000-000000000000 > /app/.cache/chroma/telemetry_user_id
+
+# Copy backend source
+COPY ./backend /app/backend
+
+# Copy frontend build artifacts
+COPY --from=frontend-build /app/build /app/build
+COPY --from=frontend-build /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --from=frontend-build /app/package.json /app/package.json
+
+# Set ownership for nonroot user (UID 65532 is the standard nonroot user in dhi.io images)
+RUN chown -R 65532:65532 /app
+
+# =============================================================================
+# Stage 3: Runtime (hardened, minimal image)
+# =============================================================================
+FROM dhi.io/python:3.11.14-debian13
+
+ARG BUILD_HASH
+
+# Copy virtual environment from builder
+COPY --from=backend-build /app/.venv /app/.venv
+
+# Copy application files
+COPY --from=backend-build /app/backend /app/backend
+COPY --from=backend-build /app/build /app/build
+COPY --from=backend-build /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --from=backend-build /app/package.json /app/package.json
+COPY --from=backend-build /app/.cache /app/.cache
+
+# Copy cache directories
+COPY --from=backend-build /app/backend/data /app/backend/data
+
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app/.venv/lib/python3.11/site-packages" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Application configuration - LITE mode settings
+ENV ENV=prod \
+    PORT=8080 \
+    HOST=0.0.0.0 \
+    USE_CUDA_DOCKER=false \
+    USE_SLIM_DOCKER=true
+
+# Disable local embedding/whisper - use external APIs
+ENV RAG_EMBEDDING_ENGINE="openai" \
+    AUDIO_STT_ENGINE="openai" \
+    AUDIO_TTS_ENGINE="openai" \
+    ENABLE_RAG_LOCAL_WEB_FETCH=false
+
+# Tiktoken settings (lightweight, still useful)
+ENV TIKTOKEN_ENCODING_NAME="cl100k_base" \
+    TIKTOKEN_CACHE_DIR="/app/backend/data/cache/tiktoken"
+
+# Security and telemetry
+ENV OPENAI_API_KEY="" \
+    WEBUI_SECRET_KEY="" \
+    SCARF_NO_ANALYTICS=true \
+    DO_NOT_TRACK=true \
+    ANONYMIZED_TELEMETRY=false
+
+# Build metadata
+ENV WEBUI_BUILD_VERSION=${BUILD_HASH} \
+    DOCKER=true
+
+# Home directory for the nonroot user
+ENV HOME=/app
+
+WORKDIR /app/backend
+
+EXPOSE 8080
+
+USER nonroot
+# Note: Hardened runtime images have no shell, so we use Python entrypoint
+CMD ["python", "start_safe.py"]
