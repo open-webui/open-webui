@@ -1353,8 +1353,47 @@ export const getUsage = async (token: string = '') => {
 	return res;
 };
 
-export const getBackendConfig = async () => {
-	let error = null;
+/**
+ * Result of backend config fetch with authentication state
+ */
+export interface BackendConfigResult {
+	/**
+	 * Backend configuration data (null if fetch failed)
+	 */
+	config: any | null;
+	
+	/**
+	 * Authentication state determined from the fetch result
+	 */
+	authState: 'authenticated' | 'unauthenticated' | 'unknown';
+	
+	/**
+	 * Whether the fetch failed due to a network/CORS error (auth redirect)
+	 */
+	isAuthRedirect: boolean;
+	
+	/**
+	 * Error object if fetch failed (null if successful)
+	 */
+	error: any | null;
+}
+
+/**
+ * Get backend configuration with authentication state
+ * 
+ * This function returns both the config and auth state, rather than throwing errors.
+ * Network/CORS failures that occur during auth redirects are mapped to unauthenticated state.
+ * 
+ * Why this approach:
+ * - Authentication expiry is a state transition, not an error condition
+ * - CORS-blocked redirects indicate unauthenticated state, not a backend error
+ * - Explicit state prevents treating auth issues as generic 500 errors
+ * 
+ * @returns Backend config result with auth state
+ */
+export const getBackendConfigWithAuthState = async (): Promise<BackendConfigResult> => {
+	let error: any = null;
+	let isAuthRedirect = false;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/config`, {
 		method: 'GET',
@@ -1364,20 +1403,108 @@ export const getBackendConfig = async () => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const errorData = await res.json();
+				// 401 Unauthorized indicates unauthenticated state
+				if (res.status === 401) {
+					return {
+						config: null,
+						authState: 'unauthenticated' as const,
+						isAuthRedirect: false,
+						error: errorData
+					};
+				}
+				throw errorData;
+			}
 			return res.json();
 		})
 		.catch((err) => {
-			console.error(err);
+			console.error('Backend config fetch error:', err);
 			error = err;
-			return null;
+			
+			// Detect CORS/network errors that occur when reverse proxy redirects to external auth
+			// These errors indicate the request was blocked by browser security (CORS policy)
+			// which happens with forward authentication redirects in PWAs
+			// 
+			// IMPORTANT: We map these to unauthenticated state, not error state
+			// This is because auth redirects are expected behavior, not failures
+			if (
+				err instanceof TypeError ||
+				err instanceof DOMException ||
+				(err?.message && (
+					err.message.includes('CORS') ||
+					err.message.includes('Failed to fetch') ||
+					err.message.includes('NetworkError') ||
+					err.message.includes('ERR_FAILED') ||
+					err.message.includes('network error') ||
+					err.message.includes('redirected')
+				)) ||
+				(err?.name && (
+					err.name === 'TypeError' ||
+					err.name === 'NetworkError' ||
+					err.name === 'DOMException'
+				))
+			) {
+				isAuthRedirect = true;
+				// Network/CORS errors during auth redirect = unauthenticated state
+				return {
+					config: null,
+					authState: 'unauthenticated' as const,
+					isAuthRedirect: true,
+					error: null // Don't treat auth redirect as an error
+				};
+			}
+			
+			// Other errors are real backend errors
+			return {
+				config: null,
+				authState: 'unknown' as const,
+				isAuthRedirect: false,
+				error: err
+			};
 		});
 
-	if (error) {
-		throw error;
+	// If we got a result object (from error handling), return it
+	if (res && typeof res === 'object' && 'authState' in res) {
+		return res as BackendConfigResult;
 	}
 
-	return res;
+	// Successful fetch = authenticated (config is available)
+	return {
+		config: res,
+		authState: 'authenticated' as const,
+		isAuthRedirect: false,
+		error: null
+	};
+};
+
+/**
+ * Get backend configuration (legacy function for backward compatibility)
+ * 
+ * @deprecated Use getBackendConfigWithAuthState() for new code
+ * @returns Backend configuration
+ * @throws Error if config fetch fails
+ */
+export const getBackendConfig = async () => {
+	const result = await getBackendConfigWithAuthState();
+	
+	if (result.error && !result.isAuthRedirect) {
+		// Only throw non-auth errors for backward compatibility
+		throw result.error;
+	}
+	
+	if (!result.config) {
+		// If no config and not auth redirect, throw error
+		if (result.isAuthRedirect) {
+			// For auth redirects, throw a special error that can be caught
+			const authError = new Error('Authentication required');
+			(authError as any).isAuthRedirect = true;
+			throw authError;
+		}
+		throw new Error('Failed to fetch backend config');
+	}
+	
+	return result.config;
 };
 
 export const getChangelog = async () => {

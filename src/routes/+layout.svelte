@@ -43,8 +43,18 @@
 	import '../app.css';
 	import 'tippy.js/dist/tippy.css';
 
-	import { executeToolServer, getBackendConfig, getVersion } from '$lib/apis';
+	import { executeToolServer, getBackendConfig, getBackendConfigWithAuthState, getVersion } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { 
+		AuthState, 
+		AuthMode, 
+		type AuthMetadata,
+		authState, 
+		authMetadata, 
+		setAuthState,
+		resetAuthState 
+	} from '$lib/auth/authState';
+	import { onAuthStateChange, handleAuthRedirect } from '$lib/auth/authRedirect';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
 
@@ -745,66 +755,131 @@
 			}
 		});
 
-		let backendConfig = null;
-		try {
-			backendConfig = await getBackendConfig();
-			console.log('Backend config:', backendConfig);
-		} catch (error) {
-			console.error('Error loading backend config:', error);
-		}
-		// Initialize i18n even if we didn't get a backend config,
-		// so `/error` can show something that's not `undefined`.
+		/**
+		 * App Bootstrap with Authentication State Management
+		 * 
+		 * This section uses a first-class authentication state model instead of
+		 * inferring state from errors. Authentication expiry is treated as a state
+		 * transition (authenticated -> unauthenticated), not an error condition.
+		 */
 
+		// Fetch backend config with authentication state
+		const configResult = await getBackendConfigWithAuthState();
+		
+		// Extract auth metadata from config if available
+		let metadata: AuthMetadata | null = null;
+		if (configResult.config?.auth) {
+			const authData = configResult.config.auth;
+			// Map backend auth mode to frontend AuthMode enum
+			let mode = AuthMode.FORM;
+			switch (authData.mode) {
+				case 'trusted-header':
+					mode = AuthMode.TRUSTED_HEADER;
+					break;
+				case 'oauth':
+					mode = AuthMode.OAUTH;
+					break;
+				case 'ldap':
+					mode = AuthMode.LDAP;
+					break;
+				case 'none':
+					mode = AuthMode.NONE;
+					break;
+				default:
+					mode = AuthMode.FORM;
+			}
+			
+			metadata = {
+				mode,
+				redirectOnUnauthenticated: authData.redirectOnUnauthenticated ?? false,
+				signoutRedirectUrl: authData.signoutRedirectUrl,
+				trustedHeaderEnabled: authData.trustedHeaderEnabled ?? false,
+				loginFormEnabled: authData.loginFormEnabled ?? false,
+				signupEnabled: authData.signupEnabled ?? false
+			};
+			authMetadata.set(metadata);
+		}
+
+		// Map config result to authentication state
+		// This is the key: we determine state from the result, not from errors
+		let currentAuthState: AuthState;
+		if (configResult.authState === 'authenticated') {
+			currentAuthState = AuthState.AUTHENTICATED;
+		} else if (configResult.authState === 'unauthenticated' || configResult.isAuthRedirect) {
+			// Network/CORS errors during auth redirect = unauthenticated state
+			// This is NOT an error condition, it's a state transition
+			currentAuthState = AuthState.UNAUTHENTICATED;
+		} else {
+			currentAuthState = AuthState.UNKNOWN;
+		}
+		
+		setAuthState(currentAuthState);
+
+		// Initialize i18n even if we didn't get a backend config
 		initI18n(localStorage?.locale);
 		if (!localStorage.locale) {
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
 				? navigator.languages
 				: [navigator.language || navigator.userLanguage];
-			const lang = backendConfig.default_locale
-				? backendConfig.default_locale
+			const lang = configResult.config?.default_locale
+				? configResult.config.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
 			changeLanguage(lang);
 			dayjs.locale(lang);
 		}
 
-		if (backendConfig) {
-			// Save Backend Status to Store
-			await config.set(backendConfig);
-			await WEBUI_NAME.set(backendConfig.name);
+		// Handle authentication state change (declarative redirect handling)
+		// This will automatically redirect if needed based on auth state and mode
+		onAuthStateChange(currentAuthState, metadata);
+
+		// If we got config, save it to store
+		if (configResult.config) {
+			await config.set(configResult.config);
+			await WEBUI_NAME.set(configResult.config.name);
 
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
 
-				const currentUrl = `${window.location.pathname}${window.location.search}`;
-				const encodedUrl = encodeURIComponent(currentUrl);
-
-				if (localStorage.token) {
-					// Get Session User Info
+				// If authenticated, verify session user
+				if (currentAuthState === AuthState.AUTHENTICATED && localStorage.token) {
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(`${error}`);
+						console.warn('Session user verification failed:', error);
+						// Session invalid, transition to unauthenticated state
+						setAuthState(AuthState.UNAUTHENTICATED);
+						localStorage.removeItem('token');
+						onAuthStateChange(AuthState.UNAUTHENTICATED, metadata);
 						return null;
 					});
 
 					if (sessionUser) {
 						await user.set(sessionUser);
-						await config.set(await getBackendConfig());
-					} else {
-						// Redirect Invalid Session User to /auth Page
-						localStorage.removeItem('token');
-						await goto(`/auth?redirect=${encodedUrl}`);
-					}
-				} else {
-					// Don't redirect if we're already on the auth page
-					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
-						await goto(`/auth?redirect=${encodedUrl}`);
+						// Refresh config after user is set
+						try {
+							const refreshResult = await getBackendConfigWithAuthState();
+							if (refreshResult.config) {
+								await config.set(refreshResult.config);
+							}
+							// Update auth state if it changed
+							if (refreshResult.authState === 'authenticated') {
+								setAuthState(AuthState.AUTHENTICATED);
+							} else if (refreshResult.authState === 'unauthenticated' || refreshResult.isAuthRedirect) {
+								setAuthState(AuthState.UNAUTHENTICATED);
+								onAuthStateChange(AuthState.UNAUTHENTICATED, metadata);
+							}
+						} catch (refreshError) {
+							console.warn('Failed to refresh backend config:', refreshError);
+							// Don't treat config refresh failure as auth failure
+						}
 					}
 				}
 			}
-		} else {
-			// Redirect to /error when Backend Not Detected
-			await goto(`/error`);
+		} else if (!configResult.isAuthRedirect && configResult.error) {
+			// Only show error page for real backend errors, not auth redirects
+			// Auth redirects are handled by onAuthStateChange above
+			if ($page.url.pathname !== '/error') {
+				await goto(`/error`);
+			}
 		}
 
 		await tick();

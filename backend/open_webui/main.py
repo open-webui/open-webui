@@ -1931,12 +1931,35 @@ async def get_app_config(request: Request):
     if user is None:
         onboarding = user_count == 0
 
+    # Determine authentication mode for frontend
+    auth_mode = "form"
+    if app.state.AUTH_TRUSTED_EMAIL_HEADER:
+        auth_mode = "trusted-header"
+    elif app.state.config.ENABLE_LDAP:
+        auth_mode = "ldap"
+    elif OAUTH_PROVIDERS:
+        auth_mode = "oauth"
+    elif WEBUI_AUTH == False:
+        auth_mode = "none"
+
+    # Build auth metadata for frontend
+    # This helps the frontend understand how to handle authentication redirects
+    auth_metadata = {
+        "mode": auth_mode,
+        "redirectOnUnauthenticated": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
+        "signoutRedirectUrl": app.state.WEBUI_AUTH_SIGNOUT_REDIRECT_URL if hasattr(app.state, 'WEBUI_AUTH_SIGNOUT_REDIRECT_URL') else None,
+        "trustedHeaderEnabled": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
+        "loginFormEnabled": app.state.config.ENABLE_LOGIN_FORM,
+        "signupEnabled": app.state.config.ENABLE_SIGNUP,
+    }
+
     return {
         **({"onboarding": True} if onboarding else {}),
         "status": True,
         "name": app.state.WEBUI_NAME,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
+        "auth": auth_metadata,
         "oauth": {
             "providers": {
                 name: config.get("name", name)

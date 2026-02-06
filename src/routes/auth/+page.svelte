@@ -8,7 +8,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import { getBackendConfig } from '$lib/apis';
+	import { getBackendConfig, getBackendConfigWithAuthState } from '$lib/apis';
 	import {
 		ldapUserSignIn,
 		getSessionUser,
@@ -16,6 +16,7 @@
 		userSignUp,
 		updateUserTimezone
 	} from '$lib/apis/auths';
+	import { AuthState, AuthMode, setAuthState, authMetadata } from '$lib/auth/authState';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
@@ -51,7 +52,59 @@
 			}
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
-			await config.set(await getBackendConfig());
+			
+			// Update authentication state to authenticated
+			setAuthState(AuthState.AUTHENTICATED);
+			
+			// Fetch backend config with auth state
+			try {
+				const configResult = await getBackendConfigWithAuthState();
+				if (configResult.config) {
+					await config.set(configResult.config);
+					
+					// Update auth metadata if available
+					if (configResult.config.auth) {
+						const authData = configResult.config.auth;
+						let mode = AuthMode.FORM;
+						switch (authData.mode) {
+							case 'trusted-header':
+								mode = AuthMode.TRUSTED_HEADER;
+								break;
+							case 'oauth':
+								mode = AuthMode.OAUTH;
+								break;
+							case 'ldap':
+								mode = AuthMode.LDAP;
+								break;
+							case 'none':
+								mode = AuthMode.NONE;
+								break;
+						}
+						authMetadata.set({
+							mode,
+							redirectOnUnauthenticated: authData.redirectOnUnauthenticated ?? false,
+							signoutRedirectUrl: authData.signoutRedirectUrl,
+							trustedHeaderEnabled: authData.trustedHeaderEnabled ?? false,
+							loginFormEnabled: authData.loginFormEnabled ?? false,
+							signupEnabled: authData.signupEnabled ?? false
+						});
+					}
+				}
+				
+				// Update auth state based on config result
+				if (configResult.authState === 'authenticated') {
+					setAuthState(AuthState.AUTHENTICATED);
+				} else if (configResult.authState === 'unauthenticated' || configResult.isAuthRedirect) {
+					// This shouldn't happen after successful login, but handle it gracefully
+					console.warn('Config fetch indicated unauthenticated state after login');
+					setAuthState(AuthState.UNAUTHENTICATED);
+				}
+			} catch (configError) {
+				// If config fetch fails, log but continue - user is authenticated
+				console.warn('Failed to fetch backend config after login:', configError);
+				// Still set authenticated state since we have a valid session
+				setAuthState(AuthState.AUTHENTICATED);
+			}
 
 			// Update user timezone
 			const timezone = getUserTimezone();
@@ -186,7 +239,18 @@
 		loaded = true;
 		setLogoImage();
 
-		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
+		// Use auth metadata to determine authentication mode
+		// This provides a more reliable way to check auth mode than inferring from config
+		const metadata = $authMetadata;
+		const isTrustedHeaderAuth = metadata?.mode === AuthMode.TRUSTED_HEADER;
+		const isAuthDisabled = metadata?.mode === AuthMode.NONE;
+		
+		// Fallback to config-based check for backward compatibility
+		const useConfigFallback = !metadata && $config;
+		const configTrustedHeader = useConfigFallback && ($config?.features.auth_trusted_header ?? false);
+		const configAuthDisabled = useConfigFallback && $config?.features.auth === false;
+		
+		if (isTrustedHeaderAuth || configTrustedHeader || isAuthDisabled || configAuthDisabled) {
 			await signInHandler();
 		} else {
 			onboarding = $config?.onboarding ?? false;

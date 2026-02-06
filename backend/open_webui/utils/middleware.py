@@ -1707,7 +1707,8 @@ async def chat_completion_files_handler(
                     queries_response = {"queries": [queries_response]}
 
                 queries = queries_response.get("queries", [])
-            except:
+            except Exception as query_error:
+                log.debug(f"Error processing queries response: {query_error}")
                 pass
 
             await __event_emitter__(
