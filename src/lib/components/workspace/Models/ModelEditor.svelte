@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { models, tools, functions, knowledge as knowledgeCollections, theme, user } from '$lib/stores';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -56,12 +56,14 @@
 		}
 	}
 
+	$: faviconUrl = `/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`;
+
 	let info = {
 		id: '',
 		base_model_id: null,
 		name: '',
 		meta: {
-			profile_image_url: '/static/favicon.png',
+			profile_image_url: `/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`,
 			description: '',
 			suggestion_prompts: null,
 			tags: []
@@ -367,7 +369,7 @@
 					<div class="self-center">
 						<button
 							class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
-							'/static/favicon.png'
+							faviconUrl
 								? 'bg-transparent'
 								: 'bg-white'} shadow-xl group relative"
 							type="button"
@@ -383,7 +385,7 @@
 								/>
 							{:else}
 								<img
-									src="/static/favicon.png"
+									src={faviconUrl}
 									alt="model profile"
 									class=" rounded-xl size-72 md:size-60 object-cover shrink-0"
 								/>
@@ -419,7 +421,7 @@
 							<button
 								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
 								on:click={() => {
-									info.meta.profile_image_url = '/static/favicon.png';
+									info.meta.profile_image_url = faviconUrl;
 								}}
 								type="button"
 							>

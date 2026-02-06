@@ -15,7 +15,7 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
+	import { config, models, settings, temporaryChatEnabled, TTSWorker, user, theme } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -591,7 +591,7 @@
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3`}>
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
-					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`)}
 				className={'size-8'}
 			/>
 		</div>

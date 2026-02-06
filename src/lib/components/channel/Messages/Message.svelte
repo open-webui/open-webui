@@ -13,7 +13,7 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { settings, user, shortCodesToEmojis } from '$lib/stores';
+	import { settings, user, shortCodesToEmojis, theme } from '$lib/stores';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -144,7 +144,7 @@
 					<ProfilePreview user={message.user}>
 						<ProfileImage
 							src={message.user?.profile_image_url ??
-								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`)}
 							className={'size-8 translate-y-1 ml-0.5'}
 						/>
 					</ProfilePreview>

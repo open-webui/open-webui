@@ -5,7 +5,7 @@
 	env.backends.onnx.wasm.wasmPaths = '/wasm/';
 
 	import { onMount, getContext } from 'svelte';
-	import { models } from '$lib/stores';
+	import { models, theme } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -353,7 +353,7 @@
 							<div class="flex items-center gap-2">
 								<div class="shrink-0">
 									<img
-										src={model?.info?.meta?.profile_image_url ?? '/favicon.png'}
+										src={model?.info?.meta?.profile_image_url ?? `/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`}
 										alt={model.name}
 										class="size-5 rounded-full object-cover shrink-0"
 									/>

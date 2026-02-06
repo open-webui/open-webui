@@ -2,10 +2,10 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" type="image/png" href="/static/favicon.png" />
-		<link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
-		<link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
-		<link rel="shortcut icon" href="/static/favicon.ico" />
+		<link id="favicon-link" rel="icon" type="image/png" href="/static/favicon.png" />
+		<link id="favicon-96-link" rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
+		<link id="favicon-svg-link" rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+		<link id="favicon-ico-link" rel="shortcut icon" href="/static/favicon.ico" />
 		<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
 		<meta name="apple-mobile-web-app-title" content="CGCE TechSense" />
 
@@ -63,16 +63,32 @@
 					metaThemeColorTag.setAttribute('content', '#171717');
 				}
 
+				// Set all favicons based on dark mode
+				function setFavicons(isDark) {
+					const suffix = isDark ? '-dark' : '';
+					const fl = document.getElementById('favicon-link');
+					const fl96 = document.getElementById('favicon-96-link');
+					const flsvg = document.getElementById('favicon-svg-link');
+					const flico = document.getElementById('favicon-ico-link');
+					if (fl) fl.href = '/static/favicon' + suffix + '.png';
+					if (fl96) fl96.href = '/static/favicon' + suffix + '-96x96.png';
+					if (flsvg) flsvg.href = '/static/favicon' + suffix + '.svg';
+					if (flico) flico.href = '/static/favicon' + suffix + '.ico';
+				}
+				setFavicons(document.documentElement.classList.contains('dark'));
+
 				window.matchMedia('(prefers-color-scheme: dark)').addListener((e) => {
 					if (localStorage.theme === 'system') {
 						if (e.matches) {
 							document.documentElement.classList.add('dark');
 							document.documentElement.classList.remove('light');
 							metaThemeColorTag.setAttribute('content', '#171717');
+							setFavicons(true);
 						} else {
 							document.documentElement.classList.add('light');
 							document.documentElement.classList.remove('dark');
 							metaThemeColorTag.setAttribute('content', '#ffffff');
+							setFavicons(false);
 						}
 					}
 				});

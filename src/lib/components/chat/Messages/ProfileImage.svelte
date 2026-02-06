@@ -1,14 +1,18 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { theme } from '$lib/stores';
 
 	export let className = 'size-8';
-	export let src = `${WEBUI_BASE_URL}/static/favicon.png`;
+
+	$: defaultFavicon = `${WEBUI_BASE_URL}/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`;
+
+	export let src = '';
 </script>
 
 <img
 	crossorigin="anonymous"
 	src={src === ''
-		? `${WEBUI_BASE_URL}/static/favicon.png`
+		? defaultFavicon
 		: src.startsWith(WEBUI_BASE_URL) ||
 			  src.startsWith('https://www.gravatar.com/avatar/') ||
 			  src.startsWith('data:') ||

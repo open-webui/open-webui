@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { config, models, settings } from '$lib/stores';
+	import { config, models, settings, theme } from '$lib/stores';
 
 	import { onMount, tick, getContext } from 'svelte';
 	import { createNewModel, getModelById } from '$lib/apis/models';
@@ -30,7 +30,7 @@
 				...modelInfo,
 				meta: {
 					...modelInfo.meta,
-					profile_image_url: modelInfo.meta.profile_image_url ?? '/static/favicon.png',
+					profile_image_url: modelInfo.meta.profile_image_url ?? `/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`,
 					suggestion_prompts: modelInfo.meta.suggestion_prompts
 						? modelInfo.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
 						: null

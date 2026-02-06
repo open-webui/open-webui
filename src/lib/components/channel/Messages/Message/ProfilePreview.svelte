@@ -4,7 +4,7 @@
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { activeUserIds } from '$lib/stores';
+	import { activeUserIds, theme } from '$lib/stores';
 
 	export let side = 'right';
 	export let align = 'top';
@@ -40,7 +40,7 @@
 					<div class="py-8 relative bg-gray-900 rounded-t-lg">
 						<img
 							crossorigin="anonymous"
-							src={user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+							src={user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/${['dark', 'oled-dark'].includes($theme) ? 'favicon-dark' : 'favicon'}.png`}
 							class=" absolute -bottom-5 left-3 size-12 ml-0.5 object-cover rounded-full -translate-y-[1px]"
 							alt="profile"
 						/>
