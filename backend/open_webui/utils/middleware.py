@@ -73,7 +73,7 @@ from open_webui.models.models import Models
 from open_webui.retrieval.utils import get_sources_from_items
 
 
-from open_webui.utils.sanitize import strip_markdown_code_fences
+from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     get_task_model_id,
@@ -4175,8 +4175,8 @@ async def streaming_chat_response_handler(response, ctx):
                         try:
                             if content_blocks[-1]["attributes"].get("type") == "code":
                                 code = content_blocks[-1]["content"]
-                                # Strip markdown fences if model included them
-                                code = strip_markdown_code_fences(code)
+                                # Sanitize code (strips ANSI codes and markdown fences)
+                                code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
                                     blocking_code = textwrap.dedent(

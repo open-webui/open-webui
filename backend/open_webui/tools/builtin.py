@@ -36,7 +36,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.channels import Channels, ChannelMember, Channel
 from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
-from open_webui.utils.sanitize import strip_markdown_code_fences
+from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
 
@@ -371,8 +371,8 @@ async def execute_code(
         return json.dumps({"error": "Request context not available"})
 
     try:
-        # Strip markdown fences if model included them
-        code = strip_markdown_code_fences(code)
+        # Sanitize code (strips ANSI codes and markdown fences)
+        code = sanitize_code(code)
 
         # Import blocked modules from config (same as middleware)
         from open_webui.config import CODE_INTERPRETER_BLOCKED_MODULES
