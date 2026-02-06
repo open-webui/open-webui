@@ -322,7 +322,7 @@
 			.replace(/<summary>.*?<\/summary>/gi, '')
 			.trim()}
 
-		{#if textContent.length > 0}
+		{#if textContent.length > 0 || token?.attributes?.type === 'tool_calls'}
 			<Collapsible
 				title={token.summary}
 				open={$settings?.expandDetails ?? false}
