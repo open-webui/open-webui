@@ -132,22 +132,23 @@
 		{/if}
 	{:else if token.type === 'table'}
 		<div class="relative w-full group mb-2">
-			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
+			<div class="scrollbar-hidden relative overflow-x-auto max-w-full" dir="auto">
+				<span class="sr-only" aria-hidden="true">{token.header[0]?.text || ''}</span>
 				<table
-					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
-					dir="auto"
+					class=" w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
 				>
 					<thead
 						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
 					>
 						<tr class="">
 							{#each token.header as header, headerIdx}
-								<th
-									scope="col"
-									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
-									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
-								>
-									<div class="gap-1.5 text-left">
+							<th
+								scope="col"
+								class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
+								style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
+								dir="auto"
+							>
+									<div class="gap-1.5 text-start">
 										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
@@ -166,15 +167,16 @@
 						{#each token.rows as row, rowIdx}
 							<tr class="bg-white dark:bg-gray-900 text-xs">
 								{#each row ?? [] as cell, cellIdx}
-									<td
-										class="px-3! py-2! text-gray-900 dark:text-white w-max {token.rows.length -
-											1 ===
-										rowIdx
-											? ''
-											: 'border-b border-gray-50! dark:border-gray-850!'}"
-										style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
-									>
-										<div class="break-normal">
+								<td
+									class="px-3! py-2! text-gray-900 dark:text-white w-max {token.rows.length -
+										1 ===
+									rowIdx
+										? ''
+										: 'border-b border-gray-50! dark:border-gray-850!'}"
+									style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
+									dir="auto"
+								>
+										<div class="break-normal text-start">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
