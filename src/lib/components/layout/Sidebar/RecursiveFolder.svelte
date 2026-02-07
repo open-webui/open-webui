@@ -643,6 +643,7 @@
 						<ChatItem
 							id={chat.id}
 							title={chat.title}
+							updatedAt={chat.updated_at}
 							{shiftKey}
 							on:change={(e) => {
 								dispatch('change', e.detail);

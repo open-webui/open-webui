@@ -47,11 +47,29 @@
 
 	export let id;
 	export let title;
+	export let updatedAt: number | null = null;
 
 	export let selected = false;
 	export let shiftKey = false;
 
 	export let onDragEnd = () => {};
+
+	function formatTimeAgo(timestamp: number): string {
+		const now = Date.now();
+		const diff = now - timestamp * 1000; // timestamp is in seconds
+
+		const seconds = Math.floor(diff / 1000);
+		const minutes = Math.floor(seconds / 60);
+		const hours = Math.floor(minutes / 60);
+		const days = Math.floor(hours / 24);
+		const weeks = Math.floor(days / 7);
+
+		if (weeks > 0) return `${weeks}w`;
+		if (days > 0) return `${days}d`;
+		if (hours > 0) return `${hours}h`;
+		if (minutes > 0) return `${minutes}m`;
+		return 'now';
+	}
 
 	let chat = null;
 
@@ -423,11 +441,18 @@
 			on:focus={(e) => {}}
 			draggable="false"
 		>
-			<div class=" flex self-center flex-1 w-full">
-				<div dir="auto" class=" text-left self-center overflow-hidden w-full h-[20px] truncate">
+			<div class="flex self-center flex-1 w-full min-w-0">
+				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px] truncate">
 					{title}
 				</div>
 			</div>
+
+			<!-- Time ago indicator -->
+			{#if updatedAt && !mouseOver}
+				<div class="shrink-0 self-center text-[10px] text-gray-400 dark:text-gray-500 pl-2">
+					{formatTimeAgo(updatedAt)}
+				</div>
+			{/if}
 		</a>
 	{/if}
 

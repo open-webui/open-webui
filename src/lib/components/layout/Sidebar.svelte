@@ -1244,6 +1244,7 @@
 												className=""
 												id={chat.id}
 												title={chat.title}
+												updatedAt={chat.updated_at}
 												{shiftKey}
 												selected={selectedChatId === chat.id}
 												on:select={() => {
@@ -1304,6 +1305,7 @@
 										className=""
 										id={chat.id}
 										title={chat.title}
+										updatedAt={chat.updated_at}
 										{shiftKey}
 										selected={selectedChatId === chat.id}
 										on:select={() => {
