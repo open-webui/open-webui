@@ -228,9 +228,11 @@
 {#if $mobile}
 	<!-- ==================== MOBILE LAYOUT ==================== -->
 	<div
-		class="h-screen flex flex-col bg-contain bg-center bg-no-repeat overflow-hidden"
+		class="h-screen flex flex-col bg-contain bg-center bg-no-repeat overflow-hidden relative"
 		style="background-image: url('/assets/images/bg_chat_placeholder.png');"
 	>
+		<!-- Dark mode overlay -->
+		<div class="absolute inset-0 bg-gray-900/70 dark:block hidden pointer-events-none z-0"></div>
 		<!-- Inner scroll container (padding applied here to avoid overflow) -->
 		<div class="pt-[60px] flex-1 overflow-y-auto scrollbar-none">
 			<!-- Content area -->
@@ -370,9 +372,11 @@
 {:else}
 	<!-- ==================== DESKTOP LAYOUT ==================== -->
 	<div
-		class="h-screen flex flex-col bg-contain bg-center bg-no-repeat flex-1"
+		class="h-screen flex flex-col bg-contain bg-center bg-no-repeat flex-1 relative"
 		style="background-image: url('/assets/images/bg_chat_placeholder.png');"
 	>
+		<!-- Dark mode overlay -->
+		<div class="absolute inset-0 bg-gray-900/70 dark:block hidden pointer-events-none z-0"></div>
 		<!-- Scrollable content area -->
 		<div class="flex-1 overflow-y-auto scrollbar-hidden flex flex-col items-center">
 			<!-- Spacer to position input at vertical center initially -->

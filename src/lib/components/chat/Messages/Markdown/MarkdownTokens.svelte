@@ -211,7 +211,7 @@
 
 			<!-- View full table button -->
 			<button
-				class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 text-caption text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-gray-900/80 px-3 py-1.5 rounded-full backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 transition z-10"
+				class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-caption font-medium text-blue-600 dark:text-blue-400 bg-white/90 dark:bg-gray-800/90 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition z-10"
 				on:click={() => (tableModals[tokenIdx] = true)}
 			>
 				<ArrowsPointingOut className="size-3" />

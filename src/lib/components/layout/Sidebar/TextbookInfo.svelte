@@ -119,8 +119,10 @@
 					backdrop-blur-[20px]
 					rounded-[20px]
 					hover:bg-white/85 dark:hover:bg-gray-900/70
-					transition cursor-pointer text-left"
+					transition cursor-pointer text-left
+					{$selectedTextbookSection?.id ? 'ring-2 ring-blue-400/50' : ''}"
 				on:click={clearSection}
+				title={$selectedTextbookSection?.id ? '클릭하여 챕터 선택 해제' : ''}
 			>
 				<div class="w-full text-body-4 text-gray-950 dark:text-white">{textbookData.title}</div>
 				<div class="flex flex-col gap-1 w-full">
@@ -145,7 +147,7 @@
 								transition text-left"
 							on:click={() => toggleSection(section.id)}
 						>
-							<span class="text-caption text-gray-950 dark:text-white flex-1 truncate">{section.title}</span>
+							<span class="text-caption text-gray-950 dark:text-white flex-1 truncate" title={section.title}>{section.title}</span>
 							<ChevronDown
 								className="size-5 flex-shrink-0 transition-transform duration-200 text-gray-950 dark:text-white {expandedSections[section.id]
 									? 'rotate-180'
@@ -169,7 +171,7 @@
 										<span class="text-body-4 flex-1 truncate
 											{$selectedTextbookSection?.id === subsection.id
 												? 'text-gray-950 dark:text-white'
-												: 'text-gray-500 dark:text-gray-600 hover:text-gray-950 dark:hover:text-white'}">{subsection.title}</span>
+												: 'text-gray-500 dark:text-gray-600 hover:text-gray-950 dark:hover:text-white'}" title={subsection.title}>{subsection.title}</span>
 									</button>
 								{/each}
 							</div>

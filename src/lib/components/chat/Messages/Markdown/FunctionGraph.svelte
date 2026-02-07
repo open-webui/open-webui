@@ -165,6 +165,31 @@
 			});
 		}
 
+		// Polar graph layout
+		if (spec.type === 'polar_2d') {
+			return {
+				...baseLayout,
+				width: 192,
+				height: 192,
+				margin: { t: 10, r: 20, b: 10, l: 20 },
+				polar: {
+					bgcolor: 'transparent',
+					radialaxis: {
+						showticklabels: true,
+						tickfont: { color: textColor, size: 7 },
+						gridcolor: gridColor
+					},
+					angularaxis: {
+						showticklabels: true,
+						tickfont: { color: textColor, size: 7 },
+						gridcolor: gridColor,
+						direction: 'counterclockwise'
+					}
+				},
+				showlegend: false
+			};
+		}
+
 		return {
 			...baseLayout,
 			width: 192, // 썸네일 크기 (w-48 = 192px)

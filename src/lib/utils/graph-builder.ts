@@ -408,7 +408,7 @@ export function isTypeSupported(type: string): boolean {
 		'function_2d', 'parametric_2d', 'function_parametric_2d', 'phase_plane', 'scatter_2d', 'point_2d', 'line_2d',
 		'composite_2d', 'multi_scatter_2d', 'cartesian', 'histogram_2d', 'vector_2d',
 		'heatmap_2d', 'contour_2d', 'implicit_2d',
-		'pie_2d', 'bar_2d',
+		'pie_2d', 'bar_2d', 'polar_2d',
 		'function_3d', 'parametric_3d', 'scatter_3d', 'composite_3d', 'vector_field_3d'
 	];
 	return supportedTypes.includes(type);
@@ -669,6 +669,103 @@ export function buildParametric2DTraces(layer: LayerSpec) {
 		name: legendName,
 		showlegend: false
 	}];
+}
+
+// polar_2d: r = f(theta) — polar coordinate graph
+// Converts to Cartesian (x = r*cos(θ), y = r*sin(θ)) and renders with scatterpolar
+export function buildPolar2DTraces(layer: LayerSpec) {
+	console.log('[GraphBuilder] buildPolar2DTraces called with:', {
+		expression: layer.expression,
+		expressions: layer.expressions,
+		domain: layer.domain
+	});
+
+	const layerAny = layer as any;
+
+	// Support single expression or expressions array (for multiple polar curves)
+	const exprList: string[] = [];
+	if (layer.expression) {
+		exprList.push(layer.expression);
+	} else if (layer.expressions && layer.expressions.length > 0) {
+		exprList.push(...layer.expressions);
+	} else if (layerAny.r_expression) {
+		exprList.push(layerAny.r_expression);
+	}
+
+	if (exprList.length === 0) {
+		console.error('[GraphBuilder] polar_2d requires expression or expressions');
+		return [];
+	}
+
+	// theta domain
+	let t0 = 0, t1 = Math.PI * 2;
+	if (layer.domain) {
+		const domainObj = layer.domain as any;
+		const domainArray = domainObj.theta || domainObj.t || (Array.isArray(domainObj) ? domainObj : null);
+		if (domainArray && Array.isArray(domainArray)) {
+			t0 = typeof domainArray[0] === 'string' ? compile(domainArray[0]).evaluate({}) : domainArray[0];
+			t1 = typeof domainArray[1] === 'string' ? compile(domainArray[1]).evaluate({}) : domainArray[1];
+		}
+	}
+	// Also check theta_axis
+	if (layerAny.theta_axis) {
+		const thetaAxis = layerAny.theta_axis;
+		if (typeof thetaAxis.min === 'number') t0 = thetaAxis.min;
+		if (typeof thetaAxis.max === 'number') t1 = thetaAxis.max;
+	}
+
+	const sampling = getSampling2D(layer.sampling) || 360;
+	const colors = normalizeColors(layer);
+	const defaultColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
+
+	const traces: any[] = [];
+
+	for (let i = 0; i < exprList.length; i++) {
+		const expr = exprList[i];
+		let fn;
+		try {
+			fn = compile(expr);
+		} catch (e) {
+			console.error('[GraphBuilder] Failed to compile polar expression:', expr, e);
+			continue;
+		}
+
+		const r: number[] = [];
+		const theta: number[] = [];
+
+		for (let j = 0; j <= sampling; j++) {
+			const th = t0 + ((t1 - t0) * j) / sampling;
+			try {
+				const rVal = fn.evaluate({ theta: th, t: th, x: th });
+				r.push(rVal);
+				theta.push(th * (180 / Math.PI)); // Plotly scatterpolar uses degrees
+			} catch {
+				r.push(NaN);
+				theta.push(th * (180 / Math.PI));
+			}
+		}
+
+		const color = colors[i] || defaultColors[i % defaultColors.length];
+		const curveName = exprList.length > 1 ? `r = ${expr}` : (layer.meta?.title || `r = ${expr}`);
+
+		traces.push({
+			r,
+			theta,
+			type: 'scatterpolar',
+			mode: 'lines',
+			line: {
+				color,
+				width: layer.style?.lineWidth ?? 2,
+				dash: getLineDash(layer.style?.lineStyle)
+			},
+			opacity: layer.style?.opacity,
+			name: curveName,
+			showlegend: exprList.length > 1
+		});
+	}
+
+	console.log('[GraphBuilder] polar_2d generated', traces.length, 'traces,', sampling, 'points each');
+	return traces;
 }
 
 // phase_plane: dx/dt = f(x,y), dy/dt = g(x,y) - vector field
@@ -2062,6 +2159,8 @@ export function buildLayerTraces(layer: LayerSpec, layerIndex: number, totalLaye
 		case 'parametric_2d':
 		case 'function_parametric_2d':
 			return buildParametric2DTraces(layer);
+		case 'polar_2d':
+			return buildPolar2DTraces(layer);
 		case 'phase_plane':
 			return buildPhasePlaneTraces(layer);
 		case 'scatter_2d':
@@ -2119,6 +2218,18 @@ export function buildComposite2DTraces(spec: GraphSpec): any[] {
 export function buildTraces(spec: GraphSpec): any[] {
 	console.log('[GraphBuilder] buildTraces called with type:', spec.type);
 
+	// Auto-correct: function_2d with 2-variable expression (x and y) → function_3d
+	if (spec.type === 'function_2d' && spec.expression) {
+		const expr = spec.expression;
+		// Check if expression uses both x and y as independent variables (not just 'xy' substring)
+		const usesX = /\bx\b/.test(expr);
+		const usesY = /\by\b/.test(expr);
+		if (usesX && usesY) {
+			console.log('[GraphBuilder] Auto-correcting function_2d → function_3d (expression uses both x and y):', expr);
+			spec = { ...spec, type: 'function_3d' };
+		}
+	}
+
 	switch (spec.type) {
 		// 2D graphs
 		case 'composite_2d':
@@ -2128,6 +2239,8 @@ export function buildTraces(spec: GraphSpec): any[] {
 		case 'parametric_2d':
 		case 'function_parametric_2d':
 			return buildParametric2DTraces(spec);
+		case 'polar_2d':
+			return buildPolar2DTraces(spec);
 		case 'phase_plane':
 			return buildPhasePlaneTraces(spec);
 		case 'scatter_2d':

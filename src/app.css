@@ -268,6 +268,15 @@ textarea::placeholder {
 	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
+/* #26 테이블 오버플로우 방지 */
+.markdown-prose table,
+.markdown-prose-sm table,
+.markdown-prose-xs table {
+	display: block;
+	overflow-x: auto;
+	max-width: 100%;
+}
+
 .markdown a {
 	@apply underline;
 }

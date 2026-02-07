@@ -975,6 +975,7 @@
 											className=""
 											id={chat.id}
 											title={chat.title}
+											updatedAt={chat.updated_at}
 											{shiftKey}
 											bookmarked={chatBookmarks[chat.id] || false}
 											selected={selectedChatId === chat.id}

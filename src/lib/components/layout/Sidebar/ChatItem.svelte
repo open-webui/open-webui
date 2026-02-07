@@ -53,8 +53,26 @@
 	export let selected = false;
 	export let shiftKey = false;
 	export let bookmarked = false;
+	export let updatedAt: number | null = null;
 
 	export let onDragEnd = () => {};
+
+	function formatRelativeTime(timestamp: number | null): string {
+		if (!timestamp) return '';
+		const now = Date.now();
+		// timestamp might be in seconds (Unix) or milliseconds
+		const ts = timestamp < 1e12 ? timestamp * 1000 : timestamp;
+		const diff = now - ts;
+		const minutes = Math.floor(diff / 60000);
+		if (minutes < 1) return '방금';
+		if (minutes < 60) return `${minutes}분 전`;
+		const hours = Math.floor(minutes / 60);
+		if (hours < 24) return `${hours}시간 전`;
+		const days = Math.floor(hours / 24);
+		if (days < 7) return `${days}일 전`;
+		if (days < 30) return `${Math.floor(days / 7)}주 전`;
+		return new Date(ts).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+	}
 
 	let chat = null;
 
@@ -439,16 +457,22 @@
 			on:focus={(e) => {}}
 			draggable="false"
 		>
-			<div class="flex self-center flex-1 w-full overflow-hidden pr-4">
+			<div class="flex self-center flex-1 w-full overflow-hidden pr-4 items-center gap-1">
 				<div
 					dir="auto"
-					class="text-body-4 text-left self-center overflow-hidden w-full truncate {id ===
+					class="text-body-4 text-left self-center overflow-hidden flex-1 truncate {id ===
 						$chatId || selected
 						? 'text-gray-800 dark:text-white'
 						: 'text-gray-600 dark:text-gray-600'}"
+					title={title}
 				>
 					{title}
 				</div>
+				{#if updatedAt}
+					<div class="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0">
+						{formatRelativeTime(updatedAt)}
+					</div>
+				{/if}
 			</div>
 		</a>
 	{/if}
@@ -466,7 +490,7 @@
 			id="sidebar-chat-item-menu "
 			class="{id === $chatId || confirmEdit || selected
 				? 'visible'
-				: 'invisible group-hover:visible'} items-center"
+				: $mobile ? 'visible' : 'invisible group-hover:visible'} items-center"
 			on:mouseenter={(e) => {
 				mouseOver = true;
 			}}
