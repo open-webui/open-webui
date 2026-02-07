@@ -33,10 +33,13 @@
 	import CreatePersonaPromptModal from './Personas/CreatePersonaPromptModal.svelte';
 	import CreatePromptGroupModal from './Personas/CreatePromptGroupModal.svelte';
 	import AddPromptToGroupModal from './Personas/AddPromptToGroupModal.svelte';
+	import PromptGroupMonitoring from './Personas/PromptGroupMonitoring.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
 	// State
+	let activeTab: 'prompts' | 'monitoring' = 'prompts';
+	let selectedMonitoringGroupId: string | null = null;
 	let loaded = false;
 	let promptGroups: PromptGroupWithMappings[] = [];
 	let personaPrompts: PersonaPrompt[] = [];
@@ -245,11 +248,43 @@
 		</p>
 	</div>
 
+	<!-- Tabs -->
+	<div class="flex gap-2 border-b border-gray-200 dark:border-gray-700">
+		<button
+			type="button"
+			class="px-4 py-2 text-sm font-medium transition relative"
+			class:text-blue-600={activeTab === 'prompts'}
+			class:dark:text-blue-400={activeTab === 'prompts'}
+			class:text-gray-500={activeTab !== 'prompts'}
+			class:dark:text-gray-400={activeTab !== 'prompts'}
+			on:click={() => (activeTab = 'prompts')}
+		>
+			프롬프트 관리
+			{#if activeTab === 'prompts'}
+				<div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400"></div>
+			{/if}
+		</button>
+		<button
+			type="button"
+			class="px-4 py-2 text-sm font-medium transition relative"
+			class:text-blue-600={activeTab === 'monitoring'}
+			class:dark:text-blue-400={activeTab === 'monitoring'}
+			class:text-gray-500={activeTab !== 'monitoring'}
+			class:dark:text-gray-400={activeTab !== 'monitoring'}
+			on:click={() => (activeTab = 'monitoring')}
+		>
+			모니터링
+			{#if activeTab === 'monitoring'}
+				<div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400"></div>
+			{/if}
+		</button>
+	</div>
+
 	{#if !loaded}
 		<div class="flex justify-center py-8">
 			<Spinner className="size-6" />
 		</div>
-	{:else}
+	{:else if activeTab === 'prompts'}
 		<!-- Default Group Setting -->
 		<div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
 			<div class="flex items-center justify-between">
@@ -431,11 +466,60 @@
 								{prompt}
 								on:edit={handleEditPrompt}
 								on:delete={(e) => handleDeletePrompt(e.detail)}
+								on:refresh={loadData}
 							/>
 						{/each}
 					</div>
 				{/if}
 			</div>
+		</div>
+	{:else if activeTab === 'monitoring'}
+		<!-- Monitoring Section -->
+		<div class="monitoring-section space-y-4">
+			<div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+				<div class="flex items-center gap-3">
+					<label class="text-sm font-medium text-gray-900 dark:text-white">
+						프롬프트 그룹 선택:
+					</label>
+					<select
+						bind:value={selectedMonitoringGroupId}
+						class="flex-1 px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+					>
+						<option value={null}>그룹을 선택하세요</option>
+						{#each promptGroups as group}
+							<option value={group.id}>{group.name}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+
+			{#if selectedMonitoringGroupId}
+				{@const selectedGroup = promptGroups.find((g) => g.id === selectedMonitoringGroupId)}
+				<PromptGroupMonitoring
+					groupId={selectedMonitoringGroupId}
+					groupName={selectedGroup?.name || ''}
+				/>
+			{:else}
+				<div class="p-12 text-center border border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="size-16 mx-auto text-gray-300 dark:text-gray-600 mb-4"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6"
+						/>
+					</svg>
+					<p class="text-gray-500 dark:text-gray-400 text-sm">
+						위에서 프롬프트 그룹을 선택하면<br />해당 그룹의 사용량 통계를 확인할 수 있습니다.
+					</p>
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>

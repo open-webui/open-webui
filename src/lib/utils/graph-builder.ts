@@ -222,6 +222,19 @@ function legendreP(n: number, x: number): number {
 	return pn;
 }
 
+// Piecewise function
+// Usage: piecewise(cond1, val1, cond2, val2, ..., defaultVal)
+function piecewise(...args: unknown[]): number {
+	// Process pairs of (condition, value)
+	for (let i = 0; i < args.length - 1; i += 2) {
+		if (args[i]) {
+			return args[i + 1] as number;
+		}
+	}
+	// Return last argument as default (or 0 if odd number of args)
+	return args.length % 2 === 1 ? (args[args.length - 1] as number) : 0;
+}
+
 // Create custom mathjs instance with special functions and constants
 const math = create(all);
 math.import({
@@ -243,14 +256,48 @@ math.import({
 	// Legendre polynomials
 	legendreP: legendreP,
 
+	// Piecewise function
+	piecewise: piecewise,
+
 	// Mathematical constants (uppercase aliases for compatibility)
 	PI: Math.PI,
 	E: Math.E
 }, { override: true });
 
+// Preprocess sum(..., var, start, end) expressions
+// Convert sum(expr, var, start, end) to (expr[var=start]) + (expr[var=start+1]) + ... + (expr[var=end])
+function preprocessSum(expr: string): string {
+	// Match sum(expression, variable, start, end)
+	const sumRegex = /sum\s*\(\s*([^,]+),\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*\)/g;
+
+	return expr.replace(sumRegex, (match, expression, variable, startStr, endStr) => {
+		const start = parseInt(startStr);
+		const end = parseInt(endStr);
+
+		if (isNaN(start) || isNaN(end) || start > end) {
+			console.warn('[GraphBuilder] Invalid sum parameters:', match);
+			return '0';
+		}
+
+		// Generate sum terms
+		const terms: string[] = [];
+		for (let i = start; i <= end; i++) {
+			// Replace variable with value in expression
+			// Use word boundary to avoid partial matches (e.g., 'n' in 'sin')
+			const term = expression.replace(new RegExp(`\\b${variable}\\b`, 'g'), i.toString());
+			terms.push(`(${term})`);
+		}
+
+		return terms.join(' + ');
+	});
+}
+
 // Export the compile function to use our custom math instance
 // This ensures all graph expressions can use Bessel functions and custom constants
-export const compile = (expr: string) => math.compile(expr);
+export const compile = (expr: string) => {
+	const preprocessed = preprocessSum(expr);
+	return math.compile(preprocessed);
+};
 
 // ========== Types ==========
 
@@ -435,12 +482,27 @@ export function buildFunction2DTraces(layer: LayerSpec) {
 			};
 		}
 
-		// Detect which variable name to use (x or t)
-		// Check if expression contains 't' and not 'x', or if x_axis label is 't'
+		// Detect which variable name to use (x, t, or theta)
+		// Prioritize actual usage in expression over label
 		const xAxisObj = xAxis as { label?: string } | undefined;
-		const usesT = expr.includes('t') && !expr.match(/\bx\b/);
-		const labelIsT = xAxisObj?.label === 't';
-		const varName = (usesT || labelIsT) ? 't' : 'x';
+		const hasX = !!expr.match(/\bx\b/);
+		const hasT = !!expr.match(/\bt\b/);
+		const hasTheta = expr.includes('theta');
+
+		let varName = 'x'; // default
+		if (hasX) {
+			varName = 'x';
+		} else if (hasT) {
+			varName = 't';
+		} else if (hasTheta) {
+			varName = 'theta';
+		} else {
+			// No variables detected, use label as fallback
+			const label = xAxisObj?.label;
+			if (label === 't' || label === 'theta') {
+				varName = label;
+			}
+		}
 
 		const [x0, x1] = getDomain2D(domain);
 		const sampling = getSampling2D(layer.sampling);
@@ -454,7 +516,14 @@ export function buildFunction2DTraces(layer: LayerSpec) {
 			x.push(xv);
 			try {
 				// Evaluate with detected variable name
-				const yv = varName === 't' ? f.evaluate({ t: xv }) : f.evaluate({ x: xv });
+				let yv: number;
+				if (varName === 't') {
+					yv = f.evaluate({ t: xv });
+				} else if (varName === 'theta') {
+					yv = f.evaluate({ theta: xv });
+				} else {
+					yv = f.evaluate({ x: xv });
+				}
 				y.push(yv);
 			} catch (e) {
 				y.push(NaN);
@@ -812,7 +881,7 @@ export function buildPhasePlaneTraces(layer: LayerSpec) {
 	return traces;
 }
 
-// scatter_2d: 산점도 (data: [[x, y], ...])
+// scatter_2d: 산점도 (data: [[x, y], ...] or [{x, y, label?, color?}, ...])
 export function buildScatter2DTraces(layer: LayerSpec, showLegend = false, legendName?: string) {
 	const colors = normalizeColors(layer);
 	const data = layer.data || [];
@@ -822,24 +891,61 @@ export function buildScatter2DTraces(layer: LayerSpec, showLegend = false, legen
 		return [];
 	}
 
-	const x = data.map((point: any) => point[0]);
-	const y = data.map((point: any) => point[1]);
-	const name = legendName || layer.style?.marker || 'scatter';
+	// Check data format: array of [x, y] or array of {x, y, ...}
+	const isObjectFormat = data[0] && typeof data[0] === 'object' && !Array.isArray(data[0]);
 
-	return [{
-		x,
-		y,
-		type: 'scatter',
-		mode: 'markers',
-		marker: {
-			symbol: markerSymbolMap[layer.style?.marker || 'circle'] || 'circle',
-			size: layer.style?.size ?? 8,
-			color: colors[0] || '#1f77b4',
-			opacity: layer.style?.opacity
-		},
-		name,
-		showlegend: showLegend
-	}];
+	if (isObjectFormat) {
+		// Handle [{x, y, label?, color?}, ...] format
+		const traces: Record<string, unknown>[] = [];
+
+		data.forEach((point: unknown, idx: number) => {
+			const pt = point as Record<string, unknown>;
+			const trace: Record<string, unknown> = {
+				x: [pt.x],
+				y: [pt.y],
+				type: 'scatter',
+				mode: pt.label ? 'markers+text' : 'markers',
+				marker: {
+					symbol: markerSymbolMap[layer.style?.marker || 'circle'] || 'circle',
+					size: layer.style?.size ?? 8,
+					color: pt.color || colors[idx] || colors[0] || '#1f77b4',
+					opacity: layer.style?.opacity ?? 1
+				},
+				name: pt.label || legendName || `point ${idx + 1}`,
+				showlegend: showLegend || !!pt.label
+			};
+
+			if (pt.label) {
+				trace.text = [pt.label];
+				trace.textposition = 'top center';
+				trace.textfont = { size: 10, color: pt.color || colors[idx] || colors[0] || '#1f77b4' };
+			}
+
+			traces.push(trace);
+		});
+
+		return traces;
+	} else {
+		// Handle [[x, y], ...] format
+		const x = data.map((point: unknown) => (point as number[])[0]);
+		const y = data.map((point: unknown) => (point as number[])[1]);
+		const name = legendName || layer.style?.marker || 'scatter';
+
+		return [{
+			x,
+			y,
+			type: 'scatter',
+			mode: 'markers',
+			marker: {
+				symbol: markerSymbolMap[layer.style?.marker || 'circle'] || 'circle',
+				size: layer.style?.size ?? 8,
+				color: colors[0] || '#1f77b4',
+				opacity: layer.style?.opacity
+			},
+			name,
+			showlegend: showLegend
+		}];
+	}
 }
 
 // line_2d: 선 (data: [[x, y], ...])

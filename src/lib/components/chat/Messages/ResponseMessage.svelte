@@ -848,8 +848,9 @@
 							>
 								{#if message.content === '' && !message.error && (!message.completed || isToolExecuting) && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
 									<Skeleton />
-								{:else if message.content === '' && !message.error && message.completed && !isToolExecuting}
+								{:else if message.content === '' && !message.error && message.completed && message.done && !isToolExecuting}
 									<!-- Edge case: message completed but no content (model error or save issue) -->
+									<!-- Only show "no response" when streaming is actually done (message.done === true) -->
 									<div class="text-gray-500 dark:text-gray-400 text-sm italic">
 										{$i18n.t('No response received. Please try again.')}
 									</div>

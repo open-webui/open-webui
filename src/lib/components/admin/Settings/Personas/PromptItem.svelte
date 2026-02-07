@@ -9,6 +9,9 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import ClockRotateRight from '$lib/components/icons/ClockRotateRight.svelte';
+
+	import PromptVersionHistoryModal from './PromptVersionHistoryModal.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -19,6 +22,7 @@
 	export let inGroup = false;
 
 	let showDropdown = false;
+	let showVersionHistory = false;
 
 	const getTypeBadge = (type: PromptType) => {
 		switch (type) {
@@ -137,6 +141,17 @@
 					{$i18n.t('편집')}
 				</DropdownMenu.Item>
 
+				<DropdownMenu.Item
+					class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition cursor-pointer"
+					on:click={() => {
+						showDropdown = false;
+						showVersionHistory = true;
+					}}
+				>
+					<ClockRotateRight className="size-4" />
+					{$i18n.t('버전 히스토리')}
+				</DropdownMenu.Item>
+
 				{#if inGroup}
 					<DropdownMenu.Item
 						class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition cursor-pointer"
@@ -164,3 +179,10 @@
 		</DropdownMenu.Root>
 	</div>
 </div>
+
+<!-- Version History Modal -->
+<PromptVersionHistoryModal
+	bind:show={showVersionHistory}
+	{prompt}
+	on:refresh={() => dispatch('refresh')}
+/>

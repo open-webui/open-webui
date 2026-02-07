@@ -339,7 +339,7 @@ export const removePromptFromGroup = async (
 	try {
 		// URL encode the prompt command (remove leading slash for URL path)
 		const command = promptCommand.startsWith('/') ? promptCommand.slice(1) : promptCommand;
-		await apiCall<boolean>(`/${groupId}/prompts/${encodeURIComponent(command)}`, token, {
+		await apiCall<boolean>(`/${groupId}/prompts/${encodeURIRemoveLeadingSlash(command)}`, token, {
 			method: 'DELETE'
 		});
 		return true;
@@ -503,7 +503,7 @@ export const updatePersonaPrompt = async (
 ): Promise<PersonaPrompt> => {
 	try {
 		const res = await fetch(
-			`${WEBUI_API_BASE_URL}/prompts/command${encodeURIComponent(command)}/update`,
+			`${WEBUI_API_BASE_URL}/prompts/command/${encodeURIRemoveLeadingSlash(command)}/update`,
 			{
 				method: 'POST',
 				headers: {
@@ -537,7 +537,7 @@ export const updatePersonaPrompt = async (
 export const deletePersonaPrompt = async (token: string, command: string): Promise<boolean> => {
 	try {
 		const res = await fetch(
-			`${WEBUI_API_BASE_URL}/prompts/command/${encodeURIComponent(command)}/delete`,
+			`${WEBUI_API_BASE_URL}/prompts/command/${encodeURIRemoveLeadingSlash(command)}/delete`,
 			{
 				method: 'DELETE',
 				headers: {
@@ -703,5 +703,210 @@ export const composePrompts = async (
 		const combinedContent = usedPrompts.map((p) => p.content).join('\n\n');
 
 		return { combined_content: combinedContent, used_prompts: usedPrompts };
+	}
+};
+
+// ============================================
+// Langfuse Version Control & Monitoring Types
+// ============================================
+
+export interface PromptVersion {
+	version: number;
+	content: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface RollbackResult {
+	success: boolean;
+	new_version: number;
+	content: string;
+}
+
+export interface PromptGroupStats {
+	total_calls: number;
+	avg_latency: number;
+	total_tokens: number;
+	users: string[];
+}
+
+export interface PromptTrace {
+	trace_id: string;
+	timestamp: string;
+	user_id: string | null;
+	model: string | null;
+	latency: number;
+	tokens: number;
+	cost?: number;
+	provider?: string;
+	proficiency_level?: number;
+	response_style?: string;
+	chapter_id?: string | null;
+	langfuse_url?: string;
+	user?: {
+		id: string;
+		name: string;
+		email: string;
+		role: string;
+	};
+}
+
+export interface PromptGroupUsage {
+	stats: PromptGroupStats & {
+		total_count?: number;
+		fetched_count?: number;
+	};
+	traces: PromptTrace[];
+	pagination?: {
+		offset: number;
+		limit: number;
+		has_more: boolean;
+	};
+}
+
+// ============================================
+// Langfuse Version Control API Functions
+// ============================================
+
+/**
+ * Get version history for a specific prompt
+ * @param token - Auth token
+ * @param command - Prompt command (e.g., "/math-base")
+ * @returns Array of prompt versions (newest first)
+ */
+
+
+const encodeURIRemoveLeadingSlash = (str: string): string => {
+	const trimmed = str.startsWith('/') ? str.slice(1) : str;
+	return encodeURIComponent(trimmed);
+}
+
+export const getPromptVersionHistory = async (
+	token: string,
+	command: string
+): Promise<PromptVersion[]> => {
+	try {
+		const res = await fetch(
+			`${WEBUI_API_BASE_URL}/prompts/command/${encodeURIRemoveLeadingSlash(command)}/versions`,
+			{
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				}
+			}
+		);
+
+		if (!res.ok) {
+			if (res.status === 503) {
+				// Langfuse not configured - gracefully return empty array
+				console.warn('Langfuse service not available (503)');
+				return [];
+			}
+			const error = await res.json();
+			throw error;
+		}
+
+		return await res.json();
+	} catch (error) {
+		console.error('Error fetching prompt version history:', error);
+		// Return empty array on network errors
+		return [];
+	}
+};
+
+/**
+ * Rollback a prompt to a specific version
+ * @param token - Auth token
+ * @param command - Prompt command (e.g., "/math-base")
+ * @param version - Version number to rollback to
+ * @returns Result of rollback operation
+ */
+export const rollbackPromptVersion = async (
+	token: string,
+	command: string,
+	version: number
+): Promise<RollbackResult> => {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/prompts/command/${encodeURIRemoveLeadingSlash(command)}/rollback/${version}`,
+		{
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	);
+
+	if (!res.ok) {
+		const error = await res.json();
+		throw error;
+	}
+
+	return await res.json();
+};
+
+// ============================================
+// Langfuse Monitoring API Functions
+// ============================================
+
+/**
+ * Get usage statistics and traces for a prompt group
+ * @param token - Auth token
+ * @param groupId - Prompt group ID
+ * @param days - Number of days to look back (default: 7)
+ * @param limit - Maximum number of traces to return (default: 50)
+ * @param summary - If true, only fetch trace metadata (fast, no tokens/latency)
+ * @param offset - Pagination offset (default: 0)
+ * @returns Usage statistics and trace data
+ */
+export const getPromptGroupUsage = async (
+	token: string,
+	groupId: string,
+	days: number = 7,
+	limit: number = 50,
+	summary: boolean = false,
+	offset: number = 0
+): Promise<PromptGroupUsage> => {
+	try {
+		const params = new URLSearchParams({
+			days: days.toString(),
+			limit: limit.toString(),
+			summary: summary.toString(),
+			offset: offset.toString()
+		});
+
+		const res = await fetch(
+			`${WEBUI_API_BASE_URL}/prompts/group/${encodeURIComponent(groupId)}/usage?${params}`,
+			{
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`
+				}
+			}
+		);
+
+		if (!res.ok) {
+			if (res.status === 503) {
+				// Langfuse not configured - gracefully return empty data
+				console.warn('Langfuse monitoring service not available (503)');
+				return {
+					stats: { total_calls: 0, avg_latency: 0, total_tokens: 0, users: [] },
+					traces: []
+				};
+			}
+			const error = await res.json();
+			throw error;
+		}
+
+		return await res.json();
+	} catch (error) {
+		console.error('Error fetching prompt group usage:', error);
+		// Return empty data on network errors
+		return {
+			stats: { total_calls: 0, avg_latency: 0, total_tokens: 0, users: [] },
+			traces: []
+		};
 	}
 };
