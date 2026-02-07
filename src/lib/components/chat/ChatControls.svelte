@@ -176,7 +176,7 @@
 							<FacilitiesOverlay
 								{submitPrompt}
 								{modelId}
-								{history}
+								bind:history
 								{addMessages}
 								{webSearchEnabled}
 								bind:files
@@ -271,7 +271,7 @@
 								<FacilitiesOverlay
 									{submitPrompt}
 									{modelId}
-									{history}
+									bind:history
 									{addMessages}
 									{initChatHandler}
 									{webSearchEnabled}

@@ -14,7 +14,6 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 
 from open_webui.models.knowledge import Knowledges
-from open_webui.models.users import Users
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_verified_user
 from open_webui.retrieval.web.tavily import search_tavily
@@ -72,6 +71,7 @@ Your job is to expand and professionally refine the user's section draft using:
 ---
 
 ### INSTRUCTIONS
+- **IMPORTANT: You are GENERATING and REWRITING content, NOT copying text verbatim. Synthesize information from sources to create professional, grant-worthy prose.**
 - Start with the User Input, retain all core ideas.
 - ONLY use information from the User Input, PDF Chunks, and Web Snippets provided above. DO NOT add any information not present in these sources.
 - Do not invent, assume, or add any equipment names, specifications, capabilities, or details not explicitly mentioned in the provided sources.
@@ -81,6 +81,7 @@ Your job is to expand and professionally refine the user's section draft using:
 - Incorporate information from multiple PDF sources and web snippets to create rich, well-cited content, but only cite information that is actually present in those sources.
 - Include specific equipment models, technical specifications, capabilities, and research applications ONLY if they are explicitly mentioned in the provided PDF Chunks or Web Snippets.
 - Do not use any external knowledge, assumptions, or information not provided in the sources above.
+- **When different sentences or parts of a paragraph come from different sources, cite each source appropriately. Example: "The lab has 10 robotic arms [source1.pdf] and advanced motion capture systems [source2.pdf] for multi-agent research."**
 {integration_instructions}
 **CRITICAL CITATION RULES - FOLLOW EXACTLY:**
 
@@ -91,6 +92,8 @@ Your job is to expand and professionally refine the user's section draft using:
 - WRONG: "...research facilities [source1.pdf, https://nyu.edu/research] are available."
 - If citing multiple sources for the same claim, use separate brackets with a space between them
 - NEVER use semicolons (;) or commas (,) inside brackets to combine sources
+- **CRITICAL: If the same information appears in multiple files (same content in different <source_id> tags), you MUST cite ALL of them. Example: "The HPC cluster has 1000 GPUs [panwar.pdf] [rangan.pdf]."**
+- **CRITICAL: When different sentences or parts of a paragraph come from different sources, cite each source for its respective information. Example: "The lab includes 10 robotic arms [source1.pdf] and advanced motion capture systems [source2.pdf] for multi-agent research."**
 
 **RULE 2: ONLY CITE SOURCES FROM <source_id> TAGS**
 - **IMPORTANT: When web search is disabled, ONLY cite PDF files and document names - NEVER cite web URLs even if they appear in sources.**
@@ -135,6 +138,34 @@ class ExtractFormDataResponse(BaseModel):
     success: bool
     form_data: Dict[str, str]
     error: Optional[str] = None
+
+class SingleSectionRequest(BaseModel):
+    sponsor: str
+    section_key: str
+    section_text: str
+    model: str
+    web_search_enabled: bool = False
+    files: Optional[List[Dict]] = None
+
+class SingleSectionResponse(BaseModel):
+    success: bool
+    section_key: str
+    section_label: str
+    generated_content: str
+    sources: List[Dict]
+    error: Optional[str] = None
+
+# Mapping from form field keys to section labels used in prompts
+FIELD_TO_SECTION = {
+    "projectTitle": "Project Title",
+    "researchSpaceFacilities": "Research Space and Facilities",
+    "coreInstrumentation": "Core Instrumentation",
+    "computingDataResources": "Computing and Data Resources",
+    "internalFacilitiesNYU": "Internal Facilities (NYU)",
+    "externalFacilitiesOther": "External Facilities (Other Institutions)",
+    "specialInfrastructure": "Special Infrastructure",
+    "equipment": "Equipment"
+}
 
 def get_section_labels(sponsor: str) -> List[str]:
     """Get section labels based on sponsor type"""
@@ -341,7 +372,7 @@ def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], r
         logging.error(f"Facilities specific site web search failed: {e}")
         return f"Web search failed: {e}", [], []
 
-def search_knowledge_base(query: str, user_id: str, request: Request, model, k: int = 5) -> List[tuple]:
+def search_knowledge_base(query: str, user_id: str, request: Request, model, k: int = 10) -> List[tuple]:
     """Model-dependent knowledge base search"""
     try:
         # Get model knowledge configuration (same as regular chat)
@@ -366,10 +397,8 @@ def search_knowledge_base(query: str, user_id: str, request: Request, model, k: 
             return []
         
         try:
-            # Get user object from user_id for proper virtual key resolution
-            user = Users.get_user_by_id(user_id)
             embedding_function = request.app.state.EMBEDDING_FUNCTION
-            query_embedding = embedding_function(query, user=user)
+            query_embedding = embedding_function(query, user_id)
         except Exception as e:
             logging.error(f"Failed to generate embeddings: {e}")
             return []
@@ -528,31 +557,8 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 error="Please fill in at least one form field"
             )
         
-        # Process attached files
-        attached_files_sources = []
-        if form_data.files:
-            logging.info(f"Processing {len(form_data.files)} attached files for facilities generation")
-            try:
-                # Import the file processing function from middleware
-                from open_webui.utils.middleware import chat_completion_files_handler
-                
-                # Create a mock body structure for file processing
-                mock_body = {
-                    "metadata": {
-                        "files": form_data.files
-                    },
-                    "messages": [{"role": "user", "content": "Facilities generation with attached files"}]
-                }
-                
-                processed_body, file_flags = await chat_completion_files_handler(request, mock_body, user)
-                attached_files_sources = file_flags.get("sources", [])
-                
-                logging.info(f"Processed attached files, found {len(attached_files_sources)} sources")
-                
-            except Exception as e:
-                logging.error(f"Error processing attached files: {e}")
-                # Continue without attached files if processing fails
-        
+        # Import the file processing function from middleware (moved outside loop for efficiency)
+        from open_webui.utils.middleware import chat_completion_files_handler
         
         section_outputs = {}
         all_sources = []
@@ -566,26 +572,99 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             logging.info(f"Processing section: {section}")
             logging.info(f"Web search enabled flag: {form_data.web_search_enabled}")
             
-            query = f"{section}: {user_text}"
+            # Improved query construction: use user text directly for better semantic matching
+            # The section context is preserved in the prompt later, so we don't need it in the query
+            query = user_text
             
+            # (query expansion, hybrid search, reranking, TOP_K config)
+            all_file_results = []
             
-            search_results = search_knowledge_base(query, user.id, request, model, k=5)
+            # Get model knowledge configuration
+            model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
             
-            # Add attached files sources to the search results
-            attached_file_results = []
-            if attached_files_sources:
-                for source in attached_files_sources:
-                    for doc in source.get("document", []):
-                        attached_file_results.append((
-                            doc, 
-                            source.get("source", {}).get("name", "attached_file"), 
-                            source.get("distances", [0.1])[0] if source.get("distances") else 0.1
-                        ))
+            # Combine knowledge base collections and uploaded files
+            files_to_process = []
+            
+            # Add knowledge base collections as "files"
+            if model_knowledge:
+                knowledge_files = []
+                for item in model_knowledge:
+                    if item.get("collection_name"):
+                        knowledge_files.append({
+                            "id": item.get("collection_name"),
+                            "name": item.get("name"),
+                            "legacy": True,
+                        })
+                    elif item.get("collection_names"):
+                        knowledge_files.append({
+                            "name": item.get("name"),
+                            "type": "collection",
+                            "collection_names": item.get("collection_names"),
+                            "legacy": True,
+                        })
+                    else:
+                        knowledge_files.append(item)
                 
-                logging.info(f"Added {len(attached_file_results)} attached file sources for {section}")
+                files_to_process.extend(knowledge_files)
+                logging.info(f"Added {len(knowledge_files)} knowledge base collections for section '{section}'")
             
-            # Combine knowledge base and attached file results
-            all_search_results = search_results + attached_file_results
+            # Add uploaded files
+            if form_data.files:
+                files_to_process.extend(form_data.files)
+                logging.info(f"Added {len(form_data.files)} uploaded files for section '{section}'")
+            
+            # Process all files (knowledge base + uploaded) together with advanced pipeline
+            if files_to_process:
+                try:
+                    # Create section-specific body for file processing
+                    section_specific_body = {
+                        "model": form_data.model,
+                        "metadata": {
+                            "files": files_to_process  # Knowledge base + uploaded files together
+                        },
+                        "messages": [{"role": "user", "content": user_text}]  # Section-specific query
+                    }
+                    
+                    processed_body, file_flags = await chat_completion_files_handler(request, section_specific_body, user)
+                    all_file_sources = file_flags.get("sources", [])
+                    
+                    # Extract documents with actual distance scores
+                    for source in all_file_sources:
+                        documents = source.get("document", [])
+                        distances = source.get("distances", [])
+                        metadata = source.get("metadata", [])
+                        
+                        # Extract source name from metadata (filename) first, fallback to file object name
+                        source_name = "unknown"
+                        if metadata and isinstance(metadata, list) and len(metadata) > 0:
+                            # Get first metadata entry (should have filename/source info)
+                            first_metadata = metadata[0] if isinstance(metadata[0], dict) else {}
+                            # Try metadata fields that contain actual filenames
+                            for key in ['source', 'name', 'filename', 'file_name']:
+                                if key in first_metadata and first_metadata[key]:
+                                    source_name = first_metadata[key]
+                                    break
+                        
+                        # Fallback to file object name if metadata doesn't have filename
+                        if source_name == "unknown":
+                            file_obj = source.get("source", {})
+                            if isinstance(file_obj, dict):
+                                source_name = file_obj.get("name", file_obj.get("id", "unknown"))
+                        
+                        # Use actual distance scores if available, otherwise use a default
+                        for i, doc in enumerate(documents):
+                            distance = distances[i] if i < len(distances) and distances[i] is not None else 0.15
+                            all_file_results.append((doc, source_name, distance))
+                    
+                    logging.info(f"Processed {len(all_file_sources)} sources (KB + uploaded) for section '{section}'")
+                    logging.info(f"Added {len(all_file_results)} total chunks for {section}")
+                    
+                except Exception as e:
+                    logging.error(f"Error processing files for section '{section}': {e}")
+                    # Continue without files for this section if processing fails
+            
+            # All results are now in all_file_results (knowledge base + uploaded files combined)
+            all_search_results = all_file_results
             
              
             retrieved_chunks = []
@@ -622,7 +701,7 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             logging.info(f"Added {len(section_sources)} sources to all_sources for {section}")
             logging.info(f"Sources added: {[s.get('source', {}).get('name', 'unknown') for s in section_sources]}")
             
-            logging.info(f"Found {len(all_search_results)} total chunks for {section} (KB: {len(search_results)}, Attached: {len(attached_file_results)})")
+            logging.info(f"Found {len(all_search_results)} total chunks for {section} (KB + uploaded files processed together with advanced pipeline)")
             logging.info(f"All sources found: {[source for _, source, _ in all_search_results]}")
             
             web_content = ""
@@ -651,6 +730,7 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                         logging.warning("No allowed sites configured for NYU Internal Facilities, falling back to standard search")
                         web_content, web_links, web_scores = facilities_web_search(query, request, user)
                 else:
+                    # Use improved query (user_text) for standard web search
                     logging.info(f"Using standard web search for section: {section}")
                     web_content, web_links, web_scores = facilities_web_search(query, request, user)
                 
@@ -864,6 +944,275 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
     except Exception as e:
         logging.error(f"Error in facilities generation: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.post("/generate-section", response_model=SingleSectionResponse)
+async def generate_facilities_section(request: Request, form_data: SingleSectionRequest, user=Depends(get_verified_user)):
+    """
+    Generate facilities content for a single section.
+    Called once per section so the frontend can display results progressively.
+    """
+    if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
+        raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
+
+    try:
+        if form_data.sponsor not in ["NSF", "NIH"]:
+            raise HTTPException(status_code=400, detail="Invalid sponsor. Must be 'NSF' or 'NIH'")
+
+        section = FIELD_TO_SECTION.get(form_data.section_key)
+        if not section:
+            raise HTTPException(status_code=400, detail=f"Invalid section key: {form_data.section_key}")
+
+        user_text = form_data.section_text.strip()
+        if not user_text:
+            return SingleSectionResponse(
+                success=False,
+                section_key=form_data.section_key,
+                section_label=section,
+                generated_content="",
+                sources=[],
+                error="Empty section text"
+            )
+
+        model = request.app.state.MODELS.get(form_data.model)
+        if not model:
+            raise HTTPException(status_code=400, detail="Model not found")
+
+        from open_webui.utils.middleware import chat_completion_files_handler
+        import re
+
+        logging.info(f"Processing section: {section}")
+        logging.info(f"Web search enabled flag: {form_data.web_search_enabled}")
+        query = user_text
+        all_file_results = []
+        all_sources = []
+        cited_sources = set()
+
+        # --- File processing (knowledge base + uploaded files) ---
+        model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
+        files_to_process = []
+
+        if model_knowledge:
+            knowledge_files = []
+            for item in model_knowledge:
+                if item.get("collection_name"):
+                    knowledge_files.append({
+                        "id": item.get("collection_name"),
+                        "name": item.get("name"),
+                        "legacy": True,
+                    })
+                elif item.get("collection_names"):
+                    knowledge_files.append({
+                        "name": item.get("name"),
+                        "type": "collection",
+                        "collection_names": item.get("collection_names"),
+                        "legacy": True,
+                    })
+                else:
+                    knowledge_files.append(item)
+            files_to_process.extend(knowledge_files)
+            logging.info(f"Added {len(knowledge_files)} knowledge base collections for section '{section}'")
+
+        if form_data.files:
+            files_to_process.extend(form_data.files)
+            logging.info(f"Added {len(form_data.files)} uploaded files for section '{section}'")
+
+        if files_to_process:
+            try:
+                section_specific_body = {
+                    "model": form_data.model,
+                    "metadata": {"files": files_to_process},
+                    "messages": [{"role": "user", "content": user_text}]
+                }
+                processed_body, file_flags = await chat_completion_files_handler(request, section_specific_body, user)
+                all_file_sources = file_flags.get("sources", [])
+
+                for source in all_file_sources:
+                    documents = source.get("document", [])
+                    distances = source.get("distances", [])
+                    metadata = source.get("metadata", [])
+
+                    source_name = "unknown"
+                    if metadata and isinstance(metadata, list) and len(metadata) > 0:
+                        first_metadata = metadata[0] if isinstance(metadata[0], dict) else {}
+                        for key in ['source', 'name', 'filename', 'file_name']:
+                            if key in first_metadata and first_metadata[key]:
+                                source_name = first_metadata[key]
+                                break
+
+                    if source_name == "unknown":
+                        file_obj = source.get("source", {})
+                        if isinstance(file_obj, dict):
+                            source_name = file_obj.get("name", file_obj.get("id", "unknown"))
+
+                    for i, doc in enumerate(documents):
+                        distance = distances[i] if i < len(distances) and distances[i] is not None else 0.15
+                        all_file_results.append((doc, source_name, distance))
+
+                logging.info(f"Processed {len(all_file_sources)} sources (KB + uploaded) for section '{section}'")
+                logging.info(f"Added {len(all_file_results)} total chunks for {section}")
+            except Exception as e:
+                logging.error(f"Error processing files for section '{section}': {e}")
+
+        all_search_results = all_file_results
+
+        # --- Source grouping ---
+        retrieved_chunks = []
+        section_sources = []
+
+        source_groups = {}
+        for doc, source, score in all_search_results:
+            if source not in source_groups:
+                source_groups[source] = []
+            source_groups[source].append((doc, score))
+
+        for source, docs_with_scores in source_groups.items():
+            logging.info(f"Processing source '{source}' with {len(docs_with_scores)} documents, using source name directly")
+            
+            docs = [doc for doc, score in docs_with_scores]
+            real_distances = [score for doc, score in docs_with_scores]
+
+            for doc in docs:
+                retrieved_chunks.append(f"<source><source_id>{source}</source_id><source_context>{doc}</source_context></source>")
+
+            section_sources.append({
+                "source": {"id": source, "name": source},
+                "document": docs,
+                "metadata": [{"source": source, "name": source}] * len(docs),
+                "distances": real_distances
+            })
+
+        all_sources.extend(section_sources)
+        
+        logging.info(f"Added {len(section_sources)} sources to all_sources for {section}")
+        logging.info(f"Sources added: {[s.get('source', {}).get('name', 'unknown') for s in section_sources]}")
+        logging.info(f"Found {len(all_search_results)} total chunks for {section} (KB + uploaded files processed together with advanced pipeline)")
+        logging.info(f"All sources found: {[source for _, source, _ in all_search_results]}")
+
+        # --- Web search ---
+        web_content = ""
+        web_links = []
+        web_scores = []
+        web_source_tags = []
+        
+        if form_data.web_search_enabled:
+            logging.info(f"Web search enabled for section: {section}")
+            is_internal_facilities = (
+                section == "5a. Internal Facilities (NYU)" or
+                section == "Internal Facilities (NYU)"
+            )
+
+            if is_internal_facilities:
+                allowed_sites = request.app.state.config.RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES.get(user.email)
+                logging.info(f"Using specific sites search for NYU Internal Facilities")
+                logging.info(f"Allowed sites: {allowed_sites}")
+                
+                if allowed_sites:
+                    web_content, web_links, web_scores = facilities_web_search_specific_sites(
+                        query, allowed_sites, request, user
+                    )
+                else:
+                    logging.warning("No allowed sites configured for NYU Internal Facilities, falling back to standard search")
+                    web_content, web_links, web_scores = facilities_web_search(query, request, user)
+            else:
+                logging.info(f"Using standard web search for section: {section}")
+                web_content, web_links, web_scores = facilities_web_search(query, request, user)
+            
+            logging.info(f"Web search results - Content length: {len(web_content) if web_content else 0}, Links: {len(web_links) if web_links else 0}")
+
+            if web_content and web_links:
+                web_content_parts = web_content.split('\n\n')
+                for i, (content_part, url, score) in enumerate(zip(web_content_parts, web_links, web_scores)):
+                    if content_part.strip() and url.strip():
+                        logging.info(f"Processing web source '{url}' using URL directly with score: {score}")
+                        web_source_tags.append(
+                            f"<source><source_id>{url}</source_id><source_context>{content_part.strip()}</source_context></source>"
+                        )
+                        all_sources.append({
+                            "source": {"id": url, "name": url, "url": url},
+                            "document": [content_part.strip()],
+                            "metadata": [{"source": url, "name": url}],
+                            "distances": [score]
+                        })
+                        logging.info(f"Added web source to all_sources: {url}")
+            
+            logging.info(f"Found {len(web_links)} web sources for {section}")
+            logging.info(f"Web URLs found: {web_links}")
+        else:
+            logging.info(f"Web search disabled for {section}")
+
+        # --- Build prompt ---
+        pdf_sources = "\n\n".join(retrieved_chunks) if retrieved_chunks else "No relevant PDF documents found in knowledge base."
+        if form_data.web_search_enabled:
+            web_sources = "\n\n".join(web_source_tags) if web_source_tags else "No relevant web sources found."
+        else:
+            web_sources = "Web search is disabled for this request."
+
+        prompt = FACILITIES_PROMPT.format(
+            sponsor=form_data.sponsor,
+            section=section,
+            section_specific_instructions="",
+            user_input=user_text,
+            retrieved_chunks=pdf_sources,
+            web_snippets=web_sources,
+            integration_instructions=""
+        )
+
+        # --- LLM call ---
+        generated_content = await call_llm_direct(prompt, form_data.model, user, request)
+        cleaned_content = generated_content.strip()
+
+        if cleaned_content.startswith('Error:') or 'Connection aborted' in cleaned_content:
+            raise Exception(f"LLM generation failed for {section}: {cleaned_content}")
+
+        # --- Citation extraction & source filtering ---
+        citations = re.findall(r'\[([^\]]+)\]', cleaned_content)
+        for citation in citations:
+            if ('.pdf' in citation or '.doc' in citation or 
+                (citation.startswith('http') and form_data.web_search_enabled) or 
+                (len(citation) > 10 and not citation.startswith('http'))):
+                cited_sources.add(citation)
+        
+        logging.info(f"Generated content for {section}: {len(cleaned_content)} chars")
+        logging.info(f"All citations found in {section}: {citations}")
+        # Filter citations based on web search status
+        if form_data.web_search_enabled:
+            valid_citations = [c for c in citations if '.pdf' in c or '.doc' in c or c.startswith('http') or len(c) > 10]
+        else:
+            valid_citations = [c for c in citations if '.pdf' in c or '.doc' in c or (len(c) > 10 and not c.startswith('http'))]
+        logging.info(f"Valid source citations in {section}: {valid_citations}")
+        
+        # Separate PDF and web citations for better debugging
+        pdf_citations = [c for c in valid_citations if '.pdf' in c or '.doc' in c]
+        web_citations = [c for c in valid_citations if c.startswith('http')]
+        logging.info(f"PDF citations in {section}: {pdf_citations}")
+        logging.info(f"Web citations in {section}: {web_citations}")
+        logging.info(f"Content preview: {cleaned_content[:200]}...")
+
+        filtered_sources = []
+        for source in all_sources:
+            source_name = source.get('source', {}).get('name', '')
+            if source_name in cited_sources:
+                filtered_sources.append(source)
+
+        logging.info(f"Total sources found: {len(all_sources)}")
+        logging.info(f"Sources actually cited: {len(cited_sources)}")
+        logging.info(f"Final sources count: {len(filtered_sources)}")
+
+        return SingleSectionResponse(
+            success=True,
+            section_key=form_data.section_key,
+            section_label=section,
+            generated_content=cleaned_content,
+            sources=filtered_sources,
+            error=None
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[generate-section] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 @router.get("/sections/{sponsor}")
 async def get_facilities_sections(sponsor: str, request: Request, user=Depends(get_verified_user)):
@@ -1616,4 +1965,3 @@ async def extract_form_data_from_files(request: Request, form_data: ExtractFormD
     except Exception as e:
         logging.error(f"Error in extract_form_data_from_files: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-

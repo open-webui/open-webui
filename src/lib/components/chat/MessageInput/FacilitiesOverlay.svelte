@@ -2,7 +2,7 @@
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
 	import { showFacilitiesOverlay, showControls, models, chatId, chats, currentChatPage } from '$lib/stores';
 	import { slide } from 'svelte/transition';
-	import { generateFacilitiesResponse, downloadFacilitiesDocument, extractFormDataFromFiles } from '$lib/apis/facilities';
+	import { generateFacilitiesResponse, generateFacilitiesSection, downloadFacilitiesDocument, extractFormDataFromFiles } from '$lib/apis/facilities';
 	import { updateChatById, getChatList } from '$lib/apis/chats';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { toast } from 'svelte-sonner';
@@ -45,6 +45,8 @@
 	
 	let downloadFilename = 'facilities_draft';
 	let lastProjectTitle = '';
+	let sectionProgress: Array<{key: string, label: string, status: 'pending' | 'processing' | 'done' | 'error'}> = [];
+	let generatedSectionContent: Record<string, string> = {};
 	
 	$: if (formData.projectTitle !== lastProjectTitle) {
 		lastProjectTitle = formData.projectTitle;
@@ -426,6 +428,131 @@
 		}
 	}
 
+	// Build formatted markdown content from completed sections (mirrors backend NSF/NIH grouping)
+	function buildFormattedContent(
+		completedSections: Record<string, string>,
+		sponsor: string
+	): string {
+		let content = `# Facilities Response for ${sponsor}\n\n`;
+
+		const sectionLabelMap: Record<string, string> = {
+			projectTitle: 'Project Title',
+			researchSpaceFacilities: 'Research Space and Facilities',
+			coreInstrumentation: 'Core Instrumentation',
+			computingDataResources: 'Computing and Data Resources',
+			internalFacilitiesNYU: 'Internal Facilities (NYU)',
+			externalFacilitiesOther: 'External Facilities (Other Institutions)',
+			specialInfrastructure: 'Special Infrastructure',
+			equipment: 'Equipment'
+		};
+
+		if (sponsor === 'NSF') {
+			const nsfGroups = [
+				{ header: '1. Project Title', keys: ['projectTitle'], useSubheadings: false },
+				{ header: '2. Facilities', keys: ['researchSpaceFacilities'], useSubheadings: false },
+				{ header: '3. Major Equipment', keys: ['coreInstrumentation', 'computingDataResources'], useSubheadings: true },
+				{ header: '4. Other Resources', keys: ['internalFacilitiesNYU', 'externalFacilitiesOther', 'specialInfrastructure'], useSubheadings: true }
+			];
+
+			for (const group of nsfGroups) {
+				const filledKeys = group.keys.filter(k => completedSections[k]);
+				if (filledKeys.length === 0) continue;
+
+				content += `## ${group.header}\n\n`;
+
+				if (group.useSubheadings) {
+					for (const key of filledKeys) {
+						content += `### ${sectionLabelMap[key]}\n\n${completedSections[key]}\n\n`;
+					}
+				} else {
+					content += `${completedSections[filledKeys[0]]}\n\n`;
+				}
+			}
+		} else {
+			// NIH - individual sections with numbered labels
+			const nihOrder = [
+				{ key: 'projectTitle', label: '1. Project Title' },
+				{ key: 'researchSpaceFacilities', label: '2. Research Space and Facilities' },
+				{ key: 'coreInstrumentation', label: '3. Core Instrumentation' },
+				{ key: 'computingDataResources', label: '4. Computing and Data Resources' },
+				{ key: 'internalFacilitiesNYU', label: '5a. Internal Facilities (NYU)' },
+				{ key: 'externalFacilitiesOther', label: '5b. External Facilities (Other Institutions)' },
+				{ key: 'specialInfrastructure', label: '6. Special Infrastructure' },
+				{ key: 'equipment', label: '7. Equipment' }
+			];
+
+			for (const { key, label } of nihOrder) {
+				if (completedSections[key]) {
+					content += `## ${label}\n\n${completedSections[key]}\n\n`;
+				}
+			}
+		}
+
+		return content;
+	}
+
+	// Build the sections dict for download (same grouping as backend)
+	function buildSectionsForDownload(
+		completedSections: Record<string, string>,
+		sponsor: string
+	): Record<string, string> {
+		const sectionLabelMap: Record<string, string> = {
+			projectTitle: 'Project Title',
+			researchSpaceFacilities: 'Research Space and Facilities',
+			coreInstrumentation: 'Core Instrumentation',
+			computingDataResources: 'Computing and Data Resources',
+			internalFacilitiesNYU: 'Internal Facilities (NYU)',
+			externalFacilitiesOther: 'External Facilities (Other Institutions)',
+			specialInfrastructure: 'Special Infrastructure',
+			equipment: 'Equipment'
+		};
+
+		const sections: Record<string, string> = {};
+
+		if (sponsor === 'NSF') {
+			const nsfGroups = [
+				{ header: '1. Project Title', keys: ['projectTitle'], useSubheadings: false },
+				{ header: '2. Facilities', keys: ['researchSpaceFacilities'], useSubheadings: false },
+				{ header: '3. Major Equipment', keys: ['coreInstrumentation', 'computingDataResources'], useSubheadings: true },
+				{ header: '4. Other Resources', keys: ['internalFacilitiesNYU', 'externalFacilitiesOther', 'specialInfrastructure'], useSubheadings: true }
+			];
+
+			for (const group of nsfGroups) {
+				const filledKeys = group.keys.filter(k => completedSections[k]);
+				if (filledKeys.length === 0) continue;
+
+				if (group.useSubheadings) {
+					let groupContent = '';
+					for (const key of filledKeys) {
+						groupContent += `### ${sectionLabelMap[key]}\n\n${completedSections[key]}\n\n`;
+					}
+					sections[group.header] = groupContent.trim();
+				} else {
+					sections[group.header] = completedSections[filledKeys[0]];
+				}
+			}
+		} else {
+			const nihOrder = [
+				{ key: 'projectTitle', label: '1. Project Title' },
+				{ key: 'researchSpaceFacilities', label: '2. Research Space and Facilities' },
+				{ key: 'coreInstrumentation', label: '3. Core Instrumentation' },
+				{ key: 'computingDataResources', label: '4. Computing and Data Resources' },
+				{ key: 'internalFacilitiesNYU', label: '5a. Internal Facilities (NYU)' },
+				{ key: 'externalFacilitiesOther', label: '5b. External Facilities (Other Institutions)' },
+				{ key: 'specialInfrastructure', label: '6. Special Infrastructure' },
+				{ key: 'equipment', label: '7. Equipment' }
+			];
+
+			for (const { key, label } of nihOrder) {
+				if (completedSections[key]) {
+					sections[label] = completedSections[key];
+				}
+			}
+		}
+
+		return sections;
+	}
+
 	async function generateSection() {
 		if (!selectedSponsor) {
 			toast.error('Please select a sponsor (NSF or NIH)');
@@ -440,88 +567,194 @@
 		}
 
 		generating = true;
+		generatedSectionContent = {};
 
 		try {
-			// Get token from localStorage
 			const token = localStorage.getItem('token');
 			if (!token) {
 				toast.error('Authentication required');
 				return;
 			}
 
-			console.log('Calling facilities API with:', {
-				sponsor: selectedSponsor,
-				form_data: formData,
-				model: modelId,
-				web_search_enabled: webSearchEnabled,
-				files: files
+			// Determine which sections have user input
+			const filledSections = currentSections.filter(s => formData[s.id]?.trim());
+
+			if (filledSections.length === 0) {
+				toast.error('Please fill in at least one form field');
+				generating = false;
+				return;
+			}
+
+			// Initialize section-by-section progress tracking
+			sectionProgress = filledSections.map(s => ({
+				key: s.id,
+				label: s.label,
+				status: 'pending' as const
+			}));
+
+			// Track files used
+			if (files && files.length > 0) {
+				usedFiles = files.map(file => file.name || file.filename || 'Unknown file');
+			}
+
+			console.log('Processing sections one-by-one:', filledSections.map(s => s.id));
+
+			// Initialize chat if needed (new chat)
+			if (!$chatId || Object.keys(history.messages).length === 0) {
+				if (initChatHandler) await initChatHandler(history);
+			}
+
+			if (!addMessages) {
+				toast.error('Cannot add messages to chat');
+				generating = false;
+				return;
+			}
+
+			const model = $models.find(m => m.id === modelId);
+			const modelName = model?.name || modelId;
+
+			// Build user message content
+			const userMessageContent = `Facilities Request for ${selectedSponsor}:\n\n` + 
+				Object.entries(formData)
+					.filter(([key, value]) => value.trim() !== '')
+					.map(([key, value]) => {
+						const section = currentSections.find(s => s.id === key);
+						return `${section?.label || key}: ${value}`;
+					})
+					.join('\n\n');
+
+			// Create user + assistant message pair (assistant starts with placeholder)
+			await addMessages({
+				modelId: modelId,
+				parentId: history.currentId || null,
+				messages: [
+					{
+						role: 'user',
+						content: userMessageContent,
+						models: [modelId]
+					},
+					{
+						role: 'assistant',
+						content: `*Generating facilities content for ${selectedSponsor}...*`,
+						model: modelId,
+						modelName: modelName,
+						modelIdx: 0,
+						userContext: null,
+						done: false,
+						sources: [],
+						error: null
+					}
+				]
 			});
-			console.log('Web search enabled value:', webSearchEnabled);
-			console.log('Attached files:', files);
-			console.log('Attached files count:', files.length);
-			console.log('Attached files details:', files.map(f => ({ name: f.name, type: f.type, id: f.id })));
 
-			// Call the facilities API
-			const response = await generateFacilitiesResponse(token, {
-				sponsor: selectedSponsor,
-				form_data: formData,
-				model: modelId,  
-				web_search_enabled: webSearchEnabled,
-				files: files
-			});
+			const assistantMsgId = history.currentId;
 
-			console.log('Facilities API response:', response);
+			// Process each section one by one — update the single chat message after each
+			let completedSections: Record<string, string> = {};
+			let allSources: any[] = [];
+			let hasAnySuccess = false;
 
-			if (response && response.success) {
-				// Use the pre-formatted content from the backend
-				const responseMessage = response.content;
-				
-				// Sources are already formatted by the backend
-				const sources = response.sources || [];
+			for (let i = 0; i < filledSections.length; i++) {
+				const section = filledSections[i];
+				sectionProgress[i].status = 'processing';
+				sectionProgress = [...sectionProgress];
 
-				console.log('Adding to chat:', {
-					contentLength: responseMessage.length,
-					sourcesCount: sources.length,
-					contentPreview: responseMessage.substring(0, 100) + '...'
-				});
+				try {
+					console.log(`Processing section ${i + 1}/${filledSections.length}: ${section.id}`);
 
-				await addFacilitiesResponseToChat(responseMessage, sources, null);
+					const result = await generateFacilitiesSection(token, {
+						sponsor: selectedSponsor,
+						section_key: section.id,
+						section_text: formData[section.id],
+						model: modelId,
+						web_search_enabled: webSearchEnabled,
+						files: files
+					});
 
-				// Store the response for download functionality
+					if (result && result.success) {
+						completedSections[section.id] = result.generated_content;
+						allSources.push(...(result.sources || []));
+						hasAnySuccess = true;
+
+						// Update overlay preview
+						generatedSectionContent[section.id] = result.generated_content;
+						generatedSectionContent = { ...generatedSectionContent };
+
+						// Update the SINGLE assistant message in chat with cumulative content
+						// bind:history propagates this change up to Chat.svelte for re-render
+						if (history.messages[assistantMsgId]) {
+							history.messages[assistantMsgId].content = buildFormattedContent(completedSections, selectedSponsor);
+							history.messages[assistantMsgId].sources = allSources;
+							history = history; // triggers bind:history → ChatControls → Chat.svelte re-render
+						}
+
+						sectionProgress[i].status = 'done';
+						console.log(`Section ${section.id} done: ${result.generated_content.length} chars`);
+					} else {
+						sectionProgress[i].status = 'error';
+						console.error(`Section ${section.id} failed:`, result?.error);
+					}
+				} catch (error: any) {
+					sectionProgress[i].status = 'error';
+					console.error(`Error generating section ${section.id}:`, error);
+				}
+
+				sectionProgress = [...sectionProgress];
+			}
+
+			// Mark assistant message as done
+			if (history.messages[assistantMsgId]) {
+				history.messages[assistantMsgId].done = true;
+				if (!hasAnySuccess) {
+					history.messages[assistantMsgId].content = '';
+					history.messages[assistantMsgId].error = { content: 'Failed to generate facilities response' };
+				}
+				history = history;
+			}
+
+			// Update chat title
+			try {
+				if (token && $chatId) {
+					const projectTitle = formData.projectTitle || 'Facilities Response';
+					const title = `Facilities Response - ${selectedSponsor} - ${projectTitle}`;
+					await updateChatById(token, $chatId, { title: title });
+					currentChatPage.set(1);
+					await chats.set(await getChatList(token, $currentChatPage));
+				}
+			} catch (error) {
+				console.error('Error updating chat title:', error);
+			}
+
+			if (hasAnySuccess) {
+				const downloadSections = buildSectionsForDownload(completedSections, selectedSponsor);
 				lastGeneratedResponse = {
-					content: responseMessage,
-					sections: response.sections || {},
-					sources: sources
+					content: buildFormattedContent(completedSections, selectedSponsor),
+					sections: downloadSections,
+					sources: allSources
 				};
-
-				// Show download options
 				showDownloadOptions = true;
 
 				if (usedFiles.length > 0) {
 					showFilesUsedMessage = true;
 				}
 
-				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}.`);
-			} else{
-				console.error('Facilities API failed:', response.error);
-				// Add error to chat like regular chat does
-				await addFacilitiesResponseToChat('', [], response.error || 'Failed to generate facilities response');
-				toast.error(response.error || 'Failed to generate facilities response');
+				const doneCount = sectionProgress.filter(s => s.status === 'done').length;
+				const errorCount = sectionProgress.filter(s => s.status === 'error').length;
+
+				if (errorCount > 0) {
+					toast.warning(`Generated ${doneCount} of ${filledSections.length} sections. ${errorCount} section(s) failed.`);
+				} else {
+					toast.success(`Generated ${doneCount} sections for ${selectedSponsor}.`);
+				}
+			} else {
+				toast.error('Failed to generate any sections');
 			}
+
+			files = [];
 
 		} catch (error: any) {
 			console.error('Error generating facilities response:', error);
-			console.error('Error details:', {
-				message: error?.message,
-				detail: error?.detail,
-				status: error?.status,
-				response: error?.response
-			});
-			
-			// Add error to chat like regular chat does - use the same error handling as regular chat
-			const errorMessage = `${error}`;
-			await addFacilitiesResponseToChat('', [], errorMessage);
-			toast.error(errorMessage);
+			toast.error(`${error}`);
 		} finally {
 			generating = false;
 		}

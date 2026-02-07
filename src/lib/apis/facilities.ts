@@ -34,6 +34,65 @@ export interface ExtractFormDataResponse {
 	error?: string;
 }
 
+export interface SingleSectionRequest {
+	sponsor: string;
+	section_key: string;
+	section_text: string;
+	model: string;
+	web_search_enabled: boolean;
+	files?: any[];
+}
+
+export interface SingleSectionResponse {
+	success: boolean;
+	section_key: string;
+	section_label: string;
+	generated_content: string;
+	sources: Array<{
+		source: { id: string; name: string; url?: string };
+		document: string[];
+		metadata: Array<{ source: string; name: string }>;
+		distances?: number[];
+	}>;
+	error?: string;
+}
+
+export const generateFacilitiesSection = async (
+	token: string,
+	request: SingleSectionRequest
+): Promise<SingleSectionResponse> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/facilities/generate-section`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(request)
+	})
+		.then(async (res) => {
+			if (!res.ok) {
+				const errorData = await res.json();
+				console.error('Facilities section API error:', errorData);
+				throw errorData;
+			}
+			return res.json();
+		})
+		.catch((err) => {
+			console.error('Facilities section API fetch error:', err);
+			error = err.detail ?? err.message ?? 'Server connection failed';
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const generateFacilitiesResponse = async (
 	token: string,
 	request: FacilitiesRequest
