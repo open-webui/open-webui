@@ -601,11 +601,12 @@ async def signin(
                 pass
 
         if not Users.get_user_by_email(email.lower(), db=db):
-            await signup(
+            await _signup(
                 request,
                 response,
                 SignupForm(email=email, password=str(uuid.uuid4()), name=name),
                 db=db,
+                bypass_signup_restriction=True,
             )
 
         user = Auths.authenticate_user_by_email(email, db=db)
@@ -632,7 +633,7 @@ async def signin(
             if Users.has_users(db=db):
                 raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
 
-            await signup(
+            await _signup(
                 request,
                 response,
                 SignupForm(email=admin_email, password=admin_password, name="User"),
@@ -684,22 +685,33 @@ async def signup(
     form_data: SignupForm,
     db: Session = Depends(get_session),
 ):
+    return await _signup(request, response, form_data, db=db)
+
+
+async def _signup(
+    request: Request,
+    response: Response,
+    form_data: SignupForm,
+    db: Session = None,
+    bypass_signup_restriction: bool = False,
+):
     has_users = Users.has_users(db=db)
 
-    if WEBUI_AUTH:
-        if (
-            not request.app.state.config.ENABLE_SIGNUP
-            or not request.app.state.config.ENABLE_LOGIN_FORM
-        ):
-            if has_users or not ENABLE_INITIAL_ADMIN_SIGNUP:
+    if not bypass_signup_restriction:
+        if WEBUI_AUTH:
+            if (
+                not request.app.state.config.ENABLE_SIGNUP
+                or not request.app.state.config.ENABLE_LOGIN_FORM
+            ):
+                if has_users or not ENABLE_INITIAL_ADMIN_SIGNUP:
+                    raise HTTPException(
+                        status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+                    )
+        else:
+            if has_users:
                 raise HTTPException(
                     status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
                 )
-    else:
-        if has_users:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-            )
 
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
