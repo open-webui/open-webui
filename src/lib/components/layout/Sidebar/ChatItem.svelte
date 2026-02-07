@@ -68,7 +68,7 @@
 		if (days > 0) return `${days}d`;
 		if (hours > 0) return `${hours}h`;
 		if (minutes > 0) return `${minutes}m`;
-		return 'now';
+		return '1m';
 	}
 
 	let chat = null;
