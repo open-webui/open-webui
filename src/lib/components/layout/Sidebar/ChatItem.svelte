@@ -63,7 +63,9 @@
 		const hours = Math.floor(minutes / 60);
 		const days = Math.floor(hours / 24);
 		const weeks = Math.floor(days / 7);
+		const years = Math.floor(days / 365);
 
+		if (years > 0) return `${years}y`;
 		if (weeks > 0) return `${weeks}w`;
 		if (days > 0) return `${days}d`;
 		if (hours > 0) return `${hours}h`;
