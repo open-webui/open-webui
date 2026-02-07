@@ -409,15 +409,27 @@ class FunctionsTable:
     def deactivate_all_functions(self, db: Optional[Session] = None) -> Optional[bool]:
         with get_db_context(db) as db:
             try:
-                db.query(Function).update(
-                    {
-                        "is_active": False,
-                        "updated_at": int(time.time()),
-                    }
+                row_count = (
+                    db.query(Function)
+                    .filter(Function.is_active)
+                    .update(
+                        {
+                            "is_active": False,
+                            "updated_at": int(time.time()),
+                        },
+                        synchronize_session=False,
+                    )
                 )
                 db.commit()
+
+                if row_count > 0:
+                    log.warning(
+                        f"Deactivated {row_count} active function(s). "
+                        "If this was unexpected, please check if SAFE_MODE is enabled in your environment variables."
+                    )
                 return True
-            except Exception:
+            except Exception as e:
+                log.exception(f"Error deactivating all functions: {e}")
                 return None
 
     def delete_function_by_id(self, id: str, db: Optional[Session] = None) -> bool:
