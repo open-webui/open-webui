@@ -9,7 +9,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, Users, UserResponse
 
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from sqlalchemy import String, cast, or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
@@ -48,7 +48,20 @@ class ModelMeta(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    pass
+    @model_validator(mode="before")
+    @classmethod
+    def validate_tags(cls, data):
+        if isinstance(data, dict) and "tags" in data:
+            tags = data["tags"]
+            if isinstance(tags, list):
+                normalized = []
+                for tag in tags:
+                    if isinstance(tag, str):
+                        normalized.append({"name": tag})
+                    elif isinstance(tag, dict) and "name" in tag:
+                        normalized.append(tag)
+                data["tags"] = normalized
+        return data
 
 
 class Model(Base):
