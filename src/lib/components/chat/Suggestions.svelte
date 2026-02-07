@@ -99,7 +99,7 @@
 				<div
 					class="box-border flex flex-col items-start p-5 gap-3
 			{$mobile ? 'w-full' : 'min-w-[18.75rem] w-[18.75rem]'}
-			h-32
+			min-h-[8rem] h-auto
 			bg-white/70 dark:bg-gray-800/70
 			shadow-sm
 			backdrop-blur-md
@@ -162,7 +162,7 @@
 								</g>
 							</svg>
 							<div
-								class="text-caption text-gray-500 flex flex-row items-center gap-1 overflow-hidden truncate max-w-[180px]"
+								class="text-caption text-gray-500 flex flex-row items-center gap-1 overflow-hidden truncate max-w-full"
 							>
 								{tag.chapter_name}
 							</div>
@@ -176,9 +176,9 @@
 						<div class="flex gap-1">
 							<div class="flex gap-1">
 								<!-- 이해함 -->
-								<Tooltip content="이해함" placement="bottom">
+								<Tooltip content="이미 알고 있어요" placement="bottom">
 									<button
-										class="w-7 h-7 p-0 border-none rounded-full cursor-pointer flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95
+										class="w-8 h-8 p-0 border-none rounded-full cursor-pointer flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95
 										{tag.feedback_status === 'understood'
 											? 'bg-green-100 dark:bg-green-900/50'
 											: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}"
@@ -187,18 +187,18 @@
 												tag.id,
 												tag.feedback_status === 'understood' ? null : 'understood'
 											)}
-										aria-label="이해함"
+										aria-label="이미 알고 있어요"
 									>
 										<svg
-											width="16"
-											height="16"
-											viewBox="0 0 16 16"
+											width="20"
+											height="20"
+											viewBox="0 0 20 20"
 											fill="none"
 											xmlns="http://www.w3.org/2000/svg"
 										>
-											<circle cx="8" cy="8" r="6" stroke="#34BE89" stroke-width="1.5" />
+											<circle cx="10" cy="10" r="7.5" stroke="#34BE89" stroke-width="1.5" />
 											<path
-												d="M5 8L7 10L11 6"
+												d="M6.25 10L8.75 12.5L13.75 7.5"
 												stroke="#34BE89"
 												stroke-width="1.5"
 												stroke-linecap="round"
@@ -261,9 +261,9 @@
 						</div>
 						<!-- Right: Practice button -->
 						<button
-							class="flex flex-row items-center py-1 pl-4 pr-3 gap-1 bg-[#076EF4] rounded-full border-none cursor-pointer
+							class="flex flex-row items-center py-1 pl-4 pr-3 gap-1 bg-blue-600 rounded-full border-none cursor-pointer
 								 text-caption leading-[21px] text-gray-50
-								transition-all duration-200 hover:bg-[#0558c7] hover:-translate-y-px active:translate-y-0"
+								transition-all duration-200 hover:bg-blue-700 hover:-translate-y-px active:translate-y-0"
 							on:click={() => handlePractice(tag)}
 						>
 							<span>바로 연습</span>

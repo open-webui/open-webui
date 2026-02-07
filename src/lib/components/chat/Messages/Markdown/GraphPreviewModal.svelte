@@ -227,6 +227,27 @@
 			});
 		}
 
+		// Polar graph layout
+		if (spec.type === 'polar_2d') {
+			return {
+				...baseLayout,
+				polar: {
+					bgcolor: 'transparent',
+					radialaxis: {
+						showticklabels: true,
+						tickfont: { color: textColor },
+						gridcolor: gridColor
+					},
+					angularaxis: {
+						showticklabels: true,
+						tickfont: { color: textColor },
+						gridcolor: gridColor,
+						direction: 'counterclockwise'
+					}
+				}
+			};
+		}
+
 		return {
 			...baseLayout,
 			xaxis,

@@ -49,7 +49,7 @@
 		<span
 			class="text-caption {activeMode === 'dashboard'
 				? 'text-[#FDFEFE]'
-				: 'text-gray-500 dark:text-gray-600'}"
+				: 'text-gray-600 dark:text-gray-400'}"
 		>
 			교수 모드
 		</span>
@@ -75,7 +75,7 @@
 		<span
 			class="text-caption {activeMode === 'chat'
 				? 'text-[#FDFEFE]'
-				: 'text-gray-500 dark:text-gray-600'}"
+				: 'text-gray-600 dark:text-gray-400'}"
 		>
 			학생 모드
 		</span>

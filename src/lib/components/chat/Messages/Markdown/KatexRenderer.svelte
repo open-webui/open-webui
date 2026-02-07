@@ -49,5 +49,20 @@
 </script>
 
 {#if renderToString && renderedHtml}
-	{@html renderedHtml}
+	<span class={displayMode ? 'katex-display-wrapper' : 'katex-inline-wrapper'}>
+		{@html renderedHtml}
+	</span>
 {/if}
+
+<style>
+	.katex-display-wrapper {
+		display: block;
+		overflow-x: auto;
+		overflow-y: hidden;
+		max-width: 100%;
+		padding: 0.25rem 0;
+	}
+	.katex-inline-wrapper {
+		overflow-wrap: break-word;
+	}
+</style>
