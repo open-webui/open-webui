@@ -529,6 +529,12 @@
 					}
 				} else if (type === 'chat:message:delta' || type === 'message') {
 					message.content += data.content;
+
+					// If stream is done and we now have content, mark as completed
+					if (message.done && message.content.trim() !== '' && !message.completed) {
+						console.log('[Socket Delta] Message now has content, marking as completed');
+						message.completed = true;
+					}
 				} else if (type === 'chat:message' || type === 'replace') {
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
@@ -1427,8 +1433,14 @@
 		}
 
 		// Mark message as completed after chatCompleted API call
+		// But only if the message has content - prevents "no response" flash during streaming
 		if (history.messages[responseMessageId]) {
-			history.messages[responseMessageId].completed = true;
+			const msg = history.messages[responseMessageId];
+			if ((msg.content && msg.content.trim() !== '') || msg.error) {
+				msg.completed = true;
+			} else {
+				console.log('[chatCompletedHandler] Skipping completed flag - message has no content yet');
+			}
 		}
 
 		taskIds = null;
@@ -1644,6 +1656,12 @@
 				} else {
 					message.content += value;
 
+					// If stream is done and we now have content, mark as completed
+					if (message.done && message.content.trim() !== '' && !message.completed) {
+						console.log('[HTTP Stream Delta] Message now has content, marking as completed');
+						message.completed = true;
+					}
+
 					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 						navigator.vibrate(5);
 					}
@@ -1765,12 +1783,39 @@
 				scrollToBottom();
 			}
 
-			await chatCompletedHandler(
-				chatId,
-				message.model,
-				message.id,
-				createMessagesList(history, message.id)
-			);
+			// Wait for message content to arrive before calling chatCompletedHandler
+			// This prevents "no response" from showing when stream events are delayed
+			if ($socket?.id) {
+				// Give a delay to ensure all stream events have been processed
+				// Responses can take 3-30 seconds, so wait 10 seconds initially
+				if (message.content.trim() === '' && !message.error) {
+					console.log('[Socket Event] Message marked done but content is empty, waiting 10s for stream events...');
+					await new Promise(resolve => setTimeout(resolve, 10000));
+				}
+
+				console.log('[Socket Event] Calling chatCompletedHandler with session_id:', $socket.id);
+				await chatCompletedHandler(
+					chatId,
+					message.model,
+					message.id,
+					createMessagesList(history, message.id)
+				);
+
+				// If still no content after 30 more seconds, mark as completed anyway
+				// This handles the case where the model truly returned no response
+				if (!message.completed && !message.error) {
+					setTimeout(() => {
+						if (history.messages[message.id] &&
+							!history.messages[message.id].completed &&
+							history.messages[message.id].done) {
+							console.log('[Socket Event] No content after 30s timeout, marking as completed');
+							history.messages[message.id].completed = true;
+						}
+					}, 30000);
+				}
+			} else {
+				console.log('[Socket Event] Skipping chatCompletedHandler - no session_id available');
+			}
 		}
 
 		console.log(data);
@@ -2354,14 +2399,99 @@
 						}
 
 						responseMessage.done = true;
+						// Don't set completed here - let chatCompletedHandler handle it conditionally
+						// based on whether content exists
 						history.messages[responseMessageId] = responseMessage;
+
+						// Event Stream 완료 처리 (Socket 스트리밍과 동일한 로직)
+						console.log('[Event Stream] Stream completed, calling completion handler');
+
+						// Clear generating flag to re-enable input
+						generating = false;
+						generationController = null;
+
+						if ($settings.responseAutoCopy) {
+							copyToClipboard(responseMessage.content);
+						}
+
+						if ($settings.responseAutoPlayback && !$showCallOverlay) {
+							await tick();
+							document.getElementById(`speak-button-${responseMessage.id}`)?.click();
+						}
+
+						// Emit chat event for TTS
+						let lastMessageContentPart =
+							getMessageContentParts(
+								removeAllDetails(responseMessage.content),
+								$config?.audio?.tts?.split_on ?? 'punctuation'
+							)?.at(-1) ?? '';
+						if (lastMessageContentPart) {
+							eventTarget.dispatchEvent(
+								new CustomEvent('chat', {
+									detail: { id: responseMessage.id, content: lastMessageContentPart }
+								})
+							);
+						}
+						eventTarget.dispatchEvent(
+							new CustomEvent('chat:finish', {
+								detail: {
+									id: responseMessage.id,
+									content: responseMessage.content
+								}
+							})
+						);
+
+						await tick();
+						if (autoScroll) {
+							scrollToBottom();
+						}
+
+						// Call chatCompletedHandler for backend processing (chapter detection etc.)
+						// Only if session_id is available (socket connected)
+						if ($socket?.id) {
+							// Wait for message content to arrive before calling chatCompletedHandler
+							// This prevents "no response" from showing when stream events are delayed
+							// Responses can take 3-30 seconds, so wait 10 seconds initially
+							if (responseMessage.content.trim() === '' && !responseMessage.error) {
+								console.log('[Event Stream] Message completed but content is empty, waiting 10s...');
+								await new Promise(resolve => setTimeout(resolve, 10000));
+							}
+
+							console.log('[Event Stream] Calling chatCompletedHandler with session_id:', $socket.id);
+							await chatCompletedHandler(
+								_chatId,
+								responseMessage.model,
+								responseMessageId,
+								createMessagesList(history, responseMessageId)
+							);
+
+							// If still no content after 30 more seconds, mark as completed anyway
+							// This handles the case where the model truly returned no response
+							if (!responseMessage.completed && !responseMessage.error) {
+								setTimeout(() => {
+									if (history.messages[responseMessageId] &&
+										!history.messages[responseMessageId].completed &&
+										history.messages[responseMessageId].done) {
+										console.log('[Event Stream] No content after 30s timeout, marking as completed');
+										history.messages[responseMessageId].completed = true;
+									}
+								}, 30000);
+							}
+						} else {
+							console.log('[Event Stream] Skipping chatCompletedHandler - no session_id available');
+						}
 					} catch (error) {
 						console.error('Error processing stream:', error);
 						responseMessage.error = {
 							content: error
 						};
 						responseMessage.done = true;
+						responseMessage.completed = true;
 						history.messages[responseMessageId] = responseMessage;
+
+						// Clear generating flag even on error
+						generating = false;
+						generationController = null;
 					}
 				} else {
 					try {
@@ -2373,7 +2503,12 @@
 							content: `HTTP Error: ${res.status}`
 						};
 						responseMessage.done = true;
+						responseMessage.completed = true;
 						history.messages[responseMessageId] = responseMessage;
+
+						// Clear generating flag even on error
+						generating = false;
+						generationController = null;
 					}
 				}
 			} else if (res.error) {
