@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 /*
 LaTeX Math Formula Extension for TipTap/ProseMirror
 Provides Obsidian-style inline math rendering with cursor-aware toggling.
@@ -334,7 +335,7 @@ function createMathWidget(region) {
 	return (view) => {
 		const span = document.createElement('span');
 		span.className = 'math-render-widget';
-		span.innerHTML = region.rendered || '';
+		span.innerHTML = DOMPurify.sanitize(region.rendered || '');
 		span.contentEditable = 'false';
 
 		// Store region data as attributes
@@ -383,13 +384,13 @@ function createMathPreviewWidget(region, view) {
 
 	if (region.error) {
 		// Show error message
-		preview.innerHTML = '<span class="math-preview-error">Invalid LaTeX</span>';
+		preview.innerHTML = DOMPurify.sanitize('<span class="math-preview-error">Invalid LaTeX</span>');
 	} else if (region.rendered) {
 		// Show rendered preview
-		preview.innerHTML = region.rendered;
+		preview.innerHTML = DOMPurify.sanitize(region.rendered);
 	} else {
 		// Empty or loading
-		preview.innerHTML = '<span class="math-preview-loading">...</span>';
+		preview.innerHTML = DOMPurify.sanitize('<span class="math-preview-loading">...</span>');
 	}
 
 
