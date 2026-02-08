@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
