@@ -37,7 +37,7 @@ export const downloadPdf = async (note) => {
 
 		const contentNode = document.createElement('div');
 
-		contentNode.innerHTML = html;
+		contentNode.innerHTML = DOMPurify.sanitize(html);
 
 		node.appendChild(contentNode);
 
