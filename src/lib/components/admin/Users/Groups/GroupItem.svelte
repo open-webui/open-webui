@@ -9,7 +9,6 @@
 
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import User from '$lib/components/icons/User.svelte';
-	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import EditGroupModal from './EditGroupModal.svelte';
 
 	export let group = {
@@ -70,9 +69,6 @@
 	}}
 >
 	<div class="flex items-center gap-1.5 w-full font-medium flex-1">
-		<div>
-			<UserCircleSolid className="size-4" />
-		</div>
 		<div class="line-clamp-1">
 			{group.name}
 		</div>
