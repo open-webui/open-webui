@@ -435,6 +435,7 @@
 			<div class="flex-1 min-w-0">
 				<Tags
 					{tags}
+					{disabled}
 					{suggestionTags}
 					on:add={(e) => {
 						tags = [...tags, { name: e.detail }];

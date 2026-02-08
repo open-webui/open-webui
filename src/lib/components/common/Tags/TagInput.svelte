@@ -5,6 +5,7 @@
 	const i18n = getContext('i18n');
 
 	export let suggestionTags = [];
+	export let disabled = false;
 
 	let tagName = '';
 	let showInput = false;
@@ -30,7 +31,9 @@
 	};
 </script>
 
-{#if showInput}
+{#if disabled}
+	<!-- hidden when disabled -->
+{:else if showInput}
 	<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-200/80 dark:bg-gray-700">
 		<span class="text-gray-500 dark:text-blue-400">+</span>
 		<input
