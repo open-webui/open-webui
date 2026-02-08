@@ -1,0 +1,577 @@
+# SECURITY_PATCHES
+
+This file lists immediate frontend-only patches to mitigate XSS and token exposure. Apply changes and tests before merge.
+
+Files identified (from grep):
+
+ - src/routes/(app)/admin/functions/create/+page.svelte:37:		const res = await createNewFunction(localStorage.token, {
+ - src/routes/(app)/admin/functions/create/+page.svelte:49:			functions.set(await getFunctions(localStorage.token));
+ - src/routes/(app)/admin/functions/create/+page.svelte:52:					localStorage.token,
+ - src/routes/(app)/admin/functions/edit/+page.svelte:38:		const res = await updateFunctionById(localStorage.token, func.id, {
+ - src/routes/(app)/admin/functions/edit/+page.svelte:50:			functions.set(await getFunctions(localStorage.token));
+ - src/routes/(app)/admin/functions/edit/+page.svelte:53:					localStorage.token,
+ - src/routes/(app)/admin/functions/edit/+page.svelte:67:			func = await getFunctionById(localStorage.token, id).catch((error) => {
+ - src/routes/(app)/admin/functions/+page.svelte:11:				functions.set(await getFunctions(localStorage.token));
+ - src/routes/(app)/dashboard/+page.svelte:73:			const result = await getTagMessagesStats(localStorage.token, tagId, 10, 0);
+ - src/routes/(app)/dashboard/+page.svelte:105:				getTopTags(localStorage.token, 10)
+ - src/routes/(app)/+layout.svelte:90:		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
+ - src/routes/(app)/+layout.svelte:116:				localStorage.token,
+ - src/routes/(app)/+layout.svelte:139:		const bannersData = await getBanners(localStorage.token);
+ - src/routes/(app)/+layout.svelte:144:		const toolsData = await getTools(localStorage.token);
+ - src/routes/(app)/+layout.svelte:296:		version = await getVersionUpdates(localStorage.token).catch((error) => {
+ - src/routes/(app)/workspace/prompts/create/+page.svelte:22:		const res = await createNewPrompt(localStorage.token, _prompt).catch((error) => {
+ - src/routes/(app)/workspace/prompts/create/+page.svelte:30:			await prompts.set(await getPrompts(localStorage.token));
+ - src/routes/(app)/workspace/prompts/edit/+page.svelte:17:		const prompt = await updatePromptByCommand(localStorage.token, _prompt).catch((error) => {
+ - src/routes/(app)/workspace/prompts/edit/+page.svelte:24:			await prompts.set(await getPrompts(localStorage.token));
+ - src/routes/(app)/workspace/prompts/edit/+page.svelte:33:				localStorage.token,
+ - src/routes/(app)/workspace/models/create/+page.svelte:33:			const res = await createNewModel(localStorage.token, {
+ - src/routes/(app)/workspace/models/create/+page.svelte:52:						localStorage.token,
+ - src/routes/(app)/workspace/models/edit/+page.svelte:21:			model = await getModelById(localStorage.token, _id).catch((e) => {
+ - src/routes/(app)/workspace/models/edit/+page.svelte:34:		const res = await updateModelById(localStorage.token, modelInfo.id, modelInfo);
+ - src/routes/(app)/workspace/models/edit/+page.svelte:39:					localStorage.token,
+ - src/routes/(app)/workspace/models/+page.svelte:12:						localStorage.token,
+ - src/routes/(app)/workspace/tools/create/+page.svelte:35:		const res = await createNewTool(localStorage.token, {
+ - src/routes/(app)/workspace/tools/create/+page.svelte:48:			tools.set(await getTools(localStorage.token));
+ - src/routes/(app)/workspace/tools/edit/+page.svelte:35:		const res = await updateToolById(localStorage.token, tool.id, {
+ - src/routes/(app)/workspace/tools/edit/+page.svelte:48:			tools.set(await getTools(localStorage.token));
+ - src/routes/(app)/workspace/tools/edit/+page.svelte:59:			tool = await getToolById(localStorage.token, id).catch((error) => {
+ - src/routes/auth/+page.svelte:70:				localStorage.token = sessionUser.token;
+ - src/routes/auth/+page.svelte:156:		localStorage.token = token;
+ - src/routes/+layout.svelte:100:			auth: { token: localStorage.token }
+ - src/routes/+layout.svelte:111:			const res = await getVersion(localStorage.token);
+ - src/routes/+layout.svelte:139:				_socket.emit('user-join', { auth: { token: localStorage.token } });
+ - src/routes/+layout.svelte:279:				toolServerToken = localStorage.token;
+ - src/routes/+layout.svelte:362:				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/routes/+layout.svelte:364:				tags.set(await getAllTags(localStorage.token));
+ - src/routes/+layout.svelte:639:					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/routes/+layout.svelte:642:				const userSettings = await getUserSettings(localStorage.token);
+ - src/routes/+layout.svelte:696:				if (localStorage.token) {
+ - src/routes/+layout.svelte:698:					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+ - src/routes/s/[id]/+page.svelte:63:		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
+ - src/routes/s/[id]/+page.svelte:84:				localStorage.token,
+ - src/routes/s/[id]/+page.svelte:89:		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
+ - src/routes/s/[id]/+page.svelte:95:			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
+ - src/routes/s/[id]/+page.svelte:133:		const res = await cloneSharedChatById(localStorage.token, chat.id).catch((error) => {
+ - src/lib/apis/index.ts:360:						toolServerToken = localStorage.token;
+ - src/lib/components/notes/NoteEditor/Chat.svelte:183:			localStorage.token,
+ - src/lib/components/notes/NoteEditor.svelte:150:		const res = await getNoteById(localStorage.token, id).catch((error) => {
+ - src/lib/components/notes/NoteEditor.svelte:176:			const res = await updateNoteById(localStorage.token, id, {
+ - src/lib/components/notes/NoteEditor.svelte:247:			localStorage.token,
+ - src/lib/components/notes/NoteEditor.svelte:416:			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+ - src/lib/components/notes/NoteEditor.svelte:579:		const res = await deleteNoteById(localStorage.token, id).catch((error) => {
+ - src/lib/components/notes/NoteEditor.svelte:618:			localStorage.token,
+ - src/lib/components/notes/NoteEditor.svelte:787:				token: localStorage.token
+ - src/lib/components/notes/Notes.svelte:97:		noteItems = await getNotes(localStorage.token, true);
+ - src/lib/components/notes/Notes.svelte:121:		const res = await deleteNoteById(localStorage.token, id).catch((error) => {
+ - src/lib/components/notes/Notes.svelte:151:				const res = await createNewNote(localStorage.token, {
+ - src/lib/components/notes/utils.ts:40:		contentNode.innerHTML = html;
+ - src/lib/components/notes/utils.ts:112:	const res = await createNewNote(localStorage.token, {
+ - src/lib/components/layout/Overlay/AccountPending.svelte:14:		adminDetails = await getAdminDetails(localStorage.token).catch((err) => {
+ - src/lib/components/layout/ChatsModal.svelte:60:		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
+ - src/lib/components/layout/SearchModal.svelte:80:		const chat = await getChatById(localStorage.token, chatId).catch(async (error) => {
+ - src/lib/components/layout/SearchModal.svelte:125:			chatList = await getChatList(localStorage.token, page);
+ - src/lib/components/layout/SearchModal.svelte:128:				chatList = await getChatListBySearchText(localStorage.token, query, page);
+ - src/lib/components/layout/SearchModal.svelte:157:			newChatList = await getChatListBySearchText(localStorage.token, query, page);
+ - src/lib/components/layout/SearchModal.svelte:159:			newChatList = await getChatList(localStorage.token, page);
+ - src/lib/components/layout/Sidebar.svelte:123:		const folderList = await getFolders(localStorage.token).catch((error) => {
+ - src/lib/components/layout/Sidebar.svelte:195:		const res = await createNewFolder(localStorage.token, {
+ - src/lib/components/layout/Sidebar.svelte:210:		await channels.set(await getChannels(localStorage.token));
+ - src/lib/components/layout/Sidebar.svelte:224:				const _tags = await getAllTags(localStorage.token);
+ - src/lib/components/layout/Sidebar.svelte:229:				const _pinnedChats = await getPinnedChatList(localStorage.token);
+ - src/lib/components/layout/Sidebar.svelte:234:				const _chats = await getChatList(localStorage.token, $currentChatPage);
+ - src/lib/components/layout/Sidebar.svelte:250:		newChatList = await getChatList(localStorage.token, $currentChatPage);
+ - src/lib/components/layout/Sidebar.svelte:264:				await importChats(localStorage.token, [
+ - src/lib/components/layout/Sidebar.svelte:540:				await updateChatById(localStorage.token, $chatId, {
+ - src/lib/components/layout/Sidebar.svelte:565:				await updateChatById(localStorage.token, $chatId, {
+ - src/lib/components/layout/Sidebar.svelte:595:		const res = await createNewChannel(localStorage.token, {
+ - src/lib/components/layout/Navbar/Menu.svelte:239:				chatObj = await getChatById(localStorage.token, chat.id);
+ - src/lib/components/layout/Sidebar/ChannelModal.svelte:60:		const res = await deleteChannelById(localStorage.token, channel.id).catch((error) => {
+ - src/lib/components/layout/Sidebar/Folders/FolderModal.svelte:56:			folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+ - src/lib/components/layout/Sidebar/SearchInput.svelte:191:		await tags.set(await getAllTags(localStorage.token));
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:88:			chat = await getChatById(localStorage.token, id);
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:102:			await updateChatById(localStorage.token, id, {
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:111:			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:112:			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:120:			localStorage.token,
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:134:			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:135:			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:140:		const res = await deleteChatById(localStorage.token, id).catch((error) => {
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:146:			tags.set(await getAllTags(localStorage.token));
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:159:		await archiveChatById(localStorage.token, id);
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:165:			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:174:				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:175:				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:301:			chat = await getChatById(localStorage.token, id);
+ - src/lib/components/layout/Sidebar/ChatItem.svelte:315:		const generatedTitle = await generateTitle(localStorage.token, model, messages).catch(
+ - src/lib/components/layout/Sidebar/ChannelItem.svelte:31:		const res = await updateChannelById(localStorage.token, channel.id, {
+ - src/lib/components/layout/Sidebar/ChatMenu.svelte:53:		await toggleChatPinnedStatusById(localStorage.token, chatId);
+ - src/lib/components/layout/Sidebar/ChatMenu.svelte:58:		pinned = await getChatPinnedStatusById(localStorage.token, chatId);
+ - src/lib/components/layout/Sidebar/ChatMenu.svelte:72:		const chat = await getChatById(localStorage.token, chatId);
+ - src/lib/components/layout/Sidebar/ChatMenu.svelte:86:		chat = await getChatById(localStorage.token, chatId);
+ - src/lib/components/layout/Sidebar/ChatMenu.svelte:247:		const chat = await getChatById(localStorage.token, chatId);
+ - src/lib/components/layout/Sidebar/UserMenu.svelte:45:		const res = await getUsage(localStorage.token).catch((error) => {
+ - src/lib/components/layout/Sidebar/PinnedModelList.svelte:32:					await updateUserSettings(localStorage.token, { ui: $settings });
+ - src/lib/components/layout/Sidebar/PinnedModelList.svelte:48:			await updateUserSettings(localStorage.token, { ui: $settings });
+ - src/lib/components/layout/Sidebar/PinnedModelList.svelte:84:							updateUserSettings(localStorage.token, { ui: $settings });
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:140:								const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:153:								let chat = await getChatById(localStorage.token, id).catch((error) => {
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:157:									chat = await importChats(localStorage.token, [
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:174:									localStorage.token,
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:293:		const res = await deleteFolderById(localStorage.token, folderId, deleteFolderContents).catch(
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:317:		const res = await updateFolderById(localStorage.token, folderId, {
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:338:				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:352:		const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:373:			chats = await getChatListByFolderId(localStorage.token, folderId).catch((error) => {
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:403:		const chats = await getChatsByFolderId(localStorage.token, folderId).catch((error) => {
+ - src/lib/components/layout/Sidebar/RecursiveFolder.svelte:498:						const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+ - src/lib/components/layout/ArchivedChatsModal.svelte:61:			chatList = await getArchivedChatList(localStorage.token, page, filter);
+ - src/lib/components/layout/ArchivedChatsModal.svelte:64:				chatList = await getArchivedChatList(localStorage.token, page, filter);
+ - src/lib/components/layout/ArchivedChatsModal.svelte:82:			newChatList = await getArchivedChatList(localStorage.token, page, filter);
+ - src/lib/components/layout/ArchivedChatsModal.svelte:84:			newChatList = await getArchivedChatList(localStorage.token, page, filter);
+ - src/lib/components/layout/ArchivedChatsModal.svelte:98:		const chats = await getAllArchivedChats(localStorage.token);
+ - src/lib/components/layout/ArchivedChatsModal.svelte:106:		const res = await archiveChatById(localStorage.token, chatId).catch((error) => {
+ - src/lib/components/layout/ArchivedChatsModal.svelte:117:			await unarchiveAllChats(localStorage.token);
+ - src/lib/components/layout/ArchivedChatsModal.svelte:129:		chatList = await getArchivedChatList(localStorage.token);
+ - src/lib/components/ChangelogModal.svelte:108:					await updateUserSettings(localStorage.token, { ui: $settings });
+ - src/lib/components/admin/Functions.svelte:97:		const item = await getFunctionById(localStorage.token, func.id).catch((error) => {
+ - src/lib/components/admin/Functions.svelte:124:		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
+ - src/lib/components/admin/Functions.svelte:140:		const _function = await getFunctionById(localStorage.token, func.id).catch((error) => {
+ - src/lib/components/admin/Functions.svelte:154:		const res = await deleteFunctionById(localStorage.token, func.id).catch((error) => {
+ - src/lib/components/admin/Functions.svelte:163:			_functions.set(await getFunctions(localStorage.token));
+ - src/lib/components/admin/Functions.svelte:166:					localStorage.token,
+ - src/lib/components/admin/Functions.svelte:176:		const res = await toggleGlobalById(localStorage.token, func.id).catch((error) => {
+ - src/lib/components/admin/Functions.svelte:191:			_functions.set(await getFunctions(localStorage.token));
+ - src/lib/components/admin/Functions.svelte:194:					localStorage.token,
+ - src/lib/components/admin/Functions.svelte:205:		functions = await getFunctionList(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Functions.svelte:250:		return await loadFunctionByUrl(localStorage.token, url);
+ - src/lib/components/admin/Functions.svelte:305:										const _functions = await exportFunctions(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Functions.svelte:558:												toggleFunctionById(localStorage.token, func.id);
+ - src/lib/components/admin/Functions.svelte:561:														localStorage.token,
+ - src/lib/components/admin/Functions.svelte:644:					localStorage.token,
+ - src/lib/components/admin/Functions.svelte:667:					const res = await createNewFunction(localStorage.token, func).catch((error) => {
+ - src/lib/components/admin/Functions.svelte:674:				functions.set(await getFunctions(localStorage.token));
+ - src/lib/components/admin/Functions.svelte:677:						localStorage.token,
+ - src/lib/components/admin/Users/UserList/UserChatsModal.svelte:58:			chatList = await getChatListByUserId(localStorage.token, user.id, page, filter);
+ - src/lib/components/admin/Users/UserList/UserChatsModal.svelte:61:				chatList = await getChatListByUserId(localStorage.token, user.id, page, filter);
+ - src/lib/components/admin/Users/UserList/UserChatsModal.svelte:78:		newChatList = await getChatListByUserId(localStorage.token, user.id, page, filter);
+ - src/lib/components/admin/Users/UserList/UserChatsModal.svelte:91:		chatList = await getChatListByUserId(localStorage.token, user.id, page, filter);
+ - src/lib/components/admin/Users/UserList/EditUserModal.svelte:48:		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
+ - src/lib/components/admin/Users/UserList/EditUserModal.svelte:62:		userGroups = await getUserGroupsById(localStorage.token, selectedUser.id).catch((error) => {
+ - src/lib/components/admin/Users/UserList/AddUserModal.svelte:50:				localStorage.token,
+ - src/lib/components/admin/Users/UserList/AddUserModal.svelte:87:									localStorage.token,
+ - src/lib/components/admin/Users/Groups/GroupItem.svelte:26:		const res = await updateGroupById(localStorage.token, group.id, _group).catch((error) => {
+ - src/lib/components/admin/Users/Groups/GroupItem.svelte:38:		const res = await deleteGroupById(localStorage.token, group.id).catch((error) => {
+ - src/lib/components/admin/Users/Groups/Users.svelte:49:			const res = await getUsers(localStorage.token, query, orderBy, direction, page).catch(
+ - src/lib/components/admin/Users/Groups/Users.svelte:67:			await addUserToGroup(localStorage.token, groupId, [userId]).catch((error) => {
+ - src/lib/components/admin/Users/Groups/Users.svelte:72:			await removeUserFromGroup(localStorage.token, groupId, [userId]).catch((error) => {
+ - src/lib/components/admin/Users/Groups.svelte:56:		groups = await getGroups(localStorage.token);
+ - src/lib/components/admin/Users/Groups.svelte:60:		const res = await createNewGroup(localStorage.token, group).catch((error) => {
+ - src/lib/components/admin/Users/Groups.svelte:67:			groups = await getGroups(localStorage.token);
+ - src/lib/components/admin/Users/Groups.svelte:74:		const res = await updateUserDefaultPermissions(localStorage.token, group.permissions).catch(
+ - src/lib/components/admin/Users/Groups.svelte:83:			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+ - src/lib/components/admin/Users/Groups.svelte:93:		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+ - src/lib/components/admin/Users/UserList.svelte:57:		const res = await deleteUserById(localStorage.token, id).catch((error) => {
+ - src/lib/components/admin/Users/UserList.svelte:83:			const res = await getUsers(localStorage.token, query, orderBy, direction, page).catch(
+ - src/lib/components/admin/Evaluations/FeedbackModal.svelte:28:			feedbackData = await getFeedbackById(localStorage.token, selectedFeedback.id).catch((err) => {
+ - src/lib/components/admin/Evaluations/Feedbacks.svelte:67:			const res = await getFeedbackItems(localStorage.token, orderBy, direction, page).catch(
+ - src/lib/components/admin/Evaluations/Feedbacks.svelte:92:		const response = await deleteFeedbackById(localStorage.token, feedbackId).catch((err) => {
+ - src/lib/components/admin/Evaluations/Feedbacks.svelte:131:		const _feedbacks = await exportAllFeedbacks(localStorage.token).catch((err) => {
+ - src/lib/components/admin/Evaluations.svelte:37:		feedbacks = await getAllFeedbacks(localStorage.token);
+ - src/lib/components/admin/Settings/WebSearch.svelte:63:		const res = await updateRAGConfig(localStorage.token, {
+ - src/lib/components/admin/Settings/WebSearch.svelte:72:		const res = await getRAGConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Database.svelte:21:		let blob = new Blob([JSON.stringify(await getAllUserChats(localStorage.token))], {
+ - src/lib/components/admin/Settings/Database.svelte:28:		const users = await getAllUsers(localStorage.token);
+ - src/lib/components/admin/Settings/Database.svelte:51:		// permissions = await getUserPermissions(localStorage.token);
+ - src/lib/components/admin/Settings/Database.svelte:75:						const res = await importConfig(localStorage.token, JSON.parse(e.target.result)).catch(
+ - src/lib/components/admin/Settings/Database.svelte:122:					const config = await exportConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Database.svelte:161:							downloadDatabase(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/Database.svelte:251:							await clearGeminiCache(localStorage.token);
+ - src/lib/components/admin/Settings/Personas.svelte:91:			const token = localStorage.token;
+ - src/lib/components/admin/Settings/Personas.svelte:110:			const newGroup = await createPromptGroup(localStorage.token, { name, description });
+ - src/lib/components/admin/Settings/Personas.svelte:123:			const updated = await updatePromptGroup(localStorage.token, editingGroup.id, { name, description });
+ - src/lib/components/admin/Settings/Personas.svelte:136:			await deletePromptGroup(localStorage.token, group.id);
+ - src/lib/components/admin/Settings/Personas.svelte:150:			await setDefaultPromptGroup(localStorage.token, group.id);
+ - src/lib/components/admin/Settings/Personas.svelte:162:			const newPrompt = await createPersonaPrompt(localStorage.token, e.detail);
+ - src/lib/components/admin/Settings/Personas.svelte:174:			const updated = await updatePersonaPrompt(localStorage.token, editingPrompt.command, e.detail);
+ - src/lib/components/admin/Settings/Personas.svelte:187:			await deletePersonaPrompt(localStorage.token, prompt.command);
+ - src/lib/components/admin/Settings/Personas.svelte:206:				await addPromptToGroup(localStorage.token, groupId, command, order);
+ - src/lib/components/admin/Settings/Personas.svelte:209:			promptGroups = await getPromptGroups(localStorage.token);
+ - src/lib/components/admin/Settings/Personas.svelte:221:			await removePromptFromGroup(localStorage.token, group.id, prompt.command);
+ - src/lib/components/admin/Settings/Personas.svelte:308:							setDefaultPromptGroup(localStorage.token, null).then(() => {
+ - src/lib/components/admin/Settings/Documents.svelte:119:		const res = await updateEmbeddingConfig(localStorage.token, {
+ - src/lib/components/admin/Settings/Documents.svelte:227:		const res = await updateRAGConfig(localStorage.token, {
+ - src/lib/components/admin/Settings/Documents.svelte:245:		const embeddingConfig = await getEmbeddingConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Documents.svelte:267:		const config = await getRAGConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Documents.svelte:284:			ragStores = await getStores(localStorage.token);
+ - src/lib/components/admin/Settings/Documents.svelte:285:			const ragStoreConfig = await getDefaultRagStoreConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Documents.svelte:295:			await setDefaultRagStoreConfig(localStorage.token, defaultRagStore);
+ - src/lib/components/admin/Settings/Documents.svelte:312:		const res = await deleteAllFiles(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/Documents.svelte:326:		const res = resetVectorDB(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/Documents.svelte:340:		const res = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/Models.svelte:85:		workspaceModels = await getBaseModels(localStorage.token);
+ - src/lib/components/admin/Settings/Models.svelte:86:		baseModels = await getModels(localStorage.token, null, true);
+ - src/lib/components/admin/Settings/Models.svelte:112:			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
+ - src/lib/components/admin/Settings/Models.svelte:120:			const res = await createNewModel(localStorage.token, {
+ - src/lib/components/admin/Settings/Models.svelte:140:				localStorage.token,
+ - src/lib/components/admin/Settings/Models.svelte:148:			await createNewModel(localStorage.token, {
+ - src/lib/components/admin/Settings/Models.svelte:160:			await toggleModelById(localStorage.token, model.id);
+ - src/lib/components/admin/Settings/Models.svelte:166:				localStorage.token,
+ - src/lib/components/admin/Settings/Models.svelte:489:										const res = await importModels(localStorage.token, models);
+ - src/lib/components/admin/Settings/Connections.svelte:27:			localStorage.token,
+ - src/lib/components/admin/Settings/Connections.svelte:73:			const res = await updateOpenAIConfig(localStorage.token, {
+ - src/lib/components/admin/Settings/Connections.svelte:94:			const res = await updateOllamaConfig(localStorage.token, {
+ - src/lib/components/admin/Settings/Connections.svelte:110:		const res = await setConnectionsConfig(localStorage.token, connectionsConfig).catch((error) => {
+ - src/lib/components/admin/Settings/Connections.svelte:146:					ollamaConfig = await getOllamaConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Connections.svelte:149:					openaiConfig = await getOpenAIConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Connections.svelte:152:					connectionsConfig = await getConnectionsConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Connections.svelte:180:					const res = await getOpenAIModels(localStorage.token, idx);
+ - src/lib/components/admin/Settings/General.svelte:57:		version = await getVersionUpdates(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/General.svelte:72:		const res = await updateLdapServer(localStorage.token, LDAP_SERVER).catch((error) => {
+ - src/lib/components/admin/Settings/General.svelte:82:		webhookUrl = await updateWebhookUrl(localStorage.token, webhookUrl);
+ - src/lib/components/admin/Settings/General.svelte:83:		const res = await updateAdminConfig(localStorage.token, adminConfig);
+ - src/lib/components/admin/Settings/General.svelte:84:		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
+ - src/lib/components/admin/Settings/General.svelte:101:				adminConfig = await getAdminConfig(localStorage.token);
+ - src/lib/components/admin/Settings/General.svelte:105:				webhookUrl = await getWebhookUrl(localStorage.token);
+ - src/lib/components/admin/Settings/General.svelte:108:				LDAP_SERVER = await getLdapServer(localStorage.token);
+ - src/lib/components/admin/Settings/General.svelte:111:				groups = await getGroups(localStorage.token);
+ - src/lib/components/admin/Settings/General.svelte:115:		const ldapConfig = await getLdapConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Evaluations.svelte:23:		evaluationConfig = await updateConfig(localStorage.token, evaluationConfig).catch((err) => {
+ - src/lib/components/admin/Settings/Evaluations.svelte:32:					localStorage.token,
+ - src/lib/components/admin/Settings/Evaluations.svelte:46:				localStorage.token,
+ - src/lib/components/admin/Settings/Evaluations.svelte:59:				localStorage.token,
+ - src/lib/components/admin/Settings/Evaluations.svelte:73:				localStorage.token,
+ - src/lib/components/admin/Settings/Evaluations.svelte:81:			evaluationConfig = await getConfig(localStorage.token).catch((err) => {
+ - src/lib/components/admin/Settings/CodeExecution.svelte:21:		const res = await setCodeExecutionConfig(localStorage.token, config);
+ - src/lib/components/admin/Settings/CodeExecution.svelte:25:		const res = await getCodeExecutionConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Images.svelte:95:		models = await getImageGenerationModels(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/Images.svelte:127:		const res = await updateConfig(localStorage.token, {
+ - src/lib/components/admin/Settings/Images.svelte:213:			const res = await getConfig(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/Images.svelte:521:											const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/Images.svelte:635:											const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/Images.svelte:1048:											const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:81:			const [res, controller] = await pullModel(localStorage.token, model.id, urlIdx).catch(
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:172:		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, urlIdx).catch(
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:270:						localStorage.token,
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:302:				fileResponse = await uploadModel(localStorage.token, file, urlIdx).catch((error) => {
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:309:			fileResponse = await downloadModel(localStorage.token, modelFileUrl, urlIdx).catch(
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:363:				localStorage.token,
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:434:				localStorage.token,
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:441:		const res = await deleteModel(localStorage.token, deleteModelTag, urlIdx).catch((error) => {
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:452:				localStorage.token,
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:477:			await deleteModel(localStorage.token, model);
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:496:			localStorage.token,
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:564:				localStorage.token,
+ - src/lib/components/admin/Settings/Models/Manage/ManageOllama.svelte:579:		ollamaModels = await getOllamaModels(localStorage.token, urlIdx).catch((error) => {
+ - src/lib/components/admin/Settings/Models/ManageModelsModal.svelte:26:					ollamaConfig = await getOllamaConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Models/ConfigureModelsModal.svelte:48:		config = await getModelsConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Models/ConfigureModelsModal.svelte:81:		const res = await setModelsConfig(localStorage.token, {
+ - src/lib/components/admin/Settings/Models/ConfigureModelsModal.svelte:108:		const res = deleteAllModels(localStorage.token);
+ - src/lib/components/admin/Settings/Pipelines.svelte:55:				localStorage.token,
+ - src/lib/components/admin/Settings/Pipelines.svelte:68:						localStorage.token,
+ - src/lib/components/admin/Settings/Pipelines.svelte:84:			localStorage.token,
+ - src/lib/components/admin/Settings/Pipelines.svelte:89:			localStorage.token,
+ - src/lib/components/admin/Settings/Pipelines.svelte:108:			pipelines = await getPipelines(localStorage.token, selectedPipelinesUrlIdx);
+ - src/lib/components/admin/Settings/Pipelines.svelte:122:			localStorage.token,
+ - src/lib/components/admin/Settings/Pipelines.svelte:135:					localStorage.token,
+ - src/lib/components/admin/Settings/Pipelines.svelte:152:			const res = await uploadPipeline(localStorage.token, file, selectedPipelinesUrlIdx).catch(
+ - src/lib/components/admin/Settings/Pipelines.svelte:165:						localStorage.token,
+ - src/lib/components/admin/Settings/Pipelines.svelte:186:			localStorage.token,
+ - src/lib/components/admin/Settings/Pipelines.svelte:199:					localStorage.token,
+ - src/lib/components/admin/Settings/Pipelines.svelte:207:		PIPELINES_LIST = await getPipelinesList(localStorage.token);
+ - src/lib/components/admin/Settings/MessageTags.svelte:102:			const token = localStorage.token;
+ - src/lib/components/admin/Settings/MessageTags.svelte:141:			const result = await updateDaemonConfig(localStorage.token, {
+ - src/lib/components/admin/Settings/MessageTags.svelte:170:			const result = await runDaemonManually(localStorage.token);
+ - src/lib/components/admin/Settings/MessageTags.svelte:191:			const result = await unlockDaemon(localStorage.token);
+ - src/lib/components/admin/Settings/MessageTags.svelte:211:			const result = await deleteTag(localStorage.token, tag.id);
+ - src/lib/components/admin/Settings/MessageTags.svelte:225:			const result = await updateTagProtection(localStorage.token, tag.id, !tag.is_protected);
+ - src/lib/components/admin/Settings/MessageTags.svelte:249:			const result = await addToBlacklist(localStorage.token, [newBlacklistTag.trim()]);
+ - src/lib/components/admin/Settings/MessageTags.svelte:266:			const result = await removeFromBlacklist(localStorage.token, [tagId]);
+ - src/lib/components/admin/Settings/MessageTags.svelte:299:			const result = await getDaemonProgress(localStorage.token);
+ - src/lib/components/admin/Settings/Audio.svelte:68:				localStorage.token,
+ - src/lib/components/admin/Settings/Audio.svelte:93:			const res = await _getVoices(localStorage.token).catch((e) => {
+ - src/lib/components/admin/Settings/Audio.svelte:115:		const res = await updateAudioConfig(localStorage.token, {
+ - src/lib/components/admin/Settings/Audio.svelte:161:		const res = await getAudioConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Tools.svelte:31:		const res = await setToolServerConnections(localStorage.token, {
+ - src/lib/components/admin/Settings/Tools.svelte:45:		const res = await getToolServerConnections(localStorage.token);
+ - src/lib/components/admin/Settings/Personas/PromptGroupItem.svelte:36:			groupPrompts = await getGroupPrompts(localStorage.token, group.id);
+ - src/lib/components/admin/Settings/Personas/PromptTypeSelector.svelte:39:			availablePersonas = await getAvailablePersonas(localStorage.token);
+ - src/lib/components/admin/Settings/Interface.svelte:53:		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
+ - src/lib/components/admin/Settings/Interface.svelte:56:		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
+ - src/lib/components/admin/Settings/Interface.svelte:63:		_banners.set(await setBanners(localStorage.token, banners));
+ - src/lib/components/admin/Settings/Interface.svelte:72:		taskConfig = await getTaskConfig(localStorage.token);
+ - src/lib/components/admin/Settings/Interface.svelte:74:		banners = await getBanners(localStorage.token);
+ - src/lib/components/admin/Settings/Interface.svelte:76:		workspaceModels = await getBaseModels(localStorage.token);
+ - src/lib/components/admin/Settings/Interface.svelte:77:		baseModels = await getModels(localStorage.token, null, false);
+ - src/lib/components/admin/Settings/MessageTags/RenameTagModal.svelte:33:			const result = await renameTag(localStorage.token, tag.id, newName.trim());
+ - src/lib/components/admin/Settings/MessageTags/CreateTagModal.svelte:29:			const result = await createProtectedTag(localStorage.token, name.trim(), isProtected);
+ - src/lib/components/admin/Settings/MessageTags/MergeTagsModal.svelte:45:			const result = await mergeTags(localStorage.token, keepTagId, selectedMergeTagIds);
+ - src/lib/components/dashboard/MessagePreviewModal.svelte:32:			const data = await getTextbookData(localStorage.token);
+ - src/lib/components/dashboard/MessagePreviewModal.svelte:101:				? await getChatByShareId(localStorage.token, message.chat_id)
+ - src/lib/components/dashboard/MessagePreviewModal.svelte:102:				: await getChatById(localStorage.token, message.chat_id);
+ - src/lib/components/playground/Completions.svelte:43:			localStorage.token,
+ - src/lib/components/playground/Chat.svelte:87:			localStorage.token,
+ - src/lib/components/AddToolServerModal.svelte:74:			localStorage.token,
+ - src/lib/components/AddToolServerModal.svelte:132:				auth_type === 'bearer' ? key : localStorage.token,
+ - src/lib/components/AddToolServerModal.svelte:143:			const res = await verifyToolServerConnection(localStorage.token, {
+ - src/lib/components/chat/Messages.svelte:106:			await updateChatById(localStorage.token, chatId, {
+ - src/lib/components/chat/Messages.svelte:112:			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Placeholder.svelte:146:						Authorization: `Bearer ${localStorage.token}`,
+ - src/lib/components/chat/Placeholder.svelte:167:						Authorization: `Bearer ${localStorage.token}`,
+ - src/lib/components/chat/Placeholder.svelte:261:							await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Placeholder.svelte:265:							await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Placeholder.svelte:405:									await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Placeholder.svelte:409:									await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/UserSettingsModal.svelte:30:		const userData = await getSessionUser(localStorage.token).catch((error) => {
+ - src/lib/components/chat/UserSettingsModal.svelte:44:		const updatedUser = await updateUserProfile(localStorage.token, {
+ - src/lib/components/chat/UserSettingsModal.svelte:54:			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+ - src/lib/components/chat/SettingsModal.svelte:524:		await updateUserSettings(localStorage.token, { ui: $settings });
+ - src/lib/components/chat/SettingsModal.svelte:529:			localStorage.token,
+ - src/lib/components/chat/Messages/CodeBlock.svelte:147:			const output = await executeCode(localStorage.token, code).catch((error) => {
+ - src/lib/components/chat/Messages/CodeBlock.svelte:384:				textArea.innerHTML = html;
+ - src/lib/components/chat/Messages/ResponseMessage.svelte:324:						localStorage.token,
+ - src/lib/components/chat/Messages/ResponseMessage.svelte:416:		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
+ - src/lib/components/chat/Messages/ResponseMessage.svelte:455:				localStorage.token,
+ - src/lib/components/chat/Messages/ResponseMessage.svelte:495:		const chat = await getChatById(localStorage.token, chatId).catch((error) => {
+ - src/lib/components/chat/Messages/ResponseMessage.svelte:547:				localStorage.token,
+ - src/lib/components/chat/Messages/ResponseMessage.svelte:554:			feedback = await createNewFeedback(localStorage.token, feedbackItem).catch((error) => {
+ - src/lib/components/chat/Messages/ResponseMessage.svelte:573:				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
+ - src/lib/components/chat/Messages/ResponseMessage.svelte:587:						localStorage.token,
+ - src/lib/components/chat/Messages/ResponseMessage.svelte:649:			e.clipboardData.setData('text/html', tempDiv.innerHTML);
+ - src/lib/components/chat/MessageInput.svelte:222:		const sessionUser = await getSessionUser(localStorage.token);
+ - src/lib/components/chat/MessageInput.svelte:584:				const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+ - src/lib/components/chat/MessageInput.svelte:928:		await tools.set(await getTools(localStorage.token));
+ - src/lib/components/chat/MessageInput.svelte:1313:																localStorage.token,
+ - src/lib/components/chat/MobileChatToolbar.svelte:46:			availablePersonas = await getAvailablePersonas(localStorage.token);
+ - src/lib/components/chat/Tags.svelte:29:		return await getTagsById(localStorage.token, chatId).catch(async (error) => {
+ - src/lib/components/chat/Tags.svelte:35:		const res = await addTagById(localStorage.token, chatId, tagName).catch(async (error) => {
+ - src/lib/components/chat/Tags.svelte:44:		await updateChatById(localStorage.token, chatId, {
+ - src/lib/components/chat/Tags.svelte:48:		await _tags.set(await getAllTags(localStorage.token));
+ - src/lib/components/chat/Tags.svelte:55:		const res = await deleteTagById(localStorage.token, chatId, tagName);
+ - src/lib/components/chat/Tags.svelte:57:		await updateChatById(localStorage.token, chatId, {
+ - src/lib/components/chat/Tags.svelte:61:		await _tags.set(await getAllTags(localStorage.token));
+ - src/lib/components/chat/ShareChatModal.svelte:22:		const sharedChat = await shareChatById(localStorage.token, chatId);
+ - src/lib/components/chat/ShareChatModal.svelte:25:		chat = await getChatById(localStorage.token, chatId);
+ - src/lib/components/chat/ShareChatModal.svelte:72:				const _chat = await getChatById(localStorage.token, chatId);
+ - src/lib/components/chat/ShareChatModal.svelte:110:								const res = await deleteSharedChatById(localStorage.token, chatId);
+ - src/lib/components/chat/ShareChatModal.svelte:113:									chat = await getChatById(localStorage.token, chatId);
+ - src/lib/components/chat/ModelSelector/Selector.svelte:205:		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, '0').catch(
+ - src/lib/components/chat/ModelSelector/Selector.svelte:298:						localStorage.token,
+ - src/lib/components/chat/ModelSelector/Selector.svelte:315:		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+ - src/lib/components/chat/ModelSelector/Selector.svelte:344:			await deleteModel(localStorage.token, model);
+ - src/lib/components/chat/ModelSelector/Selector.svelte:350:		const res = await unloadModel(localStorage.token, model).catch((error) => {
+ - src/lib/components/chat/ModelSelector/Selector.svelte:358:					localStorage.token,
+ - src/lib/components/chat/ModelSelector/Selector.svelte:391:						localStorage.token,
+ - src/lib/components/chat/ContentRenderer/FloatingButtons.svelte:120:		[res, controller] = await chatCompletion(localStorage.token, {
+ - src/lib/components/chat/ModelSelector.svelte:23:		await updateUserSettings(localStorage.token, { ui: $settings });
+ - src/lib/components/chat/ModelSelector.svelte:38:		await updateUserSettings(localStorage.token, { ui: $settings });
+ - src/lib/components/chat/Placeholder/FolderPlaceholder.svelte:29:		newChatList = await getChatListByFolderId(localStorage.token, folder.id, page).catch(
+ - src/lib/components/chat/Placeholder/FolderPlaceholder.svelte:50:			const res = await getChatListByFolderId(localStorage.token, folder.id, page);
+ - src/lib/components/chat/Placeholder/FolderTitle.svelte:47:		const res = await updateFolderById(localStorage.token, folder.id, {
+ - src/lib/components/chat/Placeholder/FolderTitle.svelte:66:			const _folder = await getFolderById(localStorage.token, folder.id).catch((error) => {
+ - src/lib/components/chat/Placeholder/FolderTitle.svelte:77:		const res = await updateFolderById(localStorage.token, folder.id, {
+ - src/lib/components/chat/Placeholder/FolderTitle.svelte:91:			const _folder = await getFolderById(localStorage.token, folder.id).catch((error) => {
+ - src/lib/components/chat/Placeholder/FolderTitle.svelte:102:		const res = await deleteFolderById(localStorage.token, folder.id, deleteFolderContents).catch(
+ - src/lib/components/chat/Placeholder/FolderTitle.svelte:116:		const chats = await getChatsByFolderId(localStorage.token, folder.id).catch((error) => {
+ - src/lib/components/chat/Chat.svelte:214:			const data = await getTextbookData(localStorage.token);
+ - src/lib/components/chat/Chat.svelte:423:			tools.set(await getTools(localStorage.token));
+ - src/lib/components/chat/Chat.svelte:426:			functions.set(await getFunctions(localStorage.token));
+ - src/lib/components/chat/Chat.svelte:555:					await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Chat.svelte:557:					chat = await getChatById(localStorage.token, $chatId);
+ - src/lib/components/chat/Chat.svelte:558:					allTags.set(await getAllTags(localStorage.token));
+ - src/lib/components/chat/Chat.svelte:634:						const asyncFunction = new Function(`return (async () => { ${data.code} })()`);
+ - src/lib/components/chat/Chat.svelte:707:			const res = await updateFolderById(localStorage.token, $selectedFolder.id, {
+ - src/lib/components/chat/Chat.svelte:743:				const updatedChat = await getChatById(localStorage.token, $chatId);
+ - src/lib/components/chat/Chat.svelte:949:			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+ - src/lib/components/chat/Chat.svelte:992:			const res = await processWeb(localStorage.token, '', url);
+ - src/lib/components/chat/Chat.svelte:1026:			const res = await processYoutubeVideo(localStorage.token, url);
+ - src/lib/components/chat/Chat.svelte:1275:		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
+ - src/lib/components/chat/Chat.svelte:1293:			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+ - src/lib/components/chat/Chat.svelte:1351:				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
+ - src/lib/components/chat/Chat.svelte:1379:		const res = await chatCompleted(localStorage.token, {
+ - src/lib/components/chat/Chat.svelte:1422:				chat = await updateChatById(localStorage.token, _chatId, {
+ - src/lib/components/chat/Chat.svelte:1431:				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Chat.svelte:1452:		const res = await chatAction(localStorage.token, actionId, {
+ - src/lib/components/chat/Chat.svelte:1488:				chat = await updateChatById(localStorage.token, _chatId, {
+ - src/lib/components/chat/Chat.svelte:1497:				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Chat.svelte:2067:		chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Chat.svelte:2072:				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Chat.svelte:2156:			userLocation = await getAndUpdateUserLocation(localStorage.token).catch((err) => {
+ - src/lib/components/chat/Chat.svelte:2225:			localStorage.token,
+ - src/lib/components/chat/Chat.svelte:2576:				const res = await stopTask(localStorage.token, taskId).catch((error) => {
+ - src/lib/components/chat/Chat.svelte:2708:				localStorage.token,
+ - src/lib/components/chat/Chat.svelte:2772:				localStorage.token,
+ - src/lib/components/chat/Chat.svelte:2804:			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Chat.svelte:2820:				chat = await updateChatById(localStorage.token, _chatId, {
+ - src/lib/components/chat/Chat.svelte:2832:				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Chat.svelte:2866:			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
+ - src/lib/components/chat/Chat.svelte:2875:				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Chat.svelte:2876:				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+ - src/lib/components/chat/Chat.svelte:3007:									localStorage.token,
+ - src/lib/components/chat/Chat.svelte:3022:									chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Controls/Valves.svelte:54:			valves = await getToolUserValvesById(localStorage.token, selectedId);
+ - src/lib/components/chat/Controls/Valves.svelte:55:			valvesSpec = await getToolUserValvesSpecById(localStorage.token, selectedId);
+ - src/lib/components/chat/Controls/Valves.svelte:57:			valves = await getFunctionUserValvesById(localStorage.token, selectedId);
+ - src/lib/components/chat/Controls/Valves.svelte:58:			valvesSpec = await getFunctionUserValvesSpecById(localStorage.token, selectedId);
+ - src/lib/components/chat/Controls/Valves.svelte:83:				const res = await updateToolUserValvesById(localStorage.token, selectedId, valves).catch(
+ - src/lib/components/chat/Controls/Valves.svelte:96:					localStorage.token,
+ - src/lib/components/chat/Controls/Valves.svelte:128:			functions.set(await getFunctions(localStorage.token));
+ - src/lib/components/chat/Controls/Valves.svelte:131:			tools.set(await getTools(localStorage.token));
+ - src/lib/components/chat/MessageInput/InputMenu.svelte:84:			availablePersonas = await getAvailablePersonas(localStorage.token);
+ - src/lib/components/chat/MessageInput/InputMenu.svelte:132:			await knowledge.set(await getKnowledgeBases(localStorage.token));
+ - src/lib/components/chat/MessageInput/CommandSuggestionList.svelte:30:				prompts.set(await getPrompts(localStorage.token));
+ - src/lib/components/chat/MessageInput/CommandSuggestionList.svelte:33:				knowledge.set(await getKnowledgeBases(localStorage.token));
+ - src/lib/components/chat/MessageInput/InputMenu/Chats.svelte:34:		let res = await getChatList(localStorage.token, page, true, true).catch(() => {
+ - src/lib/components/chat/MessageInput/InputMenu/Knowledge.svelte:24:			await knowledge.set(await getKnowledgeBases(localStorage.token));
+ - src/lib/components/chat/MessageInput/InputMenu/Notes.svelte:34:		let res = await getNoteList(localStorage.token, page).catch(() => {
+ - src/lib/components/chat/MessageInput/IntegrationsMenu.svelte:63:			await _tools.set(await getTools(localStorage.token));
+ - src/lib/components/chat/MessageInput/CallOverlay.svelte:158:			localStorage.token,
+ - src/lib/components/chat/MessageInput/CallOverlay.svelte:464:					const emoji = await generateEmoji(localStorage.token, modelId, content, chatId);
+ - src/lib/components/chat/MessageInput/CallOverlay.svelte:486:						localStorage.token,
+ - src/lib/components/chat/MessageInput/VoiceRecording.svelte:159:				localStorage.token,
+ - src/lib/components/chat/Settings/Personalization/AddMemoryModal.svelte:21:		const res = await addNewMemory(localStorage.token, content).catch((error) => {
+ - src/lib/components/chat/Settings/Personalization/ManageModal.svelte:33:		const res = await deleteMemoriesByUserId(localStorage.token).catch((error) => {
+ - src/lib/components/chat/Settings/Personalization/ManageModal.svelte:47:			memories = await getMemories(localStorage.token);
+ - src/lib/components/chat/Settings/Personalization/ManageModal.svelte:140:																	localStorage.token,
+ - src/lib/components/chat/Settings/Personalization/ManageModal.svelte:149:																	memories = await getMemories(localStorage.token);
+ - src/lib/components/chat/Settings/Personalization/ManageModal.svelte:220:		memories = await getMemories(localStorage.token);
+ - src/lib/components/chat/Settings/Personalization/ManageModal.svelte:228:		memories = await getMemories(localStorage.token);
+ - src/lib/components/chat/Settings/Personalization/EditMemoryModal.svelte:32:		const res = await updateMemoryById(localStorage.token, memory.id, content).catch((error) => {
+ - src/lib/components/chat/Settings/About.svelte:23:		version = await getVersionUpdates(localStorage.token).catch((error) => {
+ - src/lib/components/chat/Settings/About.svelte:37:		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
+ - src/lib/components/chat/Settings/DataControls.svelte:65:			localStorage.token,
+ - src/lib/components/chat/Settings/DataControls.svelte:94:		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Settings/DataControls.svelte:95:		pinnedChats.set(await getPinnedChatList(localStorage.token));
+ - src/lib/components/chat/Settings/DataControls.svelte:100:		let blob = new Blob([JSON.stringify(await getAllChats(localStorage.token))], {
+ - src/lib/components/chat/Settings/DataControls.svelte:108:		await archiveAllChats(localStorage.token).catch((error) => {
+ - src/lib/components/chat/Settings/DataControls.svelte:113:		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Settings/DataControls.svelte:120:		await deleteAllChats(localStorage.token).catch((error) => {
+ - src/lib/components/chat/Settings/DataControls.svelte:125:		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Settings/DataControls.svelte:131:		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+ - src/lib/components/chat/Settings/Account/UserProfileImage.svelte:145:				const url = await getGravatarUrl(localStorage.token, user?.email);
+ - src/lib/components/chat/Settings/Account/UpdatePassword.svelte:16:			const res = await updateUserPassword(localStorage.token, currentPassword, newPassword).catch(
+ - src/lib/components/chat/Settings/Audio.svelte:63:				const res = await _getVoices(localStorage.token).catch((e) => {
+ - src/lib/components/chat/Settings/Account.svelte:61:		const updatedUser = await updateUserProfile(localStorage.token, {
+ - src/lib/components/chat/Settings/Account.svelte:73:			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+ - src/lib/components/chat/Settings/Account.svelte:85:		APIKey = await createAPIKey(localStorage.token);
+ - src/lib/components/chat/Settings/Account.svelte:94:		const user = await getSessionUser(localStorage.token).catch((error) => {
+ - src/lib/components/chat/Settings/Account.svelte:112:		APIKey = await getAPIKey(localStorage.token).catch((error) => {
+ - src/lib/components/chat/Settings/Account.svelte:266:								<SensitiveInput value={localStorage.token} readOnly={true} />
+ - src/lib/components/chat/Settings/Account.svelte:271:										copyToClipboard(localStorage.token);
+ - src/lib/components/chat/Settings/Interface.svelte:118:				await updateUserInfo(localStorage.token, { location: position });
+ - src/lib/components/common/RichTextInput.svelte:64:					let cellContent = turndownService.turndown(cell.innerHTML).trim();
+ - src/lib/components/common/RichTextInput.svelte:353:			tempDiv.innerHTML = htmlContent;
+ - src/lib/components/common/RichTextInput/listDragHandlePlugin.js:186:						el.innerHTML = handleInnerHTML;
+ - src/lib/components/common/RichTextInput/MathFormula.js:337:		span.innerHTML = region.rendered || '';
+ - src/lib/components/common/RichTextInput/MathFormula.js:386:		preview.innerHTML = '<span class="math-preview-error">Invalid LaTeX</span>';
+ - src/lib/components/common/RichTextInput/MathFormula.js:389:		preview.innerHTML = region.rendered;
+ - src/lib/components/common/RichTextInput/MathFormula.js:392:		preview.innerHTML = '<span class="math-preview-loading">...</span>';
+ - src/lib/components/common/CodeEditor.svelte:200:					? formatPythonCode(localStorage.token, _value)
+ - src/lib/components/common/FileItemModal.svelte:46:			const knowledge = await getKnowledgeById(localStorage.token, item.id).catch((e) => {
+ - src/lib/components/common/FileItemModal.svelte:58:			const file = await getFileById(localStorage.token, item.id).catch((e) => {
+ - src/lib/components/workspace/Models.svelte:83:				localStorage.token,
+ - src/lib/components/workspace/Models.svelte:100:				tags = await getModelTags(localStorage.token).catch((error) => {
+ - src/lib/components/workspace/Models.svelte:111:		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
+ - src/lib/components/workspace/Models.svelte:125:				localStorage.token,
+ - src/lib/components/workspace/Models.svelte:166:		const res = await updateModelById(localStorage.token, model.id, model);
+ - src/lib/components/workspace/Models.svelte:182:				localStorage.token,
+ - src/lib/components/workspace/Models.svelte:219:		let groups = await getGroups(localStorage.token);
+ - src/lib/components/workspace/Models.svelte:291:								await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
+ - src/lib/components/workspace/Models.svelte:296:								await createNewModel(localStorage.token, model.info).catch((error) => {
+ - src/lib/components/workspace/Models.svelte:303:								await createNewModel(localStorage.token, model).catch((error) => {
+ - src/lib/components/workspace/Models.svelte:313:							localStorage.token,
+ - src/lib/components/workspace/Models.svelte:574:																toggleModelById(localStorage.token, model.id);
+ - src/lib/components/workspace/Models.svelte:577:																		localStorage.token,
+ - src/lib/components/workspace/Tools/ToolkitEditor.svelte:110:            result = eval(equation)
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:180:			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:387:			const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:404:		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:425:			const updatedKnowledge = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:450:			const res = await updateFileDataContentById(localStorage.token, fileId, content).catch(
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:456:				localStorage.token,
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:483:			const res = await updateKnowledgeById(localStorage.token, id, {
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:494:				_knowledge.set(await getKnowledgeBases(localStorage.token));
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:517:			const response = await getFileById(localStorage.token, file.id);
+ - src/lib/components/workspace/Knowledge/KnowledgeBase.svelte:631:		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
+ - src/lib/components/workspace/Knowledge/CreateKnowledgeBase.svelte:30:			localStorage.token,
+ - src/lib/components/workspace/Knowledge/CreateKnowledgeBase.svelte:40:			knowledge.set(await getKnowledgeBases(localStorage.token));
+ - src/lib/components/workspace/Knowledge.svelte:86:		const res = await deleteKnowledgeById(localStorage.token, item.id).catch((e) => {
+ - src/lib/components/workspace/Knowledge.svelte:91:			knowledgeBases = await getKnowledgeBaseList(localStorage.token);
+ - src/lib/components/workspace/Knowledge.svelte:92:			knowledge.set(await getKnowledgeBases(localStorage.token));
+ - src/lib/components/workspace/Knowledge.svelte:99:		knowledgeBases = await getKnowledgeBaseList(localStorage.token);
+ - src/lib/components/workspace/common/AccessControl.svelte:45:		groups = await getGroups(localStorage.token, true);
+ - src/lib/components/workspace/common/ValvesModal.svelte:70:					res = await updateToolUserValvesById(localStorage.token, id, valves).catch((error) => {
+ - src/lib/components/workspace/common/ValvesModal.svelte:74:					res = await updateFunctionUserValvesById(localStorage.token, id, valves).catch(
+ - src/lib/components/workspace/common/ValvesModal.svelte:82:					res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
+ - src/lib/components/workspace/common/ValvesModal.svelte:86:					res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
+ - src/lib/components/workspace/common/ValvesModal.svelte:109:					valves = await getToolUserValvesById(localStorage.token, id);
+ - src/lib/components/workspace/common/ValvesModal.svelte:110:					valvesSpec = await getToolUserValvesSpecById(localStorage.token, id);
+ - src/lib/components/workspace/common/ValvesModal.svelte:112:					valves = await getFunctionUserValvesById(localStorage.token, id);
+ - src/lib/components/workspace/common/ValvesModal.svelte:113:					valvesSpec = await getFunctionUserValvesSpecById(localStorage.token, id);
+ - src/lib/components/workspace/common/ValvesModal.svelte:117:					valves = await getToolValvesById(localStorage.token, id);
+ - src/lib/components/workspace/common/ValvesModal.svelte:118:					valvesSpec = await getToolValvesSpecById(localStorage.token, id);
+ - src/lib/components/workspace/common/ValvesModal.svelte:120:					valves = await getFunctionValvesById(localStorage.token, id);
+ - src/lib/components/workspace/common/ValvesModal.svelte:121:					valvesSpec = await getFunctionValvesSpecById(localStorage.token, id);
+ - src/lib/components/workspace/Models/ModelEditor.svelte:260:		await tools.set(await getTools(localStorage.token));
+ - src/lib/components/workspace/Models/ModelEditor.svelte:261:		await functions.set(await getFunctions(localStorage.token));
+ - src/lib/components/workspace/Models/ModelEditor.svelte:262:		await knowledgeCollections.set([...(await getKnowledgeBases(localStorage.token))]);
+ - src/lib/components/workspace/Models/ModelEditor.svelte:266:			promptGroups = await getPromptGroups(localStorage.token);
+ - src/lib/components/workspace/Models/Knowledge/Selector.svelte:43:		let notes = await getNoteList(localStorage.token).catch(() => {
+ - src/lib/components/workspace/Models/Knowledge.svelte:64:			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+ - src/lib/components/workspace/Models/Knowledge.svelte:132:			knowledge.set(await getKnowledgeBases(localStorage.token));
+ - src/lib/components/workspace/Prompts.svelte:110:		const res = await deletePromptByCommand(localStorage.token, command).catch((err) => {
+ - src/lib/components/workspace/Prompts.svelte:123:		prompts = await getPromptList(localStorage.token);
+ - src/lib/components/workspace/Prompts.svelte:124:		await _prompts.set(await getPrompts(localStorage.token));
+ - src/lib/components/workspace/Prompts.svelte:196:						await createNewPrompt(localStorage.token, {
+ - src/lib/components/workspace/Prompts.svelte:206:					prompts = await getPromptList(localStorage.token);
+ - src/lib/components/workspace/Prompts.svelte:207:					await _prompts.set(await getPrompts(localStorage.token));
+ - src/lib/components/workspace/Tools.svelte:85:		const item = await getToolById(localStorage.token, tool.id).catch((error) => {
+ - src/lib/components/workspace/Tools.svelte:109:		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
+ - src/lib/components/workspace/Tools.svelte:125:		const _tool = await getToolById(localStorage.token, tool.id).catch((error) => {
+ - src/lib/components/workspace/Tools.svelte:139:		const res = await deleteToolById(localStorage.token, tool.id).catch((error) => {
+ - src/lib/components/workspace/Tools.svelte:151:		tools = await getToolList(localStorage.token);
+ - src/lib/components/workspace/Tools.svelte:152:		_tools.set(await getTools(localStorage.token));
+ - src/lib/components/workspace/Tools.svelte:203:		return await loadToolByUrl(localStorage.token, url);
+ - src/lib/components/workspace/Tools.svelte:252:							const _tools = await exportTools(localStorage.token).catch((error) => {
+ - src/lib/components/workspace/Tools.svelte:555:					const res = await createNewTool(localStorage.token, tool).catch((error) => {
+ - src/lib/components/workspace/Tools.svelte:562:				tools.set(await getTools(localStorage.token));
+ - src/lib/components/workspace/OnlineKnowledge.svelte:86:			const response = await getStores(localStorage.token);
+ - src/lib/components/workspace/OnlineKnowledge.svelte:110:			const response = await getStoreFiles(localStorage.token, storeName);
+ - src/lib/components/workspace/OnlineKnowledge.svelte:269:			const result = await createStore(localStorage.token, name);
+ - src/lib/components/workspace/OnlineKnowledge.svelte:297:				await deleteCorpus(localStorage.token, selectedItem.id);
+ - src/lib/components/workspace/OnlineKnowledge.svelte:302:				await deleteStore(localStorage.token, selectedItem.id);
+ - src/lib/components/workspace/OnlineKnowledge.svelte:324:			const result = await uploadFileToStore(localStorage.token, currentStoreName, file, file.name);
+ - src/lib/components/workspace/OnlineChapter.svelte:91:			const response = await getStores(localStorage.token);
+ - src/lib/components/workspace/OnlineChapter.svelte:111:				getAdminSections(localStorage.token),
+ - src/lib/components/workspace/OnlineChapter.svelte:112:				getAdminChapters(localStorage.token)
+ - src/lib/components/workspace/OnlineChapter.svelte:197:				localStorage.token,
+ - src/lib/components/workspace/OnlineChapter.svelte:220:			const result = await updateSection(localStorage.token, editingPart.id, {
+ - src/lib/components/workspace/OnlineChapter.svelte:264:				const result = await updateChapter(localStorage.token, editingChapter.id, {
+ - src/lib/components/workspace/OnlineChapter.svelte:301:				const result = await createChapter(localStorage.token, {
+ - src/lib/components/workspace/OnlineChapter.svelte:357:				await deleteSection(localStorage.token, deleteTarget.id);
+ - src/lib/components/workspace/OnlineChapter.svelte:361:				await deleteChapter(localStorage.token, deleteTarget.id);
+ - src/lib/components/AddConnectionModal.svelte:59:		const res = await verifyOllamaConnection(localStorage.token, {
+ - src/lib/components/AddConnectionModal.svelte:92:			localStorage.token,
+ - src/lib/components/channel/Messages.svelte:108:					const res = deleteMessage(localStorage.token, message.channel_id, message.id).catch(
+ - src/lib/components/channel/Messages.svelte:123:					const res = updateMessage(localStorage.token, message.channel_id, message.id, {
+ - src/lib/components/channel/Messages.svelte:160:							localStorage.token,
+ - src/lib/components/channel/Messages.svelte:189:						const res = addReaction(localStorage.token, message.channel_id, message.id, name).catch(
+ - src/lib/components/channel/ChannelInfoModal/UserList.svelte:62:				localStorage.token,
+ - src/lib/components/channel/Messages/Message/UserStatusLinkPreview.svelte:20:			user = await getUserById(localStorage.token, id).catch((error) => {
+ - src/lib/components/channel/MessageInput.svelte:149:		const sessionUser = await getSessionUser(localStorage.token);
+ - src/lib/components/channel/MessageInput.svelte:476:			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+ - src/lib/components/channel/Channel.svelte:56:		channel = await getChannelById(localStorage.token, id).catch((error) => {
+ - src/lib/components/channel/Channel.svelte:61:			messages = await getChannelMessages(localStorage.token, id, 0);
+ - src/lib/components/channel/Channel.svelte:147:		const res = await sendMessage(localStorage.token, id, {
+ - src/lib/components/channel/Channel.svelte:244:										localStorage.token,
+ - src/lib/components/channel/Thread.svelte:49:			messages = await getChannelThreadMessages(localStorage.token, channel.id, threadId);
+ - src/lib/components/channel/Thread.svelte:132:		const res = await sendMessage(localStorage.token, channel.id, {
+ - src/lib/components/channel/Thread.svelte:201:							localStorage.token,
+ - src/lib/components/channel/MessageInput/MentionList.svelte:35:		const res = await searchUsers(localStorage.token, query).catch((error) => {
+
+Suggested quick fixes:
+
+1) Use DOMPurify.sanitize before assigning to innerHTML.
+2) Disable/Comment out new Function / eval usage and add server-side exec fallback.
+3) Remove console.log of tokens.
+4) Mask token display in settings and avoid storing tokens in localStorage long-term.
+
