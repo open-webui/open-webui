@@ -26,7 +26,8 @@
 		models,
 		selectedFolder,
 		WEBUI_NAME,
-		sidebarWidth
+		sidebarWidth,
+		activeChatIds
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -42,6 +43,7 @@
 		importChats
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
+	import { checkActiveChats } from '$lib/apis/tasks';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
@@ -469,6 +471,17 @@
 						await initChannels();
 					}
 					await initChatList();
+
+					// Check which chats have active tasks
+					const allChatIds = [...$chats.map((c) => c.id), ...$pinnedChats.map((c) => c.id)];
+					if (allChatIds.length > 0) {
+						try {
+							const res = await checkActiveChats(localStorage.token, allChatIds);
+							activeChatIds.set(new Set(res.active_chat_ids || []));
+						} catch (e) {
+							console.debug('Failed to check active chats:', e);
+						}
+					}
 				}
 			}),
 			settings.subscribe((value) => {
@@ -493,7 +506,31 @@
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
+
+		// Listen for real-time chat:active events via the events channel
+		$socket?.off('events', chatActiveEventHandler);
+		$socket?.on('events', chatActiveEventHandler);
 	});
+
+	// Handler for chat:active events (defined outside onMount for proper cleanup)
+	const chatActiveEventHandler = (event: {
+		chat_id: string;
+		message_id: string;
+		data: { type: string; data: any };
+	}) => {
+		if (event.data?.type === 'chat:active') {
+			const { active } = event.data.data;
+			activeChatIds.update((ids) => {
+				const newSet = new Set(ids);
+				if (active) {
+					newSet.add(event.chat_id);
+				} else {
+					newSet.delete(event.chat_id);
+				}
+				return newSet;
+			});
+		}
+	};
 
 	onDestroy(() => {
 		if (unsubscribers && unsubscribers.length > 0) {
@@ -518,6 +555,9 @@
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
+
+		// Clean up socket listener
+		$socket?.off('events', chatActiveEventHandler);
 	});
 
 	const newChatHandler = async () => {
@@ -1244,7 +1284,7 @@
 												className=""
 												id={chat.id}
 												title={chat.title}
-												updatedAt={chat.updated_at}
+												createdAt={chat.created_at}
 												{shiftKey}
 												selected={selectedChatId === chat.id}
 												on:select={() => {
@@ -1305,7 +1345,7 @@
 										className=""
 										id={chat.id}
 										title={chat.title}
-										updatedAt={chat.updated_at}
+										createdAt={chat.created_at}
 										{shiftKey}
 										selected={selectedChatId === chat.id}
 										on:select={() => {
