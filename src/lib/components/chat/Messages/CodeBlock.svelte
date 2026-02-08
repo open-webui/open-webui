@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 <script lang="ts">
 	import hljs from 'highlight.js';
 	import { toast } from 'svelte-sonner';
@@ -381,7 +382,7 @@
 			// Create a helper function to unescape HTML entities
 			const unescapeHtml = (html) => {
 				const textArea = document.createElement('textarea');
-				textArea.innerHTML = html;
+				textArea.innerHTML = DOMPurify.sanitize(html);
 				return textArea.value;
 			};
 
