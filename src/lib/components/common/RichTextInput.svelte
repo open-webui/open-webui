@@ -350,7 +350,7 @@
 
 			// Create a temporary div to parse HTML
 			const tempDiv = document.createElement('div');
-			tempDiv.innerHTML = htmlContent;
+			tempDiv.innerHTML = DOMPurify.sanitize(htmlContent);
 
 			// Convert HTML to ProseMirror nodes
 			const fragment = DOMParser.fromSchema(state.schema).parse(tempDiv);
