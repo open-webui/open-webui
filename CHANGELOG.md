@@ -5,12 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-- 🕐 Relative time indicators now show when chats were last updated when hovering over a chat in the sidebar, making it easy to see activity at a glance. [Commit](https://github.com/open-webui/open-webui/commit/691a04f0dd5f3b3cfecfca193d6f81ad773b3b4c)
-
 ## [0.8.0] - 2026-02-07
 
 ### Added
@@ -34,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔔 Notification toasts for new messages and other events now include a close button that appears on hover, allowing users to dismiss them immediately instead of waiting for auto-dismissal. [#21056](https://github.com/open-webui/open-webui/issues/21056), [Commit](https://github.com/open-webui/open-webui/commit/73bb600034c8532e30726129743a5ffe9002c5fb)
 - 🖼️ Image editing operations with multiple images now complete faster by loading all images concurrently instead of sequentially. [#20911](https://github.com/open-webui/open-webui/pull/20911)
 - 📧 Users can now reference their email address in prompts and system messages using the "{{USER_EMAIL}}" template variable. [#20881](https://github.com/open-webui/open-webui/pull/20881)
+- 🕐 Relative time indicators now show when chats were last updated when hovering over a chat in the sidebar, making it easy to see activity at a glance. [Commit](https://github.com/open-webui/open-webui/commit/691a04f0dd5f3b3cfecfca193d6f81ad773b3b4c)
 - 🔤 Tools and Functions in the Chat Controls sidebar now appear in alphabetical order, making it easier to locate specific tools when working with multiple integrations. [#20871](https://github.com/open-webui/open-webui/pull/20871)
 - 👁️ Administrators can now filter the model list by status (enabled, disabled, visible, hidden) and bulk enable or disable all filtered models at once. [#20553](https://github.com/open-webui/open-webui/issues/20553), [#20774](https://github.com/open-webui/open-webui/issues/20774), [Commit](https://github.com/open-webui/open-webui/commit/96a9696383d450dad2cbb230f3756ebfa258e029)
 - ⚙️ Administrators can now enable or disable individual built-in tools for each model, including time utilities, memory, chat history, notes, knowledge base, and channels. [#20641](https://github.com/open-webui/open-webui/issues/20641), [Commit](https://github.com/open-webui/open-webui/commit/c46ef3b63bcc1e2e9adbdd18fab82c4bbe33ff6c)
