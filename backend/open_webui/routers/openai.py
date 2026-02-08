@@ -87,6 +87,16 @@ async def send_get_request(url, key=None, user: UserModel = None):
         return None
 
 
+def get_models_endpoint(url: str) -> str:
+    normalized_url = url.rstrip("/")
+
+    # GitHub Models exposes catalog at /catalog/models, not /inference/models.
+    if "models.github.ai" in normalized_url:
+        return "https://models.github.ai/catalog/models"
+
+    return f"{normalized_url}/models"
+
+
 async def cleanup_response(
     response: Optional[aiohttp.ClientResponse],
     session: Optional[aiohttp.ClientSession],
@@ -367,7 +377,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
         ):
             request_tasks.append(
                 send_get_request(
-                    f"{url}/models",
+                    get_models_endpoint(url),
                     request.app.state.config.OPENAI_API_KEYS[idx],
                     user=user,
                 )
@@ -387,7 +397,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 if len(model_ids) == 0:
                     request_tasks.append(
                         send_get_request(
-                            f"{url}/models",
+                            get_models_endpoint(url),
                             request.app.state.config.OPENAI_API_KEYS[idx],
                             user=user,
                         )
@@ -576,7 +586,7 @@ async def get_models(
                     }
                 else:
                     async with session.get(
-                        f"{url}/models",
+                        get_models_endpoint(url),
                         headers=headers,
                         cookies=cookies,
                         ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -686,7 +696,7 @@ async def verify_connection(
                     return response_data
             else:
                 async with session.get(
-                    f"{url}/models",
+                    get_models_endpoint(url),
                     headers=headers,
                     cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
