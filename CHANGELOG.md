@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🖼️ Administrators can now configure which image generation models support auto-sizing and URL responses via new regex environment variables, improving compatibility with LiteLLM and other proxies that use prefixed model names. [#21126](https://github.com/open-webui/open-webui/pull/21126), [Commit](https://github.com/open-webui/open-webui/commit/ecf3fa2feb28e74ff6c17ca97d94581f316da56a)
 - ♿ Screen reader users now hear the password field label only once on the login page, improving form navigation for assistive technology users. [Commit](https://github.com/open-webui/open-webui/commit/1441d0d735c7a1470070b33327e1dd4dc5ca1131)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Catalan, Finnish, German, Japanese, Polish, Portuguese (Brazil), Simplified Chinese, Slovak, Spanish, and Traditional Chinese were enhanced and expanded.
+- 🌐 Translations for Catalan, Finnish, German, Japanese, Latvian, Polish, Portuguese (Brazil), Simplified Chinese, Slovak, Spanish, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
