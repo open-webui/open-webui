@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import { Plugin, PluginKey, NodeSelection } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import { Fragment } from 'prosemirror-model';
@@ -183,7 +184,7 @@ export function listDragHandlePlugin(options = {}) {
 						el.setAttribute('role', 'button');
 						el.setAttribute('aria-label', 'Drag list item');
 						el.contentEditable = 'false';
-						el.innerHTML = handleInnerHTML;
+						el.innerHTML = DOMPurify.sanitize(handleInnerHTML);
 						el.pmGetPos = getPos;
 						return el;
 					},
