@@ -21,6 +21,7 @@ from open_webui.models.tools import (
     ToolAccessResponse,
     Tools,
 )
+from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.plugin import (
     load_tool_module_by_id,
     replace_imports,
@@ -156,7 +157,24 @@ async def get_tools(
             tool
             for tool in tools
             if tool.user_id == user.id
-            or has_access(user.id, "read", tool.access_control, user_group_ids, db=db)
+            or (
+                has_access(
+                    user.id,
+                    "read",
+                    getattr(tool, "access_control", None),
+                    user_group_ids,
+                    db=db,
+                )
+                if str(tool.id).startswith("server:")
+                else AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="tool",
+                    resource_id=tool.id,
+                    permission="read",
+                    user_group_ids=user_group_ids,
+                    db=db,
+                )
+            )
         ]
         return tools
 
@@ -181,7 +199,13 @@ async def get_tool_list(
             write_access=(
                 (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                 or user.id == tool.user_id
-                or has_access(user.id, "write", tool.access_control, db=db)
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="tool",
+                    resource_id=tool.id,
+                    permission="write",
+                    db=db,
+                )
             ),
         )
         for tool in tools
@@ -382,14 +406,26 @@ async def get_tools_by_id(
         if (
             user.role == "admin"
             or tools.user_id == user.id
-            or has_access(user.id, "read", tools.access_control, db=db)
+            or AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="tool",
+                resource_id=tools.id,
+                permission="read",
+                db=db,
+            )
         ):
             return ToolAccessResponse(
                 **tools.model_dump(),
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == tools.user_id
-                    or has_access(user.id, "write", tools.access_control, db=db)
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="tool",
+                        resource_id=tools.id,
+                        permission="write",
+                        db=db,
+                    )
                 ),
             )
         else:
@@ -427,7 +463,13 @@ async def update_tools_by_id(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         tools.user_id != user.id
-        and not has_access(user.id, "write", tools.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -489,7 +531,13 @@ async def delete_tools_by_id(
 
     if (
         tools.user_id != user.id
-        and not has_access(user.id, "write", tools.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -588,7 +636,13 @@ async def update_tools_valves_by_id(
 
     if (
         tools.user_id != user.id
-        and not has_access(user.id, "write", tools.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(

@@ -38,6 +38,7 @@ from open_webui.utils.misc import is_string_allowed
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.models.groups import Groups
+from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.utils.access_control import has_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
@@ -165,7 +166,13 @@ async def get_tools(
             if (
                 not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                 and tool.user_id != user.id
-                and not has_access(user.id, "read", tool.access_control, user_group_ids)
+                and not AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="tool",
+                    resource_id=tool.id,
+                    permission="read",
+                    user_group_ids=user_group_ids,
+                )
             ):
                 log.warning(f"Access denied to tool {tool_id} for user {user.id}")
                 continue

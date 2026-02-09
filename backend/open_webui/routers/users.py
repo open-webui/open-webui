@@ -19,7 +19,7 @@ from open_webui.models.users import (
     UserModel,
     UserGroupIdsModel,
     UserGroupIdsListResponse,
-    UserInfoListResponse,
+    UserInfoResponse,
     UserInfoListResponse,
     UserRoleUpdateForm,
     UserStatus,
@@ -446,7 +446,7 @@ class UserActiveResponse(UserStatus):
 
 @router.get("/{user_id}", response_model=UserActiveResponse)
 async def get_user_by_id(
-    user_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+    user_id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
 ):
     # Check if user_id is a shared chat
     # If it is, get the user_id from the chat
@@ -471,6 +471,20 @@ async def get_user_by_id(
                 "is_active": Users.is_user_active(user_id, db=db),
             }
         )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+@router.get("/{user_id}/info", response_model=UserInfoResponse)
+async def get_user_info_by_id(
+    user_id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    user = Users.get_user_by_id(user_id, db=db)
+    if user:
+        return user
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

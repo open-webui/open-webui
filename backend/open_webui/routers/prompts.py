@@ -9,6 +9,7 @@ from open_webui.models.prompts import (
     PromptModel,
     Prompts,
 )
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import (
     PromptHistories,
@@ -17,7 +18,7 @@ from open_webui.models.prompt_history import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import has_permission
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
@@ -115,7 +116,13 @@ async def get_prompt_list(
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == prompt.user_id
-                    or has_access(user.id, "write", prompt.access_control, db=db)
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="prompt",
+                        resource_id=prompt.id,
+                        permission="write",
+                        db=db,
+                    )
                 ),
             )
             for prompt in result.items
@@ -186,14 +193,26 @@ async def get_prompt_by_command(
         if (
             user.role == "admin"
             or prompt.user_id == user.id
-            or has_access(user.id, "read", prompt.access_control, db=db)
+            or AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="prompt",
+                resource_id=prompt.id,
+                permission="read",
+                db=db,
+            )
         ):
             return PromptAccessResponse(
                 **prompt.model_dump(),
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == prompt.user_id
-                    or has_access(user.id, "write", prompt.access_control, db=db)
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="prompt",
+                        resource_id=prompt.id,
+                        permission="write",
+                        db=db,
+                    )
                 ),
             )
 
@@ -218,14 +237,26 @@ async def get_prompt_by_id(
         if (
             user.role == "admin"
             or prompt.user_id == user.id
-            or has_access(user.id, "read", prompt.access_control, db=db)
+            or AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="prompt",
+                resource_id=prompt.id,
+                permission="read",
+                db=db,
+            )
         ):
             return PromptAccessResponse(
                 **prompt.model_dump(),
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == prompt.user_id
-                    or has_access(user.id, "write", prompt.access_control, db=db)
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="prompt",
+                        resource_id=prompt.id,
+                        permission="write",
+                        db=db,
+                    )
                 ),
             )
 
@@ -258,7 +289,13 @@ async def update_prompt_by_id(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         prompt.user_id != user.id
-        and not has_access(user.id, "write", prompt.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -311,7 +348,13 @@ async def update_prompt_metadata(
 
     if (
         prompt.user_id != user.id
-        and not has_access(user.id, "write", prompt.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -356,7 +399,13 @@ async def set_prompt_version(
 
     if (
         prompt.user_id != user.id
-        and not has_access(user.id, "write", prompt.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -395,7 +444,13 @@ async def delete_prompt_by_id(
 
     if (
         prompt.user_id != user.id
-        and not has_access(user.id, "write", prompt.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -434,7 +489,13 @@ async def get_prompt_history(
     if not (
         user.role == "admin"
         or prompt.user_id == user.id
-        or has_access(user.id, "read", prompt.access_control, db=db)
+        or AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="read",
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -469,7 +530,13 @@ async def get_prompt_history_entry(
     if not (
         user.role == "admin"
         or prompt.user_id == user.id
-        or has_access(user.id, "read", prompt.access_control, db=db)
+        or AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="read",
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -508,7 +575,13 @@ async def delete_prompt_history_entry(
     if not (
         user.role == "admin"
         or prompt.user_id == user.id
-        or has_access(user.id, "write", prompt.access_control, db=db)
+        or AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="write",
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -553,7 +626,13 @@ async def get_prompt_diff(
     if not (
         user.role == "admin"
         or prompt.user_id == user.id
-        or has_access(user.id, "read", prompt.access_control, db=db)
+        or AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="read",
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

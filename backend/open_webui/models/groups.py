@@ -22,6 +22,7 @@ from sqlalchemy import (
     ForeignKey,
     cast,
     or_,
+    select,
 )
 
 
@@ -97,6 +98,16 @@ class GroupMemberModel(BaseModel):
 
 class GroupResponse(GroupModel):
     member_count: Optional[int] = None
+
+
+class GroupInfoResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    description: str
+    member_count: Optional[int] = None
+    created_at: int
+    updated_at: int
 
 
 class GroupForm(BaseModel):
@@ -181,14 +192,12 @@ class GroupTable:
 
                         if member_id:
                             # Also include member-only groups where user is a member
-                            member_groups_subq = (
-                                db.query(GroupMember.group_id)
-                                .filter(GroupMember.user_id == member_id)
-                                .subquery()
+                            member_groups_select = select(GroupMember.group_id).where(
+                                GroupMember.user_id == member_id
                             )
                             members_only_and_is_member = and_(
                                 json_share_lower == "members",
-                                Group.id.in_(member_groups_subq),
+                                Group.id.in_(member_groups_select),
                             )
                             query = query.filter(
                                 or_(anyone_can_share, members_only_and_is_member)
