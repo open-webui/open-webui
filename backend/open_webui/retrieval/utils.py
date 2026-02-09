@@ -29,9 +29,9 @@ from open_webui.models.knowledge import Knowledges
 
 from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
+from open_webui.models.access_grants import AccessGrants
 
 from open_webui.retrieval.vector.main import GetResult
-from open_webui.utils.access_control import has_access
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.misc import get_message_list
 
@@ -999,7 +999,12 @@ async def get_sources_from_items(
             if note and (
                 user.role == "admin"
                 or note.user_id == user.id
-                or has_access(user.id, "read", note.access_control)
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="note",
+                    resource_id=note.id,
+                    permission="read",
+                )
             ):
                 # User has access to the note
                 query_result = {
@@ -1091,7 +1096,12 @@ async def get_sources_from_items(
             if knowledge_base and (
                 user.role == "admin"
                 or knowledge_base.user_id == user.id
-                or has_access(user.id, "read", knowledge_base.access_control)
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="knowledge",
+                    resource_id=knowledge_base.id,
+                    permission="read",
+                )
             ):
                 if (
                     item.get("context") == "full"
@@ -1100,7 +1110,12 @@ async def get_sources_from_items(
                     if knowledge_base and (
                         user.role == "admin"
                         or knowledge_base.user_id == user.id
-                        or has_access(user.id, "read", knowledge_base.access_control)
+                        or AccessGrants.has_access(
+                            user_id=user.id,
+                            resource_type="knowledge",
+                            resource_id=knowledge_base.id,
+                            permission="read",
+                        )
                     ):
                         files = Knowledges.get_files_by_id(knowledge_base.id)
 
