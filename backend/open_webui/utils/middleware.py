@@ -2235,6 +2235,7 @@ async def process_chat_response(
                     nonlocal content_blocks
                     nonlocal response_usage
                     nonlocal chunk_count
+                    nonlocal model_id
 
                     response_tool_calls = []
                     reasoning_details = []
