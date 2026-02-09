@@ -41,6 +41,7 @@
 	export let sendMessage: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
+	export let regenerateWithModel: Function = () => {};
 	export let mergeResponses: Function;
 
 	export let chatActionHandler: Function;
@@ -443,6 +444,7 @@
 								{saveMessage}
 								{submitMessage}
 								{regenerateResponse}
+								{regenerateWithModel}
 								{continueResponse}
 								{mergeResponses}
 								{addMessages}

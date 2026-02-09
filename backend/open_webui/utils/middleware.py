@@ -33,6 +33,10 @@ from open_webui.socket.main import (
     get_active_status_by_user_id,
     process_token_usage,
 )
+from open_webui.tasks import (
+    get_pending_model_switch,
+    clear_pending_model_switch,
+)
 from open_webui.routers.tasks import (
     generate_queries,
     generate_title,
@@ -2800,6 +2804,26 @@ async def process_chat_response(
                     )
 
                     try:
+                        # Check for pending model switch
+                        pending_model = get_pending_model_switch(task_id)
+                        if pending_model:
+                            old_model_id = model_id
+                            model_id = pending_model
+                            clear_pending_model_switch(task_id)
+                            log.info(f"Model switched from {old_model_id} to {model_id} for task {task_id}")
+                            
+                            # Notify frontend that model switch was applied
+                            await event_emitter(
+                                {
+                                    "type": "model-switch:applied",
+                                    "data": {
+                                        "old_model_id": old_model_id,
+                                        "new_model_id": model_id,
+                                        "task_id": task_id,
+                                    },
+                                }
+                            )
+
                         new_form_data = {
                             **form_data,
                             "model": model_id,

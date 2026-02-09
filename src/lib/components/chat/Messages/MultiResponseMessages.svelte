@@ -43,6 +43,7 @@
 
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
+	export let regenerateWithModel: Function = () => {};
 	export let mergeResponses: Function;
 
 	export let addMessages: Function;
@@ -322,6 +323,12 @@
 										groupedMessageIdsIdx[selectedModelIdx] =
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
+									regenerateWithModel={async (message, modelId, preserveToolContext = false) => {
+										regenerateWithModel(message, modelId, preserveToolContext);
+										await tick();
+										groupedMessageIdsIdx[selectedModelIdx] =
+											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
+									}}
 									{addMessages}
 									{readOnly}
 									{topPadding}
@@ -374,6 +381,12 @@
 										{continueResponse}
 										regenerateResponse={async (message, prompt = null) => {
 											regenerateResponse(message, prompt);
+											await tick();
+											groupedMessageIdsIdx[modelIdx] =
+												groupedMessageIds[modelIdx].messageIds.length - 1;
+										}}
+										regenerateWithModel={async (message, modelId, preserveToolContext = false) => {
+											regenerateWithModel(message, modelId, preserveToolContext);
 											await tick();
 											groupedMessageIdsIdx[modelIdx] =
 												groupedMessageIds[modelIdx].messageIds.length - 1;

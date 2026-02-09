@@ -1302,7 +1302,9 @@ async def generate_chat_completion(
 
     try:
         session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            read_bufsize=4 * 1024 * 1024,  # 4MB to handle large SSE lines from reasoning models
         )
 
         r = await session.request(
@@ -1467,7 +1469,10 @@ async def embeddings(request: Request, form_data: dict, user):
         request, url, key, api_config, user=user
     )
     try:
-        session = aiohttp.ClientSession(trust_env=True)
+        session = aiohttp.ClientSession(
+            trust_env=True,
+            read_bufsize=4 * 1024 * 1024,  # 4MB to handle large SSE lines from reasoning models
+        )
         r = await session.request(
             method="POST",
             url=f"{url}/embeddings",
@@ -1591,7 +1596,10 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         else:
             request_url = f"{url}/{path}"
 
-        session = aiohttp.ClientSession(trust_env=True)
+        session = aiohttp.ClientSession(
+            trust_env=True,
+            read_bufsize=4 * 1024 * 1024,  # 4MB to handle large SSE lines from reasoning models
+        )
         r = await session.request(
             method=request.method,
             url=request_url,

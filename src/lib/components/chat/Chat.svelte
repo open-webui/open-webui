@@ -591,6 +591,16 @@
 					if (autoScroll) {
 						scrollToBottom('smooth');
 					}
+				} else if (type === 'model-switch:pending') {
+					// Model switch has been queued
+					message.pendingSwitchModel = data.model_id;
+					toast.info($i18n.t('Model switch to {{model}} queued for next iteration', { model: data.model_id }));
+				} else if (type === 'model-switch:applied') {
+					// Model switch was applied
+					message.model = data.new_model_id;
+					message.modelName = $models.find((m) => m.id === data.new_model_id)?.name ?? data.new_model_id;
+					message.pendingSwitchModel = null;
+					toast.success($i18n.t('Switched to model: {{model}}', { model: message.modelName }));
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
@@ -2678,6 +2688,112 @@
 		}
 	};
 
+	const regenerateWithModel = async (message, newModelId, preserveToolContext = false) => {
+		console.log('regenerateWithModel', message, newModelId, preserveToolContext);
+
+		if (!history.currentId) {
+			return;
+		}
+
+		const model = $models.find((m) => m.id === newModelId);
+		if (!model) {
+			toast.error($i18n.t(`Model {{modelId}} not found`, { modelId: newModelId }));
+			return;
+		}
+
+		let userMessage = history.messages[message.parentId];
+
+		if (preserveToolContext) {
+			// Feature 2: Keep tool calls and reasoning, only remove the final answer
+			// Parse the message content to find tool call sections
+			const content = message.content || '';
+			
+			// Find the last tool_calls details block
+			const toolCallsRegex = /<details\s+type="tool_calls"[^>]*>[\s\S]*?<\/details>/gi;
+			const toolCallMatches = [...content.matchAll(toolCallsRegex)];
+			
+			if (toolCallMatches.length > 0) {
+				// Get the position after the last tool call block
+				const lastMatch = toolCallMatches[toolCallMatches.length - 1];
+				const lastToolCallEndPos = lastMatch.index + lastMatch[0].length;
+				
+				// The preserved content is everything up to and including the last tool call block
+				const preservedContent = content.substring(0, lastToolCallEndPos).trim();
+				
+				// Create a new response message that includes the preserved context
+				const responseMessageId = uuidv4();
+				const responseMessage = {
+					parentId: message.parentId,
+					id: responseMessageId,
+					childrenIds: [],
+					role: 'assistant',
+					content: preservedContent + '\n\n', // Start with preserved context
+					model: newModelId,
+					modelName: model.name ?? newModelId,
+					modelIdx: message.modelIdx ?? 0,
+					timestamp: Math.floor(Date.now() / 1000),
+					preservedToolContext: true // Mark that this has preserved context
+				};
+
+				// Add message to history
+				history.messages[responseMessageId] = responseMessage;
+				history.currentId = responseMessageId;
+
+				// Append messageId to childrenIds of parent message
+				if (message.parentId !== null && history.messages[message.parentId]) {
+					history.messages[message.parentId].childrenIds = [
+						...history.messages[message.parentId].childrenIds,
+						responseMessageId
+					];
+				}
+
+				history = history;
+				await tick();
+
+				if (autoScroll) {
+					scrollToBottom();
+				}
+
+				// Prepare messages list including the preserved tool context
+				const messages = createMessagesList(history, responseMessageId);
+				
+				// Send to the new model to continue from where the tool context ends
+				const _chatId = JSON.parse(JSON.stringify($chatId));
+				const chatEventEmitter = await getChatEventEmitter(newModelId, _chatId);
+				
+				await sendMessageSocket(
+					model,
+					messages,
+					history,
+					responseMessageId,
+					_chatId
+				);
+
+				if (chatEventEmitter) clearInterval(chatEventEmitter);
+			} else {
+				// No tool calls found, fall back to regular regeneration with new model
+				if (autoScroll) {
+					scrollToBottom();
+				}
+
+				await sendMessage(history, userMessage.id, {
+					modelId: newModelId,
+					modelIdx: message.modelIdx
+				});
+			}
+		} else {
+			// Simple model switch - just regenerate with the new model (no tool context preservation)
+			if (autoScroll) {
+				scrollToBottom();
+			}
+
+			await sendMessage(history, userMessage.id, {
+				modelId: newModelId,
+				modelIdx: message.modelIdx
+			});
+		}
+	};
+
 	const continueResponse = async () => {
 		console.log('continueResponse');
 		const _chatId = JSON.parse(JSON.stringify($chatId));
@@ -3009,6 +3125,7 @@
 										{submitMessage}
 										{continueResponse}
 										{regenerateResponse}
+										{regenerateWithModel}
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}

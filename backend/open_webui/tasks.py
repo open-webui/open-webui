@@ -18,6 +18,10 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 tasks: Dict[str, asyncio.Task] = {}
 item_tasks = {}
 
+# A dictionary to track pending model switches for active tasks
+# Key: task_id, Value: {"model_id": str, "timestamp": float}
+pending_model_switches: Dict[str, dict] = {}
+
 
 REDIS_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks"
 REDIS_ITEM_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks:item"
@@ -184,3 +188,61 @@ async def stop_item_tasks(redis: Redis, item_id: str):
             return result  # Return the first failure
 
     return {"status": True, "message": f"All tasks for item {item_id} stopped."}
+
+
+# ===============================
+# PENDING MODEL SWITCH MANAGEMENT
+# ===============================
+
+
+async def set_pending_model_switch(task_id: str, model_id: str) -> dict:
+    """
+    Set a pending model switch for an active task.
+    The agentic loop will pick this up at its next iteration.
+    """
+    import time
+    
+    if task_id not in tasks:
+        return {"status": False, "message": f"Task {task_id} not found or not active."}
+    
+    pending_model_switches[task_id] = {
+        "model_id": model_id,
+        "timestamp": time.time()
+    }
+    
+    log.info(f"Pending model switch set for task {task_id}: switching to {model_id}")
+    return {"status": True, "message": f"Model switch to {model_id} queued for task {task_id}."}
+
+
+def get_pending_model_switch(task_id: str) -> Optional[str]:
+    """
+    Check if there's a pending model switch for a task.
+    Returns the model_id if there's a pending switch, None otherwise.
+    """
+    if task_id in pending_model_switches:
+        return pending_model_switches[task_id].get("model_id")
+    return None
+
+
+def clear_pending_model_switch(task_id: str) -> None:
+    """
+    Clear the pending model switch after it has been applied.
+    """
+    if task_id in pending_model_switches:
+        del pending_model_switches[task_id]
+        log.info(f"Pending model switch cleared for task {task_id}")
+
+
+async def get_pending_model_switches_for_chat(redis, chat_id: str) -> List[dict]:
+    """
+    Get all pending model switches for tasks associated with a chat.
+    """
+    task_ids = await list_task_ids_by_item_id(redis, chat_id)
+    switches = []
+    for task_id in task_ids:
+        if task_id in pending_model_switches:
+            switches.append({
+                "task_id": task_id,
+                **pending_model_switches[task_id]
+            })
+    return switches

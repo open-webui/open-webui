@@ -35,6 +35,7 @@
 	export let submitMessage;
 
 	export let regenerateResponse;
+	export let regenerateWithModel: Function = () => {};
 	export let continueResponse;
 	export let mergeResponses;
 
@@ -93,6 +94,7 @@
 				{deleteMessage}
 				{continueResponse}
 				{regenerateResponse}
+				{regenerateWithModel}
 				{addMessages}
 				{readOnly}
 				{editCodeBlock}
@@ -115,6 +117,7 @@
 				{deleteMessage}
 				{continueResponse}
 				{regenerateResponse}
+				{regenerateWithModel}
 				{mergeResponses}
 				{triggerScroll}
 				{addMessages}

@@ -31,7 +31,7 @@ from open_webui.env import (
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
-from open_webui.tasks import create_task, stop_item_tasks
+from open_webui.tasks import create_task, stop_item_tasks, set_pending_model_switch, list_task_ids_by_item_id
 from open_webui.utils.redis import get_redis_connection
 from open_webui.utils.access_control import has_access, get_users_with_access
 from open_webui.models.token_usage import token_groups
@@ -316,6 +316,80 @@ async def usage(sid, data):
 
         # Process token usage tracking with chat_id and user_id for analytics
         await process_token_usage(model_id, usage_data, chat_id=chat_id, user_id=user_id)
+
+
+@sio.on("model-switch")
+async def model_switch(sid, data):
+    """
+    Handle model switch requests during an active agentic loop.
+    The switch will be applied at the next iteration of the tool call loop.
+    """
+    if sid not in SESSION_POOL:
+        return {"status": False, "message": "Session not found"}
+    
+    chat_id = data.get("chat_id")
+    new_model_id = data.get("model_id")
+    task_id = data.get("task_id")
+    
+    if not new_model_id:
+        return {"status": False, "message": "No model_id provided"}
+    
+    log.info(f"Model switch request: chat_id={chat_id}, task_id={task_id}, new_model={new_model_id}")
+    
+    # If a specific task_id is provided, switch for that task
+    if task_id:
+        result = await set_pending_model_switch(task_id, new_model_id)
+        
+        # Emit event to notify frontend that model switch is pending
+        await sio.emit(
+            "events",
+            {
+                "chat_id": chat_id,
+                "message_id": data.get("message_id"),
+                "data": {
+                    "type": "model-switch:pending",
+                    "data": {
+                        "task_id": task_id,
+                        "model_id": new_model_id,
+                    }
+                }
+            },
+            to=sid,
+        )
+        
+        return result
+    
+    # If no task_id provided, try to find active tasks for the chat
+    if chat_id:
+        task_ids = await list_task_ids_by_item_id(REDIS, chat_id)
+        if task_ids:
+            results = []
+            for tid in task_ids:
+                result = await set_pending_model_switch(tid, new_model_id)
+                results.append(result)
+            
+            # Emit event for each task
+            await sio.emit(
+                "events",
+                {
+                    "chat_id": chat_id,
+                    "message_id": data.get("message_id"),
+                    "data": {
+                        "type": "model-switch:pending",
+                        "data": {
+                            "task_ids": task_ids,
+                            "model_id": new_model_id,
+                        }
+                    }
+                },
+                to=sid,
+            )
+            
+            return {"status": True, "message": f"Model switch queued for {len(task_ids)} active task(s)"}
+        else:
+            return {"status": False, "message": "No active tasks found for this chat"}
+    
+    return {"status": False, "message": "No chat_id or task_id provided"}
 
 
 async def process_token_usage(

@@ -51,6 +51,7 @@
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
+	import ModelSwitcher from './ResponseMessage/ModelSwitcher.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 
@@ -137,6 +138,7 @@
 	export let submitMessage: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
+	export let regenerateWithModel: Function = () => {};
 
 	export let addMessages: Function;
 
@@ -811,6 +813,19 @@
 						bind:this={buttonsContainerElement}
 						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
 					>
+						{#if !message.done && !readOnly && isLastMessage}
+							<!-- Model switcher shown during generation -->
+							<ModelSwitcher
+								{chatId}
+								messageId={message.id}
+								taskId={null}
+								currentModelId={message.model}
+								onSwitch={(modelId) => {
+									// Update message model for UI feedback
+									message.pendingSwitchModel = modelId;
+								}}
+							/>
+						{/if}
 						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
@@ -1321,6 +1336,12 @@
 														});
 													});
 												}}
+												onRegenerateWithModel={(modelId, preserveToolContext = false) => {
+													showRateComment = false;
+													regenerateWithModel(message, modelId, preserveToolContext);
+												}}
+												currentModelId={message.model}
+												hasToolCalls={message.content?.includes('<details type="tool_calls"') ?? false}
 											>
 												<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 													<div
