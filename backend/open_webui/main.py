@@ -516,7 +516,6 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
-from open_webui.utils.access_control import has_access
 
 from open_webui.utils.auth import (
     get_license_data,

@@ -151,7 +151,7 @@
 				return {
 					...file,
 					user: undefined,
-					access_control: undefined
+					access_grants: undefined
 				};
 			}),
 		selectedToolIds,

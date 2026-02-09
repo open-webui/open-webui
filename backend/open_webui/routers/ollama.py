@@ -45,6 +45,7 @@ from open_webui.internal.db import get_session
 
 
 from open_webui.models.models import Models
+from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.misc import (
     calculate_sha256,
 )
@@ -54,9 +55,6 @@ from open_webui.utils.payload import (
     apply_system_prompt_to_body,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access
-
-
 from open_webui.config import (
     UPLOAD_DIR,
 )
@@ -431,8 +429,12 @@ async def get_filtered_models(models, user, db=None):
     for model in models.get("models", []):
         model_info = Models.get_model_by_id(model["model"], db=db)
         if model_info:
-            if user.id == model_info.user_id or has_access(
-                user.id, type="read", access_control=model_info.access_control, db=db
+            if user.id == model_info.user_id or AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="model",
+                resource_id=model_info.id,
+                permission="read",
+                db=db,
             ):
                 filtered_models.append(model)
     return filtered_models
@@ -1293,7 +1295,7 @@ async def generate_chat_completion(
         raise HTTPException(status_code=503, detail="Ollama API is disabled")
 
     # NOTE: We intentionally do NOT use Depends(get_session) here.
-    # Database operations (get_model_by_id, has_access) manage their own short-lived sessions.
+    # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
     if BYPASS_MODEL_ACCESS_CONTROL:
@@ -1340,10 +1342,11 @@ async def generate_chat_completion(
         if not bypass_filter and user.role == "user":
             if not (
                 user.id == model_info.user_id
-                or has_access(
-                    user.id,
-                    type="read",
-                    access_control=model_info.access_control,
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="model",
+                    resource_id=model_info.id,
+                    permission="read",
                 )
             ):
                 raise HTTPException(
@@ -1417,7 +1420,7 @@ async def generate_openai_completion(
     user=Depends(get_verified_user),
 ):
     # NOTE: We intentionally do NOT use Depends(get_session) here.
-    # Database operations (get_model_by_id, has_access) manage their own short-lived sessions.
+    # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
     metadata = form_data.pop("metadata", None)
@@ -1452,10 +1455,11 @@ async def generate_openai_completion(
         if user.role == "user":
             if not (
                 user.id == model_info.user_id
-                or has_access(
-                    user.id,
-                    type="read",
-                    access_control=model_info.access_control,
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="model",
+                    resource_id=model_info.id,
+                    permission="read",
                 )
             ):
                 raise HTTPException(
@@ -1502,7 +1506,7 @@ async def generate_openai_chat_completion(
     user=Depends(get_verified_user),
 ):
     # NOTE: We intentionally do NOT use Depends(get_session) here.
-    # Database operations (get_model_by_id, has_access) manage their own short-lived sessions.
+    # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
     metadata = form_data.pop("metadata", None)
@@ -1541,10 +1545,11 @@ async def generate_openai_chat_completion(
         if user.role == "user":
             if not (
                 user.id == model_info.user_id
-                or has_access(
-                    user.id,
-                    type="read",
-                    access_control=model_info.access_control,
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="model",
+                    resource_id=model_info.id,
+                    permission="read",
                 )
             ):
                 raise HTTPException(
@@ -1642,10 +1647,11 @@ async def get_openai_models(
         for model in models:
             model_info = Models.get_model_by_id(model["id"], db=db)
             if model_info:
-                if user.id == model_info.user_id or has_access(
-                    user.id,
-                    type="read",
-                    access_control=model_info.access_control,
+                if user.id == model_info.user_id or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="model",
+                    resource_id=model_info.id,
+                    permission="read",
                     db=db,
                 ):
                     filtered_models.append(model)

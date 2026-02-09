@@ -46,7 +46,7 @@
 	let commitMessage = '';
 	let isProduction = true;
 
-	let accessControl = {};
+	let accessGrants = [];
 	let showAccessControlModal = false;
 	let hasManualEdit = false;
 
@@ -87,7 +87,7 @@
 				command,
 				content,
 				tags: tags.map((tag) => tag.name),
-				access_control: accessControl,
+				access_grants: accessGrants,
 				commit_message: commitMessage || undefined,
 				is_production: isProduction
 			});
@@ -259,7 +259,7 @@
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 			tags = (prompt.tags || []).map((tag) => ({ name: tag }));
-			accessControl = prompt?.access_control === undefined ? {} : prompt?.access_control;
+			accessGrants = prompt?.access_grants === undefined ? [] : prompt?.access_grants;
 
 			// Store originals for revert on collision
 			originalName = name;
@@ -286,10 +286,10 @@
 
 <AccessControlModal
 	bind:show={showAccessControlModal}
-	bind:accessControl
+	bind:accessGrants
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
-	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
+	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin' || edit}
 />
 
 <!-- Edit Modal -->

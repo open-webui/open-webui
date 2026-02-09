@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from open_webui.internal.db import get_session
 
 from open_webui.models.models import Models
+from open_webui.models.access_grants import AccessGrants
 from open_webui.config import (
     CACHE_DIR,
 )
@@ -51,7 +52,6 @@ from open_webui.utils.misc import (
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access
 from open_webui.utils.headers import include_user_info_headers
 
 
@@ -463,8 +463,12 @@ async def get_filtered_models(models, user, db=None):
     for model in models.get("data", []):
         model_info = Models.get_model_by_id(model["id"], db=db)
         if model_info:
-            if user.id == model_info.user_id or has_access(
-                user.id, type="read", access_control=model_info.access_control, db=db
+            if user.id == model_info.user_id or AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="model",
+                resource_id=model_info.id,
+                permission="read",
+                db=db,
             ):
                 filtered_models.append(model)
     return filtered_models
@@ -907,7 +911,7 @@ async def generate_chat_completion(
     bypass_system_prompt: bool = False,
 ):
     # NOTE: We intentionally do NOT use Depends(get_session) here.
-    # Database operations (get_model_by_id, has_access) manage their own short-lived sessions.
+    # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
     if BYPASS_MODEL_ACCESS_CONTROL:
@@ -945,10 +949,11 @@ async def generate_chat_completion(
         if not bypass_filter and user.role == "user":
             if not (
                 user.id == model_info.user_id
-                or has_access(
-                    user.id,
-                    type="read",
-                    access_control=model_info.access_control,
+                or AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="model",
+                    resource_id=model_info.id,
+                    permission="read",
                 )
             ):
                 raise HTTPException(
