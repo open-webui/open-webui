@@ -184,6 +184,9 @@ class UserInfoResponse(UserStatus):
     name: str
     email: str
     role: str
+    bio: Optional[str] = None
+    groups: Optional[list] = []
+    is_active: bool = False
 
 
 class UserIdNameResponse(BaseModel):

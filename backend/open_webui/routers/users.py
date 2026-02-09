@@ -484,7 +484,14 @@ async def get_user_info_by_id(
 ):
     user = Users.get_user_by_id(user_id, db=db)
     if user:
-        return user
+        groups = Groups.get_groups_by_member_id(user_id, db=db)
+        return UserInfoResponse(
+            **{
+                **user.model_dump(),
+                "groups": [{"id": group.id, "name": group.name} for group in groups],
+                "is_active": Users.is_user_active(user_id, db=db),
+            }
+        )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
