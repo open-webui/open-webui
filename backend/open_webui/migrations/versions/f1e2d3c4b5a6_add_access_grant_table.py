@@ -225,7 +225,8 @@ def upgrade() -> None:
         if table_name not in existing_tables:
             continue
         try:
-            op.drop_column(table_name, "access_control")
+            with op.batch_alter_table(table_name) as batch:
+                batch.drop_column("access_control")
         except Exception:
             pass
 
@@ -249,9 +250,8 @@ def downgrade() -> None:
     # Step 1: Re-add access_control columns to resource tables
     for table_name, _ in resource_tables:
         try:
-            op.add_column(
-                table_name, sa.Column("access_control", sa.JSON(), nullable=True)
-            )
+            with op.batch_alter_table(table_name) as batch:
+                batch.add_column(sa.Column("access_control", sa.JSON(), nullable=True))
         except Exception:
             pass
 
