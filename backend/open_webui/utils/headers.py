@@ -49,10 +49,10 @@ async def get_headers_and_cookies(
     config=None,
     metadata: Optional[dict] = None,
     user: UserModel = None,
+    content_type: Optional[str] = "application/json",
 ):
     cookies = {}
     headers = {
-        "Content-Type": "application/json",
         **(
             {
                 "HTTP-Referer": "https://openwebui.com/",
@@ -62,6 +62,9 @@ async def get_headers_and_cookies(
             else {}
         ),
     }
+
+    if content_type:
+        headers["Content-Type"] = content_type
 
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
         headers = include_user_info_headers(headers, user)

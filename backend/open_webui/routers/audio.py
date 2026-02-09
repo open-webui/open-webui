@@ -652,19 +652,22 @@ def transcription_handler(request, file_path, metadata, user=None):
                         key=request.app.state.config.STT_OPENAI_API_KEY,
                         config=request.app.state.config.STT_OPENAI_API_CONFIG,
                         user=user,
+                        content_type=None,
                     )
                 )
 
-                # requests library doesn't support cookies dict directly in the same way as aiohttp for all cases, but widely supported
-                # Adapting usage if needed. requests.post(..., cookies=cookies) works.
+                request_headers = dict(headers)
+                # Multipart upload requires requests to set boundary-aware Content-Type.
+                request_headers.pop("Content-Type", None)
 
-                r = requests.post(
-                    url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
-                    headers=headers,
-                    cookies=cookies,
-                    files={"file": (filename, open(file_path, "rb"))},
-                    data=payload,
-                )
+                with open(file_path, "rb") as audio_file:
+                    r = requests.post(
+                        url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
+                        headers=request_headers,
+                        cookies=cookies,
+                        files={"file": (filename, audio_file)},
+                        data=payload,
+                    )
 
                 if r.status_code == 200:
                     # Successful transcription
