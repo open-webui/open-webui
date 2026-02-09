@@ -305,14 +305,14 @@ class GroupTable:
 
     def get_group_user_ids_by_id(
         self, id: str, db: Optional[Session] = None
-    ) -> Optional[list[str]]:
+    ) -> list[str]:
         with get_db_context(db) as db:
             members = (
                 db.query(GroupMember.user_id).filter(GroupMember.group_id == id).all()
             )
 
             if not members:
-                return None
+                return []
 
             return [m[0] for m in members]
 
