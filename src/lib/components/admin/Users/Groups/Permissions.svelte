@@ -158,6 +158,38 @@
 				</div>
 			{/if}
 		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Skills Access')}
+				</div>
+				<Switch bind:state={permissions.workspace.skills} />
+			</div>
+
+			{#if permissions.workspace.skills}
+				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('Import Skills')}
+						</div>
+						<Switch bind:state={permissions.workspace.skills_import} />
+					</div>
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('Export Skills')}
+						</div>
+						<Switch bind:state={permissions.workspace.skills_export} />
+					</div>
+				</div>
+			{:else if defaultPermissions?.workspace?.skills}
+				<div class="pb-0.5">
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
 	</div>
 
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />

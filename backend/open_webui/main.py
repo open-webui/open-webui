@@ -60,6 +60,7 @@ from starsessions.stores.redis import RedisStore
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
+from open_webui.utils.skills_external_bridge import sync_external_skills_from_env
 from open_webui.socket.main import (
     MODELS,
     app as socket_app,
@@ -89,6 +90,7 @@ from open_webui.routers import (
     models,
     knowledge,
     prompts,
+    skills,
     evaluations,
     tools,
     users,
@@ -613,6 +615,25 @@ async def lifespan(app: FastAPI):
     # when the first user lands on the / route.
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
+
+    if os.environ.get("EXTERNAL_SKILLS_SYNC_ON_START", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        try:
+            sync_summary = sync_external_skills_from_env()
+            if sync_summary.get("enabled"):
+                log.info(
+                    "External skills startup sync: "
+                    f"discovered={sync_summary.get('discovered', 0)} "
+                    f"created={sync_summary.get('created', 0)} "
+                    f"updated={sync_summary.get('updated', 0)} "
+                    f"errors={len(sync_summary.get('errors', []))}"
+                )
+        except Exception as e:
+            log.exception(f"External skills startup sync failed: {e}")
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -1452,6 +1473,7 @@ app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
+app.include_router(skills.router, prefix="/api/v1/skills", tags=["skills"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
@@ -1666,6 +1688,7 @@ async def chat_completion(
             "parent_message_id": form_data.pop("parent_id", None),
             "session_id": form_data.pop("session_id", None),
             "filter_ids": form_data.pop("filter_ids", []),
+            "skill_ids": form_data.get("skill_ids", None),
             "tool_ids": form_data.get("tool_ids", None),
             "tool_servers": form_data.pop("tool_servers", None),
             "files": form_data.get("files", None),
@@ -1691,7 +1714,6 @@ async def chat_completion(
             if not metadata["chat_id"].startswith(
                 "local:"
             ):  # temporary chats are not stored
-
                 # Verify chat ownership
                 chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
                 if chat is None and user.role != "admin":  # admins can access any chat

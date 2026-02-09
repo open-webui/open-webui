@@ -2043,6 +2043,11 @@
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
+				skill_ids:
+					Array.isArray(model?.info?.meta?.defaultSkillIds) &&
+					model.info.meta.defaultSkillIds.length > 0
+						? model.info.meta.defaultSkillIds
+						: undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				tool_servers: ($toolServers ?? []).filter(
 					(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)

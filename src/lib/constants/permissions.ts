@@ -4,12 +4,15 @@ export const DEFAULT_PERMISSIONS = {
 		knowledge: false,
 		prompts: false,
 		tools: false,
+		skills: false,
 		models_import: false,
 		models_export: false,
 		prompts_import: false,
 		prompts_export: false,
 		tools_import: false,
-		tools_export: false
+		tools_export: false,
+		skills_import: false,
+		skills_export: false
 	},
 	sharing: {
 		models: false,

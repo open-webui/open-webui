@@ -68,7 +68,10 @@ from open_webui.utils.files import (
 
 from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
+from open_webui.models.skills import Skills
 from open_webui.models.models import Models
+
+from open_webui.utils.skills_executor import execute_skill_scripts
 
 from open_webui.retrieval.utils import get_sources_from_items
 
@@ -680,7 +683,6 @@ def handle_responses_streaming_event(
             elif type_name not in ["completed", "failed"]:
                 output_index = data.get("output_index", len(current_output) - 1)
                 if current_output and 0 <= output_index < len(current_output):
-
                     key = (
                         "text"
                         if type_name
@@ -985,7 +987,7 @@ async def chat_completion_tools_handler(
 
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{get_content_from_message(message)}\"\"\""
+            f'{message["role"].upper()}: """{get_content_from_message(message)}"""'
             for message in recent_messages
         )
 
@@ -1395,7 +1397,6 @@ def get_images_from_messages(message_list):
     images = []
 
     for message in reversed(message_list):
-
         message_images = []
         for file in message.get("files", []):
             if file.get("type") == "image":
@@ -1730,7 +1731,8 @@ async def chat_completion_files_handler(
                 request=request,
                 items=files,
                 queries=queries,
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                embedding_function=lambda query,
+                prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
                 k=request.app.state.config.TOP_K,
@@ -1903,6 +1905,361 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
     return processed
 
 
+# ── Skills helper functions ───────────────────────────────────────────────
+
+
+def _normalize_activation_values(value: Any) -> list[str]:
+    if isinstance(value, str):
+        item = value.strip()
+        return [item] if item else []
+
+    if isinstance(value, list):
+        items: list[str] = []
+        for raw_item in value:
+            if isinstance(raw_item, str):
+                item = raw_item.strip()
+                if item:
+                    items.append(item)
+        return items
+
+    return []
+
+
+def _has_explicit_auto_rules(activation: dict) -> bool:
+    any_keywords = _normalize_activation_values(
+        activation.get("keywords")
+        or activation.get("any")
+        or activation.get("when_any")
+    )
+    all_keywords = _normalize_activation_values(
+        activation.get("all_keywords")
+        or activation.get("all")
+        or activation.get("when_all")
+    )
+    regex_patterns = _normalize_activation_values(
+        activation.get("regex") or activation.get("patterns")
+    )
+
+    return bool(any_keywords or all_keywords or regex_patterns)
+
+
+def _is_auto_activation_match(skill, user_message: str) -> bool:
+    activation = skill.activation if isinstance(skill.activation, dict) else {}
+
+    any_keywords = _normalize_activation_values(
+        activation.get("keywords")
+        or activation.get("any")
+        or activation.get("when_any")
+    )
+    all_keywords = _normalize_activation_values(
+        activation.get("all_keywords")
+        or activation.get("all")
+        or activation.get("when_all")
+    )
+    regex_patterns = _normalize_activation_values(
+        activation.get("regex") or activation.get("patterns")
+    )
+
+    if not (any_keywords or all_keywords or regex_patterns):
+        return False
+
+    msg_lower = user_message.lower()
+
+    if any_keywords and any(kw.lower() in msg_lower for kw in any_keywords):
+        return True
+
+    if all_keywords and all(kw.lower() in msg_lower for kw in all_keywords):
+        return True
+
+    if regex_patterns:
+        for pattern in regex_patterns:
+            try:
+                if re.search(pattern, user_message, re.IGNORECASE):
+                    return True
+            except re.error:
+                pass
+
+    return False
+
+
+def _get_skill_semantic_summary(skill) -> str:
+    activation = skill.activation if isinstance(skill.activation, dict) else {}
+    semantic_hint = activation.get("semantic_hint")
+    if isinstance(semantic_hint, str) and semantic_hint.strip():
+        return semantic_hint.strip()
+
+    meta = skill.meta if isinstance(skill.meta, dict) else {}
+    for key in ["description", "summary", "purpose", "use_when"]:
+        value = meta.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    content = skill.content if isinstance(skill.content, str) else ""
+    if not content:
+        return ""
+
+    normalized_content = re.sub(r"\s+", " ", content).strip()
+    return normalized_content[:500]
+
+
+def _tokenize_semantic_text(text: str) -> set[str]:
+    if not isinstance(text, str):
+        return set()
+
+    acronym_tokens = {
+        match.group(0).lower() for match in re.finditer(r"\b[A-Z][A-Z0-9]{1,6}\b", text)
+    }
+
+    compound_tokens: set[str] = set()
+    for match in re.finditer(
+        r"\b([A-Za-z0-9]{1,6})\s*[/_-]\s*([A-Za-z0-9]{1,6})\b", text
+    ):
+        left = match.group(1).lower()
+        right = match.group(2).lower()
+        compound_tokens.update({left, right, f"{left}{right}"})
+
+    normalized = re.sub(r"[^a-z0-9]+", " ", text.lower())
+    raw_tokens = [token.strip() for token in normalized.split() if token.strip()]
+
+    stopwords = {
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "this",
+        "that",
+        "have",
+        "your",
+        "about",
+        "into",
+        "over",
+        "under",
+        "when",
+        "where",
+        "while",
+        "what",
+        "which",
+        "who",
+        "how",
+        "are",
+        "can",
+        "you",
+        "our",
+        "out",
+        "off",
+        "all",
+        "any",
+        "just",
+        "like",
+        "need",
+        "help",
+    }
+
+    tokens: set[str] = set()
+    for token in raw_tokens:
+        if token in stopwords:
+            continue
+        if (
+            len(token) < 3
+            and token not in acronym_tokens
+            and token not in compound_tokens
+        ):
+            continue
+        tokens.add(token)
+        if len(token) > 4 and token.endswith("s"):
+            tokens.add(token[:-1])
+
+    tokens.update(acronym_tokens)
+    tokens.update(compound_tokens)
+
+    return tokens
+
+
+def _select_semantic_skill_ids_by_overlap(
+    user_message: str,
+    candidate_skills: list,
+) -> list[str]:
+    user_tokens = _tokenize_semantic_text(user_message)
+    if not user_tokens:
+        return []
+
+    ranked = []
+    for skill in candidate_skills:
+        summary = f"{skill.name} {_get_skill_semantic_summary(skill)}"
+        summary_tokens = _tokenize_semantic_text(summary)
+        if not summary_tokens:
+            continue
+
+        overlap = user_tokens.intersection(summary_tokens)
+        score = 0
+        for token in overlap:
+            if len(token) >= 8:
+                score += 3
+            elif len(token) >= 5:
+                score += 2
+            else:
+                score += 1
+
+        if score == 0:
+            continue
+
+        ranked.append((skill, score))
+
+    if not ranked:
+        return []
+
+    ranked.sort(key=lambda item: (item[1], item[0].priority), reverse=True)
+
+    threshold = 3
+    top_score = ranked[0][1]
+    if top_score < threshold:
+        return []
+
+    selected = [
+        skill.id
+        for skill, score in ranked
+        if score >= threshold and score >= (top_score - 1)
+    ]
+
+    return selected[:3]
+
+
+async def _extract_response_content(response) -> Optional[str]:
+    if hasattr(response, "body_iterator"):
+        content = None
+        async for chunk in response.body_iterator:
+            try:
+                data = json.loads(chunk.decode("utf-8", "replace"))
+                content = data["choices"][0]["message"]["content"]
+            except Exception:
+                continue
+
+        if response.background is not None:
+            await response.background()
+
+        return content
+
+    if isinstance(response, dict):
+        return response.get("choices", [{}])[0].get("message", {}).get("content", None)
+
+    return None
+
+
+async def _select_semantic_skill_ids(
+    request,
+    user,
+    model_id: str,
+    user_message: str,
+    candidate_skills: list,
+    models: dict,
+) -> list[str]:
+    if (
+        not candidate_skills
+        or not isinstance(user_message, str)
+        or not user_message.strip()
+    ):
+        return []
+
+    candidate_skills = sorted(
+        candidate_skills, key=lambda skill: skill.priority, reverse=True
+    )
+    candidate_skills = candidate_skills[:12]
+
+    task_model_id = get_task_model_id(
+        model_id,
+        request.app.state.config.TASK_MODEL,
+        request.app.state.config.TASK_MODEL_EXTERNAL,
+        models,
+    )
+
+    if task_model_id not in models:
+        task_model_id = model_id if model_id in models else None
+
+    if not task_model_id:
+        return []
+
+    candidates_payload = [
+        {
+            "id": skill.id,
+            "name": skill.name,
+            "summary": _get_skill_semantic_summary(skill),
+        }
+        for skill in candidate_skills
+    ]
+
+    selector_system_prompt = (
+        "You are a strict skills selector. "
+        "Given a user message and available skills, return JSON only in this format: "
+        '{"skill_ids": ["id1", "id2"]}. '
+        "Select only skills that are clearly relevant to the user request intent. "
+        "Avoid selecting infrastructure/devops skills for pure application coding questions. "
+        "Select at most 3 skill IDs."
+    )
+
+    selector_user_payload = {
+        "user_message": user_message,
+        "skills": candidates_payload,
+    }
+
+    payload = {
+        "model": task_model_id,
+        "messages": [
+            {"role": "system", "content": selector_system_prompt},
+            {
+                "role": "user",
+                "content": json.dumps(selector_user_payload, ensure_ascii=False),
+            },
+        ],
+        "stream": False,
+        "metadata": {"task": "skill_semantic_selector"},
+    }
+
+    try:
+        response = await generate_chat_completion(
+            request,
+            form_data=payload,
+            user=user,
+            bypass_system_prompt=True,
+        )
+
+        content = await _extract_response_content(response)
+        if not content:
+            return []
+
+        start = content.find("{")
+        end = content.rfind("}")
+        if start != -1 and end > start:
+            content = content[start : end + 1]
+
+        result = json.loads(content)
+        raw_ids = result.get("skill_ids", []) if isinstance(result, dict) else []
+
+        allowed_ids = {skill.id for skill in candidate_skills}
+        skill_ids = [
+            skill_id
+            for skill_id in raw_ids
+            if isinstance(skill_id, str) and skill_id in allowed_ids
+        ]
+
+        if not skill_ids:
+            skill_ids = _select_semantic_skill_ids_by_overlap(
+                user_message,
+                candidate_skills,
+            )
+
+        return skill_ids[:3]
+    except Exception as e:
+        log.debug(f"Semantic skill selector failed: {e}")
+        return _select_semantic_skill_ids_by_overlap(
+            user_message,
+            candidate_skills,
+        )
+
+
+# ── End Skills helpers ────────────────────────────────────────────────
+
+
 async def process_chat_payload(request, form_data, user, metadata, model):
     # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
@@ -1957,6 +2314,132 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     events = []
     sources = []
+
+    # ── Skills activation & script execution ──────────────────────────
+    applied_skill_ids: list[str] = []
+
+    selected_skill_ids = metadata.get("skill_ids", []) if metadata else []
+    if isinstance(selected_skill_ids, str):
+        selected_skill_ids = [selected_skill_ids]
+    elif not isinstance(selected_skill_ids, list):
+        selected_skill_ids = []
+    selected_skill_ids = [
+        skill_id for skill_id in selected_skill_ids if isinstance(skill_id, str)
+    ]
+
+    selected_skills_by_id = {}
+    if selected_skill_ids:
+        selected_skills = Skills.get_active_skills_by_ids_and_user_id(
+            user.id, selected_skill_ids
+        )
+        selected_skills_by_id = {skill.id: skill for skill in selected_skills}
+
+    user_message_for_activation = (
+        get_last_user_message(form_data.get("messages", [])) or ""
+    )
+
+    always_active_skills = []
+    rules_auto_active_skills = []
+    semantic_candidate_skills_by_id = {}
+
+    for skill in Skills.get_active_skills_by_user_id(user.id):
+        if skill.id in selected_skills_by_id:
+            continue
+
+        activation = skill.activation if isinstance(skill.activation, dict) else {}
+        mode = str(activation.get("mode", "manual")).strip().lower()
+
+        if mode == "always":
+            always_active_skills.append(skill)
+            continue
+
+        if mode == "auto":
+            if _is_auto_activation_match(skill, user_message_for_activation):
+                rules_auto_active_skills.append(skill)
+                continue
+
+            if not _has_explicit_auto_rules(activation):
+                semantic_candidate_skills_by_id[skill.id] = skill
+
+            continue
+
+        if mode == "semantic":
+            semantic_candidate_skills_by_id[skill.id] = skill
+
+    semantic_auto_active_skills = []
+    if semantic_candidate_skills_by_id:
+        semantic_selected_ids = await _select_semantic_skill_ids(
+            request,
+            user,
+            form_data.get("model", ""),
+            user_message_for_activation,
+            list(semantic_candidate_skills_by_id.values()),
+            models,
+        )
+
+        semantic_auto_active_skills = [
+            semantic_candidate_skills_by_id[skill_id]
+            for skill_id in semantic_selected_ids
+            if skill_id in semantic_candidate_skills_by_id
+        ]
+
+    combined_skills_by_id = {}
+    for skills_group in [
+        selected_skills_by_id.values(),
+        always_active_skills,
+        rules_auto_active_skills,
+        semantic_auto_active_skills,
+    ]:
+        for skill in skills_group:
+            combined_skills_by_id[skill.id] = skill
+
+    active_skills = sorted(
+        combined_skills_by_id.values(), key=lambda item: item.priority, reverse=True
+    )
+    applied_skill_ids = [skill.id for skill in active_skills]
+
+    # Apply lower-priority skills first so higher-priority prompts stay on top.
+    for skill in reversed(active_skills):
+        effects = skill.effects if isinstance(skill.effects, dict) else {}
+
+        skill_system_prompt = effects.get("system_prompt") if effects else None
+        if not isinstance(skill_system_prompt, str) or not skill_system_prompt.strip():
+            skill_system_prompt = skill.content
+
+        # Execute skill scripts if the skill has any (.py / .sh)
+        skill_exec_output = None
+        skill_meta = skill.meta if isinstance(skill.meta, dict) else {}
+        bridge_info = skill_meta.get("external_bridge", {})
+        if bridge_info.get("has_python_scripts") or bridge_info.get(
+            "has_shell_scripts"
+        ):
+            try:
+                skill_exec_output = await asyncio.to_thread(
+                    execute_skill_scripts,
+                    skill_meta,
+                    user_message_for_activation,
+                )
+            except Exception as e:
+                log.warning(f"Skill script execution failed for {skill.id}: {e}")
+                skill_exec_output = None
+
+        # Build the combined system prompt: skill content + execution output
+        combined_prompt_parts = []
+        if isinstance(skill_system_prompt, str) and skill_system_prompt.strip():
+            combined_prompt_parts.append(skill_system_prompt.strip())
+
+        if skill_exec_output:
+            combined_prompt_parts.append(
+                f"\n[Skill Execution Output: {skill.name}]\n"
+                f"<skill_output>\n{skill_exec_output}\n</skill_output>"
+            )
+
+        combined_prompt = "\n".join(combined_prompt_parts)
+        if combined_prompt.strip():
+            form_data = apply_system_prompt_to_body(
+                combined_prompt, form_data, metadata, user
+            )
+    # ── End Skills ────────────────────────────────────────────────────
 
     # Folder "Project" handling
     # Check if the request has chat_id and is inside of a folder
@@ -2123,6 +2606,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     metadata = {
         **metadata,
+        "skill_ids": applied_skill_ids if applied_skill_ids else None,
         "tool_ids": tool_ids,
         "files": files,
     }
@@ -2214,7 +2698,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
                         headers = include_user_info_headers(headers, user)
                         if metadata and metadata.get("chat_id"):
-                            headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get("chat_id")
+                            headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get(
+                                "chat_id"
+                            )
 
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(
@@ -2787,9 +3273,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 "id": output_id("msg"),
                                 "status": "completed",
                                 "role": "assistant",
-                                "content": [
-                                    {"type": "output_text", "text": content}
-                                ],
+                                "content": [{"type": "output_text", "text": content}],
                             }
                         ]
 
@@ -2932,7 +3416,6 @@ async def streaming_chat_response_handler(response, ctx):
 
                 if last_type == "message":
                     for start_tag, end_tag in tags:
-
                         start_tag_pattern = rf"{re.escape(start_tag)}"
                         if start_tag.startswith("<") and start_tag.endswith(">"):
                             start_tag_pattern = (
@@ -2942,9 +3425,7 @@ async def streaming_chat_response_handler(response, ctx):
                         match = re.search(start_tag_pattern, content)
                         if match:
                             try:
-                                attr_content = (
-                                    match.group(1) if match.group(1) else ""
-                                )
+                                attr_content = match.group(1) if match.group(1) else ""
                             except:
                                 attr_content = ""
 
@@ -2957,7 +3438,7 @@ async def streaming_chat_response_handler(response, ctx):
                             current_text = get_last_text(output)
                             set_last_text(
                                 output,
-                                current_text.replace(match.group(0) + after_tag, "")
+                                current_text.replace(match.group(0) + after_tag, ""),
                             )
 
                             if before_tag:
@@ -3006,7 +3487,9 @@ async def streaming_chat_response_handler(response, ctx):
                                         "id": output_id("msg"),
                                         "status": "in_progress",
                                         "role": "assistant",
-                                        "content": [{"type": "output_text", "text": ""}],
+                                        "content": [
+                                            {"type": "output_text", "text": ""}
+                                        ],
                                         "_tag_type": content_type,
                                         "start_tag": start_tag,
                                         "end_tag": end_tag,
@@ -3034,8 +3517,14 @@ async def streaming_chat_response_handler(response, ctx):
 
                 elif (
                     (last_type == "reasoning" and content_type == "reasoning")
-                    or (last_type == "open_webui:code_interpreter" and content_type == "code_interpreter")
-                    or (last_type == "message" and output[-1].get("_tag_type") == content_type)
+                    or (
+                        last_type == "open_webui:code_interpreter"
+                        and content_type == "code_interpreter"
+                    )
+                    or (
+                        last_type == "message"
+                        and output[-1].get("_tag_type") == content_type
+                    )
                 ):
                     item = output[-1]
                     start_tag = item.get("start_tag", "")
@@ -3153,9 +3642,7 @@ async def streaming_chat_response_handler(response, ctx):
                         # Clean processed content
                         start_tag_clean = rf"{re.escape(start_tag)}"
                         if start_tag.startswith("<") and start_tag.endswith(">"):
-                            start_tag_clean = (
-                                rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
-                            )
+                            start_tag_clean = rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
 
                         content = re.sub(
                             rf"{start_tag_clean}(.|\n)*?{re.escape(end_tag)}",
@@ -3184,7 +3671,9 @@ async def streaming_chat_response_handler(response, ctx):
             content = (
                 message.get("content", "")
                 if message
-                else last_assistant_message if last_assistant_message else ""
+                else last_assistant_message
+                if last_assistant_message
+                else ""
             )
 
             # Initialize output: use existing from message if continuing, else create new
@@ -3205,7 +3694,6 @@ async def streaming_chat_response_handler(response, ctx):
                     ]
                 else:
                     output = []
-
 
             usage = None
 
@@ -3489,14 +3977,19 @@ async def streaming_chat_response_handler(response, ctx):
                                             for tc in response_tool_calls:
                                                 call_id = tc.get("id", "")
                                                 func = tc.get("function", {})
-                                                pending_fc_items.append({
-                                                    "type": "function_call",
-                                                    "id": call_id or output_id("fc"),
-                                                    "call_id": call_id,
-                                                    "name": func.get("name", ""),
-                                                    "arguments": func.get("arguments", "{}"),
-                                                    "status": "in_progress",
-                                                })
+                                                pending_fc_items.append(
+                                                    {
+                                                        "type": "function_call",
+                                                        "id": call_id
+                                                        or output_id("fc"),
+                                                        "call_id": call_id,
+                                                        "name": func.get("name", ""),
+                                                        "arguments": func.get(
+                                                            "arguments", "{}"
+                                                        ),
+                                                        "status": "in_progress",
+                                                    }
+                                                )
                                             pending_output = output + pending_fc_items
                                             await event_emitter(
                                                 {
@@ -3560,22 +4053,25 @@ async def streaming_chat_response_handler(response, ctx):
 
                                         # Append to reasoning content
                                         parts = reasoning_item.get("content", [])
-                                        if parts and parts[-1].get("type") == "output_text":
+                                        if (
+                                            parts
+                                            and parts[-1].get("type") == "output_text"
+                                        ):
                                             parts[-1]["text"] += reasoning_content
                                         else:
                                             reasoning_item["content"] = [
-                                                {"type": "output_text", "text": reasoning_content}
+                                                {
+                                                    "type": "output_text",
+                                                    "text": reasoning_content,
+                                                }
                                             ]
 
-                                        data = {
-                                            "content": serialize_output(output)
-                                        }
+                                        data = {"content": serialize_output(output)}
 
                                     if value:
                                         if (
                                             output
-                                            and output[-1].get("type")
-                                            == "reasoning"
+                                            and output[-1].get("type") == "reasoning"
                                             and output[-1]
                                             .get("attributes", {})
                                             .get("type")
@@ -3595,7 +4091,12 @@ async def streaming_chat_response_handler(response, ctx):
                                                     "id": output_id("msg"),
                                                     "status": "in_progress",
                                                     "role": "assistant",
-                                                    "content": [{"type": "output_text", "text": ""}],
+                                                    "content": [
+                                                        {
+                                                            "type": "output_text",
+                                                            "text": "",
+                                                        }
+                                                    ],
                                                 }
                                             )
 
@@ -3625,13 +4126,22 @@ async def streaming_chat_response_handler(response, ctx):
                                                     "id": output_id("msg"),
                                                     "status": "in_progress",
                                                     "role": "assistant",
-                                                    "content": [{"type": "output_text", "text": ""}],
+                                                    "content": [
+                                                        {
+                                                            "type": "output_text",
+                                                            "text": "",
+                                                        }
+                                                    ],
                                                 }
                                             )
 
                                         # Append value to last message item's text
                                         msg_parts = output[-1].get("content", [])
-                                        if msg_parts and msg_parts[-1].get("type") == "output_text":
+                                        if (
+                                            msg_parts
+                                            and msg_parts[-1].get("type")
+                                            == "output_text"
+                                        ):
                                             msg_parts[-1]["text"] += value
                                         else:
                                             output[-1]["content"] = [
@@ -3639,32 +4149,26 @@ async def streaming_chat_response_handler(response, ctx):
                                             ]
 
                                         if DETECT_REASONING_TAGS:
-                                            content, output, _ = (
-                                                tag_output_handler(
-                                                    "reasoning",
-                                                    reasoning_tags,
-                                                    content,
-                                                    output,
-                                                )
+                                            content, output, _ = tag_output_handler(
+                                                "reasoning",
+                                                reasoning_tags,
+                                                content,
+                                                output,
                                             )
 
-                                            content, output, _ = (
-                                                tag_output_handler(
-                                                    "solution",
-                                                    DEFAULT_SOLUTION_TAGS,
-                                                    content,
-                                                    output,
-                                                )
+                                            content, output, _ = tag_output_handler(
+                                                "solution",
+                                                DEFAULT_SOLUTION_TAGS,
+                                                content,
+                                                output,
                                             )
 
                                         if DETECT_CODE_INTERPRETER:
-                                            content, output, end = (
-                                                tag_output_handler(
-                                                    "code_interpreter",
-                                                    DEFAULT_CODE_INTERPRETER_TAGS,
-                                                    content,
-                                                    output,
-                                                )
+                                            content, output, end = tag_output_handler(
+                                                "code_interpreter",
+                                                DEFAULT_CODE_INTERPRETER_TAGS,
+                                                content,
+                                                output,
                                             )
 
                                             if end:
@@ -3682,9 +4186,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             )
                                         else:
                                             data = {
-                                                "content": serialize_output(
-                                                    output
-                                                ),
+                                                "content": serialize_output(output),
                                             }
 
                                 if delta:
@@ -3725,7 +4227,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                 "id": output_id("msg"),
                                                 "status": "in_progress",
                                                 "role": "assistant",
-                                                "content": [{"type": "output_text", "text": ""}],
+                                                "content": [
+                                                    {"type": "output_text", "text": ""}
+                                                ],
                                             }
                                         )
 
@@ -3754,7 +4258,6 @@ async def streaming_chat_response_handler(response, ctx):
                     len(tool_calls) > 0
                     and tool_call_retries < CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES
                 ):
-
                     tool_call_retries += 1
 
                     response_tool_calls = tool_calls.pop(0)
@@ -3763,14 +4266,16 @@ async def streaming_chat_response_handler(response, ctx):
                     for tc in response_tool_calls:
                         call_id = tc.get("id", "")
                         func = tc.get("function", {})
-                        output.append({
-                            "type": "function_call",
-                            "id": call_id or output_id("fc"),
-                            "call_id": call_id,
-                            "name": func.get("name", ""),
-                            "arguments": func.get("arguments", "{}"),
-                            "status": "in_progress",
-                        })
+                        output.append(
+                            {
+                                "type": "function_call",
+                                "id": call_id or output_id("fc"),
+                                "call_id": call_id,
+                                "name": func.get("name", ""),
+                                "arguments": func.get("arguments", "{}"),
+                                "status": "in_progress",
+                            }
+                        )
 
                     await event_emitter(
                         {
@@ -3929,35 +4434,42 @@ async def streaming_chat_response_handler(response, ctx):
                         call_id = tc.get("id", "")
                         # Mark function_call as completed
                         for item in output:
-                            if item.get("type") == "function_call" and item.get("call_id") == call_id:
+                            if (
+                                item.get("type") == "function_call"
+                                and item.get("call_id") == call_id
+                            ):
                                 item["status"] = "completed"
                                 # Update arguments with parsed/sanitized version
-                                item["arguments"] = tc.get("function", {}).get("arguments", "{}")
+                                item["arguments"] = tc.get("function", {}).get(
+                                    "arguments", "{}"
+                                )
                                 break
 
                     for result in results:
-                        output.append({
-                            "type": "function_call_output",
-                            "id": output_id("fco"),
-                            "call_id": result.get("tool_call_id", ""),
-                            "output": [
-                                {
-                                    "type": "input_text",
-                                    "text": result.get("content", ""),
-                                }
-                            ],
-                            "status": "completed",
-                            **(
-                                {"files": result.get("files")}
-                                if result.get("files")
-                                else {}
-                            ),
-                            **(
-                                {"embeds": result.get("embeds")}
-                                if result.get("embeds")
-                                else {}
-                            ),
-                        })
+                        output.append(
+                            {
+                                "type": "function_call_output",
+                                "id": output_id("fco"),
+                                "call_id": result.get("tool_call_id", ""),
+                                "output": [
+                                    {
+                                        "type": "input_text",
+                                        "text": result.get("content", ""),
+                                    }
+                                ],
+                                "status": "completed",
+                                **(
+                                    {"files": result.get("files")}
+                                    if result.get("files")
+                                    else {}
+                                ),
+                                **(
+                                    {"embeds": result.get("embeds")}
+                                    if result.get("embeds")
+                                    else {}
+                                ),
+                            }
+                        )
 
                     # Append a new empty message item for the next response
                     output.append(
@@ -4031,7 +4543,6 @@ async def streaming_chat_response_handler(response, ctx):
                         and output[-1].get("type") == "open_webui:code_interpreter"
                         and retries < MAX_RETRIES
                     ):
-
                         await event_emitter(
                             {
                                 "type": "chat:completion",
@@ -4125,7 +4636,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     if isinstance(stdout, str):
                                         stdoutLines = stdout.split("\n")
                                         for idx, line in enumerate(stdoutLines):
-
                                             if "data:image/png;base64" in line:
                                                 image_url = get_image_url_from_base64(
                                                     request,
