@@ -402,11 +402,24 @@ selectedKnowledgeSources = input.selectedKnowledgeSources;
 		}
 	};
 
+	// 處理瀏覽器關閉/刷新事件，嘗試清理未完成的任務
+	const handleBeforeUnload = () => {
+		if (taskIds && taskIds.length > 0) {
+			for (const taskId of taskIds) {
+				navigator.sendBeacon(
+					`${WEBUI_BASE_URL}/api/tasks/stop/${taskId}`,
+					JSON.stringify({ token: localStorage.token })
+				);
+			}
+		}
+	};
+
 	onMount(async () => {
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 		window.addEventListener('searchPlanButtonClicked', searchPlanButtonClickHandler);
+		window.addEventListener('beforeunload', handleBeforeUnload);
 
 		if (!$chatId) {
 			chatIdUnsubscriber = chatId.subscribe(async (value) => {
@@ -473,6 +486,7 @@ selectedKnowledgeSources = [];
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
 		window.removeEventListener('searchPlanButtonClicked', searchPlanButtonClickHandler);
+		window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
 
 	const searchPlanButtonClickHandler = () => {
@@ -856,19 +870,36 @@ selectedKnowledgeSources = [];
 				await tick();
 
 				if (history.currentId) {
-					for (const message of Object.values(history.messages)) {
+					let hasInterruptedMessages = false;
+
+					for (const message of Object.values(history.messages) as any[]) {
 						if (message.role === 'assistant') {
-							message.done = true;
+							// 檢查是否為被中斷的訊息（內容為空且無錯誤標記）
+							const isInterrupted =
+								(!message.content || message.content.trim() === '') && !message.error;
+
+							if (isInterrupted) {
+								hasInterruptedMessages = true;
+								message.done = true;
+								message.error = {
+									content: $i18n.t('Response was interrupted. Click regenerate to try again.')
+								};
+							} else {
+								message.done = true;
+							}
 						}
 					}
-				}
 
-				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
-					return null;
-				});
-
-				if (taskRes) {
-					taskIds = taskRes.task_ids;
+					// 清理遺留的後端任務
+					const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch(() => null);
+					if (hasInterruptedMessages && taskRes?.task_ids?.length > 0) {
+						for (const taskId of taskRes.task_ids) {
+							await stopTask(localStorage.token, taskId).catch(() => {});
+						}
+						taskIds = null;
+					} else if (taskRes) {
+						taskIds = taskRes.task_ids;
+					}
 				}
 
 				await tick();

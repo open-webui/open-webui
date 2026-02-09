@@ -437,6 +437,34 @@
 			window.applyTheme();
 		}
 
+		// 全局 fetch 攔截器：處理 401 錯誤自動重定向到登入頁面
+		let isRedirecting = false;
+		const originalFetch = window.fetch;
+		window.fetch = async function (...args) {
+			const response = await originalFetch.apply(this, args);
+			if (response.status === 401 && !isRedirecting) {
+				const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
+				// 排除登入相關 API，避免無限循環
+				if (url && !url.includes('/auths/signin') && !url.includes('/auths/signup') && !url.includes('/api/config')) {
+					console.log('[401 Interceptor] Detected 401 on:', url);
+					isRedirecting = true;
+					try {
+						const { handle401Error } = await import('$lib/apis/utils/fetch');
+						await handle401Error();
+					} catch (e) {
+						console.error('[401 Interceptor] Error during redirect:', e);
+					} finally {
+						// 延遲重置 flag，避免並發的 401 response 觸發重複 redirect
+						// 但確保下次 token 過期時攔截器仍能正常運作
+						setTimeout(() => {
+							isRedirecting = false;
+						}, 2000);
+					}
+				}
+			}
+			return response;
+		};
+
 		if (window?.electronAPI) {
 			const info = await window.electronAPI.send({
 				type: 'app:info'
@@ -538,10 +566,19 @@
 
 				if (localStorage.token) {
 					// Get Session User Info
-					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(`${error}`);
-						return null;
-					});
+					let sessionUser = null;
+					try {
+						sessionUser = await getSessionUser(localStorage.token);
+					} catch (error) {
+						console.log('[Session] Error getting session user:', error);
+						// 檢查是否為 401 錯誤
+						const errorStr = String(error);
+						if (errorStr.includes('Unauthorized') || errorStr.includes('Invalid token') || errorStr.includes('401')) {
+							toast.error('Session expired. Please sign in again.');
+						} else {
+							toast.error(errorStr);
+						}
+					}
 
 					if (sessionUser) {
 						// Save Session User to Store
@@ -551,7 +588,9 @@
 						await config.set(await getBackendConfig());
 					} else {
 						// Redirect Invalid Session User to /auth Page
+						console.log('[Session] Invalid session, redirecting to auth page');
 						localStorage.removeItem('token');
+						await user.set(undefined);
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				} else {
