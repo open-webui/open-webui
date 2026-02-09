@@ -108,7 +108,7 @@
 	let builtinTools = {};
 
 	let actionIds = [];
-	let accessControl = {};
+	let accessGrants = [];
 	let tts = { voice: '' };
 
 	const submitHandler = async () => {
@@ -140,7 +140,7 @@
 
 		info.params = { ...info.params, ...params };
 
-		info.access_control = accessControl;
+		info.access_grants = accessGrants;
 		info.meta.capabilities = capabilities;
 
 		if (enableDescription) {
@@ -301,14 +301,7 @@
 			builtinTools = model?.meta?.builtinTools ?? {};
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
 
-			if ('access_control' in model) {
-				accessControl = model.access_control;
-			} else {
-				accessControl = {};
-			}
-
-			console.log(model?.access_control);
-			console.log(accessControl);
+			accessGrants = model?.access_grants ?? [];
 
 			info = {
 				...info,
@@ -334,10 +327,10 @@
 {#if loaded}
 	<AccessControlModal
 		bind:show={showAccessControlModal}
-		bind:accessControl
+		bind:accessGrants
 		accessRoles={['read', 'write']}
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
-		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin' || edit}
 	/>
 
 	{#if onBack}

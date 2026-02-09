@@ -15,7 +15,7 @@
 
 	let name = '';
 	let description = '';
-	let accessControl = {};
+	let accessGrants = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -32,7 +32,7 @@
 			localStorage.token,
 			name,
 			description,
-			accessControl
+			accessGrants
 		).catch((e) => {
 			toast.error(`${e}`);
 		});
@@ -114,7 +114,7 @@
 
 		<div class="mt-2">
 			<AccessControl
-				bind:accessControl
+				bind:accessGrants
 				accessRoles={['read', 'write']}
 				share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
 				sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}

@@ -108,8 +108,17 @@
 		},
 		// pages: [], // TODO: Implement pages for notes to allow users to create multiple pages in a note
 		meta: null,
-		access_control: {}
+		access_grants: []
 	};
+
+	const hasPublicReadGrant = (grants) =>
+		Array.isArray(grants) &&
+		grants.some(
+			(grant) =>
+				grant?.principal_type === 'user' &&
+				grant?.principal_id === '*' &&
+				grant?.permission === 'read'
+		);
 
 	let files = [];
 	let messages = [];
@@ -161,6 +170,9 @@
 
 		if (res) {
 			note = res;
+			if (!Array.isArray(note?.access_grants)) {
+				note.access_grants = [];
+			}
 			files = res.data.files || [];
 
 			if (note?.write_access) {
@@ -193,7 +205,7 @@
 				data: {
 					files: files
 				},
-				access_control: note?.access_control
+				access_grants: note?.access_grants ?? []
 			}).catch((e) => {
 				toast.error(`${e}`);
 			});
@@ -765,8 +777,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		console.log('noteEventHandler', _note);
 		if (_note.id !== id) return;
 
-		if (_note.access_control && _note.access_control !== note.access_control) {
-			note.access_control = _note.access_control;
+		if (_note.access_grants && _note.access_grants !== note.access_grants) {
+			note.access_grants = _note.access_grants;
 		}
 
 		if (_note.data && _note.data.files) {
@@ -851,7 +863,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 {#if note}
 	<AccessControlModal
 		bind:show={showAccessControlModal}
-		bind:accessControl={note.access_control}
+		bind:accessGrants={note.access_grants}
 		accessRoles={['read', 'write']}
 		onChange={() => {
 			changeDebounceHandler();
@@ -1114,7 +1126,11 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										}}
 										disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
 									>
-										<span> {note?.access_control ? $i18n.t('Private') : $i18n.t('Everyone')} </span>
+										<span>
+											{hasPublicReadGrant(note?.access_grants)
+												? $i18n.t('Everyone')
+												: $i18n.t('Private')}
+										</span>
 									</button>
 								{:else}
 									<div>

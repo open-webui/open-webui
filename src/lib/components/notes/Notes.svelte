@@ -129,7 +129,7 @@
 						}
 					},
 					meta: null,
-					access_control: {}
+					access_grants: []
 				}).catch((error) => {
 					toast.error(`${error}`);
 					return null;

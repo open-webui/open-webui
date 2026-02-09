@@ -30,7 +30,7 @@
 		description: ''
 	};
 	export let content = '';
-	export let accessControl = {};
+	export let accessGrants = [];
 
 	let _content = '';
 
@@ -161,7 +161,7 @@ class Tools:
 			name,
 			meta,
 			content,
-			access_control: accessControl
+			access_grants: accessGrants
 		});
 	};
 
@@ -187,10 +187,10 @@ class Tools:
 
 <AccessControlModal
 	bind:show={showAccessControlModal}
-	bind:accessControl
+	bind:accessGrants
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.tools || $user?.role === 'admin'}
-	sharePublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
+	sharePublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin' || edit}
 />
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">

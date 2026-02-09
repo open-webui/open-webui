@@ -560,7 +560,8 @@
 
 <ChannelModal
 	bind:show={showCreateChannel}
-	onSubmit={async ({ type, name, is_private, access_control, group_ids, user_ids }) => {
+	onSubmit={async (payload: any) => {
+		let { type, name, is_private, access_grants, group_ids, user_ids } = payload ?? {};
 		name = name?.trim();
 
 		if (type === 'dm') {
@@ -579,7 +580,7 @@
 			type: type,
 			name: name,
 			is_private: is_private,
-			access_control: access_control,
+			access_grants: access_grants,
 			group_ids: group_ids,
 			user_ids: user_ids
 		}).catch((error) => {

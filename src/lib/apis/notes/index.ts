@@ -5,7 +5,7 @@ type NoteItem = {
 	title: string;
 	data: object;
 	meta?: null | object;
-	access_control?: null | object;
+	access_grants?: object[];
 };
 
 export const createNewNote = async (token: string, note: NoteItem) => {
