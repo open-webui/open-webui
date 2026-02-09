@@ -552,6 +552,30 @@ FEISHU_REDIRECT_URI = PersistentConfig(
     os.environ.get("FEISHU_REDIRECT_URI", ""),
 )
 
+FACEBOOK_CLIENT_ID = PersistentConfig(
+    "FACEBOOK_CLIENT_ID",
+    "oauth.facebook.client_id",
+    os.environ.get("FACEBOOK_CLIENT_ID", ""),
+)
+
+FACEBOOK_CLIENT_SECRET = PersistentConfig(
+    "FACEBOOK_CLIENT_SECRET",
+    "oauth.facebook.client_secret",
+    os.environ.get("FACEBOOK_CLIENT_SECRET", ""),
+)
+
+FACEBOOK_OAUTH_SCOPE = PersistentConfig(
+    "FACEBOOK_OAUTH_SCOPE",
+    "oauth.facebook.scope",
+    os.environ.get("FACEBOOK_OAUTH_SCOPE", "openid email"),
+)
+
+FACEBOOK_REDIRECT_URI = PersistentConfig(
+    "FACEBOOK_REDIRECT_URI",
+    "oauth.facebook.redirect_uri",
+    os.environ.get("FACEBOOK_REDIRECT_URI", ""),
+)
+
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_ROLE_MANAGEMENT",
     "oauth.enable_role_mapping",
@@ -800,6 +824,32 @@ def load_oauth_providers():
             "sub_claim": "user_id",
         }
 
+    if FACEBOOK_CLIENT_ID.value and FACEBOOK_CLIENT_SECRET.value:
+
+        def facebook_oauth_register(oauth: OAuth):
+            client = oauth.register(
+                name="facebook",
+                client_id=FACEBOOK_CLIENT_ID.value,
+                client_secret=FACEBOOK_CLIENT_SECRET.value,
+                access_token_url="https://graph.facebook.com/oauth/access_token",
+                server_metadata_url="https://www.facebook.com/.well-known/openid-configuration",
+                client_kwargs={
+                    "scope": FACEBOOK_OAUTH_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
+                },
+                redirect_uri=FACEBOOK_REDIRECT_URI.value,
+            )
+            return client
+
+        OAUTH_PROVIDERS["facebook"] = {
+            "redirect_uri": FACEBOOK_REDIRECT_URI.value,
+            "register": facebook_oauth_register,
+        }
+
     configured_providers = []
     if GOOGLE_CLIENT_ID.value:
         configured_providers.append("Google")
@@ -809,6 +859,8 @@ def load_oauth_providers():
         configured_providers.append("GitHub")
     if FEISHU_CLIENT_ID.value:
         configured_providers.append("Feishu")
+    if FACEBOOK_CLIENT_ID.value:
+        configured_providers.append("Facebook")
 
     if configured_providers and not OPENID_PROVIDER_URL.value:
         provider_list = ", ".join(configured_providers)
