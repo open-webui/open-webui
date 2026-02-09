@@ -111,8 +111,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔄 The analytics database migration now correctly excludes shared chats, preventing migration errors on instances with many shared conversations. [Commit](https://github.com/open-webui/open-webui/commit/2cf2565e80413dd7a661cd5153a6643dd4e801d9), [Commit](https://github.com/open-webui/open-webui/commit/e8a36f033b5ee74c94cc1b60fb7b5563caa4c0a7)
 - 📦 Tool call results in chat can now be expanded and collapsed again after a recent refactor inadvertently disabled this behavior. [#21205](https://github.com/open-webui/open-webui/pull/21205)
 - 🪛 Fixed Ollama/OpenAI API endpoints bypassing `ENABLE_OLLAMA_API` and `ENABLE_OPENAI_API` flags when the `url_idx` parameter was provided. Endpoints now properly return a 503 error with a clear "API is disabled" message instead of attempting to connect and logging confusing connection errors.
-- 🌅 Icons in chat and action menus are now displayed correctly in dark mode, fixing an issue where PNG icons with "svg" in their base64 encoding were randomly inverted. [#21272](https://github.com/open-webui/open-webui/pull/21272)
-
 ### Changed
 
 - ⚠️ **IMPORTANT: Database Migration Required** — This release includes database schema changes; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances.
