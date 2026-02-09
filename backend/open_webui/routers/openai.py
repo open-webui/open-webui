@@ -858,6 +858,33 @@ def convert_to_responses_payload(payload: dict) -> dict:
     if "max_tokens" in responses_payload:
         responses_payload["max_output_tokens"] = responses_payload.pop("max_tokens")
     
+    # Remove Chat Completions-only parameters not supported by the Responses API
+    for unsupported_key in ("stream_options", "logit_bias", "frequency_penalty", "presence_penalty", "stop"):
+        responses_payload.pop(unsupported_key, None)
+    
+    # Convert Chat Completions tools format to Responses API format
+    # Chat Completions: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
+    # Responses API:    {"type": "function", "name": ..., "description": ..., "parameters": ...}
+    if "tools" in responses_payload and isinstance(responses_payload["tools"], list):
+        converted_tools = []
+        for tool in responses_payload["tools"]:
+            if isinstance(tool, dict) and "function" in tool:
+                func = tool["function"]
+                converted_tool = {"type": tool.get("type", "function")}
+                if isinstance(func, dict):
+                    converted_tool["name"] = func.get("name", "")
+                    if "description" in func:
+                        converted_tool["description"] = func["description"]
+                    if "parameters" in func:
+                        converted_tool["parameters"] = func["parameters"]
+                    if "strict" in func:
+                        converted_tool["strict"] = func["strict"]
+                converted_tools.append(converted_tool)
+            else:
+                # Already in correct format or unknown format, pass through
+                converted_tools.append(tool)
+        responses_payload["tools"] = converted_tools
+    
     return responses_payload
 
 
