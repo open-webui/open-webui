@@ -2,7 +2,9 @@ import json
 import logging
 import os
 import shutil
+import socket
 import base64
+from concurrent.futures import ThreadPoolExecutor
 import redis
 
 from datetime import datetime
@@ -1013,6 +1015,39 @@ if ENV == "prod":
             OLLAMA_BASE_URL = "http://host.docker.internal:11434"
     elif K8S_FLAG:
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
+
+
+def _resolve_ollama_base_url(url: str) -> str:
+    """If the default Ollama port (11434) is unreachable, try the fallback port (12434)."""
+
+    def reachable(host: str, port: int) -> bool:
+        try:
+            with socket.create_connection((host, port), timeout=1.0):
+                return True
+        except (OSError, TimeoutError):
+            return False
+
+    host = urlparse(url).hostname or "localhost"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        default = pool.submit(reachable, host, 11434)
+        fallback = pool.submit(reachable, host, 12434)
+
+    if not default.result() and fallback.result():
+        url = url.replace(":11434", ":12434")
+        log.info(f"Ollama port 11434 unreachable on {host}, falling back to 12434")
+    elif not default.result():
+        log.info(f"Ollama ports 11434 and 12434 both unreachable on {host}")
+
+    return url
+
+
+# Auto-resolve Ollama port when no explicit URL was provided by the user.
+# The Dockerfile default is "/ollama" which the block above rewrites to :11434.
+if os.environ.get("OLLAMA_BASE_URL", "") in ("", "/ollama") and not os.environ.get(
+    "OLLAMA_BASE_URLS", ""
+):
+    OLLAMA_BASE_URL = _resolve_ollama_base_url(OLLAMA_BASE_URL)
 
 
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
