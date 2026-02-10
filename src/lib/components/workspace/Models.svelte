@@ -240,6 +240,7 @@
 		groupIds = groups.map((group) => group.id);
 
 		loaded = true;
+		getModelList();
 
 		const onKeyDown = (event) => {
 			if (event.key === 'Shift') {
