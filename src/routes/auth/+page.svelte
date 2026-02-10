@@ -45,7 +45,7 @@
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
 			console.log(sessionUser);
-			toast.success($i18n.t(`You're now logged in.`));
+			toast.success($i18n.t(`You're now logged in`) + (sessionUser.name ? `, ${sessionUser.name}` : '') + '!');
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
