@@ -119,6 +119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🪛 Fixed Ollama/OpenAI API endpoints bypassing `ENABLE_OLLAMA_API` and `ENABLE_OPENAI_API` flags when the `url_idx` parameter was provided. Endpoints now properly return a 503 error with a clear "API is disabled" message instead of attempting to connect and logging confusing connection errors.
 - 🛠️ Document uploads to knowledge bases now work correctly when using OpenSearch backend with opensearch-py >= 3.0.0, fixing a TypeError that previously caused failures. [#21248](https://github.com/open-webui/open-webui/pull/21248), [#20649](https://github.com/open-webui/open-webui/issues/20649)
 - 📱 Multi-line text pasted from Gboard on Android now inserts correctly instead of being replaced with a single newline, fixing a bug where the keyboard's clipboard suggestion strip sent text via 'insertText' events instead of standard paste events. [#21265](https://github.com/open-webui/open-webui/pull/21265)
+- 🔧 The '/api/embeddings' endpoint now correctly returns separate embeddings for each input string when processing batch requests to Ollama providers. [Commit](https://github.com/open-webui/open-webui/commit/8fd5c06e5bf7e0ccbda15d83338912ea17f66783), [#21279](https://github.com/open-webui/open-webui/issues/21279)
 
 ### Changed
 
