@@ -35,7 +35,6 @@ from open_webui.utils.plugin import (
     get_function_module_from_cache,
 )
 from open_webui.utils.tools import get_tools
-from open_webui.utils.access_control import has_access
 
 from open_webui.env import GLOBAL_LOG_LEVEL
 

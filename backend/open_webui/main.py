@@ -518,7 +518,6 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
-from open_webui.utils.access_control import has_access
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -1333,7 +1332,9 @@ class APIKeyRestrictionMiddleware(BaseHTTPMiddleware):
         token = None
 
         if auth_header:
-            scheme, token = auth_header.split(" ")
+            parts = auth_header.split(" ", 1)
+            if len(parts) == 2:
+                token = parts[1]
 
         # Only apply restrictions if an sk- API key is used
         if token and token.startswith("sk-"):
@@ -1806,6 +1807,16 @@ async def chat_completion(
             except Exception as e:
                 log.debug(f"Error cleaning up: {e}")
                 pass
+            # Emit chat:active=false when task completes
+            try:
+                if metadata.get("chat_id"):
+                    event_emitter = get_event_emitter(metadata, update_db=False)
+                    if event_emitter:
+                        await event_emitter(
+                            {"type": "chat:active", "data": {"active": False}}
+                        )
+            except Exception as e:
+                log.debug(f"Error emitting chat:active: {e}")
 
     if (
         metadata.get("session_id")
@@ -1818,6 +1829,12 @@ async def chat_completion(
             process_chat(request, form_data, user, metadata, model),
             id=metadata["chat_id"],
         )
+        # Emit chat:active=true when task starts
+        event_emitter = get_event_emitter(metadata, update_db=False)
+        if event_emitter:
+            await event_emitter(
+                {"type": "chat:active", "data": {"active": True}}
+            )
         return {"status": True, "task_id": task_id}
     else:
         return await process_chat(request, form_data, user, metadata, model)

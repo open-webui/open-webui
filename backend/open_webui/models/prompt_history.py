@@ -45,6 +45,7 @@ class PromptHistoryModel(BaseModel):
 
 class PromptHistoryResponse(PromptHistoryModel):
     """Response model with user info."""
+
     user: Optional[UserResponse] = None
 
 
@@ -91,16 +92,20 @@ class PromptHistoryTable:
                 .limit(limit)
                 .all()
             )
-            
+
             # Get user info for each entry
             user_ids = list(set(e.user_id for e in entries))
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
-            
+
             return [
                 PromptHistoryResponse(
                     **PromptHistoryModel.model_validate(entry).model_dump(),
-                    user=users_dict.get(entry.user_id).model_dump() if users_dict.get(entry.user_id) else None,
+                    user=(
+                        users_dict.get(entry.user_id).model_dump()
+                        if users_dict.get(entry.user_id)
+                        else None
+                    ),
                 )
                 for entry in entries
             ]
@@ -112,7 +117,9 @@ class PromptHistoryTable:
     ) -> Optional[PromptHistoryModel]:
         """Get a specific history entry by ID."""
         with get_db_context(db) as db:
-            entry = db.query(PromptHistory).filter(PromptHistory.id == history_id).first()
+            entry = (
+                db.query(PromptHistory).filter(PromptHistory.id == history_id).first()
+            )
             if entry:
                 return PromptHistoryModel.model_validate(entry)
             return None
@@ -155,27 +162,31 @@ class PromptHistoryTable:
     ) -> Optional[dict]:
         """Compute diff between two history entries."""
         with get_db_context(db) as db:
-            from_entry = db.query(PromptHistory).filter(PromptHistory.id == from_id).first()
+            from_entry = (
+                db.query(PromptHistory).filter(PromptHistory.id == from_id).first()
+            )
             to_entry = db.query(PromptHistory).filter(PromptHistory.id == to_id).first()
-            
+
             if not from_entry or not to_entry:
                 return None
-            
+
             from_snapshot = from_entry.snapshot
             to_snapshot = to_entry.snapshot
-            
+
             # Compute diff for content field
             from_content = from_snapshot.get("content", "")
             to_content = to_snapshot.get("content", "")
-            
-            diff_lines = list(difflib.unified_diff(
-                from_content.splitlines(keepends=True),
-                to_content.splitlines(keepends=True),
-                fromfile=f"v{from_id[:8]}",
-                tofile=f"v{to_id[:8]}",
-                lineterm="",
-            ))
-            
+
+            diff_lines = list(
+                difflib.unified_diff(
+                    from_content.splitlines(keepends=True),
+                    to_content.splitlines(keepends=True),
+                    fromfile=f"v{from_id[:8]}",
+                    tofile=f"v{to_id[:8]}",
+                    lineterm="",
+                )
+            )
+
             return {
                 "from_id": from_id,
                 "to_id": to_id,
@@ -183,7 +194,6 @@ class PromptHistoryTable:
                 "to_snapshot": to_snapshot,
                 "content_diff": diff_lines,
                 "name_changed": from_snapshot.get("name") != to_snapshot.get("name"),
-                "access_control_changed": from_snapshot.get("access_control") != to_snapshot.get("access_control"),
             }
 
     def delete_history_by_prompt_id(
@@ -193,7 +203,9 @@ class PromptHistoryTable:
     ) -> bool:
         """Delete all history entries for a prompt."""
         with get_db_context(db) as db:
-            db.query(PromptHistory).filter(PromptHistory.prompt_id == prompt_id).delete()
+            db.query(PromptHistory).filter(
+                PromptHistory.prompt_id == prompt_id
+            ).delete()
             db.commit()
             return True
 

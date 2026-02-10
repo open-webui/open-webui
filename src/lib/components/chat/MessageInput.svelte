@@ -151,7 +151,7 @@
 				return {
 					...file,
 					user: undefined,
-					access_control: undefined
+					access_grants: undefined
 				};
 			}),
 		selectedToolIds,
@@ -1634,7 +1634,7 @@
 															<div class="size-4 items-center flex justify-center">
 																<img
 																	src={filter.icon}
-																	class="size-3.5 {filter.icon.includes('svg')
+																	class="size-3.5 {filter.icon.includes('data:image/svg')
 																		? 'dark:invert-[80%]'
 																		: ''}"
 																	style="fill: currentColor;"
@@ -1746,7 +1746,7 @@
 											<!-- {$i18n.t('Create Note')}  -->
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
-													id="send-message-button"
+													id="create-note-button"
 													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
 													type="button"
 													disabled={prompt === '' && files.length === 0}

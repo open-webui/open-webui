@@ -7,6 +7,7 @@ from open_webui.models.users import Users, UserInfoResponse
 from open_webui.models.groups import (
     Groups,
     GroupForm,
+    GroupInfoResponse,
     GroupUpdateForm,
     GroupResponse,
     UserIdsForm,
@@ -94,6 +95,23 @@ async def get_group_by_id(
     group = Groups.get_group_by_id(id, db=db)
     if group:
         return GroupResponse(
+            **group.model_dump(),
+            member_count=Groups.get_group_member_count_by_id(group.id, db=db),
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+@router.get("/id/{id}/info", response_model=Optional[GroupInfoResponse])
+async def get_group_info_by_id(
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    group = Groups.get_group_by_id(id, db=db)
+    if group:
+        return GroupInfoResponse(
             **group.model_dump(),
             member_count=Groups.get_group_member_count_by_id(group.id, db=db),
         )

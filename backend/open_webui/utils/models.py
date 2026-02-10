@@ -13,6 +13,7 @@ from open_webui.functions import get_function_models
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
 
 
@@ -354,8 +355,12 @@ def check_model_access(user, model, db=None):
             raise Exception("Model not found")
         elif not (
             user.id == model_info.user_id
-            or has_access(
-                user.id, type="read", access_control=model_info.access_control, db=db
+            or AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="model",
+                resource_id=model_info.id,
+                permission="read",
+                db=db,
             )
         ):
             raise Exception("Model not found")
@@ -395,11 +400,13 @@ def get_filtered_models(models, user, db=None):
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == model_info.user_id
-                    or has_access(
-                        user.id,
-                        type="read",
-                        access_control=model_info.access_control,
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="model",
+                        resource_id=model_info.id,
+                        permission="read",
                         user_group_ids=user_group_ids,
+                        db=db,
                     )
                 ):
                     filtered_models.append(model)
