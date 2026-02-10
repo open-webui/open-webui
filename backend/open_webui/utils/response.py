@@ -192,17 +192,29 @@ def convert_embedding_response_ollama_to_openai(response) -> dict:
                 "model": "...",
             }
     """
-    # Ollama batch-style output
+    # Ollama batch-style output from /api/embed
+    # Response format: {"embeddings": [[0.1, 0.2, ...], [0.3, 0.4, ...]], "model": "..."}
     if isinstance(response, dict) and "embeddings" in response:
         openai_data = []
         for i, emb in enumerate(response["embeddings"]):
-            openai_data.append(
-                {
-                    "object": "embedding",
-                    "embedding": emb.get("embedding"),
-                    "index": emb.get("index", i),
-                }
-            )
+            # /api/embed returns embeddings as plain float lists
+            if isinstance(emb, list):
+                openai_data.append(
+                    {
+                        "object": "embedding",
+                        "embedding": emb,
+                        "index": i,
+                    }
+                )
+            # Also handle dict format for robustness
+            elif isinstance(emb, dict):
+                openai_data.append(
+                    {
+                        "object": "embedding",
+                        "embedding": emb.get("embedding"),
+                        "index": emb.get("index", i),
+                    }
+                )
         return {
             "object": "list",
             "data": openai_data,
