@@ -38,6 +38,7 @@ dependencies = [
     "pycrdt==0.12.46",
     "redis",
 
+    "pytz==2025.2",
     "APScheduler==3.11.2",
     "RestrictedPython==8.1",
 
