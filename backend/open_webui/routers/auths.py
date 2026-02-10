@@ -37,7 +37,6 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
-    WEBUI_API_GROUP,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
@@ -1255,14 +1254,6 @@ async def generate_api_key(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
-        )
-
-    groups = Groups.get_groups_by_member_id(user.id)
-    # Check if user in special group. Get the group for env variable
-    if not any(WEBUI_API_GROUP == group.name for group in groups):
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED_USER,
         )
 
     api_key = create_api_key()

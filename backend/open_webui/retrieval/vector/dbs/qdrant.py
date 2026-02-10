@@ -138,11 +138,11 @@ class QdrantClient(VectorDBBase):
             )
 
     def _get_sparse(self, query: str):
-        return next(bm25_embedding_model.embed(query)).as_object()
+        return next(bm25_embedding_model.query_embed(query)).as_object()
 
     def _create_points(self, items: list[VectorItem]):
         return [
-            PointStruct(
+            models.PointStruct(
                 id=item["id"],
                 vector={
                     "dense": item["vector"],

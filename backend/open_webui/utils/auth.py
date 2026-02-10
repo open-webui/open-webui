@@ -23,7 +23,6 @@ from opentelemetry import trace
 
 
 from open_webui.utils.access_control import has_permission
-from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 from open_webui.models.auths import Auths
 
@@ -41,7 +40,6 @@ from open_webui.env import (
     TRUSTED_SIGNATURE_KEY,
     STATIC_DIR,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
-    WEBUI_API_GROUP,
 )
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -397,15 +395,6 @@ def get_current_user_by_api_key(request, api_key: str):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
         )
-
-    if api_key.startswith("sk-"):
-        groups = Groups.get_groups_by_member_id(user.id)
-        # Check if user in special group. Get the group for env variable
-        if not any(WEBUI_API_GROUP == group.name for group in groups):
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
-                detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED_USER,
-            )
 
     # Add user info to current span
     current_span = trace.get_current_span()
