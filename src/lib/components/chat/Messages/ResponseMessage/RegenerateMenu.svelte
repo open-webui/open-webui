@@ -13,7 +13,10 @@
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let onRegenerate: Function = (prompt = null) => {};
-	export let onRegenerateWithModel: Function = (modelId: string, preserveToolContext?: boolean) => {};
+	export let onRegenerateWithModel: Function = (
+		modelId: string,
+		preserveToolContext?: boolean
+	) => {};
 	export let onClose: Function = () => {};
 	export let currentModelId: string = '';
 	export let hasToolCalls: boolean = false;
@@ -49,13 +52,28 @@
 		>
 			{#if showModelSelector}
 				<!-- Model Selector View -->
-				<div class="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+				<div
+					class="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800"
+				>
 					<button
 						class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-						on:click={() => { showModelSelector = false; }}
+						on:click={() => {
+							showModelSelector = false;
+						}}
 					>
-						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M15.75 19.5 8.25 12l7.5-7.5"
+							/>
 						</svg>
 					</button>
 					<span class="text-sm font-medium">{$i18n.t('Select Model')}</span>
@@ -79,7 +97,10 @@
 				<div class="max-h-60 overflow-y-auto py-1">
 					{#each availableModels as model}
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {model.id === currentModelId ? 'bg-gray-50 dark:bg-gray-800' : ''}"
+							class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {model.id ===
+							currentModelId
+								? 'bg-gray-50 dark:bg-gray-800'
+								: ''}"
 							on:click={() => {
 								onRegenerateWithModel(model.id, preserveContext);
 								show = false;
@@ -93,7 +114,9 @@
 									alt={model.name}
 								/>
 							{:else}
-								<div class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs">
+								<div
+									class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs"
+								>
 									{model.name?.charAt(0) ?? 'M'}
 								</div>
 							{/if}
@@ -148,7 +171,7 @@
 					</div>
 				</div>
 				<hr class="border-gray-50 dark:border-gray-800 my-1 mx-2" />
-				
+
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 					on:click={() => {
@@ -199,7 +222,8 @@
 				<!-- Re-run with Different Model option -->
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-					on:click={() => {
+					on:click={(e) => {
+						e.preventDefault();
 						showModelSelector = true;
 					}}
 				>

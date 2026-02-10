@@ -11,7 +11,7 @@ from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
-from sqlalchemy import or_, func, select, and_, text
+from sqlalchemy import or_, func, select, and_, text, case
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
@@ -762,25 +762,33 @@ class ChatTable:
             if folder_ids:
                 query = query.filter(Chat.folder_id.in_(folder_ids))
 
-            query = query.order_by(Chat.updated_at.desc())
+            query = query.order_by(
+                case(
+                    (Chat.title.ilike(f"%{search_text}%"), 0),
+                    else_=1
+                ),
+                Chat.updated_at.desc()
+            )
 
             # Check if the database dialect is either 'sqlite' or 'postgresql'
             dialect_name = db.bind.dialect.name
             if dialect_name == "sqlite":
-                # SQLite case: using JSON1 extension for JSON searching
-                sqlite_content_sql = (
-                    "EXISTS ("
-                    "    SELECT 1 "
-                    "    FROM json_each(Chat.chat, '$.messages') AS message "
-                    "    WHERE LOWER(message.value->>'content') LIKE '%' || :content_key || '%'"
-                    ")"
-                )
-                sqlite_content_clause = text(sqlite_content_sql)
-                query = query.filter(
-                    or_(
-                        Chat.title.ilike(bindparam("title_key")), sqlite_content_clause
-                    ).params(title_key=f"%{search_text}%", content_key=search_text)
-                )
+                # Keyword search (AND logic)
+                for idx, word in enumerate(search_text_words):
+                    content_key = f"content_key_{idx}"
+                    sqlite_content_sql = (
+                        "EXISTS ("
+                        "    SELECT 1 "
+                        "    FROM json_each(Chat.chat, '$.messages') AS message "
+                        "    WHERE LOWER(message.value->>'content') LIKE '%' || :{} || '%'".format(content_key) +
+                        ")"
+                    )
+                    sqlite_content_clause = text(sqlite_content_sql)
+                    query = query.filter(
+                        or_(
+                            Chat.title.ilike(f"%{word}%"), sqlite_content_clause
+                        )
+                    ).params(**{content_key: word})
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
@@ -813,21 +821,24 @@ class ChatTable:
                     )
 
             elif dialect_name == "postgresql":
-                # PostgreSQL relies on proper JSON query for search
-                postgres_content_sql = (
-                    "EXISTS ("
-                    "    SELECT 1 "
-                    "    FROM json_array_elements(Chat.chat->'messages') AS message "
-                    "    WHERE LOWER(message->>'content') LIKE '%' || :content_key || '%'"
-                    ")"
-                )
-                postgres_content_clause = text(postgres_content_sql)
-                query = query.filter(
-                    or_(
-                        Chat.title.ilike(bindparam("title_key")),
-                        postgres_content_clause,
-                    ).params(title_key=f"%{search_text}%", content_key=search_text)
-                )
+                # Keyword search (AND logic)
+                for idx, word in enumerate(search_text_words):
+                    content_key = f"content_key_{idx}"
+                    postgres_content_sql = (
+                        "EXISTS ("
+                        "    SELECT 1 "
+                        "    FROM json_array_elements(Chat.chat->'messages') AS message "
+                        "    WHERE LOWER(message->>'content') LIKE '%' || :{} || '%'".format(content_key) +
+                        ")"
+                    )
+                    postgres_content_clause = text(postgres_content_sql)
+
+                    query = query.filter(
+                        or_(
+                            Chat.title.ilike(f"%{word}%"),
+                            postgres_content_clause,
+                        )
+                    ).params(**{content_key: word})
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
