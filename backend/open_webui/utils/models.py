@@ -366,18 +366,22 @@ def check_model_access(user, model, db=None):
             raise Exception("Model not found")
 
 
-def get_filtered_models(models, user, db=None):
-    # Filter out models that the user does not have access to
+def get_filtered_models(models: list[dict], user, db=None):
+    """Filter models based on user access control.
+
+    Args:
+        models: Model dicts as returned by get_all_models().  Each non-arena
+            model is expected to carry an ``"info"`` dict with at least a
+            ``"user_id"`` key (populated from ``ModelModel.model_dump()``).
+            Models without ``info["user_id"]`` are treated as not configured
+            in the database and are excluded for non-bypassed users.
+        user: The authenticated user to check access for.
+        db: Optional database session.
+    """
     if (
         user.role == "user"
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
-        model_ids = [model["id"] for model in models if not model.get("arena")]
-        model_infos = {
-            model_info.id: model_info
-            for model_info in Models.get_models_by_ids(model_ids)
-        }
-
         filtered_models = []
         user_group_ids = {
             group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
@@ -395,15 +399,18 @@ def get_filtered_models(models, user, db=None):
                     filtered_models.append(model)
                 continue
 
-            model_info = model_infos.get(model["id"], None)
-            if model_info:
+            # Non-arena models carry their DB metadata in model["info"],
+            # including "user_id".  Models without this field have no
+            # database entry and are excluded from access-controlled results.
+            model_info = model.get("info")
+            if model_info and "user_id" in model_info:
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model_info.user_id
+                    or user.id == model_info["user_id"]
                     or AccessGrants.has_access(
                         user_id=user.id,
                         resource_type="model",
-                        resource_id=model_info.id,
+                        resource_id=model["id"],
                         permission="read",
                         user_group_ids=user_group_ids,
                         db=db,
