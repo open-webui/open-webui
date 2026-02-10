@@ -57,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧠 Memory updates are now up to 39% faster by eliminating redundant database queries. [#21013](https://github.com/open-webui/open-webui/pull/21013)
 - ⚙️ Filter function loading is now faster by batching database queries instead of fetching each function individually. [#21018](https://github.com/open-webui/open-webui/pull/21018)
 - 🖼️ Administrators can now configure which image generation models support auto-sizing and URL responses via new regex environment variables, improving compatibility with LiteLLM and other proxies that use prefixed model names. [#21126](https://github.com/open-webui/open-webui/pull/21126), [Commit](https://github.com/open-webui/open-webui/commit/ecf3fa2feb28e74ff6c17ca97d94581f316da56a)
+- 💨 Batch-adding files to knowledge bases is now faster with a single database query instead of one query per file. [#21006](https://github.com/open-webui/open-webui/pull/21006)
 - 💡 Users can now see which chats have active tasks running directly in the sidebar. [Commit](https://github.com/open-webui/open-webui/commit/48522271586a5bf24b649610f03b4ffd8afb2782)
 - ♿ Screen reader users now hear the password field label only once on the login page, improving form navigation for assistive technology users. [Commit](https://github.com/open-webui/open-webui/commit/1441d0d735c7a1470070b33327e1dd4dc5ca1131)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
