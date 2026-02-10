@@ -354,7 +354,7 @@
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
 				const { done, content, title } = data;
-				const displayTitle = title || 'New Chat';
+				const displayTitle = title || $i18n.t('New Chat');
 
 				if (done) {
 					if ($settings?.notificationSoundAlways ?? false) {
