@@ -244,6 +244,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🕸️ Administrators can now successfully save WebSearch settings without encountering validation errors for domain filter lists, YouTube language settings, or timeout values. [#20422](https://github.com/open-webui/open-webui/pull/20422)
 - 📦 Administrators installing with the uv package manager now experience successful installation after deprecated dependencies that were causing conflicts were removed. [#20177](https://github.com/open-webui/open-webui/issues/20177), [#20192](https://github.com/open-webui/open-webui/pull/20192)
 - ⏱️ Administrators using custom "AIOHTTP_CLIENT_TIMEOUT" settings now see the configured timeout correctly applied to embedding generation, OAuth discovery, webhook calls, and tool/function loading instead of falling back to the default 300-second timeout. [Commit](https://github.com/open-webui/open-webui/commit/e67891a374625d9888ec391da561f0b4ed79ed5d)
+- 📱 Multi-line text pasted from Gboard on Android now inserts correctly instead of being replaced with a single newline, fixing a bug where the keyboard's clipboard suggestion strip sent text via 'insertText' events instead of standard paste events. [#21265](https://github.com/open-webui/open-webui/pull/21265)
 
 ### Changed
 
