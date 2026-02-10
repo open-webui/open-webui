@@ -116,6 +116,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📦 Tool call results in chat can now be expanded and collapsed again after a recent refactor inadvertently disabled this behavior. [#21205](https://github.com/open-webui/open-webui/pull/21205)
 - 🪛 Fixed Ollama/OpenAI API endpoints bypassing `ENABLE_OLLAMA_API` and `ENABLE_OPENAI_API` flags when the `url_idx` parameter was provided. Endpoints now properly return a 503 error with a clear "API is disabled" message instead of attempting to connect and logging confusing connection errors.
 - 🛠️ Document uploads to knowledge bases now work correctly when using OpenSearch backend with opensearch-py >= 3.0.0, fixing a TypeError that previously caused failures. [#21248](https://github.com/open-webui/open-webui/pull/21248), [#20649](https://github.com/open-webui/open-webui/issues/20649)
+- 📱 Multi-line text pasted from Gboard on Android now inserts correctly instead of being replaced with a single newline, fixing a bug where the keyboard's clipboard suggestion strip sent text via 'insertText' events instead of standard paste events. [#21265](https://github.com/open-webui/open-webui/pull/21265)
+
 ### Changed
 
 - ⚠️ **IMPORTANT: Database Migration Required** — This release includes database schema changes; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances.
