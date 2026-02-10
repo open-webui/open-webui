@@ -331,7 +331,8 @@ export const updatePromptMetadata = async (
 	promptId: string,
 	name: string,
 	command: string,
-	tags: string[] = []
+	tags: string[] = [],
+	accessGrants: any[] | null = null
 ) => {
 	let error = null;
 
@@ -342,7 +343,7 @@ export const updatePromptMetadata = async (
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ name, command, tags })
+		body: JSON.stringify({ name, command, tags, access_grants: accessGrants })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

@@ -33,6 +33,7 @@ class PromptMetadataForm(BaseModel):
     name: str
     command: str
     tags: Optional[list[str]] = None
+    access_grants: Optional[list[dict]] = None
 
 
 router = APIRouter()
@@ -372,7 +373,7 @@ async def update_prompt_metadata(
             )
 
     updated_prompt = Prompts.update_prompt_metadata(
-        prompt.id, form_data.name, form_data.command, form_data.tags, db=db
+        prompt.id, form_data.name, form_data.command, form_data.tags, form_data.access_grants, db=db
     )
     if updated_prompt:
         return updated_prompt

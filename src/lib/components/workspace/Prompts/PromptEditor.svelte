@@ -213,14 +213,6 @@
 		}
 
 		debounceTimer = setTimeout(async () => {
-			// Skip if nothing changed
-			if (
-				name === originalName &&
-				command === originalCommand &&
-				JSON.stringify(tags) === JSON.stringify(originalTags)
-			)
-				return;
-
 			if (!validateCommandString(command)) {
 				toast.error(
 					$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
@@ -235,7 +227,8 @@
 					prompt?.id,
 					name,
 					command,
-					tags.map((tag) => tag.name)
+					tags.map((tag) => tag.name),
+					accessGrants
 				);
 				// Update originals on success
 				originalName = name;
@@ -290,6 +283,9 @@
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin' || edit}
+	onChange={() => {
+		debouncedSaveMetadata();
+	}}
 />
 
 <!-- Edit Modal -->
