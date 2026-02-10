@@ -28,10 +28,9 @@
 		addFileToKnowledgeById,
 		getKnowledgeById,
 		removeFileFromKnowledgeById,
-		resetKnowledgeById,
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
-		searchKnowledgeFilesById
+		syncFilesToKnowledgeByIdBatch
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
@@ -88,6 +87,9 @@
 	let selectedFileContent = '';
 
 	let inputFiles = null;
+	let syncMode = false;
+	let syncCollectedNames: Set<string> = new Set();
+	let syncCollectedIds: string[] = [];
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
@@ -180,7 +182,6 @@
 		const blob = new Blob([content], { type: 'text/plain' });
 		const file = blobToFile(blob, `${name}.txt`);
 
-		console.log(file);
 		return file;
 	};
 
@@ -261,7 +262,16 @@
 	};
 
 	const uploadFileHandler = async (file) => {
-		console.log(file);
+		// When syncing a directory, remember each file's relative name used on upload.
+		if (syncMode) {
+			try {
+				// Track only base names to match server-side storage
+				const baseName = file.name?.split(/[\\/]/).pop() ?? file.name;
+				syncCollectedNames.add(baseName);
+			} catch (_) {
+				// no-op
+			}
+		}
 
 		const fileItem = {
 			type: 'file',
@@ -284,10 +294,6 @@
 			($config?.file?.max_size ?? null) !== null &&
 			file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 		) {
-			console.log('File exceeds max size limit:', {
-				fileSize: file.size,
-				maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-			});
 			toast.error(
 				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
 					maxSize: $config?.file?.max_size
@@ -315,21 +321,23 @@
 			});
 
 			if (uploadedFile) {
-				console.log(uploadedFile);
-				fileItems = fileItems.map((item) => {
-					if (item.itemId === fileItem.itemId) {
+				knowledge.files = knowledge.files.map((item) => {
+					if (item.itemId === tempItemId) {
 						item.id = uploadedFile.id;
 					}
 					return item;
 				});
-
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
 					fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
 				} else {
-					await addFileHandler(uploadedFile.id);
-				}
+                    if (syncMode) {
+                        syncCollectedIds.push(uploadedFile.id);
+                    } else {
+                        await addFileHandler(uploadedFile.id);
+                    }
+                }
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
@@ -427,8 +435,6 @@
 
 		if (totalFiles > 0) {
 			await processDirectory(dirHandle);
-		} else {
-			console.log('No files to upload.');
 		}
 	};
 
@@ -512,20 +518,52 @@
 
 	// Helper function to maintain file paths within zip
 	const syncDirectoryHandler = async () => {
-		if (fileItems.length > 0) {
-			const res = await resetKnowledgeById(localStorage.token, id).catch((e) => {
+		syncMode = true;
+		syncCollectedNames = new Set();
+		syncCollectedIds = [];
+		try {
+			await uploadDirectoryHandler();
+
+			// After uploading, sync all new/updated files in one batch
+			const batchRes = await syncFilesToKnowledgeByIdBatch(localStorage.token, id, syncCollectedIds).catch((e) => {
 				toast.error(`${e}`);
+				return null;
 			});
-
-			if (res) {
-				fileItems = [];
-				toast.success($i18n.t('Knowledge reset successfully.'));
-
-				// Upload directory
-				uploadDirectoryHandler();
+			if (batchRes) {
+				knowledge = batchRes;
 			}
-		} else {
-			uploadDirectoryHandler();
+
+			// After batch sync, remove KB files that are not present in the directory
+			const dirNames = new Set(Array.from(syncCollectedNames));
+			const currentFiles = knowledge?.files ?? [];
+			const toRemove = currentFiles.filter((f) => !dirNames.has(f?.meta?.name ?? f?.filename));
+
+			await Promise.all(
+				toRemove.map(async (f) => {
+					// First remove from knowledge (and KB vectors) but keep file record
+					await removeFileFromKnowledgeById(localStorage.token, id, f.id, false).catch((e) => {
+						toast.error(`${e}`);
+						return null;
+					});
+					// Then delete the actual file (removes per-file vectors and storage)
+					await deleteFileById(localStorage.token, f.id).catch((e) => {
+						console.error(e);
+					});
+				})
+			);
+
+			// Refresh knowledge to ensure consistent state after concurrent operations
+			const refreshed = await getKnowledgeById(localStorage.token, id).catch((e) => {
+				toast.error(`${e}`);
+				return null;
+			});
+			if (refreshed) {
+				knowledge = refreshed;
+			}
+
+			toast.success($i18n.t('Directory sync completed.'));
+		} finally {
+			syncMode = false;
 		}
 	};
 
@@ -544,15 +582,33 @@
 		}
 	};
 
+	const syncFileHandler = async (fileId) => {
+		const updatedKnowledge = await syncFilesToKnowledgeByIdBatch(localStorage.token, id, [fileId]).catch(
+			(e) => {
+				toast.error(`${e}`);
+				return null;
+			}
+		);
+
+		if (updatedKnowledge) {
+			knowledge = updatedKnowledge;
+			toast.success($i18n.t('File synced successfully.'));
+		} else {
+			toast.error($i18n.t('Failed to sync file.'));
+			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
+		}
+	};
+
 	const deleteFileHandler = async (fileId) => {
 		try {
-			console.log('Starting file deletion process for:', fileId);
 
 			// Remove from knowledge base only
 			const res = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
 			console.log('Knowledge base updated:', res);
 
-			if (res) {
+
+			if (updatedKnowledge) {
+				knowledge = updatedKnowledge;
 				toast.success($i18n.t('File removed successfully.'));
 				await init();
 			}
@@ -570,7 +626,6 @@
 
 	const updateFileContentHandler = async () => {
 		if (isSaving) {
-			console.log('Save operation already in progress, skipping...');
 			return;
 		}
 
@@ -601,7 +656,6 @@
 	};
 
 	const changeDebounceHandler = () => {
-		console.log('debounce');
 		if (debounceTimeout) {
 			clearTimeout(debounceTimeout);
 		}
@@ -783,7 +837,7 @@
 <SyncConfirmDialog
 	bind:show={showSyncConfirmModal}
 	message={$i18n.t(
-		'This will reset the knowledge base and sync all files. Do you wish to continue?'
+		'This will sync a directory: new files will be added, modified files updated, and files missing from the selected directory will be removed from the knowledge. Do you wish to continue?'
 	)}
 	on:confirm={() => {
 		syncDirectoryHandler();
@@ -1099,6 +1153,26 @@
 										{/if}
 									</div>
 
+						{#if filteredItems.length > 0}
+							<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
+								<Files
+									small
+									files={filteredItems}
+									{selectedFileId}
+									on:click={(e) => {
+										selectedFileId = selectedFileId === e.detail ? null : e.detail;
+									}}
+									on:delete={(e) => {
+
+										selectedFileId = null;
+										deleteFileHandler(e.detail);
+									}}
+								/>
+							</div>
+						{:else}
+							<div class="my-3 flex flex-col justify-center text-center text-gray-500 text-xs">
+								<div>
+									{$i18n.t('No content found')}
 									{#key selectedFile.id}
 										<textarea
 											class="w-full h-full text-sm outline-none resize-none px-3 py-2"

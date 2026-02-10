@@ -324,6 +324,8 @@ export const addFileToKnowledgeById = async (token: string, id: string, fileId: 
 	return res;
 };
 
+
+
 export const updateFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
 	let error = null;
 
@@ -359,10 +361,17 @@ export const updateFileFromKnowledgeById = async (token: string, id: string, fil
 	return res;
 };
 
-export const removeFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
+export const removeFileFromKnowledgeById = async (
+	token: string,
+	id: string,
+	fileId: string,
+	deleteFile: boolean = true
+) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/remove`, {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/knowledge/${id}/file/remove?delete_file=${deleteFile}`,
+		{
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -447,6 +456,37 @@ export const deleteKnowledgeById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const syncFilesToKnowledgeByIdBatch = async (token: string, id: string, fileIds: string[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/sync/batch`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			file_ids: fileIds
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});
