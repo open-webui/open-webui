@@ -293,10 +293,34 @@ async def get_authorization_server_discovery_urls(server_url: str) -> list[str]:
     discovery_urls = []
     for auth_server in authorization_servers:
         auth_server = auth_server.rstrip("/")
+        parsed = urllib.parse.urlparse(auth_server)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+
+        if parsed.path and parsed.path != "/":
+            # RFC 8414 §3: insert well-known between host and path
+            path = parsed.path.rstrip("/")
+            discovery_urls.extend(
+                [
+                    urllib.parse.urljoin(
+                        base_url,
+                        f"/.well-known/oauth-authorization-server{path}",
+                    ),
+                    urllib.parse.urljoin(
+                        base_url,
+                        f"/.well-known/openid-configuration{path}",
+                    ),
+                ]
+            )
+
+        # Also try the base URL without path (fallback)
         discovery_urls.extend(
             [
-                f"{auth_server}/.well-known/oauth-authorization-server",
-                f"{auth_server}/.well-known/openid-configuration",
+                urllib.parse.urljoin(
+                    base_url, "/.well-known/oauth-authorization-server"
+                ),
+                urllib.parse.urljoin(
+                    base_url, "/.well-known/openid-configuration"
+                ),
             ]
         )
 
