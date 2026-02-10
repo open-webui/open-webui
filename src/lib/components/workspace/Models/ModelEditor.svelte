@@ -328,7 +328,7 @@
 	<AccessControlModal
 		bind:show={showAccessControlModal}
 		bind:accessGrants
-		accessRoles={['read', 'write']}
+		accessRoles={preset ? ['read', 'write'] : ['read']}
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
 		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin' || edit}
 	/>
