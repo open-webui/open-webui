@@ -33,7 +33,6 @@ class PromptMetadataForm(BaseModel):
     name: str
     command: str
     tags: Optional[list[str]] = None
-    access_grants: Optional[list[dict]] = None
 
 
 router = APIRouter()
@@ -373,7 +372,7 @@ async def update_prompt_metadata(
             )
 
     updated_prompt = Prompts.update_prompt_metadata(
-        prompt.id, form_data.name, form_data.command, form_data.tags, form_data.access_grants, db=db
+        prompt.id, form_data.name, form_data.command, form_data.tags, db=db
     )
     if updated_prompt:
         return updated_prompt
@@ -424,6 +423,52 @@ async def set_prompt_version(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(),
         )
+
+
+############################
+# UpdatePromptAccessById
+############################
+
+
+class PromptAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post("/id/{prompt_id}/access/update", response_model=Optional[PromptModel])
+async def update_prompt_access_by_id(
+    prompt_id: str,
+    form_data: PromptAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        prompt.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="prompt",
+            resource_id=prompt.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    AccessGrants.set_access_grants(
+        "prompt", prompt_id, form_data.access_grants, db=db
+    )
+
+    return Prompts.get_prompt_by_id(prompt_id, db=db)
 
 
 ############################

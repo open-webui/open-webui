@@ -31,6 +31,7 @@
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
+		updateKnowledgeAccessGrants,
 		searchKnowledgeFilesById
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
@@ -838,8 +839,13 @@
 			sharePublic={$user?.permissions?.sharing?.public_knowledge ||
 				$user?.role === 'admin' ||
 				knowledge?.write_access}
-			onChange={() => {
-				changeDebounceHandler();
+			onChange={async () => {
+				try {
+					await updateKnowledgeAccessGrants(localStorage.token, id, knowledge.access_grants ?? []);
+					toast.success($i18n.t('Saved'));
+				} catch (error) {
+					toast.error(`${error}`);
+				}
 			}}
 			accessRoles={['read', 'write']}
 		/>

@@ -18,6 +18,7 @@
 		setProductionPromptVersion,
 		deletePromptHistoryVersion,
 		updatePromptMetadata,
+		updatePromptAccessGrants,
 		getPromptTags
 	} from '$lib/apis/prompts';
 	import dayjs from 'dayjs';
@@ -227,8 +228,7 @@
 					prompt?.id,
 					name,
 					command,
-					tags.map((tag) => tag.name),
-					accessGrants
+					tags.map((tag) => tag.name)
 				);
 				// Update originals on success
 				originalName = name;
@@ -283,8 +283,15 @@
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin' || edit}
-	onChange={() => {
-		debouncedSaveMetadata();
+	onChange={async () => {
+		if (edit && prompt?.id) {
+			try {
+				await updatePromptAccessGrants(localStorage.token, prompt.id, accessGrants);
+				toast.success($i18n.t('Saved'));
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+		}
 	}}
 />
 

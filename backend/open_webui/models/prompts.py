@@ -502,10 +502,9 @@ class PromptsTable:
         name: str,
         command: str,
         tags: Optional[list[str]] = None,
-        access_grants: Optional[list[dict]] = None,
         db: Optional[Session] = None,
     ) -> Optional[PromptModel]:
-        """Update only name, command, tags, and access grants (no history created)."""
+        """Update only name, command, and tags (no history created)."""
         try:
             with get_db_context(db) as db:
                 prompt = db.query(Prompt).filter_by(id=prompt_id).first()
@@ -517,11 +516,6 @@ class PromptsTable:
                 
                 if tags is not None:
                     prompt.tags = tags
-
-                if access_grants is not None:
-                    AccessGrants.set_access_grants(
-                        "prompt", prompt_id, access_grants, db=db
-                    )
                     
                 prompt.updated_at = int(time.time())
                 db.commit()

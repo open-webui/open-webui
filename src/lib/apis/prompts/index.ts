@@ -331,8 +331,7 @@ export const updatePromptMetadata = async (
 	promptId: string,
 	name: string,
 	command: string,
-	tags: string[] = [],
-	accessGrants: any[] | null = null
+	tags: string[] = []
 ) => {
 	let error = null;
 
@@ -343,7 +342,7 @@ export const updatePromptMetadata = async (
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({ name, command, tags, access_grants: accessGrants })
+		body: JSON.stringify({ name, command, tags })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -418,6 +417,39 @@ export const deletePromptById = async (token: string, promptId: string) => {
 		.catch((err) => {
 			error = err.detail;
 
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updatePromptAccessGrants = async (
+	token: string,
+	promptId: string,
+	accessGrants: any[]
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/access/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ access_grants: accessGrants })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});

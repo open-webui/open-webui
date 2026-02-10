@@ -502,6 +502,55 @@ async def update_knowledge_by_id(
 
 
 ############################
+# UpdateKnowledgeAccessById
+############################
+
+
+class KnowledgeAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post("/{id}/access/update", response_model=Optional[KnowledgeFilesResponse])
+async def update_knowledge_access_by_id(
+    id: str,
+    form_data: KnowledgeAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    AccessGrants.set_access_grants(
+        "knowledge", id, form_data.access_grants, db=db
+    )
+
+    return KnowledgeFilesResponse(
+        **Knowledges.get_knowledge_by_id(id=id, db=db).model_dump(),
+        files=Knowledges.get_file_metadatas_by_id(id, db=db),
+    )
+
+
+############################
 # GetKnowledgeFilesById
 ############################
 
