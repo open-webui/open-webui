@@ -1542,6 +1542,8 @@ async def process_chat_response(
     else:
         log.warning(f"❌ CONDITIONS NOT MET - event_emitter will be None!")
 
+    model_id = form_data.get("model", "")
+
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
         # First, extract and process reasoning content for ALL non-streaming responses
@@ -1793,7 +1795,6 @@ async def process_chat_response(
     # Streaming response
     if event_emitter and event_caller:
         task_id = str(uuid4())  # Create a unique task ID.
-        model_id = form_data.get("model", "")
 
         def split_content_and_whitespace(content):
             content_stripped = content.rstrip()
@@ -1811,6 +1812,8 @@ async def process_chat_response(
 
         # Handle as a background task
         async def response_handler(response, events):
+            nonlocal model_id
+
             def serialize_content_blocks(content_blocks, raw=False):
                 content = ""
 
