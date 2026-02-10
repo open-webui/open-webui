@@ -482,6 +482,52 @@ async def update_model_by_id(
 
 
 ############################
+# UpdateModelAccessById
+############################
+
+
+class ModelAccessGrantsForm(BaseModel):
+    id: str
+    access_grants: list[dict]
+
+
+@router.post("/model/access/update", response_model=Optional[ModelModel])
+async def update_model_access_by_id(
+    form_data: ModelAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    model = Models.get_model_by_id(form_data.id, db=db)
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        model.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="model",
+            resource_id=model.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    AccessGrants.set_access_grants(
+        "model", form_data.id, form_data.access_grants, db=db
+    )
+
+    return Models.get_model_by_id(form_data.id, db=db)
+
+
+############################
 # DeleteModelById
 ############################
 

@@ -511,6 +511,52 @@ async def update_tools_by_id(
 
 
 ############################
+# UpdateToolAccessById
+############################
+
+
+class ToolAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post("/id/{id}/access/update", response_model=Optional[ToolModel])
+async def update_tool_access_by_id(
+    id: str,
+    form_data: ToolAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    tools = Tools.get_tool_by_id(id, db=db)
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        tools.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    AccessGrants.set_access_grants(
+        "tool", id, form_data.access_grants, db=db
+    )
+
+    return Tools.get_tool_by_id(id, db=db)
+
+
+############################
 # DeleteToolsById
 ############################
 

@@ -25,6 +25,7 @@
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import { updateModelAccessGrants } from '$lib/apis/models';
 
 	const i18n = getContext('i18n');
 
@@ -331,6 +332,16 @@
 		accessRoles={preset ? ['read', 'write'] : ['read']}
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
 		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin' || edit}
+		onChange={async () => {
+			if (edit && model?.id) {
+				try {
+					await updateModelAccessGrants(localStorage.token, model.id, accessGrants);
+					toast.success($i18n.t('Saved'));
+				} catch (error) {
+					toast.error(`${error}`);
+				}
+			}
+		}}
 	/>
 
 	{#if onBack}

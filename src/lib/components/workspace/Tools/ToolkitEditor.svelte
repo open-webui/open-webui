@@ -1,10 +1,12 @@
 <script>
+	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
 
 	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores';
+	import { updateToolAccessGrants } from '$lib/apis/tools';
 
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -191,6 +193,16 @@ class Tools:
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.tools || $user?.role === 'admin'}
 	sharePublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin' || edit}
+	onChange={async () => {
+		if (edit && id) {
+			try {
+				await updateToolAccessGrants(localStorage.token, id, accessGrants);
+				toast.success($i18n.t('Saved'));
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+		}
+	}}
 />
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
