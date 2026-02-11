@@ -3843,6 +3843,18 @@ AUDIO_STT_OPENAI_API_KEY = PersistentConfig(
     os.getenv("AUDIO_STT_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+audio_stt_openai_api_config = os.getenv("AUDIO_STT_OPENAI_API_CONFIG", "")
+try:
+    audio_stt_openai_api_config = json.loads(audio_stt_openai_api_config)
+except json.JSONDecodeError:
+    audio_stt_openai_api_config = {}
+
+AUDIO_STT_OPENAI_API_CONFIG = PersistentConfig(
+    "AUDIO_STT_OPENAI_API_CONFIG",
+    "audio.stt.openai.api_config",
+    audio_stt_openai_api_config,
+)
+
 AUDIO_STT_ENGINE = PersistentConfig(
     "AUDIO_STT_ENGINE",
     "audio.stt.engine",
@@ -3924,6 +3936,18 @@ AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
     "AUDIO_TTS_OPENAI_API_KEY",
     "audio.tts.openai.api_key",
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
+)
+
+audio_tts_openai_api_config = os.getenv("AUDIO_TTS_OPENAI_API_CONFIG", "")
+try:
+    audio_tts_openai_api_config = json.loads(audio_tts_openai_api_config)
+except json.JSONDecodeError:
+    audio_tts_openai_api_config = {}
+
+AUDIO_TTS_OPENAI_API_CONFIG = PersistentConfig(
+    "AUDIO_TTS_OPENAI_API_CONFIG",
+    "audio.tts.openai.api_config",
+    audio_tts_openai_api_config,
 )
 
 audio_tts_openai_params = os.getenv("AUDIO_TTS_OPENAI_PARAMS", "")
