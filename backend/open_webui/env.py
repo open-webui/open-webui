@@ -573,6 +573,15 @@ else:
     except Exception:
         MODELS_CACHE_TTL = 1
 
+OLLAMA_EMBED_NUM_CTX = os.environ.get("OLLAMA_EMBED_NUM_CTX", "")
+if OLLAMA_EMBED_NUM_CTX == "":
+    OLLAMA_EMBED_NUM_CTX = None
+else:
+    try:
+        OLLAMA_EMBED_NUM_CTX = int(OLLAMA_EMBED_NUM_CTX)
+    except Exception:
+        OLLAMA_EMBED_NUM_CTX = None
+
 
 ####################################
 # CHAT

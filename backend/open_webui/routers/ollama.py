@@ -66,6 +66,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
+    OLLAMA_EMBED_NUM_CTX,
 )
 from open_webui.constants import ERROR_MESSAGES
 
@@ -1023,6 +1024,10 @@ async def embed(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
+    if OLLAMA_EMBED_NUM_CTX is not None:
+        if form_data.options is None:
+            form_data.options = {}
+        form_data.options["num_ctx"] = OLLAMA_EMBED_NUM_CTX
 
     try:
         headers = {
@@ -1105,6 +1110,10 @@ async def embeddings(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
+    if OLLAMA_EMBED_NUM_CTX is not None:
+        if form_data.options is None:
+            form_data.options = {}
+        form_data.options["num_ctx"] = OLLAMA_EMBED_NUM_CTX
 
     try:
         headers = {
