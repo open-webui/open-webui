@@ -75,7 +75,9 @@ export let exportMode = false;
 				{exportMode}
 				{topPadding}
 			/>
-		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
+		{:else if
+			(history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1 ||
+			exportMode}
 			<ResponseMessage
 				{chatId}
 				{history}
