@@ -347,35 +347,43 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
     if not request.app.state.config.ENABLE_OPENAI_API:
         return []
 
+    # Cache config values locally to avoid repeated Redis lookups.
+    # Each access to request.app.state.config.<KEY> triggers a Redis GET;
+    # caching here avoids hundreds of redundant round-trips.
+    api_base_urls = request.app.state.config.OPENAI_API_BASE_URLS
+    api_keys = list(request.app.state.config.OPENAI_API_KEYS)
+    api_configs = request.app.state.config.OPENAI_API_CONFIGS
+
     # Check if API KEYS length is same than API URLS length
-    num_urls = len(request.app.state.config.OPENAI_API_BASE_URLS)
-    num_keys = len(request.app.state.config.OPENAI_API_KEYS)
+    num_urls = len(api_base_urls)
+    num_keys = len(api_keys)
 
     if num_keys != num_urls:
         # if there are more keys than urls, remove the extra keys
         if num_keys > num_urls:
-            new_keys = request.app.state.config.OPENAI_API_KEYS[:num_urls]
-            request.app.state.config.OPENAI_API_KEYS = new_keys
+            api_keys = api_keys[:num_urls]
+            request.app.state.config.OPENAI_API_KEYS = api_keys
         # if there are more urls than keys, add empty keys
         else:
-            request.app.state.config.OPENAI_API_KEYS += [""] * (num_urls - num_keys)
+            api_keys += [""] * (num_urls - num_keys)
+            request.app.state.config.OPENAI_API_KEYS = api_keys
 
     request_tasks = []
-    for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS):
-        if (str(idx) not in request.app.state.config.OPENAI_API_CONFIGS) and (
-            url not in request.app.state.config.OPENAI_API_CONFIGS  # Legacy support
+    for idx, url in enumerate(api_base_urls):
+        if (str(idx) not in api_configs) and (
+            url not in api_configs  # Legacy support
         ):
             request_tasks.append(
                 send_get_request(
                     f"{url}/models",
-                    request.app.state.config.OPENAI_API_KEYS[idx],
+                    api_keys[idx],
                     user=user,
                 )
             )
         else:
-            api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+            api_config = api_configs.get(
                 str(idx),
-                request.app.state.config.OPENAI_API_CONFIGS.get(
+                api_configs.get(
                     url, {}
                 ),  # Legacy support
             )
@@ -388,7 +396,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                     request_tasks.append(
                         send_get_request(
                             f"{url}/models",
-                            request.app.state.config.OPENAI_API_KEYS[idx],
+                            api_keys[idx],
                             user=user,
                         )
                     )
@@ -417,10 +425,10 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
     for idx, response in enumerate(responses):
         if response:
-            url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-            api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+            url = api_base_urls[idx]
+            api_config = api_configs.get(
                 str(idx),
-                request.app.state.config.OPENAI_API_CONFIGS.get(
+                api_configs.get(
                     url, {}
                 ),  # Legacy support
             )
@@ -483,6 +491,10 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     if not request.app.state.config.ENABLE_OPENAI_API:
         return {"data": []}
 
+    # Cache config value locally to avoid repeated Redis lookups inside
+    # the nested loop in get_merged_models (one GET per model otherwise).
+    api_base_urls = request.app.state.config.OPENAI_API_BASE_URLS
+
     responses = await get_all_models_responses(request, user=user)
 
     def extract_data(response):
@@ -518,7 +530,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
                     if (
                         "api.openai.com"
-                        in request.app.state.config.OPENAI_API_BASE_URLS[idx]
+                        in api_base_urls[idx]
                         and not is_supported_openai_models(model_id)
                     ):
                         # Skip unwanted OpenAI models
