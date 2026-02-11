@@ -5,7 +5,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users
-from pydantic import BaseModel
+from open_webui.utils.validate import validate_profile_image_url
+from pydantic import BaseModel, field_validator
 from sqlalchemy import Boolean, Column, String, Text
 
 log = logging.getLogger(__name__)
@@ -73,6 +74,13 @@ class SignupForm(BaseModel):
     email: str
     password: str
     profile_image_url: Optional[str] = "/user.png"
+
+    @field_validator("profile_image_url")
+    @classmethod
+    def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            return validate_profile_image_url(v)
+        return v
 
 
 class AddUserForm(SignupForm):
