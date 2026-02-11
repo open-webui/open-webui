@@ -68,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔌 API endpoints now support independent access control updates for models, tools, knowledge bases, and notes, enabling finer-grained permission management. [Commit](https://github.com/open-webui/open-webui/commit/0044902c082f8475336cc7d5c57fe3f35ab0555d), [Commit](https://github.com/open-webui/open-webui/commit/c259c878060af1b03b702c943e8813d7b4fc3199), [Commit](https://github.com/open-webui/open-webui/commit/e3a825769063cee486650cc2eb9a032676e630c5)
 - ♿ Screen reader users now hear the password field label only once on the login page, improving form navigation for assistive technology users. [Commit](https://github.com/open-webui/open-webui/commit/1441d0d735c7a1470070b33327e1dd4dc5ca1131)
 - 🔄 Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 Translations for Catalan, Finnish, German, Japanese, Latvian, Polish, Portuguese (Brazil), Simplified Chinese, Slovak, Spanish, and Traditional Chinese were enhanced and expanded.
+- 🌐 Translations for Catalan, Finnish, French, German, Japanese, Latvian, Polish, Portuguese (Brazil), Simplified Chinese, Slovak, Spanish, and Traditional Chinese were enhanced and expanded.
 - 🍀 Irish translations have been added to the application, expanding language support for Irish users.
 
 ### Fixed
