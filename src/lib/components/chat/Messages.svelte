@@ -9,12 +9,14 @@
 		currentChatPage,
 		temporaryChatEnabled
 	} from '$lib/stores';
-	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
-	const dispatch = createEventDispatcher();
+	import { tick, getContext } from 'svelte';
+	import {
+		setupContextAsyncTaskTracker,
+		type WaitForSettledOptions
+	} from '$lib/utils/AsyncTaskTracker';
 
 	import { toast } from 'svelte-sonner';
 	import { getChatList, updateChatById } from '$lib/apis/chats';
-	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
 
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -60,6 +62,12 @@
 
 	export let messagesCount: number | null = 20;
 	let messagesLoading = false;
+
+	const asyncTaskTracker = setupContextAsyncTaskTracker();
+
+	export async function waitForSettled(options: WaitForSettledOptions = {}): Promise<void> {
+		await asyncTaskTracker.waitForSettled(options);
+	}
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
@@ -430,7 +438,7 @@
 							</div>
 						</Loader>
 					{/if}
-					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
+					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false" class="all-messages-container">
 						{#each messages as message, messageIdx (message.id)}
 							<Message
 								{chatId}
