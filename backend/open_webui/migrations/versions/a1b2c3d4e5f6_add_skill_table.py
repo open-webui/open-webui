@@ -31,7 +31,7 @@ def upgrade() -> None:
             sa.Column("description", sa.Text(), nullable=True),
             sa.Column("content", sa.Text(), nullable=False),
             sa.Column("meta", sa.JSON(), nullable=True),
-            sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
+            sa.Column("is_active", sa.Boolean(), nullable=False),
             sa.Column("updated_at", sa.BigInteger(), nullable=False),
             sa.Column("created_at", sa.BigInteger(), nullable=False),
         )
