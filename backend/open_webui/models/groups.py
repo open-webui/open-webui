@@ -216,13 +216,13 @@ class GroupTable:
                         ).filter(GroupMember.user_id == filter["member_id"])
 
             groups = query.order_by(Group.updated_at.desc()).all()
+            group_ids = [group.id for group in groups]
+            member_counts = self.get_group_member_counts_by_ids(group_ids, db=db)
             return [
                 GroupResponse.model_validate(
                     {
                         **GroupModel.model_validate(group).model_dump(),
-                        "member_count": self.get_group_member_count_by_id(
-                            group.id, db=db
-                        ),
+                        "member_count": member_counts.get(group.id, 0),
                     }
                 )
                 for group in groups
@@ -257,12 +257,14 @@ class GroupTable:
             total = query.count()
             query = query.order_by(Group.updated_at.desc())
             groups = query.offset(skip).limit(limit).all()
+            group_ids = [group.id for group in groups]
+            member_counts = self.get_group_member_counts_by_ids(group_ids, db=db)
 
             return {
                 "items": [
                     GroupResponse.model_validate(
                         **GroupModel.model_validate(group).model_dump(),
-                        member_count=self.get_group_member_count_by_id(group.id, db=db),
+                        member_count=member_counts.get(group.id, 0),
                     )
                     for group in groups
                 ],
@@ -378,6 +380,20 @@ class GroupTable:
                 .scalar()
             )
             return count if count else 0
+
+    def get_group_member_counts_by_ids(
+        self, ids: list[str], db: Optional[Session] = None
+    ) -> dict[str, int]:
+        if not ids:
+            return {}
+        with get_db_context(db) as db:
+            rows = (
+                db.query(GroupMember.group_id, func.count(GroupMember.user_id))
+                .filter(GroupMember.group_id.in_(ids))
+                .group_by(GroupMember.group_id)
+                .all()
+            )
+            return {group_id: count for group_id, count in rows}
 
     def update_group_by_id(
         self,
