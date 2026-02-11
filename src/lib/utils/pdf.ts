@@ -1,19 +1,10 @@
 import DOMPurify from 'dompurify';
 import type JSPDF from 'jspdf';
+import type { Options as Html2CanvasOptions } from 'html2canvas-pro';
+import i18n from 'i18next';
+import { writable } from 'svelte/store';
 
 // ==================== Type Definitions ====================
-
-/**
- * Options for rendering element to canvas
- */
-interface RenderCanvasOptions {
-	/** Virtual height for rendering */
-	virtualHeight?: number;
-	/** Window width for rendering */
-	windowWidth?: number;
-	/** Window height for rendering */
-	windowHeight?: number;
-}
 
 /**
  * Note data structure
@@ -47,6 +38,73 @@ interface ChatPdfOptions {
 	onBeforeRender?: () => Promise<void> | void;
 	/** Optional callback after rendering (for hiding full messages) */
 	onAfterRender?: () => Promise<void> | void;
+	/** Optional selector used to split child elements into render chunks */
+	childSplitSelector?: string;
+	/** Optional callback for export progress updates */
+	onProgress?: (progress: PdfExportProgress) => void;
+	/** Optional abort signal for cancellation */
+	signal?: AbortSignal;
+}
+
+interface ElementRenderChunk {
+	y: number;
+	height: number;
+}
+
+interface PdfAppendState {
+	pageCount: number;
+}
+
+export type PdfExportOverlayState = {
+	show: boolean;
+	stage: PdfExportStage;
+	title: string;
+	stageText: string;
+	progress: number;
+	currentChunk: number;
+	totalChunks: number;
+	pagesGenerated: number;
+	estimatedRemainingMinutes: number | null;
+	onCancel?: () => void;
+};
+
+export const pdfExportOverlay = writable<PdfExportOverlayState>({
+	show: false,
+	stage: 'preparing',
+	title: 'Exporting PDF',
+	stageText: 'Preparing export...',
+	progress: 0,
+	currentChunk: 0,
+	totalChunks: 0,
+	pagesGenerated: 0,
+	estimatedRemainingMinutes: null,
+	onCancel: undefined
+});
+
+type PdfExportStage = 'preparing' | 'rendering' | 'saving' | 'done';
+
+interface PdfExportProgress {
+	stage: PdfExportStage;
+	percent: number;
+	currentChunk?: number;
+	totalChunks?: number;
+	pagesGenerated?: number;
+}
+
+interface RenderElementToCanvasOptions {
+	canvas?: HTMLCanvasElement;
+	x?: number;
+	y?: number;
+	width?: number;
+	height?: number;
+	onclone?: (document: Document, element: HTMLElement) => void;
+	ignoreElements?: (element: Element) => boolean;
+}
+
+interface CanvasSizeResult {
+	width: number;
+	height: number;
+	success?: boolean;
 }
 
 // ==================== Shared Constants ====================
@@ -58,9 +116,21 @@ const A4_PAGE_HEIGHT_MM = 297;
 /** Default virtual width in pixels for cloned element */
 const DEFAULT_VIRTUAL_WIDTH = 800;
 /** Canvas scale factor for increased resolution */
-const CANVAS_SCALE = 2;
+const CANVAS_SCALE = window.devicePixelRatio || 2;
 /** JPEG quality for image compression (0.0 to 1.0) */
 const JPEG_QUALITY = 0.95;
+/** Conservative browser canvas edge limit in pixels */
+const MAX_CANVAS_EDGE_PX = 16384;
+/** Conservative browser canvas area limit in pixels */
+const MAX_CANVAS_AREA_PX = 268_000_000;
+/** Number of concurrent html2canvas render tasks */
+const RENDER_CONCURRENCY = 1;
+/** Extra tail guard height to avoid clipping final content */
+const RENDER_TAIL_GUARD_PX = 128;
+/** Step size used when probing canvas height fallback tests */
+const CANVAS_PROBE_STEP_PX = 1024;
+
+const canvasMaxHeightProbeCache = new Map<number, Promise<number | null>>();
 
 // ==================== Shared Utility Functions ====================
 
@@ -70,6 +140,46 @@ const JPEG_QUALITY = 0.95;
  */
 const isDarkMode = (): boolean => {
 	return document.documentElement.classList.contains('dark');
+};
+
+const createAbortError = (): Error => {
+	const error = new Error('PDF export cancelled');
+	error.name = 'AbortError';
+	return error;
+};
+
+const throwIfAborted = (signal?: AbortSignal): void => {
+	if (signal?.aborted) {
+		throw createAbortError();
+	}
+};
+
+const emitExportProgress = (
+	callback: ((progress: PdfExportProgress) => void) | undefined,
+	progress: PdfExportProgress
+): void => {
+	callback?.(progress);
+};
+
+const getStageText = (stage: PdfExportStage): string => {
+	if (stage === 'preparing') return i18n.t('Preparing export...');
+	if (stage === 'rendering') return i18n.t('Rendering content...');
+	if (stage === 'saving') return i18n.t('Saving PDF...');
+	return i18n.t('Completed');
+};
+
+const getEstimatedRemainingMinutes = (startedAt: number, progressPercent: number): number | null => {
+	if (progressPercent <= 0 || progressPercent >= 100) {
+		return null;
+	}
+
+	const elapsedMs = Date.now() - startedAt;
+	if (elapsedMs <= 0) {
+		return null;
+	}
+
+	const remainingMs = (elapsedMs * (100 - progressPercent)) / progressPercent;
+	return Math.max(0, Math.ceil(remainingMs / 60_000));
 };
 
 /**
@@ -112,92 +222,215 @@ const styleElementForRendering = (element: HTMLElement, virtualWidth: number): v
  * Render DOM element to canvas using html2canvas
  * @param element - DOM element to render
  * @param virtualWidth - Virtual width in pixels
- * @param options - Optional rendering options
  * @returns Promise that resolves to a canvas element
  */
 const renderElementToCanvas = async (
 	element: HTMLElement,
 	virtualWidth: number,
-	options?: RenderCanvasOptions
+	options?: RenderElementToCanvasOptions
 ): Promise<HTMLCanvasElement> => {
 	const { default: html2canvas } = await import('html2canvas-pro');
 
 	const isDark = isDarkMode();
-	const canvasOptions: Record<string, unknown> = {
+	const cropY = options?.y ?? 0;
+	const elementHeight = Math.max(1, Math.ceil(element.getBoundingClientRect().height), element.scrollHeight);
+	const cropHeight = Math.max(1, Math.ceil(options?.height ?? elementHeight));
+	const windowHeight = Math.max(elementHeight, Math.ceil(cropY + cropHeight));
+	const canvasOptions: Partial<Html2CanvasOptions> = {
 		useCORS: true,
+		allowTaint: true,
 		backgroundColor: isDark ? '#000' : '#fff',
 		scale: CANVAS_SCALE,
-		width: virtualWidth
+		windowWidth: virtualWidth,
+		windowHeight,
+		x: options?.x || 0,
+		y: cropY,
+		width: options?.width ?? virtualWidth,
+		height: cropHeight,
+		canvas: options?.canvas,
+		onclone: options?.onclone,
+		ignoreElements: options?.ignoreElements,
 	};
 
-	// Add optional window dimensions for Note rendering
-	if (options?.windowWidth !== undefined) {
-		canvasOptions.windowWidth = options.windowWidth;
-	}
-	if (options?.windowHeight !== undefined) {
-		canvasOptions.windowHeight = options.windowHeight;
+	const canvas = await html2canvas(element, canvasOptions);
+	return canvas;
+};
+
+const getSafeRenderChunkHeightPxFallback = (virtualWidth: number, scale: number): number => {
+	const canvasWidthPx = Math.max(1, Math.floor(virtualWidth * scale));
+	const maxHeightByEdge = Math.floor(MAX_CANVAS_EDGE_PX / scale);
+	const maxHeightByArea = Math.floor(MAX_CANVAS_AREA_PX / canvasWidthPx / scale);
+	return Math.max(1, Math.min(maxHeightByEdge, maxHeightByArea));
+};
+
+const probeMaxCanvasHeightPx = async (canvasWidthPx: number): Promise<number | null> => {
+	try {
+		const { default: canvasSize } = await import('canvas-size');
+		const [maxHeightResult, maxAreaResult] = await Promise.all([
+			canvasSize.maxHeight({ useWorker: true }),
+			canvasSize.maxArea({ useWorker: true })
+		]);
+
+		const maxHeightPx = Math.max(1, Math.floor((maxHeightResult as CanvasSizeResult).height || 1));
+		const areaResult = maxAreaResult as CanvasSizeResult;
+		const maxAreaPx = Math.max(1, Math.floor((areaResult.width || 1) * (areaResult.height || 1)));
+		const maxHeightByAreaPx = Math.max(1, Math.floor(maxAreaPx / canvasWidthPx));
+		let candidateHeightPx = Math.max(1, Math.min(maxHeightPx, maxHeightByAreaPx));
+
+		const firstValidation = (await canvasSize.test({
+			width: canvasWidthPx,
+			height: candidateHeightPx,
+			useWorker: true
+		})) as CanvasSizeResult;
+		if (firstValidation.success) {
+			return candidateHeightPx;
+		}
+
+		while (candidateHeightPx > 1) {
+			candidateHeightPx = Math.max(1, candidateHeightPx - CANVAS_PROBE_STEP_PX);
+			const validation = (await canvasSize.test({
+				width: canvasWidthPx,
+				height: candidateHeightPx,
+				useWorker: true
+			})) as CanvasSizeResult;
+			if (validation.success) {
+				return candidateHeightPx;
+			}
+		}
+	} catch (error) {
+		console.warn('Failed to probe canvas size via canvas-size:', error);
 	}
 
-	return await html2canvas(element, canvasOptions);
+	return null;
 };
 
 /**
- * Convert canvas to PDF with proper pagination using slice-based method
- * This is the more accurate pagination method that slices the canvas into page-sized chunks
- * @param pdf - jsPDF instance
- * @param canvas - Canvas element containing the rendered content
- * @param virtualWidth - Virtual width in pixels used for rendering
- * @param pageWidthMM - Page width in millimeters
- * @param pageHeightMM - Page height in millimeters
+ * Compute a safe chunk height in CSS pixels based on browser canvas limits.
  */
-const canvasToPdfWithSlicing = (
+const getSafeRenderChunkHeightPx = async (virtualWidth: number, scale: number): Promise<number> => {
+	const canvasWidthPx = Math.max(1, Math.floor(virtualWidth * scale));
+	const fallbackSafeHeightPx = getSafeRenderChunkHeightPxFallback(virtualWidth, scale);
+	const probePromise = canvasMaxHeightProbeCache.get(canvasWidthPx) ?? probeMaxCanvasHeightPx(canvasWidthPx);
+	canvasMaxHeightProbeCache.set(canvasWidthPx, probePromise);
+	const probedMaxHeightPx = await probePromise;
+	const safeHeight =
+		probedMaxHeightPx && probedMaxHeightPx > 0
+			? Math.max(1, Math.floor(probedMaxHeightPx / scale))
+			: fallbackSafeHeightPx;
+	const a4PageHeightPx = Math.max(
+		1,
+		Math.floor((A4_PAGE_HEIGHT_MM / A4_PAGE_WIDTH_MM) * virtualWidth)
+	);
+
+	// Prefer chunk size that is an integer multiple of one A4 page height.
+	const a4PageMultiple = Math.floor(safeHeight / a4PageHeightPx);
+	const safeHeightAlignedToA4 =
+		a4PageMultiple > 0 ? a4PageMultiple * a4PageHeightPx : safeHeight;
+
+	return safeHeightAlignedToA4;
+};
+
+/**
+ * Build render chunks from element children (selector-based), with canvas-safe chunking.
+ * Falls back to full element range when selector has no matches.
+ * @param element - Root element used for rendering
+ * @param childSplitSelector - Optional selector for children to split by
+ * @param maxChunkHeightPx - Max chunk height in CSS pixels
+ * @returns Render chunks in CSS pixel coordinates
+ */
+const buildElementRenderChunks = (
+	element: HTMLElement,
+	childSplitSelector: string | undefined,
+	maxChunkHeightPx: number
+): ElementRenderChunk[] => {
+	const splitRange = (startY: number, totalHeight: number): ElementRenderChunk[] => {
+		const chunks: ElementRenderChunk[] = [];
+		let offset = 0;
+		while (offset < totalHeight) {
+			const chunkHeight = Math.min(maxChunkHeightPx, totalHeight - offset);
+			chunks.push({
+				y: Math.max(0, Math.floor(startY + offset)),
+				height: Math.max(1, Math.ceil(chunkHeight))
+			});
+			offset += chunkHeight;
+		}
+		return chunks;
+	};
+
+	if (childSplitSelector) {
+		const rootRect = element.getBoundingClientRect();
+		const children = Array.from(element.querySelectorAll<HTMLElement>(childSplitSelector));
+		if (children.length > 0) {
+			const chunks = children.flatMap((child) => {
+				const childRect = child.getBoundingClientRect();
+				const top = Math.max(0, childRect.top - rootRect.top);
+				const height = Math.max(1, childRect.height);
+				return splitRange(top, height);
+			});
+			if (chunks.length > 0) {
+				return chunks;
+			}
+		}
+	}
+
+	const rootRect = element.getBoundingClientRect();
+	const lastChildBottom =
+		element.lastElementChild instanceof HTMLElement
+			? Math.max(0, element.lastElementChild.getBoundingClientRect().bottom - rootRect.top)
+			: 0;
+	const fullHeight = Math.max(
+		1,
+		Math.ceil(
+			Math.max(
+				element.scrollHeight,
+				element.getBoundingClientRect().height,
+				element.offsetHeight,
+				element.clientHeight,
+				lastChildBottom
+			) + RENDER_TAIL_GUARD_PX
+		)
+	);
+	const fallbackChunks = splitRange(0, fullHeight);
+	return fallbackChunks;
+};
+
+/**
+ * Append one rendered canvas chunk to PDF by slicing it into A4-height pages.
+ */
+const appendCanvasChunkToPdf = (
 	pdf: JSPDF,
 	canvas: HTMLCanvasElement,
-	virtualWidth: number,
+	state: PdfAppendState,
 	pageWidthMM: number,
 	pageHeightMM: number
 ): void => {
-	// Convert page height in mm to px on canvas scale for cropping
-	// Calculate scale factor from px/mm:
-	// virtualWidth px corresponds directly to 210mm in PDF, so pxPerMM:
-	const pxPerPDFMM = canvas.width / pageWidthMM; // canvas px per PDF mm
-
-	// Height in px for one page slice:
-	const pagePixelHeight = Math.floor(pxPerPDFMM * pageHeightMM);
+	const pxPerPdfMM = canvas.width / pageWidthMM;
+	const pageSliceHeightPx = Math.max(1, Math.floor(pxPerPdfMM * pageHeightMM));
+	const pageCanvas = document.createElement('canvas');
+	pageCanvas.width = canvas.width;
 
 	let offsetY = 0;
-	let page = 0;
-
 	while (offsetY < canvas.height) {
-		// Height of slice
-		const sliceHeight = Math.min(pagePixelHeight, canvas.height - offsetY);
-
-		// Create temp canvas for slice
-		const pageCanvas = document.createElement('canvas');
-		pageCanvas.width = canvas.width;
+		const sliceHeight = Math.min(pageSliceHeightPx, canvas.height - offsetY);
 		pageCanvas.height = sliceHeight;
 
 		const ctx = pageCanvas.getContext('2d');
 		if (!ctx) {
-			throw new Error('Failed to get canvas context');
+			throw new Error('Failed to get page canvas context');
 		}
-
-		// Draw the slice of original canvas onto pageCanvas
+		ctx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
 		ctx.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
 
-		const imgData = pageCanvas.toDataURL('image/jpeg', JPEG_QUALITY);
-
-		// Calculate image height in PDF units keeping aspect ratio
-		const imgHeightMM = (sliceHeight * pageWidthMM) / canvas.width;
-
-		if (page > 0) pdf.addPage();
-
+		if (state.pageCount > 0) {
+			pdf.addPage();
+		}
 		applyDarkModeBackground(pdf, pageWidthMM, pageHeightMM);
 
+		const imgData = pageCanvas.toDataURL('image/jpeg', JPEG_QUALITY);
+		const imgHeightMM = (sliceHeight * pageWidthMM) / canvas.width;
 		pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMM, imgHeightMM);
-
+		state.pageCount += 1;
 		offsetY += sliceHeight;
-		page++;
 	}
 };
 
@@ -253,7 +486,6 @@ const createNoteNode = (note: NoteData, virtualWidth: number): HTMLElement => {
 	contentNode.innerHTML = html;
 	node.appendChild(contentNode);
 
-	console.log(node);
 	document.body.appendChild(node);
 
 	return node;
@@ -322,6 +554,102 @@ const exportPlainTextToPdf = async (text: string, filename: string): Promise<voi
 	doc.save(filename);
 };
 
+/**
+ * Export a styled DOM element to PDF using the shared canvas->slice pipeline.
+ * Note and Chat stylized exports both use this path to keep behavior consistent.
+ * @param element - DOM element to render
+ * @param filename - Output PDF filename
+ * @param virtualWidth - Virtual width used during html2canvas render
+ * @param waitBeforeRenderMs - Optional wait to allow layout settling
+ */
+const exportStyledElementToPdf = async (
+	element: HTMLElement,
+	filename: string,
+	virtualWidth: number = DEFAULT_VIRTUAL_WIDTH,
+	waitBeforeRenderMs = 0,
+	childSplitSelector?: string,
+	onProgress?: (progress: PdfExportProgress) => void,
+	signal?: AbortSignal
+): Promise<void> => {
+	throwIfAborted(signal);
+	emitExportProgress(onProgress, { stage: 'preparing', percent: 0 });
+
+	if (waitBeforeRenderMs > 0) {
+		await new Promise((resolve) => setTimeout(resolve, waitBeforeRenderMs));
+	}
+
+	throwIfAborted(signal);
+	const [pdf] = await Promise.all([createPdfDocument()]);
+	const safeRenderChunkHeightPx = await getSafeRenderChunkHeightPx(virtualWidth, CANVAS_SCALE);
+	const chunks = buildElementRenderChunks(element, childSplitSelector, safeRenderChunkHeightPx);
+	const pdfState: PdfAppendState = { pageCount: 0 };
+	emitExportProgress(onProgress, {
+		stage: 'rendering',
+		percent: 5,
+		currentChunk: 0,
+		totalChunks: chunks.length,
+		pagesGenerated: 0
+	});
+
+	let completedChunks = 0;
+	for (let batchStart = 0; batchStart < chunks.length; batchStart += RENDER_CONCURRENCY) {
+		throwIfAborted(signal);
+		const batch = chunks.slice(batchStart, batchStart + RENDER_CONCURRENCY);
+		const renderedBatch = await Promise.all(
+			batch.map(async (chunk, batchOffset) => {
+				throwIfAborted(signal);
+				const index = batchStart + batchOffset;
+				const chunkCanvas = document.createElement('canvas');
+				chunkCanvas.width = Math.max(1, Math.floor(virtualWidth * CANVAS_SCALE));
+				chunkCanvas.height = Math.max(1, Math.floor(chunk.height * CANVAS_SCALE));
+
+				const canvas = await renderElementToCanvas(element, virtualWidth, {
+					canvas: chunkCanvas,
+					x: 0,
+					y: chunk.y,
+					width: virtualWidth,
+					height: chunk.height
+				});
+				throwIfAborted(signal);
+
+				return { index, canvas };
+			})
+		);
+
+		renderedBatch.sort((a, b) => a.index - b.index);
+		for (const rendered of renderedBatch) {
+			throwIfAborted(signal);
+			appendCanvasChunkToPdf(pdf, rendered.canvas, pdfState, A4_PAGE_WIDTH_MM, A4_PAGE_HEIGHT_MM);
+			completedChunks += 1;
+			const renderPercent = chunks.length > 0 ? 5 + (completedChunks / chunks.length) * 90 : 95;
+			emitExportProgress(onProgress, {
+				stage: 'rendering',
+				percent: Math.min(95, Math.round(renderPercent)),
+				currentChunk: completedChunks,
+				totalChunks: chunks.length,
+				pagesGenerated: pdfState.pageCount
+			});
+		}
+	}
+
+	throwIfAborted(signal);
+	emitExportProgress(onProgress, {
+		stage: 'saving',
+		percent: 98,
+		currentChunk: chunks.length,
+		totalChunks: chunks.length,
+		pagesGenerated: pdfState.pageCount
+	});
+	pdf.save(filename);
+	emitExportProgress(onProgress, {
+		stage: 'done',
+		percent: 100,
+		currentChunk: chunks.length,
+		totalChunks: chunks.length,
+		pagesGenerated: pdfState.pageCount
+	});
+};
+
 // ==================== Public API Functions ====================
 
 /**
@@ -332,10 +660,6 @@ const exportPlainTextToPdf = async (text: string, filename: string): Promise<voi
  * @throws Error if PDF generation fails
  */
 export const downloadNotePdf = async (note: NoteData): Promise<void> => {
-	// Define a fixed virtual screen size
-	const virtualWidth = 1024; // Fixed width (adjust as needed)
-	const virtualHeight = 1400; // Fixed height (adjust as needed)
-
 	// Create DOM node from note content
 	const node = createNoteNode(note, DEFAULT_VIRTUAL_WIDTH);
 	const htmlContent = note.data?.content?.html;
@@ -346,18 +670,7 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
 	);
 
 	try {
-		// Render to canvas
-		const [canvas, pdf] = await Promise.all([
-			renderElementToCanvas(node, virtualWidth, {
-				windowWidth: virtualWidth,
-				windowHeight: virtualHeight
-			}),
-			createPdfDocument()
-		]);
-
-		canvasToPdfWithSlicing(pdf, canvas, virtualWidth, A4_PAGE_WIDTH_MM, A4_PAGE_HEIGHT_MM);
-
-		pdf.save(`${note.title}.pdf`);
+		await exportStyledElementToPdf(node, `${note.title}.pdf`, DEFAULT_VIRTUAL_WIDTH, 0, ':scope > *');
 	} finally {
 		// Clean up: remove hidden node if needed
 		if (shouldRemoveNode && node.parentNode) {
@@ -384,47 +697,110 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
  * @throws Error if PDF generation fails or if chatText is missing in plain text mode
  */
 export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> => {
-	console.log('Downloading PDF', options);
+	const internalAbortController = new AbortController();
+	const onAbortFromExternal = () => internalAbortController.abort();
+	options.signal?.addEventListener('abort', onAbortFromExternal);
+	const effectiveSignal = internalAbortController.signal;
+	const exportStartedAt = Date.now();
 
-	if ((options.stylizedPdfExport ?? true) && options.containerElementId) {
-		await options.onBeforeRender?.();
+	const updateOverlay = (progress: PdfExportProgress): void => {
+		const estimatedRemainingMinutes = getEstimatedRemainingMinutes(exportStartedAt, progress.percent);
+		pdfExportOverlay.update((state) => ({
+			...state,
+			show: true,
+			stage: progress.stage,
+			title: 'Exporting PDF',
+			stageText: getStageText(progress.stage),
+			progress: progress.percent,
+			currentChunk: progress.currentChunk ?? state.currentChunk,
+			totalChunks: progress.totalChunks ?? state.totalChunks,
+			pagesGenerated: progress.pagesGenerated ?? state.pagesGenerated,
+			estimatedRemainingMinutes,
+			onCancel: () => internalAbortController.abort()
+		}));
+	};
 
-		const containerElement = document.getElementById(options.containerElementId);
-		try {
-			if (containerElement) {
-				const virtualWidth = DEFAULT_VIRTUAL_WIDTH;
+	pdfExportOverlay.set({
+		show: true,
+		stage: 'preparing',
+		title: 'Exporting PDF',
+		stageText: 'Preparing export...',
+		progress: 0,
+		currentChunk: 0,
+		totalChunks: 0,
+		pagesGenerated: 0,
+		estimatedRemainingMinutes: null,
+		onCancel: () => internalAbortController.abort()
+	});
 
-				// Clone and style element for rendering
-				const clonedElement = cloneElementForRendering(containerElement, virtualWidth);
+	try {
+		if ((options.stylizedPdfExport ?? true) && options.containerElementId) {
+			throwIfAborted(effectiveSignal);
+			await options.onBeforeRender?.();
 
-				// Wait for DOM update/layout
-				await new Promise((r) => setTimeout(r, 100));
-
-				// Render entire content once
-				const [canvas, pdf] = await Promise.all([
-					renderElementToCanvas(clonedElement, virtualWidth),
-					createPdfDocument()
-				]);
-
-				// Clean up cloned element
-				document.body.removeChild(clonedElement);
-
-				// Create PDF and convert canvas
-				canvasToPdfWithSlicing(pdf, canvas, virtualWidth, A4_PAGE_WIDTH_MM, A4_PAGE_HEIGHT_MM);
-
-				pdf.save(`chat-${options.title}.pdf`);
+			const containerElement = document.getElementById(options.containerElementId);
+			try {
+				if (containerElement) {
+					// Clone and style element for rendering
+					const clonedElement = cloneElementForRendering(containerElement, DEFAULT_VIRTUAL_WIDTH);
+					try {
+						await exportStyledElementToPdf(
+							clonedElement,
+							`chat-${options.title}.pdf`,
+							DEFAULT_VIRTUAL_WIDTH,
+							100,
+							options.childSplitSelector,
+							(progress) => {
+								emitExportProgress(options.onProgress, progress);
+								updateOverlay(progress);
+							},
+							effectiveSignal
+						);
+					} finally {
+						// Clean up cloned element
+						if (clonedElement.parentNode) {
+							document.body.removeChild(clonedElement);
+						}
+					}
+				}
+			} finally {
+				await options.onAfterRender?.();
 			}
-		} finally {
-			await options.onAfterRender?.();
+
+			return;
 		}
 
-		return;
-	}
+		if (options.chatText) {
+			throwIfAborted(effectiveSignal);
+			const preparingProgress: PdfExportProgress = { stage: 'preparing', percent: 0 };
+			emitExportProgress(options.onProgress, preparingProgress);
+			updateOverlay(preparingProgress);
+			await exportPlainTextToPdf(options.chatText, `chat-${options.title}.pdf`);
+			const doneProgress: PdfExportProgress = { stage: 'done', percent: 100 };
+			emitExportProgress(options.onProgress, doneProgress);
+			updateOverlay(doneProgress);
+			return;
+		}
 
-	if (options.chatText) {
-		await exportPlainTextToPdf(options.chatText, `chat-${options.title}.pdf`);
-		return;
+		throw new Error('Either containerElementId or chatText is required');
+	} catch (error) {
+		if (error instanceof Error && error.name === 'AbortError') {
+			return;
+		}
+		throw error;
+	} finally {
+		options.signal?.removeEventListener('abort', onAbortFromExternal);
+		pdfExportOverlay.set({
+			show: false,
+			stage: 'preparing',
+			title: 'Exporting PDF',
+			stageText: 'Preparing export...',
+			progress: 0,
+			currentChunk: 0,
+			totalChunks: 0,
+			pagesGenerated: 0,
+			estimatedRemainingMinutes: null,
+			onCancel: undefined
+		});
 	}
-
-	throw new Error('Either containerElementId or chatText is required');
 };
