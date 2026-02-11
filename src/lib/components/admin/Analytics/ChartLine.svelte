@@ -83,7 +83,11 @@
 		{@const labelCount = Math.min(7, data.length)}
 		{@const step = labelCount > 1 ? Math.floor((data.length - 1) / (labelCount - 1)) || 1 : 1}
 		{@const isHourly = data[0]?.date?.includes(':')}
-		{@const dateFormat = isHourly ? 'h A' : period === 'year' || period === 'all' ? 'M/D/YY' : 'M/D'}
+		{@const dateFormat = isHourly
+			? 'h A'
+			: period === 'year' || period === 'all'
+				? 'M/D/YY'
+				: 'M/D'}
 		<div class="flex justify-between px-0.5 text-[10px] text-gray-400">
 			{#each Array(labelCount) as _, i}
 				{@const idx = i === labelCount - 1 ? data.length - 1 : Math.min(i * step, data.length - 1)}

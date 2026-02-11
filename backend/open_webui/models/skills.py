@@ -11,7 +11,6 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, or_
 
-
 log = logging.getLogger(__name__)
 
 ####################
@@ -112,7 +111,9 @@ class SkillsTable:
         return AccessGrants.get_grants_by_resource("skill", skill_id, db=db)
 
     def _to_skill_model(self, skill: Skill, db: Optional[Session] = None) -> SkillModel:
-        skill_data = SkillModel.model_validate(skill).model_dump(exclude={"access_grants"})
+        skill_data = SkillModel.model_validate(skill).model_dump(
+            exclude={"access_grants"}
+        )
         skill_data["access_grants"] = self._get_access_grants(skill_data["id"], db=db)
         return SkillModel.model_validate(skill_data)
 
@@ -223,9 +224,7 @@ class SkillsTable:
                 from open_webui.models.users import User, UserModel
 
                 # Join with User table for user filtering
-                query = db.query(Skill, User).outerjoin(
-                    User, User.id == Skill.user_id
-                )
+                query = db.query(Skill, User).outerjoin(User, User.id == Skill.user_id)
 
                 if filter:
                     query_key = filter.get("query")

@@ -41,7 +41,6 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.access_control import get_permissions, has_permission
 
-
 log = logging.getLogger(__name__)
 
 router = APIRouter()

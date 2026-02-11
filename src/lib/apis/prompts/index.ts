@@ -1,16 +1,16 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 type PromptItem = {
-	id?: string;  // Prompt ID
+	id?: string; // Prompt ID
 	command: string;
-	name: string;  // Changed from title
+	name: string; // Changed from title
 	content: string;
 	data?: object | null;
 	meta?: object | null;
 	access_grants?: object[];
-	version_id?: string | null;  // Active version
-	commit_message?: string | null;  // For history tracking
-	is_production?: boolean;  // Whether to set new version as production
+	version_id?: string | null; // Active version
+	commit_message?: string | null; // For history tracking
+	is_production?: boolean; // Whether to set new version as production
 };
 
 type PromptHistoryItem = {
@@ -196,7 +196,6 @@ export const getPromptItems = async (
 };
 
 export const getPromptList = async (token: string = '') => {
-
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/list`, {
@@ -472,17 +471,14 @@ export const getPromptHistory = async (
 ): Promise<PromptHistoryItem[]> => {
 	let error = null;
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history?page=${page}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history?page=${page}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
-	)
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -507,17 +503,14 @@ export const deletePromptHistoryVersion = async (
 ): Promise<boolean> => {
 	let error = null;
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`,
-		{
-			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
-	)
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -542,17 +535,14 @@ export const getPromptHistoryEntry = async (
 ): Promise<PromptHistoryItem> => {
 	let error = null;
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
-	)
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();

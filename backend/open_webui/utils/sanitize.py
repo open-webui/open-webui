@@ -2,7 +2,9 @@ import re
 
 # ANSI escape code pattern - matches all common ANSI sequences
 # This includes color codes, cursor movement, and other terminal control sequences
-ANSI_ESCAPE_PATTERN = re.compile(r'\x1b\[[0-9;]*[A-Za-z]|\x1b\([AB]|\x1b[PX^_].*?\x1b\\|\x1b\].*?(?:\x07|\x1b\\)')
+ANSI_ESCAPE_PATTERN = re.compile(
+    r"\x1b\[[0-9;]*[A-Za-z]|\x1b\([AB]|\x1b[PX^_].*?\x1b\\|\x1b\].*?(?:\x07|\x1b\\)"
+)
 
 
 def strip_ansi_codes(text: str) -> str:
@@ -18,7 +20,7 @@ def strip_ansi_codes(text: str) -> str:
     - Reset codes: \x1b[0m, \x1b[39m
     - Cursor movement: \x1b[1A, \x1b[2J, etc.
     """
-    return ANSI_ESCAPE_PATTERN.sub('', text)
+    return ANSI_ESCAPE_PATTERN.sub("", text)
 
 
 def strip_markdown_code_fences(code: str) -> str:
@@ -55,4 +57,3 @@ def sanitize_code(code: str) -> str:
     code = strip_ansi_codes(code)
     code = strip_markdown_code_fences(code)
     return code
-

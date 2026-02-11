@@ -60,7 +60,12 @@
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
 
-	import { deleteNoteById, getNoteById, updateNoteById, updateNoteAccessGrants } from '$lib/apis/notes';
+	import {
+		deleteNoteById,
+		getNoteById,
+		updateNoteById,
+		updateNoteAccessGrants
+	} from '$lib/apis/notes';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Spinner from '../common/Spinner.svelte';

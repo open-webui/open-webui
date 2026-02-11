@@ -98,7 +98,7 @@ def create_session_response(
     """
     Create JWT token and build session response for a user.
     Shared helper for signin, signup, ldap_auth, add_user, and token_exchange endpoints.
-    
+
     Args:
         request: FastAPI request object
         user: User object
@@ -558,7 +558,9 @@ async def ldap_auth(
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
 
-                return create_session_response(request, user, db, response, set_cookie=True)
+                return create_session_response(
+                    request, user, db, response, set_cookie=True
+                )
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         else:

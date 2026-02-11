@@ -173,12 +173,7 @@
 		}, 300);
 	}
 
-	$: if (
-		loaded &&
-		sortKey !== undefined &&
-		permission !== undefined &&
-		viewOption !== undefined
-	) {
+	$: if (loaded && sortKey !== undefined && permission !== undefined && viewOption !== undefined) {
 		init();
 	}
 

@@ -345,9 +345,7 @@ async def update_note_access_by_id(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    AccessGrants.set_access_grants(
-        "note", id, form_data.access_grants, db=db
-    )
+    AccessGrants.set_access_grants("note", id, form_data.access_grants, db=db)
 
     return Notes.get_note_by_id(id, db=db)
 

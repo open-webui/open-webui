@@ -107,7 +107,9 @@ async def get_prompt_list(
 
         filter["user_id"] = user.id
 
-    result = Prompts.search_prompts(user.id, filter=filter, skip=skip, limit=limit, db=db)
+    result = Prompts.search_prompts(
+        user.id, filter=filter, skip=skip, limit=limit, db=db
+    )
 
     return PromptAccessListResponse(
         items=[
@@ -313,9 +315,7 @@ async def update_prompt_by_id(
             )
 
     # Use the ID from the found prompt
-    updated_prompt = Prompts.update_prompt_by_id(
-        prompt.id, form_data, user.id, db=db
-    )
+    updated_prompt = Prompts.update_prompt_by_id(prompt.id, form_data, user.id, db=db)
     if updated_prompt:
         return updated_prompt
     else:
@@ -464,9 +464,7 @@ async def update_prompt_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    AccessGrants.set_access_grants(
-        "prompt", prompt_id, form_data.access_grants, db=db
-    )
+    AccessGrants.set_access_grants("prompt", prompt_id, form_data.access_grants, db=db)
 
     return Prompts.get_prompt_by_id(prompt_id, db=db)
 
@@ -522,7 +520,7 @@ async def get_prompt_history(
 ):
     """Get version history for a prompt."""
     PAGE_SIZE = 20
-    
+
     prompt = Prompts.get_prompt_by_id(prompt_id, db=db)
 
     if not prompt:
@@ -554,9 +552,7 @@ async def get_prompt_history(
     return history
 
 
-@router.get(
-    "/id/{prompt_id}/history/{history_id}", response_model=PromptHistoryModel
-)
+@router.get("/id/{prompt_id}/history/{history_id}", response_model=PromptHistoryModel)
 async def get_prompt_history_entry(
     prompt_id: str,
     history_id: str,
@@ -599,9 +595,7 @@ async def get_prompt_history_entry(
     return history_entry
 
 
-@router.delete(
-    "/id/{prompt_id}/history/{history_id}", response_model=bool
-)
+@router.delete("/id/{prompt_id}/history/{history_id}", response_model=bool)
 async def delete_prompt_history_entry(
     prompt_id: str,
     history_id: str,

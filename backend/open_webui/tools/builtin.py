@@ -380,8 +380,8 @@ async def execute_code(
         # Add import blocking code if there are blocked modules
         if CODE_INTERPRETER_BLOCKED_MODULES:
             import textwrap
-            blocking_code = textwrap.dedent(
-                f"""
+
+            blocking_code = textwrap.dedent(f"""
                 import builtins
 
                 BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -397,15 +397,20 @@ async def execute_code(
                     return _real_import(name, globals, locals, fromlist, level)
 
                 builtins.__import__ = restricted_import
-                """
-            )
+                """)
             code = blocking_code + "\n" + code
 
-        engine = getattr(__request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide")
+        engine = getattr(
+            __request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide"
+        )
         if engine == "pyodide":
             # Execute via frontend pyodide using bidirectional event call
             if __event_call__ is None:
-                return json.dumps({"error": "Event call not available. WebSocket connection required for pyodide execution."})
+                return json.dumps(
+                    {
+                        "error": "Event call not available. WebSocket connection required for pyodide execution."
+                    }
+                )
 
             output = await __event_call__(
                 {
@@ -413,7 +418,9 @@ async def execute_code(
                     "data": {
                         "id": str(uuid4()),
                         "code": code,
-                        "session_id": __metadata__.get("session_id") if __metadata__ else None,
+                        "session_id": (
+                            __metadata__.get("session_id") if __metadata__ else None
+                        ),
                     },
                 }
             )
@@ -436,12 +443,14 @@ async def execute_code(
                 code,
                 (
                     __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
-                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == "token"
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                    == "token"
                     else None
                 ),
                 (
                     __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
-                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH == "password"
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                    == "password"
                     else None
                 ),
                 __request__.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
@@ -1921,7 +1930,9 @@ async def view_skill(
         # Check user access
         user_role = __user__.get("role", "user")
         if user_role != "admin" and skill.user_id != user_id:
-            user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
+            user_group_ids = [
+                group.id for group in Groups.get_groups_by_member_id(user_id)
+            ]
             if not AccessGrants.has_access(
                 user_id=user_id,
                 resource_type="skill",
@@ -1931,11 +1942,13 @@ async def view_skill(
             ):
                 return json.dumps({"error": "Access denied"})
 
-        return json.dumps({
-            "name": skill.name,
-            "content": skill.content,
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "name": skill.name,
+                "content": skill.content,
+            },
+            ensure_ascii=False,
+        )
     except Exception as e:
         log.exception(f"view_skill error: {e}")
         return json.dumps({"error": str(e)})
-

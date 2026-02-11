@@ -28,14 +28,11 @@
 			return;
 		}
 
-		const res = await createNewKnowledge(
-			localStorage.token,
-			name,
-			description,
-			accessGrants
-		).catch((e) => {
-			toast.error(`${e}`);
-		});
+		const res = await createNewKnowledge(localStorage.token, name, description, accessGrants).catch(
+			(e) => {
+				toast.error(`${e}`);
+			}
+		);
 
 		if (res) {
 			toast.success($i18n.t('Knowledge created successfully.'));

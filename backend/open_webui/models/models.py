@@ -18,7 +18,6 @@ from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import BigInteger, Column, Text, Boolean
 
-
 log = logging.getLogger(__name__)
 
 
@@ -182,7 +181,9 @@ class ModelsTable:
 
     def get_all_models(self, db: Optional[Session] = None) -> list[ModelModel]:
         with get_db_context(db) as db:
-            return [self._to_model_model(model, db=db) for model in db.query(Model).all()]
+            return [
+                self._to_model_model(model, db=db) for model in db.query(Model).all()
+            ]
 
     def get_models(self, db: Optional[Session] = None) -> list[ModelUserResponse]:
         with get_db_context(db) as db:

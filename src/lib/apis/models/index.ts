@@ -281,11 +281,7 @@ export const updateModelById = async (token: string, id: string, model: object) 
 	return res;
 };
 
-export const updateModelAccessGrants = async (
-	token: string,
-	id: string,
-	accessGrants: any[]
-) => {
+export const updateModelAccessGrants = async (token: string, id: string, accessGrants: any[]) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/access/update`, {

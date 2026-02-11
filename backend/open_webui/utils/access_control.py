@@ -139,16 +139,23 @@ def has_access(
             continue
         principal_type = grant.get("principal_type")
         principal_id = grant.get("principal_id")
-        if principal_type == "user" and (principal_id == "*" or principal_id == user_id):
+        if principal_type == "user" and (
+            principal_id == "*" or principal_id == user_id
+        ):
             return True
-        if principal_type == "group" and user_group_ids and principal_id in user_group_ids:
+        if (
+            principal_type == "group"
+            and user_group_ids
+            and principal_id in user_group_ids
+        ):
             return True
-
 
     return False
 
 
-def migrate_access_control(data: dict, ac_key: str = "access_control", grants_key: str = "access_grants") -> None:
+def migrate_access_control(
+    data: dict, ac_key: str = "access_control", grants_key: str = "access_grants"
+) -> None:
     """
     Auto-migrate a config dict in-place from legacy access_control dict to access_grants list.
 
@@ -169,17 +176,21 @@ def migrate_access_control(data: dict, ac_key: str = "access_control", grants_ke
             if not perm_data:
                 continue
             for group_id in perm_data.get("group_ids", []):
-                grants.append({
-                    "principal_type": "group",
-                    "principal_id": group_id,
-                    "permission": perm,
-                })
+                grants.append(
+                    {
+                        "principal_type": "group",
+                        "principal_id": group_id,
+                        "permission": perm,
+                    }
+                )
             for uid in perm_data.get("user_ids", []):
-                grants.append({
-                    "principal_type": "user",
-                    "principal_id": uid,
-                    "permission": perm,
-                })
+                grants.append(
+                    {
+                        "principal_type": "user",
+                        "principal_id": uid,
+                        "permission": perm,
+                    }
+                )
 
     data[grants_key] = grants
     data.pop(ac_key, None)

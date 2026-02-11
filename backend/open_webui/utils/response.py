@@ -68,7 +68,7 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
     input_tokens = int(data.get("prompt_eval_count", 0))
     output_tokens = int(data.get("eval_count", 0))
     total_tokens = input_tokens + output_tokens
-    
+
     return {
         # Standardized fields
         "input_tokens": input_tokens,

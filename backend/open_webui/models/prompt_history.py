@@ -13,7 +13,6 @@ from open_webui.models.users import Users, UserResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, Text, JSON, Index
 
-
 ####################
 # PromptHistory DB Schema
 ####################

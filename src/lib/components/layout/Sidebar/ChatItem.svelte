@@ -75,7 +75,6 @@
 		return '1m';
 	}
 
-
 	let chat = null;
 
 	let mouseOver = false;

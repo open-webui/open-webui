@@ -551,7 +551,6 @@ from open_webui.utils.redis import get_sentinels_from_env
 
 from open_webui.constants import ERROR_MESSAGES
 
-
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -575,8 +574,7 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(
-    rf"""
+print(rf"""
  ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
 ██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
@@ -588,8 +586,7 @@ print(
 v{VERSION} - building the best AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
-"""
-)
+""")
 
 
 @asynccontextmanager
@@ -1845,9 +1842,7 @@ async def chat_completion(
         # Emit chat:active=true when task starts
         event_emitter = get_event_emitter(metadata, update_db=False)
         if event_emitter:
-            await event_emitter(
-                {"type": "chat:active", "data": {"active": True}}
-            )
+            await event_emitter({"type": "chat:active", "data": {"active": True}})
         return {"status": True, "task_id": task_id}
     else:
         return await process_chat(request, form_data, user, metadata, model)

@@ -128,10 +128,7 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
-		<form
-			class=" flex flex-col max-h-[100dvh] h-full"
-			on:submit|preventDefault={submitHandler}
-		>
+		<form class=" flex flex-col max-h-[100dvh] h-full" on:submit|preventDefault={submitHandler}>
 			<div class="flex flex-col flex-1 overflow-auto h-0 rounded-lg">
 				<div class="w-full mb-2 flex flex-col gap-0.5">
 					<div class="flex w-full items-center">
@@ -177,7 +174,8 @@
 									</div>
 								</button>
 							{:else}
-								<span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
+								<span
+									class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
 									>{$i18n.t('Read Only')}</span
 								>
 							{/if}
@@ -190,7 +188,11 @@
 								{id}
 							</div>
 						{:else}
-							<Tooltip className="w-full" content={$i18n.t('e.g. code-review-guidelines')} placement="top-start">
+							<Tooltip
+								className="w-full"
+								content={$i18n.t('e.g. code-review-guidelines')}
+								placement="top-start"
+							>
 								<input
 									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-hidden"
 									type="text"

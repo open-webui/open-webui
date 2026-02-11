@@ -151,11 +151,15 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     def flush_pending():
         nonlocal pending_content, pending_tool_calls
         if pending_content or pending_tool_calls:
-            messages.append({
-                "role": "assistant",
-                "content": "\n".join(pending_content) if pending_content else "",
-                **({"tool_calls": pending_tool_calls} if pending_tool_calls else {}),
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": "\n".join(pending_content) if pending_content else "",
+                    **(
+                        {"tool_calls": pending_tool_calls} if pending_tool_calls else {}
+                    ),
+                }
+            )
             pending_content = []
             pending_tool_calls = []
 
@@ -178,14 +182,16 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             # Ensure arguments is always a JSON string
             if not isinstance(arguments, str):
                 arguments = json.dumps(arguments)
-            pending_tool_calls.append({
-                "id": item.get("call_id", ""),
-                "type": "function",
-                "function": {
-                    "name": item.get("name", ""),
-                    "arguments": arguments,
+            pending_tool_calls.append(
+                {
+                    "id": item.get("call_id", ""),
+                    "type": "function",
+                    "function": {
+                        "name": item.get("name", ""),
+                        "arguments": arguments,
+                    },
                 }
-            })
+            )
 
         elif item_type == "function_call_output":
             # Flush any pending content/tool_calls before adding tool result
@@ -198,11 +204,13 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                 if part.get("type") == "input_text":
                     content += part.get("text", "")
 
-            messages.append({
-                "role": "tool",
-                "tool_call_id": item.get("call_id", ""),
-                "content": content,
-            })
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": item.get("call_id", ""),
+                    "content": content,
+                }
+            )
 
         elif item_type == "reasoning":
             if raw:
@@ -218,9 +226,7 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                 if reasoning_text:
                     start_tag = item.get("start_tag", "<think>")
                     end_tag = item.get("end_tag", "</think>")
-                    pending_content.append(
-                        f"{start_tag}{reasoning_text}{end_tag}"
-                    )
+                    pending_content.append(f"{start_tag}{reasoning_text}{end_tag}")
             # else: skip reasoning blocks for normal LLM messages
 
         elif item_type == "open_webui:code_interpreter":

@@ -1633,9 +1633,7 @@ async def update_message_by_id(
         if (
             user.role != "admin"
             and message.user_id != user.id
-            and not channel_has_access(
-                user.id, channel, permission="read", db=db
-            )
+            and not channel_has_access(user.id, channel, permission="read", db=db)
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()

@@ -22,10 +22,14 @@ class AccessGrant(Base):
     __tablename__ = "access_grant"
 
     id = Column(Text, primary_key=True)
-    resource_type = Column(Text, nullable=False)  # "knowledge", "model", "prompt", "tool", "note", "channel", "file"
+    resource_type = Column(
+        Text, nullable=False
+    )  # "knowledge", "model", "prompt", "tool", "note", "channel", "file"
     resource_id = Column(Text, nullable=False)
     principal_type = Column(Text, nullable=False)  # "user" or "group"
-    principal_id = Column(Text, nullable=False)  # user_id, group_id, or "*" (wildcard for public)
+    principal_id = Column(
+        Text, nullable=False
+    )  # user_id, group_id, or "*" (wildcard for public)
     permission = Column(Text, nullable=False)  # "read" or "write"
     created_at = Column(BigInteger, nullable=False)
 
@@ -173,9 +177,11 @@ def normalize_access_grants(access_grants: Optional[list]) -> list[dict]:
 
         key = (principal_type, principal_id, permission)
         deduped[key] = {
-            "id": grant.get("id")
-            if isinstance(grant.get("id"), str) and grant.get("id")
-            else str(uuid.uuid4()),
+            "id": (
+                grant.get("id")
+                if isinstance(grant.get("id"), str) and grant.get("id")
+                else str(uuid.uuid4())
+            ),
             "principal_type": principal_type,
             "principal_id": principal_id,
             "permission": permission,

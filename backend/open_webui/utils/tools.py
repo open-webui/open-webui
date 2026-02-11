@@ -352,7 +352,9 @@ async def get_tools(
                             headers = include_user_info_headers(headers, user)
                             metadata = extra_params.get("__metadata__", {})
                             if metadata and metadata.get("chat_id"):
-                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get("chat_id")
+                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = (
+                                    metadata.get("chat_id")
+                                )
 
                         def make_tool_function(
                             function_name, tool_server_data, headers
@@ -416,9 +418,8 @@ def get_builtin_tools(
 
     # Helper to get model capabilities (defaults to True if not specified)
     def get_model_capability(name: str, default: bool = True) -> bool:
-        return (
-            (model.get("info", {}).get("meta", {}).get("capabilities") or {})
-            .get(name, default)
+        return (model.get("info", {}).get("meta", {}).get("capabilities") or {}).get(
+            name, default
         )
 
     # Helper to check if a builtin tool category is enabled via meta.builtinTools
@@ -491,13 +492,17 @@ def get_builtin_tools(
         builtin_functions.append(execute_code)
 
     # Notes tools - search, view, create, and update user's notes (if builtin category enabled AND notes enabled globally)
-    if is_builtin_tool_enabled("notes") and getattr(request.app.state.config, "ENABLE_NOTES", False):
+    if is_builtin_tool_enabled("notes") and getattr(
+        request.app.state.config, "ENABLE_NOTES", False
+    ):
         builtin_functions.extend(
             [search_notes, view_note, write_note, replace_note_content]
         )
 
     # Channels tools - search channels and messages (if builtin category enabled AND channels enabled globally)
-    if is_builtin_tool_enabled("channels") and getattr(request.app.state.config, "ENABLE_CHANNELS", False):
+    if is_builtin_tool_enabled("channels") and getattr(
+        request.app.state.config, "ENABLE_CHANNELS", False
+    ):
         builtin_functions.extend(
             [
                 search_channels,

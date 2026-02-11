@@ -201,7 +201,7 @@
 			if (storedQueueData) {
 				try {
 					const restoredQueue = JSON.parse(storedQueueData);
-					
+
 					if (restoredQueue.length > 0) {
 						sessionStorage.removeItem(`chat-queue-${chatIdProp}`);
 						// Check if there are pending tasks (still generating)
@@ -1971,8 +1971,8 @@
 			..._messages.map((message) => ({
 				...message,
 				content: processDetails(message.content),
-			// Include output for temp chats (backend will use it and strip before LLM)
-			...(message.output ? { output: message.output } : {})
+				// Include output for temp chats (backend will use it and strip before LLM)
+				...(message.output ? { output: message.output } : {})
 			}))
 		].filter((message) => message);
 
@@ -2027,7 +2027,8 @@
 		const skillMentionRegex = /<\$([^|>]+)\|?[^>]*>/g;
 		const skillIds = [];
 		for (const message of messages) {
-			const content = typeof message.content === 'string' ? message.content : message.content?.[0]?.text ?? '';
+			const content =
+				typeof message.content === 'string' ? message.content : (message.content?.[0]?.text ?? '');
 			for (const match of content.matchAll(skillMentionRegex)) {
 				if (!skillIds.includes(match[1])) {
 					skillIds.push(match[1]);

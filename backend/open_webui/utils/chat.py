@@ -57,7 +57,6 @@ from open_webui.utils.filter import (
 
 from open_webui.env import GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
-
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
@@ -341,7 +340,9 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     }
 
     try:
-        filter_ids = get_sorted_filter_ids(request, model, metadata.get("filter_ids", []))
+        filter_ids = get_sorted_filter_ids(
+            request, model, metadata.get("filter_ids", [])
+        )
         filter_functions = Functions.get_functions_by_ids(filter_ids)
 
         result, _ = await process_filter_functions(

@@ -329,7 +329,9 @@ class ChatTable:
                             data=message,
                         )
             except Exception as e:
-                log.warning(f"Failed to write initial messages to chat_message table: {e}")
+                log.warning(
+                    f"Failed to write initial messages to chat_message table: {e}"
+                )
 
             return ChatModel.model_validate(chat_item) if chat_item else None
 
@@ -388,7 +390,9 @@ class ChatTable:
                                 data=message,
                             )
             except Exception as e:
-                log.warning(f"Failed to write imported messages to chat_message table: {e}")
+                log.warning(
+                    f"Failed to write imported messages to chat_message table: {e}"
+                )
 
             return [ChatModel.model_validate(chat) for chat in chats]
 
@@ -739,8 +743,10 @@ class ChatTable:
     ) -> list[ChatModel]:
 
         with get_db_context(db) as db:
-            query = db.query(Chat).filter_by(user_id=user_id).filter(
-                Chat.share_id.isnot(None)
+            query = (
+                db.query(Chat)
+                .filter_by(user_id=user_id)
+                .filter(Chat.share_id.isnot(None))
             )
 
             if filter:
@@ -1110,29 +1116,23 @@ class ChatTable:
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
+                    query = query.filter(text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.meta, '$.tags') AS tag
                             )
-                            """
-                        )
-                    )
+                            """))
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(
-                                    f"""
+                                text(f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_each(Chat.meta, '$.tags') AS tag
                                         WHERE tag.value = :tag_id_{tag_idx}
                                     )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )
@@ -1168,29 +1168,23 @@ class ChatTable:
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
+                    query = query.filter(text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
-                            """
-                        )
-                    )
+                            """))
                 elif tag_ids:
                     query = query.filter(
                         and_(
                             *[
-                                text(
-                                    f"""
+                                text(f"""
                                     EXISTS (
                                         SELECT 1
                                         FROM json_array_elements_text(Chat.meta->'tags') AS tag
                                         WHERE tag = :tag_id_{tag_idx}
                                     )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
+                                    """).params(**{f"tag_id_{tag_idx}": tag_id})
                                 for tag_idx, tag_id in enumerate(tag_ids)
                             ]
                         )

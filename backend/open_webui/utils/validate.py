@@ -36,4 +36,3 @@ def validate_profile_image_url(url: str) -> str:
     raise ValueError(
         "Invalid profile image URL: only data URIs and default avatars are allowed."
     )
-

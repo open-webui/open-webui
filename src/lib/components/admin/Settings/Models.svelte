@@ -104,7 +104,9 @@
 		modelsToDisable.forEach((m) => (m.is_active = false));
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id)));
+		await Promise.all(
+			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
+		);
 	};
 
 	const downloadModels = async (models) => {

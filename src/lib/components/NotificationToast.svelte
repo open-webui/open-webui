@@ -50,7 +50,10 @@
 		(e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
 
 		// Skip if clicking the close button
-		if (closeButtonElement && (e.target === closeButtonElement || closeButtonElement.contains(e.target as Node))) {
+		if (
+			closeButtonElement &&
+			(e.target === closeButtonElement || closeButtonElement.contains(e.target as Node))
+		) {
 			return;
 		}
 

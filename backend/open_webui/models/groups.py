@@ -25,7 +25,6 @@ from sqlalchemy import (
     select,
 )
 
-
 log = logging.getLogger(__name__)
 
 ####################
@@ -182,12 +181,12 @@ class GroupTable:
                     if share_value:
                         # Groups open to anyone: data is null, config.share is null, or share is true
                         # Use case-insensitive string comparison to handle variations like "True", "TRUE"
-                        # Handle potential JSON boolean to string casting issues by checking for both string 'true' and boolean equivalence if possible, 
+                        # Handle potential JSON boolean to string casting issues by checking for both string 'true' and boolean equivalence if possible,
                         anyone_can_share = or_(
                             Group.data.is_(None),
                             json_share_str.is_(None),
                             json_share_lower == "true",
-                            json_share_lower == "1", # Handle SQLite boolean true
+                            json_share_lower == "1",  # Handle SQLite boolean true
                         )
 
                         if member_id:

@@ -10,7 +10,6 @@ from typing import Dict, List, Optional
 
 from open_webui.env import REDIS_KEY_PREFIX
 
-
 log = logging.getLogger(__name__)
 
 # A dictionary to keep track of active tasks

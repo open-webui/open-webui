@@ -11,7 +11,6 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Column, String, Text
 
-
 log = logging.getLogger(__name__)
 
 ####################

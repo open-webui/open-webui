@@ -36,7 +36,6 @@ from open_webui.models.access_grants import AccessGrants, has_public_read_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.models.models import Models, ModelForm
 
-
 log = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -358,7 +357,7 @@ async def reindex_knowledge_base_metadata_embeddings(
     user=Depends(get_admin_user),
 ):
     """Batch embed all existing knowledge bases. Admin only.
-    
+
     NOTE: We intentionally do NOT use Depends(get_session) here.
     This endpoint loops through ALL knowledge bases and calls embed_knowledge_base_metadata()
     for each one, making N external embedding API calls. Holding a session during
@@ -540,9 +539,7 @@ async def update_knowledge_access_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    AccessGrants.set_access_grants(
-        "knowledge", id, form_data.access_grants, db=db
-    )
+    AccessGrants.set_access_grants("knowledge", id, form_data.access_grants, db=db)
 
     return KnowledgeFilesResponse(
         **Knowledges.get_knowledge_by_id(id=id, db=db).model_dump(),

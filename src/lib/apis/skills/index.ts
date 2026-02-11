@@ -227,11 +227,7 @@ export const updateSkillById = async (token: string, id: string, skill: object) 
 	return res;
 };
 
-export const updateSkillAccessGrants = async (
-	token: string,
-	id: string,
-	accessGrants: any[]
-) => {
+export const updateSkillAccessGrants = async (token: string, id: string, accessGrants: any[]) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/skills/id/${id}/access/update`, {

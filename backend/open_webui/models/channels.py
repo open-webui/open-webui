@@ -263,7 +263,9 @@ class ChannelTable:
     def _to_channel_model(
         self, channel: Channel, db: Optional[Session] = None
     ) -> ChannelModel:
-        channel_data = ChannelModel.model_validate(channel).model_dump(exclude={"access_grants"})
+        channel_data = ChannelModel.model_validate(channel).model_dump(
+            exclude={"access_grants"}
+        )
         access_grants = self._get_access_grants(channel_data["id"], db=db)
         channel_data["access_grants"] = access_grants
         return ChannelModel.model_validate(channel_data)
@@ -770,9 +772,7 @@ class ChannelTable:
                         .first()
                     )
                     if membership:
-                        allowed_channels.append(
-                            self._to_channel_model(channel, db=db)
-                        )
+                        allowed_channels.append(self._to_channel_model(channel, db=db))
                     continue
 
                 # --- Case B: standard channel => rely on ACL permissions ---

@@ -695,7 +695,9 @@ async def agenerate_azure_openai_batch_embeddings(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         ) as session:
             async with session.post(
-                full_url, headers=headers, json=form_data,
+                full_url,
+                headers=headers,
+                json=form_data,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()

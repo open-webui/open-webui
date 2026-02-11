@@ -24,7 +24,6 @@ from open_webui.utils.access_control import has_access, has_permission
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 
-
 log = logging.getLogger(__name__)
 
 PAGE_ITEM_COUNT = 30
@@ -98,9 +97,7 @@ async def get_skill_list(
 
         filter["user_id"] = user.id
 
-    result = Skills.search_skills(
-        user.id, filter=filter, skip=skip, limit=limit, db=db
-    )
+    result = Skills.search_skills(user.id, filter=filter, skip=skip, limit=limit, db=db)
 
     return SkillAccessListResponse(
         items=[
@@ -343,9 +340,7 @@ async def update_skill_access_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    AccessGrants.set_access_grants(
-        "skill", id, form_data.access_grants, db=db
-    )
+    AccessGrants.set_access_grants("skill", id, form_data.access_grants, db=db)
 
     return Skills.get_skill_by_id(id, db=db)
 

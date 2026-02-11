@@ -33,8 +33,7 @@
 				description: updatedSkill.description,
 				content: updatedSkill.content,
 				is_active: updatedSkill.is_active,
-				access_grants:
-					updatedSkill?.access_grants === undefined ? [] : updatedSkill?.access_grants
+				access_grants: updatedSkill?.access_grants === undefined ? [] : updatedSkill?.access_grants
 			};
 		}
 	};
@@ -54,8 +53,7 @@
 					description: _skill.description,
 					content: _skill.content,
 					is_active: _skill.is_active,
-					access_grants:
-						_skill?.access_grants === undefined ? [] : _skill?.access_grants
+					access_grants: _skill?.access_grants === undefined ? [] : _skill?.access_grants
 				};
 			} else {
 				goto('/workspace/skills');

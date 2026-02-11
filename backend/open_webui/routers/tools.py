@@ -36,7 +36,6 @@ from open_webui.utils.tools import get_tool_servers
 from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 
-
 log = logging.getLogger(__name__)
 
 
@@ -555,9 +554,7 @@ async def update_tool_access_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    AccessGrants.set_access_grants(
-        "tool", id, form_data.access_grants, db=db
-    )
+    AccessGrants.set_access_grants("tool", id, form_data.access_grants, db=db)
 
     return Tools.get_tool_by_id(id, db=db)
 
