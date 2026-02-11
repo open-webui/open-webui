@@ -30,6 +30,7 @@
 	export let isLastMessage;
 	export let readOnly = false;
 	export let editCodeBlock = true;
+export let exportMode = false;
 
 	export let setInputText: Function = () => {};
 	export let updateChat: Function;
@@ -320,6 +321,8 @@
 									}}
 									{addMessages}
 									{readOnly}
+									{editCodeBlock}
+									{exportMode}
 									{topPadding}
 								/>
 							{/if}
@@ -377,6 +380,7 @@
 										{addMessages}
 										{readOnly}
 										{editCodeBlock}
+										{exportMode}
 										{topPadding}
 									/>
 								{/if}
@@ -415,7 +419,7 @@
 									{#if (message?.content ?? '') === ''}
 										<Skeleton />
 									{:else}
-										<Markdown id={`merged`} content={message.content ?? ''} />
+										<Markdown id={`merged`} content={message.content ?? ''} {exportMode} />
 									{/if}
 								</div>
 							</div>
