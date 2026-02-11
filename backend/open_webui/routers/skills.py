@@ -14,7 +14,7 @@ from open_webui.models.skills import (
     SkillResponse,
     SkillUserResponse,
     SkillAccessResponse,
-    SkillListResponse,
+    SkillAccessListResponse,
     Skills,
 )
 from open_webui.models.access_grants import AccessGrants
@@ -72,62 +72,56 @@ async def get_skills(
 ############################
 
 
-@router.get("/list", response_model=list[SkillAccessResponse])
+@router.get("/list", response_model=SkillAccessListResponse)
 async def get_skill_list(
-    user=Depends(get_verified_user), db: Session = Depends(get_session)
-):
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
-        skills = Skills.get_skills(db=db)
-    else:
-        skills = Skills.get_skills_by_user_id(user.id, "read", db=db)
-
-    return [
-        SkillAccessResponse(
-            **skill.model_dump(),
-            write_access=(
-                (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                or user.id == skill.user_id
-                or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type="skill",
-                    resource_id=skill.id,
-                    permission="write",
-                    db=db,
-                )
-            ),
-        )
-        for skill in skills
-    ]
-
-
-############################
-# SearchSkills
-############################
-
-
-@router.get("/search", response_model=SkillListResponse)
-async def search_skills(
     query: Optional[str] = None,
+    view_option: Optional[str] = None,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    page = max(page, 1)
     limit = PAGE_ITEM_COUNT
+
+    page = max(1, page)
     skip = (page - 1) * limit
 
     filter = {}
     if query:
         filter["query"] = query
+    if view_option:
+        filter["view_option"] = view_option
 
     if not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL):
+        groups = Groups.get_groups_by_member_id(user.id, db=db)
+        if groups:
+            filter["group_ids"] = [group.id for group in groups]
+
         filter["user_id"] = user.id
 
     result = Skills.search_skills(
         user.id, filter=filter, skip=skip, limit=limit, db=db
     )
 
-    return result
+    return SkillAccessListResponse(
+        items=[
+            SkillAccessResponse(
+                **skill.model_dump(),
+                write_access=(
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    or user.id == skill.user_id
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="skill",
+                        resource_id=skill.id,
+                        permission="write",
+                        db=db,
+                    )
+                ),
+            )
+            for skill in result.items
+        ],
+        total=result.total,
+    )
 
 
 ############################

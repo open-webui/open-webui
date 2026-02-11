@@ -93,18 +93,20 @@ export const getSkillList = async (token: string = '') => {
 	return res;
 };
 
-export const searchSkills = async (
+export const getSkillItems = async (
 	token: string = '',
 	query: string | null = null,
+	viewOption: string | null = null,
 	page: number | null = null
 ) => {
 	let error = null;
 
 	const searchParams = new URLSearchParams();
 	if (query) searchParams.append('query', query);
+	if (viewOption) searchParams.append('view_option', viewOption);
 	if (page) searchParams.append('page', page.toString());
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/skills/search?${searchParams.toString()}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/skills/list?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -120,7 +122,7 @@ export const searchSkills = async (
 			return json;
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = err;
 			console.error(err);
 			return null;
 		});

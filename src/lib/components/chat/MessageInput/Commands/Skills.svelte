@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import { searchSkills } from '$lib/apis/skills';
+	import { getSkillItems } from '$lib/apis/skills';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Keyframes from '$lib/components/icons/Keyframes.svelte';
 
@@ -26,7 +26,7 @@
 	});
 
 	const getItems = async () => {
-		const res = await searchSkills(localStorage.token, query).catch(() => null);
+		const res = await getSkillItems(localStorage.token, query).catch(() => null);
 		if (res) {
 			filteredItems = res.items;
 		}

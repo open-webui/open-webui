@@ -10,8 +10,8 @@
 	import { goto } from '$app/navigation';
 	import {
 		getSkills,
-		getSkillList,
 		getSkillById,
+		getSkillItems,
 		exportSkills,
 		deleteSkillById,
 		toggleSkillById
@@ -32,6 +32,7 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Switch from '../common/Switch.svelte';
 	import SkillMenu from './Skills/SkillMenu.svelte';
+	import Pagination from '../common/Pagination.svelte';
 
 	let shiftKey = false;
 	let loaded = false;
@@ -45,38 +46,53 @@
 	let selectedSkill = null;
 	let showDeleteConfirm = false;
 
-	let skills = [];
-	let filteredItems = [];
+	let filteredItems = null;
+	let total = null;
+	let loading = false;
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
+	let page = 1;
 
+	// Debounce only query changes
 	$: if (query !== undefined) {
+		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			setFilteredItems();
+			page = 1;
+			getSkillItems();
 		}, 300);
 	}
 
-	$: if (skills && viewOption !== undefined) {
-		setFilteredItems();
+	// Immediate response to page/filter changes
+	$: if (page && viewOption !== undefined) {
+		getSkillItems();
 	}
 
-	const setFilteredItems = () => {
-		filteredItems = skills.filter((s) => {
-			if (query === '' && viewOption === '') return true;
-			const lowerQuery = query.toLowerCase();
-			return (
-				((s.name || '').toLowerCase().includes(lowerQuery) ||
-					(s.id || '').toLowerCase().includes(lowerQuery) ||
-					(s.description || '').toLowerCase().includes(lowerQuery) ||
-					(s.user?.name || '').toLowerCase().includes(lowerQuery) ||
-					(s.user?.email || '').toLowerCase().includes(lowerQuery)) &&
-				(viewOption === '' ||
-					(viewOption === 'created' && s.user_id === $user?.id) ||
-					(viewOption === 'shared' && s.user_id !== $user?.id))
-			);
-		});
+	const getSkillItems = async () => {
+		if (!loaded) return;
+
+		loading = true;
+		try {
+			const res = await getSkillItems(
+				localStorage.token,
+				query,
+				viewOption,
+				page
+			).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				filteredItems = res.items;
+				total = res.total;
+			}
+		} catch (err) {
+			console.error(err);
+		} finally {
+			loading = false;
+		}
 	};
 
 	const cloneHandler = async (skill) => {
@@ -117,18 +133,15 @@
 
 		if (res) {
 			toast.success($i18n.t('Skill deleted successfully'));
-			await init();
 		}
-	};
 
-	const init = async () => {
-		skills = await getSkillList(localStorage.token);
-		_skills.set(await getSkills(localStorage.token));
+		page = 1;
+		getSkillItems();
+		await _skills.set(await getSkills(localStorage.token));
 	};
 
 	onMount(async () => {
 		viewOption = localStorage?.workspaceViewOption || '';
-		await init();
 		loaded = true;
 
 		const onKeyDown = (event) => {
@@ -179,7 +192,7 @@
 				</div>
 
 				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
-					{filteredItems.length}
+					{total ?? ''}
 				</div>
 			</div>
 
@@ -229,7 +242,7 @@
 					</button>
 				{/if}
 
-				{#if skills.length && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills)}
+				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills)}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={async () => {
@@ -312,13 +325,18 @@
 					bind:value={viewOption}
 					onChange={async (value) => {
 						localStorage.workspaceViewOption = value;
+						page = 1;
 						await tick();
 					}}
 				/>
 			</div>
 		</div>
 
-		{#if (filteredItems ?? []).length !== 0}
+		{#if filteredItems === null || loading}
+			<div class="w-full h-full flex justify-center items-center my-16 mb-24">
+				<Spinner className="size-5" />
+			</div>
+		{:else if (filteredItems ?? []).length !== 0}
 			<div class=" my-2 gap-2 grid px-3 lg:grid-cols-2">
 				{#each filteredItems as skill}
 					<Tooltip content={skill?.description ?? skill?.id}>
@@ -458,6 +476,12 @@
 					</Tooltip>
 				{/each}
 			</div>
+
+			{#if total > 30}
+				<div class="flex justify-center mt-4 mb-2">
+					<Pagination bind:page count={total} perPage={30} />
+				</div>
+			{/if}
 		{:else}
 			<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 				<div class="max-w-md text-center">
