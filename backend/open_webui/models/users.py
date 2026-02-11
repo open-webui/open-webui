@@ -184,6 +184,9 @@ class UserInfoResponse(UserStatus):
     name: str
     email: str
     role: str
+    bio: Optional[str] = None
+    groups: Optional[list] = []
+    is_active: bool = False
 
 
 class UserIdNameResponse(BaseModel):
@@ -243,6 +246,7 @@ class UsersTable:
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
+        username: Optional[str] = None,
         oauth: Optional[dict] = None,
         db: Optional[Session] = None,
     ) -> Optional[UserModel]:
@@ -257,6 +261,7 @@ class UsersTable:
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
+                    "username": username,
                     "oauth": oauth,
                 }
             )
@@ -530,9 +535,12 @@ class UsersTable:
     ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
-                db.query(User).filter_by(id=id).update({"role": role})
-                db.commit()
                 user = db.query(User).filter_by(id=id).first()
+                if not user:
+                    return None
+                user.role = role
+                db.commit()
+                db.refresh(user)
                 return UserModel.model_validate(user)
         except Exception:
             return None
@@ -542,12 +550,13 @@ class UsersTable:
     ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
-                db.query(User).filter_by(id=id).update(
-                    {**form_data.model_dump(exclude_none=True)}
-                )
-                db.commit()
-
                 user = db.query(User).filter_by(id=id).first()
+                if not user:
+                    return None
+                for key, value in form_data.model_dump(exclude_none=True).items():
+                    setattr(user, key, value)
+                db.commit()
+                db.refresh(user)
                 return UserModel.model_validate(user)
         except Exception:
             return None
@@ -557,12 +566,12 @@ class UsersTable:
     ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
-                db.query(User).filter_by(id=id).update(
-                    {"profile_image_url": profile_image_url}
-                )
-                db.commit()
-
                 user = db.query(User).filter_by(id=id).first()
+                if not user:
+                    return None
+                user.profile_image_url = profile_image_url
+                db.commit()
+                db.refresh(user)
                 return UserModel.model_validate(user)
         except Exception:
             return None
@@ -573,12 +582,12 @@ class UsersTable:
     ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
-                db.query(User).filter_by(id=id).update(
-                    {"last_active_at": int(time.time())}
-                )
-                db.commit()
-
                 user = db.query(User).filter_by(id=id).first()
+                if not user:
+                    return None
+                user.last_active_at = int(time.time())
+                db.commit()
+                db.refresh(user)
                 return UserModel.model_validate(user)
         except Exception:
             return None
@@ -620,12 +629,14 @@ class UsersTable:
     ) -> Optional[UserModel]:
         try:
             with get_db_context(db) as db:
-                db.query(User).filter_by(id=id).update(updated)
-                db.commit()
-
                 user = db.query(User).filter_by(id=id).first()
+                if not user:
+                    return None
+                for key, value in updated.items():
+                    setattr(user, key, value)
+                db.commit()
+                db.refresh(user)
                 return UserModel.model_validate(user)
-                # return UserModel(**user.dict())
         except Exception as e:
             print(e)
             return None

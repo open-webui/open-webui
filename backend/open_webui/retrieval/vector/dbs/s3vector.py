@@ -295,7 +295,11 @@ class S3VectorClient(VectorDBBase):
             raise
 
     def search(
-        self, collection_name: str, vectors: List[List[Union[float, int]]], limit: int
+        self,
+        collection_name: str,
+        vectors: List[List[Union[float, int]]],
+        filter: Optional[dict] = None,
+        limit: int = 10,
     ) -> Optional[SearchResult]:
         """
         Search for similar vectors in a collection using multiple query vectors.

@@ -12,7 +12,13 @@
 	const i18n = getContext('i18n');
 
 	onMount(() => {
-		_tools = tools.reduce((acc, tool) => {
+		// Filter out OAuth2.1 MCP tools - these cannot be set as model defaults
+		// because OAuth authentication is per-user and would fail for users
+		// who haven't completed the OAuth flow.
+		// The `authenticated` field only exists on OAuth2.1 MCP tools.
+		const availableTools = tools.filter((tool) => tool.authenticated === undefined);
+
+		_tools = availableTools.reduce((acc, tool) => {
 			acc[tool.id] = {
 				...tool,
 				selected: selectedToolIds.includes(tool.id)

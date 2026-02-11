@@ -2,38 +2,49 @@
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { prompts } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
-	import { getPromptByCommand, getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
+	import { getPromptById, getPrompts, updatePromptById } from '$lib/apis/prompts';
 	import { page } from '$app/stores';
 
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
 	let prompt = null;
-	let disabled = true;
+	let disabled = false;
+
+	// Get prompt ID from route params
+	$: promptId = $page.params.id;
 
 	const onSubmit = async (_prompt) => {
 		console.log(_prompt);
-		const prompt = await updatePromptByCommand(localStorage.token, _prompt).catch((error) => {
+		const updatedPrompt = await updatePromptById(localStorage.token, _prompt).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
-		if (prompt) {
+		if (updatedPrompt) {
 			toast.success($i18n.t('Prompt updated successfully'));
 			await prompts.set(await getPrompts(localStorage.token));
-			await goto('/workspace/prompts');
+			// Update local prompt state to reflect the new version
+			prompt = {
+				id: updatedPrompt.id,
+				name: updatedPrompt.name,
+				command: updatedPrompt.command,
+				content: updatedPrompt.content,
+				version_id: updatedPrompt.version_id,
+				tags: updatedPrompt.tags,
+				access_grants: updatedPrompt?.access_grants === undefined ? [] : updatedPrompt?.access_grants
+			};
 		}
 	};
 
 	onMount(async () => {
-		const command = $page.url.searchParams.get('command');
-		if (command) {
-			const _prompt = await getPromptByCommand(
+		if (promptId) {
+			const _prompt = await getPromptById(
 				localStorage.token,
-				command.replace(/\//g, '')
+				promptId
 			).catch((error) => {
 				toast.error(`${error}`);
 				return null;
@@ -42,10 +53,13 @@
 			if (_prompt) {
 				disabled = !_prompt.write_access ?? true;
 				prompt = {
-					title: _prompt.title,
+					id: _prompt.id,
+					name: _prompt.name,
 					command: _prompt.command,
 					content: _prompt.content,
-					access_control: _prompt?.access_control === undefined ? {} : _prompt?.access_control
+					version_id: _prompt.version_id,
+					tags: _prompt.tags,
+					access_grants: _prompt?.access_grants === undefined ? [] : _prompt?.access_grants
 				};
 			} else {
 				goto('/workspace/prompts');

@@ -24,6 +24,8 @@ from opentelemetry import trace
 
 from open_webui.utils.access_control import has_permission
 from open_webui.models.users import Users
+from open_webui.models.auths import Auths
+
 
 from open_webui.constants import ERROR_MESSAGES
 
@@ -31,6 +33,7 @@ from open_webui.env import (
     ENABLE_PASSWORD_VALIDATION,
     OFFLINE_MODE,
     LICENSE_BLOB,
+    PASSWORD_VALIDATION_HINT,
     PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
     pk,
@@ -42,8 +45,6 @@ from open_webui.env import (
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
-from open_webui.internal.db import get_session
 
 
 log = logging.getLogger(__name__)
@@ -173,7 +174,7 @@ def validate_password(password: str) -> bool:
 
     if ENABLE_PASSWORD_VALIDATION:
         if not PASSWORD_VALIDATION_REGEX_PATTERN.match(password):
-            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD())
+            raise Exception(ERROR_MESSAGES.INVALID_PASSWORD(PASSWORD_VALIDATION_HINT))
 
     return True
 
@@ -277,7 +278,10 @@ async def get_current_user(
     response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
-    db: Session = Depends(get_session),
+    # NOTE: We intentionally do NOT use Depends(get_session) here.
+    # Sessions are managed internally with short-lived context managers.
+    # This ensures connections are released immediately after auth queries,
+    # not held for the entire request duration (e.g., during 30+ second LLM calls).
 ):
     token = None
 
@@ -292,7 +296,7 @@ async def get_current_user(
 
     # auth by api key
     if token.startswith("sk-"):
-        user = get_current_user_by_api_key(request, token, db=db)
+        user = get_current_user_by_api_key(request, token)
 
         # Add user info to current span
         current_span = trace.get_current_span()
@@ -321,7 +325,7 @@ async def get_current_user(
                     detail="Invalid token",
                 )
 
-            user = Users.get_user_by_id(data["id"], db=db)
+            user = Users.get_user_by_id(data["id"])
             if user is None:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -371,8 +375,9 @@ async def get_current_user(
         raise e
 
 
-def get_current_user_by_api_key(request, api_key: str, db: Session = None):
-    user = Users.get_user_by_api_key(api_key, db=db)
+def get_current_user_by_api_key(request, api_key: str):
+    # Each function call manages its own short-lived session internally
+    user = Users.get_user_by_api_key(api_key)
 
     if user is None:
         raise HTTPException(
@@ -400,7 +405,7 @@ def get_current_user_by_api_key(request, api_key: str, db: Session = None):
         current_span.set_attribute("client.user.role", user.role)
         current_span.set_attribute("client.auth.type", "api_key")
 
-    Users.update_last_active_by_id(user.id, db=db)
+    Users.update_last_active_by_id(user.id)
     return user
 
 
@@ -420,3 +425,37 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def create_admin_user(email: str, password: str, name: str = "Admin"):
+    """
+    Create an admin user from environment variables.
+    Used for headless/automated deployments.
+    Returns the created user or None if creation failed.
+    """
+
+    if not email or not password:
+        return None
+
+    if Users.has_users():
+        log.debug("Users already exist, skipping admin creation")
+        return None
+
+    log.info(f"Creating admin account from environment variables: {email}")
+    try:
+        hashed = get_password_hash(password)
+        user = Auths.insert_new_auth(
+            email=email.lower(),
+            password=hashed,
+            name=name,
+            role="admin",
+        )
+        if user:
+            log.info(f"Admin account created successfully: {email}")
+            return user
+        else:
+            log.error("Failed to create admin account from environment variables")
+            return None
+    except Exception as e:
+        log.error(f"Error creating admin account: {e}")
+        return None

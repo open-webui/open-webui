@@ -35,11 +35,6 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
-	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
-	import Markdown from '../chat/Messages/Markdown.svelte';
-	import Image from './Image.svelte';
-	import FullHeightIframe from './FullHeightIframe.svelte';
-	import { settings } from '$lib/stores';
 
 	export let open = false;
 
@@ -62,167 +57,14 @@
 	$: onChange(open);
 
 	const collapsibleId = uuidv4();
-
-	function parseJSONString(str) {
-		try {
-			return parseJSONString(JSON.parse(str));
-		} catch (e) {
-			return str;
-		}
-	}
-
-	function formatJSONString(str) {
-		try {
-			const parsed = parseJSONString(str);
-			// If parsed is an object/array, then it's valid JSON
-			if (typeof parsed === 'object') {
-				return JSON.stringify(parsed, null, 2);
-			} else {
-				// It's a primitive value like a number, boolean, etc.
-				return `${JSON.stringify(String(parsed))}`;
-			}
-		} catch (e) {
-			// Not valid JSON, return as-is
-			return str;
-		}
-	}
 </script>
 
 <div {id} class={className}>
-	{#if attributes?.type === 'tool_calls'}
-		{@const args = decode(attributes?.arguments)}
-		{@const result = decode(attributes?.result ?? '')}
-		{@const files = parseJSONString(decode(attributes?.files ?? ''))}
-		{@const embeds = parseJSONString(decode(attributes?.embeds ?? ''))}
-
-		{#if embeds && Array.isArray(embeds) && embeds.length > 0}
-			<div class="py-1 w-full cursor-pointer">
-				<div class=" w-full text-xs text-gray-500">
-					<div class="">
-						{attributes.name}
-					</div>
-				</div>
-
-				{#each embeds as embed, idx}
-					<div class="my-2" id={`${collapsibleId}-tool-calls-${attributes?.id}-embed-${idx}`}>
-						<FullHeightIframe
-							src={embed}
-							{args}
-							allowScripts={true}
-							allowForms={true}
-							allowSameOrigin={true}
-							allowPopups={true}
-						/>
-					</div>
-				{/each}
-			</div>
-		{:else}
-			<div
-				class="{buttonClassName} cursor-pointer"
-				on:pointerup={() => {
-					if (!disabled) {
-						open = !open;
-					}
-				}}
-			>
-				<div
-					class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done &&
-					attributes?.done !== 'true'
-						? 'shimmer'
-						: ''}
-			"
-				>
-					{#if attributes?.done && attributes?.done !== 'true'}
-						<div>
-							<Spinner className="size-4" />
-						</div>
-					{/if}
-
-					<div class="">
-						{#if attributes?.done === 'true'}
-							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}`}
-								content={$i18n.t('View Result from **{{NAME}}**', {
-									NAME: attributes.name
-								})}
-							/>
-						{:else}
-							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-executing`}
-								content={$i18n.t('Executing **{{NAME}}**...', {
-									NAME: attributes.name
-								})}
-							/>
-						{/if}
-					</div>
-
-					<div class="flex self-center translate-y-[1px]">
-						{#if open}
-							<ChevronUp strokeWidth="3.5" className="size-3.5" />
-						{:else}
-							<ChevronDown strokeWidth="3.5" className="size-3.5" />
-						{/if}
-					</div>
-				</div>
-			</div>
-
-			{#if !grow}
-				{#if open && !hide}
-					<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-						{#if attributes?.type === 'tool_calls'}
-							{#if attributes?.done === 'true'}
-								<Markdown
-									id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
-									content={`> \`\`\`json
-> ${formatJSONString(args)}
-> ${formatJSONString(result)}
-> \`\`\``}
-								/>
-							{:else}
-								<Markdown
-									id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
-									content={`> \`\`\`json
-> ${formatJSONString(args)}
-> \`\`\``}
-								/>
-							{/if}
-						{:else}
-							<slot name="content" />
-						{/if}
-					</div>
-				{/if}
-			{/if}
-		{/if}
-
-		{#if attributes?.done === 'true'}
-			{#if typeof files === 'object'}
-				{#each files ?? [] as file, idx}
-					{#if typeof file === 'string'}
-						{#if file.startsWith('data:image/')}
-							<Image
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
-								src={file}
-								alt="Image"
-							/>
-						{/if}
-					{:else if typeof file === 'object'}
-						{#if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) && file.url}
-							<Image
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
-								src={file.url}
-								alt="Image"
-							/>
-						{/if}
-					{/if}
-				{/each}
-			{/if}
-		{/if}
-	{:else}
 		{#if title !== null}
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<!-- svelte-ignore a11y-click-events-have-key-events -->
 			<div
-				class="{buttonClassName} cursor-pointer"
+				class="{buttonClassName} {disabled ? '' : 'cursor-pointer'}"
 				on:pointerup={() => {
 					if (!disabled) {
 						open = !open;
@@ -270,13 +112,15 @@
 						{/if}
 					</div>
 
-					<div class="flex self-center translate-y-[1px]">
-						{#if open}
-							<ChevronUp strokeWidth="3.5" className="size-3.5" />
-						{:else}
-							<ChevronDown strokeWidth="3.5" className="size-3.5" />
-						{/if}
-					</div>
+					{#if !disabled}
+						<div class="flex self-center translate-y-[1px]">
+							{#if open}
+								<ChevronUp strokeWidth="3.5" className="size-3.5" />
+							{:else}
+								<ChevronDown strokeWidth="3.5" className="size-3.5" />
+							{/if}
+						</div>
+					{/if}
 				</div>
 			</div>
 		{:else}
@@ -331,5 +175,4 @@
 				</div>
 			{/if}
 		{/if}
-	{/if}
 </div>

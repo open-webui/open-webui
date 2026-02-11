@@ -22,6 +22,7 @@ from sqlalchemy import (
     ForeignKey,
     cast,
     or_,
+    select,
 )
 
 
@@ -99,6 +100,16 @@ class GroupResponse(GroupModel):
     member_count: Optional[int] = None
 
 
+class GroupInfoResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    description: str
+    member_count: Optional[int] = None
+    created_at: int
+    updated_at: int
+
+
 class GroupForm(BaseModel):
     name: str
     description: str
@@ -165,27 +176,28 @@ class GroupTable:
                     share_value = filter["share"]
                     member_id = filter.get("member_id")
                     json_share = Group.data["config"]["share"]
-                    json_share_bool = json_share.as_boolean()
                     json_share_str = json_share.as_string()
+                    json_share_lower = func.lower(json_share_str)
 
                     if share_value:
-                        # Groups open to anyone: data is null, share is null, or share is true
+                        # Groups open to anyone: data is null, config.share is null, or share is true
+                        # Use case-insensitive string comparison to handle variations like "True", "TRUE"
+                        # Handle potential JSON boolean to string casting issues by checking for both string 'true' and boolean equivalence if possible, 
                         anyone_can_share = or_(
                             Group.data.is_(None),
-                            json_share_bool.is_(None),
-                            json_share_bool == True,
+                            json_share_str.is_(None),
+                            json_share_lower == "true",
+                            json_share_lower == "1", # Handle SQLite boolean true
                         )
 
                         if member_id:
                             # Also include member-only groups where user is a member
-                            member_groups_subq = (
-                                db.query(GroupMember.group_id)
-                                .filter(GroupMember.user_id == member_id)
-                                .subquery()
+                            member_groups_select = select(GroupMember.group_id).where(
+                                GroupMember.user_id == member_id
                             )
                             members_only_and_is_member = and_(
-                                json_share_str == "members",
-                                Group.id.in_(member_groups_subq),
+                                json_share_lower == "members",
+                                Group.id.in_(member_groups_select),
                             )
                             query = query.filter(
                                 or_(anyone_can_share, members_only_and_is_member)
@@ -194,7 +206,7 @@ class GroupTable:
                             query = query.filter(anyone_can_share)
                     else:
                         query = query.filter(
-                            and_(Group.data.isnot(None), json_share_bool == False)
+                            and_(Group.data.isnot(None), json_share_lower == "false")
                         )
 
                 else:
@@ -304,14 +316,14 @@ class GroupTable:
 
     def get_group_user_ids_by_id(
         self, id: str, db: Optional[Session] = None
-    ) -> Optional[list[str]]:
+    ) -> list[str]:
         with get_db_context(db) as db:
             members = (
                 db.query(GroupMember.user_id).filter(GroupMember.group_id == id).all()
             )
 
             if not members:
-                return None
+                return []
 
             return [m[0] for m in members]
 
@@ -588,11 +600,10 @@ class GroupTable:
                 if not user_ids:
                     return GroupModel.model_validate(group)
 
-                # Remove each user from group_member
-                for user_id in user_ids:
-                    db.query(GroupMember).filter(
-                        GroupMember.group_id == id, GroupMember.user_id == user_id
-                    ).delete()
+                # Remove users from group_member in batch
+                db.query(GroupMember).filter(
+                    GroupMember.group_id == id, GroupMember.user_id.in_(user_ids)
+                ).delete(synchronize_session=False)
 
                 # Update group timestamp
                 group.updated_at = int(time.time())

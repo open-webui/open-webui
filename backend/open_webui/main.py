@@ -68,6 +68,7 @@ from open_webui.socket.main import (
     get_models_in_use,
 )
 from open_webui.routers import (
+    analytics,
     audio,
     images,
     ollama,
@@ -288,6 +289,7 @@ from open_webui.config import (
     ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
     PDF_EXTRACT_IMAGES,
+    PDF_LOADER_MODE,
     YOUTUBE_LOADER_LANGUAGE,
     YOUTUBE_LOADER_PROXY_URL,
     # Retrieval (Web Search)
@@ -352,6 +354,9 @@ from open_webui.config import (
     EXTERNAL_WEB_SEARCH_API_KEY,
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
+    YANDEX_WEB_SEARCH_URL,
+    YANDEX_WEB_SEARCH_API_KEY,
+    YANDEX_WEB_SEARCH_CONFIG,
     # WebUI
     WEBUI_AUTH,
     WEBUI_NAME,
@@ -487,6 +492,11 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
     ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
+    # Admin Account Runtime Creation
+    WEBUI_ADMIN_EMAIL,
+    WEBUI_ADMIN_PASSWORD,
+    WEBUI_ADMIN_NAME,
+    ENABLE_EASTER_EGGS,
 )
 
 
@@ -502,8 +512,11 @@ from open_webui.utils.chat import (
     chat_action as chat_action_handler,
 )
 from open_webui.utils.embeddings import generate_embeddings
-from open_webui.utils.middleware import process_chat_payload, process_chat_response
-from open_webui.utils.access_control import has_access
+from open_webui.utils.middleware import (
+    build_chat_response_context,
+    process_chat_payload,
+    process_chat_response,
+)
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -511,6 +524,7 @@ from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
     get_verified_user,
+    create_admin_user,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import (
@@ -588,6 +602,12 @@ async def lifespan(app: FastAPI):
 
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
+
+    # Create admin account from env vars if specified and no users exist
+    if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
+        if create_admin_user(WEBUI_ADMIN_EMAIL, WEBUI_ADMIN_PASSWORD, WEBUI_ADMIN_NAME):
+            # Disable signup since we now have an admin
+            app.state.config.ENABLE_SIGNUP = False
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
@@ -796,6 +816,21 @@ app.state.config.ENABLE_USER_STATUS = ENABLE_USER_STATUS
 app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
 app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
 
+# Migrate legacy access_control → access_grants on boot
+from open_webui.utils.access_control import migrate_access_control
+
+connections = app.state.config.TOOL_SERVER_CONNECTIONS
+if any("access_control" in c.get("config", {}) for c in connections):
+    for connection in connections:
+        migrate_access_control(connection.get("config", {}))
+    app.state.config.TOOL_SERVER_CONNECTIONS = connections
+
+arena_models = app.state.config.EVALUATION_ARENA_MODELS
+if any("access_control" in m.get("meta", {}) for m in arena_models):
+    for model in arena_models:
+        migrate_access_control(model.get("meta", {}))
+    app.state.config.EVALUATION_ARENA_MODELS = arena_models
+
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
@@ -934,6 +969,7 @@ app.state.config.RAG_OLLAMA_BASE_URL = RAG_OLLAMA_BASE_URL
 app.state.config.RAG_OLLAMA_API_KEY = RAG_OLLAMA_API_KEY
 
 app.state.config.PDF_EXTRACT_IMAGES = PDF_EXTRACT_IMAGES
+app.state.config.PDF_LOADER_MODE = PDF_LOADER_MODE
 
 app.state.config.YOUTUBE_LOADER_LANGUAGE = YOUTUBE_LOADER_LANGUAGE
 app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
@@ -995,6 +1031,9 @@ app.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL
 app.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY
 app.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL
 app.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY
+app.state.config.YANDEX_WEB_SEARCH_URL = YANDEX_WEB_SEARCH_URL
+app.state.config.YANDEX_WEB_SEARCH_API_KEY = YANDEX_WEB_SEARCH_API_KEY
+app.state.config.YANDEX_WEB_SEARCH_CONFIG = YANDEX_WEB_SEARCH_CONFIG
 
 
 app.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL
@@ -1164,7 +1203,6 @@ app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
 app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
 
 app.state.config.WHISPER_MODEL = WHISPER_MODEL
-app.state.config.WHISPER_VAD_FILTER = WHISPER_VAD_FILTER
 app.state.config.DEEPGRAM_API_KEY = DEEPGRAM_API_KEY
 
 app.state.config.AUDIO_STT_AZURE_API_KEY = AUDIO_STT_AZURE_API_KEY
@@ -1307,7 +1345,9 @@ class APIKeyRestrictionMiddleware(BaseHTTPMiddleware):
         token = None
 
         if auth_header:
-            scheme, token = auth_header.split(" ")
+            parts = auth_header.split(" ", 1)
+            if len(parts) == 2:
+                token = parts[1]
 
         # Only apply restrictions if an sk- API key is used
         if token and token.startswith("sk-"):
@@ -1358,6 +1398,13 @@ async def check_url(request: Request, call_next):
     request.state.token = get_http_authorization_cred(
         request.headers.get("Authorization")
     )
+    # Fallback to cookie token for browser sessions
+    if request.state.token is None and request.cookies.get("token"):
+        from fastapi.security import HTTPAuthorizationCredentials
+
+        request.state.token = HTTPAuthorizationCredentials(
+            scheme="Bearer", credentials=request.cookies.get("token")
+        )
 
     request.state.enable_api_keys = app.state.config.ENABLE_API_KEYS
     response = await call_next(request)
@@ -1431,6 +1478,7 @@ app.include_router(functions.router, prefix="/api/v1/functions", tags=["function
 app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 # SCIM 2.0 API for identity management
@@ -1718,9 +1766,11 @@ async def chat_completion(
                 except:
                     pass
 
-            return await process_chat_response(
-                request, response, form_data, user, metadata, model, events, tasks
+            ctx = build_chat_response_context(
+                request, form_data, user, model, metadata, tasks, events
             )
+
+            return await process_chat_response(response, ctx)
         except asyncio.CancelledError:
             log.info("Chat processing was cancelled")
             try:
@@ -1770,6 +1820,16 @@ async def chat_completion(
             except Exception as e:
                 log.debug(f"Error cleaning up: {e}")
                 pass
+            # Emit chat:active=false when task completes
+            try:
+                if metadata.get("chat_id"):
+                    event_emitter = get_event_emitter(metadata, update_db=False)
+                    if event_emitter:
+                        await event_emitter(
+                            {"type": "chat:active", "data": {"active": False}}
+                        )
+            except Exception as e:
+                log.debug(f"Error emitting chat:active: {e}")
 
     if (
         metadata.get("session_id")
@@ -1782,6 +1842,12 @@ async def chat_completion(
             process_chat(request, form_data, user, metadata, model),
             id=metadata["chat_id"],
         )
+        # Emit chat:active=true when task starts
+        event_emitter = get_event_emitter(metadata, update_db=False)
+        if event_emitter:
+            await event_emitter(
+                {"type": "chat:active", "data": {"active": True}}
+            )
         return {"status": True, "task_id": task_id}
     else:
         return await process_chat(request, form_data, user, metadata, model)
@@ -1922,6 +1988,7 @@ async def get_app_config(request: Request):
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             "enable_version_update_check": ENABLE_VERSION_UPDATE_CHECK,
             "enable_public_active_users_count": ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
+            "enable_easter_eggs": ENABLE_EASTER_EGGS,
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,

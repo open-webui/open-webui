@@ -68,6 +68,13 @@ class FeedbackIdResponse(BaseModel):
     updated_at: int
 
 
+class LeaderboardFeedbackData(BaseModel):
+    """Minimal feedback data for leaderboard computation (excludes snapshot/meta)."""
+
+    id: str
+    data: Optional[dict] = None
+
+
 class RatingData(BaseModel):
     rating: Optional[str | int] = None
     model_id: Optional[str] = None
@@ -118,6 +125,17 @@ class FeedbackUserResponse(FeedbackResponse):
 class FeedbackListResponse(BaseModel):
     items: list[FeedbackUserResponse]
     total: int
+
+
+class ModelHistoryEntry(BaseModel):
+    date: str
+    won: int
+    lost: int
+
+
+class ModelHistoryResponse(BaseModel):
+    model_id: str
+    history: list[ModelHistoryEntry]
 
 
 class FeedbackTable:
@@ -172,6 +190,23 @@ class FeedbackTable:
                 return FeedbackModel.model_validate(feedback)
         except Exception:
             return None
+
+    def get_feedbacks_by_chat_id(
+        self, chat_id: str, db: Optional[Session] = None
+    ) -> list[FeedbackModel]:
+        """Get all feedbacks for a specific chat."""
+        try:
+            with get_db_context(db) as db:
+                # meta.chat_id stores the chat reference
+                feedbacks = (
+                    db.query(Feedback)
+                    .filter(Feedback.meta["chat_id"].as_string() == chat_id)
+                    .order_by(Feedback.created_at.desc())
+                    .all()
+                )
+                return [FeedbackModel.model_validate(fb) for fb in feedbacks]
+        except Exception:
+            return []
 
     def get_feedback_items(
         self,
@@ -271,6 +306,85 @@ class FeedbackTable:
                 .all()
             ]
 
+    def get_feedbacks_for_leaderboard(
+        self, db: Optional[Session] = None
+    ) -> list[LeaderboardFeedbackData]:
+        """Fetch only id and data for leaderboard computation (excludes snapshot/meta)."""
+        with get_db_context(db) as db:
+            return [
+                LeaderboardFeedbackData(id=row.id, data=row.data)
+                for row in db.query(Feedback.id, Feedback.data).all()
+            ]
+
+    def get_model_evaluation_history(
+        self, model_id: str, days: int = 30, db: Optional[Session] = None
+    ) -> list[ModelHistoryEntry]:
+        """
+        Get daily wins/losses for a specific model over the past N days.
+        If days=0, returns all time data starting from first feedback.
+        Returns: [{"date": "2026-01-08", "won": 5, "lost": 2}, ...]
+        """
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+
+        with get_db_context(db) as db:
+            if days == 0:
+                # All time - no cutoff
+                rows = db.query(Feedback.created_at, Feedback.data).all()
+            else:
+                cutoff = int(time.time()) - (days * 86400)
+                rows = (
+                    db.query(Feedback.created_at, Feedback.data)
+                    .filter(Feedback.created_at >= cutoff)
+                    .all()
+                )
+
+        daily_counts = defaultdict(lambda: {"won": 0, "lost": 0})
+        first_date = None
+
+        for created_at, data in rows:
+            if not data:
+                continue
+            if data.get("model_id") != model_id:
+                continue
+
+            rating_str = str(data.get("rating", ""))
+            if rating_str not in ("1", "-1"):
+                continue
+
+            date_str = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d")
+            if rating_str == "1":
+                daily_counts[date_str]["won"] += 1
+            else:
+                daily_counts[date_str]["lost"] += 1
+
+            # Track first date for this model
+            if first_date is None or date_str < first_date:
+                first_date = date_str
+
+        # Generate date range
+        result = []
+        today = datetime.now().date()
+
+        if days == 0 and first_date:
+            # All time: start from first feedback date
+            start_date = datetime.strptime(first_date, "%Y-%m-%d").date()
+            num_days = (today - start_date).days + 1
+        else:
+            # Fixed range
+            num_days = days
+            start_date = today - timedelta(days=days - 1)
+
+        for i in range(num_days):
+            d = start_date + timedelta(days=i)
+            date_str = d.strftime("%Y-%m-%d")
+            counts = daily_counts.get(date_str, {"won": 0, "lost": 0})
+            result.append(
+                ModelHistoryEntry(date=date_str, won=counts["won"], lost=counts["lost"])
+            )
+
+        return result
+
     def get_feedbacks_by_type(
         self, type: str, db: Optional[Session] = None
     ) -> list[FeedbackModel]:
@@ -363,23 +477,15 @@ class FeedbackTable:
         self, user_id: str, db: Optional[Session] = None
     ) -> bool:
         with get_db_context(db) as db:
-            feedbacks = db.query(Feedback).filter_by(user_id=user_id).all()
-            if not feedbacks:
-                return False
-            for feedback in feedbacks:
-                db.delete(feedback)
+            result = db.query(Feedback).filter_by(user_id=user_id).delete()
             db.commit()
-            return True
+            return result > 0
 
     def delete_all_feedbacks(self, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:
-            feedbacks = db.query(Feedback).all()
-            if not feedbacks:
-                return False
-            for feedback in feedbacks:
-                db.delete(feedback)
+            result = db.query(Feedback).delete()
             db.commit()
-            return True
+            return result > 0
 
 
 Feedbacks = FeedbackTable()

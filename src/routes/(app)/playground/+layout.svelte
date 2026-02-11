@@ -68,6 +68,13 @@
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/completions">{$i18n.t('Completions')}</a
 					>
+
+					<a
+						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/images')
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+						href="/playground/images">{$i18n.t('Images')}</a
+					>
 				</div>
 			</div>
 		</div>

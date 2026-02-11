@@ -449,8 +449,9 @@ export const executeToolServer = async (
 
 		if (operation.parameters) {
 			operation.parameters.forEach((param: any) => {
-				const paramName = param.name;
-				const paramIn = param.in;
+				const paramName = param?.name;
+				if (!paramName) return;
+				const paramIn = param?.in;
 				if (params.hasOwnProperty(paramName)) {
 					if (paramIn === 'path') {
 						pathParams[paramName] = params[paramName];
@@ -1674,7 +1675,7 @@ export interface ModelMeta {
 	profile_image_url?: string;
 }
 
-export interface ModelParams {}
+export interface ModelParams { }
 
 export type GlobalModelConfig = ModelConfig[];
 
