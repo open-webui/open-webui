@@ -38,6 +38,7 @@
 	export let paragraphTag = 'p';
 
 	export let editCodeBlock = true;
+export let exportMode = false;
 	export let topPadding = false;
 
 	export let onSave: Function = () => {};
@@ -108,7 +109,7 @@
 		{#if token.raw.includes('```')}
 			<CodeBlock
 				id={`${id}-${tokenIdx}`}
-				collapsed={$settings?.collapseCodeBlocks ?? false}
+				collapsed={exportMode ? false : ($settings?.collapseCodeBlocks ?? false)}
 				{token}
 				lang={token?.lang ?? ''}
 				code={token?.text ?? ''}
@@ -116,6 +117,7 @@
 				{save}
 				{preview}
 				edit={editCodeBlock}
+				{exportMode}
 				stickyButtonsClassName={topPadding ? 'top-10' : 'top-0'}
 				onSave={(value) => {
 					onSave({
@@ -228,6 +230,7 @@
 					tokens={token.tokens}
 					{done}
 					{editCodeBlock}
+					{exportMode}
 					{onTaskClick}
 					{sourceIds}
 					{onSourceClick}
@@ -263,6 +266,7 @@
 							top={token.loose}
 							{done}
 							{editCodeBlock}
+							{exportMode}
 							{onTaskClick}
 							{sourceIds}
 							{onSourceClick}
@@ -298,6 +302,7 @@
 									top={token.loose}
 									{done}
 									{editCodeBlock}
+									{exportMode}
 									{onTaskClick}
 									{sourceIds}
 									{onSourceClick}
@@ -310,6 +315,7 @@
 								top={token.loose}
 								{done}
 								{editCodeBlock}
+								{exportMode}
 								{onTaskClick}
 								{sourceIds}
 								{onSourceClick}
@@ -324,7 +330,9 @@
 			.replace(/<summary>.*?<\/summary>/gi, '')
 			.trim()}
 
-		{#if token?.attributes?.type === 'tool_calls'}
+		{#if exportMode && token?.attributes?.type === 'reasoning'}
+			<!-- Hide reasoning/thinking blocks in export mode -->
+		{:else if token?.attributes?.type === 'tool_calls'}
 			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
 			<ToolCallDisplay
 				id={`${id}-${tokenIdx}-tc`}
@@ -335,7 +343,7 @@
 		{:else if textContent.length > 0}
 			<Collapsible
 				title={token.summary}
-				open={$settings?.expandDetails ?? false}
+				open={exportMode ? true : ($settings?.expandDetails ?? false)}
 				attributes={token?.attributes}
 				className="w-full space-y-1"
 				dir="auto"
@@ -347,6 +355,7 @@
 						attributes={token?.attributes}
 						{done}
 						{editCodeBlock}
+						{exportMode}
 						{onTaskClick}
 						{sourceIds}
 						{onSourceClick}

@@ -36,6 +36,7 @@
 	export let run = true;
 	export let preview = false;
 	export let collapsed = false;
+	export let exportMode = false;
 
 	export let token;
 	export let lang = '';
@@ -76,6 +77,10 @@
 	const collapseCodeBlock = () => {
 		collapsed = !collapsed;
 	};
+
+	$: if (exportMode && collapsed) {
+		collapsed = false;
+	}
 
 	const saveCode = () => {
 		saved = true;
@@ -446,10 +451,11 @@
 				{lang}
 			</div>
 
-			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 pr-3 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white"
-			>
-				<div class="flex items-center gap-0.5">
+			{#if !exportMode}
+				<div
+					class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 pr-3 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white"
+				>
+					<div class="flex items-center gap-0.5">
 					<button
 						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 						on:click={collapseCodeBlock}
@@ -510,8 +516,9 @@
 							</div>
 						</button>
 					{/if}
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			<div
 				class="language-{lang} rounded-t-2xl -mt-8 {editorClassName
@@ -543,7 +550,9 @@
 								stderr ||
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
-								class="language-{lang} rounded-t-none whitespace-pre text-sm"
+								class="language-{lang} rounded-t-none {exportMode
+									? 'whitespace-pre-wrap break-words'
+									: 'whitespace-pre'} text-sm"
 								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
 									code}</code
 							></pre>
