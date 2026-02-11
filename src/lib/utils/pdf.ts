@@ -1,6 +1,8 @@
 import DOMPurify from 'dompurify';
+import canvasSize from 'canvas-size';
+import html2canvas, { type Options as Html2CanvasOptions } from 'html2canvas-pro';
+import { jsPDF } from 'jspdf';
 import type JSPDF from 'jspdf';
-import type { Options as Html2CanvasOptions } from 'html2canvas-pro';
 import i18n from 'i18next';
 import { writable } from 'svelte/store';
 
@@ -104,6 +106,7 @@ interface RenderElementToCanvasOptions {
 	y?: number;
 	width?: number;
 	height?: number;
+	elementHeight?: number;
 	onclone?: (document: Document, element: HTMLElement) => void;
 	ignoreElements?: (element: Element) => boolean;
 }
@@ -118,20 +121,20 @@ const A4_PAGE_HEIGHT_MM = 297;
 const DEFAULT_VIRTUAL_WIDTH = 800;
 /** Canvas scale factor for increased resolution */
 const CANVAS_SCALE = window.devicePixelRatio || 2;
-/** JPEG quality for image compression (0.0 to 1.0) */
+/** JPEG quality for canvas encoding before PDF embedding */
 const JPEG_QUALITY = 0.95;
 /** Conservative browser canvas edge limit in pixels */
 const MAX_CANVAS_EDGE_PX = 16384;
 /** Conservative browser canvas area limit in pixels */
 const MAX_CANVAS_AREA_PX = 268_000_000;
-/** Number of concurrent html2canvas render tasks */
-const RENDER_CONCURRENCY = 1;
 /** Extra tail guard height to avoid clipping final content */
 const RENDER_TAIL_GUARD_PX = 128;
 /** Step size used when probing canvas height fallback tests */
 const CANVAS_PROBE_STEP_PX = 1024;
 
 const canvasMaxHeightProbeCache = new Map<number, Promise<number | null>>();
+const sharedProbeCanvas = document.createElement('canvas');
+let sharedProbeContext: CanvasRenderingContext2D | null = null;
 
 /** Whether the current browser is little-endian */
 const IS_LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x01020304]).buffer)[0] === 0x04;
@@ -212,7 +215,6 @@ const getEstimatedRemainingMinutes = (startedAt: number, progressPercent: number
  * @returns New jsPDF instance configured for A4 portrait orientation
  */
 const createPdfDocument = async () => {
-	const { jsPDF } = await import('jspdf');
 	return new jsPDF('p', 'mm', 'a4');
 };
 
@@ -254,11 +256,11 @@ const renderElementToCanvas = async (
 	virtualWidth: number,
 	options?: RenderElementToCanvasOptions
 ): Promise<HTMLCanvasElement> => {
-	const { default: html2canvas } = await import('html2canvas-pro');
-
 	const isDark = isDarkMode();
 	const cropY = options?.y ?? 0;
-	const elementHeight = Math.max(1, Math.ceil(element.getBoundingClientRect().height), element.scrollHeight);
+	const elementHeight =
+		options?.elementHeight ??
+		Math.max(1, Math.ceil(element.getBoundingClientRect().height), element.scrollHeight);
 	const cropHeight = Math.max(1, Math.ceil(options?.height ?? elementHeight));
 	const windowHeight = Math.max(elementHeight, Math.ceil(cropY + cropHeight));
 	const canvasOptions: Partial<Html2CanvasOptions> = {
@@ -290,7 +292,6 @@ const getSafeRenderChunkHeightPxFallback = (virtualWidth: number, scale: number)
 
 const probeMaxCanvasHeightPx = async (canvasWidthPx: number): Promise<number | null> => {
 	try {
-		const { default: canvasSize } = await import('canvas-size');
 		const [maxHeightResult, maxAreaResult] = await Promise.all([
 			canvasSize.maxHeight({ useWorker: true, usePromise: true }),
 			canvasSize.maxArea({ useWorker: true, usePromise: true })
@@ -410,12 +411,17 @@ const appendCanvasChunkToPdf = (
 	state: PdfAppendState,
 	pageWidthMM: number,
 	pageHeightMM: number,
+	isDark: boolean,
 	options?: AppendCanvasChunkOptions
 ): AppendCanvasChunkResult => {
 	const pxPerPdfMM = canvas.width / pageWidthMM;
 	const pageSliceHeightPx = Math.max(1, Math.floor(pxPerPdfMM * pageHeightMM));
 	const pageCanvas = document.createElement('canvas');
 	pageCanvas.width = canvas.width;
+	const pageCanvasContext = pageCanvas.getContext('2d');
+	if (!pageCanvasContext) {
+		throw new Error('Failed to get page canvas context');
+	}
 	let pagesAdded = 0;
 
 	let offsetY = 0;
@@ -423,27 +429,34 @@ const appendCanvasChunkToPdf = (
 		const sliceHeight = Math.min(pageSliceHeightPx, canvas.height - offsetY);
 		if (
 			options?.stopWhenEncounteringEmptySlice &&
-			!canvasRegionHasRenderableContent(canvas, 0, offsetY, canvas.width, sliceHeight)
+			!canvasRegionHasRenderableContent(canvas, 0, offsetY, canvas.width, sliceHeight, isDark)
 		) {
 			return { pagesAdded, encounteredEmptySlice: true };
 		}
 
 		pageCanvas.height = sliceHeight;
-
-		const ctx = pageCanvas.getContext('2d');
-		if (!ctx) {
-			throw new Error('Failed to get page canvas context');
-		}
-		ctx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
-		ctx.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+		pageCanvasContext.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
+		pageCanvasContext.drawImage(
+			canvas,
+			0,
+			offsetY,
+			canvas.width,
+			sliceHeight,
+			0,
+			0,
+			canvas.width,
+			sliceHeight
+		);
 
 		if (state.pageCount > 0) {
 			pdf.addPage();
 		}
-		applyDarkModeBackground(pdf, pageWidthMM, pageHeightMM);
+		if (isDark) {
+			applyDarkModeBackground(pdf, pageWidthMM, pageHeightMM);
+		}
 
-		const imgData = pageCanvas.toDataURL('image/jpeg', JPEG_QUALITY);
 		const imgHeightMM = (sliceHeight * pageWidthMM) / canvas.width;
+		const imgData = pageCanvas.toDataURL('image/jpeg', JPEG_QUALITY);
 		pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMM, imgHeightMM);
 		state.pageCount += 1;
 		pagesAdded += 1;
@@ -462,7 +475,8 @@ const canvasRegionHasRenderableContent = (
 	sourceX: number,
 	sourceY: number,
 	sourceWidth: number,
-	sourceHeight: number
+	sourceHeight: number,
+	isDark: boolean
 ): boolean => {
 	const clampedWidth = Math.max(0, Math.floor(sourceWidth));
 	const clampedHeight = Math.max(0, Math.floor(sourceHeight));
@@ -475,10 +489,16 @@ const canvasRegionHasRenderableContent = (
 		const probeMaxEdge = 128;
 		const probeWidth = Math.max(1, Math.min(clampedWidth, probeMaxEdge));
 		const probeHeight = Math.max(1, Math.min(clampedHeight, probeMaxEdge));
-		const probeCanvas = document.createElement('canvas');
-		probeCanvas.width = probeWidth;
-		probeCanvas.height = probeHeight;
-		const probeContext = probeCanvas.getContext('2d', { willReadFrequently: true });
+		if (sharedProbeCanvas.width !== probeWidth) {
+			sharedProbeCanvas.width = probeWidth;
+		}
+		if (sharedProbeCanvas.height !== probeHeight) {
+			sharedProbeCanvas.height = probeHeight;
+		}
+		if (!sharedProbeContext) {
+			sharedProbeContext = sharedProbeCanvas.getContext('2d', { willReadFrequently: true });
+		}
+		const probeContext = sharedProbeContext;
 		if (!probeContext) {
 			return false;
 		}
@@ -500,7 +520,7 @@ const canvasRegionHasRenderableContent = (
 			imageData.byteOffset,
 			Math.floor(imageData.byteLength / 4)
 		);
-		const bg = isDarkMode() ? 0 : 255;
+		const bg = isDark ? 0 : 255;
 		const tolerance = 8;
 
 		for (let i = 0; i < pixels.length; i += 1) {
@@ -516,10 +536,6 @@ const canvasRegionHasRenderableContent = (
 	}
 
 	return false;
-};
-
-const canvasHasRenderableContent = (canvas: HTMLCanvasElement): boolean => {
-	return canvasRegionHasRenderableContent(canvas, 0, 0, canvas.width, canvas.height);
 };
 
 /**
@@ -666,7 +682,13 @@ const exportStyledElementToPdf = async (
 	}
 
 	throwIfAborted(signal);
-	const [pdf] = await Promise.all([createPdfDocument()]);
+	const pdf = await createPdfDocument();
+	const isDark = isDarkMode();
+	const elementHeight = Math.max(
+		1,
+		Math.ceil(element.getBoundingClientRect().height),
+		element.scrollHeight
+	);
 	const safeRenderChunkHeightPx = await getSafeRenderChunkHeightPx(virtualWidth, CANVAS_SCALE);
 	const chunks = buildElementRenderChunks(element, safeRenderChunkHeightPx);
 	const pdfState: PdfAppendState = { pageCount: 0 };
@@ -680,61 +702,47 @@ const exportStyledElementToPdf = async (
 
 	let completedChunks = 0;
 	let shouldStopTailContinuation = false;
-	initialChunkLoop: for (
-		let batchStart = 0;
-		batchStart < chunks.length;
-		batchStart += RENDER_CONCURRENCY
-	) {
+	for (let index = 0; index < chunks.length; index += 1) {
 		throwIfAborted(signal);
-		const batch = chunks.slice(batchStart, batchStart + RENDER_CONCURRENCY);
-		const renderedBatch = await Promise.all(
-			batch.map(async (chunk, batchOffset) => {
-				throwIfAborted(signal);
-				const index = batchStart + batchOffset;
-				const chunkCanvas = document.createElement('canvas');
-				chunkCanvas.width = Math.max(1, Math.floor(virtualWidth * CANVAS_SCALE));
-				chunkCanvas.height = Math.max(1, Math.floor(chunk.height * CANVAS_SCALE));
+		const chunk = chunks[index];
+		const chunkCanvas = document.createElement('canvas');
+		chunkCanvas.width = Math.max(1, Math.floor(virtualWidth * CANVAS_SCALE));
+		chunkCanvas.height = Math.max(1, Math.floor(chunk.height * CANVAS_SCALE));
 
-				const canvas = await renderElementToCanvas(element, virtualWidth, {
-					canvas: chunkCanvas,
-					x: 0,
-					y: chunk.y,
-					width: virtualWidth,
-					height: chunk.height
-				});
-				throwIfAborted(signal);
+		const canvas = await renderElementToCanvas(element, virtualWidth, {
+			canvas: chunkCanvas,
+			x: 0,
+			y: chunk.y,
+			width: virtualWidth,
+			height: chunk.height,
+			elementHeight
+		});
+		throwIfAborted(signal);
 
-				return { index, canvas };
-			})
-		);
-
-		renderedBatch.sort((a, b) => a.index - b.index);
-		for (const rendered of renderedBatch) {
-			throwIfAborted(signal);
-			const appendResult = appendCanvasChunkToPdf(
-				pdf,
-				rendered.canvas,
-				pdfState,
-				A4_PAGE_WIDTH_MM,
-				A4_PAGE_HEIGHT_MM,
-				{
-					stopWhenEncounteringEmptySlice: rendered.index === chunks.length - 1
-				}
-			);
-			completedChunks += 1;
-			const renderPercent = chunks.length > 0 ? 5 + (completedChunks / chunks.length) * 90 : 95;
-			emitExportProgress(onProgress, {
-				stage: 'rendering',
-				percent: Math.min(95, Math.round(renderPercent)),
-				currentChunk: completedChunks,
-				totalChunks: chunks.length,
-				pagesGenerated: pdfState.pageCount
-			});
-
-			if (appendResult.encounteredEmptySlice) {
-				shouldStopTailContinuation = true;
-				break initialChunkLoop;
+		const appendResult = appendCanvasChunkToPdf(
+			pdf,
+			canvas,
+			pdfState,
+			A4_PAGE_WIDTH_MM,
+			A4_PAGE_HEIGHT_MM,
+			isDark,
+			{
+				stopWhenEncounteringEmptySlice: index === chunks.length - 1
 			}
+		);
+		completedChunks += 1;
+		const renderPercent = chunks.length > 0 ? 5 + (completedChunks / chunks.length) * 90 : 95;
+		emitExportProgress(onProgress, {
+			stage: 'rendering',
+			percent: Math.min(95, Math.round(renderPercent)),
+			currentChunk: completedChunks,
+			totalChunks: chunks.length,
+			pagesGenerated: pdfState.pageCount
+		});
+
+		if (appendResult.encounteredEmptySlice) {
+			shouldStopTailContinuation = true;
+			break;
 		}
 	}
 
@@ -753,11 +761,12 @@ const exportStyledElementToPdf = async (
 				x: 0,
 				y: continuationY,
 				width: virtualWidth,
-				height: safeRenderChunkHeightPx
+				height: safeRenderChunkHeightPx,
+				elementHeight
 			});
 
 			throwIfAborted(signal);
-			if (!canvasHasRenderableContent(tailCanvas)) {
+			if (!canvasRegionHasRenderableContent(tailCanvas, 0, 0, tailCanvas.width, tailCanvas.height, isDark)) {
 				break;
 			}
 
@@ -767,6 +776,7 @@ const exportStyledElementToPdf = async (
 				pdfState,
 				A4_PAGE_WIDTH_MM,
 				A4_PAGE_HEIGHT_MM,
+				isDark,
 				{
 					stopWhenEncounteringEmptySlice: true
 				}
