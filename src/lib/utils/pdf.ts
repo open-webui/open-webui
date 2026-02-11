@@ -38,8 +38,6 @@ interface ChatPdfOptions {
 	onBeforeRender?: () => Promise<void> | void;
 	/** Optional callback after rendering (for hiding full messages) */
 	onAfterRender?: () => Promise<void> | void;
-	/** Optional selector used to split child elements into render chunks */
-	childSplitSelector?: string;
 	/** Optional callback for export progress updates */
 	onProgress?: (progress: PdfExportProgress) => void;
 	/** Optional abort signal for cancellation */
@@ -99,12 +97,6 @@ interface RenderElementToCanvasOptions {
 	height?: number;
 	onclone?: (document: Document, element: HTMLElement) => void;
 	ignoreElements?: (element: Element) => boolean;
-}
-
-interface CanvasSizeResult {
-	width: number;
-	height: number;
-	success?: boolean;
 }
 
 // ==================== Shared Constants ====================
@@ -267,33 +259,34 @@ const probeMaxCanvasHeightPx = async (canvasWidthPx: number): Promise<number | n
 	try {
 		const { default: canvasSize } = await import('canvas-size');
 		const [maxHeightResult, maxAreaResult] = await Promise.all([
-			canvasSize.maxHeight({ useWorker: true }),
-			canvasSize.maxArea({ useWorker: true })
+			canvasSize.maxHeight({ useWorker: true, usePromise: true }),
+			canvasSize.maxArea({ useWorker: true, usePromise: true })
 		]);
 
-		const maxHeightPx = Math.max(1, Math.floor((maxHeightResult as CanvasSizeResult).height || 1));
-		const areaResult = maxAreaResult as CanvasSizeResult;
-		const maxAreaPx = Math.max(1, Math.floor((areaResult.width || 1) * (areaResult.height || 1)));
+		const maxHeightPx = Math.max(1, Math.floor(maxHeightResult.height || 1));
+		const maxAreaPx = Math.max(1, Math.floor((maxAreaResult.width || 1) * (maxAreaResult.height || 1)));
 		const maxHeightByAreaPx = Math.max(1, Math.floor(maxAreaPx / canvasWidthPx));
 		let candidateHeightPx = Math.max(1, Math.min(maxHeightPx, maxHeightByAreaPx));
 
-		const firstValidation = (await canvasSize.test({
+		const firstValidation = await canvasSize.test({
 			width: canvasWidthPx,
 			height: candidateHeightPx,
-			useWorker: true
-		})) as CanvasSizeResult;
-		if (firstValidation.success) {
+			useWorker: true,
+			usePromise: true
+		});
+		if (firstValidation) {
 			return candidateHeightPx;
 		}
 
 		while (candidateHeightPx > 1) {
 			candidateHeightPx = Math.max(1, candidateHeightPx - CANVAS_PROBE_STEP_PX);
-			const validation = (await canvasSize.test({
+			const validation = await canvasSize.test({
 				width: canvasWidthPx,
 				height: candidateHeightPx,
-				useWorker: true
-			})) as CanvasSizeResult;
-			if (validation.success) {
+				useWorker: true,
+				usePromise: true
+			});
+			if (validation) {
 				return candidateHeightPx;
 			}
 		}
@@ -331,16 +324,13 @@ const getSafeRenderChunkHeightPx = async (virtualWidth: number, scale: number): 
 };
 
 /**
- * Build render chunks from element children (selector-based), with canvas-safe chunking.
- * Falls back to full element range when selector has no matches.
+ * Build render chunks from element children, with canvas-safe chunking.
  * @param element - Root element used for rendering
- * @param childSplitSelector - Optional selector for children to split by
  * @param maxChunkHeightPx - Max chunk height in CSS pixels
  * @returns Render chunks in CSS pixel coordinates
  */
 const buildElementRenderChunks = (
 	element: HTMLElement,
-	childSplitSelector: string | undefined,
 	maxChunkHeightPx: number
 ): ElementRenderChunk[] => {
 	const splitRange = (startY: number, totalHeight: number): ElementRenderChunk[] => {
@@ -356,22 +346,6 @@ const buildElementRenderChunks = (
 		}
 		return chunks;
 	};
-
-	if (childSplitSelector) {
-		const rootRect = element.getBoundingClientRect();
-		const children = Array.from(element.querySelectorAll<HTMLElement>(childSplitSelector));
-		if (children.length > 0) {
-			const chunks = children.flatMap((child) => {
-				const childRect = child.getBoundingClientRect();
-				const top = Math.max(0, childRect.top - rootRect.top);
-				const height = Math.max(1, childRect.height);
-				return splitRange(top, height);
-			});
-			if (chunks.length > 0) {
-				return chunks;
-			}
-		}
-	}
 
 	const rootRect = element.getBoundingClientRect();
 	const lastChildBottom =
@@ -567,7 +541,6 @@ const exportStyledElementToPdf = async (
 	filename: string,
 	virtualWidth: number = DEFAULT_VIRTUAL_WIDTH,
 	waitBeforeRenderMs = 0,
-	childSplitSelector?: string,
 	onProgress?: (progress: PdfExportProgress) => void,
 	signal?: AbortSignal
 ): Promise<void> => {
@@ -581,7 +554,7 @@ const exportStyledElementToPdf = async (
 	throwIfAborted(signal);
 	const [pdf] = await Promise.all([createPdfDocument()]);
 	const safeRenderChunkHeightPx = await getSafeRenderChunkHeightPx(virtualWidth, CANVAS_SCALE);
-	const chunks = buildElementRenderChunks(element, childSplitSelector, safeRenderChunkHeightPx);
+	const chunks = buildElementRenderChunks(element, safeRenderChunkHeightPx);
 	const pdfState: PdfAppendState = { pageCount: 0 };
 	emitExportProgress(onProgress, {
 		stage: 'rendering',
@@ -670,7 +643,7 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
 	);
 
 	try {
-		await exportStyledElementToPdf(node, `${note.title}.pdf`, DEFAULT_VIRTUAL_WIDTH, 0, ':scope > *');
+		await exportStyledElementToPdf(node, `${note.title}.pdf`, DEFAULT_VIRTUAL_WIDTH, 0);
 	} finally {
 		// Clean up: remove hidden node if needed
 		if (shouldRemoveNode && node.parentNode) {
@@ -749,7 +722,6 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 							`chat-${options.title}.pdf`,
 							DEFAULT_VIRTUAL_WIDTH,
 							100,
-							options.childSplitSelector,
 							(progress) => {
 								emitExportProgress(options.onProgress, progress);
 								updateOverlay(progress);
