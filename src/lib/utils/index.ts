@@ -1699,3 +1699,21 @@ export const getCodeBlockContents = (content: string): object => {
 		js: jsContent.trim()
 	};
 };
+export const parseFrontmatter = (content) => {
+	const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+	if (match) {
+		const frontmatter = {};
+		match[1].split('\n').forEach((line) => {
+			const [key, ...value] = line.split(':');
+			if (key && value) {
+				frontmatter[key.trim()] = value.join(':').trim().replace(/^["']|["']$/g, '');
+			}
+		});
+		return frontmatter;
+	}
+	return {};
+};
+
+export const formatSkillName = (name) => {
+	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+};

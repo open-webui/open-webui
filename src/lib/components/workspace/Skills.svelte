@@ -16,7 +16,8 @@
 		deleteSkillById,
 		toggleSkillById
 	} from '$lib/apis/skills';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, parseFrontmatter, formatSkillName } from '$lib/utils';
+	import TagInput from '$lib/components/common/Tags/TagInput.svelte';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -34,6 +35,9 @@
 
 	let shiftKey = false;
 	let loaded = false;
+
+	let importFiles;
+	let importInputElement: HTMLInputElement;
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
@@ -180,6 +184,51 @@
 			</div>
 
 			<div class="flex w-full justify-end gap-1.5">
+				<input
+					bind:this={importInputElement}
+					bind:files={importFiles}
+					type="file"
+					accept=".md"
+					hidden
+					on:change={() => {
+						if (importFiles && importFiles.length > 0) {
+							const reader = new FileReader();
+							reader.onload = (event) => {
+								const mdContent = event.target?.result;
+								if (typeof mdContent === 'string') {
+									const fm = parseFrontmatter(mdContent);
+									const fileName = importFiles[0].name.replace(/\.md$/, '');
+									const rawName = fm.name || fileName;
+									const displayName = formatSkillName(rawName);
+									sessionStorage.skill = JSON.stringify({
+										name: displayName,
+										id: fm.name || '', // Use raw frontmatter name as ID if available
+										description: fm.description || '',
+										content: mdContent,
+										is_active: true,
+										access_grants: []
+									});
+									goto('/workspace/skills/create');
+								}
+							};
+							reader.readAsText(importFiles[0]);
+						}
+					}}
+				/>
+
+				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						on:click={() => {
+							importInputElement.click();
+						}}
+					>
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Import')}
+						</div>
+					</button>
+				{/if}
+
 				{#if skills.length && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills)}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"

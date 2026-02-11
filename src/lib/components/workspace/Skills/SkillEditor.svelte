@@ -8,7 +8,7 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import { user } from '$lib/stores';
-	import { slugify } from '$lib/utils';
+	import { slugify, parseFrontmatter, formatSkillName } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { updateSkillAccessGrants } from '$lib/apis/skills';
 	import { goto } from '$app/navigation';
@@ -31,13 +31,45 @@
 	let accessGrants = [];
 	let showAccessControlModal = false;
 	let hasManualEdit = false;
+	let hasManualName = false;
+	let hasManualDescription = false;
+	let isFrontmatterDetected = false;
 
-	$: if (!edit && !hasManualEdit) {
+	// Auto-detect frontmatter and fill name/description in create mode
+	$: if (!edit && content) {
+		const fm = parseFrontmatter(content);
+		if (fm.name) {
+			isFrontmatterDetected = true;
+			if (!hasManualName) {
+				name = formatSkillName(fm.name);
+			}
+			if (!hasManualEdit) {
+				id = fm.name;
+			}
+		} else {
+			isFrontmatterDetected = false;
+		}
+		if (fm.description && !hasManualDescription) {
+			description = fm.description;
+		}
+	} else if (!edit && !content) {
+		isFrontmatterDetected = false;
+	}
+
+	$: if (!edit && !hasManualEdit && !isFrontmatterDetected) {
 		id = name !== '' ? slugify(name) : '';
 	}
 
 	function handleIdInput(e: Event) {
 		hasManualEdit = true;
+	}
+
+	function handleNameInput(e: Event) {
+		hasManualName = true;
+	}
+
+	function handleDescriptionInput(e: Event) {
+		hasManualDescription = true;
 	}
 
 	const submitHandler = async () => {
@@ -68,6 +100,10 @@
 			description = skill.description || '';
 			content = skill.content || '';
 			accessGrants = skill?.access_grants === undefined ? [] : skill?.access_grants;
+
+			if (name) hasManualName = true;
+			if (description) hasManualDescription = true;
+			if (id) hasManualEdit = true;
 		}
 	});
 </script>
@@ -120,6 +156,7 @@
 									type="text"
 									placeholder={$i18n.t('Skill Name')}
 									bind:value={name}
+									on:input={handleNameInput}
 									required
 									{disabled}
 								/>
@@ -176,6 +213,7 @@
 								type="text"
 								placeholder={$i18n.t('Skill Description')}
 								bind:value={description}
+								on:input={handleDescriptionInput}
 								{disabled}
 							/>
 						</Tooltip>
