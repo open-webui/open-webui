@@ -449,6 +449,30 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
             else:
                 data = action(**params)
 
+            # Process action result for Rich UI embeds (HTMLResponse, tuple with headers)
+            # Deferred import to avoid circular dependency (middleware imports chat)
+            from open_webui.utils.middleware import process_tool_result
+
+            processed_result, _, action_embeds = process_tool_result(
+                request,
+                action_id,
+                data,
+                "action",
+            )
+
+            if action_embeds:
+                await __event_emitter__(
+                    {
+                        "type": "embeds",
+                        "data": {
+                            "embeds": action_embeds,
+                        },
+                    }
+                )
+                # Replace data with the processed status dict so we don't
+                # try to serialize the raw HTMLResponse / tuple back to the client
+                data = processed_result
+
         except Exception as e:
             raise Exception(f"Error: {e}")
 
