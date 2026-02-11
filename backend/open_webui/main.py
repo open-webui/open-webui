@@ -815,6 +815,21 @@ app.state.config.ENABLE_USER_STATUS = ENABLE_USER_STATUS
 app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
 app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
 
+# Migrate legacy access_control → access_grants on boot
+from open_webui.utils.access_control import migrate_access_control
+
+connections = app.state.config.TOOL_SERVER_CONNECTIONS
+if any("access_control" in c.get("config", {}) for c in connections):
+    for connection in connections:
+        migrate_access_control(connection.get("config", {}))
+    app.state.config.TOOL_SERVER_CONNECTIONS = connections
+
+arena_models = app.state.config.EVALUATION_ARENA_MODELS
+if any("access_control" in m.get("meta", {}) for m in arena_models):
+    for model in arena_models:
+        migrate_access_control(model.get("meta", {}))
+    app.state.config.EVALUATION_ARENA_MODELS = arena_models
+
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM

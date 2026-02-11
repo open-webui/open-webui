@@ -77,12 +77,21 @@ async def get_tools(
         )
 
     # OpenAPI Tool Servers
+    server_access_grants = {}
     for server in await get_tool_servers(request):
+        connection = request.app.state.config.TOOL_SERVER_CONNECTIONS[
+            server.get("idx", 0)
+        ]
+        server_config = connection.get("config", {})
+
+        server_id = f"server:{server.get('id')}"
+        server_access_grants[server_id] = server_config.get("access_grants", [])
+
         tools.append(
             ToolUserResponse(
                 **{
-                    "id": f"server:{server.get('id')}",
-                    "user_id": f"server:{server.get('id')}",
+                    "id": server_id,
+                    "user_id": server_id,
                     "name": server.get("openapi", {})
                     .get("info", {})
                     .get("title", "Tool Server"),
@@ -91,11 +100,6 @@ async def get_tools(
                         .get("info", {})
                         .get("description", ""),
                     },
-                    "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                        server.get("idx", 0)
-                    ]
-                    .get("config", {})
-                    .get("access_control", None),
                     "updated_at": int(time.time()),
                     "created_at": int(time.time()),
                 }
@@ -119,20 +123,22 @@ async def get_tools(
                     )
                 )
 
+            server_config = server.get("config", {})
+
+            tool_id = f"server:mcp:{server.get('info', {}).get('id')}"
+            server_access_grants[tool_id] = server_config.get("access_grants", [])
+
             tools.append(
                 ToolUserResponse(
                     **{
-                        "id": f"server:mcp:{server.get('info', {}).get('id')}",
-                        "user_id": f"server:mcp:{server.get('info', {}).get('id')}",
+                        "id": tool_id,
+                        "user_id": tool_id,
                         "name": server.get("info", {}).get("name", "MCP Tool Server"),
                         "meta": {
                             "description": server.get("info", {}).get(
                                 "description", ""
                             ),
                         },
-                        "access_control": server.get("config", {}).get(
-                            "access_control", None
-                        ),
                         "updated_at": int(time.time()),
                         "created_at": int(time.time()),
                         **(
@@ -161,7 +167,7 @@ async def get_tools(
                 has_access(
                     user.id,
                     "read",
-                    getattr(tool, "access_control", None),
+                    server_access_grants.get(str(tool.id), []),
                     user_group_ids,
                     db=db,
                 )

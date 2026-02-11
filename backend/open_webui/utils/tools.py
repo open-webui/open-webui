@@ -149,8 +149,9 @@ def has_tool_server_access(
     if user_group_ids is None:
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
-    access_control = server_connection.get("config", {}).get("access_control", None)
-    return has_access(user.id, "read", access_control, user_group_ids)
+    server_config = server_connection.get("config", {})
+    access_grants = server_config.get("access_grants", [])
+    return has_access(user.id, "read", access_grants, user_group_ids)
 
 
 async def get_tools(
