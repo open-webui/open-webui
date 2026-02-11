@@ -2099,9 +2099,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Skills: inject manifest only — model uses view_skill tool to load full content on-demand
     user_skill_ids = form_data.pop("skill_ids", None) or []
-    model_skill_ids = model.get("info", {}).get("meta", {}).get("skills", [])
+    model_skill_ids = model.get("info", {}).get("meta", {}).get("skillIds", [])
 
     all_skill_ids = list(set(user_skill_ids + model_skill_ids))
+    available_skills = []
     if all_skill_ids:
         from open_webui.models.skills import Skills as SkillsModel
 
@@ -2348,6 +2349,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             {
                 **extra_params,
                 "__event_emitter__": event_emitter,
+                "__skill_ids__": [s.id for s in available_skills],
             },
             features,
             model,

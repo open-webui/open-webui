@@ -54,22 +54,7 @@
 	let viewOption = '';
 	let page = 1;
 
-	// Debounce only query changes
-	$: if (query !== undefined) {
-		loading = true;
-		clearTimeout(searchDebounceTimer);
-		searchDebounceTimer = setTimeout(() => {
-			page = 1;
-			getSkillItems();
-		}, 300);
-	}
-
-	// Immediate response to page/filter changes
-	$: if (page && viewOption !== undefined) {
-		getSkillItems();
-	}
-
-	const getSkillItems = async () => {
+	const loadSkillItems = async () => {
 		if (!loaded) return;
 
 		loading = true;
@@ -94,6 +79,21 @@
 			loading = false;
 		}
 	};
+
+	// Debounce only query changes
+	$: if (query !== undefined) {
+		loading = true;
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			page = 1;
+			loadSkillItems();
+		}, 300);
+	}
+
+	// Immediate response to page/filter changes
+	$: if (page && viewOption !== undefined) {
+		loadSkillItems();
+	}
 
 	const cloneHandler = async (skill) => {
 		const _skill = await getSkillById(localStorage.token, skill.id).catch((error) => {
@@ -136,7 +136,7 @@
 		}
 
 		page = 1;
-		getSkillItems();
+		loadSkillItems();
 		await _skills.set(await getSkills(localStorage.token));
 	};
 
