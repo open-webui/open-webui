@@ -42,6 +42,7 @@
 	export let triggerScroll;
 	export let readOnly = false;
 	export let editCodeBlock = true;
+export let exportMode = false;
 	export let topPadding = false;
 </script>
 
@@ -71,6 +72,7 @@
 				{deleteMessage}
 				{readOnly}
 				{editCodeBlock}
+				{exportMode}
 				{topPadding}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
@@ -97,6 +99,7 @@
 				{addMessages}
 				{readOnly}
 				{editCodeBlock}
+				{exportMode}
 				{topPadding}
 			/>
 		{:else}
@@ -122,6 +125,7 @@
 					{addMessages}
 					{readOnly}
 					{editCodeBlock}
+					{exportMode}
 					{topPadding}
 				/>
 			{/key}

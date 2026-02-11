@@ -50,6 +50,7 @@
 
 	export let readOnly = false;
 	export let editCodeBlock = true;
+	export let exportMode = false;
 
 	export let topPadding = false;
 	export let bottomPadding = false;
@@ -454,8 +455,9 @@
 								{mergeResponses}
 								{addMessages}
 								{triggerScroll}
-								{readOnly}
-								{editCodeBlock}
+								readOnly={readOnly || exportMode}
+								editCodeBlock={exportMode ? false : editCodeBlock}
+								{exportMode}
 								{topPadding}
 							/>
 						{/each}

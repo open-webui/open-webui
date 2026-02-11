@@ -114,15 +114,14 @@
 				className="h-full flex pt-4 pb-8 w-full"
 				chatId={`chat-preview-${chat?.id ?? ''}`}
 				user={$user}
-				readOnly={true}
+				exportMode
+				autoScroll
 				history={chat.chat.history}
 				messages={chat.chat.messages}
-				autoScroll={true}
 				sendMessage={() => {}}
 				continueResponse={() => {}}
 				regenerateResponse={() => {}}
 				messagesCount={null}
-				editCodeBlock={false}
 			/>
 		</div>
 	</div>
