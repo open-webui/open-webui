@@ -22,6 +22,7 @@
 
 	export let paragraphTag = 'p';
 	export let editCodeBlock = true;
+export let exportMode = false;
 	export let topPadding = false;
 
 	export let sourceIds = [];
@@ -87,6 +88,7 @@
 		{preview}
 		{paragraphTag}
 		{editCodeBlock}
+		{exportMode}
 		{sourceIds}
 		{topPadding}
 		{onTaskClick}
