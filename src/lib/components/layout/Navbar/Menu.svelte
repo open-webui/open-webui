@@ -36,6 +36,7 @@
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
+	import type { WaitForSettledOptions } from '$lib/utils/AsyncTaskTracker';
 
 	const i18n = getContext('i18n');
 
@@ -52,6 +53,9 @@
 	export let onClose: Function = () => {};
 
 	let showFullMessages = false;
+	let exportMessagesRef: {
+		waitForSettled?: (options?: WaitForSettledOptions) => Promise<void>;
+	} | null = null;
 
 	const getChatAsText = async () => {
 		const history = chat.chat.history;
@@ -78,10 +82,16 @@
 			title: chat.chat.title,
 			stylizedPdfExport: $settings?.stylizedPdfExport ?? true,
 			containerElementId: 'full-messages-container',
+			chunkSelector: '.all-messages-container > *',
 			chatText: await getChatAsText(),
 			async onBeforeRender() {
 				showFullMessages = true;
 				await tick();
+				try {
+					await exportMessagesRef?.waitForSettled?.();
+				} catch (error) {
+					console.warn('Timed out while waiting for async render tasks before PDF export:', error);
+				}
 			},
 			onAfterRender() {
 				showFullMessages = false;
@@ -111,6 +121,7 @@
 	<div class="hidden w-full h-full flex-col">
 		<div id="full-messages-container">
 			<Messages
+				bind:this={exportMessagesRef}
 				className="h-full flex pt-4 pb-8 w-full"
 				chatId={`chat-preview-${chat?.id ?? ''}`}
 				user={$user}

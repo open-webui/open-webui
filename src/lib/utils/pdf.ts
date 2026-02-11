@@ -42,6 +42,8 @@ interface ChatPdfOptions {
 	onAfterRender?: () => Promise<void> | void;
 	/** Optional callback for export progress updates */
 	onProgress?: (progress: PdfExportProgress) => void;
+	/** Optional chunk selector for stylized mode */
+	chunkSelector?: string;
 	/** Optional abort signal for cancellation */
 	signal?: AbortSignal;
 }
@@ -109,6 +111,7 @@ interface RenderElementToCanvasOptions {
 	elementHeight?: number;
 	onclone?: (document: Document, element: HTMLElement) => void;
 	ignoreElements?: (element: Element) => boolean;
+	lastElementY?: number;
 }
 
 // ==================== Shared Constants ====================
@@ -243,6 +246,7 @@ const styleElementForRendering = (element: HTMLElement, virtualWidth: number): v
 	element.style.position = 'absolute';
 	element.style.left = '-9999px';
 	element.style.height = 'auto';
+	element.dataset.cloningElement = 'true';
 };
 
 /**
@@ -254,29 +258,102 @@ const styleElementForRendering = (element: HTMLElement, virtualWidth: number): v
 const renderElementToCanvas = async (
 	element: HTMLElement,
 	virtualWidth: number,
-	options?: RenderElementToCanvasOptions
+	options?: RenderElementToCanvasOptions,
+	elmChunks?: { y: number; height: number }[]
 ): Promise<HTMLCanvasElement> => {
 	const isDark = isDarkMode();
 	const cropY = options?.y ?? 0;
-	const elementHeight =
-		options?.elementHeight ??
-		Math.max(1, Math.ceil(element.getBoundingClientRect().height), element.scrollHeight);
-	const cropHeight = Math.max(1, Math.ceil(options?.height ?? elementHeight));
-	const windowHeight = Math.max(elementHeight, Math.ceil(cropY + cropHeight));
+	// 确保至少渲染1px
+	const cropHeight = Math.max(1, Math.ceil(options?.height ?? 0));
+	const currentChunkEndY = cropY + cropHeight;
+
+	// 1. 计算当前的“基准 Y (Base Y)”
+	// 基准 Y 指的是：在当前视口范围内，第一个“应该出现”的元素原本的 Y 坐标。
+	// 因为我们移除了它上面的所有元素，它在克隆 DOM 里会跑到顶部。
+	// 我们用这个基准 Y 来计算相对偏移量。
+	
+	let baseContentY = 0;
+	
+	// 为了快速判断，我们先处理 elmChunks（如果传了的话）
+	// 找到第一个与当前视图 [cropY, currentChunkEndY] 相交的 chunk
+	if (elmChunks && elmChunks.length > 0) {
+		const firstVisibleChunk = elmChunks.find(chunk => {
+			const chunkBottom = chunk.y + chunk.height;
+			// 排除掉：完全在上面 (bottom <= cropY) 或 完全在下面 (y >= endY) 的
+			return !(chunkBottom <= cropY || chunk.y >= currentChunkEndY);
+		});
+		
+		if (firstVisibleChunk) {
+			baseContentY = firstVisibleChunk.y;
+		} else {
+			// 如果没有找到相交的chunk（比如是纯空白区域），默认不对齐
+			// 或者如果 cropY 超过了所有内容，就以 cropY 为准
+			baseContentY = cropY; 
+		}
+	} else {
+		// 如果没传 elmChunks（比如 tail 渲染阶段），我们只能保守一点，
+		// 假设没有发生 DOM 塌缩，或者只能依赖 dataset 实时判断。
+		// 但根据你的逻辑，这里我们主要处理“正文”部分的逻辑。
+		// 如果不传 elmChunks，我们默认不进行坐标偏移（因为不知道原来在哪里），
+		// 但为了兼容性，建议尽可能传入 elmChunks。
+		baseContentY = 0; 
+	}
+	
+	// 特殊情况：如果实际上我们是从 0 开始截取的，基准肯定也是 0
+	if (cropY === 0) baseContentY = 0;
+
+	// 2. 计算修正后的 captureY
+	// 如果上面的元素被删了，当前内容跑到了 0 (或 padding 处)。
+	// 我们原本想在 cropY 处截图，现在应该在 (cropY - baseContentY) 处截图。
+	// 比如：想要截取 5000-6000。第一个元素从 4800 开始。
+    // 删掉 4800 以前的。该元素变到了 0。
+	// 我们需要截取该元素内部 200px 处开始的内容。即 5000 - 4800 = 200。
+	const captureY = Math.max(0, cropY - baseContentY);
+
 	const canvasOptions: Partial<Html2CanvasOptions> = {
 		useCORS: true,
 		allowTaint: true,
 		backgroundColor: isDark ? '#000' : '#fff',
 		scale: CANVAS_SCALE,
 		windowWidth: virtualWidth,
-		windowHeight,
+		// 视口高度只需要覆盖我们要截取的部分即可，不用设太大，节省内存
+		windowHeight: Math.max(captureY + cropHeight + 100, 1000), 
 		x: options?.x || 0,
-		y: cropY,
+		y: captureY, // 关键：使用计算后的相对坐标
 		width: options?.width ?? virtualWidth,
 		height: cropHeight,
 		canvas: options?.canvas,
-		onclone: options?.onclone,
-		ignoreElements: options?.ignoreElements,
+		ignoreElements(elm) {
+			// 1. 基础过滤
+			if (options?.ignoreElements && options.ignoreElements(elm)) {
+				return true;
+			}
+			if (elm.parentNode === document.body) {
+				return (elm as HTMLElement).dataset?.cloningElement !== 'true';
+			}
+
+			// 2. 核心性能过滤逻辑
+			if (elm instanceof HTMLElement) {
+				const cloningHeightStr = elm.dataset.cloningHeight;
+				const cloningYStr = elm.dataset.cloningY;
+
+				// 只有当元素有明确的坐标标记（即主要内容块）时，确实执行过滤
+				if (cloningHeightStr && cloningYStr) {
+					const elmY = parseInt(cloningYStr, 10);
+					const elmH = parseInt(cloningHeightStr, 10);
+					const elmBottom = elmY + elmH;
+
+					// 判断逻辑：
+					// 1. 元素底部 <= cropY：说明元素完全在当前视窗上方 -> 忽略 (return true)
+					// 2. 元素顶部 >= currentChunkEndY：说明元素完全在当前视窗下方 -> 忽略 (return true)
+					if (elmBottom <= cropY || elmY >= currentChunkEndY) {
+						return true; // 移除元素！性能极大提升
+					}
+				}
+			}
+			
+			return false;
+		}
 	};
 
 	const canvas = await html2canvas(element, canvasOptions);
@@ -658,6 +735,22 @@ const exportPlainTextToPdf = async (text: string, filename: string): Promise<voi
 	doc.save(filename);
 };
 
+const applyChunkSelector = (element: HTMLElement, chunkSelector?: string) => {
+	const chunks: { y: number, height: number }[] = [];
+	if (chunkSelector) {
+		element.querySelectorAll(chunkSelector).forEach((chunk) => {
+			const size = chunk.getBoundingClientRect();
+			(chunk as HTMLElement).dataset.cloningY = size.y.toString();
+			(chunk as HTMLElement).dataset.cloningHeight = size.height.toString();
+			chunks.push({
+				y: size.y,
+				height: size.height
+			});
+		});
+	}
+	return chunks;
+};
+
 /**
  * Export a styled DOM element to PDF using the shared canvas->slice pipeline.
  * Note and Chat stylized exports both use this path to keep behavior consistent.
@@ -669,6 +762,7 @@ const exportPlainTextToPdf = async (text: string, filename: string): Promise<voi
 const exportStyledElementToPdf = async (
 	element: HTMLElement,
 	filename: string,
+	chunkSelector?: string,
 	virtualWidth: number = DEFAULT_VIRTUAL_WIDTH,
 	waitBeforeRenderMs = 0,
 	onProgress?: (progress: PdfExportProgress) => void,
@@ -700,6 +794,8 @@ const exportStyledElementToPdf = async (
 		pagesGenerated: 0
 	});
 
+	const elmChunks = applyChunkSelector(element, chunkSelector);
+
 	let completedChunks = 0;
 	let shouldStopTailContinuation = false;
 	for (let index = 0; index < chunks.length; index += 1) {
@@ -709,14 +805,17 @@ const exportStyledElementToPdf = async (
 		chunkCanvas.width = Math.max(1, Math.floor(virtualWidth * CANVAS_SCALE));
 		chunkCanvas.height = Math.max(1, Math.floor(chunk.height * CANVAS_SCALE));
 
+		const prevChunk = chunks[index - 1];
+
 		const canvas = await renderElementToCanvas(element, virtualWidth, {
 			canvas: chunkCanvas,
 			x: 0,
 			y: chunk.y,
 			width: virtualWidth,
 			height: chunk.height,
-			elementHeight
-		});
+			elementHeight,
+			lastElementY: prevChunk ? (prevChunk.y + prevChunk.height) : undefined
+		}, elmChunks);
 		throwIfAborted(signal);
 
 		const appendResult = appendCanvasChunkToPdf(
@@ -763,7 +862,7 @@ const exportStyledElementToPdf = async (
 				width: virtualWidth,
 				height: safeRenderChunkHeightPx,
 				elementHeight
-			});
+			}, elmChunks);
 
 			throwIfAborted(signal);
 			if (!canvasRegionHasRenderableContent(tailCanvas, 0, 0, tailCanvas.width, tailCanvas.height, isDark)) {
@@ -836,7 +935,7 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
 	);
 
 	try {
-		await exportStyledElementToPdf(node, `${note.title}.pdf`, DEFAULT_VIRTUAL_WIDTH, 0);
+		await exportStyledElementToPdf(node, `${note.title}.pdf`, undefined, DEFAULT_VIRTUAL_WIDTH, 0);
 	} finally {
 		// Clean up: remove hidden node if needed
 		if (shouldRemoveNode && node.parentNode) {
@@ -913,6 +1012,7 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 						await exportStyledElementToPdf(
 							clonedElement,
 							`chat-${options.title}.pdf`,
+							options.chunkSelector,
 							DEFAULT_VIRTUAL_WIDTH,
 							100,
 							(progress) => {

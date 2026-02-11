@@ -12,6 +12,7 @@
 		renderMermaidDiagram,
 		renderVegaVisualization
 	} from '$lib/utils';
+	import { getContextAsyncTaskTracker } from '$lib/utils/AsyncTaskTracker';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -48,6 +49,7 @@
 	export let stickyButtonsClassName = 'top-0';
 
 	let pyodideWorker = null;
+	const asyncTaskTracker = getContextAsyncTaskTracker();
 
 	let _code = '';
 	$: if (code) {
@@ -345,7 +347,9 @@
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			try {
-				renderHTML = await renderMermaid(code);
+				renderHTML = asyncTaskTracker
+					? await asyncTaskTracker.track(() => renderMermaid(code), 'mermaid-render')
+					: await renderMermaid(code);
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
@@ -357,7 +361,9 @@
 			(token?.raw ?? '').slice(-4).includes('```')
 		) {
 			try {
-				renderHTML = await renderVegaVisualization(code);
+				renderHTML = asyncTaskTracker
+					? await asyncTaskTracker.track(() => renderVegaVisualization(code), 'vega-render')
+					: await renderVegaVisualization(code);
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
