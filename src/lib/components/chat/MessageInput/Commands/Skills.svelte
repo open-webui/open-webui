@@ -58,7 +58,7 @@
 
 {#if filteredItems.length > 0}
 	{#each filteredItems as skill, skillIdx}
-		<Tooltip content={skill.id} placement="top-start">
+		<Tooltip content={skill.description || skill.name} placement="top-start">
 			<button
 				class="px-2.5 py-1.5 rounded-xl w-full text-left {skillIdx === selectedIdx
 					? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
@@ -80,11 +80,9 @@
 					<div class="truncate">
 						{skill.name}
 					</div>
-					{#if skill.description}
-						<div class="ml-2 text-xs text-gray-500 truncate">
-							{skill.description}
-						</div>
-					{/if}
+					<div class="ml-2 text-xs text-gray-500 truncate">
+						{skill.id}
+					</div>
 				</div>
 			</button>
 		</Tooltip>
