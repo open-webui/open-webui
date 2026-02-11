@@ -14,7 +14,8 @@
 	export let modelId: string = '';
 	export let history: any = null;
 	export let addMessages: Function | null = null;
-	export let initChatHandler: Function | null = null; 
+	export let initChatHandler: Function | null = null;
+	export let saveChatHandler: Function | null = null;
 	export let webSearchEnabled: boolean = false;
 	export let files: any[] = [];
 	
@@ -27,12 +28,20 @@
 	let selectedSponsor = '';
 	let formData: Record<string, string> = {
 		projectTitle: '',
+		// NSF fields
 		researchSpaceFacilities: '',
 		coreInstrumentation: '',
 		computingDataResources: '',
 		internalFacilitiesNYU: '',
 		externalFacilitiesOther: '',
 		specialInfrastructure: '',
+		// NIH fields
+		laboratory: '',
+		animal: '',
+		computer: '',
+		office: '',
+		clinical: '',
+		other: '',
 		equipment: ''
 	};
 
@@ -69,7 +78,7 @@
 	}
 
 
-	const formSections = [
+	const nsfFormSections = [
 		{ id: 'projectTitle', label: '1. Project Title', required: true },
 		{ id: 'researchSpaceFacilities', label: '2. Research Space and Facilities', required: true },
 		{ id: 'coreInstrumentation', label: '3. Core Instrumentation', required: true },
@@ -79,10 +88,19 @@
 		{ id: 'specialInfrastructure', label: '6. Special Infrastructure', required: true }
 	];
 
-	// Show equipment field only for NIH
-	$: currentSections = selectedSponsor === 'NIH' 
-		? [...formSections, { id: 'equipment', label: '7. Equipment', required: true }]
-		: formSections;
+	const nihFormSections = [
+		{ id: 'projectTitle', label: '1. Project Title', required: true },
+		{ id: 'laboratory', label: '2. Laboratory', required: true },
+		{ id: 'animal', label: '3. Animal', required: true },
+		{ id: 'computer', label: '4. Computer', required: true },
+		{ id: 'office', label: '5. Office', required: true },
+		{ id: 'clinical', label: '6. Clinical', required: true },
+		{ id: 'other', label: '7. Other', required: true },
+		{ id: 'equipment', label: '8. Equipment', required: true }
+	];
+
+	// Select sections based on sponsor
+	$: currentSections = selectedSponsor === 'NIH' ? nihFormSections : nsfFormSections;
 
 	$: if ($chatId && (selectedSponsor || Object.values(formData).some(v => v.trim() !== '') || showFilesUsedMessage)) {
 		saveToLocalStorage();
@@ -436,6 +454,7 @@
 		let content = `# Facilities Response for ${sponsor}\n\n`;
 
 		const sectionLabelMap: Record<string, string> = {
+			// NSF fields
 			projectTitle: 'Project Title',
 			researchSpaceFacilities: 'Research Space and Facilities',
 			coreInstrumentation: 'Core Instrumentation',
@@ -443,6 +462,13 @@
 			internalFacilitiesNYU: 'Internal Facilities (NYU)',
 			externalFacilitiesOther: 'External Facilities (Other Institutions)',
 			specialInfrastructure: 'Special Infrastructure',
+			// NIH fields
+			laboratory: 'Laboratory',
+			animal: 'Animal',
+			computer: 'Computer',
+			office: 'Office',
+			clinical: 'Clinical',
+			other: 'Other',
 			equipment: 'Equipment'
 		};
 
@@ -472,13 +498,13 @@
 			// NIH - individual sections with numbered labels
 			const nihOrder = [
 				{ key: 'projectTitle', label: '1. Project Title' },
-				{ key: 'researchSpaceFacilities', label: '2. Research Space and Facilities' },
-				{ key: 'coreInstrumentation', label: '3. Core Instrumentation' },
-				{ key: 'computingDataResources', label: '4. Computing and Data Resources' },
-				{ key: 'internalFacilitiesNYU', label: '5a. Internal Facilities (NYU)' },
-				{ key: 'externalFacilitiesOther', label: '5b. External Facilities (Other Institutions)' },
-				{ key: 'specialInfrastructure', label: '6. Special Infrastructure' },
-				{ key: 'equipment', label: '7. Equipment' }
+				{ key: 'laboratory', label: '2. Laboratory' },
+				{ key: 'animal', label: '3. Animal' },
+				{ key: 'computer', label: '4. Computer' },
+				{ key: 'office', label: '5. Office' },
+				{ key: 'clinical', label: '6. Clinical' },
+				{ key: 'other', label: '7. Other' },
+				{ key: 'equipment', label: '8. Equipment' }
 			];
 
 			for (const { key, label } of nihOrder) {
@@ -497,6 +523,7 @@
 		sponsor: string
 	): Record<string, string> {
 		const sectionLabelMap: Record<string, string> = {
+			// NSF fields
 			projectTitle: 'Project Title',
 			researchSpaceFacilities: 'Research Space and Facilities',
 			coreInstrumentation: 'Core Instrumentation',
@@ -504,6 +531,13 @@
 			internalFacilitiesNYU: 'Internal Facilities (NYU)',
 			externalFacilitiesOther: 'External Facilities (Other Institutions)',
 			specialInfrastructure: 'Special Infrastructure',
+			// NIH fields
+			laboratory: 'Laboratory',
+			animal: 'Animal',
+			computer: 'Computer',
+			office: 'Office',
+			clinical: 'Clinical',
+			other: 'Other',
 			equipment: 'Equipment'
 		};
 
@@ -532,15 +566,16 @@
 				}
 			}
 		} else {
+			// NIH
 			const nihOrder = [
 				{ key: 'projectTitle', label: '1. Project Title' },
-				{ key: 'researchSpaceFacilities', label: '2. Research Space and Facilities' },
-				{ key: 'coreInstrumentation', label: '3. Core Instrumentation' },
-				{ key: 'computingDataResources', label: '4. Computing and Data Resources' },
-				{ key: 'internalFacilitiesNYU', label: '5a. Internal Facilities (NYU)' },
-				{ key: 'externalFacilitiesOther', label: '5b. External Facilities (Other Institutions)' },
-				{ key: 'specialInfrastructure', label: '6. Special Infrastructure' },
-				{ key: 'equipment', label: '7. Equipment' }
+				{ key: 'laboratory', label: '2. Laboratory' },
+				{ key: 'animal', label: '3. Animal' },
+				{ key: 'computer', label: '4. Computer' },
+				{ key: 'office', label: '5. Office' },
+				{ key: 'clinical', label: '6. Clinical' },
+				{ key: 'other', label: '7. Other' },
+				{ key: 'equipment', label: '8. Equipment' }
 			];
 
 			for (const { key, label } of nihOrder) {
@@ -712,6 +747,14 @@
 				history = history;
 			}
 
+			if (saveChatHandler && $chatId) {
+				try {
+					await saveChatHandler($chatId, history);
+				} catch (err) {
+					console.error('Error saving facilities response to chat:', err);
+				}
+			}
+
 			// Update chat title
 			try {
 				if (token && $chatId) {
@@ -821,7 +864,8 @@
 			if (message.role === 'assistant' && message.content && 
 			    (message.content.includes('Facilities Response') || 
 			     message.content.includes('## 1. Project Title') ||
-			     message.content.includes('## 2. Facilities'))) {
+			     message.content.includes('## 2. Facilities') ||
+			     message.content.includes('## 2. Laboratory'))) {
 				facilitiesMessage = message;
 				break;
 			}
@@ -836,7 +880,8 @@
 				if (message.role === 'assistant' && message.content &&
 				    (message.content.includes('Facilities Response') ||
 				     message.content.includes('## 1. Project Title') ||
-				     message.content.includes('## 2. Facilities'))) {
+				     message.content.includes('## 2. Facilities') ||
+				     message.content.includes('## 2. Laboratory'))) {
 					facilitiesMessage = message;
 					break;
 				}

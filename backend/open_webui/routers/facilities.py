@@ -158,12 +158,20 @@ class SingleSectionResponse(BaseModel):
 # Mapping from form field keys to section labels used in prompts
 FIELD_TO_SECTION = {
     "projectTitle": "Project Title",
+    # NSF fields
     "researchSpaceFacilities": "Research Space and Facilities",
     "coreInstrumentation": "Core Instrumentation",
     "computingDataResources": "Computing and Data Resources",
     "internalFacilitiesNYU": "Internal Facilities (NYU)",
     "externalFacilitiesOther": "External Facilities (Other Institutions)",
     "specialInfrastructure": "Special Infrastructure",
+    # NIH fields
+    "laboratory": "Laboratory",
+    "animal": "Animal",
+    "computer": "Computer",
+    "office": "Office",
+    "clinical": "Clinical",
+    "other": "Other",
     "equipment": "Equipment"
 }
 
@@ -181,13 +189,13 @@ def get_section_labels(sponsor: str) -> List[str]:
         # NIH keeps individual sections
         return [
             "1. Project Title",
-            "2. Research Space and Facilities",
-            "3. Core Instrumentation", 
-            "4. Computing and Data Resources",
-            "5a. Internal Facilities (NYU)",
-            "5b. External Facilities (Other Institutions)",
-            "6. Special Infrastructure",
-            "7. Equipment"
+            "2. Laboratory",
+            "3. Animal",
+            "4. Computer",
+            "5. Office",
+            "6. Clinical",
+            "7. Other",
+            "8. Equipment"
         ]
 
 def facilities_web_search(query: str, request: Request, user) -> tuple[str, List[str], List[float]]:
@@ -516,16 +524,16 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 "specialInfrastructure": "Special Infrastructure"
             }
         else:
-            # NIH: Keep original 1-to-1 mapping
+            # NIH: Individual sections
             field_mappings = {
                 "projectTitle": "1. Project Title",
-                "researchSpaceFacilities": "2. Research Space and Facilities", 
-                "coreInstrumentation": "3. Core Instrumentation",
-                "computingDataResources": "4. Computing and Data Resources",
-                "internalFacilitiesNYU": "5a. Internal Facilities (NYU)",
-                "externalFacilitiesOther": "5b. External Facilities (Other Institutions)",
-                "specialInfrastructure": "6. Special Infrastructure",
-                "equipment": "7. Equipment"
+                "laboratory": "2. Laboratory",
+                "animal": "3. Animal",
+                "computer": "4. Computer",
+                "office": "5. Office",
+                "clinical": "6. Clinical",
+                "other": "7. Other",
+                "equipment": "8. Equipment"
             }
         
         user_inputs = {}
@@ -1722,7 +1730,8 @@ async def extract_form_data_from_files(request: Request, form_data: ExtractFormD
         logging.info(f"Combined document content length: {len(combined_content)} characters")
         
         # section instructions based on sponsor with clear, detailed definitions
-        section_definitions = {
+        # NSF section definitions
+        nsf_section_definitions = {
         "projectTitle": {
             "label": "1. Project Title",
             "instructions": """Extract the formal research project title.
@@ -1917,16 +1926,193 @@ async def extract_form_data_from_files(request: Request, form_data: ExtractFormD
         }
     }
 
-        
+        # NIH section definitions
+        nih_section_definitions = {
+        "projectTitle": {
+            "label": "1. Project Title",
+            "instructions": """Extract the formal research project title.
+
+    DEFINITION:
+    The official title of the NIH proposal or research project.
+
+    Look for (in order of preference):
+    - The title on the NIH cover sheet, application face page, or first page.
+    - The title at the top of the "Project Summary/Abstract" or "Specific Aims" page.
+
+    Guidelines:
+    - Extract the exact title text as written (do not paraphrase).
+    - Exclude labels like 'Project Summary', 'Specific Aims', 'Abstract', etc.
+    - If multiple titles appear (e.g. main + internal code), choose the main NIH project title."""
+        },
+
+        "laboratory": {
+            "label": "2. Laboratory",
+            "instructions": """Extract information about laboratory spaces where the research will be performed.
+
+    DEFINITION:
+    Physical laboratory spaces used for the proposed research, including their location, size, and outfitting.
+
+    Look for:
+    - Lab location: campus, building name, and room number.
+    - Whether the PI has a dedicated laboratory; list its size in square feet if mentioned.
+    - If the PI shares space with another PI or works in a mentor's laboratory, note that and explain what space is available for the project.
+    - Lab outfitting and capabilities pertinent to the project: biological safety cabinets, chemical fume hoods, tissue culture incubators, bench- and micro-centrifuges, refrigerators, freezers, and other relevant equipment.
+    - If sharing space, what resources are specifically available for the study.
+    - If more than one laboratory will be used, extract information for each lab separately.
+
+    Guidelines:
+    - Focus on where the work will be performed and how the lab is equipped.
+    - Include specific capabilities pertinent to the proposed research.
+    - Do NOT include animal facilities here (those go under Animal).
+    - Do NOT include computers/servers here (those go under Computer).
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "animal": {
+            "label": "3. Animal",
+            "instructions": """Extract information about animal facilities and resources for the study.
+
+    DEFINITION:
+    Animal housing, procedure rooms, surgical facilities, and institutional animal care resources
+    relevant to the proposed research.
+
+    Look for:
+    - Where animals are housed and proximity to the PI's laboratory.
+    - Specific procedure rooms or surgical suites available for animal studies.
+    - Equipment available for animal research (surgical equipment, imaging for animals, behavioral testing apparatus).
+    - Institutional resources: veterinary care, basic husbandry, IACUC support.
+    - Animal facility certifications or accreditations (e.g., AAALAC).
+
+    Guidelines:
+    - Only include information if the study involves animals.
+    - Focus on housing location, proximity to lab, available procedure rooms, equipment, and institutional support.
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "computer": {
+            "label": "4. Computer",
+            "instructions": """Extract information about computer resources available for the research.
+
+    DEFINITION:
+    Computer hardware, software, networking, and computing infrastructure available to the PI and
+    research staff for the proposed project.
+
+    Look for:
+    - PCs, workstations, and their operating systems.
+    - Basic software needed for the research (statistical software, graphical software, Office suite, specialized analysis tools).
+    - Internet access and network connectivity.
+    - Computers available to lab staff, students, or research personnel.
+    - Specialized computing resources: mainframe access, HPC clusters, GPU resources, cloud computing.
+    - Data storage and backup systems.
+
+    Guidelines:
+    - Include both personal computing resources and shared/institutional computing infrastructure.
+    - Describe availability and accessibility of computing resources.
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "office": {
+            "label": "5. Office",
+            "instructions": """Extract information about office spaces for the PI and research personnel.
+
+    DEFINITION:
+    Dedicated office space for the PI, research staff, students, and other project personnel.
+
+    Look for:
+    - Dedicated office space for the PI: size in square feet, location (campus, building, room number).
+    - Proximity of office to the laboratory.
+    - Office space available to employees, students, postdocs, and other research personnel.
+    - Whether office space is dedicated or shared, and its size.
+    - Whether office space is located in or near the lab.
+
+    Guidelines:
+    - Focus on office locations, sizes, and who has access.
+    - Include proximity information relative to the lab.
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "clinical": {
+            "label": "6. Clinical",
+            "instructions": """Extract information about clinical resources available for the study.
+
+    DEFINITION:
+    Clinical facilities, resources, and support available to the PI for clinical research activities.
+
+    Look for:
+    - Clinical resources available to support the research (clinical trial units, patient recruitment facilities, clinical labs).
+    - Support from Clinical and Translational Science Institutes (CTSI) or similar programs (e.g., ACTSI).
+    - Clinical cores: biostatistics cores, biorepositories, imaging cores, clinical pharmacology units.
+    - Patient populations or clinical cohorts available for the study.
+    - Clinical data infrastructure (electronic health records access, clinical databases).
+
+    Guidelines:
+    - Only include information if the study has a clinical component.
+    - Focus on clinical resources, institutional support, and available clinical infrastructure.
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "other": {
+            "label": "7. Other",
+            "instructions": """Extract information about other institutional, departmental, or divisional resources.
+
+    DEFINITION:
+    Any other equipment, resources, or institutional support necessary for the project that does not fit
+    into the Laboratory, Animal, Computer, Office, or Clinical categories.
+
+    Look for:
+    - Institutional resources: libraries, shared core facilities, fabrication shops, machine shops.
+    - Departmental or divisional resources and support services.
+    - Collaborative arrangements or shared resources with other departments or institutions.
+    - Training and mentorship resources, especially for Early Stage Investigators (ESIs).
+    - Institutional investment in the investigator's success: resources for classes, travel, training.
+    - Collegial support: career enrichment programs, peer groups, supervision assistance.
+    - Administrative and logistical support: management, oversight, best practices training.
+    - Protected time for research with salary support.
+    - Special facilities for working with biohazards or potentially dangerous substances.
+    - Any unique features of the scientific environment that contribute to probability of success.
+
+    Guidelines:
+    - This is a catch-all section for resources not covered by other NIH sections.
+    - Include institutional support and scientific environment contributions.
+    - For ESIs, include institutional investment details if available.
+    - Do NOT duplicate information already captured in other sections.
+    - Do NOT extract any financial or budget information."""
+        },
+
+        "equipment": {
+            "label": "8. Equipment",
+            "instructions": """Extract information about major equipment available for the research.
+
+    DEFINITION:
+    Research equipment, instruments, and tools available for the proposed project, including both
+    specialized and general-purpose research devices.
+
+    Look for:
+    - Named equipment, instruments, and tools with models or specifications (if mentioned).
+    - Major research instruments: microscopes, spectrometers, sequencers, imaging systems, flow cytometers.
+    - Laboratory equipment: centrifuges, PCR machines, gel electrophoresis systems, mass spectrometers.
+    - Shared or core facility equipment available for use.
+    - Any equipment specifically relevant to the proposed research methods.
+
+    Guidelines:
+    - Focus on equipment that is directly relevant to the proposed research.
+    - Include equipment names, types, models, and brief specs if present.
+    - Do NOT include computers or general office equipment (those go under Computer or Office).
+    - Do NOT extract any financial or budget information (no prices, no purchase details)."""
+        }
+    }
+
+        # Select section definitions based on sponsor
+        section_definitions = nsf_section_definitions if form_data.sponsor == "NSF" else nih_section_definitions
+
         # sections to extract based on sponsor
         if form_data.sponsor == "NSF":
             sections_to_extract = ["projectTitle", "researchSpaceFacilities", "coreInstrumentation", 
                                   "computingDataResources", "internalFacilitiesNYU", "externalFacilitiesOther", 
                                   "specialInfrastructure"]
         else:  # NIH
-            sections_to_extract = ["projectTitle", "researchSpaceFacilities", "coreInstrumentation", 
-                                  "computingDataResources", "internalFacilitiesNYU", "externalFacilitiesOther", 
-                                  "specialInfrastructure", "equipment"]
+            sections_to_extract = ["projectTitle", "laboratory", "animal", "computer", 
+                                  "office", "clinical", "other", "equipment"]
         
         extracted_form_data = {}
         

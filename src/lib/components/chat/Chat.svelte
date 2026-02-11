@@ -2112,6 +2112,7 @@
 				{eventTarget}
 				{initChatHandler}
 				{addMessages}
+				{saveChatHandler}
 				bind:webSearchEnabled
 			/>
 		</PaneGroup>
