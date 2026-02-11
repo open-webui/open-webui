@@ -2097,6 +2097,30 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
 
+    # Skills: inject manifest only — model uses view_skill tool to load full content on-demand
+    user_skill_ids = form_data.pop("skill_ids", None) or []
+    model_skill_ids = model.get("info", {}).get("meta", {}).get("skillIds", [])
+
+    all_skill_ids = list(set(user_skill_ids + model_skill_ids))
+    available_skills = []
+    if all_skill_ids:
+        from open_webui.models.skills import Skills as SkillsModel
+
+        accessible_skill_ids = {s.id for s in SkillsModel.get_skills_by_user_id(user.id, "read")}
+        available_skills = [
+            s for sid in all_skill_ids
+            if sid in accessible_skill_ids and (s := SkillsModel.get_skill_by_id(sid)) and s.is_active
+        ]
+
+        if available_skills:
+            manifest = "<available_skills>\n"
+            for skill in available_skills:
+                manifest += f"<skill>\n<name>{skill.name}</name>\n<description>{skill.description or ''}</description>\n</skill>\n"
+            manifest += "</available_skills>"
+            form_data["messages"] = add_or_update_system_message(
+                manifest, form_data["messages"], append=True
+            )
+
     prompt = get_last_user_message(form_data["messages"])
     # TODO: re-enable URL extraction from prompt
     # urls = []
@@ -2325,6 +2349,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             {
                 **extra_params,
                 "__event_emitter__": event_emitter,
+                "__skill_ids__": [s.id for s in available_skills],
             },
             features,
             model,
