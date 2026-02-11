@@ -53,6 +53,15 @@ interface PdfAppendState {
 	pageCount: number;
 }
 
+interface AppendCanvasChunkOptions {
+	stopWhenEncounteringEmptySlice?: boolean;
+}
+
+interface AppendCanvasChunkResult {
+	pagesAdded: number;
+	encounteredEmptySlice: boolean;
+}
+
 export type PdfExportOverlayState = {
 	show: boolean;
 	stage: PdfExportStage;
@@ -123,6 +132,30 @@ const RENDER_TAIL_GUARD_PX = 128;
 const CANVAS_PROBE_STEP_PX = 1024;
 
 const canvasMaxHeightProbeCache = new Map<number, Promise<number | null>>();
+
+/** Whether the current browser is little-endian */
+const IS_LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x01020304]).buffer)[0] === 0x04;
+const pixelDiffersFromBackground = IS_LITTLE_ENDIAN
+	? (pixel: number, bg: number, tolerance: number): boolean => {
+			const r = pixel & 0xff;
+			const g = (pixel >>> 8) & 0xff;
+			const b = (pixel >>> 16) & 0xff;
+			return (
+				Math.abs(r - bg) > tolerance ||
+				Math.abs(g - bg) > tolerance ||
+				Math.abs(b - bg) > tolerance
+			);
+		}
+	: (pixel: number, bg: number, tolerance: number): boolean => {
+			const r = (pixel >>> 24) & 0xff;
+			const g = (pixel >>> 16) & 0xff;
+			const b = (pixel >>> 8) & 0xff;
+			return (
+				Math.abs(r - bg) > tolerance ||
+				Math.abs(g - bg) > tolerance ||
+				Math.abs(b - bg) > tolerance
+			);
+		};
 
 // ==================== Shared Utility Functions ====================
 
@@ -376,16 +409,25 @@ const appendCanvasChunkToPdf = (
 	canvas: HTMLCanvasElement,
 	state: PdfAppendState,
 	pageWidthMM: number,
-	pageHeightMM: number
-): void => {
+	pageHeightMM: number,
+	options?: AppendCanvasChunkOptions
+): AppendCanvasChunkResult => {
 	const pxPerPdfMM = canvas.width / pageWidthMM;
 	const pageSliceHeightPx = Math.max(1, Math.floor(pxPerPdfMM * pageHeightMM));
 	const pageCanvas = document.createElement('canvas');
 	pageCanvas.width = canvas.width;
+	let pagesAdded = 0;
 
 	let offsetY = 0;
 	while (offsetY < canvas.height) {
 		const sliceHeight = Math.min(pageSliceHeightPx, canvas.height - offsetY);
+		if (
+			options?.stopWhenEncounteringEmptySlice &&
+			!canvasRegionHasRenderableContent(canvas, 0, offsetY, canvas.width, sliceHeight)
+		) {
+			return { pagesAdded, encounteredEmptySlice: true };
+		}
+
 		pageCanvas.height = sliceHeight;
 
 		const ctx = pageCanvas.getContext('2d');
@@ -404,8 +446,80 @@ const appendCanvasChunkToPdf = (
 		const imgHeightMM = (sliceHeight * pageWidthMM) / canvas.width;
 		pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMM, imgHeightMM);
 		state.pageCount += 1;
+		pagesAdded += 1;
 		offsetY += sliceHeight;
 	}
+
+	return { pagesAdded, encounteredEmptySlice: false };
+};
+
+/**
+ * Check whether a rendered canvas contains non-background pixels.
+ * Used to decide if we should continue rendering tail chunks.
+ */
+const canvasRegionHasRenderableContent = (
+	canvas: HTMLCanvasElement,
+	sourceX: number,
+	sourceY: number,
+	sourceWidth: number,
+	sourceHeight: number
+): boolean => {
+	const clampedWidth = Math.max(0, Math.floor(sourceWidth));
+	const clampedHeight = Math.max(0, Math.floor(sourceHeight));
+	if (clampedWidth <= 0 || clampedHeight <= 0) {
+		return false;
+	}
+
+	try {
+		// Downsample first to avoid reading a huge pixel buffer from a large canvas.
+		const probeMaxEdge = 128;
+		const probeWidth = Math.max(1, Math.min(clampedWidth, probeMaxEdge));
+		const probeHeight = Math.max(1, Math.min(clampedHeight, probeMaxEdge));
+		const probeCanvas = document.createElement('canvas');
+		probeCanvas.width = probeWidth;
+		probeCanvas.height = probeHeight;
+		const probeContext = probeCanvas.getContext('2d', { willReadFrequently: true });
+		if (!probeContext) {
+			return false;
+		}
+
+		probeContext.drawImage(
+			canvas,
+			Math.floor(sourceX),
+			Math.floor(sourceY),
+			clampedWidth,
+			clampedHeight,
+			0,
+			0,
+			probeWidth,
+			probeHeight
+		);
+		const imageData = probeContext.getImageData(0, 0, probeWidth, probeHeight).data;
+		const pixels = new Uint32Array(
+			imageData.buffer,
+			imageData.byteOffset,
+			Math.floor(imageData.byteLength / 4)
+		);
+		const bg = isDarkMode() ? 0 : 255;
+		const tolerance = 8;
+
+		for (let i = 0; i < pixels.length; i += 1) {
+			if (pixelDiffersFromBackground(pixels[i], bg, tolerance)) {
+				return true;
+			}
+		}
+	} catch (error) {
+		// If pixels are unreadable (e.g. browser security edge cases),
+		// keep existing behavior and avoid truncating by assuming content exists.
+		console.warn('Failed to inspect canvas pixels for tail continuation:', error);
+		return true;
+	}
+
+	return false;
+};
+
+const canvasHasRenderableContent = (canvas: HTMLCanvasElement): boolean => {
+	return canvasRegionHasRenderableContent(canvas, 0, 0, canvas.width, canvas.height);
 };
 
 /**
@@ -565,7 +679,12 @@ const exportStyledElementToPdf = async (
 	});
 
 	let completedChunks = 0;
-	for (let batchStart = 0; batchStart < chunks.length; batchStart += RENDER_CONCURRENCY) {
+	let shouldStopTailContinuation = false;
+	initialChunkLoop: for (
+		let batchStart = 0;
+		batchStart < chunks.length;
+		batchStart += RENDER_CONCURRENCY
+	) {
 		throwIfAborted(signal);
 		const batch = chunks.slice(batchStart, batchStart + RENDER_CONCURRENCY);
 		const renderedBatch = await Promise.all(
@@ -592,7 +711,16 @@ const exportStyledElementToPdf = async (
 		renderedBatch.sort((a, b) => a.index - b.index);
 		for (const rendered of renderedBatch) {
 			throwIfAborted(signal);
-			appendCanvasChunkToPdf(pdf, rendered.canvas, pdfState, A4_PAGE_WIDTH_MM, A4_PAGE_HEIGHT_MM);
+			const appendResult = appendCanvasChunkToPdf(
+				pdf,
+				rendered.canvas,
+				pdfState,
+				A4_PAGE_WIDTH_MM,
+				A4_PAGE_HEIGHT_MM,
+				{
+					stopWhenEncounteringEmptySlice: rendered.index === chunks.length - 1
+				}
+			);
 			completedChunks += 1;
 			const renderPercent = chunks.length > 0 ? 5 + (completedChunks / chunks.length) * 90 : 95;
 			emitExportProgress(onProgress, {
@@ -602,6 +730,61 @@ const exportStyledElementToPdf = async (
 				totalChunks: chunks.length,
 				pagesGenerated: pdfState.pageCount
 			});
+
+			if (appendResult.encounteredEmptySlice) {
+				shouldStopTailContinuation = true;
+				break initialChunkLoop;
+			}
+		}
+	}
+
+	// Tail continuation: keep rendering forward while new chunks still contain content.
+	if (!shouldStopTailContinuation) {
+		let continuationY = chunks.length > 0 ? chunks[chunks.length - 1].y + chunks[chunks.length - 1].height : 0;
+		const maxContinuationChunks = 512;
+		for (let i = 0; i < maxContinuationChunks; i += 1) {
+			throwIfAborted(signal);
+			const chunkCanvas = document.createElement('canvas');
+			chunkCanvas.width = Math.max(1, Math.floor(virtualWidth * CANVAS_SCALE));
+			chunkCanvas.height = Math.max(1, Math.floor(safeRenderChunkHeightPx * CANVAS_SCALE));
+
+			const tailCanvas = await renderElementToCanvas(element, virtualWidth, {
+				canvas: chunkCanvas,
+				x: 0,
+				y: continuationY,
+				width: virtualWidth,
+				height: safeRenderChunkHeightPx
+			});
+
+			throwIfAborted(signal);
+			if (!canvasHasRenderableContent(tailCanvas)) {
+				break;
+			}
+
+			const appendResult = appendCanvasChunkToPdf(
+				pdf,
+				tailCanvas,
+				pdfState,
+				A4_PAGE_WIDTH_MM,
+				A4_PAGE_HEIGHT_MM,
+				{
+					stopWhenEncounteringEmptySlice: true
+				}
+			);
+			completedChunks += 1;
+			continuationY += safeRenderChunkHeightPx;
+
+			emitExportProgress(onProgress, {
+				stage: 'rendering',
+				percent: 95,
+				currentChunk: completedChunks,
+				totalChunks: chunks.length + i + 1,
+				pagesGenerated: pdfState.pageCount
+			});
+
+			if (appendResult.encounteredEmptySlice) {
+				break;
+			}
 		}
 	}
 
