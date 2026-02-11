@@ -17,14 +17,25 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { getContextAsyncTaskTracker } from '$lib/utils/AsyncTaskTracker';
 
 	export let content: string;
 	export let displayMode: boolean = false;
 
-	let renderToString: typeof katexRenderToString | null = null;
+	let renderToString: typeof renderToStringType | null = null;
+	const asyncTaskTracker = getContextAsyncTaskTracker();
 
 	onMount(async () => {
-		renderToString = await getKatexRenderer();
+		const loadKatex = async () => {
+			renderToString = await getKatexRenderer();
+		};
+
+		if (asyncTaskTracker) {
+			await asyncTaskTracker.track(loadKatex, 'katex-renderer-load');
+			return;
+		}
+
+		await loadKatex();
 	});
 </script>
 
