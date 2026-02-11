@@ -219,6 +219,24 @@ class SkillsTable:
         except Exception:
             return None
 
+    def toggle_skill_by_id(
+        self, id: str, db: Optional[Session] = None
+    ) -> Optional[SkillModel]:
+        with get_db_context(db) as db:
+            try:
+                skill = db.query(Skill).filter_by(id=id).first()
+                if not skill:
+                    return None
+
+                skill.is_active = not skill.is_active
+                skill.updated_at = int(time.time())
+                db.commit()
+                db.refresh(skill)
+
+                return self._to_skill_model(skill, db=db)
+            except Exception:
+                return None
+
     def delete_skill_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:

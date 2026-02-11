@@ -325,6 +325,49 @@ async def update_skill_access_by_id(
 
 
 ############################
+# ToggleSkillById
+############################
+
+
+@router.post("/id/{id}/toggle", response_model=Optional[SkillModel])
+async def toggle_skill_by_id(
+    id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
+):
+    skill = Skills.get_skill_by_id(id, db=db)
+    if skill:
+        if (
+            user.role == "admin"
+            or skill.user_id == user.id
+            or AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="skill",
+                resource_id=skill.id,
+                permission="write",
+                db=db,
+            )
+        ):
+            skill = Skills.toggle_skill_by_id(id, db=db)
+
+            if skill:
+                return skill
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Error toggling skill"),
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
 # DeleteSkillById
 ############################
 
