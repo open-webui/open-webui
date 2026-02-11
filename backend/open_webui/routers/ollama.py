@@ -1024,10 +1024,11 @@ async def embed(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
-    if OLLAMA_EMBED_NUM_CTX is not None:
-        if form_data.options is None:
-            form_data.options = {}
-        form_data.options["num_ctx"] = OLLAMA_EMBED_NUM_CTX
+    if form_data.options is None:
+        form_data.options = {}
+    form_data.options["num_ctx"] = (
+        OLLAMA_EMBED_NUM_CTX if OLLAMA_EMBED_NUM_CTX is not None else 4096
+    )
 
     try:
         headers = {
@@ -1110,10 +1111,11 @@ async def embeddings(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
-    if OLLAMA_EMBED_NUM_CTX is not None:
-        if form_data.options is None:
-            form_data.options = {}
-        form_data.options["num_ctx"] = OLLAMA_EMBED_NUM_CTX
+    if form_data.options is None:
+        form_data.options = {}
+    form_data.options["num_ctx"] = (
+        OLLAMA_EMBED_NUM_CTX if OLLAMA_EMBED_NUM_CTX is not None else 4096
+    )
 
     try:
         headers = {

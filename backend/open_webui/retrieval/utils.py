@@ -44,6 +44,7 @@ from open_webui.env import (
     OFFLINE_MODE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     AIOHTTP_CLIENT_SESSION_SSL,
+    OLLAMA_EMBED_NUM_CTX,
 )
 from open_webui.config import (
     RAG_EMBEDDING_QUERY_PREFIX,
@@ -719,6 +720,12 @@ def generate_ollama_batch_embeddings(
         if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
             json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
+        if "options" not in json_data or json_data["options"] is None:
+            json_data["options"] = {}
+        json_data["options"]["num_ctx"] = (
+            OLLAMA_EMBED_NUM_CTX if OLLAMA_EMBED_NUM_CTX is not None else 4096
+        )
+
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {key}",
@@ -758,6 +765,12 @@ async def agenerate_ollama_batch_embeddings(
         form_data = {"input": texts, "model": model}
         if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
             form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
+
+        if "options" not in form_data or form_data["options"] is None:
+            form_data["options"] = {}
+        form_data["options"]["num_ctx"] = (
+            OLLAMA_EMBED_NUM_CTX if OLLAMA_EMBED_NUM_CTX is not None else 4096
+        )
 
         headers = {
             "Content-Type": "application/json",
