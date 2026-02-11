@@ -241,10 +241,12 @@ export let exportMode = false;
 {#if parentMessage}
 	<div>
 		<div
-			class="flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden"
+			class={exportMode
+				? 'flex flex-col gap-3'
+				: 'flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden'}
 			id="responses-container-{chatId}-{parentMessage.id}"
 		>
-			{#if $settings?.displayMultiModelResponsesInTabs ?? false}
+			{#if !exportMode && ($settings?.displayMultiModelResponsesInTabs ?? false)}
 				<div class="w-full">
 					<div class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850">
 						<div
