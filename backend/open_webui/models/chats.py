@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
 
 from pydantic import BaseModel, ConfigDict
@@ -314,6 +315,22 @@ class ChatTable:
             db.add(chat_item)
             db.commit()
             db.refresh(chat_item)
+
+            # Dual-write initial messages to chat_message table
+            try:
+                history = form_data.chat.get("history", {})
+                messages = history.get("messages", {})
+                for message_id, message in messages.items():
+                    if isinstance(message, dict) and message.get("role"):
+                        ChatMessages.upsert_message(
+                            message_id=message_id,
+                            chat_id=id,
+                            user_id=user_id,
+                            data=message,
+                        )
+            except Exception as e:
+                log.warning(f"Failed to write initial messages to chat_message table: {e}")
+
             return ChatModel.model_validate(chat_item) if chat_item else None
 
     def _chat_import_form_to_chat_model(
@@ -356,6 +373,23 @@ class ChatTable:
 
             db.add_all(chats)
             db.commit()
+
+            # Dual-write messages to chat_message table
+            try:
+                for form_data, chat_obj in zip(chat_import_forms, chats):
+                    history = form_data.chat.get("history", {})
+                    messages = history.get("messages", {})
+                    for message_id, message in messages.items():
+                        if isinstance(message, dict) and message.get("role"):
+                            ChatMessages.upsert_message(
+                                message_id=message_id,
+                                chat_id=chat_obj.id,
+                                user_id=user_id,
+                                data=message,
+                            )
+            except Exception as e:
+                log.warning(f"Failed to write imported messages to chat_message table: {e}")
+
             return [ChatModel.model_validate(chat) for chat in chats]
 
     def update_chat_by_id(
@@ -458,6 +492,18 @@ class ChatTable:
         history["currentId"] = message_id
 
         chat["history"] = history
+
+        # Dual-write to chat_message table
+        try:
+            ChatMessages.upsert_message(
+                message_id=message_id,
+                chat_id=id,
+                user_id=self.get_chat_by_id(id).user_id,
+                data=history["messages"][message_id],
+            )
+        except Exception as e:
+            log.warning(f"Failed to write to chat_message table: {e}")
+
         return self.update_chat_by_id(id, chat)
 
     def add_message_status_to_chat_by_id_and_message_id(

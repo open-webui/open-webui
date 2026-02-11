@@ -14,7 +14,7 @@ import requests
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from open_webui.config import CACHE_DIR
+from open_webui.config import CACHE_DIR, IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.retrieval.web.utils import validate_url
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS
@@ -201,12 +201,12 @@ async def update_config(
     set_image_model(request, form_data.IMAGE_GENERATION_MODEL)
     if (
         form_data.IMAGE_SIZE == "auto"
-        and not form_data.IMAGE_GENERATION_MODEL.startswith("gpt-image")
+        and not re.match(IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, form_data.IMAGE_GENERATION_MODEL)
     ):
         raise HTTPException(
             status_code=400,
             detail=ERROR_MESSAGES.INCORRECT_FORMAT(
-                "  (auto is only allowed with gpt-image models)."
+                f"  (auto is only allowed with models matching {IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN})."
             ),
         )
 
@@ -610,9 +610,7 @@ async def image_generations(
                 ),
                 **(
                     {}
-                    if request.app.state.config.IMAGE_GENERATION_MODEL.startswith(
-                        "gpt-image"
-                    )
+                    if re.match(IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN, request.app.state.config.IMAGE_GENERATION_MODEL)
                     else {"response_format": "b64_json"}
                 ),
                 **(
@@ -949,7 +947,7 @@ async def image_edits(
                 **({"size": size} if size else {}),
                 **(
                     {}
-                    if request.app.state.config.IMAGE_EDIT_MODEL.startswith("gpt-image")
+                    if re.match(IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN, request.app.state.config.IMAGE_EDIT_MODEL)
                     else {"response_format": "b64_json"}
                 ),
             }

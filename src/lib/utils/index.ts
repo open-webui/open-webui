@@ -28,6 +28,10 @@ import hljs from 'highlight.js';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export const formatNumber = (num: number): string => {
+	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(num);
+};
+
 function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -1273,17 +1277,20 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 				// Extract path and query parameters
 				if (operation.parameters) {
 					operation.parameters.forEach((param) => {
-						let description = param.schema.description || param.description || '';
-						if (param.schema.enum && Array.isArray(param.schema.enum)) {
-							description += `. Possible values: ${param.schema.enum.join(', ')}`;
+						const paramName = param?.name;
+						if (!paramName) return;
+						const paramSchema = param?.schema ?? {};
+						let description = paramSchema.description || param.description || '';
+						if (paramSchema.enum && Array.isArray(paramSchema.enum)) {
+							description += `. Possible values: ${paramSchema.enum.join(', ')}`;
 						}
-						tool.parameters.properties[param.name] = {
-							type: param.schema.type,
+						tool.parameters.properties[paramName] = {
+							type: paramSchema.type,
 							description: description
 						};
 
 						if (param.required) {
-							tool.parameters.required.push(param.name);
+							tool.parameters.required.push(paramName);
 						}
 					});
 				}

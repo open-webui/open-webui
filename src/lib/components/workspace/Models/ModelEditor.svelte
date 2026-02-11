@@ -25,6 +25,7 @@
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import { updateModelAccessGrants } from '$lib/apis/models';
 
 	const i18n = getContext('i18n');
 
@@ -108,7 +109,7 @@
 	let builtinTools = {};
 
 	let actionIds = [];
-	let accessControl = {};
+	let accessGrants = [];
 	let tts = { voice: '' };
 
 	const submitHandler = async () => {
@@ -140,7 +141,7 @@
 
 		info.params = { ...info.params, ...params };
 
-		info.access_control = accessControl;
+		info.access_grants = accessGrants;
 		info.meta.capabilities = capabilities;
 
 		if (enableDescription) {
@@ -303,14 +304,7 @@
 			builtinTools = model?.meta?.builtinTools ?? {};
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
 
-			if ('access_control' in model) {
-				accessControl = model.access_control;
-			} else {
-				accessControl = {};
-			}
-
-			console.log(model?.access_control);
-			console.log(accessControl);
+			accessGrants = model?.access_grants ?? [];
 
 			info = {
 				...info,
@@ -336,10 +330,20 @@
 {#if loaded}
 	<AccessControlModal
 		bind:show={showAccessControlModal}
-		bind:accessControl
-		accessRoles={['read', 'write']}
+		bind:accessGrants
+		accessRoles={preset ? ['read', 'write'] : ['read']}
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
-		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin' || edit}
+		onChange={async () => {
+			if (edit && model?.id) {
+				try {
+					await updateModelAccessGrants(localStorage.token, model.id, accessGrants);
+					toast.success($i18n.t('Saved'));
+				} catch (error) {
+					toast.error(`${error}`);
+				}
+			}
+		}}
 	/>
 
 	{#if onBack}
@@ -726,19 +730,19 @@
 						{/if}
 					</div>
 
-					<div class="my-2">
+					<div class="my-4">
 						<Knowledge bind:selectedItems={knowledge} />
 					</div>
 
-					<div class="my-2">
+					<div class="my-4">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 					</div>
 
 					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
 
 						{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
-							<div class="my-2">
+							<div class="my-4">
 								<FiltersSelector
 									bind:selectedFilterIds={filterIds}
 									filters={($functions ?? []).filter((func) => func.type === 'filter')}
@@ -753,7 +757,7 @@
 							)}
 
 							{#if toggleableFilters.length > 0}
-								<div class="my-2">
+								<div class="my-4">
 									<DefaultFiltersSelector
 										bind:selectedFilterIds={defaultFilterIds}
 										filters={toggleableFilters}
@@ -763,7 +767,7 @@
 						{/if}
 
 						{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-							<div class="my-2">
+							<div class="my-4">
 								<ActionsSelector
 									bind:selectedActionIds={actionIds}
 									actions={($functions ?? []).filter((func) => func.type === 'action')}
@@ -772,9 +776,9 @@
 						{/if}
 					{/if}
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
 
-					<div class="my-2">
+					<div class="my-4">
 						<Capabilities bind:capabilities />
 					</div>
 
@@ -787,19 +791,19 @@
 							.map(([key, value]) => key)}
 
 						{#if availableFeatures.length > 0}
-							<div class="my-2">
+							<div class="my-4">
 								<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
 							</div>
 						{/if}
 					{/if}
 
 					{#if capabilities.builtin_tools}
-						<div class="my-2">
+						<div class="my-4">
 							<BuiltinTools bind:builtinTools />
 						</div>
 					{/if}
 
-					<div class="my-2">
+					<div class="my-4">
 						<div class="flex w-full justify-between mb-1">
 							<div class="self-center text-xs font-medium text-gray-500">
 								{$i18n.t('TTS Voice')}
@@ -813,7 +817,7 @@
 						/>
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
 
 					<div class="my-2 flex justify-end">
 						<button

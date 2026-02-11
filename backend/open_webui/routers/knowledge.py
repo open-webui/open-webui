@@ -29,7 +29,8 @@ from open_webui.storage.provider import Storage
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user, get_admin_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import has_permission
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
@@ -133,8 +134,12 @@ async def get_knowledge_bases(
                 write_access=(
                     user.id == knowledge_base.user_id
                     or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or has_access(
-                        user.id, "write", knowledge_base.access_control, db=db
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="knowledge",
+                        resource_id=knowledge_base.id,
+                        permission="write",
+                        db=db,
                     )
                 ),
             )
@@ -180,8 +185,12 @@ async def search_knowledge_bases(
                 write_access=(
                     user.id == knowledge_base.user_id
                     or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or has_access(
-                        user.id, "write", knowledge_base.access_control, db=db
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="knowledge",
+                        resource_id=knowledge_base.id,
+                        permission="write",
+                        db=db,
                     )
                 ),
             )
@@ -243,14 +252,14 @@ async def create_new_knowledge(
     # Check if user can share publicly
     if (
         user.role != "admin"
-        and form_data.access_control == None
+        and has_public_read_access_grant(form_data.access_grants)
         and not has_permission(
             user.id,
             "sharing.public_knowledge",
             request.app.state.config.USER_PERMISSIONS,
         )
     ):
-        form_data.access_control = {}
+        form_data.access_grants = []
 
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
@@ -387,7 +396,13 @@ async def get_knowledge_by_id(
         if (
             user.role == "admin"
             or knowledge.user_id == user.id
-            or has_access(user.id, "read", knowledge.access_control, db=db)
+            or AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="knowledge",
+                resource_id=knowledge.id,
+                permission="read",
+                db=db,
+            )
         ):
 
             return KnowledgeFilesResponse(
@@ -395,7 +410,13 @@ async def get_knowledge_by_id(
                 write_access=(
                     user.id == knowledge.user_id
                     or (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or has_access(user.id, "write", knowledge.access_control, db=db)
+                    or AccessGrants.has_access(
+                        user_id=user.id,
+                        resource_type="knowledge",
+                        resource_id=knowledge.id,
+                        permission="write",
+                        db=db,
+                    )
                 ),
             )
         else:
@@ -435,7 +456,12 @@ async def update_knowledge_by_id(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -446,14 +472,14 @@ async def update_knowledge_by_id(
     # Check if user can share publicly
     if (
         user.role != "admin"
-        and form_data.access_control == None
+        and has_public_read_access_grant(form_data.access_grants)
         and not has_permission(
             user.id,
             "sharing.public_knowledge",
             request.app.state.config.USER_PERMISSIONS,
         )
     ):
-        form_data.access_control = {}
+        form_data.access_grants = []
 
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
@@ -473,6 +499,55 @@ async def update_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ID_TAKEN,
         )
+
+
+############################
+# UpdateKnowledgeAccessById
+############################
+
+
+class KnowledgeAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post("/{id}/access/update", response_model=Optional[KnowledgeFilesResponse])
+async def update_knowledge_access_by_id(
+    id: str,
+    form_data: KnowledgeAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    AccessGrants.set_access_grants(
+        "knowledge", id, form_data.access_grants, db=db
+    )
+
+    return KnowledgeFilesResponse(
+        **Knowledges.get_knowledge_by_id(id=id, db=db).model_dump(),
+        files=Knowledges.get_file_metadatas_by_id(id, db=db),
+    )
 
 
 ############################
@@ -502,7 +577,13 @@ async def get_knowledge_files_by_id(
     if not (
         user.role == "admin"
         or knowledge.user_id == user.id
-        or has_access(user.id, "read", knowledge.access_control, db=db)
+        or AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="read",
+            db=db,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -555,7 +636,13 @@ def add_file_to_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -624,7 +711,13 @@ def update_file_from_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
 
@@ -693,7 +786,13 @@ def remove_file_from_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -770,7 +869,13 @@ async def delete_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -802,7 +907,7 @@ async def delete_knowledge_by_id(
                     base_model_id=model.base_model_id,
                     meta=model.meta,
                     params=model.params,
-                    access_control=model.access_control,
+                    access_grants=model.access_grants,
                     is_active=model.is_active,
                 )
                 Models.update_model_by_id(model.id, model_form, db=db)
@@ -839,7 +944,13 @@ async def reset_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -882,7 +993,13 @@ async def add_files_to_knowledge_batch(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control, db=db)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            db=db,
+        )
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -890,17 +1007,19 @@ async def add_files_to_knowledge_batch(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    # Get files content
+    # Batch-fetch all files to avoid N+1 queries
     log.info(f"files/batch/add - {len(form_data)} files")
-    files: List[FileModel] = []
-    for form in form_data:
-        file = Files.get_file_by_id(form.file_id, db=db)
-        if not file:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File {form.file_id} not found",
-            )
-        files.append(file)
+    file_ids = [form.file_id for form in form_data]
+    files = Files.get_files_by_ids(file_ids, db=db)
+
+    # Verify all requested files were found
+    found_ids = {file.id for file in files}
+    missing_ids = [fid for fid in file_ids if fid not in found_ids]
+    if missing_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File {missing_ids[0]} not found",
+        )
 
     # Process files
     try:

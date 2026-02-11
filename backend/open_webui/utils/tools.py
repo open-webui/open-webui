@@ -38,6 +38,7 @@ from open_webui.utils.misc import is_string_allowed
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.models.groups import Groups
+from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.utils.access_control import has_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
@@ -45,7 +46,10 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
 )
+from open_webui.utils.headers import include_user_info_headers
 from open_webui.tools.builtin import (
     search_web,
     fetch_url,
@@ -145,8 +149,9 @@ def has_tool_server_access(
     if user_group_ids is None:
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
-    access_control = server_connection.get("config", {}).get("access_control", None)
-    return has_access(user.id, "read", access_control, user_group_ids)
+    server_config = server_connection.get("config", {})
+    access_grants = server_config.get("access_grants", [])
+    return has_access(user.id, "read", access_grants, user_group_ids)
 
 
 async def get_tools(
@@ -165,7 +170,13 @@ async def get_tools(
             if (
                 not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                 and tool.user_id != user.id
-                and not has_access(user.id, "read", tool.access_control, user_group_ids)
+                and not AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="tool",
+                    resource_id=tool.id,
+                    permission="read",
+                    user_group_ids=user_group_ids,
+                )
             ):
                 log.warning(f"Access denied to tool {tool_id} for user {user.id}")
                 continue
@@ -334,6 +345,13 @@ async def get_tools(
                         if connection_headers and isinstance(connection_headers, dict):
                             for key, value in connection_headers.items():
                                 headers[key] = value
+
+                        # Add user info headers if enabled
+                        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                            headers = include_user_info_headers(headers, user)
+                            metadata = extra_params.get("__metadata__", {})
+                            if metadata and metadata.get("chat_id"):
+                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get("chat_id")
 
                         def make_tool_function(
                             function_name, tool_server_data, headers
@@ -703,9 +721,10 @@ def convert_openapi_to_tool_payload(openapi_spec):
                     "parameters": {"type": "object", "properties": {}, "required": []},
                 }
 
-                # Extract path and query parameters
                 for param in operation.get("parameters", []):
-                    param_name = param["name"]
+                    param_name = param.get("name")
+                    if not param_name:
+                        continue
                     param_schema = param.get("schema", {})
                     description = param_schema.get("description", "")
                     if not description:
@@ -977,8 +996,10 @@ async def execute_tool_server(
         body_params = {}
 
         for param in operation.get("parameters", []):
-            param_name = param["name"]
-            param_in = param["in"]
+            param_name = param.get("name")
+            if not param_name:
+                continue
+            param_in = param.get("in")
             if param_name in params:
                 if param_in == "path":
                     path_params[param_name] = params[param_name]

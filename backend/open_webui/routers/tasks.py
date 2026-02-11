@@ -49,6 +49,21 @@ router = APIRouter()
 ##################################
 
 
+class ActiveChatsForm(BaseModel):
+    chat_ids: list[str]
+
+
+@router.post("/active/chats")
+async def check_active_chats(
+    request: Request, form_data: ActiveChatsForm, user=Depends(get_verified_user)
+):
+    """Check which chat IDs have active tasks."""
+    from open_webui.tasks import get_active_chat_ids
+
+    active = await get_active_chat_ids(request.app.state.redis, form_data.chat_ids)
+    return {"active_chat_ids": active}
+
+
 @router.get("/config")
 async def get_task_config(request: Request, user=Depends(get_verified_user)):
     return {

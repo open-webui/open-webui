@@ -32,7 +32,7 @@
 	import TagSelector from './common/TagSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Pagination from '../common/Pagination.svelte';
-  
+
 	let shiftKey = false;
 
 	const i18n = getContext('i18n');
@@ -73,6 +73,8 @@
 	}
 
 	const getPromptList = async () => {
+		if (!loaded) return;
+
 		loading = true;
 		try {
 			const res = await getPromptItems(
@@ -172,7 +174,6 @@
 
 	onMount(async () => {
 		viewOption = localStorage?.workspaceViewOption || '';
-		page = 1;
 		loaded = true;
 
 		const onKeyDown = (event) => {

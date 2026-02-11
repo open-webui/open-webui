@@ -7,7 +7,7 @@ type PromptItem = {
 	content: string;
 	data?: object | null;
 	meta?: object | null;
-	access_control?: null | object;
+	access_grants?: object[];
 	version_id?: string | null;  // Active version
 	commit_message?: string | null;  // For history tracking
 	is_production?: boolean;  // Whether to set new version as production
@@ -23,7 +23,7 @@ type PromptHistoryItem = {
 		command: string;
 		data: object;
 		meta: object;
-		access_control: object | null;
+		access_grants: object[];
 	};
 	user_id: string;
 	commit_message: string | null;
@@ -42,7 +42,7 @@ type PromptDiff = {
 	to_snapshot: object;
 	content_diff: string[];
 	name_changed: boolean;
-	access_control_changed: boolean;
+	access_grants_changed: boolean;
 };
 
 export const createNewPrompt = async (token: string, prompt: PromptItem) => {
@@ -428,6 +428,39 @@ export const deletePromptById = async (token: string, promptId: string) => {
 	return res;
 };
 
+export const updatePromptAccessGrants = async (
+	token: string,
+	promptId: string,
+	accessGrants: any[]
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/access/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ access_grants: accessGrants })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 ////////////////////////////
 // Prompt History APIs
 ////////////////////////////
@@ -611,4 +644,3 @@ export const getPromptDiff = async (
 
 	return res;
 };
-

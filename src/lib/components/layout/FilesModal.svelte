@@ -28,7 +28,7 @@
 	let page = 0;
 	let allFilesLoaded = false;
 	let filesLoading = false;
-	let searchDebounceTimeout: any;
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let selectedFileId: string | null = null;
 	let showDeleteConfirmDialog = false;
@@ -61,25 +61,19 @@
 	const searchHandler = async () => {
 		if (!show) return;
 
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-
 		page = 0;
 		files = null;
 		allFilesLoaded = false;
 
-		const doSearch = async () => {
+		try {
 			const pattern = query ? `*${query}*` : '*';
 			const newFiles = await searchFiles(localStorage.token, pattern, 0, PAGE_SIZE);
 			files = sortFiles(newFiles);
 			allFilesLoaded = newFiles.length < PAGE_SIZE;
-		};
-
-		if (query === '') {
-			await doSearch();
-		} else {
-			searchDebounceTimeout = setTimeout(doSearch, 500);
+		} catch (error) {
+			// Handle 404 or other errors - show empty state instead of spinner
+			files = [];
+			allFilesLoaded = true;
 		}
 	};
 
@@ -89,13 +83,18 @@
 		filesLoading = true;
 		page += 1;
 
-		const pattern = query ? `*${query}*` : '*';
-		const newFiles = await searchFiles(localStorage.token, pattern, page * PAGE_SIZE, PAGE_SIZE);
+		try {
+			const pattern = query ? `*${query}*` : '*';
+			const newFiles = await searchFiles(localStorage.token, pattern, page * PAGE_SIZE, PAGE_SIZE);
 
-		allFilesLoaded = newFiles.length < PAGE_SIZE;
+			allFilesLoaded = newFiles.length < PAGE_SIZE;
 
-		if (newFiles.length > 0) {
-			files = sortFiles([...(files || []), ...newFiles]);
+			if (newFiles.length > 0) {
+				files = sortFiles([...(files || []), ...newFiles]);
+			}
+		} catch (error) {
+			// Handle errors silently for load more
+			allFilesLoaded = true;
 		}
 
 		filesLoading = false;
@@ -141,8 +140,12 @@
 		showFileItemModal = true;
 	};
 
-	$: if (show) {
-		searchHandler();
+	// Debounce query changes
+	$: if (show && query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			searchHandler();
+		}, 300);
 	}
 
 	onMount(() => {
@@ -167,10 +170,15 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
 		};
+	});
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 	});
 </script>
 
@@ -232,7 +240,6 @@
 					<input
 						class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
-						on:input={() => searchHandler()}
 						placeholder={$i18n.t('Search Files')}
 						maxlength="500"
 					/>
@@ -243,7 +250,6 @@
 								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 								on:click={() => {
 									query = '';
-									searchHandler();
 								}}
 							>
 								<XMark className="size-3" strokeWidth="2" />

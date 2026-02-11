@@ -37,7 +37,7 @@
 			name: data.name,
 			meta: data.meta,
 			content: data.content,
-			access_control: data.access_control
+			access_grants: data.access_grants
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -83,7 +83,7 @@
 		name={tool.name}
 		meta={tool.meta}
 		content={tool.content}
-		accessControl={tool.access_control}
+		accessGrants={tool.access_grants ?? []}
 		onSave={(value) => {
 			saveHandler(value);
 		}}
