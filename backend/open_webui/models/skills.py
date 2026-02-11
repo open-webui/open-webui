@@ -9,7 +9,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Boolean, Column, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, or_
 
 
 log = logging.getLogger(__name__)
@@ -93,6 +93,11 @@ class SkillForm(BaseModel):
     meta: SkillMeta = SkillMeta()
     is_active: bool = True
     access_grants: Optional[list[dict]] = None
+
+
+class SkillListResponse(BaseModel):
+    items: list[SkillAccessResponse] = []
+    total: int = 0
 
 
 class SkillsTable:
@@ -199,6 +204,88 @@ class SkillsTable:
                 db=db,
             )
         ]
+
+    def search_skills(
+        self,
+        user_id: str,
+        filter: dict,
+        skip: int = 0,
+        limit: int = 30,
+        db: Optional[Session] = None,
+    ) -> SkillListResponse:
+        try:
+            with get_db_context(db) as db:
+                query = db.query(Skill)
+
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(
+                        or_(
+                            Skill.name.ilike(f"%{query_key}%"),
+                            Skill.description.ilike(f"%{query_key}%"),
+                            Skill.id.ilike(f"%{query_key}%"),
+                        )
+                    )
+
+                # Only active skills
+                query = query.filter(Skill.is_active == True)
+
+                query = query.order_by(Skill.updated_at.desc())
+
+                # Apply access control if not admin bypass
+                if "user_id" in filter:
+                    user_group_ids = {
+                        group.id
+                        for group in Groups.get_groups_by_member_id(
+                            filter["user_id"], db=db
+                        )
+                    }
+                    all_results = query.all()
+                    accessible = [
+                        s
+                        for s in all_results
+                        if s.user_id == filter["user_id"]
+                        or AccessGrants.has_access(
+                            user_id=filter["user_id"],
+                            resource_type="skill",
+                            resource_id=s.id,
+                            permission="read",
+                            user_group_ids=user_group_ids,
+                            db=db,
+                        )
+                    ]
+                    total = len(accessible)
+                    items = accessible[skip : skip + limit] if limit else accessible[skip:]
+                else:
+                    total = query.count()
+                    if skip:
+                        query = query.offset(skip)
+                    if limit:
+                        query = query.limit(limit)
+                    items = query.all()
+
+                user_ids = list(set(s.user_id for s in items))
+                users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
+                users_dict = {u.id: u for u in users}
+
+                skill_responses = []
+                for skill in items:
+                    user = users_dict.get(skill.user_id)
+                    skill_model = self._to_skill_model(skill, db=db)
+                    skill_responses.append(
+                        SkillAccessResponse(
+                            **SkillUserResponse(
+                                **skill_model.model_dump(),
+                                user=user.model_dump() if user else None,
+                            ).model_dump(),
+                            write_access=False,
+                        )
+                    )
+
+                return SkillListResponse(items=skill_responses, total=total)
+        except Exception as e:
+            log.exception(f"Error searching skills: {e}")
+            return SkillListResponse(items=[], total=0)
 
     def update_skill_by_id(
         self, id: str, updated: dict, db: Optional[Session] = None

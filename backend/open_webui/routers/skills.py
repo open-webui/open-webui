@@ -14,6 +14,7 @@ from open_webui.models.skills import (
     SkillResponse,
     SkillUserResponse,
     SkillAccessResponse,
+    SkillListResponse,
     Skills,
 )
 from open_webui.models.access_grants import AccessGrants
@@ -26,6 +27,7 @@ from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 
+PAGE_ITEM_COUNT = 30
 
 router = APIRouter()
 
@@ -96,6 +98,36 @@ async def get_skill_list(
         )
         for skill in skills
     ]
+
+
+############################
+# SearchSkills
+############################
+
+
+@router.get("/search", response_model=SkillListResponse)
+async def search_skills(
+    query: Optional[str] = None,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    page = max(page, 1)
+    limit = PAGE_ITEM_COUNT
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+
+    if not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL):
+        filter["user_id"] = user.id
+
+    result = Skills.search_skills(
+        user.id, filter=filter, skip=skip, limit=limit, db=db
+    )
+
+    return result
 
 
 ############################

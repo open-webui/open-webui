@@ -1,9 +1,6 @@
 <script lang="ts">
-	import Fuse from 'fuse.js';
-
-	import { getContext } from 'svelte';
-	import { skills } from '$lib/stores';
-	import { getSkillList } from '$lib/apis/skills';
+	import { getContext, onDestroy } from 'svelte';
+	import { searchSkills } from '$lib/apis/skills';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Keyframes from '$lib/components/icons/Keyframes.svelte';
 
@@ -15,30 +12,25 @@
 	let selectedIdx = 0;
 	export let filteredItems = [];
 
-	let _skills = [];
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
-	const loadSkills = async () => {
-		if ($skills) {
-			_skills = $skills;
-		} else {
-			_skills = await getSkillList(localStorage.token);
-			skills.set(_skills);
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			getItems();
+		}, 200);
+	}
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+	});
+
+	const getItems = async () => {
+		const res = await searchSkills(localStorage.token, query).catch(() => null);
+		if (res) {
+			filteredItems = res.items;
 		}
 	};
-
-	loadSkills();
-
-	$: fuse = new Fuse(
-		(_skills ?? []).filter((s) => s.enabled !== false),
-		{
-			keys: ['name', 'id', 'meta.description'],
-			threshold: 0.5
-		}
-	);
-
-	$: filteredItems = query
-		? fuse.search(query).map((e) => e.item)
-		: (_skills ?? []).filter((s) => s.enabled !== false);
 
 	$: if (query) {
 		selectedIdx = 0;
@@ -81,16 +73,16 @@
 				on:focus={() => {}}
 				data-selected={skillIdx === selectedIdx}
 			>
-				<div class="flex text-black dark:text-gray-100 line-clamp-1">
+				<div class="flex text-black dark:text-gray-100 line-clamp-1 items-center">
 					<div class="flex items-center justify-center size-5 mr-2 shrink-0">
 						<Keyframes className="size-4" />
 					</div>
 					<div class="truncate">
 						{skill.name}
 					</div>
-					{#if skill.meta?.description}
+					{#if skill.description}
 						<div class="ml-2 text-xs text-gray-500 truncate">
-							{skill.meta.description}
+							{skill.description}
 						</div>
 					{/if}
 				</div>
