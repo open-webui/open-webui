@@ -140,6 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗝️ SSL certificate verification now respects the "AIOHTTP_CLIENT_SESSION_SSL" setting for OpenAI and Azure OpenAI embedding requests, allowing connections to self-signed certificate endpoints when disabled. [Commit](https://github.com/open-webui/open-webui/commit/cd31b8301b38bfa86872608cfbd022ff74e3ae52)
 - 🔧 Models now receive properly formatted tool call results in multi-turn conversations, fixing an issue where HTML entities caused malformed content that was hard to parse. [#20755](https://github.com/open-webui/open-webui/pull/20755)
 - 💾 Inline images no longer exhaust the model's context window by including their full base64 data in chat metadata, preventing premature context exhaustion with image-heavy conversations. [#20916](https://github.com/open-webui/open-webui/pull/20916)
+- 🐛 The OpenAI API router model lookup was corrected to use the proper model identifier when checking the cache, ensuring consistent and correct model retrieval during chat completions. [#21327](https://github.com/open-webui/open-webui/pull/21327)
 
 ### Changed
 
