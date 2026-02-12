@@ -38,6 +38,7 @@ from open_webui.utils.misc import is_string_allowed
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.models.groups import Groups
+from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.utils.access_control import has_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
@@ -45,12 +46,17 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
+    FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
 )
+from open_webui.utils.headers import include_user_info_headers
 from open_webui.tools.builtin import (
     search_web,
     fetch_url,
     generate_image,
     edit_image,
+    execute_code,
     search_memories,
     add_memory,
     replace_memory_content,
@@ -72,6 +78,7 @@ from open_webui.tools.builtin import (
     search_knowledge_files,
     query_knowledge_files,
     view_knowledge_file,
+    view_skill,
 )
 
 import copy
@@ -144,8 +151,9 @@ def has_tool_server_access(
     if user_group_ids is None:
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
-    access_control = server_connection.get("config", {}).get("access_control", None)
-    return has_access(user.id, "read", access_control, user_group_ids)
+    server_config = server_connection.get("config", {})
+    access_grants = server_config.get("access_grants", [])
+    return has_access(user.id, "read", access_grants, user_group_ids)
 
 
 async def get_tools(
@@ -164,7 +172,13 @@ async def get_tools(
             if (
                 not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                 and tool.user_id != user.id
-                and not has_access(user.id, "read", tool.access_control, user_group_ids)
+                and not AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type="tool",
+                    resource_id=tool.id,
+                    permission="read",
+                    user_group_ids=user_group_ids,
+                )
             ):
                 log.warning(f"Access denied to tool {tool_id} for user {user.id}")
                 continue
@@ -334,6 +348,19 @@ async def get_tools(
                             for key, value in connection_headers.items():
                                 headers[key] = value
 
+                        # Add user info headers if enabled
+                        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+                            headers = include_user_info_headers(headers, user)
+                            metadata = extra_params.get("__metadata__", {})
+                            if metadata and metadata.get("chat_id"):
+                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = (
+                                    metadata.get("chat_id")
+                                )
+                            if metadata and metadata.get("message_id"):
+                                headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = (
+                                    metadata.get("message_id")
+                                )
+
                         def make_tool_function(
                             function_name, tool_server_data, headers
                         ):
@@ -396,67 +423,91 @@ def get_builtin_tools(
 
     # Helper to get model capabilities (defaults to True if not specified)
     def get_model_capability(name: str, default: bool = True) -> bool:
-        return (
-            model.get("info", {})
-            .get("meta", {})
-            .get("capabilities", {})
-            .get(name, default)
+        return (model.get("info", {}).get("meta", {}).get("capabilities") or {}).get(
+            name, default
         )
 
-    # Time utilities - always available for date calculations
-    builtin_functions.extend([get_current_timestamp, calculate_timestamp])
+    # Helper to check if a builtin tool category is enabled via meta.builtinTools
+    # Defaults to True if not specified (backward compatible)
+    def is_builtin_tool_enabled(category: str) -> bool:
+        builtin_tools = model.get("info", {}).get("meta", {}).get("builtinTools", {})
+        return builtin_tools.get(category, True)
+
+    # Time utilities - available for date calculations
+    if is_builtin_tool_enabled("time"):
+        builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
     # Knowledge base tools - conditional injection based on model knowledge
     # If model has attached knowledge (any type), only provide query_knowledge_files
     # Otherwise, provide all KB browsing tools
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", [])
-    if model_knowledge:
-        # Model has attached knowledge - only allow semantic search within it
-        builtin_functions.append(query_knowledge_files)
-    else:
-        # No model knowledge - allow full KB browsing
-        builtin_functions.extend(
-            [
-                list_knowledge_bases,
-                search_knowledge_bases,
-                query_knowledge_bases,
-                search_knowledge_files,
-                query_knowledge_files,
-                view_knowledge_file,
-            ]
-        )
+    if is_builtin_tool_enabled("knowledge"):
+        if model_knowledge:
+            # Model has attached knowledge - only allow semantic search within it
+            builtin_functions.append(query_knowledge_files)
+        else:
+            # No model knowledge - allow full KB browsing
+            builtin_functions.extend(
+                [
+                    list_knowledge_bases,
+                    search_knowledge_bases,
+                    query_knowledge_bases,
+                    search_knowledge_files,
+                    query_knowledge_files,
+                    view_knowledge_file,
+                ]
+            )
 
     # Chats tools - search and fetch user's chat history
-    builtin_functions.extend([search_chats, view_chat])
+    if is_builtin_tool_enabled("chats"):
+        builtin_functions.extend([search_chats, view_chat])
 
-    # Add memory tools if enabled for this chat
-    if features.get("memory"):
+    # Add memory tools if builtin category enabled AND enabled for this chat
+    if is_builtin_tool_enabled("memory") and features.get("memory"):
         builtin_functions.extend([search_memories, add_memory, replace_memory_content])
 
-    # Add web search tools if enabled globally AND model has web_search capability
-    if getattr(
-        request.app.state.config, "ENABLE_WEB_SEARCH", False
-    ) and get_model_capability("web_search"):
+    # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
+    if (
+        is_builtin_tool_enabled("web_search")
+        and getattr(request.app.state.config, "ENABLE_WEB_SEARCH", False)
+        and get_model_capability("web_search")
+    ):
         builtin_functions.extend([search_web, fetch_url])
 
-    # Add image generation/edit tools if enabled globally AND model has image_generation capability
-    if getattr(
-        request.app.state.config, "ENABLE_IMAGE_GENERATION", False
-    ) and get_model_capability("image_generation"):
+    # Add image generation/edit tools if builtin category enabled AND enabled globally AND model has image_generation capability
+    if (
+        is_builtin_tool_enabled("image_generation")
+        and getattr(request.app.state.config, "ENABLE_IMAGE_GENERATION", False)
+        and get_model_capability("image_generation")
+    ):
         builtin_functions.append(generate_image)
-    if getattr(
-        request.app.state.config, "ENABLE_IMAGE_EDIT", False
-    ) and get_model_capability("image_generation"):
+    if (
+        is_builtin_tool_enabled("image_generation")
+        and getattr(request.app.state.config, "ENABLE_IMAGE_EDIT", False)
+        and get_model_capability("image_generation")
+    ):
         builtin_functions.append(edit_image)
 
-    # Notes tools - search, view, create, and update user's notes (if notes enabled globally)
-    if getattr(request.app.state.config, "ENABLE_NOTES", False):
+    # Add code interpreter tool if builtin category enabled AND enabled globally AND model has code_interpreter capability
+    if (
+        is_builtin_tool_enabled("code_interpreter")
+        and getattr(request.app.state.config, "ENABLE_CODE_INTERPRETER", True)
+        and get_model_capability("code_interpreter")
+    ):
+        builtin_functions.append(execute_code)
+
+    # Notes tools - search, view, create, and update user's notes (if builtin category enabled AND notes enabled globally)
+    if is_builtin_tool_enabled("notes") and getattr(
+        request.app.state.config, "ENABLE_NOTES", False
+    ):
         builtin_functions.extend(
             [search_notes, view_note, write_note, replace_note_content]
         )
 
-    # Channels tools - search channels and messages (if channels enabled globally)
-    if getattr(request.app.state.config, "ENABLE_CHANNELS", False):
+    # Channels tools - search channels and messages (if builtin category enabled AND channels enabled globally)
+    if is_builtin_tool_enabled("channels") and getattr(
+        request.app.state.config, "ENABLE_CHANNELS", False
+    ):
         builtin_functions.extend(
             [
                 search_channels,
@@ -466,6 +517,10 @@ def get_builtin_tools(
             ]
         )
 
+    # Skills tools - view_skill allows model to load full skill instructions on demand
+    if extra_params.get("__skill_ids__"):
+        builtin_functions.append(view_skill)
+
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(
             func,
@@ -473,6 +528,8 @@ def get_builtin_tools(
                 "__request__": request,
                 "__user__": extra_params.get("__user__", {}),
                 "__event_emitter__": extra_params.get("__event_emitter__"),
+                "__event_call__": extra_params.get("__event_call__"),
+                "__metadata__": extra_params.get("__metadata__"),
                 "__chat_id__": extra_params.get("__chat_id__"),
                 "__message_id__": extra_params.get("__message_id__"),
                 "__model_knowledge__": model_knowledge,
@@ -673,9 +730,10 @@ def convert_openapi_to_tool_payload(openapi_spec):
                     "parameters": {"type": "object", "properties": {}, "required": []},
                 }
 
-                # Extract path and query parameters
                 for param in operation.get("parameters", []):
-                    param_name = param["name"]
+                    param_name = param.get("name")
+                    if not param_name:
+                        continue
                     param_schema = param.get("schema", {})
                     description = param_schema.get("description", "")
                     if not description:
@@ -947,8 +1005,10 @@ async def execute_tool_server(
         body_params = {}
 
         for param in operation.get("parameters", []):
-            param_name = param["name"]
-            param_in = param["in"]
+            param_name = param.get("name")
+            if not param_name:
+                continue
+            param_in = param.get("in")
             if param_name in params:
                 if param_in == "path":
                     path_params[param_name] = params[param_name]

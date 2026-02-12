@@ -3,7 +3,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, config, prompts, tools as _tools, user } from '$lib/stores';
@@ -47,6 +47,7 @@
 
 	let showConfirm = false;
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let showManifestModal = false;
 	let showValvesModal = false;
@@ -62,7 +63,14 @@
 
 	let showImportModal = false;
 
-	$: if (tools && query !== undefined && viewOption !== undefined) {
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			setFilteredItems();
+		}, 300);
+	}
+
+	$: if (tools && viewOption !== undefined) {
 		setFilteredItems();
 	}
 
@@ -179,10 +187,15 @@
 		window.addEventListener('blur-sm', onBlur);
 
 		return () => {
+			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur-sm', onBlur);
 		};
+	});
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 	});
 </script>
 

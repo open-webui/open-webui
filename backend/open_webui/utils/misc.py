@@ -128,6 +128,138 @@ def get_content_from_message(message: dict) -> Optional[str]:
     return None
 
 
+def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
+    """
+    Convert OR-aligned output items to OpenAI Chat Completion-format messages.
+
+    This reconstructs the full conversation from the stored Responses API-native
+    output items, including assistant messages with tool_calls arrays and tool
+    role messages.
+
+    Args:
+        output: List of OR-aligned output items (Responses API format).
+        raw: If True, include reasoning blocks (with original tags) and code
+             interpreter blocks for LLM re-processing follow-ups.
+    """
+    if not output or not isinstance(output, list):
+        return []
+
+    messages = []
+    pending_tool_calls = []
+    pending_content = []
+
+    def flush_pending():
+        nonlocal pending_content, pending_tool_calls
+        if pending_content or pending_tool_calls:
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": "\n".join(pending_content) if pending_content else "",
+                    **(
+                        {"tool_calls": pending_tool_calls} if pending_tool_calls else {}
+                    ),
+                }
+            )
+            pending_content = []
+            pending_tool_calls = []
+
+    for item in output:
+        item_type = item.get("type", "")
+
+        if item_type == "message":
+            # Extract text from output_text content parts
+            content_parts = item.get("content", [])
+            text = ""
+            for part in content_parts:
+                if part.get("type") == "output_text":
+                    text += part.get("text", "")
+            if text:
+                pending_content.append(text)
+
+        elif item_type == "function_call":
+            # Collect tool calls to batch into assistant message
+            arguments = item.get("arguments", "{}")
+            # Ensure arguments is always a JSON string
+            if not isinstance(arguments, str):
+                arguments = json.dumps(arguments)
+            pending_tool_calls.append(
+                {
+                    "id": item.get("call_id", ""),
+                    "type": "function",
+                    "function": {
+                        "name": item.get("name", ""),
+                        "arguments": arguments,
+                    },
+                }
+            )
+
+        elif item_type == "function_call_output":
+            # Flush any pending content/tool_calls before adding tool result
+            flush_pending()
+
+            # Extract text from output content parts
+            output_parts = item.get("output", [])
+            content = ""
+            for part in output_parts:
+                if part.get("type") == "input_text":
+                    content += part.get("text", "")
+
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": item.get("call_id", ""),
+                    "content": content,
+                }
+            )
+
+        elif item_type == "reasoning":
+            if raw:
+                # Include reasoning with original tags for LLM re-processing
+                reasoning_text = ""
+                source_list = item.get("summary", []) or item.get("content", [])
+                for part in source_list:
+                    if part.get("type") == "output_text":
+                        reasoning_text += part.get("text", "")
+                    elif "text" in part:
+                        reasoning_text += part.get("text", "")
+
+                if reasoning_text:
+                    start_tag = item.get("start_tag", "<think>")
+                    end_tag = item.get("end_tag", "</think>")
+                    pending_content.append(f"{start_tag}{reasoning_text}{end_tag}")
+            # else: skip reasoning blocks for normal LLM messages
+
+        elif item_type == "open_webui:code_interpreter":
+            if raw:
+                # Include code interpreter content for LLM re-processing
+                code = item.get("code", "")
+                code_output = item.get("output", "")
+
+                if code:
+                    lang = item.get("lang", "python")
+                    pending_content.append(f"```{lang}\n{code}\n```")
+
+                if code_output:
+                    if isinstance(code_output, dict):
+                        stdout = code_output.get("stdout", "")
+                        result = code_output.get("result", "")
+                        output_text = stdout or result
+                    else:
+                        output_text = str(code_output)
+                    if output_text:
+                        pending_content.append(f"Output:\n{output_text}")
+            # else: skip extension types
+
+        elif item_type.startswith("open_webui:"):
+            # Skip other extension types
+            pass
+
+    # Flush remaining content/tool_calls
+    flush_pending()
+
+    return messages
+
+
 def get_last_user_message(messages: list[dict]) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:
@@ -648,6 +780,31 @@ def extract_urls(text: str) -> list[str]:
         r"(https?://[^\s]+)", re.IGNORECASE
     )  # Matches http and https URLs
     return url_pattern.findall(text)
+
+
+async def cleanup_response(
+    response: Optional[aiohttp.ClientResponse],
+    session: Optional[aiohttp.ClientSession],
+):
+    if response:
+        response.close()
+    if session:
+        await session.close()
+
+
+async def stream_wrapper(response, session, content_handler=None):
+    """
+    Wrap a stream to ensure cleanup happens even if streaming is interrupted.
+    This is more reliable than BackgroundTask which may not run if client disconnects.
+    """
+    try:
+        stream = (
+            content_handler(response.content) if content_handler else response.content
+        )
+        async for chunk in stream:
+            yield chunk
+    finally:
+        await cleanup_response(response, session)
 
 
 def stream_chunks_handler(stream: aiohttp.StreamReader):

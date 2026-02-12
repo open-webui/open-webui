@@ -42,13 +42,13 @@ from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.redis import get_redis_connection
-from open_webui.utils.access_control import has_access, get_users_with_access
+from open_webui.utils.access_control import has_permission
+from open_webui.models.access_grants import AccessGrants
 
 
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
 )
-
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -346,11 +346,12 @@ async def user_join(sid, data):
 
     await sio.enter_room(sid, f"user:{user.id}")
 
-    # Join all the channels
-    channels = Channels.get_channels_by_user_id(user.id)
-    log.debug(f"{channels=}")
-    for channel in channels:
-        await sio.enter_room(sid, f"channel:{channel.id}")
+    # Join all the channels only if user has channels permission
+    if user.role == "admin" or has_permission(user.id, "features.channels"):
+        channels = Channels.get_channels_by_user_id(user.id)
+        log.debug(f"{channels=}")
+        for channel in channels:
+            await sio.enter_room(sid, f"channel:{channel.id}")
 
     return {"id": user.id, "name": user.name}
 
@@ -376,11 +377,12 @@ async def join_channel(sid, data):
     if not user:
         return
 
-    # Join all the channels
-    channels = Channels.get_channels_by_user_id(user.id)
-    log.debug(f"{channels=}")
-    for channel in channels:
-        await sio.enter_room(sid, f"channel:{channel.id}")
+    # Join all the channels only if user has channels permission
+    if user.role == "admin" or has_permission(user.id, "features.channels"):
+        channels = Channels.get_channels_by_user_id(user.id)
+        log.debug(f"{channels=}")
+        for channel in channels:
+            await sio.enter_room(sid, f"channel:{channel.id}")
 
 
 @sio.on("join-note")
@@ -405,7 +407,12 @@ async def join_note(sid, data):
     if (
         user.role != "admin"
         and user.id != note.user_id
-        and not has_access(user.id, type="read", access_control=note.access_control)
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="note",
+            resource_id=note.id,
+            permission="read",
+        )
     ):
         log.error(f"User {user.id} does not have access to note {data['note_id']}")
         return
@@ -467,8 +474,11 @@ async def ydoc_document_join(sid, data):
             if (
                 user.get("role") != "admin"
                 and user.get("id") != note.user_id
-                and not has_access(
-                    user.get("id"), type="read", access_control=note.access_control
+                and not AccessGrants.has_access(
+                    user_id=user.get("id"),
+                    resource_type="note",
+                    resource_id=note.id,
+                    permission="read",
                 )
             ):
                 log.error(
@@ -537,8 +547,11 @@ async def document_save_handler(document_id, data, user):
         if (
             user.get("role") != "admin"
             and user.get("id") != note.user_id
-            and not has_access(
-                user.get("id"), type="read", access_control=note.access_control
+            and not AccessGrants.has_access(
+                user_id=user.get("id"),
+                resource_type="note",
+                resource_id=note.id,
+                permission="read",
             )
         ):
             log.error(f"User {user.get('id')} does not have access to note {note_id}")

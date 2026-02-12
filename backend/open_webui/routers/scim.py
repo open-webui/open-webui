@@ -352,18 +352,17 @@ def user_to_scim(user: UserModel, request: Request, db=None) -> SCIMUser:
 def group_to_scim(group: GroupModel, request: Request, db=None) -> SCIMGroup:
     """Convert internal Group model to SCIM Group"""
     member_ids = Groups.get_group_user_ids_by_id(group.id, db) or []
-    members = []
 
-    for user_id in member_ids:
-        user = Users.get_user_by_id(user_id, db=db)
-        if user:
-            members.append(
-                SCIMGroupMember(
-                    value=user.id,
-                    ref=f"{request.base_url}api/v1/scim/v2/Users/{user.id}",
-                    display=user.name,
-                )
-            )
+    # Batch-fetch all users to avoid N+1 queries
+    users = Users.get_users_by_user_ids(member_ids, db=db) if member_ids else []
+    members = [
+        SCIMGroupMember(
+            value=user.id,
+            ref=f"{request.base_url}api/v1/scim/v2/Users/{user.id}",
+            display=user.name,
+        )
+        for user in users
+    ]
 
     return SCIMGroup(
         id=group.id,

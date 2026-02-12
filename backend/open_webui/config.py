@@ -2,7 +2,9 @@ import json
 import logging
 import os
 import shutil
+import socket
 import base64
+from concurrent.futures import ThreadPoolExecutor
 import redis
 
 from datetime import datetime
@@ -257,7 +259,7 @@ class AppConfig:
             self._state[key].value = value
             self._state[key].save()
 
-            if self._redis:
+            if self._redis and ENABLE_PERSISTENT_CONFIG:
                 redis_key = f"{self._redis_key_prefix}:config:{key}"
                 self._redis.set(redis_key, json.dumps(self._state[key].value))
 
@@ -265,8 +267,8 @@ class AppConfig:
         if key not in self._state:
             raise AttributeError(f"Config key '{key}' not found")
 
-        # If Redis is available, check for an updated value
-        if self._redis:
+        # If Redis is available and persistent config is enabled, check for an updated value
+        if self._redis and ENABLE_PERSISTENT_CONFIG:
             redis_key = f"{self._redis_key_prefix}:config:{key}"
             redis_value = self._redis.get(redis_key)
 
@@ -1015,6 +1017,39 @@ if ENV == "prod":
         OLLAMA_BASE_URL = "http://ollama-service.open-webui.svc.cluster.local:11434"
 
 
+def _resolve_ollama_base_url(url: str) -> str:
+    """If the default Ollama port (11434) is unreachable, try the fallback port (12434)."""
+
+    def reachable(host: str, port: int) -> bool:
+        try:
+            with socket.create_connection((host, port), timeout=1.0):
+                return True
+        except (OSError, TimeoutError):
+            return False
+
+    host = urlparse(url).hostname or "localhost"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        default = pool.submit(reachable, host, 11434)
+        fallback = pool.submit(reachable, host, 12434)
+
+    if not default.result() and fallback.result():
+        url = url.replace(":11434", ":12434")
+        log.info(f"Ollama port 11434 unreachable on {host}, falling back to 12434")
+    elif not default.result():
+        log.info(f"Ollama ports 11434 and 12434 both unreachable on {host}")
+
+    return url
+
+
+# Auto-resolve Ollama port when no explicit URL was provided by the user.
+# The Dockerfile default is "/ollama" which the block above rewrites to :11434.
+if os.environ.get("OLLAMA_BASE_URL", "") in ("", "/ollama") and not os.environ.get(
+    "OLLAMA_BASE_URLS", ""
+):
+    OLLAMA_BASE_URL = _resolve_ollama_base_url(OLLAMA_BASE_URL)
+
+
 OLLAMA_BASE_URLS = os.environ.get("OLLAMA_BASE_URLS", "")
 OLLAMA_BASE_URLS = OLLAMA_BASE_URLS if OLLAMA_BASE_URLS != "" else OLLAMA_BASE_URL
 
@@ -1265,6 +1300,11 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
 )
 
+USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS", "False").lower()
+    == "true"
+)
+
 USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT", "False").lower()
     == "true"
@@ -1486,6 +1526,7 @@ DEFAULT_USER_PERMISSIONS = {
         "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
         "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
         "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
+        "skills": USER_PERMISSIONS_WORKSPACE_SKILLS_ACCESS,
         "models_import": USER_PERMISSIONS_WORKSPACE_MODELS_IMPORT,
         "models_export": USER_PERMISSIONS_WORKSPACE_MODELS_EXPORT,
         "prompts_import": USER_PERMISSIONS_WORKSPACE_PROMPTS_IMPORT,
@@ -2246,9 +2287,15 @@ ENABLE_QDRANT_MULTITENANCY_MODE = (
 QDRANT_COLLECTION_PREFIX = os.environ.get("QDRANT_COLLECTION_PREFIX", "open-webui")
 
 WEAVIATE_HTTP_HOST = os.environ.get("WEAVIATE_HTTP_HOST", "")
+WEAVIATE_GRPC_HOST = os.environ.get("WEAVIATE_GRPC_HOST", "")
 WEAVIATE_HTTP_PORT = int(os.environ.get("WEAVIATE_HTTP_PORT", "8080"))
 WEAVIATE_GRPC_PORT = int(os.environ.get("WEAVIATE_GRPC_PORT", "50051"))
 WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY")
+WEAVIATE_HTTP_SECURE = os.environ.get("WEAVIATE_HTTP_SECURE", "false").lower() == "true"
+WEAVIATE_GRPC_SECURE = os.environ.get("WEAVIATE_GRPC_SECURE", "false").lower() == "true"
+WEAVIATE_SKIP_INIT_CHECKS = (
+    os.environ.get("WEAVIATE_SKIP_INIT_CHECKS", "false").lower() == "true"
+)
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
@@ -2803,6 +2850,12 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
     "PDF_EXTRACT_IMAGES",
     "rag.pdf_extract_images",
     os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true",
+)
+
+PDF_LOADER_MODE = PersistentConfig(
+    "PDF_LOADER_MODE",
+    "rag.pdf_loader_mode",
+    os.environ.get("PDF_LOADER_MODE", "page"),
 )
 
 RAG_EMBEDDING_MODEL = PersistentConfig(
@@ -3400,6 +3453,24 @@ EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
     os.environ.get("EXTERNAL_WEB_LOADER_API_KEY", ""),
 )
 
+YANDEX_WEB_SEARCH_URL = PersistentConfig(
+    "YANDEX_WEB_SEARCH_URL",
+    "rag.web.search.yandex_web_search_url",
+    os.environ.get("YANDEX_WEB_SEARCH_URL", ""),
+)
+
+YANDEX_WEB_SEARCH_API_KEY = PersistentConfig(
+    "YANDEX_WEB_SEARCH_API_KEY",
+    "rag.web.search.yandex_web_search_api_key",
+    os.environ.get("YANDEX_WEB_SEARCH_API_KEY", ""),
+)
+
+YANDEX_WEB_SEARCH_CONFIG = PersistentConfig(
+    "YANDEX_WEB_SEARCH_CONFIG",
+    "rag.web.search.yandex_web_search_config",
+    os.environ.get("YANDEX_WEB_SEARCH_CONFIG", ""),
+)
+
 ####################################
 # Images
 ####################################
@@ -3420,6 +3491,16 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
     "IMAGE_GENERATION_MODEL",
     "image_generation.model",
     os.getenv("IMAGE_GENERATION_MODEL", ""),
+)
+
+# Regex pattern for models that support IMAGE_SIZE = "auto".
+IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN = os.getenv(
+    "IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN", "^gpt-image"
+)
+
+# Regex pattern for models that return URLs instead of base64 data.
+IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN = os.getenv(
+    "IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN", "^gpt-image"
 )
 
 IMAGE_SIZE = PersistentConfig(
