@@ -13,12 +13,12 @@ PyJWT[crypto]==2.11.0
 authlib==1.6.7
 
 requests==2.32.5
-aiohttp==3.13.2 # do not update to 3.13.3 - broken
+aiohttp==3.13.3 # do not update to 3.13.3 - broken
 async-timeout
 aiocache
 aiofiles
 starlette-compress==1.7.0
-Brotli==1.1.0
+Brotli==1.2.0
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
 python-mimeparse==2.0.0
@@ -69,7 +69,7 @@ fpdf2==2.8.5
 pymdown-extensions==10.20.1
 docx2txt==0.9
 python-pptx==1.0.2
-unstructured==0.18.31
+unstructured==0.18.32
 msoffcrypto-tool==6.0.0
 nltk==3.9.2
 Markdown==3.10.1
@@ -83,7 +83,7 @@ psutil
 sentencepiece
 soundfile==0.13.1
 
-pillow==12.1.0
+pillow==12.1.1
 opencv-python-headless==4.13.0.92
 rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
