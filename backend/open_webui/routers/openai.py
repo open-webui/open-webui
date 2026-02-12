@@ -25,6 +25,7 @@ from open_webui.internal.db import get_session
 
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
 from open_webui.config import (
     CACHE_DIR,
 )
@@ -466,15 +467,24 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
 async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
+    model_ids = [model["id"] for model in models.get("data", [])]
+    model_infos = {
+        m.id: m for m in Models.get_models_by_ids(model_ids, db=db)
+    }
+    user_group_ids = {
+        g.id for g in Groups.get_groups_by_member_id(user.id, db=db)
+    }
+
     filtered_models = []
     for model in models.get("data", []):
-        model_info = Models.get_model_by_id(model["id"], db=db)
+        model_info = model_infos.get(model["id"])
         if model_info:
             if user.id == model_info.user_id or AccessGrants.has_access(
                 user_id=user.id,
                 resource_type="model",
                 resource_id=model_info.id,
                 permission="read",
+                user_group_ids=user_group_ids,
                 db=db,
             ):
                 filtered_models.append(model)
