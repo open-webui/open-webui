@@ -1663,6 +1663,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "캐시 무시",
 	"Skip the cache and re-run the inference. Defaults to False.": "캐시를 무시하고 추론을 다시 실행합니다. 기본값은 False입니다.",
 	"Something went wrong :/": "무언가 잘못 되었습니다 :/",

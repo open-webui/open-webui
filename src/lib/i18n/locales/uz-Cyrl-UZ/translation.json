@@ -1664,6 +1664,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "Кешни ўтказиб юбориш",
 	"Skip the cache and re-run the inference. Defaults to False.": "Кешни ўтказиб юборинг ва хулосани қайта ишга туширинг. Бирламчи параметрлар Фалсе.",
 	"Something went wrong :/": "",

@@ -1664,6 +1664,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "Spring cache over",
 	"Skip the cache and re-run the inference. Defaults to False.": "Spring cachen over og kør inferensen igen. Standard er falsk.",
 	"Something went wrong :/": "Noget gik galt :/",

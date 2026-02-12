@@ -1664,6 +1664,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "رد کردن کش",
 	"Skip the cache and re-run the inference. Defaults to False.": "کش را رد کرده و استنتاج را مجدداً اجرا کنید. پیش\u200cفرض: False.",
 	"Something went wrong :/": "مشکلی پیش آمد :/",

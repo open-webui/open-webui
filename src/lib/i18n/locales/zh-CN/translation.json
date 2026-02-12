@@ -1663,6 +1663,7 @@
 	"Skill Name": "技能名称",
 	"Skill updated successfully": "技能更新成功",
 	"Skills": "技能",
+	"Skills Access": "",
 	"Skip Cache": "跳过缓存",
 	"Skip the cache and re-run the inference. Defaults to False.": "跳过缓存并重新执行推理。默认为关闭",
 	"Something went wrong :/": "发生错误",

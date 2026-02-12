@@ -1663,6 +1663,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "ข้ามแคช",
 	"Skip the cache and re-run the inference. Defaults to False.": "ข้ามแคชและรันการอนุมานใหม่อีกครั้ง ค่าเริ่มต้นคือ False",
 	"Something went wrong :/": "มีบางอย่างผิดพลาด :/",

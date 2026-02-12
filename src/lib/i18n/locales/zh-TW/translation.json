@@ -1663,6 +1663,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "略過快取",
 	"Skip the cache and re-run the inference. Defaults to False.": "略過快取並重新執行推理。預設為 False。",
 	"Something went wrong :/": "發生錯誤 :/",

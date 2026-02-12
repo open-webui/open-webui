@@ -1666,6 +1666,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "Přeskočit mezipaměť",
 	"Skip the cache and re-run the inference. Defaults to False.": "Přeskočit mezipaměť a znovu spustit inferenci. Výchozí hodnota je False.",
 	"Something went wrong :/": "Něco se pokazilo :/",

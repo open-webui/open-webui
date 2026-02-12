@@ -380,7 +380,8 @@
 			if (file['type'].startsWith('image/')) {
 				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
 					// Quick shortcut so we don’t do unnecessary work.
-					const settingsCompression = (settings?.imageCompression && settings?.imageCompressionInChannels) ?? false;
+					const settingsCompression =
+						(settings?.imageCompression && settings?.imageCompressionInChannels) ?? false;
 					const configWidth = config?.file?.image_compression?.width ?? null;
 					const configHeight = config?.file?.image_compression?.height ?? null;
 

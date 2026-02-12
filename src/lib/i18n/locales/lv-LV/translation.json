@@ -1665,6 +1665,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "Izlaist kešatmiņu",
 	"Skip the cache and re-run the inference. Defaults to False.": "Izlaist kešatmiņu un atkārtoti palaist secinājumu. Noklusējums ir False.",
 	"Something went wrong :/": "Kaut kas nogāja greizi :/",

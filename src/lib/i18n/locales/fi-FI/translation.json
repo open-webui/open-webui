@@ -1664,6 +1664,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "Ohita välimuisti",
 	"Skip the cache and re-run the inference. Defaults to False.": "Ohita välimuisti ja suorita päätelmä uudelleen. Oletusarvo ei käytössä.",
 	"Something went wrong :/": "Jokin meni pieleen :/",

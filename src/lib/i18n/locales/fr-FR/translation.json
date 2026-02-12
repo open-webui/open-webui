@@ -1665,6 +1665,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "Ne pas utiliser le cache",
 	"Skip the cache and re-run the inference. Defaults to False.": "Ne pas utiliser le cache et re executer l'inférence. Par defaut à False",
 	"Something went wrong :/": "Quelque chose s'est mal passé :/",
