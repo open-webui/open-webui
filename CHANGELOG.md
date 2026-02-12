@@ -143,6 +143,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 💾 Inline images no longer exhaust the model's context window by including their full base64 data in chat metadata, preventing premature context exhaustion with image-heavy conversations. [#20916](https://github.com/open-webui/open-webui/pull/20916)
 - 🐛 The OpenAI API router model lookup was corrected to use the proper model identifier when checking the cache, ensuring consistent and correct model retrieval during chat completions. [#21327](https://github.com/open-webui/open-webui/pull/21327)
 - 🐛 Ollama-compatible providers that don't use ":latest" in model names can now successfully chat, fixing errors where model names were incorrectly appended with ":latest" suffixes. [#21331](https://github.com/open-webui/open-webui/issues/21331), [Commit](https://github.com/open-webui/open-webui/commit/05ae44b98dc279ee12cc8eab17278ccbfec60301)
+- ⛔ OpenAI API endpoint detection was corrected to use exact hostname matching instead of substring matching, preventing third-party providers with similar URL patterns from being incorrectly filtered. [Commit](https://github.com/open-webui/open-webui/commit/423d8b18170a0b92b582aba6ef7bb9ba173e876e)
 
 ### Changed
 
