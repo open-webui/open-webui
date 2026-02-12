@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ The model selector dropdown now renders smoothly even with hundreds of models, eliminating the lag and freezing that occurred when opening the dropdown with large model lists. [Commit](https://github.com/open-webui/open-webui/commit/4331029926245b7b74fa8e254610c91400b239b0)
 - 🚗 Toggling model visibility in the admin panel is now faster with optimized database access. [#21009](https://github.com/open-webui/open-webui/pull/21009)
 - 💾 Model access control checks are now faster by batch-fetching model info and group memberships upfront instead of querying for each model. [#21008](https://github.com/open-webui/open-webui/pull/21008)
+- ⚙️ Model list loading and model imports are now faster by eliminating redundant database queries. [#21004](https://github.com/open-webui/open-webui/pull/21004)
 - 🏃 SCIM group member lookups are now up to 13x faster by batching user queries instead of fetching each member individually. [#21005](https://github.com/open-webui/open-webui/pull/21005)
 - 💨 Group member counts are now fetched in a single batch query when loading group lists, eliminating redundant database lookups. [Commit](https://github.com/open-webui/open-webui/commit/96c07f44a8f5e6346b2ea6ac529ff4ec3c47e90a)
 - 💨 Bulk feedback deletion and group member removal are now 4-5x faster with optimized batch operations. [#21019](https://github.com/open-webui/open-webui/pull/21019)
