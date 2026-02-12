@@ -502,6 +502,22 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 try:
                     self._safe_process_url_sync(url)
                     page = browser.new_page()
+
+                    # Intercept navigation requests to prevent SSRF via redirects.
+                    # Only validates document (navigation) requests — not sub-resources
+                    # like images/scripts/CSS — to avoid excessive DNS lookups.
+                    def _intercept_navigation(route):
+                        if route.request.resource_type == "document":
+                            try:
+                                validate_url(route.request.url)
+                                route.continue_()
+                            except Exception:
+                                route.abort()
+                        else:
+                            route.continue_()
+
+                    page.route("**/*", _intercept_navigation)
+
                     response = page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f"page.goto() returned None for url {url}")
@@ -533,6 +549,22 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 try:
                     await self._safe_process_url(url)
                     page = await browser.new_page()
+
+                    # Intercept navigation requests to prevent SSRF via redirects.
+                    # Only validates document (navigation) requests — not sub-resources
+                    # like images/scripts/CSS — to avoid excessive DNS lookups.
+                    async def _intercept_navigation(route):
+                        if route.request.resource_type == "document":
+                            try:
+                                await run_in_threadpool(validate_url, route.request.url)
+                                await route.continue_()
+                            except Exception:
+                                await route.abort()
+                        else:
+                            await route.continue_()
+
+                    await page.route("**/*", _intercept_navigation)
+
                     response = await page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f"page.goto() returned None for url {url}")
