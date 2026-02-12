@@ -775,6 +775,19 @@
 						/>
 					</div>
 
+					<div class="mb-2.5">
+						<div class=" self-center text-xs font-medium mb-2">
+							{$i18n.t('Citation Content Format')}
+						</div>
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={adminConfig.CITATION_FORMAT}
+						>
+							<option value="plain_text">{$i18n.t('Plain Text')}</option>
+							<option value="markdown">{$i18n.t('Markdown')}</option>
+						</select>
+					</div>
+
 					<div class="mb-2.5 w-full justify-between">
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('WebUI URL')}</div>
