@@ -1580,6 +1580,9 @@ def save_docs_to_vector_db(
 
         # Run async embedding in sync context using the main event loop
         # This allows the main loop to stay responsive to health checks during long operations
+        embedding_timeout_str = os.environ.get("RAG_EMBEDDING_TIMEOUT")
+        embedding_timeout = int(embedding_timeout_str) if embedding_timeout_str else None
+
         future = asyncio.run_coroutine_threadsafe(
             embedding_function(
                 list(map(lambda x: x.replace("\n", " "), texts)),
@@ -1588,7 +1591,7 @@ def save_docs_to_vector_db(
             ),
             request.app.state.main_loop,
         )
-        embeddings = future.result(timeout=600)
+        embeddings = future.result(timeout=embedding_timeout)
         log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
         items = [
