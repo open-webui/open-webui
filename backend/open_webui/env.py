@@ -783,6 +783,17 @@ AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
 )
 
 
+RAG_EMBEDDING_TIMEOUT = os.environ.get("RAG_EMBEDDING_TIMEOUT", "")
+
+if RAG_EMBEDDING_TIMEOUT == "":
+    RAG_EMBEDDING_TIMEOUT = None
+else:
+    try:
+        RAG_EMBEDDING_TIMEOUT = int(RAG_EMBEDDING_TIMEOUT)
+    except Exception:
+        RAG_EMBEDDING_TIMEOUT = None
+
+
 ####################################
 # SENTENCE TRANSFORMERS
 ####################################
