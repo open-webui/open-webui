@@ -50,16 +50,22 @@
 	$: selectedModelsForInput = selectedModels;
 
 	/* -----------------------------
-	   ✅ VISIBILITY CONTROL (FINAL)
+	   VISIBILITY CONTROL (STABLE)
 	----------------------------- */
 	let inputActive = false;
 	let userInteracted = false;
 
-	// Only show after REAL user interaction
-	$: showSuggestions = userInteracted && (inputActive || prompt.length > 0);
+	// ✅ FINAL RULE:
+	// - user interacted
+	// - input focused OR text typed
+	// - NO files uploaded
+	$: showSuggestions =
+		userInteracted &&
+		files.length === 0 &&
+		(inputActive || prompt.length > 0);
 
 	/* -----------------------------
-	   Suggestion helpers
+	   Suggestions helpers
 	----------------------------- */
 	const getSuggestionPrompts = (meta: any) => meta?.suggestion_prompts;
 
@@ -83,20 +89,20 @@
 	};
 
 	onMount(() => {
-		// 🔒 Force hidden on first load
+		// Force hidden on first load
 		inputActive = false;
 		userInteracted = false;
 	});
 </script>
 
 <!-- =====================================================
-     PAGE WRAPPER
+     PAGE WRAPPER (NO SCROLL)
 ===================================================== -->
-<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 py-24 text-center">
+<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 py-8 text-center">
 
 	{#if $temporaryChatEnabled}
 		<Tooltip
-			content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
+			content={$i18n.t('This chat wont appear in history and your messages will not be saved.')}
 			className="w-full flex justify-center mb-2"
 			placement="top"
 		>
@@ -107,17 +113,17 @@
 		</Tooltip>
 	{/if}
 
-	<!-- HEADER -->
-	<div class="flex flex-col items-center justify-center text-center font-primary">
+	<!-- HEADER (FIXED POSITION) -->
+	<div class="flex flex-col items-center justify-center text-center font-primary mb-4">
 		<img
 			src={`${WEBUI_BASE_URL}/static/favicon.png`}
-			alt="Copai Logo"
+			alt="Cook Logo"
 			class="w-14 h-14 mb-4"
 			draggable="false"
 		/>
 
 		<h1 class="text-3xl @sm:text-4xl font-semibold text-gray-900 dark:text-gray-100">
-			Welcome to Copai
+			Welcome to Cook
 		</h1>
 
 		<p class="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-md">
@@ -130,10 +136,10 @@
 	</div>
 
 	<!-- =====================================================
-	     INPUT + SUGGESTIONS (FINAL, STABLE)
+	     SUGGESTIONS + INPUT (FIXED HEIGHT CONTAINER)
 	===================================================== -->
 	<div
-		class="mt-10 w-full flex flex-col-reverse items-center text-left"
+		class="w-full flex flex-col items-center text-left"
 		on:focusin={() => {
 			inputActive = true;
 			userInteracted = true;
@@ -141,12 +147,37 @@
 		on:click={() => {
 			inputActive = true;
 			userInteracted = true;
-		}}    
+		}}
 		on:keydown={() => (userInteracted = true)}
 	>
+		<!-- SUGGESTIONS (FIXED HEIGHT CONTAINER) -->
+		<div class="mx-auto max-w-2xl w-full mb-2" style="min-height: 160px;">
+			<div
+				class="transition-opacity duration-200"
+				style="
+					opacity: {showSuggestions ? 1 : 0};
+					pointer-events: {showSuggestions ? 'auto' : 'none'};
+				"
+			>
+				<div
+					class="mx-5 max-h-40 overflow-y-auto overscroll-contain"
+				>
+					<Suggestions
+						suggestionPrompts={
+							getSuggestionPrompts(atSelectedModel?.info?.meta) ??
+							getSuggestionPrompts(models[selectedModelIdx]?.info?.meta) ??
+							$config?.default_prompt_suggestions ??
+							[]
+						}
+						inputValue={prompt}
+						on:select={(e) => selectSuggestionPrompt(e.detail)}
+					/>
+				</div>
+			</div>
+		</div>
 
 		<!-- INPUT -->
-		<div class="w-full @md:max-w-3xl py-3">
+		<div class="w-full @md:max-w-3xl py-2">
 			<MessageInput
 				{history}
 				selectedModels={selectedModelsForInput}
@@ -166,30 +197,6 @@
 				on:upload={(e) => dispatch('upload', e.detail)}
 				on:submit={(e) => dispatch('submit', e.detail)}
 			/>
-		</div>
-
-		<!-- 🔒 RESERVED SPACE (NO SHIFT EVER) -->
-		<div class="mx-auto max-w-2xl w-full min-h-[220px]">
-			<div
-				class="transition-opacity duration-200"
-				style="
-					opacity: {showSuggestions ? 1 : 0};
-					pointer-events: {showSuggestions ? 'auto' : 'none'};
-				"
-			>
-				<div class="mx-5">
-					<Suggestions
-						suggestionPrompts={
-							getSuggestionPrompts(atSelectedModel?.info?.meta) ??
-							getSuggestionPrompts(models[selectedModelIdx]?.info?.meta) ??
-							$config?.default_prompt_suggestions ??
-							[]
-						}
-						inputValue={prompt}
-						on:select={(e) => selectSuggestionPrompt(e.detail)}
-					/>
-				</div>
-			</div>
 		</div>
 
 	</div>

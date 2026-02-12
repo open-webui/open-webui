@@ -372,7 +372,8 @@
 	};
 
 	// Helper variables to avoid type assertion issues in templates
-	$: hasWorkspaceAccess = $user?.role === 'admin' || ($user as any)?.permissions;
+	// $: hasWorkspaceAccess = $user?.role === 'admin' || ($user as any)?.permissions;
+	$: hasWorkspaceAccess = $user?.role === 'admin';
 	$: hasChannelsEnabled = ($config as any)?.features?.enable_channels;
 	$: chatList = ($chats as any) ?? [];
 	$: pinnedChatList = ($pinnedChats as any) ?? [];
@@ -494,9 +495,10 @@
 		? 'md:relative w-[280px] max-w-[280px] shadow-2xl md:shadow-none'
 		: '-translate-x-[280px] w-[0px]'} {$isApp
 		? 'ml-[4.5rem] md:ml-0'
-		: 'transition-all duration-300 ease-out'} shrink-0 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl text-gray-900 dark:text-gray-100 text-sm fixed z-50 top-0 left-0 overflow-x-hidden border-r border-gray-200/80 dark:border-gray-800/80"
+		: 'transition-all duration-300 ease-out'} shrink-0 bg-[#f9f9f9] dark:bg-gray-900 backdrop-blur-xl text-gray-900 dark:text-gray-100 text-sm fixed z-50 top-0 left-0 overflow-x-hidden border-r border-gray-200"
 	data-state={$showSidebar}
 >
+
 	<div
 		class="py-3.5 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[280px] overflow-x-hidden z-50 {$showSidebar
 			? ''
@@ -529,9 +531,12 @@
 
 			<a
 				id="sidebar-new-chat-button"
-				class="new-chat-button flex-1 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 bg-gradient-to-br   
-				 hover:from-gray-100 hover:to-gray-100  
-				    transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98] no-drag-region group"
+				class="new-chat-button flex-1 flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 
+		bg-white dark:bg-gray-800 
+		border border-gray-200 dark:border-gray-700
+		hover:bg-gray-50 dark:hover:bg-gray-700
+		transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98] no-drag-region group"
+
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -546,6 +551,7 @@
 					}, 0);
 				}}
 			>
+
 				<div class="flex items-center gap-2.5 min-w-0">
 					<div class="flex-shrink-0 p-1.5 bg-white/80 dark:bg-gray-900/80 rounded-lg shadow-sm">
 						<img

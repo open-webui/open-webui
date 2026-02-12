@@ -127,7 +127,7 @@
 <UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
 
 {#if ($config?.license_metadata?.seats ?? null) !== null && users.length > $config?.license_metadata?.seats}
-	<div class="mb-4">
+	<div class="mt-1 mb-3">
 		<Banner
 			className="mx-0"
 			banner={{
@@ -141,35 +141,39 @@
 	</div>
 {/if}
 
-<div class="mb-6 flex flex-col gap-4">
-	<!-- Header Section -->
+<!-- Header Section -->
+<div class="mb-6 space-y-4">
 	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+		<!-- Title and Count -->
 		<div class="flex items-center gap-3">
-			<div>
-				<h2 class="text-2xl font-semibold text-gray-900 dark:text-white">
-					{$i18n.t('Users')}
-				</h2>
-				{#if ($config?.license_metadata?.seats ?? null) !== null}
-					{#if users.length > $config?.license_metadata?.seats}
-						<p class="text-sm text-red-600 dark:text-red-400 mt-0.5">
-							{users.length} of {$config?.license_metadata?.seats} seats used
-						</p>
-					{:else}
-						<p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-							{users.length} of {$config?.license_metadata?.seats} seats used
-						</p>
-					{/if}
+			<h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+				{$i18n.t('Users')}
+			</h2>
+			<div class="h-6 w-px bg-gray-300 dark:bg-gray-700"></div>
+			{#if ($config?.license_metadata?.seats ?? null) !== null}
+				{#if users.length > $config?.license_metadata?.seats}
+					<div class="flex items-baseline gap-1.5">
+						<span class="text-lg font-semibold text-red-600 dark:text-red-400">{users.length}</span>
+						<span class="text-sm text-gray-500 dark:text-gray-400">of</span>
+						<span class="text-lg font-semibold text-red-600 dark:text-red-400">{$config?.license_metadata?.seats}</span>
+						<span class="text-sm text-gray-500 dark:text-gray-400">seats</span>
+					</div>
 				{:else}
-					<p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-						{users.length} {users.length === 1 ? 'user' : 'users'}
-					</p>
+					<div class="flex items-baseline gap-1.5">
+						<span class="text-lg font-semibold text-gray-700 dark:text-gray-300">{users.length}</span>
+						<span class="text-sm text-gray-500 dark:text-gray-400">of</span>
+						<span class="text-lg font-semibold text-gray-700 dark:text-gray-300">{$config?.license_metadata?.seats}</span>
+						<span class="text-sm text-gray-500 dark:text-gray-400">seats</span>
+					</div>
 				{/if}
-			</div>
+			{:else}
+				<span class="text-lg font-semibold text-gray-700 dark:text-gray-300">{users.length}</span>
+			{/if}
 		</div>
 
-		<!-- Search and Add Section -->
-		<div class="flex gap-2">
-			<div class="relative flex-1 md:w-72">
+		<!-- Search and Add Button -->
+		<div class="flex items-center gap-3">
+			<div class="relative flex-1 md:w-80">
 				<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -185,7 +189,7 @@
 					</svg>
 				</div>
 				<input
-					class="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all"
+					class="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all duration-150"
 					bind:value={search}
 					placeholder={$i18n.t('Search users...')}
 				/>
@@ -193,153 +197,165 @@
 
 			<Tooltip content={$i18n.t('Add User')}>
 				<button
-					class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-colors font-medium text-sm flex items-center gap-2 shadow-sm"
+					class="p-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-colors duration-150 shadow-sm hover:shadow"
 					on:click={() => {
 						showAddUserModal = !showAddUserModal;
 					}}
 				>
-					<Plus className="size-4" />
-					<span class="hidden sm:inline">Add User</span>
+					<Plus className="size-4" strokeWidth="2.5" />
 				</button>
 			</Tooltip>
 		</div>
 	</div>
 </div>
 
-<div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900">
+<!-- Table Container -->
+<div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
 	<div class="overflow-x-auto">
-		<table class="w-full">
-			<thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+		<table class="w-full text-sm text-left">
+			<thead class="bg-gray-50 dark:bg-gray-850 border-b border-gray-200 dark:border-gray-800">
 				<tr>
 					<th
 						scope="col"
-						class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+						class="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => setSortKey('role')}
 					>
-						<div class="flex gap-2 items-center">
-							{$i18n.t('Role')}
-							<span class="text-gray-400">
-								{#if sortKey === 'role'}
+						<div class="flex items-center gap-2">
+							<span>{$i18n.t('Role')}</span>
+							{#if sortKey === 'role'}
+								<span class="text-blue-600 dark:text-blue-400">
 									{#if sortOrder === 'asc'}
-										<ChevronUp className="size-3.5" />
+										<ChevronUp className="size-3.5" strokeWidth="2.5" />
 									{:else}
-										<ChevronDown className="size-3.5" />
+										<ChevronDown className="size-3.5" strokeWidth="2.5" />
 									{/if}
-								{:else}
-									<ChevronUp className="size-3.5 opacity-0" />
-								{/if}
-							</span>
+								</span>
+							{:else}
+								<span class="text-gray-400 opacity-0 group-hover:opacity-100">
+									<ChevronUp className="size-3.5" />
+								</span>
+							{/if}
 						</div>
 					</th>
 					<th
 						scope="col"
-						class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+						class="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => setSortKey('name')}
 					>
-						<div class="flex gap-2 items-center">
-							{$i18n.t('Name')}
-							<span class="text-gray-400">
-								{#if sortKey === 'name'}
+						<div class="flex items-center gap-2">
+							<span>{$i18n.t('Name')}</span>
+							{#if sortKey === 'name'}
+								<span class="text-blue-600 dark:text-blue-400">
 									{#if sortOrder === 'asc'}
-										<ChevronUp className="size-3.5" />
+										<ChevronUp className="size-3.5" strokeWidth="2.5" />
 									{:else}
-										<ChevronDown className="size-3.5" />
+										<ChevronDown className="size-3.5" strokeWidth="2.5" />
 									{/if}
-								{:else}
-									<ChevronUp className="size-3.5 opacity-0" />
-								{/if}
-							</span>
+								</span>
+							{:else}
+								<span class="text-gray-400 opacity-0 group-hover:opacity-100">
+									<ChevronUp className="size-3.5" />
+								</span>
+							{/if}
 						</div>
 					</th>
 					<th
 						scope="col"
-						class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+						class="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => setSortKey('email')}
 					>
-						<div class="flex gap-2 items-center">
-							{$i18n.t('Email')}
-							<span class="text-gray-400">
-								{#if sortKey === 'email'}
+						<div class="flex items-center gap-2">
+							<span>{$i18n.t('Email')}</span>
+							{#if sortKey === 'email'}
+								<span class="text-blue-600 dark:text-blue-400">
 									{#if sortOrder === 'asc'}
-										<ChevronUp className="size-3.5" />
+										<ChevronUp className="size-3.5" strokeWidth="2.5" />
 									{:else}
-										<ChevronDown className="size-3.5" />
+										<ChevronDown className="size-3.5" strokeWidth="2.5" />
 									{/if}
-								{:else}
-									<ChevronUp className="size-3.5 opacity-0" />
-								{/if}
-							</span>
+								</span>
+							{:else}
+								<span class="text-gray-400 opacity-0 group-hover:opacity-100">
+									<ChevronUp className="size-3.5" />
+								</span>
+							{/if}
 						</div>
 					</th>
 					<th
 						scope="col"
-						class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+						class="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => setSortKey('last_active_at')}
 					>
-						<div class="flex gap-2 items-center">
-							{$i18n.t('Last Active')}
-							<span class="text-gray-400">
-								{#if sortKey === 'last_active_at'}
+						<div class="flex items-center gap-2">
+							<span>{$i18n.t('Last Active')}</span>
+							{#if sortKey === 'last_active_at'}
+								<span class="text-blue-600 dark:text-blue-400">
 									{#if sortOrder === 'asc'}
-										<ChevronUp className="size-3.5" />
+										<ChevronUp className="size-3.5" strokeWidth="2.5" />
 									{:else}
-										<ChevronDown className="size-3.5" />
+										<ChevronDown className="size-3.5" strokeWidth="2.5" />
 									{/if}
-								{:else}
-									<ChevronUp className="size-3.5 opacity-0" />
-								{/if}
-							</span>
+								</span>
+							{:else}
+								<span class="text-gray-400 opacity-0 group-hover:opacity-100">
+									<ChevronUp className="size-3.5" />
+								</span>
+							{/if}
 						</div>
 					</th>
 					<th
 						scope="col"
-						class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+						class="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => setSortKey('created_at')}
 					>
-						<div class="flex gap-2 items-center">
-							{$i18n.t('Created at')}
-							<span class="text-gray-400">
-								{#if sortKey === 'created_at'}
+						<div class="flex items-center gap-2">
+							<span>{$i18n.t('Created at')}</span>
+							{#if sortKey === 'created_at'}
+								<span class="text-blue-600 dark:text-blue-400">
 									{#if sortOrder === 'asc'}
-										<ChevronUp className="size-3.5" />
+										<ChevronUp className="size-3.5" strokeWidth="2.5" />
 									{:else}
-										<ChevronDown className="size-3.5" />
+										<ChevronDown className="size-3.5" strokeWidth="2.5" />
 									{/if}
-								{:else}
-									<ChevronUp className="size-3.5 opacity-0" />
-								{/if}
-							</span>
+								</span>
+							{:else}
+								<span class="text-gray-400 opacity-0 group-hover:opacity-100">
+									<ChevronUp className="size-3.5" />
+								</span>
+							{/if}
 						</div>
 					</th>
 					<th
 						scope="col"
-						class="px-6 py-3.5 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+						class="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => setSortKey('oauth_sub')}
 					>
-						<div class="flex gap-2 items-center">
-							{$i18n.t('OAuth ID')}
-							<span class="text-gray-400">
-								{#if sortKey === 'oauth_sub'}
+						<div class="flex items-center gap-2">
+							<span>{$i18n.t('OAuth ID')}</span>
+							{#if sortKey === 'oauth_sub'}
+								<span class="text-blue-600 dark:text-blue-400">
 									{#if sortOrder === 'asc'}
-										<ChevronUp className="size-3.5" />
+										<ChevronUp className="size-3.5" strokeWidth="2.5" />
 									{:else}
-										<ChevronDown className="size-3.5" />
+										<ChevronDown className="size-3.5" strokeWidth="2.5" />
 									{/if}
-								{:else}
-									<ChevronUp className="size-3.5 opacity-0" />
-								{/if}
-							</span>
+								</span>
+							{:else}
+								<span class="text-gray-400 opacity-0 group-hover:opacity-100">
+									<ChevronUp className="size-3.5" />
+								</span>
+							{/if}
 						</div>
 					</th>
-					<th scope="col" class="px-6 py-3.5 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-						{$i18n.t('Actions')}
+					<th scope="col" class="px-4 py-3 text-right">
+						<span class="sr-only">Actions</span>
 					</th>
 				</tr>
 			</thead>
-			<tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+			<tbody class="divide-y divide-gray-100 dark:divide-gray-850">
 				{#each filteredUsers as user, userIdx}
-					<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-						<td class="px-6 py-4 whitespace-nowrap">
+					<tr class="hover:bg-gray-50 dark:hover:bg-gray-850/50 transition-colors">
+						<td class="px-4 py-3">
 							<button
 								class="inline-block"
 								on:click={() => {
@@ -358,10 +374,10 @@
 								/>
 							</button>
 						</td>
-						<td class="px-6 py-4 whitespace-nowrap">
+						<td class="px-4 py-3">
 							<div class="flex items-center gap-3">
 								<img
-									class="rounded-full w-9 h-9 object-cover ring-2 ring-gray-100 dark:ring-gray-800"
+									class="rounded-full w-8 h-8 object-cover ring-2 ring-gray-100 dark:ring-gray-800"
 									src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
 									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 									user.profile_image_url.startsWith('data:')
@@ -369,42 +385,38 @@
 										: `/user.png`}
 									alt="user"
 								/>
-								<div class="text-sm font-medium text-gray-900 dark:text-white">
-									{user.name}
-								</div>
+								<span class="font-medium text-gray-900 dark:text-gray-100">{user.name}</span>
 							</div>
 						</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-							{user.email}
-						</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+						<td class="px-4 py-3 text-gray-600 dark:text-gray-400">{user.email}</td>
+						<td class="px-4 py-3 text-gray-600 dark:text-gray-400">
 							{dayjs(user.last_active_at * 1000).fromNow()}
 						</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+						<td class="px-4 py-3 text-gray-600 dark:text-gray-400">
 							{dayjs(user.created_at * 1000).format('LL')}
 						</td>
-						<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-							{user.oauth_sub ?? '-'}
+						<td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+							{user.oauth_sub ?? '—'}
 						</td>
-						<td class="px-6 py-4 whitespace-nowrap text-right">
+						<td class="px-4 py-3">
 							<div class="flex items-center justify-end gap-1">
 								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
-											class="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg transition-colors"
+											class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors duration-150"
 											on:click={async () => {
 												showUserChatsModal = !showUserChatsModal;
 												selectedUser = user;
 											}}
 										>
-											<ChatBubbles />
+											<ChatBubbles className="size-4" />
 										</button>
 									</Tooltip>
 								{/if}
 
 								<Tooltip content={$i18n.t('Edit User')}>
 									<button
-										class="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-lg transition-colors"
+										class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors duration-150"
 										on:click={async () => {
 											showEditUserModal = !showEditUserModal;
 											selectedUser = user;
@@ -414,7 +426,7 @@
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
 											viewBox="0 0 24 24"
-											stroke-width="1.5"
+											stroke-width="2"
 											stroke="currentColor"
 											class="w-4 h-4"
 										>
@@ -430,7 +442,7 @@
 								{#if user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Delete User')}>
 										<button
-											class="p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg transition-colors"
+											class="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors duration-150"
 											on:click={async () => {
 												showDeleteConfirmDialog = true;
 												selectedUser = user;
@@ -440,7 +452,7 @@
 												xmlns="http://www.w3.org/2000/svg"
 												fill="none"
 												viewBox="0 0 24 24"
-												stroke-width="1.5"
+												stroke-width="2"
 												stroke="currentColor"
 												class="w-4 h-4"
 											>
@@ -462,14 +474,24 @@
 	</div>
 </div>
 
-<div class="mt-3 flex items-center justify-between">
-	<p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
-			<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
-		</svg>
-		{$i18n.t("Click on the user role button to change a user's role.")}
-	</p>
-	
+<!-- Help Text -->
+<div class="mt-3 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		viewBox="0 0 20 20"
+		fill="currentColor"
+		class="w-4 h-4 flex-shrink-0"
+	>
+		<path
+			fill-rule="evenodd"
+			d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+			clip-rule="evenodd"
+		/>
+	</svg>
+	<span>{$i18n.t("Click on the user role button to change a user's role.")}</span>
+</div>
+
+<div class="mt-4">
 	<Pagination bind:page count={users.length} />
 </div>
 

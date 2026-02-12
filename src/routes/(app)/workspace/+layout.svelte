@@ -51,49 +51,49 @@
 
 {#if loaded}
 	<div
-		class=" relative flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class="relative flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} max-w-full"
 	>
-		<nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">
-			<div class=" flex items-center gap-1">
-				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+		<nav class="sticky top-0 z-10 px-3 py-2 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-100 dark:border-gray-800 drag-region">
+			<div class="flex items-center gap-3">
+				<div class="{$showSidebar ? 'md:hidden' : ''} flex-none">
 					<button
 						id="sidebar-toggle-button"
-						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						class="p-2 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 						on:click={() => {
 							showSidebar.set(!$showSidebar);
 						}}
 						aria-label="Toggle Sidebar"
 					>
-						<div class=" m-auto self-center">
-							<MenuLines />
-						</div>
+						<MenuLines />
 					</button>
 				</div>
 
-				<div class="">
+				<div class="flex-1 overflow-hidden">
 					<div
-						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
+						class="flex gap-1.5 scrollbar-none overflow-x-auto text-sm font-medium bg-gray-50 dark:bg-gray-850 rounded-lg p-1"
 					>
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a
-								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+								class="min-w-fit px-4 py-2 rounded-md transition-all {$page.url.pathname.includes(
 									'/workspace/models'
 								)
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/models">{$i18n.t('Models')}</a
+									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+									: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-800/50'}"
+								href="/workspace/models"
 							>
+								{$i18n.t('Models')}
+							</a>
 						{/if}
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 							<a
-								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+								class="min-w-fit px-4 py-2 rounded-md transition-all {$page.url.pathname.includes(
 									'/workspace/knowledge'
 								)
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+									: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-800/50'}"
 								href="/workspace/knowledge"
 							>
 								{$i18n.t('Knowledge')}
@@ -102,20 +102,22 @@
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
 							<a
-								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+								class="min-w-fit px-4 py-2 rounded-md transition-all {$page.url.pathname.includes(
 									'/workspace/prompts'
 								)
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/prompts">{$i18n.t('Prompts')}</a
+									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+									: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-800/50'}"
+								href="/workspace/prompts"
 							>
+								{$i18n.t('Prompts')}
+							</a>
 						{/if}
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
 							<a
-								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/tools')
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								class="min-w-fit px-4 py-2 rounded-md transition-all {$page.url.pathname.includes('/workspace/tools')
+									? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+									: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-800/50'}"
 								href="/workspace/tools"
 							>
 								{$i18n.t('Tools')}
@@ -123,12 +125,10 @@
 						{/if}
 					</div>
 				</div>
-
-				<!-- <div class="flex items-center text-xl font-semibold">{$i18n.t('Workspace')}</div> -->
 			</div>
 		</nav>
 
-		<div class="  pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
+		<div class="flex-1 px-5 py-4 overflow-y-auto" id="workspace-container">
 			<slot />
 		</div>
 	</div>

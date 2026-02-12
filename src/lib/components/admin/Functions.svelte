@@ -196,22 +196,41 @@
 	</title>
 </svelte:head>
 
-<div class="flex flex-col gap-1 mt-1.5 mb-2">
+<div class="flex flex-col gap-3 mt-2 mb-4">
 	<div class="flex justify-between items-center">
-		<div class="flex md:self-center text-xl items-center font-medium px-0.5">
-			{$i18n.t('Functions')}
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-			<span class="text-base font-lg text-gray-500 dark:text-gray-300">{filteredItems.length}</span>
+		<div class="flex items-center gap-4">
+			<div class="flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 shadow-lg shadow-orange-500/20">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="w-6 h-6 text-white"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M4.25 2A2.25 2.25 0 002 4.25v11.5A2.25 2.25 0 004.25 18h11.5A2.25 2.25 0 0018 15.75V4.25A2.25 2.25 0 0015.75 2H4.25zm4.03 6.28a.75.75 0 00-1.06-1.06L4.97 9.47a.75.75 0 000 1.06l2.25 2.25a.75.75 0 001.06-1.06L6.56 10l1.72-1.72zm4.5-1.06a.75.75 0 10-1.06 1.06L13.44 10l-1.72 1.72a.75.75 0 101.06 1.06l2.25-2.25a.75.75 0 000-1.06l-2.25-2.25z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+			<div>
+				<div class="flex items-center gap-3">
+					<h2 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+						{$i18n.t('Functions')}
+					</h2>
+					<span class="px-3 py-1 text-sm font-bold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-full">
+						{filteredItems.length}
+					</span>
+				</div>
+			</div>
 		</div>
 	</div>
 
-	<div class=" flex w-full space-x-2">
-		<div class="flex flex-1">
-			<div class=" self-center ml-1 mr-3">
-				<Search className="size-3.5" />
-			</div>
+	<div class="flex w-full gap-3">
+		<div class="flex flex-1 items-center gap-3 px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:border-gray-300 dark:hover:border-gray-600 transition-all">
+			<Search className="size-4 text-gray-400" />
 			<input
-				class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+				class="w-full text-sm font-medium bg-transparent outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
 				bind:value={query}
 				placeholder={$i18n.t('Search Functions')}
 			/>
@@ -219,61 +238,63 @@
 
 		<div>
 			<a
-				class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+				class="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 dark:from-orange-500 dark:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 text-white transition-all shadow-lg shadow-orange-500/25 hover:shadow-xl hover:shadow-orange-500/30 hover:scale-105 active:scale-95"
 				href="/admin/functions/create"
 			>
-				<Plus className="size-3.5" />
+				<Plus className="size-5" />
 			</a>
 		</div>
 	</div>
 </div>
 
-<div class="mb-5">
+<div class="mb-6 space-y-2">
 	{#each filteredItems as func (func.id)}
 		<div
-			class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
+			class="flex space-x-4 cursor-pointer w-full px-4 py-3.5 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition-all duration-150 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:shadow-md group"
 		>
 			<a
-				class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
+				class="flex flex-1 space-x-4 cursor-pointer w-full"
 				href={`/admin/functions/edit?id=${encodeURIComponent(func.id)}`}
 			>
-				<div class="flex items-center text-left">
-					<div class=" flex-1 self-center pl-1">
-						<div class=" font-semibold flex items-center gap-1.5">
+				<div class="flex items-center text-left w-full">
+					<div class="flex-1 pl-1">
+						<div class="font-semibold flex items-center gap-2 mb-1.5">
 							<div
-								class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+								class="text-xs font-bold px-2 py-0.5 rounded-lg uppercase line-clamp-1 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-700 dark:text-gray-200 shadow-sm"
 							>
 								{func.type}
 							</div>
 
 							{#if func?.meta?.manifest?.version}
 								<div
-									class="text-xs font-bold px-1 rounded-sm line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+									class="text-xs font-bold px-2 py-0.5 rounded-lg line-clamp-1 bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 text-blue-700 dark:text-blue-200 shadow-sm"
 								>
 									v{func?.meta?.manifest?.version ?? ''}
 								</div>
 							{/if}
 
-							<div class=" line-clamp-1">
+							<div class="line-clamp-1 text-gray-900 dark:text-white">
 								{func.name}
 							</div>
 						</div>
 
-						<div class="flex gap-1.5 px-1">
-							<div class=" text-gray-500 text-xs font-medium shrink-0">{func.id}</div>
+						<div class="flex gap-2 px-1">
+							<div class="text-gray-600 dark:text-gray-400 text-xs font-semibold shrink-0">
+								{func.id}
+							</div>
 
-							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+							<div class="text-xs text-gray-600 dark:text-gray-400 overflow-hidden text-ellipsis line-clamp-1">
 								{func.meta.description}
 							</div>
 						</div>
 					</div>
 				</div>
 			</a>
-			<div class="flex flex-row gap-0.5 self-center">
+			<div class="flex flex-row gap-1 self-center">
 				{#if shiftKey}
 					<Tooltip content={$i18n.t('Delete')}>
 						<button
-							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+							class="self-center w-fit text-sm px-3 py-2.5 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all hover:scale-110 active:scale-95"
 							type="button"
 							on:click={() => {
 								deleteHandler(func);
@@ -286,7 +307,7 @@
 					{#if func?.meta?.manifest?.funding_url ?? false}
 						<Tooltip content={$i18n.t('Support')}>
 							<button
-								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								class="self-center w-fit text-sm px-3 py-2.5 text-gray-600 dark:text-gray-400 hover:text-pink-600 dark:hover:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20 rounded-xl transition-all hover:scale-110 active:scale-95"
 								type="button"
 								on:click={() => {
 									selectedFunction = func;
@@ -300,7 +321,7 @@
 
 					<Tooltip content={$i18n.t('Valves')}>
 						<button
-							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+							class="self-center w-fit text-sm px-3 py-2.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all hover:scale-110 active:scale-95"
 							type="button"
 							on:click={() => {
 								selectedFunction = func;
@@ -311,7 +332,7 @@
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
 								viewBox="0 0 24 24"
-								stroke-width="1.5"
+								stroke-width="2"
 								stroke="currentColor"
 								class="size-4"
 							>
@@ -355,7 +376,7 @@
 						onClose={() => {}}
 					>
 						<button
-							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+							class="self-center w-fit text-sm p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all hover:scale-110 active:scale-95"
 							type="button"
 						>
 							<EllipsisHorizontal className="size-5" />
@@ -363,7 +384,7 @@
 					</FunctionMenu>
 				{/if}
 
-				<div class=" self-center mx-1">
+				<div class="self-center ml-1">
 					<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 						<Switch
 							bind:state={func.is_active}
@@ -391,8 +412,8 @@
 	)}
 </div> -->
 
-<div class=" flex justify-end w-full mb-2">
-	<div class="flex space-x-2">
+<div class="flex justify-end w-full mb-4">
+	<div class="flex gap-3">
 		<input
 			id="documents-import-input"
 			bind:this={functionsImportInputElement}
@@ -407,32 +428,30 @@
 		/>
 
 		<button
-			class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+			class="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-200 transition-all shadow-sm hover:shadow-md font-semibold text-sm hover:scale-105 active:scale-95"
 			on:click={() => {
 				functionsImportInputElement.click();
 			}}
 		>
-			<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Functions')}</div>
+			<div class="font-semibold line-clamp-1">{$i18n.t('Import Functions')}</div>
 
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 16 16"
-					fill="currentColor"
-					class="w-4 h-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 16 16"
+				fill="currentColor"
+				class="w-4 h-4"
+			>
+				<path
+					fill-rule="evenodd"
+					d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+					clip-rule="evenodd"
+				/>
+			</svg>
 		</button>
 
 		{#if $functions.length}
 			<button
-				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+				class="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-200 transition-all shadow-sm hover:shadow-md font-semibold text-sm hover:scale-105 active:scale-95"
 				on:click={async () => {
 					const _functions = await exportFunctions(localStorage.token).catch((error) => {
 						toast.error(`${error}`);
@@ -447,49 +466,47 @@
 					}
 				}}
 			>
-				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Functions')}</div>
+				<div class="font-semibold line-clamp-1">{$i18n.t('Export Functions')}</div>
 
-				<div class=" self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</div>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 16 16"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+						clip-rule="evenodd"
+					/>
+				</svg>
 			</button>
 		{/if}
 	</div>
 </div>
 
 {#if $config?.features.enable_community_sharing}
-	<div class=" my-16">
-		<div class=" text-xl font-medium mb-1 line-clamp-1">
+	<div class="my-16 px-1">
+		<div class="text-xl font-bold mb-3 text-gray-900 dark:text-white line-clamp-1">
 			{$i18n.t('Made by Open WebUI Community')}
 		</div>
 
 		<a
-			class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
+			class="flex cursor-pointer items-center justify-between hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-850 dark:hover:to-gray-800 w-full px-5 py-4 rounded-2xl transition-all border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm hover:shadow-md group hover:scale-[1.02] active:scale-[0.98]"
 			href="https://openwebui.com/#open-webui-community"
 			target="_blank"
 		>
-			<div class=" self-center">
-				<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a function')}</div>
-				<div class=" text-sm line-clamp-1">
+			<div class="self-center">
+				<div class="font-bold text-gray-900 dark:text-white line-clamp-1 mb-1">
+					{$i18n.t('Discover a function')}
+				</div>
+				<div class="text-sm font-medium text-gray-600 dark:text-gray-400 line-clamp-1">
 					{$i18n.t('Discover, download, and explore custom functions')}
 				</div>
 			</div>
 
-			<div>
-				<div>
-					<ChevronRight />
-				</div>
+			<div class="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors group-hover:translate-x-1 transform transition-transform">
+				<ChevronRight />
 			</div>
 		</a>
 	</div>
@@ -502,8 +519,8 @@
 		deleteHandler(selectedFunction);
 	}}
 >
-	<div class=" text-sm text-gray-500">
-		{$i18n.t('This will delete')} <span class="  font-semibold">{selectedFunction.name}</span>.
+	<div class="text-sm text-gray-500">
+		{$i18n.t('This will delete')} <span class="font-semibold">{selectedFunction.name}</span>.
 	</div>
 </DeleteConfirmDialog>
 
@@ -552,16 +569,16 @@
 	}}
 >
 	<div class="text-sm text-gray-500">
-		<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
-			<div>Please carefully review the following warnings:</div>
+		<div class="bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-xl px-4 py-3 border border-yellow-500/30">
+			<div class="font-semibold mb-2">Please carefully review the following warnings:</div>
 
-			<ul class=" mt-1 list-disc pl-4 text-xs">
+			<ul class="mt-1 list-disc pl-4 text-xs space-y-1">
 				<li>{$i18n.t('Functions allow arbitrary code execution.')}</li>
 				<li>{$i18n.t('Do not install functions from sources you do not fully trust.')}</li>
 			</ul>
 		</div>
 
-		<div class="my-3">
+		<div class="my-3 font-medium">
 			{$i18n.t(
 				'I acknowledge that I have read and I understand the implications of my action. I am aware of the risks associated with executing arbitrary code and I have verified the trustworthiness of the source.'
 			)}

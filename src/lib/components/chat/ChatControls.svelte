@@ -38,11 +38,14 @@
 	let dragged = false;
 	let isAnimating = false;
 
-	let minSize = 30; // Fixed size percentage
+	let minSize = 20; // Minimum size percentage (can't pull back smaller than this)
+	let maxSize = 70; // Maximum size percentage
+	let currentSize = 30; // Default size
 
 	export const openPane = () => {
 		isAnimating = true;
-		pane.resize(minSize);
+		currentSize = 30;
+		pane.resize(30);
 		setTimeout(() => {
 			isAnimating = false;
 		}, 150);
@@ -104,10 +107,28 @@
 		if ($showCallOverlay) {
 			showCallOverlay.set(false);
 		}
+
+		// Reset pane size to default when closing
+		if (pane) {
+			currentSize = 30;
+			pane.resize(0);
+		}
 	};
 
 	$: if (!chatId) {
 		closeHandler();
+	}
+
+	// Reset pane when controls are hidden
+	$: if (!$showControls && pane) {
+		setTimeout(() => {
+			pane.resize(0);
+		}, 150);
+	}
+
+	// Track pane size changes
+	$: if (pane && pane.size) {
+		currentSize = pane.size;
 	}
 </script>
 
@@ -171,20 +192,30 @@
 	{:else}
 		<!-- Desktop View -->
 		{#if $showControls}
-			<!-- Removed PaneResizer - no longer resizable -->
-			<div class="w-1 bg-gray-200 dark:bg-gray-700"></div>
+			<!-- Resizable divider - only show when Artifacts is active -->
+			{#if $showArtifacts}
+				<PaneResizer
+					class="group relative w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 cursor-col-resize select-none"
+				>
+					<div
+						class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-blue-500/20"
+					></div>
+				</PaneResizer>
+			{:else}
+				<div class="w-1 bg-gray-200 dark:bg-gray-700"></div>
+			{/if}
 		{/if}
 
 		<Pane
 			bind:pane
 			defaultSize={0}
 			minSize={minSize}
-			maxSize={minSize}
+			maxSize={maxSize}
 			onCollapse={() => {
 				showControls.set(false);
 			}}
 			collapsible={true}
-			class="z-10 transition-all duration-200 ease-out"
+			class="z-10"
 		>
 			{#if $showControls}
 				<div
@@ -250,6 +281,10 @@
 
 <style>
 	:global(.pane) {
-		transition: width 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+		transition: width 0.2s ease-out !important;
+	}
+	
+	:global(.pane-resizer) {
+		transition: background-color 0.15s ease-in-out !important;
 	}
 </style>

@@ -444,10 +444,10 @@
 		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'}">
 			<div
 				class="{($settings?.widescreenMode ?? null)
-					? 'max-w-full px-8'
-					: 'max-w-3xl'} px-6 mx-auto inset-x-0"
+					? 'max-w-full px-4 @sm:px-6 @md:px-8'
+					: 'max-w-3xl px-4 @sm:px-6'} mx-auto inset-x-0"
 			>
-				<div class="">
+				<div class="w-full">
 					<input
 						bind:this={filesInputElement}
 						bind:files={inputFiles}
@@ -491,13 +491,13 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex gap-2.5"
+							class="w-full flex gap-2 @sm:gap-2.5"
 							on:submit|preventDefault={() => {
 								dispatch('submit', prompt);
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full rounded-3xl border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all duration-200 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm dark:text-gray-100"
+								class="flex-1 flex flex-col relative w-full min-w-0 rounded-3xl border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-all duration-200 bg-white dark:bg-gray-800 shadow-sm hover:shadow-sm dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
@@ -589,10 +589,11 @@
 									</div>
 								{/if}
 
-								<div class="px-4">
+								<!-- ✅ INCREASED: Changed from 70px to 140px to show ~4 lines -->
+								<div class="px-4" style="max-height: 500px; overflow-y: auto;">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-4 px-2 resize-none h-fit max-h-40 overflow-auto"
+											class="text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-4 px-2"
 											id="chat-input-container"
 										>
 											<RichTextInput
@@ -806,6 +807,7 @@
 											dir="auto"
 											bind:this={chatInputElement}
 											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-4 px-2 resize-none"
+											style="max-height: 160px; overflow-y: auto;"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:compositionstart={() => (isComposing = true)}
@@ -948,8 +950,9 @@
 														e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
 													}
 
+													// ✅ INCREASED: Changed from 160px to 200px to show ~4 lines
 													e.target.style.height = '';
-													e.target.style.height = Math.min(e.target.scrollHeight, 240) + 'px';
+													e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 												}
 
 												if (e.key === 'Escape') {
@@ -962,12 +965,14 @@
 											}}
 											rows="1"
 											on:input={async (e) => {
+												// ✅ INCREASED: Changed from 160px to 200px to show ~4 lines
 												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 											}}
 											on:focus={async (e) => {
+												// ✅ INCREASED: Changed from 160px to 200px to show ~4 lines
 												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+												e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
 											}}
 											on:paste={async (e) => {
 												const clipboardData = e.clipboardData || window.clipboardData;
@@ -1011,8 +1016,8 @@
 									{/if}
 								</div>
 
-								<div class="grid grid-cols-[1fr_auto] mt-2 mb-4 mx-2 max-w-full items-end gap-3">
-									<div class="ml-2 self-end flex items-center flex-1 max-w-[80%] gap-2">
+								<div class="grid grid-cols-[1fr_auto] mt-2 mb-4 mx-1 @sm:mx-2 max-w-full items-end gap-2 @sm:gap-3">
+									<div class="ml-1 @sm:ml-2 self-end flex items-center flex-1 min-w-0 max-w-[75%] @sm:max-w-[80%] gap-1.5 @sm:gap-2 overflow-hidden">
 										<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
@@ -1168,8 +1173,8 @@
 									</div>
 
 									<div
-										class="self-end mr-2 shrink-0 relative flex items-center justify-end"
-										style="width: 100px; min-width: 100px;"
+										class="self-end mr-1 @sm:mr-2 shrink-0 relative flex items-center justify-end"
+										style="width: 90px; min-width: 90px;"
 									>
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<Tooltip content={$i18n.t('Record voice')}>

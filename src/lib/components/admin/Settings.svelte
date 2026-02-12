@@ -72,9 +72,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('General')}</span>
 			</div>
-			{#if selectedTab === 'general'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -101,9 +99,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Connections')}</span>
 			</div>
-			{#if selectedTab === 'connections'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -132,9 +128,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Models')}</span>
 			</div>
-			{#if selectedTab === 'models'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -152,9 +146,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Evaluations')}</span>
 			</div>
-			{#if selectedTab === 'evaluations'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -183,9 +175,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Tools')}</span>
 			</div>
-			{#if selectedTab === 'tools'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -218,9 +208,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Documents')}</span>
 			</div>
-			{#if selectedTab === 'documents'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -247,9 +235,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Web Search')}</span>
 			</div>
-			{#if selectedTab === 'web'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -278,9 +264,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Code Execution')}</span>
 			</div>
-			{#if selectedTab === 'code-execution'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -309,9 +293,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Interface')}</span>
 			</div>
-			{#if selectedTab === 'interface'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -341,9 +323,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Audio')}</span>
 			</div>
-			{#if selectedTab === 'audio'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -372,9 +352,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Images')}</span>
 			</div>
-			{#if selectedTab === 'images'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -407,9 +385,7 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Pipelines')}</span>
 			</div>
-			{#if selectedTab === 'pipelines'}
-				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			
 		</button>
 
 		<button
@@ -440,9 +416,9 @@
 				</div>
 				<span class="font-medium">{$i18n.t('Database')}</span>
 			</div>
-			{#if selectedTab === 'db'}
+			<!-- {#if selectedTab === 'db'}
 				<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full hidden lg:block"></div>
-			{/if}
+			{/if} -->
 		</button>
 	</div>
 

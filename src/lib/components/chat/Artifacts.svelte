@@ -390,20 +390,33 @@
 					</div>
 				{:else}
 					<div class="flex items-center justify-center h-full">
-						<div class="text-center p-8" in:fade={{ duration: 300 }}>
-							<div class="mb-4">
-								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m0 0a2.246 2.246 0 0 0-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0 1 21 12v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6c0-.98.626-1.813 1.5-2.122" />
-								</svg>
-							</div>
-							<p class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
-								{$i18n.t('No artifacts found')}
-							</p>
-							<p class="text-sm text-gray-500 dark:text-gray-400">
-								{$i18n.t('No HTML, CSS, or JavaScript content found.')}
-							</p>
-						</div>
-					</div>
+	<div class="text-center p-8 max-w-md" in:fade={{ duration: 300 }}>
+		<!-- Icon with animated gradient background -->
+		<div class="mb-6 relative inline-block">
+			<div class="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-2xl blur-xl opacity-50"></div>
+			<div class="relative bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-6 rounded-2xl border border-blue-200/50 dark:border-blue-700/30">
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mx-auto text-blue-500 dark:text-blue-400">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m0 0a2.246 2.246 0 0 0-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0 1 21 12v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6c0-.98.626-1.813 1.5-2.122" />
+				</svg>
+			</div>
+		</div>
+		
+		<!-- Text content -->
+		<h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+			{$i18n.t('No artifacts found')}
+		</h3>
+		<p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+			{$i18n.t('No HTML, CSS, or JavaScript content found.')}
+		</p>
+		
+		<!-- Optional subtle hint -->
+		<div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+			<p class="text-xs text-gray-500 dark:text-gray-500">
+				{$i18n.t('Code artifacts will appear here when generated')}
+			</p>
+		</div>
+	</div>
+</div>
 				{/if}
 			</div>
 		</div>

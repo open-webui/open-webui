@@ -84,8 +84,11 @@
 <!-- =============================
      SUGGESTION LIST
 ============================= -->
-<div class="max-h-48 overflow-auto scrollbar-none space-y-1 {className}">
-	{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
+<!-- <div class="max-h-48 overflow-auto scrollbar-none space-y-1 {className}">
+	{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)} -->
+	<div class="overflow-hidden space-y-1 {className}">
+	{#each filteredPrompts.slice(0, 2) as prompt, idx (prompt.id || prompt.content)}
+
 		<button
 			type="button"
 			class="

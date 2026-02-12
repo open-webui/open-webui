@@ -1987,10 +1987,11 @@
 					{initNewChat}
 				/>
 
-				<div class="flex flex-col flex-auto z-10 w-full @container">
+				<div class="flex flex-col flex-auto z-10 w-full @container h-full">
 					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
+						<!-- Messages Container - with proper bottom padding for fixed input -->
 						<div
-							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+							class="pb-2.5 flex flex-col justify-between w-full flex-1 overflow-auto scrollbar-hidden"
 							id="messages-container"
 							bind:this={messagesContainerElement}
 							on:scroll={(e) => {
@@ -1999,7 +2000,7 @@
 									messagesContainerElement.clientHeight + 5;
 							}}
 						>
-							<div class=" h-full w-full flex flex-col">
+							<div class="h-full w-full flex flex-col pb-32 sm:pb-40">
 								<Messages
 									chatId={$chatId}
 									bind:history
@@ -2020,60 +2021,64 @@
 							</div>
 						</div>
 
-						<div class=" pb-[1rem]">
-							<MessageInput
-								{history}
-								{taskIds}
-								{selectedModels}
-								bind:files
-								bind:prompt
-								bind:autoScroll
-								bind:selectedToolIds
-								bind:imageGenerationEnabled
-								bind:codeInterpreterEnabled
-								bind:webSearchEnabled
-								bind:atSelectedModel
-								toolServers={$toolServers}
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
-								{stopResponse}
-								{createMessagePair}
-								onChange={(input) => {
-									if (input.prompt) {
-										localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
-									} else {
-										localStorage.removeItem(`chat-input-${$chatId}`);
-									}
-								}}
-								on:upload={async (e) => {
-									const { type, data } = e.detail;
+						<!-- Fixed Input Container at Bottom -->
+						 <!-- border-t border-gray-200 dark:border-gray-800 -->
+						<div class="sticky bottom-0 left-0 right-0 z-20 bg-white dark:bg-gray-900 ">
 
-									if (type === 'web') {
-										await uploadWeb(data);
-									} else if (type === 'youtube') {
-										await uploadYoutubeTranscription(data);
-									} else if (type === 'google-drive') {
-										await uploadGoogleDriveFile(data);
-									}
-								}}
-								on:submit={async (e) => {
-									if (e.detail || files.length > 0) {
-										await tick();
-										submitPrompt(
-											($settings?.richTextInput ?? true)
-												? e.detail.replaceAll('\n\n', '\n')
-												: e.detail
-										);
-									}
-								}}
-							/>
+							<div class="max-w-6xl mx-auto px-4 py-3">
+								<MessageInput
+									{history}
+									{taskIds}
+									{selectedModels}
+									bind:files
+									bind:prompt
+									bind:autoScroll
+									bind:selectedToolIds
+									bind:imageGenerationEnabled
+									bind:codeInterpreterEnabled
+									bind:webSearchEnabled
+									bind:atSelectedModel
+									toolServers={$toolServers}
+									transparentBackground={$settings?.backgroundImageUrl ?? false}
+									{stopResponse}
+									{createMessagePair}
+									onChange={(input) => {
+										if (input.prompt) {
+											localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
+										} else {
+											localStorage.removeItem(`chat-input-${$chatId}`);
+										}
+									}}
+									on:upload={async (e) => {
+										const { type, data } = e.detail;
 
-							<div
-								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-							>
-								<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+										if (type === 'web') {
+											await uploadWeb(data);
+										} else if (type === 'youtube') {
+											await uploadYoutubeTranscription(data);
+										} else if (type === 'google-drive') {
+											await uploadGoogleDriveFile(data);
+										}
+									}}
+									on:submit={async (e) => {
+										if (e.detail || files.length > 0) {
+											await tick();
+											submitPrompt(
+												($settings?.richTextInput ?? true)
+													? e.detail.replaceAll('\n\n', '\n')
+													: e.detail
+											);
+										}
+									}}
+								/>
+
+								<div class="text-xs text-gray-500 text-center line-clamp-1 mt-2">
+									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+								</div>
 							</div>
 						</div>
 					{:else}
+						<!-- Placeholder View (Empty Chat) -->
 						<div class="overflow-auto w-full h-full flex items-center">
 							<Placeholder
 								{history}

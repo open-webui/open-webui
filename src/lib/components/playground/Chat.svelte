@@ -209,79 +209,77 @@
 	});
 </script>
 
-<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
+<div class="flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">
-		<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="300px">
-			<div class="flex flex-col px-5 py-3 text-sm">
-				<div class="flex justify-between items-center mb-2">
-					<div class=" font-medium text-base">Settings</div>
+		<Sidebar bind:show={showSettings} className="bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800" width="320px">
+			<div class="flex flex-col h-full">
+				<div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+					<div class="font-semibold text-base text-gray-900 dark:text-white">Settings</div>
 
-					<div class=" translate-x-1.5">
-						<button
-							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-							on:click={() => {
-								showSettings = !showSettings;
-							}}
-						>
-							<ArrowRight className="size-3" strokeWidth="2.5" />
-						</button>
-					</div>
+					<button
+						class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-lg"
+						on:click={() => {
+							showSettings = !showSettings;
+						}}
+					>
+						<ArrowRight className="size-4" strokeWidth="2.5" />
+					</button>
 				</div>
 
-				<div class="mt-1">
+				<div class="flex-1 px-5 py-4 overflow-y-auto">
 					<div>
-						<div class=" text-xs font-medium mb-1">Model</div>
+						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Model
+						</label>
 
-						<div class="w-full">
-							<select
-								class="w-full bg-transparent border border-gray-100 dark:border-gray-850 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden"
-								bind:value={selectedModelId}
-							>
-								{#each $models as model}
-									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
-								{/each}
-							</select>
-						</div>
+						<select
+							class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 focus:border-transparent transition-shadow"
+							bind:value={selectedModelId}
+						>
+							{#each $models as model}
+								<option value={model.id} class="bg-white dark:bg-gray-800">{model.name}</option>
+							{/each}
+						</select>
 					</div>
 				</div>
 			</div>
 		</Sidebar>
 
-		<div class=" flex flex-col h-full px-3.5">
-			<div class="flex w-full items-start gap-1.5">
+		<div class="flex flex-col h-full px-4 py-3">
+			<div class="flex w-full items-start gap-2 mb-3">
 				<Collapsible
 					className="w-full flex-1"
 					bind:open={showSystem}
-					buttonClassName="w-full rounded-lg text-sm border border-gray-100 dark:border-gray-850 w-full py-1 px-1.5"
+					buttonClassName="w-full rounded-lg text-sm border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 transition-colors w-full py-2.5 px-3"
 					grow={true}
 				>
 					<div class="flex gap-2 justify-between items-center">
-						<div class=" shrink-0 font-medium ml-1.5">
+						<div class="shrink-0 font-medium text-gray-900 dark:text-white">
 							{$i18n.t('System Instructions')}
 						</div>
 
 						{#if !showSystem}
-							<div class=" flex-1 text-gray-500 line-clamp-1">
-								{system}
+							<div class="flex-1 text-gray-500 dark:text-gray-400 line-clamp-1 text-sm">
+								{system || $i18n.t("You're a helpful assistant.")}
 							</div>
 						{/if}
 
 						<div class="shrink-0">
-							<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
+							<div class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded">
 								{#if showSystem}
-									<ChevronUp className="size-3.5" />
+									<ChevronUp className="size-4" />
 								{:else}
-									<Pencil className="size-3.5" />
+									<Pencil className="size-4" />
 								{/if}
-							</button>
+							</div>
 						</div>
 					</div>
 
 					<div slot="content">
-						<div class="pt-1 px-1.5">
+						<div class="pt-3 pb-2 px-1">
 							<textarea
 								bind:this={systemTextareaElement}
-								class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
+								class="w-full h-full bg-transparent resize-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
 								bind:value={system}
 								placeholder={$i18n.t("You're a helpful assistant.")}
 								on:input={() => {
@@ -293,41 +291,37 @@
 					</div>
 				</Collapsible>
 
-				<div class="translate-y-1">
-					<button
-						class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-						on:click={() => {
-							showSettings = !showSettings;
-						}}
-					>
-						<Cog6 />
-					</button>
-				</div>
+				<button
+					class="p-2.5 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850 border border-gray-200 dark:border-gray-800 transition-colors rounded-lg"
+					on:click={() => {
+						showSettings = !showSettings;
+					}}
+				>
+					<Cog6 className="size-5" />
+				</button>
 			</div>
 
 			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+				class="pb-3 flex flex-col justify-between w-full flex-auto overflow-auto h-0 bg-gray-50/50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-800"
 				id="messages-container"
 				bind:this={messagesContainerElement}
 			>
-				<div class=" h-full w-full flex flex-col">
-					<div class="flex-1 p-1">
+				<div class="h-full w-full flex flex-col">
+					<div class="flex-1 p-3">
 						<Messages bind:messages />
 					</div>
 				</div>
 			</div>
 
-			<div class="pb-3">
-				<div class="text-xs font-medium text-gray-500 px-2 py-1">
-					{selectedModelId}
+			<div class="pt-3">
+				<div class="text-xs font-medium text-gray-500 dark:text-gray-400 px-1 pb-2">
+					{selectedModelId || 'No model selected'}
 				</div>
-				<div class="border border-gray-100 dark:border-gray-850 w-full px-3 py-2.5 rounded-xl">
-					<div class="py-0.5">
-						<!-- $i18n.t('a user') -->
-						<!-- $i18n.t('an assistant') -->
+				<div class="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 w-full rounded-xl shadow-sm">
+					<div class="px-4 py-3">
 						<textarea
 							bind:value={message}
-							class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
+							class="w-full h-full bg-transparent resize-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
 							placeholder={$i18n.t(`Enter {{role}} message here`, {
 								role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 							})}
@@ -343,10 +337,10 @@
 						/>
 					</div>
 
-					<div class="flex justify-between">
+					<div class="flex justify-between items-center px-4 pb-3 pt-2 border-t border-gray-100 dark:border-gray-800">
 						<div>
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+								class="px-4 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors rounded-lg"
 								on:click={() => {
 									role = role === 'user' ? 'assistant' : 'user';
 								}}
@@ -359,11 +353,11 @@
 							</button>
 						</div>
 
-						<div>
+						<div class="flex gap-2">
 							{#if !loading}
 								<button
 									disabled={message === ''}
-									class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+									class="px-4 py-2 text-sm font-medium disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors rounded-lg"
 									on:click={() => {
 										addHandler();
 										role = role === 'user' ? 'assistant' : 'user';
@@ -373,7 +367,7 @@
 								</button>
 
 								<button
-									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+									class="px-4 py-2 text-sm font-medium bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200 transition-colors rounded-lg shadow-sm"
 									on:click={() => {
 										submitHandler();
 									}}
@@ -382,7 +376,7 @@
 								</button>
 							{:else}
 								<button
-									class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
+									class="px-4 py-2 text-sm font-medium bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-colors rounded-lg"
 									on:click={() => {
 										stopResponse();
 									}}

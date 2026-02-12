@@ -405,6 +405,30 @@
 	});
 </script>
 
+<style>
+	/* Hide line numbers in code editor */
+	:global(.language-html .cm-gutters),
+	:global(.language-python .cm-gutters),
+	:global(.language-javascript .cm-gutters),
+	:global(.language-typescript .cm-gutters),
+	:global(.language-css .cm-gutters),
+	:global(.language-json .cm-gutters),
+	:global([class*="language-"] .cm-gutters) {
+		display: none !important;
+	}
+
+	/* Adjust editor padding when line numbers are hidden */
+	:global(.language-html .cm-content),
+	:global(.language-python .cm-content),
+	:global(.language-javascript .cm-content),
+	:global(.language-typescript .cm-content),
+	:global(.language-css .cm-content),
+	:global(.language-json .cm-content),
+	:global([class*="language-"] .cm-content) {
+		padding-left: 1rem;
+	}
+</style>
+
 <div>
 	<div class="relative {className} flex flex-col rounded-lg" dir="ltr">
 		{#if lang === 'mermaid'}
@@ -418,82 +442,108 @@
 				<pre class="mermaid">{code}</pre>
 			{/if}
 		{:else}
-			<div class="text-text-300 absolute pl-4 py-1.5 text-xs font-medium dark:text-white">
-				{lang}
-			</div>
+			<!-- STICKY HEADER BAR -->
+			<div class="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 rounded-t-lg shadow-sm">
+				<div class="flex items-center justify-between px-4 py-2">
+					<!-- Language Label -->
+					<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
+						{lang || 'plaintext'}
+					</div>
 
-			<div
-				class="sticky {stickyButtonsClassName} mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
-			>
-				<div class="flex items-center gap-0.5 translate-y-[1px]">
-					<button
-						class="flex gap-1 items-center bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
-						on:click={collapseCodeBlock}
-					>
-						<div>
-							<ChevronUpDown className="size-3" />
-						</div>
+					<!-- Action Buttons -->
+					<div class="flex items-center gap-2">
+						<!-- Collapse Button -->
+						<button
+							class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1"
+							on:click={collapseCodeBlock}
+							aria-label={collapsed ? 'Expand code block' : 'Collapse code block'}
+							type="button"
+						>
+							<ChevronUpDown className="w-3.5 h-3.5" />
+							<span>{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}</span>
+						</button>
 
-						<div>
-							{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}
-						</div>
-					</button>
+						<!-- Python Run Button -->
+						{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
+							{#if executing}
+								<div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-transparent rounded-md cursor-wait">
+									<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+										<circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="3"></circle>
+										<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+									</svg>
+									<span>{$i18n.t('Running')}</span>
+								</div>
+							{:else if run}
+								<button
+									class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1"
+									on:click={async () => {
+										code = _code;
+										await tick();
+										executePython(code);
+									}}
+									aria-label="Run Python code"
+									type="button"
+								>
+									<CommandLine className="w-3.5 h-3.5" />
+									<span>{$i18n.t('Run')}</span>
+								</button>
+							{/if}
+						{/if}
 
-					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
-						{#if executing}
-							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">
-								{$i18n.t('Running')}
-							</div>
-						{:else if run}
+						<!-- Save Button -->
+						{#if save}
 							<button
-								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
-								on:click={async () => {
-									code = _code;
-									await tick();
-									executePython(code);
-								}}
+								class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1 {saved ? 'text-green-600 dark:text-green-400' : ''}"
+								on:click={saveCode}
+								aria-label="Save code"
+								type="button"
 							>
-								<div>
-									<CommandLine className="size-3" />
-								</div>
-
-								<div>
-									{$i18n.t('Run')}
-								</div>
+								{#if saved}
+									<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+									</svg>
+								{/if}
+								<span>{saved ? $i18n.t('Saved') : $i18n.t('Save')}</span>
 							</button>
 						{/if}
-					{/if}
 
-					{#if save}
+						<!-- Copy Button -->
 						<button
-							class="save-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
-							on:click={saveCode}
+							class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600 focus-visible:ring-offset-1 {copied ? 'text-green-600 dark:text-green-400' : ''}"
+							on:click={copyCode}
+							aria-label="Copy code to clipboard"
+							type="button"
 						>
-							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
+							{#if copied}
+								<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+								</svg>
+							{:else}
+								<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+								</svg>
+							{/if}
+							<span>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</span>
 						</button>
-					{/if}
-
-					<button
-						class="copy-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
-						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
-					>
+					</div>
 				</div>
 			</div>
 
 			<div
-				class="language-{lang} rounded-t-lg -mt-8 {editorClassName
+				class="language-{lang} {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
-						: 'rounded-b-lg'} overflow-hidden"
+						: 'rounded-b-lg'} overflow-hidden border-x border-b border-gray-200 dark:border-gray-800"
 			>
-				<div class=" pt-7 bg-gray-50 dark:bg-gray-850"></div>
+				<div class="bg-gray-50 dark:bg-gray-900"></div>
 
 				{#if !collapsed}
 					<CodeEditor
 						value={code}
 						{id}
 						{lang}
+						lineNumbers={false}
 						onSave={() => {
 							saveCode();
 						}}
@@ -503,13 +553,11 @@
 					/>
 				{:else}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-lg! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
+						class="bg-gray-50 dark:bg-gray-900 rounded-b-lg px-4 py-3 text-xs text-gray-500 dark:text-gray-400 italic"
 					>
-						<span class="text-gray-500 italic">
-							{$i18n.t('{{COUNT}} hidden lines', {
-								COUNT: code.split('\n').length
-							})}
-						</span>
+						{$i18n.t('{{COUNT}} hidden lines', {
+							COUNT: code.split('\n').length
+						})}
 					</div>
 				{/if}
 			</div>
@@ -522,37 +570,37 @@
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg! py-4 px-4 flex flex-col gap-2"
+						class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg border-x border-b border-gray-200 dark:border-gray-800 py-4 px-4 flex flex-col gap-3"
 					>
 						{#if executing}
-							<div class=" ">
-								<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+							<div>
+								<div class="text-gray-500 dark:text-gray-400 text-xs font-medium mb-2">STDOUT/STDERR</div>
 								<div class="text-sm">Running...</div>
 							</div>
 						{:else}
 							{#if stdout || stderr}
-								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+								<div>
+									<div class="text-gray-500 dark:text-gray-400 text-xs font-medium mb-2">STDOUT/STDERR</div>
 									<div
-										class="text-sm {stdout?.split('\n')?.length > 100
+										class="text-sm font-mono {stdout?.split('\n')?.length > 100
 											? `max-h-96`
-											: ''}  overflow-y-auto"
+											: ''} overflow-y-auto"
 									>
 										{stdout || stderr}
 									</div>
 								</div>
 							{/if}
 							{#if result || files}
-								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">RESULT</div>
+								<div>
+									<div class="text-gray-500 dark:text-gray-400 text-xs font-medium mb-2">RESULT</div>
 									{#if result}
-										<div class="text-sm">{`${JSON.stringify(result)}`}</div>
+										<div class="text-sm font-mono">{`${JSON.stringify(result)}`}</div>
 									{/if}
 									{#if files}
-										<div class="flex flex-col gap-2">
+										<div class="flex flex-col gap-3 mt-2">
 											{#each files as file}
 												{#if file.type.startsWith('image')}
-													<img src={file.data} alt="Output" class=" w-full max-w-[36rem]" />
+													<img src={file.data} alt="Output" class="w-full max-w-[36rem] rounded-lg border border-gray-200 dark:border-gray-700" />
 												{/if}
 											{/each}
 										</div>

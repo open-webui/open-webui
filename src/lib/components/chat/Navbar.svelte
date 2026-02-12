@@ -18,7 +18,7 @@
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
-
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -47,7 +47,8 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<nav class="sticky top-0 z-30 w-full py-1.5 -mb-8 flex flex-col items-center drag-region">
+<nav class="sticky top-0 z-30 w-full py-3 flex flex-col items-center drag-region border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+
 	<div class="flex items-center w-full px-1.5">
 		<div
 			class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
@@ -60,18 +61,61 @@
 						? 'md:hidden'
 						: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 				>
-					<button
-						id="sidebar-toggle-button"
-						class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-						aria-label="Toggle Sidebar"
-					>
-						<div class=" m-auto self-center">
-							<MenuLines />
-						</div>
-					</button>
+					<!-- Toggle between Logo and Menu Icon based on sidebar state -->
+					{#if $showSidebar}
+						<!-- Show menu icon when sidebar is open -->
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+							aria-label="Toggle Sidebar"
+						>
+							<div class=" m-auto self-center">
+								<MenuLines />
+							</div>
+						</button>
+					{:else}
+						<!-- Show logo when sidebar is closed -->
+						<Tooltip content={$showSidebar ? $i18n.t('Close Bar') : $i18n.t('Open Bar')}>
+							<button
+								id="sidebar-toggle-button"
+								class="cursor-pointer px-2 py-2 flex rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								on:click={() => {
+									showSidebar.set(!$showSidebar);
+								}}
+								aria-label="Toggle Sidebar"
+							>
+								<div class="m-auto self-center">
+									<img
+										crossorigin="anonymous"
+										src="{WEBUI_BASE_URL}/static/favicon.png"
+										class="size-5 rounded"
+										alt="logo"
+									/>
+								</div>
+							</button>
+						</Tooltip>
+
+					{/if}
+					
+					<Tooltip content={$i18n.t('New Chat')}>
+						<button
+							id="new-chat-button"
+							class=" flex {$showSidebar
+								? 'md:hidden'
+								: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								initNewChat();
+							}}
+							aria-label="New Chat"
+						>
+							<div class=" m-auto self-center">
+								<PencilSquare className=" size-5" strokeWidth="2" />
+							</div>
+						</button>
+					</Tooltip>
 				</div>
 
 				<div
@@ -81,6 +125,7 @@
 				>
 					{#if showModelSelector}
 						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+						
 					{/if}
 				</div>
 
@@ -120,11 +165,12 @@
 							</button>
 						</Menu>
 					{/if}
+					
 					<!-- Theme Toggle Button -->
 					<button
 						class="flex items-center h-6 cursor-pointer rounded-full
 							transition-all duration-300 ease-in-out
-							bg-gray-200 dark:bg-gray-900 hover:shadow-md"
+							bg-gray-200 dark:bg-gray-600 hover:shadow-md"
 						on:click={() => {
 							const htmlElement = document.documentElement;
 							const isDark = htmlElement.classList.contains('dark');
@@ -201,7 +247,7 @@
 						</button>
 					</Tooltip>
 
-					<Tooltip content={$i18n.t('New Chat')}>
+					<!-- <Tooltip content={$i18n.t('New Chat')}>
 						<button
 							id="new-chat-button"
 							class=" flex {$showSidebar
@@ -216,7 +262,7 @@
 								<PencilSquare className=" size-5" strokeWidth="2" />
 							</div>
 						</button>
-					</Tooltip>
+					</Tooltip> -->
 
 					<!-- {#if $user !== undefined && $user !== null}
 						<UserMenu

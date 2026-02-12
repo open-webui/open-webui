@@ -35,7 +35,10 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-6xl px-8 lg:px-20">
+	<!-- FIXED: Responsive padding and max-width -->
+	<div class="m-auto w-full max-w-6xl px-4 sm:px-6 md:px-8 lg:px-20">
+		
+		<!-- Model Avatars Section -->
 		<div class="flex justify-start">
 			<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
@@ -56,7 +59,7 @@
 									($i18n.language === 'dg-DG'
 										? `/doge.png`
 										: `${WEBUI_BASE_URL}/static/favicon.png`)}
-								class=" size-[2.7rem] rounded-full border-[1px] border-gray-100 dark:border-none"
+								class="size-10 sm:size-[2.7rem] rounded-full border-[1px] border-gray-100 dark:border-none"
 								alt="logo"
 								draggable="false"
 							/>
@@ -66,21 +69,24 @@
 			</div>
 		</div>
 
+		<!-- Temporary Chat Badge -->
 		{#if $temporaryChatEnabled}
 			<Tooltip
-				content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
+				content={$i18n.t('This chat wont appear in history and your messages will not be saved.')}
 				className="w-full flex justify-center mb-0.5"
 				placement="top"
 			>
-				<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-					<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
+				<div class="flex items-center gap-2 text-gray-500 font-medium text-base sm:text-lg my-2 w-fit">
+					<EyeSlash strokeWidth="2.5" className="size-4 sm:size-5" />
+					{$i18n.t('Temporary Chat')}
 				</div>
 			</Tooltip>
 		{/if}
 
-		<div class=" w-full font-primary mb-6" in:fade={{ duration: 200, delay: 300 }}>
+		<!-- FIXED: Suggestions Grid - Responsive columns -->
+		<div class="w-full font-primary mb-4 sm:mb-6" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions
-				className="grid grid-cols-2"
+				className="grid grid-cols-1 sm:grid-cols-2 gap-2"
 				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
 					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
@@ -91,44 +97,50 @@
 			/>
 		</div>
 
+		<!-- FIXED: Model Name & Description - Responsive text sizes -->
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
+			class="mt-2 mb-4 text-2xl sm:text-3xl text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
 		>
-			<div>
-				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
+			<div class="w-full">
+				<!-- Model Name -->
+				<div class="capitalize line-clamp-1" in:fade={{ duration: 200 }}>
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
 				</div>
+				
+				<!-- Model Description -->
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 						<div
-							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
+							class="mt-0.5 text-sm sm:text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-2 sm:line-clamp-3 markdown"
 						>
 							{@html marked.parse(
 								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
 							)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
-							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+							<div class="mt-0.5 text-xs sm:text-sm font-normal text-gray-400 dark:text-gray-500">
 								By
 								{#if models[selectedModelIdx]?.info?.meta?.user.community}
 									<a
 										href="https://openwebui.com/m/{models[selectedModelIdx]?.info?.meta?.user
 											.username}"
-										>{models[selectedModelIdx]?.info?.meta?.user.name
-											? models[selectedModelIdx]?.info?.meta?.user.name
-											: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
+										class="hover:underline"
 									>
+										{models[selectedModelIdx]?.info?.meta?.user.name
+											? models[selectedModelIdx]?.info?.meta?.user.name
+											: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}
+									</a>
 								{:else}
 									{models[selectedModelIdx]?.info?.meta?.user.name}
 								{/if}
 							</div>
 						{/if}
 					{:else}
-						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
+						<div class="text-sm sm:text-base font-medium text-gray-400 dark:text-gray-500 line-clamp-1">
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}

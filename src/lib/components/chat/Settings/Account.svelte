@@ -87,7 +87,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between">
-	<div class="space-y-6 overflow-y-auto">
+	<div class="space-y-6 overflow-y-scroll max-h-[28rem] lg:max-h-full px-1">
 		<input
 			id="profile-image-input"
 			bind:this={profileImageInputElement}
@@ -152,20 +152,10 @@
 
 		<!-- Profile Section -->
 		<div class="space-y-4">
-			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-					{$i18n.t('Profile')}
-				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">
-					Manage your personal information
-				</p>
-			</div>
-
-			<!-- Profile Image Card -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<div class="flex items-start gap-4">
+			<div class="flex items-start gap-6">
+				<div class="flex-shrink-0">
 					<button
-						class="relative rounded-full flex-shrink-0 group"
+						class="relative group rounded-full ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all duration-200"
 						type="button"
 						on:click={() => {
 							profileImageInputElement.click();
@@ -174,17 +164,17 @@
 						<img
 							src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(name)}
 							alt="profile"
-							class="rounded-full w-20 h-20 object-cover border-2 border-gray-200 dark:border-gray-700"
+							class="rounded-full size-20 object-cover"
 						/>
 
 						<div
-							class="absolute flex justify-center items-center rounded-full inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-200"
+							class="absolute flex justify-center items-center rounded-full inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
 								fill="currentColor"
-								class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+								class="w-6 h-6 text-white"
 							>
 								<path
 									d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z"
@@ -192,14 +182,16 @@
 							</svg>
 						</div>
 					</button>
+				</div>
 
-					<div class="flex-1">
-						<div class="text-sm font-medium text-gray-900 dark:text-white mb-2">
+				<div class="flex-1 space-y-3">
+					<div>
+						<div class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
 							{$i18n.t('Profile Image')}
 						</div>
 						<div class="flex flex-wrap gap-2">
 							<button
-								class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+								class="text-xs font-medium text-gray-700 dark:text-gray-300 rounded-lg px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 transition-colors duration-150"
 								on:click={async () => {
 									if (canvasPixelTest()) {
 										profileImageUrl = generateInitialsImage(name);
@@ -219,7 +211,7 @@
 							</button>
 
 							<button
-								class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+								class="text-xs font-medium text-gray-700 dark:text-gray-300 rounded-lg px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-750 transition-colors duration-150"
 								on:click={async () => {
 									const url = await getGravatarUrl(localStorage.token, $user?.email);
 									profileImageUrl = url;
@@ -229,7 +221,7 @@
 							</button>
 
 							<button
-								class="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+								class="text-xs font-medium text-red-600 dark:text-red-400 rounded-lg px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150"
 								on:click={async () => {
 									profileImageUrl = '/user.png';
 								}}
@@ -241,13 +233,12 @@
 				</div>
 			</div>
 
-			<!-- Name Input Card -->
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<div class="text-sm font-medium text-gray-900 dark:text-white mb-2">
+			<div class="space-y-2">
+				<label class="block text-sm font-semibold text-gray-700 dark:text-gray-200">
 					{$i18n.t('Name')}
-				</div>
+				</label>
 				<input
-					class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+					class="w-full text-sm px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all duration-150"
 					type="text"
 					bind:value={name}
 					required
@@ -256,16 +247,12 @@
 			</div>
 
 			{#if $config?.features?.enable_user_webhooks}
-				<!-- Webhook URL Card -->
-				<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-					<div class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+				<div class="space-y-2">
+					<label class="block text-sm font-semibold text-gray-700 dark:text-gray-200">
 						{$i18n.t('Notification Webhook')}
-					</div>
-					<div class="text-xs text-gray-500 dark:text-gray-400 mb-2">
-						Receive notifications via webhook
-					</div>
+					</label>
 					<input
-						class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+						class="w-full text-sm px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition-all duration-150"
 						type="url"
 						placeholder={$i18n.t('Enter your webhook URL')}
 						bind:value={webhookUrl}
@@ -276,34 +263,21 @@
 		</div>
 
 		<!-- Password Section -->
-		<div class="space-y-4 pt-2">
-			<div>
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-					{$i18n.t('Security')}
-				</h3>
-				<p class="text-sm text-gray-500 dark:text-gray-400">
-					Manage your password and authentication
-				</p>
-			</div>
-
-			<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-				<UpdatePassword />
-			</div>
+		<div class="pt-2">
+			<UpdatePassword />
 		</div>
 
+		<!-- Divider -->
+		<div class="border-t border-gray-200 dark:border-gray-800"></div>
+
 		<!-- API Keys Section -->
-		<div class="space-y-4 pt-2">
-			<div class="flex items-center justify-between">
-				<div>
-					<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-						{$i18n.t('API keys')}
-					</h3>
-					<p class="text-sm text-gray-500 dark:text-gray-400">
-						Manage your authentication tokens
-					</p>
-				</div>
+		<div class="space-y-4">
+			<div class="flex justify-between items-center">
+				<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+					{$i18n.t('API keys')}
+				</h3>
 				<button
-					class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+					class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-150"
 					type="button"
 					on:click={() => {
 						showAPIKeys = !showAPIKeys;
@@ -314,18 +288,22 @@
 			</div>
 
 			{#if showAPIKeys}
-				<div class="space-y-3">
-					<!-- JWT Token Card -->
-					<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-						<div class="text-sm font-medium text-gray-900 dark:text-white mb-2">
-							{$i18n.t('JWT Token')}
+				<div class="space-y-5">
+					<!-- JWT Token -->
+					<div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+						<div class="flex justify-between items-center mb-3">
+							<span class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+								{$i18n.t('JWT Token')}
+							</span>
 						</div>
-						<div class="flex gap-2">
+
+						<div class="flex items-center gap-2">
 							<div class="flex-1">
 								<SensitiveInput value={localStorage.token} readOnly={true} />
 							</div>
+
 							<button
-								class="flex-shrink-0 p-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+								class="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-150 flex-shrink-0"
 								on:click={() => {
 									copyToClipboard(localStorage.token);
 									JWTTokenCopied = true;
@@ -333,7 +311,6 @@
 										JWTTokenCopied = false;
 									}, 2000);
 								}}
-								title="Copy to clipboard"
 							>
 								{#if JWTTokenCopied}
 									<svg
@@ -371,19 +348,23 @@
 						</div>
 					</div>
 
+					<!-- API Key -->
 					{#if $config?.features?.enable_api_key ?? true}
-						<!-- API Key Card -->
-						<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-							<div class="text-sm font-medium text-gray-900 dark:text-white mb-2">
-								{$i18n.t('API Key')}
+						<div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+							<div class="flex justify-between items-center mb-3">
+								<span class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+									{$i18n.t('API Key')}
+								</span>
 							</div>
+
 							{#if APIKey}
-								<div class="flex gap-2">
+								<div class="flex items-center gap-2">
 									<div class="flex-1">
 										<SensitiveInput value={APIKey} readOnly={true} />
 									</div>
+
 									<button
-										class="flex-shrink-0 p-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+										class="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-150 flex-shrink-0"
 										on:click={() => {
 											copyToClipboard(APIKey);
 											APIKeyCopied = true;
@@ -391,7 +372,6 @@
 												APIKeyCopied = false;
 											}, 2000);
 										}}
-										title="Copy to clipboard"
 									>
 										{#if APIKeyCopied}
 											<svg
@@ -429,11 +409,10 @@
 
 									<Tooltip content={$i18n.t('Create new key')}>
 										<button
-											class="flex-shrink-0 p-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+											class="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors duration-150 flex-shrink-0"
 											on:click={() => {
 												createAPIKeyHandler();
 											}}
-											title="Regenerate API key"
 										>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -441,7 +420,7 @@
 												viewBox="0 0 24 24"
 												stroke-width="2"
 												stroke="currentColor"
-												class="w-4 h-4 text-gray-600 dark:text-gray-400"
+												class="size-4 text-gray-600 dark:text-gray-400"
 											>
 												<path
 													stroke-linecap="round"
@@ -454,12 +433,12 @@
 								</div>
 							{:else}
 								<button
-									class="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+									class="flex items-center justify-center gap-2 w-full font-medium text-sm px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-colors duration-150"
 									on:click={() => {
 										createAPIKeyHandler();
 									}}
 								>
-									<Plus strokeWidth="2" className="w-4 h-4" />
+									<Plus strokeWidth="2" className="size-4" />
 									{$i18n.t('Create new secret key')}
 								</button>
 							{/if}
@@ -471,9 +450,9 @@
 	</div>
 
 	<!-- Save Button -->
-	<div class="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
+	<div class="flex justify-end pt-5 border-t border-gray-200 dark:border-gray-800 mt-6">
 		<button
-			class="px-6 py-2.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+			class="px-6 py-2.5 text-sm font-semibold bg-orange-600 hover:bg-orange-700 text-white dark:bg-orange-500 dark:hover:bg-orange-600 transition-colors duration-150 rounded-lg shadow-sm hover:shadow"
 			on:click={async () => {
 				const res = await submitHandler();
 
@@ -486,32 +465,3 @@
 		</button>
 	</div>
 </div>
-
-<style>
-	/* Custom scrollbar styling */
-	::-webkit-scrollbar {
-		width: 8px;
-		height: 8px;
-	}
-
-	::-webkit-scrollbar-track {
-		background: transparent;
-	}
-
-	::-webkit-scrollbar-thumb {
-		background: rgba(156, 163, 175, 0.5);
-		border-radius: 4px;
-	}
-
-	::-webkit-scrollbar-thumb:hover {
-		background: rgba(156, 163, 175, 0.7);
-	}
-
-	:global(.dark) ::-webkit-scrollbar-thumb {
-		background: rgba(75, 85, 99, 0.5);
-	}
-
-	:global(.dark) ::-webkit-scrollbar-thumb:hover {
-		background: rgba(75, 85, 99, 0.7);
-	}
-</style>
