@@ -591,6 +591,10 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Store reference to main event loop for sync->async calls (e.g., embedding generation)
+    # This allows sync functions to schedule work on the main loop without blocking health checks
+    app.state.main_loop = asyncio.get_running_loop()
+
     app.state.instance_id = INSTANCE_ID
     start_logger()
 
