@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 from typing import Optional
+from urllib.parse import urlparse
 
 import aiohttp
 from aiocache import cached
@@ -520,9 +521,11 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                 for model in model_list:
                     model_id = model.get("id") or model.get("name")
 
-                    if "api.openai.com" in api_base_urls[
-                        idx
-                    ] and not is_supported_openai_models(model_id):
+                    base_url = api_base_urls[idx]
+                    hostname = urlparse(base_url).hostname if base_url else None
+                    if hostname == "api.openai.com" and not is_supported_openai_models(
+                        model_id
+                    ):
                         # Skip unwanted OpenAI models
                         continue
 
