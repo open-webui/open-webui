@@ -1928,10 +1928,16 @@
 			})
 			.filter((message) => message?.role === 'user' || message?.content?.trim());
 
+		// Merge user-selected tools with model-configured tools
+		const modelToolIds = (model?.info?.meta?.toolIds ?? []).filter(
+			(id) => $tools?.find((t) => t.id === id)
+		);
+		const mergedToolIds = [...new Set([...selectedToolIds, ...modelToolIds])];
+
 		const toolIds = [];
 		const toolServerIds = [];
 
-		for (const toolId of selectedToolIds) {
+		for (const toolId of mergedToolIds) {
 			if (toolId.startsWith('direct_server:')) {
 				let serverId = toolId.replace('direct_server:', '');
 				// Check if serverId is a number
