@@ -2321,9 +2321,10 @@ async def oauth_login_callback(
     provider: str,
     request: Request,
     response: Response,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_session),
 ):
-    return await oauth_manager.handle_callback(request, provider, response, db=db)
+    return await oauth_manager.handle_callback(request, provider, response, db=db, background_tasks=background_tasks)
 
 
 @app.get("/manifest.json")
