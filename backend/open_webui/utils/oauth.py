@@ -22,6 +22,7 @@ from authlib.oidc.core import UserInfo
 from fastapi import (
     HTTPException,
     status,
+    BackgroundTasks,
 )
 from starlette.responses import RedirectResponse
 from typing import Optional
@@ -69,11 +70,14 @@ from open_webui.env import (
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
     ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
+    WEBUI_CHAT_ENCRYPTION_KEY,
+    WEBUI_CHAT_ENCRYPT_OLD_CHATS,
 )
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.groups import apply_default_group_assignment
+from open_webui.utils.db.encrypt_old_chats import encrypt_old_chats_for_user
 
 from mcp.shared.auth import (
     OAuthClientMetadata as MCPOAuthClientMetadata,
@@ -1399,7 +1403,7 @@ class OAuthManager:
 
         return await client.authorize_redirect(request, redirect_uri, **kwargs)
 
-    async def handle_callback(self, request, provider, response, db=None):
+    async def handle_callback(self, request, provider, response, db=None, background_tasks: BackgroundTasks = None):
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
 
@@ -1705,5 +1709,9 @@ class OAuthManager:
             )
         except Exception as e:
             log.error(f"Failed to store OAuth session server-side: {e}")
+
+        # Schedule encryption of old plaintext chats (runs once per user login; only if enabled with WEBUI_CHAT_ENCRYPT_OLD_CHATS)
+        if background_tasks and WEBUI_CHAT_ENCRYPTION_KEY and WEBUI_CHAT_ENCRYPT_OLD_CHATS:
+            background_tasks.add_task(encrypt_old_chats_for_user, user.id)
 
         return response
