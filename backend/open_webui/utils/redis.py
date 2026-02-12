@@ -1,6 +1,9 @@
 import inspect
 from urllib.parse import urlparse, parse_qs
 
+import asyncio
+import time
+
 import logging
 
 import redis
@@ -212,6 +215,7 @@ def get_redis_connection(
                 "password": redis_config["password"],
                 "decode_responses": decode_responses,
                 "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT,
+                **sentinel_kwargs
             }
 
             sentinel = redis.sentinel.Sentinel(
@@ -248,6 +252,7 @@ def get_redis_connection(
                 "password": redis_config["password"],
                 "decode_responses": decode_responses,
                 "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT,
+                **sentinel_kwargs
             }
 
             sentinel = redis.sentinel.Sentinel(
