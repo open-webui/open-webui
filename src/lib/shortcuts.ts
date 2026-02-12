@@ -16,6 +16,7 @@ export enum Shortcut {
 	NEW_CHAT = 'newChat',
 	NEW_TEMPORARY_CHAT = 'newTemporaryChat',
 	DELETE_CHAT = 'deleteChat',
+	OPEN_MODEL_SELECTOR = 'openModelSelector',
 
 	//Global
 	SEARCH = 'search',
@@ -56,6 +57,11 @@ export const shortcuts: ShortcutRegistry = {
 	[Shortcut.DELETE_CHAT]: {
 		name: 'Delete Chat',
 		keys: ['mod', 'shift', 'Backspace', 'Delete'],
+		category: 'Chat'
+	},
+	[Shortcut.OPEN_MODEL_SELECTOR]: {
+		name: 'Open Model Selector',
+		keys: ['mod', 'shift', 'M'],
 		category: 'Chat'
 	},
 

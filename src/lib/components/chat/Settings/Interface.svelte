@@ -63,6 +63,7 @@
 	let insertFollowUpPrompt = false;
 
 	let regenerateMenu = true;
+	let enableMessageQueue = true;
 
 	let landingPageMode = '';
 	let chatBubble = true;
@@ -234,6 +235,7 @@
 		insertFollowUpPrompt = source?.insertFollowUpPrompt ?? false;
 
 		regenerateMenu = source?.regenerateMenu ?? true;
+    enableMessageQueue = source?.enableMessageQueue ?? true;
 
 		largeTextAsFile = source?.largeTextAsFile ?? false;
 		copyFormatted = source?.copyFormatted ?? false;
@@ -603,6 +605,25 @@
 			{/if}
 
 			<div class=" my-2 text-sm font-medium">{$i18n.t('Chat')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="enable-message-queue-label" class=" self-center text-xs">
+						{$i18n.t('Enable Message Queue')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="enable-message-queue-label"
+							tooltip={true}
+							bind:state={enableMessageQueue}
+							on:change={() => {
+								saveSettings({ enableMessageQueue });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

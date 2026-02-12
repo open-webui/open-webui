@@ -22,6 +22,7 @@ from open_webui.models.users import (
     UserListResponse,
     UserModelResponse,
     Users,
+    UserModel,
     UserNameResponse,
 )
 
@@ -35,6 +36,7 @@ from open_webui.models.channels import (
     ChannelWebhookModel,
     ChannelWebhookForm,
 )
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 from open_webui.models.messages import (
     Messages,
     MessageModel,
@@ -59,12 +61,7 @@ from open_webui.utils.chat import generate_chat_completion
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import (
-    has_access,
-    get_users_with_access,
-    get_permitted_group_and_user_ids,
-    has_permission,
-)
+from open_webui.utils.access_control import has_permission
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.channels import extract_mentions, replace_mentions
 from open_webui.internal.db import get_session
@@ -75,18 +72,87 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def channel_has_access(
+    user_id: str,
+    channel: ChannelModel,
+    permission: str = "read",
+    strict: bool = True,
+    db: Optional[Session] = None,
+) -> bool:
+    if AccessGrants.has_access(
+        user_id=user_id,
+        resource_type="channel",
+        resource_id=channel.id,
+        permission=permission,
+        db=db,
+    ):
+        return True
+
+    if (
+        not strict
+        and permission == "write"
+        and has_public_read_access_grant(channel.access_grants)
+    ):
+        return True
+
+    return False
+
+
+def get_channel_users_with_access(
+    channel: ChannelModel, permission: str = "read", db: Optional[Session] = None
+):
+    return AccessGrants.get_users_with_access(
+        resource_type="channel",
+        resource_id=channel.id,
+        permission=permission,
+        db=db,
+    )
+
+
+def get_channel_permitted_group_and_user_ids(
+    channel: ChannelModel, permission: str = "read"
+) -> Optional[dict[str, list[str]]]:
+    if permission == "read" and has_public_read_access_grant(channel.access_grants):
+        return None
+
+    user_ids = []
+    group_ids = []
+
+    for grant in channel.access_grants:
+        if grant.permission != permission:
+            continue
+        if grant.principal_type == "group":
+            group_ids.append(grant.principal_id)
+        elif grant.principal_type == "user" and grant.principal_id != "*":
+            user_ids.append(grant.principal_id)
+
+    return {
+        "user_ids": list(dict.fromkeys(user_ids)),
+        "group_ids": list(dict.fromkeys(group_ids)),
+    }
+
+
 ############################
 # Channels Enabled Dependency
 ############################
 
 
-def check_channels_access(request: Request):
+def check_channels_access(request: Request, user: Optional[UserModel] = None):
     """Dependency to ensure channels are globally enabled."""
     if not request.app.state.config.ENABLE_CHANNELS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Channels are not enabled",
         )
+
+    if user:
+        if user.role != "admin" and not has_permission(
+            user.id, "features.channels", request.app.state.config.USER_PERMISSIONS
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
 
 
 ############################
@@ -355,7 +421,7 @@ async def get_channel_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
@@ -408,22 +474,22 @@ async def get_channel_by_id(
             }
         )
     else:
-        if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control, db=db
+        if user.role != "admin" and not channel_has_access(
+            user.id, channel, permission="read", db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
 
-        write_access = has_access(
+        write_access = channel_has_access(
             user.id,
-            type="write",
-            access_control=channel.access_control,
+            channel,
+            permission="write",
             strict=False,
             db=db,
         )
 
-        user_count = len(get_users_with_access("read", channel.access_control))
+        user_count = len(get_channel_users_with_access(channel, "read", db=db))
 
         channel_member = Channels.get_member_by_channel_and_user_id(
             channel.id, user.id, db=db
@@ -467,7 +533,7 @@ async def get_channel_members_by_id(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
 
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
@@ -517,8 +583,8 @@ async def get_channel_members_by_id(
             filter["channel_id"] = channel.id
         else:
             filter["roles"] = ["!pending"]
-            permitted_ids = get_permitted_group_and_user_ids(
-                "read", channel.access_control
+            permitted_ids = get_channel_permitted_group_and_user_ids(
+                channel, permission="read"
             )
             if permitted_ids:
                 filter["user_ids"] = permitted_ids.get("user_ids")
@@ -788,7 +854,7 @@ async def get_channel_messages(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-    check_channels_access(request)
+    check_channels_access(request, user)
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
@@ -801,8 +867,8 @@ async def get_channel_messages(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control, db=db
+        if user.role != "admin" and not channel_has_access(
+            user.id, channel, permission="read", db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -878,8 +944,8 @@ async def get_pinned_channel_messages(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control, db=db
+        if user.role != "admin" and not channel_has_access(
+            user.id, channel, permission="read", db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -936,7 +1002,7 @@ async def get_pinned_channel_messages(
 async def send_notification(
     name, webui_url, channel, message, active_user_ids, db=None
 ):
-    users = get_users_with_access("read", channel.access_control)
+    users = get_channel_users_with_access(channel, "read", db=db)
 
     for user in users:
         if (user.id not in active_user_ids) and Channels.is_user_channel_member(
@@ -1055,7 +1121,7 @@ async def model_response_handler(request, channel, message, user, db=None):
                         f"{username}: {replace_mentions(thread_message.content)}"
                     )
 
-                    thread_message_files = thread_message.data.get("files", [])
+                    thread_message_files = (thread_message.data or {}).get("files", [])
                     for file in thread_message_files:
                         if file.get("type", "") == "image":
                             images.append(file.get("url", ""))
@@ -1163,10 +1229,10 @@ async def new_message_handler(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not has_access(
+        if user.role != "admin" and not channel_has_access(
             user.id,
-            type="write",
-            access_control=channel.access_control,
+            channel,
+            permission="write",
             strict=False,
             db=db,
         ):
@@ -1308,8 +1374,8 @@ async def get_channel_message(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control, db=db
+        if user.role != "admin" and not channel_has_access(
+            user.id, channel, permission="read", db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1362,8 +1428,8 @@ async def get_channel_message_data(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control, db=db
+        if user.role != "admin" and not channel_has_access(
+            user.id, channel, permission="read", db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1416,8 +1482,8 @@ async def pin_channel_message(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control, db=db
+        if user.role != "admin" and not channel_has_access(
+            user.id, channel, permission="read", db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1482,8 +1548,8 @@ async def get_channel_thread_messages(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not has_access(
-            user.id, type="read", access_control=channel.access_control, db=db
+        if user.role != "admin" and not channel_has_access(
+            user.id, channel, permission="read", db=db
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1567,9 +1633,7 @@ async def update_message_by_id(
         if (
             user.role != "admin"
             and message.user_id != user.id
-            and not has_access(
-                user.id, type="read", access_control=channel.access_control, db=db
-            )
+            and not channel_has_access(user.id, channel, permission="read", db=db)
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -1634,10 +1698,10 @@ async def add_reaction_to_message(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not has_access(
+        if user.role != "admin" and not channel_has_access(
             user.id,
-            type="write",
-            access_control=channel.access_control,
+            channel,
+            permission="write",
             strict=False,
             db=db,
         ):
@@ -1713,10 +1777,10 @@ async def remove_reaction_by_id_and_user_id_and_name(
                 status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
             )
     else:
-        if user.role != "admin" and not has_access(
+        if user.role != "admin" and not channel_has_access(
             user.id,
-            type="write",
-            access_control=channel.access_control,
+            channel,
+            permission="write",
             strict=False,
             db=db,
         ):
@@ -1808,10 +1872,10 @@ async def delete_message_by_id(
         if (
             user.role != "admin"
             and message.user_id != user.id
-            and not has_access(
+            and not channel_has_access(
                 user.id,
-                type="write",
-                access_control=channel.access_control,
+                channel,
+                permission="write",
                 strict=False,
                 db=db,
             )

@@ -7,6 +7,7 @@
 	import { toast } from 'svelte-sonner';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -35,7 +36,8 @@
 		'perplexity',
 		'sougou',
 		'firecrawl',
-		'external'
+		'external',
+		'yandex'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
@@ -733,6 +735,55 @@
 										placeholder={$i18n.t('Enter External Web Search API Key')}
 										bind:value={webConfig.EXTERNAL_WEB_SEARCH_API_KEY}
 									/>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'yandex'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Yandex Web Search URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Yandex Web Search URL')}
+												bind:value={webConfig.YANDEX_WEB_SEARCH_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Yandex Web Search API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Yandex Web Search API Key')}
+										bind:value={webConfig.YANDEX_WEB_SEARCH_API_KEY}
+									/>
+								</div>
+
+								<div class="mb-2.5">
+									<div class=" mb-1 text-xs font-medium">{$i18n.t('Yandex Web Search config')}</div>
+
+									<Tooltip
+										content={$i18n.t(
+											'Leave empty to use the default config, or enter a valid json (see https://yandex.cloud/en/docs/search-api/api-ref/WebSearch/search#yandex.cloud.searchapi.v2.WebSearchRequest)'
+										)}
+										placement="top-start"
+									>
+										<Textarea
+											bind:value={webConfig.YANDEX_WEB_SEARCH_CONFIG}
+											placeholder={$i18n.t(
+												'Leave empty to use the default config, or enter a valid json (see https://yandex.cloud/en/docs/search-api/api-ref/WebSearch/search#yandex.cloud.searchapi.v2.WebSearchRequest)'
+											)}
+										/>
+									</Tooltip>
 								</div>
 							</div>
 						{/if}
