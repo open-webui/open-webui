@@ -85,6 +85,8 @@
 	}
 
 	const getModelList = async () => {
+		if (!loaded) return;
+
 		try {
 			const res = await getWorkspaceModels(
 				localStorage.token,
@@ -460,7 +462,7 @@
 						<div
 							class="flex transition rounded-2xl w-full p-2.5 {model.write_access
 								? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50'
-								: 'cursor-not-allowed opacity-60'}"
+								: 'dark:hover:bg-gray-850/50 hover:bg-gray-50'}"
 							id="model-item-{model.id}"
 							on:click={() => {
 								if (model.write_access) {
@@ -505,10 +507,9 @@
 														</div>
 													{/if}
 
-													{#if model.write_access || $user?.role === 'admin'}
-														<div class="flex {model.is_active ? '' : 'text-gray-500'}">
+													<div class="flex {model.is_active ? '' : 'text-gray-500'}">
 															<div class="flex items-center gap-0.5">
-																{#if shiftKey}
+																{#if shiftKey && model.write_access}
 																	<Tooltip
 																		content={model?.meta?.hidden
 																			? $i18n.t('Show')
@@ -546,6 +547,7 @@
 																	<ModelMenu
 																		user={$user}
 																		{model}
+																		writeAccess={model.write_access}
 																		editHandler={() => {
 																			goto(
 																				`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
@@ -582,9 +584,8 @@
 																		</div>
 																	</ModelMenu>
 																{/if}
-															</div>
 														</div>
-													{/if}
+													</div>
 
 													{#if model.write_access}
 														<button

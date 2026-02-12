@@ -27,7 +27,8 @@
 		showSidebar,
 		currentChatPage,
 		tags,
-		selectedFolder
+		selectedFolder,
+		activeChatIds
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -41,17 +42,38 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { generateTitle } from '$lib/apis';
 
 	export let className = '';
 
 	export let id;
 	export let title;
+	export let createdAt: number | null = null;
 
 	export let selected = false;
 	export let shiftKey = false;
 
 	export let onDragEnd = () => {};
+
+	function formatTimeAgo(timestamp: number): string {
+		const now = Date.now();
+		const diff = now - timestamp * 1000; // timestamp is in seconds
+
+		const seconds = Math.floor(diff / 1000);
+		const minutes = Math.floor(seconds / 60);
+		const hours = Math.floor(minutes / 60);
+		const days = Math.floor(hours / 24);
+		const weeks = Math.floor(days / 7);
+		const years = Math.floor(days / 365);
+
+		if (years > 0) return `${years}y`;
+		if (weeks > 0) return `${weeks}w`;
+		if (days > 0) return `${days}d`;
+		if (hours > 0) return `${hours}h`;
+		if (minutes > 0) return `${minutes}m`;
+		return '1m';
+	}
 
 	let chat = null;
 
@@ -423,11 +445,25 @@
 			on:focus={(e) => {}}
 			draggable="false"
 		>
-			<div class=" flex self-center flex-1 w-full">
-				<div dir="auto" class=" text-left self-center overflow-hidden w-full h-[20px] truncate">
+			<!-- Loading spinner for active chat (left side) -->
+			{#if $activeChatIds.has(id)}
+				<div class="shrink-0 self-center pr-2">
+					<Spinner className="size-3" />
+				</div>
+			{/if}
+
+			<div class="flex self-center flex-1 w-full min-w-0">
+				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px] truncate">
 					{title}
 				</div>
 			</div>
+
+			<!-- Time ago indicator -->
+			{#if createdAt && !mouseOver}
+				<div class="shrink-0 self-center text-[10px] text-gray-400 dark:text-gray-500 pl-2">
+					{formatTimeAgo(createdAt)}
+				</div>
+			{/if}
 		</a>
 	{/if}
 

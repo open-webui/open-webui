@@ -897,6 +897,34 @@
 						oncompositionend(event);
 						return false;
 					},
+					beforeinput: (view, event) => {
+						// Workaround for Gboard's clipboard suggestion strip which sends
+						// multi-line pastes as 'insertText' rather than a standard paste event.
+						// Manually insert with hard breaks to preserve multi-line formatting.
+						const isAndroid = /Android/i.test(navigator.userAgent);
+						if (isAndroid && event.inputType === 'insertText' && event.data?.includes('\n')) {
+							event.preventDefault();
+
+							const { state, dispatch } = view;
+							const { from, to } = state.selection;
+							const lines = event.data.split('\n');
+							const nodes = [];
+
+							lines.forEach((line, index) => {
+								if (index > 0) {
+									nodes.push(state.schema.nodes.hardBreak.create());
+								}
+								if (line.length > 0) {
+									nodes.push(state.schema.text(line));
+								}
+							});
+
+							const fragment = Fragment.fromArray(nodes);
+							dispatch(state.tr.replaceWith(from, to, fragment).scrollIntoView());
+							return true;
+						}
+						return false;
+					},
 					focus: (view, event) => {
 						eventDispatch('focus', { event });
 						return false;

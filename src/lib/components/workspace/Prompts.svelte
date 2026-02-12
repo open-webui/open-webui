@@ -4,14 +4,14 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
 	import {
 		createNewPrompt,
 		deletePromptById,
 		getPrompts,
-		getPromptList,
+		getPromptItems,
 		getPromptTags
 	} from '$lib/apis/prompts';
 	import { capitalizeFirstLetter, slugify, copyToClipboard } from '$lib/utils';
@@ -31,6 +31,8 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import Pagination from '../common/Pagination.svelte';
+
 	let shiftKey = false;
 
 	const i18n = getContext('i18n');
@@ -39,9 +41,12 @@
 
 	let importFiles = null;
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
-	let prompts = [];
+	let prompts = null;
 	let tags = [];
+	let total = null;
+	let loading = false;
 
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
@@ -51,27 +56,55 @@
 	let selectedTag = '';
 	let copiedId: string | null = null;
 
-	let filteredItems = [];
+	let page = 1;
 
-	$: if (prompts && query !== undefined && viewOption !== undefined && selectedTag !== undefined) {
-		setFilteredItems();
+	// Debounce only query changes
+	$: if (query !== undefined) {
+		loading = true;
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			getPromptList();
+		}, 300);
 	}
 
-	const setFilteredItems = () => {
-		filteredItems = prompts.filter((p) => {
-			if (query === '' && viewOption === '' && selectedTag === '') return true;
-			const lowerQuery = query.toLowerCase();
-			return (
-				((p.title || '').toLowerCase().includes(lowerQuery) ||
-					(p.command || '').toLowerCase().includes(lowerQuery) ||
-					(p.user?.name || '').toLowerCase().includes(lowerQuery) ||
-					(p.user?.email || '').toLowerCase().includes(lowerQuery)) &&
-				(viewOption === '' ||
-					(viewOption === 'created' && p.user_id === $user?.id) ||
-					(viewOption === 'shared' && p.user_id !== $user?.id)) &&
-				(selectedTag === '' || (p.tags && p.tags.includes(selectedTag)))
-			);
-		});
+	// Immediate response to page/filter changes
+	$: if (page && selectedTag !== undefined && viewOption !== undefined) {
+		getPromptList();
+	}
+
+	const getPromptList = async () => {
+		if (!loaded) return;
+
+		loading = true;
+		try {
+			const res = await getPromptItems(
+				localStorage.token,
+				query,
+				viewOption,
+				selectedTag,
+				null,
+				null,
+				page
+			).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				prompts = res.items;
+				total = res.total;
+
+				// get tags
+				tags = await getPromptTags(localStorage.token).catch((error) => {
+					toast.error(`${error}`);
+					return [];
+				});
+			}
+		} catch (err) {
+			console.error(err);
+		} finally {
+			loading = false;
+		}
 	};
 
 	const shareHandler = async (prompt) => {
@@ -134,18 +167,13 @@
 			toast.success($i18n.t(`Deleted {{name}}`, { name: command }));
 		}
 
-		await init();
-	};
-
-	const init = async () => {
-		prompts = await getPromptList(localStorage.token);
-		tags = await getPromptTags(localStorage.token);
+		page = 1;
+		getPromptList();
 		await _prompts.set(await getPrompts(localStorage.token));
 	};
 
 	onMount(async () => {
 		viewOption = localStorage?.workspaceViewOption || '';
-		await init();
 		loaded = true;
 
 		const onKeyDown = (event) => {
@@ -169,10 +197,15 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
 		};
+	});
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 	});
 </script>
 
@@ -222,7 +255,9 @@
 						});
 					}
 
-					prompts = await getPromptList(localStorage.token);
+					prompts = null;
+					page = 1;
+					getPromptList();
 					await _prompts.set(await getPrompts(localStorage.token));
 
 					importFiles = [];
@@ -239,7 +274,7 @@
 				</div>
 
 				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
-					{filteredItems.length}
+					{total ?? ''}
 				</div>
 			</div>
 
@@ -257,7 +292,7 @@
 					</button>
 				{/if}
 
-				{#if prompts.length && ($user?.role === 'admin' || $user?.permissions?.workspace?.prompts_export)}
+				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.prompts_export)}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={async () => {
@@ -330,7 +365,7 @@
 					bind:value={viewOption}
 					onChange={async (value) => {
 						localStorage.workspaceViewOption = value;
-
+						page = 1;
 						await tick();
 					}}
 				/>
@@ -344,10 +379,14 @@
 			</div>
 		</div>
 
-		{#if (filteredItems ?? []).length !== 0}
+		{#if prompts === null || loading}
+			<div class="w-full h-full flex justify-center items-center my-16 mb-24">
+				<Spinner className="size-5" />
+			</div>
+		{:else if (prompts ?? []).length !== 0}
 			<!-- Before they call, I will answer; while they are yet speaking, I will hear. -->
 			<div class="gap-2 grid my-2 px-3 lg:grid-cols-2">
-				{#each filteredItems as prompt}
+				{#each prompts as prompt}
 					<a
 						class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
 						href={`/workspace/prompts/${prompt.id}`}
@@ -450,6 +489,12 @@
 					</a>
 				{/each}
 			</div>
+
+			{#if total > 30}
+				<div class="flex justify-center mt-4 mb-2">
+					<Pagination bind:page count={total} perPage={30} />
+				</div>
+			{/if}
 		{:else}
 			<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 				<div class="max-w-md text-center">

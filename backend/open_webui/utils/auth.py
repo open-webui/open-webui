@@ -46,7 +46,6 @@ from open_webui.env import (
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-
 log = logging.getLogger(__name__)
 
 SESSION_SECRET = WEBUI_SECRET_KEY

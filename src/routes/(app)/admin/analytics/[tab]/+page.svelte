@@ -1,5 +1,5 @@
 <script>
-	import Evaluations from '$lib/components/admin/Evaluations.svelte';
+	import Analytics from '$lib/components/admin/Analytics.svelte';
 </script>
 
-<Evaluations />
+<Analytics />

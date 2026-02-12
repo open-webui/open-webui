@@ -11,9 +11,22 @@
 
 	let selectedPromptIdx = 0;
 	export let filteredItems = [];
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let debouncedQuery = '';
+
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			debouncedQuery = query;
+		}, 200);
+	}
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
+	});
 
 	$: filteredItems = prompts
-		.filter((p) => p.command.toLowerCase().includes(query.toLowerCase()))
+		.filter((p) => p.command.toLowerCase().includes(debouncedQuery.toLowerCase()))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	$: if (query) {

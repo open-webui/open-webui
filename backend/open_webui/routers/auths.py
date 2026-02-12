@@ -1,3 +1,4 @@
+import asyncio
 import re
 import uuid
 import time
@@ -19,6 +20,7 @@ from open_webui.models.auths import (
     UpdatePasswordForm,
 )
 from open_webui.models.users import (
+    UserModel,
     UserProfileImageResponse,
     Users,
     UpdateProfileForm,
@@ -98,7 +100,7 @@ def create_session_response(
     """
     Create JWT token and build session response for a user.
     Shared helper for signin, signup, ldap_auth, add_user, and token_exchange endpoints.
-    
+
     Args:
         request: FastAPI request object
         user: User object
@@ -376,7 +378,7 @@ async def ldap_auth(
             auto_bind="NONE",
             authentication="SIMPLE" if LDAP_APP_DN else "ANONYMOUS",
         )
-        if not connection_app.bind():
+        if not await asyncio.to_thread(connection_app.bind):
             raise HTTPException(400, detail="Application account bind failed")
 
         ENABLE_LDAP_GROUP_MANAGEMENT = (
@@ -397,7 +399,8 @@ async def ldap_auth(
             )
         log.info(f"LDAP search attributes: {search_attributes}")
 
-        search_success = connection_app.search(
+        search_success = await asyncio.to_thread(
+            connection_app.search,
             search_base=LDAP_SEARCH_BASE,
             search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})",
             attributes=search_attributes,
@@ -501,7 +504,7 @@ async def ldap_auth(
                 auto_bind="NONE",
                 authentication="SIMPLE",
             )
-            if not connection_user.bind():
+            if not await asyncio.to_thread(connection_user.bind):
                 raise HTTPException(400, "Authentication failed.")
 
             user = Users.get_user_by_email(email, db=db)
@@ -558,7 +561,9 @@ async def ldap_auth(
                     except Exception as e:
                         log.error(f"Failed to sync groups for user {user.id}: {e}")
 
-                return create_session_response(request, user, db, response, set_cookie=True)
+                return create_session_response(
+                    request, user, db, response, set_cookie=True
+                )
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         else:
@@ -601,10 +606,11 @@ async def signin(
                 pass
 
         if not Users.get_user_by_email(email.lower(), db=db):
-            await signup(
+            await signup_handler(
                 request,
-                response,
-                SignupForm(email=email, password=str(uuid.uuid4()), name=name),
+                email,
+                str(uuid.uuid4()),
+                name,
                 db=db,
             )
 
@@ -632,10 +638,11 @@ async def signin(
             if Users.has_users(db=db):
                 raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
 
-            await signup(
+            await signup_handler(
                 request,
-                response,
-                SignupForm(email=admin_email, password=admin_password, name="User"),
+                admin_email,
+                admin_password,
+                "User",
                 db=db,
             )
 
@@ -677,6 +684,62 @@ async def signin(
 ############################
 
 
+async def signup_handler(
+    request: Request,
+    email: str,
+    password: str,
+    name: str,
+    profile_image_url: str = "/user.png",
+    *,
+    db: Session,
+) -> UserModel:
+    """
+    Core user-creation logic shared by the signup endpoint and
+    trusted-header / no-auth auto-registration flows.
+
+    Returns the newly created UserModel.
+    Raises HTTPException on failure.
+    """
+    has_users = Users.has_users(db=db)
+    role = "admin" if not has_users else request.app.state.config.DEFAULT_USER_ROLE
+    hashed = get_password_hash(password)
+
+    user = Auths.insert_new_auth(
+        email=email.lower(),
+        password=hashed,
+        name=name,
+        profile_image_url=profile_image_url,
+        role=role,
+        db=db,
+    )
+    if not user:
+        raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+
+    if request.app.state.config.WEBHOOK_URL:
+        await post_webhook(
+            request.app.state.WEBUI_NAME,
+            request.app.state.config.WEBHOOK_URL,
+            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+            {
+                "action": "signup",
+                "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                "user": user.model_dump_json(exclude_none=True),
+            },
+        )
+
+    if not has_users:
+        # Disable signup after the first user is created
+        request.app.state.config.ENABLE_SIGNUP = False
+
+    apply_default_group_assignment(
+        request.app.state.config.DEFAULT_GROUP_ID,
+        user.id,
+        db=db,
+    )
+
+    return user
+
+
 @router.post("/signup", response_model=SessionUserResponse)
 async def signup(
     request: Request,
@@ -715,44 +778,15 @@ async def signup(
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
-        hashed = get_password_hash(form_data.password)
-
-        role = "admin" if not has_users else request.app.state.config.DEFAULT_USER_ROLE
-        user = Auths.insert_new_auth(
-            form_data.email.lower(),
-            hashed,
+        user = await signup_handler(
+            request,
+            form_data.email,
+            form_data.password,
             form_data.name,
             form_data.profile_image_url,
-            role,
             db=db,
         )
-
-        if user:
-            if request.app.state.config.WEBHOOK_URL:
-                await post_webhook(
-                    request.app.state.WEBUI_NAME,
-                    request.app.state.config.WEBHOOK_URL,
-                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                    {
-                        "action": "signup",
-                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
-                        "user": user.model_dump_json(exclude_none=True),
-                    },
-                )
-
-            if not has_users:
-                # Disable signup after the first user is created
-                request.app.state.config.ENABLE_SIGNUP = False
-
-            apply_default_group_assignment(
-                request.app.state.config.DEFAULT_GROUP_ID,
-                user.id,
-                db=db,
-            )
-
-            return create_session_response(request, user, db, response, set_cookie=True)
-        else:
-            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+        return create_session_response(request, user, db, response, set_cookie=True)
     except HTTPException:
         raise
     except Exception as err:

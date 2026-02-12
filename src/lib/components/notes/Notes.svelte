@@ -60,6 +60,7 @@
 	let total = null;
 
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let sortKey = null;
 	let displayOption = null;
@@ -128,7 +129,7 @@
 						}
 					},
 					meta: null,
-					access_control: {}
+					access_grants: []
 				}).catch((error) => {
 					toast.error(`${error}`);
 					return null;
@@ -163,13 +164,16 @@
 		await getItemsPage();
 	};
 
-	$: if (
-		loaded &&
-		query !== undefined &&
-		sortKey !== undefined &&
-		permission !== undefined &&
-		viewOption !== undefined
-	) {
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => {
+			if (loaded) {
+				init();
+			}
+		}, 300);
+	}
+
+	$: if (loaded && sortKey !== undefined && permission !== undefined && viewOption !== undefined) {
 		init();
 	}
 
@@ -283,6 +287,7 @@
 	});
 
 	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 		console.log('destroy');
 		const dropzoneElement = document.getElementById('notes-container');
 
