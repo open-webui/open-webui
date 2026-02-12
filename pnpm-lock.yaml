@@ -28,7 +28,7 @@ importers:
         version: 1.7.5
       '@huggingface/transformers':
         specifier: ^3.0.0
-        version: 3.8.1
+        version: 3.8.1  
       '@joplin/turndown-plugin-gfm':
         specifier: ^1.0.62
         version: 1.0.64
