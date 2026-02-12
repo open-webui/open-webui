@@ -24,6 +24,7 @@ class TestSentinelRedisProxy:
         assert result["service"] == "mymaster"
         assert result["port"] == 6379
         assert result["db"] == 0
+        assert result["ssl"] == False
 
     def test_parse_redis_service_url_defaults(self):
         """Test parsing Redis service URL with defaults"""
@@ -35,6 +36,23 @@ class TestSentinelRedisProxy:
         assert result["service"] == "mymaster"
         assert result["port"] == 6379
         assert result["db"] == 0
+        assert result["ssl"] == False
+
+    def test_parse_redis_service_url_params(self):
+        """Test parsing Redis service URL with params"""
+        url = "rediss://user:password@mymaster:6379/0?ssl_cert_reqs=required&ssl_ca_certs=/etc/ssl-custom/certs/bundle.pem"
+
+
+        result = parse_redis_service_url(url)
+
+        assert result["username"] is None
+        assert result["password"] is None
+        assert result["service"] == "mymaster"
+        assert result["port"] == 6379
+        assert result["db"] == 0
+        assert result["ssl"] == True
+        assert result["ssl_cert_reqs"] == "required"
+        assert result["ssl_ca_certs"] == "/etc/ssl-custom/certs/bundle.pem"
 
     def test_parse_redis_service_url_invalid_scheme(self):
         """Test parsing invalid URL scheme"""
