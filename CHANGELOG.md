@@ -144,6 +144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ⚠️ **IMPORTANT: Database Migration Required** — This release includes database schema changes; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates, as running mixed versions will cause application failures due to schema incompatibility between old and new instances.
+- ⚠️ **Chat Message Table Migration** — This release includes a new chat message table migration that can take a significant amount of time to complete in larger deployments with extensive chat histories. Administrators should plan for adequate maintenance windows and allow the migration to complete fully without interruption. Running the migration with insufficient time or resources may result in data integrity issues.
 - 🔗 Prompts now use unique ID-based URLs instead of command-based URLs, allowing more flexible command renaming without breaking saved links or integrations. [#20945](https://github.com/open-webui/open-webui/pull/20945)
 
 ## [0.7.2] - 2026-01-10
