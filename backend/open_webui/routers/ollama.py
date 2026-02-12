@@ -105,8 +105,6 @@ async def send_get_request(url, key=None, user: UserModel = None):
         return None
 
 
-
-
 async def send_post_request(
     url: str,
     payload: Union[str, bytes],
@@ -420,12 +418,8 @@ async def get_all_models(request: Request, user: UserModel = None):
 async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     model_ids = [model["model"] for model in models.get("models", [])]
-    model_infos = {
-        m.id: m for m in Models.get_models_by_ids(model_ids, db=db)
-    }
-    user_group_ids = {
-        g.id for g in Groups.get_groups_by_member_id(user.id, db=db)
-    }
+    model_infos = {m.id: m for m in Models.get_models_by_ids(model_ids, db=db)}
+    user_group_ids = {g.id for g in Groups.get_groups_by_member_id(user.id, db=db)}
 
     filtered_models = []
     for model in models.get("models", []):
@@ -1029,9 +1023,6 @@ async def embed(
     if url_idx is None:
         model = form_data.model
 
-        if ":" not in model:
-            model = f"{model}:latest"
-
         # Check if model is already in app state cache to avoid expensive get_all_models() call
         models = request.app.state.OLLAMA_MODELS
         if not models or model not in models:
@@ -1116,9 +1107,6 @@ async def embeddings(
 
     if url_idx is None:
         model = form_data.model
-
-        if ":" not in model:
-            model = f"{model}:latest"
 
         # Check if model is already in app state cache to avoid expensive get_all_models() call
         models = request.app.state.OLLAMA_MODELS
@@ -1213,10 +1201,6 @@ async def generate_completion(
         models = request.app.state.OLLAMA_MODELS
 
         model = form_data.model
-
-        if ":" not in model:
-            model = f"{model}:latest"
-
         if model in models:
             url_idx = random.choice(models[model]["urls"])
         else:
@@ -1653,12 +1637,8 @@ async def get_openai_models(
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         model_ids = [model["id"] for model in models]
-        model_infos = {
-            m.id: m for m in Models.get_models_by_ids(model_ids, db=db)
-        }
-        user_group_ids = {
-            g.id for g in Groups.get_groups_by_member_id(user.id, db=db)
-        }
+        model_infos = {m.id: m for m in Models.get_models_by_ids(model_ids, db=db)}
+        user_group_ids = {g.id for g in Groups.get_groups_by_member_id(user.id, db=db)}
 
         filtered_models = []
         for model in models:
