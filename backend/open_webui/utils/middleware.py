@@ -1455,7 +1455,9 @@ def add_file_context(messages: list, chat_id: str, user) -> list:
 
     for message, stored_message in zip(messages, stored_messages):
         files_with_urls = [
-            file for file in stored_message.get("files", []) if file.get("url")
+            file
+            for file in stored_message.get("files", [])
+            if file.get("url") and not file.get("url").startswith("data:")
         ]
         if not files_with_urls:
             continue
