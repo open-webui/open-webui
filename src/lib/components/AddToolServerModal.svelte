@@ -250,8 +250,10 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		// remove trailing slash from url
-		url = url.replace(/\/$/, '');
+		// remove trailing slash from url (except for MCP servers where it may be significant)
+		if (type !== 'mcp') {
+			url = url.replace(/\/$/, '');
+		}
 		if (id.includes(':') || id.includes('|')) {
 			toast.error($i18n.t('ID cannot contain ":" or "|" characters'));
 			loading = false;
