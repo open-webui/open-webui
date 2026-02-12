@@ -72,16 +72,11 @@
 
 	let searchDebounceTimer;
 
-	$: if (page !== undefined && selectedTag !== undefined && viewOption !== undefined) {
+	$: if (loaded && page !== undefined && selectedTag !== undefined && viewOption !== undefined) {
 		getModelList();
 	}
 
-	$: if (query !== undefined) {
-		clearTimeout(searchDebounceTimer);
-		searchDebounceTimer = setTimeout(() => {
-			getModelList();
-		}, 300);
-	}
+
 
 	const getModelList = async () => {
 		if (!loaded) return;
@@ -404,6 +399,12 @@
 					bind:value={query}
 					placeholder={$i18n.t('Search Models')}
 					maxlength="500"
+					on:input={() => {
+						clearTimeout(searchDebounceTimer);
+						searchDebounceTimer = setTimeout(() => {
+							getModelList();
+						}, 300);
+					}}
 				/>
 
 				{#if query}
@@ -412,6 +413,7 @@
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:click={() => {
 								query = '';
+								getModelList();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />
