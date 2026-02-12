@@ -782,6 +782,30 @@ def extract_urls(text: str) -> list[str]:
     return url_pattern.findall(text)
 
 
+
+async def cleanup_response(
+    response: Optional[aiohttp.ClientResponse],
+    session: Optional[aiohttp.ClientSession],
+):
+    if response:
+        response.close()
+    if session:
+        await session.close()
+
+
+async def stream_wrapper(response, session, content_handler=None):
+    """
+    Wrap a stream to ensure cleanup happens even if streaming is interrupted.
+    This is more reliable than BackgroundTask which may not run if client disconnects.
+    """
+    try:
+        stream = content_handler(response.content) if content_handler else response.content
+        async for chunk in stream:
+            yield chunk
+    finally:
+        await cleanup_response(response, session)
+
+
 def stream_chunks_handler(stream: aiohttp.StreamReader):
     """
     Handle stream response chunks, supporting large data chunks that exceed the original 16kb limit.

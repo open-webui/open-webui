@@ -38,7 +38,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, validator
-from starlette.background import BackgroundTask
+
 from sqlalchemy.orm import Session
 
 from open_webui.internal.db import get_session
@@ -49,6 +49,8 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.utils.misc import (
     calculate_sha256,
+    cleanup_response,
+    stream_wrapper,
 )
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
@@ -103,14 +105,6 @@ async def send_get_request(url, key=None, user: UserModel = None):
         return None
 
 
-async def cleanup_response(
-    response: Optional[aiohttp.ClientResponse],
-    session: Optional[aiohttp.ClientSession],
-):
-    if response:
-        response.close()
-    if session:
-        await session.close()
 
 
 async def send_post_request(
@@ -124,6 +118,7 @@ async def send_post_request(
 ):
 
     r = None
+    streaming = False
     try:
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
@@ -168,13 +163,11 @@ async def send_post_request(
             if content_type:
                 response_headers["Content-Type"] = content_type
 
+            streaming = True
             return StreamingResponse(
-                r.content,
+                stream_wrapper(r, session),
                 status_code=r.status,
                 headers=response_headers,
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
             )
         else:
             res = await r.json()
@@ -190,7 +183,7 @@ async def send_post_request(
             detail=detail if e else "Open WebUI: Server Connection Error",
         )
     finally:
-        if not stream:
+        if not streaming:
             await cleanup_response(r, session)
 
 

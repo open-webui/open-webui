@@ -18,7 +18,7 @@ from fastapi.responses import (
     PlainTextResponse,
 )
 from pydantic import BaseModel
-from starlette.background import BackgroundTask
+
 from sqlalchemy.orm import Session
 
 from open_webui.internal.db import get_session
@@ -48,8 +48,10 @@ from open_webui.utils.payload import (
     apply_system_prompt_to_body,
 )
 from open_webui.utils.misc import (
+    cleanup_response,
     convert_logit_bias_input_to_json,
     stream_chunks_handler,
+    stream_wrapper,
 )
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -88,14 +90,6 @@ async def send_get_request(url, key=None, user: UserModel = None):
         return None
 
 
-async def cleanup_response(
-    response: Optional[aiohttp.ClientResponse],
-    session: Optional[aiohttp.ClientSession],
-):
-    if response:
-        response.close()
-    if session:
-        await session.close()
 
 
 def openai_reasoning_model_handler(payload):
@@ -1104,12 +1098,9 @@ async def generate_chat_completion(
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
-                stream_chunks_handler(r.content),
+                stream_wrapper(r, session, stream_chunks_handler),
                 status_code=r.status,
                 headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
             )
         else:
             try:
@@ -1190,12 +1181,9 @@ async def embeddings(request: Request, form_data: dict, user):
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
-                r.content,
+                stream_wrapper(r, session),
                 status_code=r.status,
                 headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
             )
         else:
             try:
@@ -1282,12 +1270,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             return StreamingResponse(
-                r.content,
+                stream_wrapper(r, session),
                 status_code=r.status,
                 headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
             )
         else:
             try:
