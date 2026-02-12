@@ -1384,7 +1384,13 @@ app.add_middleware(APIKeyRestrictionMiddleware)
 async def commit_session_after_request(request: Request, call_next):
     response = await call_next(request)
     # log.debug("Commit session after request")
-    ScopedSession.commit()
+    try:
+        ScopedSession.commit()
+    finally:
+        # CRITICAL: remove() returns the connection to the pool.
+        # Without this, connections remain "checked out" and accumulate
+        # as "idle in transaction" in PostgreSQL.
+        ScopedSession.remove()
     return response
 
 
