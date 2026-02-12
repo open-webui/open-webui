@@ -18,6 +18,7 @@ from open_webui.storage.provider import Storage
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
 from open_webui.routers.files import upload_file_handler
+from open_webui.retrieval.web.utils import validate_url
 
 import mimetypes
 import base64
@@ -33,6 +34,8 @@ MARKDOWN_IMAGE_URL_PATTERN = re.compile(r"!\[(.*?)\]\((.+?)\)", re.IGNORECASE)
 def get_image_base64_from_url(url: str) -> Optional[str]:
     try:
         if url.startswith("http"):
+            # Validate URL to prevent SSRF attacks against local/private networks
+            validate_url(url)
             # Download the image from the URL
             response = requests.get(url)
             response.raise_for_status()

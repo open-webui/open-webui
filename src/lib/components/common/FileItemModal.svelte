@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { WorkBook } from 'xlsx';
+	import DOMPurify from 'dompurify';
 
 	import { getContext, onMount, tick } from 'svelte';
 
@@ -118,11 +119,13 @@
 		const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
 		rowCount = range.e.r - range.s.r + 1;
 
-		excelHtml = XLSX.utils.sheet_to_html(worksheet, {
-			id: 'excel-table',
-			editable: false,
-			header: ''
-		});
+		excelHtml = DOMPurify.sanitize(
+			XLSX.utils.sheet_to_html(worksheet, {
+				id: 'excel-table',
+				editable: false,
+				header: ''
+			})
+		);
 	};
 
 	$: if (selectedSheet && excelWorkbook) {

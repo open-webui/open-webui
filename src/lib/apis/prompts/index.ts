@@ -1,16 +1,16 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 type PromptItem = {
-	id?: string;  // Prompt ID
+	id?: string; // Prompt ID
 	command: string;
-	name: string;  // Changed from title
+	name: string; // Changed from title
 	content: string;
 	data?: object | null;
 	meta?: object | null;
-	access_control?: null | object;
-	version_id?: string | null;  // Active version
-	commit_message?: string | null;  // For history tracking
-	is_production?: boolean;  // Whether to set new version as production
+	access_grants?: object[];
+	version_id?: string | null; // Active version
+	commit_message?: string | null; // For history tracking
+	is_production?: boolean; // Whether to set new version as production
 };
 
 type PromptHistoryItem = {
@@ -23,7 +23,7 @@ type PromptHistoryItem = {
 		command: string;
 		data: object;
 		meta: object;
-		access_control: object | null;
+		access_grants: object[];
 	};
 	user_id: string;
 	commit_message: string | null;
@@ -42,7 +42,7 @@ type PromptDiff = {
 	to_snapshot: object;
 	content_diff: string[];
 	name_changed: boolean;
-	access_control_changed: boolean;
+	access_grants_changed: boolean;
 };
 
 export const createNewPrompt = async (token: string, prompt: PromptItem) => {
@@ -125,6 +125,65 @@ export const getPromptTags = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getPromptItems = async (
+	token: string = '',
+	query: string | null,
+	viewOption: string | null,
+	selectedTag: string | null,
+	orderBy: string | null,
+	direction: string | null,
+	page: number
+) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	if (query) {
+		searchParams.append('query', query);
+	}
+	if (viewOption) {
+		searchParams.append('view_option', viewOption);
+	}
+	if (selectedTag) {
+		searchParams.append('tag', selectedTag);
+	}
+	if (orderBy) {
+		searchParams.append('order_by', orderBy);
+	}
+	if (direction) {
+		searchParams.append('direction', direction);
+	}
+	if (page) {
+		searchParams.append('page', page.toString());
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/list?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
 			console.error(err);
 			return null;
 		});
@@ -368,6 +427,39 @@ export const deletePromptById = async (token: string, promptId: string) => {
 	return res;
 };
 
+export const updatePromptAccessGrants = async (
+	token: string,
+	promptId: string,
+	accessGrants: any[]
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/access/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ access_grants: accessGrants })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 ////////////////////////////
 // Prompt History APIs
 ////////////////////////////
@@ -379,17 +471,14 @@ export const getPromptHistory = async (
 ): Promise<PromptHistoryItem[]> => {
 	let error = null;
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history?page=${page}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history?page=${page}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
-	)
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -414,17 +503,14 @@ export const deletePromptHistoryVersion = async (
 ): Promise<boolean> => {
 	let error = null;
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`,
-		{
-			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
-	)
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -449,17 +535,14 @@ export const getPromptHistoryEntry = async (
 ): Promise<PromptHistoryItem> => {
 	let error = null;
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
 		}
-	)
+	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
@@ -551,4 +634,3 @@ export const getPromptDiff = async (
 
 	return res;
 };
-

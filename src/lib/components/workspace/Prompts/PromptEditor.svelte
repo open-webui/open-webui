@@ -18,6 +18,7 @@
 		setProductionPromptVersion,
 		deletePromptHistoryVersion,
 		updatePromptMetadata,
+		updatePromptAccessGrants,
 		getPromptTags
 	} from '$lib/apis/prompts';
 	import dayjs from 'dayjs';
@@ -46,7 +47,7 @@
 	let commitMessage = '';
 	let isProduction = true;
 
-	let accessControl = {};
+	let accessGrants = [];
 	let showAccessControlModal = false;
 	let hasManualEdit = false;
 
@@ -87,7 +88,7 @@
 				command,
 				content,
 				tags: tags.map((tag) => tag.name),
-				access_control: accessControl,
+				access_grants: accessGrants,
 				commit_message: commitMessage || undefined,
 				is_production: isProduction
 			});
@@ -213,14 +214,6 @@
 		}
 
 		debounceTimer = setTimeout(async () => {
-			// Skip if nothing changed
-			if (
-				name === originalName &&
-				command === originalCommand &&
-				JSON.stringify(tags) === JSON.stringify(originalTags)
-			)
-				return;
-
 			if (!validateCommandString(command)) {
 				toast.error(
 					$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
@@ -259,7 +252,7 @@
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 			tags = (prompt.tags || []).map((tag) => ({ name: tag }));
-			accessControl = prompt?.access_control === undefined ? {} : prompt?.access_control;
+			accessGrants = prompt?.access_grants === undefined ? [] : prompt?.access_grants;
 
 			// Store originals for revert on collision
 			originalName = name;
@@ -286,10 +279,20 @@
 
 <AccessControlModal
 	bind:show={showAccessControlModal}
-	bind:accessControl
+	bind:accessGrants
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
-	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
+	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin' || edit}
+	onChange={async () => {
+		if (edit && prompt?.id) {
+			try {
+				await updatePromptAccessGrants(localStorage.token, prompt.id, accessGrants);
+				toast.success($i18n.t('Saved'));
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+		}
+	}}
 />
 
 <!-- Edit Modal -->
@@ -418,7 +421,7 @@
 				<div class="mt-1.5">
 					<Tooltip content={$i18n.t('Click to copy ID')}>
 						<button
-							class="text-xs text-gray-500 font-mono bg-gray-50 dark:bg-gray-850 px-2 py-1 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							class="text-xs text-gray-500 font-mono px-2 py-1 rounded-lg cursor-pointer hover:underline transition"
 							on:click={() => {
 								copyToClipboard(prompt.id);
 								toast.success($i18n.t('ID copied to clipboard'));
@@ -435,6 +438,7 @@
 			<div class="flex-1 min-w-0">
 				<Tags
 					{tags}
+					{disabled}
 					{suggestionTags}
 					on:add={(e) => {
 						tags = [...tags, { name: e.detail }];
@@ -465,7 +469,7 @@
 						</div>
 						{#if selectedHistoryEntry}
 							<span
-								class="text-xs text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded"
+								class="text-xs text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-1.5 rounded"
 							>
 								{selectedHistoryEntry.id.slice(0, 7)}
 							</span>
@@ -509,9 +513,9 @@
 					</div>
 					<!-- Scrollable content -->
 					<div
-						class="bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-100 dark:border-gray-800 h-full overflow-y-auto"
+						class="bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-100/50 dark:border-gray-850/50 h-full overflow-y-auto"
 					>
-						<pre class="text-sm whitespace-pre-wrap font-mono pr-8">{selectedHistoryEntry?.snapshot
+						<pre class="text-xs whitespace-pre-wrap font-mono pr-8">{selectedHistoryEntry?.snapshot
 								?.content || content}</pre>
 					</div>
 				</div>
@@ -623,10 +627,10 @@
 					<div class="flex">
 						<!-- Content -->
 						<button
-							class="flex-1 text-left px-3.5 py-2 mb-1 rounded-xl transition group
+							class="flex-1 text-left px-3.5 py-2 mb-1 rounded-2xl transition group
 								{selectedHistoryEntry?.id === entry.id
-								? 'bg-gray-50 dark:bg-gray-850'
-								: 'hover:bg-gray-50 dark:hover:bg-gray-850'}"
+								? 'bg-gray-100/50 dark:bg-gray-850/50'
+								: 'hover:bg-gray-100/50 dark:hover:bg-gray-850/50'}"
 							on:click={() => (selectedHistoryEntry = entry)}
 						>
 							<!-- Commit Message -->

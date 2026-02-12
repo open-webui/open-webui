@@ -29,7 +29,6 @@ from pydantic import BaseModel, HttpUrl
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
 
-
 log = logging.getLogger(__name__)
 
 

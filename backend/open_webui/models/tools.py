@@ -6,12 +6,10 @@ from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.groups import Groups
+from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
-
-from open_webui.utils.access_control import has_access
-
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import BigInteger, Column, String, Text
 
 log = logging.getLogger(__name__)
 
@@ -31,23 +29,6 @@ class Tool(Base):
     meta = Column(JSONField)
     valves = Column(JSONField)
 
-    access_control = Column(JSON, nullable=True)  # Controls data access levels.
-    # Defines access control rules for this entry.
-    # - `None`: Public access, available to all users with the "user" role.
-    # - `{}`: Private access, restricted exclusively to the owner.
-    # - Custom permissions: Specific access control for reading and writing;
-    #   Can specify group or user-level restrictions:
-    #   {
-    #      "read": {
-    #          "group_ids": ["group_id1", "group_id2"],
-    #          "user_ids":  ["user_id1", "user_id2"]
-    #      },
-    #      "write": {
-    #          "group_ids": ["group_id1", "group_id2"],
-    #          "user_ids":  ["user_id1", "user_id2"]
-    #      }
-    #   }
-
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
@@ -64,7 +45,7 @@ class ToolModel(BaseModel):
     content: str
     specs: list[dict]
     meta: ToolMeta
-    access_control: Optional[dict] = None
+    access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
@@ -86,7 +67,7 @@ class ToolResponse(BaseModel):
     user_id: str
     name: str
     meta: ToolMeta
-    access_control: Optional[dict] = None
+    access_grants: list[AccessGrantModel] = Field(default_factory=list)
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -106,7 +87,7 @@ class ToolForm(BaseModel):
     name: str
     content: str
     meta: ToolMeta
-    access_control: Optional[dict] = None
+    access_grants: Optional[list[dict]] = None
 
 
 class ToolValves(BaseModel):
@@ -114,6 +95,16 @@ class ToolValves(BaseModel):
 
 
 class ToolsTable:
+    def _get_access_grants(
+        self, tool_id: str, db: Optional[Session] = None
+    ) -> list[AccessGrantModel]:
+        return AccessGrants.get_grants_by_resource("tool", tool_id, db=db)
+
+    def _to_tool_model(self, tool: Tool, db: Optional[Session] = None) -> ToolModel:
+        tool_data = ToolModel.model_validate(tool).model_dump(exclude={"access_grants"})
+        tool_data["access_grants"] = self._get_access_grants(tool_data["id"], db=db)
+        return ToolModel.model_validate(tool_data)
+
     def insert_new_tool(
         self,
         user_id: str,
@@ -122,23 +113,24 @@ class ToolsTable:
         db: Optional[Session] = None,
     ) -> Optional[ToolModel]:
         with get_db_context(db) as db:
-            tool = ToolModel(
-                **{
-                    **form_data.model_dump(),
-                    "specs": specs,
-                    "user_id": user_id,
-                    "updated_at": int(time.time()),
-                    "created_at": int(time.time()),
-                }
-            )
-
             try:
-                result = Tool(**tool.model_dump())
+                result = Tool(
+                    **{
+                        **form_data.model_dump(exclude={"access_grants"}),
+                        "specs": specs,
+                        "user_id": user_id,
+                        "updated_at": int(time.time()),
+                        "created_at": int(time.time()),
+                    }
+                )
                 db.add(result)
                 db.commit()
                 db.refresh(result)
+                AccessGrants.set_access_grants(
+                    "tool", result.id, form_data.access_grants, db=db
+                )
                 if result:
-                    return ToolModel.model_validate(result)
+                    return self._to_tool_model(result, db=db)
                 else:
                     return None
             except Exception as e:
@@ -151,7 +143,7 @@ class ToolsTable:
         try:
             with get_db_context(db) as db:
                 tool = db.get(Tool, id)
-                return ToolModel.model_validate(tool)
+                return self._to_tool_model(tool, db=db) if tool else None
         except Exception:
             return None
 
@@ -170,7 +162,7 @@ class ToolsTable:
                 tools.append(
                     ToolUserModel.model_validate(
                         {
-                            **ToolModel.model_validate(tool).model_dump(),
+                            **self._to_tool_model(tool, db=db).model_dump(),
                             "user": user.model_dump() if user else None,
                         }
                     )
@@ -189,7 +181,14 @@ class ToolsTable:
             tool
             for tool in tools
             if tool.user_id == user_id
-            or has_access(user_id, permission, tool.access_control, user_group_ids)
+            or AccessGrants.has_access(
+                user_id=user_id,
+                resource_type="tool",
+                resource_id=tool.id,
+                permission=permission,
+                user_group_ids=user_group_ids,
+                db=db,
+            )
         ]
 
     def get_tool_valves_by_id(
@@ -266,20 +265,24 @@ class ToolsTable:
     ) -> Optional[ToolModel]:
         try:
             with get_db_context(db) as db:
+                access_grants = updated.pop("access_grants", None)
                 db.query(Tool).filter_by(id=id).update(
                     {**updated, "updated_at": int(time.time())}
                 )
                 db.commit()
+                if access_grants is not None:
+                    AccessGrants.set_access_grants("tool", id, access_grants, db=db)
 
                 tool = db.query(Tool).get(id)
                 db.refresh(tool)
-                return ToolModel.model_validate(tool)
+                return self._to_tool_model(tool, db=db)
         except Exception:
             return None
 
     def delete_tool_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
+                AccessGrants.revoke_all_access("tool", id, db=db)
                 db.query(Tool).filter_by(id=id).delete()
                 db.commit()
 
