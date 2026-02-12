@@ -422,6 +422,13 @@ async def get_channel_by_id(
     db: Session = Depends(get_session),
 ):
     check_channels_access(request, user)
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
@@ -534,6 +541,13 @@ async def get_channel_members_by_id(
     db: Session = Depends(get_session),
 ):
     check_channels_access(request, user)
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
 
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
@@ -855,6 +869,13 @@ async def get_channel_messages(
     db: Session = Depends(get_session),
 ):
     check_channels_access(request, user)
+    if user.role != "admin" and not has_permission(
+        user.id, "features.channels", request.app.state.config.USER_PERMISSIONS, db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
     channel = Channels.get_channel_by_id(id, db=db)
     if not channel:
         raise HTTPException(
