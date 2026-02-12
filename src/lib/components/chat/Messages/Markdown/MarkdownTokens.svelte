@@ -17,6 +17,7 @@
 	import KatexRenderer from './KatexRenderer.svelte';
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
@@ -133,7 +134,8 @@
 		<div class="relative w-full group mb-2">
 			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
 				<table
-					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					class=" w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					dir="auto"
 				>
 					<thead
 						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
@@ -143,9 +145,9 @@
 								<th
 									scope="col"
 									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
-									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
+									style={token.align[headerIdx] ? `text-align: ${token.align[headerIdx]}` : ''}
 								>
-									<div class="gap-1.5 text-left">
+									<div class="gap-1.5 text-start">
 										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
@@ -322,7 +324,15 @@
 			.replace(/<summary>.*?<\/summary>/gi, '')
 			.trim()}
 
-		{#if textContent.length > 0}
+		{#if token?.attributes?.type === 'tool_calls'}
+			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
+			<ToolCallDisplay
+				id={`${id}-${tokenIdx}-tc`}
+				attributes={token.attributes}
+				open={false}
+				className="w-full space-y-1"
+			/>
+		{:else if textContent.length > 0}
 			<Collapsible
 				title={token.summary}
 				open={$settings?.expandDetails ?? false}

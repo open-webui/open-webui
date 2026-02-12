@@ -28,6 +28,12 @@ import hljs from 'highlight.js';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export const formatNumber = (num: number): string => {
+	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(
+		num
+	);
+};
+
 function escapeRegExp(string: string): string {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -37,9 +43,7 @@ export const replaceOutsideCode = (content: string, replacer: (str: string) => s
 	return content
 		.split(/(```[\s\S]*?```|`[\s\S]*?`)/)
 		.map((segment) => {
-			return segment.startsWith('```') || segment.startsWith('`')
-				? segment
-				: replacer(segment);
+			return segment.startsWith('```') || segment.startsWith('`') ? segment : replacer(segment);
 		})
 		.join('');
 };
@@ -874,7 +878,7 @@ export const processDetails = (content) => {
 			}
 
 			if (attributes.result) {
-				content = content.replace(match, `"${attributes.result}"`);
+				content = content.replace(match, unescapeHtml(attributes.result));
 			}
 		}
 	}
@@ -1273,17 +1277,20 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 				// Extract path and query parameters
 				if (operation.parameters) {
 					operation.parameters.forEach((param) => {
-						let description = param.schema.description || param.description || '';
-						if (param.schema.enum && Array.isArray(param.schema.enum)) {
-							description += `. Possible values: ${param.schema.enum.join(', ')}`;
+						const paramName = param?.name;
+						if (!paramName) return;
+						const paramSchema = param?.schema ?? {};
+						let description = paramSchema.description || param.description || '';
+						if (paramSchema.enum && Array.isArray(paramSchema.enum)) {
+							description += `. Possible values: ${paramSchema.enum.join(', ')}`;
 						}
-						tool.parameters.properties[param.name] = {
-							type: param.schema.type,
+						tool.parameters.properties[paramName] = {
+							type: paramSchema.type,
 							description: description
 						};
 
 						if (param.required) {
-							tool.parameters.required.push(param.name);
+							tool.parameters.required.push(paramName);
 						}
 					});
 				}
@@ -1691,4 +1698,25 @@ export const getCodeBlockContents = (content: string): object => {
 		css: cssContent.trim(),
 		js: jsContent.trim()
 	};
+};
+export const parseFrontmatter = (content) => {
+	const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+	if (match) {
+		const frontmatter = {};
+		match[1].split('\n').forEach((line) => {
+			const [key, ...value] = line.split(':');
+			if (key && value) {
+				frontmatter[key.trim()] = value
+					.join(':')
+					.trim()
+					.replace(/^["']|["']$/g, '');
+			}
+		});
+		return frontmatter;
+	}
+	return {};
+};
+
+export const formatSkillName = (name) => {
+	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 };

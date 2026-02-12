@@ -119,11 +119,13 @@
 		const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
 		rowCount = range.e.r - range.s.r + 1;
 
-		excelHtml = DOMPurify.sanitize(XLSX.utils.sheet_to_html(worksheet, {
-			id: 'excel-table',
-			editable: false,
-			header: ''
-		}));
+		excelHtml = DOMPurify.sanitize(
+			XLSX.utils.sheet_to_html(worksheet, {
+				id: 'excel-table',
+				editable: false,
+				header: ''
+			})
+		);
 	};
 
 	$: if (selectedSheet && excelWorkbook) {

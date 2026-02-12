@@ -1,4 +1,4 @@
-<!-- 
+<!--
 ⚠️ CRITICAL CHECKS FOR CONTRIBUTORS (READ, DON'T DELETE) ⚠️
 1. Target the `dev` branch. PRs targeting `main` will be automatically closed.
 2. Do NOT delete the CLA section at the bottom. It is required for the bot to accept your PR.
@@ -84,9 +84,9 @@ This is to ensure large feature PRs are discussed with the community first, befo
 
 ### Contributor License Agreement
 
-<!-- 
-🚨 DO NOT DELETE THE TEXT BELOW 🚨 
-Keep the "Contributor License Agreement" confirmation text intact. 
+<!--
+🚨 DO NOT DELETE THE TEXT BELOW 🚨
+Keep the "Contributor License Agreement" confirmation text intact.
 Deleting it will trigger the CLA-Bot to INVALIDATE your PR.
 -->
 

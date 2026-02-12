@@ -12,9 +12,10 @@ from open_webui.models.groups import Groups, GroupMember
 from open_webui.models.channels import ChannelMember
 
 from open_webui.utils.misc import throttle
+from open_webui.utils.validate import validate_profile_image_url
 
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
     BigInteger,
     JSON,
@@ -154,6 +155,11 @@ class UpdateProfileForm(BaseModel):
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
 
+    @field_validator("profile_image_url")
+    @classmethod
+    def check_profile_image_url(cls, v: str) -> str:
+        return validate_profile_image_url(v)
+
 
 class UserGroupIdsModel(UserModel):
     group_ids: list[str] = []
@@ -184,6 +190,9 @@ class UserInfoResponse(UserStatus):
     name: str
     email: str
     role: str
+    bio: Optional[str] = None
+    groups: Optional[list] = []
+    is_active: bool = False
 
 
 class UserIdNameResponse(BaseModel):
@@ -234,6 +243,11 @@ class UserUpdateForm(BaseModel):
     profile_image_url: str
     password: Optional[str] = None
 
+    @field_validator("profile_image_url")
+    @classmethod
+    def check_profile_image_url(cls, v: str) -> str:
+        return validate_profile_image_url(v)
+
 
 class UsersTable:
     def insert_new_user(
@@ -243,6 +257,7 @@ class UsersTable:
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
+        username: Optional[str] = None,
         oauth: Optional[dict] = None,
         db: Optional[Session] = None,
     ) -> Optional[UserModel]:
@@ -257,6 +272,7 @@ class UsersTable:
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
+                    "username": username,
                     "oauth": oauth,
                 }
             )

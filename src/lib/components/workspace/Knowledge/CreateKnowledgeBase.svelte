@@ -15,7 +15,7 @@
 
 	let name = '';
 	let description = '';
-	let accessControl = {};
+	let accessGrants = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -28,14 +28,11 @@
 			return;
 		}
 
-		const res = await createNewKnowledge(
-			localStorage.token,
-			name,
-			description,
-			accessControl
-		).catch((e) => {
-			toast.error(`${e}`);
-		});
+		const res = await createNewKnowledge(localStorage.token, name, description, accessGrants).catch(
+			(e) => {
+				toast.error(`${e}`);
+			}
+		);
 
 		if (res) {
 			toast.success($i18n.t('Knowledge created successfully.'));
@@ -114,7 +111,7 @@
 
 		<div class="mt-2">
 			<AccessControl
-				bind:accessControl
+				bind:accessGrants
 				accessRoles={['read', 'write']}
 				share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
 				sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}

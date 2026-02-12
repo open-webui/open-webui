@@ -44,6 +44,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 
 	let shiftKey = false;
 
@@ -64,6 +65,9 @@
 
 	let viewOption = ''; // '' = All, 'enabled', 'disabled', 'visible', 'hidden'
 
+	const perPage = 30;
+	let currentPage = 1;
+
 	$: if (models) {
 		filteredModels = models
 			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
@@ -81,6 +85,10 @@
 
 	let searchValue = '';
 
+	$: if (searchValue || viewOption !== undefined) {
+		currentPage = 1;
+	}
+
 	const enableAllHandler = async () => {
 		const modelsToEnable = filteredModels.filter((m) => !(m.is_active ?? true));
 		// Optimistic UI update
@@ -96,7 +104,9 @@
 		modelsToDisable.forEach((m) => (m.is_active = false));
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id)));
+		await Promise.all(
+			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
+		);
 	};
 
 	const downloadModels = async (models) => {
@@ -420,7 +430,7 @@
 
 			<div class="px-3 my-2" id="model-list">
 				{#if filteredModels.length > 0}
-					{#each filteredModels as model, modelIdx (`${model.id}-${modelIdx}`)}
+					{#each filteredModels.slice((currentPage - 1) * perPage, currentPage * perPage) as model, modelIdx (`${model.id}-${modelIdx}`)}
 						<div
 							class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition {model
 								?.meta?.hidden
@@ -575,6 +585,10 @@
 					</div>
 				{/if}
 			</div>
+
+			{#if filteredModels.length > perPage}
+				<Pagination bind:page={currentPage} count={filteredModels.length} {perPage} />
+			{/if}
 		</div>
 
 		{#if $user?.role === 'admin'}

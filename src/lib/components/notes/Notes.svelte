@@ -129,7 +129,7 @@
 						}
 					},
 					meta: null,
-					access_control: {}
+					access_grants: []
 				}).catch((error) => {
 					toast.error(`${error}`);
 					return null;
@@ -173,12 +173,7 @@
 		}, 300);
 	}
 
-	$: if (
-		loaded &&
-		sortKey !== undefined &&
-		permission !== undefined &&
-		viewOption !== undefined
-	) {
+	$: if (loaded && sortKey !== undefined && permission !== undefined && viewOption !== undefined) {
 		init();
 	}
 

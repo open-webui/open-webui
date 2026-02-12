@@ -388,7 +388,9 @@
 											exportToJson();
 										}}
 									>
-										<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
+										<div class="flex items-center line-clamp-1">
+											{$i18n.t('Export chat (.json)')}
+										</div>
 									</DropdownMenu.Item>
 									<DropdownMenu.Item
 										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"

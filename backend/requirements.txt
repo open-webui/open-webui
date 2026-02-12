@@ -1,16 +1,16 @@
-fastapi==0.128.0
+fastapi==0.128.5
 uvicorn[standard]==0.40.0
 pydantic==2.12.5
 python-multipart==0.0.22
 itsdangerous==2.2.0
 
-python-socketio==5.16.0
+python-socketio==5.16.1
 python-jose==3.5.0
 cryptography
 bcrypt==5.0.0
 argon2-cffi==25.1.0
-PyJWT[crypto]==2.10.1
-authlib==1.6.6
+PyJWT[crypto]==2.11.0
+authlib==1.6.7
 
 requests==2.32.5
 aiohttp==3.13.2 # do not update to 3.13.3 - broken
@@ -27,14 +27,15 @@ alembic==1.18.3
 peewee==3.19.0
 peewee-migrate==1.14.3
 
-pycrdt==0.12.45
+pycrdt==0.12.46
 redis
 
 APScheduler==3.11.2
 RestrictedPython==8.1
+pytz==2025.2
 
 loguru==0.7.3
-asgiref==3.11.0
+asgiref==3.11.1
 
 # AI libraries
 tiktoken
@@ -42,9 +43,9 @@ mcp==1.26.0
 
 openai
 anthropic
-google-genai==1.60.0
+google-genai==1.62.0
 
-langchain==1.2.7
+langchain==1.2.9
 langchain-community==0.4.1
 langchain-classic==1.0.1
 langchain-text-splitters==1.1.0
@@ -54,7 +55,7 @@ chromadb==1.4.1
 weaviate-client==4.19.2
 opensearch-py==3.1.0
 
-transformers==4.57.6
+transformers==5.1.0
 sentence-transformers==5.2.2
 accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
@@ -62,17 +63,17 @@ einops==0.8.2
 
 ftfy==6.3.1
 chardet==5.2.0
-pypdf==6.6.2
+pypdf==6.7.0
 fpdf2==2.8.5
 pymdown-extensions==10.20.1
 docx2txt==0.9
 python-pptx==1.0.2
 unstructured==0.18.31
-msoffcrypto-tool==5.4.2
+msoffcrypto-tool==6.0.0
 nltk==3.9.2
 Markdown==3.10.1
 pypandoc==1.16.2
-pandas==2.3.3
+pandas==3.0.0
 openpyxl==3.1.5
 pyxlsb==1.0.10
 xlrd==2.0.2
@@ -82,11 +83,11 @@ sentencepiece
 soundfile==0.13.1
 
 pillow==12.1.0
-opencv-python-headless==4.13.0.90
+opencv-python-headless==4.13.0.92
 rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
 
-onnxruntime==1.23.2
+onnxruntime==1.24.1
 faster-whisper==1.2.1
 
 black==26.1.0
@@ -107,7 +108,7 @@ google-auth-httplib2
 google-auth-oauthlib
 
 googleapis-common-protos==1.72.0
-google-cloud-storage==3.8.0
+google-cloud-storage==3.9.0
 
 ## Databases
 pymongo
@@ -115,12 +116,12 @@ psycopg2-binary==2.9.11
 pgvector==0.4.2
 
 PyMySQL==1.1.2
-boto3==1.42.38
+boto3==1.42.44
 
 pymilvus==2.6.8
 qdrant-client==1.16.2
 playwright==1.58.0 # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary
-elasticsearch==9.2.1
+elasticsearch==9.3.0
 pinecone==6.0.2
 oracledb==3.4.2
 

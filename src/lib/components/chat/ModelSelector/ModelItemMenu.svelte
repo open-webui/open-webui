@@ -96,6 +96,8 @@
 		</DropdownMenu.Item>
 
 		{#if $config?.features.enable_community_sharing}
+			<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+
 			<DropdownMenu.Item
 				type="button"
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
@@ -103,7 +105,10 @@
 					e.stopPropagation();
 					e.preventDefault();
 
-					window.open(`https://openwebui.com/models?q=${encodeURIComponent(model?.id ?? '')}`, '_blank');
+					window.open(
+						`https://openwebui.com/models?q=${encodeURIComponent(model?.id ?? '')}`,
+						'_blank'
+					);
 					show = false;
 				}}
 			>
