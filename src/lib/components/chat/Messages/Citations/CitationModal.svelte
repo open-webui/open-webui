@@ -3,10 +3,11 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { settings } from '$lib/stores';
+	import { config, settings } from '$lib/stores';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -215,6 +216,13 @@
 									srcdoc={document.document}
 									title={$i18n.t('Content')}
 								></iframe>
+							{:else if $config?.ui?.citation_format === 'markdown'}
+								<div class="text-sm dark:text-gray-400 prose dark:prose-invert max-w-none">
+									<Markdown
+										id={`citation-${documentIdx}`}
+										content={document.document.trim().replace(/\n\n+/g, '\n\n')}
+									/>
+								</div>
 							{:else}
 								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">{document.document
 										.trim()

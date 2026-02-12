@@ -1280,6 +1280,12 @@ RESPONSE_WATERMARK = PersistentConfig(
     os.environ.get("RESPONSE_WATERMARK", ""),
 )
 
+CITATION_FORMAT = PersistentConfig(
+    "CITATION_FORMAT",
+    "ui.citation_format",
+    os.environ.get("CITATION_FORMAT", "plain_text"),
+)
+
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()
