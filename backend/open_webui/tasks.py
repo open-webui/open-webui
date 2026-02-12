@@ -73,7 +73,13 @@ async def redis_list_item_tasks(redis: Redis, item_id: str) -> List[str]:
 
 
 async def redis_send_command(redis: Redis, command: dict):
-    await redis.publish(REDIS_PUBSUB_CHANNEL, json.dumps(command))
+    command_json = json.dumps(command)
+    # RedisCluster doesn't expose publish() directly, but the
+    # PUBLISH command broadcasts across all cluster nodes server-side.
+    if hasattr(redis, "nodes_manager"):
+        await redis.execute_command("PUBLISH", REDIS_PUBSUB_CHANNEL, command_json)
+    else:
+        await redis.publish(REDIS_PUBSUB_CHANNEL, command_json)
 
 
 async def cleanup_task(redis, task_id: str, id=None):
