@@ -1,3 +1,4 @@
+import asyncio
 import re
 import uuid
 import time
@@ -377,7 +378,7 @@ async def ldap_auth(
             auto_bind="NONE",
             authentication="SIMPLE" if LDAP_APP_DN else "ANONYMOUS",
         )
-        if not connection_app.bind():
+        if not await asyncio.to_thread(connection_app.bind):
             raise HTTPException(400, detail="Application account bind failed")
 
         ENABLE_LDAP_GROUP_MANAGEMENT = (
@@ -398,7 +399,8 @@ async def ldap_auth(
             )
         log.info(f"LDAP search attributes: {search_attributes}")
 
-        search_success = connection_app.search(
+        search_success = await asyncio.to_thread(
+            connection_app.search,
             search_base=LDAP_SEARCH_BASE,
             search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})",
             attributes=search_attributes,
@@ -502,7 +504,7 @@ async def ldap_auth(
                 auto_bind="NONE",
                 authentication="SIMPLE",
             )
-            if not connection_user.bind():
+            if not await asyncio.to_thread(connection_user.bind):
                 raise HTTPException(400, "Authentication failed.")
 
             user = Users.get_user_by_email(email, db=db)
