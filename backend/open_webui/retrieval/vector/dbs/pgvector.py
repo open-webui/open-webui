@@ -46,7 +46,7 @@ class DocumentChunk(Base):
 
 class PgvectorClient:
     def __init__(self) -> None:
-
+        log.info("[PGVECTOR] init START | use_existing_db=%s", not PGVECTOR_DB_URL)
         # if no pgvector uri, use the existing database connection
         if not PGVECTOR_DB_URL:
             from open_webui.internal.db import Session
@@ -88,7 +88,7 @@ class PgvectorClient:
                 )
             )
             self.session.commit()
-            log.info("Initialization complete.")
+            log.info("[PGVECTOR] init SUCCESS")
         except Exception as e:
             self.session.rollback()
             log.exception(f"Error during initialization: {e}")
@@ -142,6 +142,7 @@ class PgvectorClient:
         return vector
 
     def insert(self, collection_name: str, items: List[VectorItem]) -> None:
+        log.info("[PGVECTOR] insert START | collection=%s | items_count=%s", collection_name, len(items))
         try:
             new_items = []
             for item in items:
@@ -156,15 +157,14 @@ class PgvectorClient:
                 new_items.append(new_chunk)
             self.session.bulk_save_objects(new_items)
             self.session.commit()
-            log.info(
-                f"Inserted {len(new_items)} items into collection '{collection_name}'."
-            )
+            log.info("[PGVECTOR] insert SUCCESS | collection=%s | inserted=%s", collection_name, len(new_items))
         except Exception as e:
             self.session.rollback()
             log.exception(f"Error during insert: {e}")
             raise
 
     def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
+        log.info("[PGVECTOR] upsert START | collection=%s | items_count=%s", collection_name, len(items))
         try:
             for item in items:
                 vector = self.adjust_vector_length(item["vector"])
@@ -190,9 +190,7 @@ class PgvectorClient:
                     )
                     self.session.add(new_chunk)
             self.session.commit()
-            log.info(
-                f"Upserted {len(items)} items into collection '{collection_name}'."
-            )
+            log.info("[PGVECTOR] upsert SUCCESS | collection=%s | upserted=%s", collection_name, len(items))
         except Exception as e:
             self.session.rollback()
             log.exception(f"Error during upsert: {e}")
@@ -204,8 +202,10 @@ class PgvectorClient:
         vectors: List[List[float]],
         limit: Optional[int] = None,
     ) -> Optional[SearchResult]:
+        log.info("[PGVECTOR] search START | collection=%s | vectors_count=%s | limit=%s", collection_name, len(vectors) if vectors else 0, limit)
         try:
             if not vectors:
+                log.info("[PGVECTOR] search EMPTY | collection=%s | reason=no_vectors", collection_name)
                 return None
 
             # Adjust query vectors to VECTOR_LENGTH
@@ -268,6 +268,7 @@ class PgvectorClient:
             metadatas = [[] for _ in range(num_queries)]
 
             if not results:
+                log.info("[PGVECTOR] search SUCCESS | collection=%s | num_queries=%s | results_total=0", collection_name, num_queries)
                 return SearchResult(
                     ids=ids,
                     distances=distances,
@@ -282,16 +283,23 @@ class PgvectorClient:
                 documents[qid].append(row.text)
                 metadatas[qid].append(row.vmetadata)
 
+            total_hits = sum(len(d) for d in documents)
+            log.info("[PGVECTOR] search SUCCESS | collection=%s | num_queries=%s | results_total=%s", collection_name, num_queries, total_hits)
             return SearchResult(
                 ids=ids, distances=distances, documents=documents, metadatas=metadatas
             )
         except Exception as e:
+            try:
+                self.session.rollback()
+            except Exception:
+                pass
             log.exception(f"Error during search: {e}")
             return None
 
     def query(
         self, collection_name: str, filter: Dict[str, Any], limit: Optional[int] = None
     ) -> Optional[GetResult]:
+        log.info("[PGVECTOR] query START | collection=%s | filter=%s | limit=%s", collection_name, filter, limit)
         try:
             query = self.session.query(DocumentChunk).filter(
                 DocumentChunk.collection_name == collection_name
@@ -306,24 +314,31 @@ class PgvectorClient:
             results = query.all()
 
             if not results:
+                log.info("[PGVECTOR] query EMPTY | collection=%s | filter=%s", collection_name, filter)
                 return None
 
             ids = [[result.id for result in results]]
             documents = [[result.text for result in results]]
             metadatas = [[result.vmetadata for result in results]]
 
+            log.info("[PGVECTOR] query SUCCESS | collection=%s | results_count=%s", collection_name, len(results))
             return GetResult(
                 ids=ids,
                 documents=documents,
                 metadatas=metadatas,
             )
         except Exception as e:
+            try:
+                self.session.rollback()
+            except Exception:
+                pass
             log.exception(f"Error during query: {e}")
             return None
 
     def get(
         self, collection_name: str, limit: Optional[int] = None
     ) -> Optional[GetResult]:
+        log.info("[PGVECTOR] get START | collection=%s | limit=%s", collection_name, limit)
         try:
             query = self.session.query(DocumentChunk).filter(
                 DocumentChunk.collection_name == collection_name
@@ -334,14 +349,20 @@ class PgvectorClient:
             results = query.all()
 
             if not results:
+                log.info("[PGVECTOR] get EMPTY | collection=%s", collection_name)
                 return None
 
             ids = [[result.id for result in results]]
             documents = [[result.text for result in results]]
             metadatas = [[result.vmetadata for result in results]]
 
+            log.info("[PGVECTOR] get SUCCESS | collection=%s | results_count=%s", collection_name, len(results))
             return GetResult(ids=ids, documents=documents, metadatas=metadatas)
         except Exception as e:
+            try:
+                self.session.rollback()
+            except Exception:
+                pass
             log.exception(f"Error during get: {e}")
             return None
 
@@ -351,6 +372,7 @@ class PgvectorClient:
         ids: Optional[List[str]] = None,
         filter: Optional[Dict[str, Any]] = None,
     ) -> None:
+        log.info("[PGVECTOR] delete START | collection=%s | ids_count=%s | filter=%s", collection_name, len(ids) if ids else 0, filter)
         try:
             query = self.session.query(DocumentChunk).filter(
                 DocumentChunk.collection_name == collection_name
@@ -364,19 +386,18 @@ class PgvectorClient:
                     )
             deleted = query.delete(synchronize_session=False)
             self.session.commit()
-            log.info(f"Deleted {deleted} items from collection '{collection_name}'.")
+            log.info("[PGVECTOR] delete SUCCESS | collection=%s | deleted=%s", collection_name, deleted)
         except Exception as e:
             self.session.rollback()
             log.exception(f"Error during delete: {e}")
             raise
 
     def reset(self) -> None:
+        log.info("[PGVECTOR] reset START")
         try:
             deleted = self.session.query(DocumentChunk).delete()
             self.session.commit()
-            log.info(
-                f"Reset complete. Deleted {deleted} items from 'document_chunk' table."
-            )
+            log.info("[PGVECTOR] reset SUCCESS | deleted=%s", deleted)
         except Exception as e:
             self.session.rollback()
             log.exception(f"Error during reset: {e}")
@@ -386,6 +407,7 @@ class PgvectorClient:
         pass
 
     def has_collection(self, collection_name: str) -> bool:
+        log.info("[PGVECTOR] has_collection START | collection=%s", collection_name)
         try:
             exists = (
                 self.session.query(DocumentChunk)
@@ -393,11 +415,17 @@ class PgvectorClient:
                 .first()
                 is not None
             )
+            log.info("[PGVECTOR] has_collection SUCCESS | collection=%s | exists=%s", collection_name, exists)
             return exists
         except Exception as e:
+            try:
+                self.session.rollback()
+            except Exception:
+                pass
             log.exception(f"Error checking collection existence: {e}")
             return False
 
     def delete_collection(self, collection_name: str) -> None:
+        log.info("[PGVECTOR] delete_collection START | collection=%s", collection_name)
         self.delete(collection_name)
-        log.info(f"Collection '{collection_name}' deleted.")
+        log.info("[PGVECTOR] delete_collection SUCCESS | collection=%s", collection_name)
