@@ -37,7 +37,7 @@
 			name: data.name,
 			meta: data.meta,
 			content: data.content,
-			access_control: data.access_control
+			access_grants: data.access_grants
 		}).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -87,7 +87,7 @@
 			name={tool?.name ?? ''}
 			meta={tool?.meta ?? { description: '' }}
 			content={tool?.content ?? ''}
-			accessControl={tool?.access_control !== undefined ? tool.access_control : {}}
+			accessGrants={tool?.access_grants !== undefined ? tool.access_grants : []}
 			{clone}
 			onSave={(value) => {
 				saveHandler(value);

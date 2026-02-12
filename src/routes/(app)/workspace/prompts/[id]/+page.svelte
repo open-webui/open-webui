@@ -35,17 +35,15 @@
 				content: updatedPrompt.content,
 				version_id: updatedPrompt.version_id,
 				tags: updatedPrompt.tags,
-				access_control: updatedPrompt?.access_control === undefined ? {} : updatedPrompt?.access_control
+				access_grants:
+					updatedPrompt?.access_grants === undefined ? [] : updatedPrompt?.access_grants
 			};
 		}
 	};
 
 	onMount(async () => {
 		if (promptId) {
-			const _prompt = await getPromptById(
-				localStorage.token,
-				promptId
-			).catch((error) => {
+			const _prompt = await getPromptById(localStorage.token, promptId).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
@@ -59,7 +57,7 @@
 					content: _prompt.content,
 					version_id: _prompt.version_id,
 					tags: _prompt.tags,
-					access_control: _prompt?.access_control === undefined ? {} : _prompt?.access_control
+					access_grants: _prompt?.access_grants === undefined ? [] : _prompt?.access_grants
 				};
 			} else {
 				goto('/workspace/prompts');

@@ -18,11 +18,6 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/ef")
-async def get_embeddings(request: Request):
-    return {"result": await request.app.state.EMBEDDING_FUNCTION("hello world")}
-
-
 ############################
 # GetMemories
 ############################
@@ -165,7 +160,7 @@ async def reset_memory_from_vector_db(
     user=Depends(get_verified_user),
 ):
     """Reset user's memory vector embeddings.
-    
+
     CRITICAL: We intentionally do NOT use Depends(get_session) here.
     This endpoint generates embeddings for ALL user memories in parallel using
     asyncio.gather(). A user with 100 memories would trigger 100 embedding API

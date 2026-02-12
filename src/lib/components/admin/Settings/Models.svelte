@@ -44,6 +44,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
+	import Pagination from '$lib/components/common/Pagination.svelte';
 
 	let shiftKey = false;
 
@@ -64,6 +65,9 @@
 
 	let viewOption = ''; // '' = All, 'enabled', 'disabled', 'visible', 'hidden'
 
+	const perPage = 30;
+	let currentPage = 1;
+
 	$: if (models) {
 		filteredModels = models
 			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
@@ -81,6 +85,10 @@
 
 	let searchValue = '';
 
+	$: if (searchValue || viewOption !== undefined) {
+		currentPage = 1;
+	}
+
 	const enableAllHandler = async () => {
 		const modelsToEnable = filteredModels.filter((m) => !(m.is_active ?? true));
 		// Optimistic UI update
@@ -96,7 +104,9 @@
 		modelsToDisable.forEach((m) => (m.is_active = false));
 		models = models;
 		// Sync with server
-		await Promise.all(modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id)));
+		await Promise.all(
+			modelsToDisable.map((model) => toggleModelById(localStorage.token, model.id))
+		);
 	};
 
 	const downloadModels = async (models) => {
@@ -301,37 +311,40 @@
 	{#if selectedModelId === null}
 		<div class="flex flex-col gap-1 mt-1.5 mb-2">
 			<div class="flex justify-between items-center">
-				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2">
-					{$i18n.t('Models')}
-					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-						>{filteredModels.length}</span
-					>
+				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+					<div>
+						{$i18n.t('Models')}
+					</div>
+
+					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+						{filteredModels.length}
+					</div>
 				</div>
 
-				<div class="flex items-center gap-1.5">
-					<Tooltip content={$i18n.t('Manage Models')}>
-						<button
-							class=" p-1 rounded-full flex gap-1 items-center"
-							type="button"
-							on:click={() => {
-								showManageModal = true;
-							}}
-						>
-							<Download />
-						</button>
-					</Tooltip>
+				<div class="flex w-full justify-end gap-1.5">
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						type="button"
+						on:click={() => {
+							showManageModal = true;
+						}}
+					>
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Manage')}
+						</div>
+					</button>
 
-					<Tooltip content={$i18n.t('Settings')}>
-						<button
-							class=" p-1 rounded-full flex gap-1 items-center"
-							type="button"
-							on:click={() => {
-								showConfigModal = true;
-							}}
-						>
-							<Cog6 />
-						</button>
-					</Tooltip>
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+						type="button"
+						on:click={() => {
+							showConfigModal = true;
+						}}
+					>
+						<div class=" self-center font-medium line-clamp-1">
+							{$i18n.t('Settings')}
+						</div>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -417,7 +430,7 @@
 
 			<div class="px-3 my-2" id="model-list">
 				{#if filteredModels.length > 0}
-					{#each filteredModels as model, modelIdx (`${model.id}-${modelIdx}`)}
+					{#each filteredModels.slice((currentPage - 1) * perPage, currentPage * perPage) as model, modelIdx (`${model.id}-${modelIdx}`)}
 						<div
 							class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition {model
 								?.meta?.hidden
@@ -572,6 +585,10 @@
 					</div>
 				{/if}
 			</div>
+
+			{#if filteredModels.length > perPage}
+				<Pagination bind:page={currentPage} count={filteredModels.length} {perPage} />
+			{/if}
 		</div>
 
 		{#if $user?.role === 'admin'}

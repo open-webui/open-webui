@@ -128,7 +128,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential pandoc gcc netcat-openbsd curl jq \
     python3-dev \
-    ffmpeg libsm6 libxext6 \
+    ffmpeg libsm6 libxext6 zstd \
     && rm -rf /var/lib/apt/lists/*
 
 # install python dependencies
@@ -143,6 +143,7 @@ RUN pip3 install --no-cache-dir uv && \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ.get('AUXILIARY_EMBEDDING_MODEL', 'TaylorAI/bge-micro-v2'), device='cpu')" && \
     python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+    python -c "import nltk; nltk.download('punkt_tab')"; \
     else \
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
     uv pip install --system -r requirements.txt --no-cache-dir && \
@@ -151,6 +152,7 @@ RUN pip3 install --no-cache-dir uv && \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ.get('AUXILIARY_EMBEDDING_MODEL', 'TaylorAI/bge-micro-v2'), device='cpu')" && \
     python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+    python -c "import nltk; nltk.download('punkt_tab')"; \
     fi; \
     fi; \
     mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \

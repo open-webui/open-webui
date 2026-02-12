@@ -195,6 +195,25 @@ class FunctionsTable:
         except Exception:
             return None
 
+    def get_functions_by_ids(
+        self, ids: list[str], db: Optional[Session] = None
+    ) -> list[FunctionModel]:
+        """
+        Batch fetch multiple functions by their IDs in a single query.
+        Returns functions in the same order as the input IDs (None entries filtered out).
+        """
+        if not ids:
+            return []
+        try:
+            with get_db_context(db) as db:
+                functions = db.query(Function).filter(Function.id.in_(ids)).all()
+                # Create a dict for O(1) lookup
+                func_dict = {f.id: FunctionModel.model_validate(f) for f in functions}
+                # Return in original order, filtering out any not found
+                return [func_dict[id] for id in ids if id in func_dict]
+        except Exception:
+            return []
+
     def get_functions(
         self, active_only=False, include_valves=False, db: Optional[Session] = None
     ) -> list[FunctionModel | FunctionWithValvesModel]:

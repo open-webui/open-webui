@@ -48,9 +48,7 @@
 	$: if (query !== undefined) {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			if (loaded) {
-				init();
-			}
+			init();
 		}, 300);
 	}
 
@@ -58,7 +56,7 @@
 		clearTimeout(searchDebounceTimer);
 	});
 
-	$: if (loaded && viewOption !== undefined) {
+	$: if (viewOption !== undefined) {
 		init();
 	}
 
@@ -77,6 +75,8 @@
 	};
 
 	const init = async () => {
+		if (!loaded) return;
+
 		reset();
 		await getItemsPage();
 	};

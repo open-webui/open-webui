@@ -129,6 +129,25 @@
 	onDestroy(() => {
 		window.removeEventListener('keydown', keydownListener);
 	});
+
+	const hasPublicReadGrant = (grants: any) =>
+		Array.isArray(grants) &&
+		grants.some(
+			(grant) =>
+				grant?.principal_type === 'user' &&
+				grant?.principal_id === '*' &&
+				grant?.permission === 'read'
+		);
+
+	const isPublicChannel = (channel: any): boolean => {
+		if (channel?.type === 'group') {
+			if (typeof channel?.is_private === 'boolean') {
+				return !channel.is_private;
+			}
+			return hasPublicReadGrant(channel?.access_grants);
+		}
+		return hasPublicReadGrant(channel?.access_grants);
+	};
 </script>
 
 {#if filteredItems.length}
@@ -165,7 +184,7 @@
 					>
 						{#if item.type === 'channel'}
 							<div class=" size-4 justify-center flex items-center mr-0.5">
-								{#if item?.data?.access_control === null}
+								{#if isPublicChannel(item?.data)}
 									<Hashtag className="size-3" strokeWidth="2.5" />
 								{:else}
 									<Lock className="size-[15px]" strokeWidth="2" />
