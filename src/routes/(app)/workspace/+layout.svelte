@@ -36,6 +36,8 @@
 				goto('/');
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
 				goto('/');
+			} else if ($page.url.pathname.includes('/skills') && !$user?.permissions?.workspace?.skills) {
+				goto('/');
 			}
 		}
 
@@ -111,17 +113,6 @@
 							>
 						{/if}
 
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
-							<a
-								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/tools"
-							>
-								{$i18n.t('Tools')}
-							</a>
-						{/if}
-
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
 							<a
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/skills')
@@ -130,6 +121,17 @@
 								href="/workspace/skills"
 							>
 								{$i18n.t('Skills')}
+							</a>
+						{/if}
+
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
+							<a
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/tools"
+							>
+								{$i18n.t('Tools')}
 							</a>
 						{/if}
 					</div>
