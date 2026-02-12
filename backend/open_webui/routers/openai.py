@@ -1271,6 +1271,14 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                     )
 
             if payload is not None:
+                if not isinstance(payload, dict):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Invalid payload type for Azure routing: "
+                            "expected JSON object"
+                        ),
+                    )
                 url, payload = convert_to_azure_payload(url, payload, api_version)
                 body = json.dumps(payload).encode()
             request_url = f"{url}/{path}?api-version={api_version}"
