@@ -171,9 +171,13 @@ def get_citation_source_from_tool_result(
     Returns a list of sources (usually one, but query_knowledge_files may return multiple).
     """
     try:
+        tool_result = json.loads(tool_result)
+        if isinstance(tool_result, dict) and "error" in tool_result:
+            return []
+
         if tool_name == "search_web":
             # Parse JSON array: [{"title": "...", "link": "...", "snippet": "..."}]
-            results = json.loads(tool_result)
+            results = tool_result
             documents = []
             metadata = []
 
@@ -200,7 +204,7 @@ def get_citation_source_from_tool_result(
             ]
 
         elif tool_name == "view_knowledge_file":
-            file_data = json.loads(tool_result)
+            file_data = tool_result
             filename = file_data.get("filename", "Unknown File")
             file_id = file_data.get("id", "")
             knowledge_name = file_data.get("knowledge_name", "")
@@ -229,7 +233,7 @@ def get_citation_source_from_tool_result(
             ]
 
         elif tool_name == "query_knowledge_files":
-            chunks = json.loads(tool_result)
+            chunks = tool_result
 
             # Group chunks by source for better citation display
             # Each unique source becomes a separate source entry
@@ -2249,11 +2253,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         headers = include_user_info_headers(headers, user)
                         if metadata and metadata.get("chat_id"):
                             headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get(
-                              "chat_id"
+                                "chat_id"
                             )
                         if metadata and metadata.get("message_id"):
-                            headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata.get(
-                              "message_id"
+                            headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = (
+                                metadata.get("message_id")
                             )
 
                     mcp_clients[server_id] = MCPClient()
@@ -4121,7 +4125,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 code = sanitize_code(code)
 
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(f"""
+                                    blocking_code = textwrap.dedent(
+                                        f"""
                                         import builtins
     
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
@@ -4137,7 +4142,8 @@ async def streaming_chat_response_handler(response, ctx):
                                             return _real_import(name, globals, locals, fromlist, level)
     
                                         builtins.__import__ = restricted_import
-                                    """)
+                                    """
+                                    )
                                     code = blocking_code + "\n" + code
 
                                 if (
