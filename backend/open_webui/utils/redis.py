@@ -1,7 +1,5 @@
 import inspect
-from urllib.parse import urlparse
-import asyncio
-import time
+from urllib.parse import urlparse, parse_qs
 
 import logging
 
@@ -147,13 +145,19 @@ def parse_redis_service_url(redis_url):
     if parsed_url.scheme != "redis" and parsed_url.scheme != "rediss":
         raise ValueError("Invalid Redis URL scheme. Must be 'redis' or 'rediss'.")
 
-    return {
+    sentinel_query_params = parse_qs(parsed_url.query)
+    sentinel_query_params = {k: v[0] for k, v in sentinel_query_params.items()}
+
+    options = {
         "username": parsed_url.username or None,
         "password": parsed_url.password or None,
         "service": parsed_url.hostname or "mymaster",
         "port": parsed_url.port or 6379,
         "db": int(parsed_url.path.lstrip("/") or 0),
+        "ssl": parsed_url.scheme == "rediss",
+        **sentinel_query_params
     }
+    return options
 
 
 def get_redis_client(async_mode=False):
@@ -197,14 +201,23 @@ def get_redis_connection(
         # If using sentinel in async mode
         if redis_sentinels:
             redis_config = parse_redis_service_url(redis_url)
+            exclude_keys = {"port", "db", "service"}
+            sentinel_kwargs = {k: v for k, v in redis_config.items() if k not in exclude_keys}
+
+            connection_kwargs = {
+                "port": redis_config["port"],
+                "db": redis_config["db"],
+                "ssl": redis_config["ssl"],
+                "username": redis_config["username"],
+                "password": redis_config["password"],
+                "decode_responses": decode_responses,
+                "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT,
+            }
+
             sentinel = redis.sentinel.Sentinel(
                 redis_sentinels,
-                port=redis_config["port"],
-                db=redis_config["db"],
-                username=redis_config["username"],
-                password=redis_config["password"],
-                decode_responses=decode_responses,
-                socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
+                sentinel_kwargs=sentinel_kwargs,
+                **connection_kwargs,
             )
             connection = SentinelRedisProxy(
                 sentinel,
@@ -224,14 +237,23 @@ def get_redis_connection(
 
         if redis_sentinels:
             redis_config = parse_redis_service_url(redis_url)
+            exclude_keys = {"port", "db", "service"}
+            sentinel_kwargs = {k: v for k, v in redis_config.items() if k not in exclude_keys}
+
+            connection_kwargs = {
+                "port": redis_config["port"],
+                "db": redis_config["db"],
+                "ssl": redis_config["ssl"],
+                "username": redis_config["username"],
+                "password": redis_config["password"],
+                "decode_responses": decode_responses,
+                "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT,
+            }
+
             sentinel = redis.sentinel.Sentinel(
                 redis_sentinels,
-                port=redis_config["port"],
-                db=redis_config["db"],
-                username=redis_config["username"],
-                password=redis_config["password"],
-                decode_responses=decode_responses,
-                socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
+                sentinel_kwargs=sentinel_kwargs,
+                **connection_kwargs,
             )
             connection = SentinelRedisProxy(
                 sentinel,
