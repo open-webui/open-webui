@@ -163,7 +163,9 @@
 								{/each}
 							</div>
 						{:else}
-							<div class="h-full flex items-center justify-center text-gray-400 dark:text-gray-600 text-sm">
+							<div
+								class="h-full flex items-center justify-center text-gray-400 dark:text-gray-600 text-sm"
+							>
 								{$i18n.t('Generated images will appear here')}
 							</div>
 						{/if}
@@ -173,38 +175,40 @@
 
 			<!-- Input Area -->
 			<div class="pb-3">
-				<div class="border border-gray-100/30 dark:border-gray-850/30 w-full px-3 py-2.5 rounded-xl">
+				<div
+					class="border border-gray-100/30 dark:border-gray-850/30 w-full px-3 py-2.5 rounded-xl"
+				>
 					<!-- Source Images -->
-				{#if sourceImages.length > 0}
-					<div class="flex flex-wrap gap-2 mb-2">
-						{#each sourceImages as image, index}
-							<div class=" relative group">
-								<div class="relative flex items-center">
-									<img src={image} alt="" class="size-10 rounded-xl object-cover" />
-								</div>
-								<div class=" absolute -top-1 -right-1">
-									<button
-										class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
-										type="button"
-										on:click={() => removeImage(index)}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											aria-hidden="true"
-											class="size-4"
+					{#if sourceImages.length > 0}
+						<div class="flex flex-wrap gap-2 mb-2">
+							{#each sourceImages as image, index}
+								<div class=" relative group">
+									<div class="relative flex items-center">
+										<img src={image} alt="" class="size-10 rounded-xl object-cover" />
+									</div>
+									<div class=" absolute -top-1 -right-1">
+										<button
+											class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+											type="button"
+											on:click={() => removeImage(index)}
 										>
-											<path
-												d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-											/>
-										</svg>
-									</button>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												aria-hidden="true"
+												class="size-4"
+											>
+												<path
+													d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+												/>
+											</svg>
+										</button>
+									</div>
 								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
+							{/each}
+						</div>
+					{/if}
 
 					<!-- Prompt Textarea -->
 					<div class="py-0.5">

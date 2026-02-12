@@ -38,6 +38,7 @@ from open_webui.models.files import (
 from open_webui.models.chats import Chats
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
+from open_webui.models.access_grants import AccessGrants
 
 
 from open_webui.routers.retrieval import ProcessFileForm, process_file
@@ -47,7 +48,6 @@ from open_webui.storage.provider import Storage
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 
@@ -82,8 +82,13 @@ def has_access_to_file(
         group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
     }
     for knowledge_base in knowledge_bases:
-        if knowledge_base.user_id == user.id or has_access(
-            user.id, access_type, knowledge_base.access_control, user_group_ids, db=db
+        if knowledge_base.user_id == user.id or AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge_base.id,
+            permission=access_type,
+            user_group_ids=user_group_ids,
+            db=db,
         ):
             return True
 

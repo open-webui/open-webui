@@ -17,6 +17,7 @@
 	import KatexRenderer from './KatexRenderer.svelte';
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
@@ -134,6 +135,7 @@
 			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
 				<table
 					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					dir="auto"
 				>
 					<thead
 						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
@@ -322,7 +324,15 @@
 			.replace(/<summary>.*?<\/summary>/gi, '')
 			.trim()}
 
-		{#if textContent.length > 0}
+		{#if token?.attributes?.type === 'tool_calls'}
+			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
+			<ToolCallDisplay
+				id={`${id}-${tokenIdx}-tc`}
+				attributes={token.attributes}
+				open={false}
+				className="w-full space-y-1"
+			/>
+		{:else if textContent.length > 0}
 			<Collapsible
 				title={token.summary}
 				open={$settings?.expandDetails ?? false}

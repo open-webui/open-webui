@@ -151,7 +151,6 @@ def resolve_valves_schema_options(
     return schema
 
 
-
 def extract_frontmatter(content):
     """
     Extract frontmatter as a dictionary from the provided content string.
