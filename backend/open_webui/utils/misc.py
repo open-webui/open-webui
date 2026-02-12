@@ -782,7 +782,6 @@ def extract_urls(text: str) -> list[str]:
     return url_pattern.findall(text)
 
 
-
 async def cleanup_response(
     response: Optional[aiohttp.ClientResponse],
     session: Optional[aiohttp.ClientSession],
@@ -799,7 +798,9 @@ async def stream_wrapper(response, session, content_handler=None):
     This is more reliable than BackgroundTask which may not run if client disconnects.
     """
     try:
-        stream = content_handler(response.content) if content_handler else response.content
+        stream = (
+            content_handler(response.content) if content_handler else response.content
+        )
         async for chunk in stream:
             yield chunk
     finally:
