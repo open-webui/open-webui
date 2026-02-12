@@ -195,14 +195,26 @@ ENABLE_FORWARD_USER_INFO_HEADERS = (
 )
 
 # Header names for user info forwarding (customizable via environment variables)
-FORWARD_USER_INFO_HEADER_USER_NAME = os.environ.get("FORWARD_USER_INFO_HEADER_USER_NAME", "X-OpenWebUI-User-Name")
-FORWARD_USER_INFO_HEADER_USER_ID = os.environ.get("FORWARD_USER_INFO_HEADER_USER_ID", "X-OpenWebUI-User-Id")
-FORWARD_USER_INFO_HEADER_USER_EMAIL = os.environ.get("FORWARD_USER_INFO_HEADER_USER_EMAIL", "X-OpenWebUI-User-Email")
-FORWARD_USER_INFO_HEADER_USER_ROLE = os.environ.get("FORWARD_USER_INFO_HEADER_USER_ROLE", "X-OpenWebUI-User-Role")
+FORWARD_USER_INFO_HEADER_USER_NAME = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_NAME", "X-OpenWebUI-User-Name"
+)
+FORWARD_USER_INFO_HEADER_USER_ID = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_ID", "X-OpenWebUI-User-Id"
+)
+FORWARD_USER_INFO_HEADER_USER_EMAIL = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_EMAIL", "X-OpenWebUI-User-Email"
+)
+FORWARD_USER_INFO_HEADER_USER_ROLE = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_ROLE", "X-OpenWebUI-User-Role"
+)
 
 # Header name for chat ID forwarding (customizable via environment variable)
-FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.environ.get("FORWARD_SESSION_INFO_HEADER_CHAT_ID", "X-OpenWebUI-Chat-Id")
-FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.environ.get("FORWARD_SESSION_INFO_HEADER_MESSAGE_ID", "X-OpenWebUI-Message-Id")
+FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.environ.get(
+    "FORWARD_SESSION_INFO_HEADER_MESSAGE_ID", "X-OpenWebUI-Message-Id"
+)
+FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.environ.get(
+    "FORWARD_SESSION_INFO_HEADER_CHAT_ID", "X-OpenWebUI-Chat-Id"
+)
 
 # Experimental feature, may be removed in future
 ENABLE_STAR_SESSIONS_MIDDLEWARE = (
@@ -402,18 +414,14 @@ try:
     REDIS_SOCKET_CONNECT_TIMEOUT = float(REDIS_SOCKET_CONNECT_TIMEOUT)
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
-    
-REDIS_RECONNECT_DELAY = os.environ.get(
-    "REDIS_RECONNECT_DELAY", ""
-)
+
+REDIS_RECONNECT_DELAY = os.environ.get("REDIS_RECONNECT_DELAY", "")
 
 if REDIS_RECONNECT_DELAY == "":
     REDIS_RECONNECT_DELAY = None
 else:
     try:
-        REDIS_RECONNECT_DELAY = float(
-            REDIS_RECONNECT_DELAY
-        )
+        REDIS_RECONNECT_DELAY = float(REDIS_RECONNECT_DELAY)
         if REDIS_RECONNECT_DELAY < 0:
             REDIS_RECONNECT_DELAY = None
     except Exception:
@@ -581,15 +589,11 @@ LICENSE_PUBLIC_KEY = os.environ.get("LICENSE_PUBLIC_KEY", "")
 
 pk = None
 if LICENSE_PUBLIC_KEY:
-    pk = serialization.load_pem_public_key(
-        f"""
+    pk = serialization.load_pem_public_key(f"""
 -----BEGIN PUBLIC KEY-----
 {LICENSE_PUBLIC_KEY}
 -----END PUBLIC KEY-----
-""".encode(
-            "utf-8"
-        )
-    )
+""".encode("utf-8"))
 
 
 ####################################

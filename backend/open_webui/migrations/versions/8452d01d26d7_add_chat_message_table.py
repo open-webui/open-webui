@@ -165,7 +165,9 @@ def upgrade() -> None:
                 log.warning(f"Failed to insert message {message_id}: {e}")
                 continue
 
-    log.info(f"Backfilled {messages_inserted} messages into chat_message table ({messages_failed} failed)")
+    log.info(
+        f"Backfilled {messages_inserted} messages into chat_message table ({messages_failed} failed)"
+    )
 
 
 def downgrade() -> None:

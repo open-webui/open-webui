@@ -26,8 +26,6 @@ class File(Base):
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
 
-    access_control = Column(JSON, nullable=True)
-
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -44,8 +42,6 @@ class FileModel(BaseModel):
 
     data: Optional[dict] = None
     meta: Optional[dict] = None
-
-    access_control: Optional[dict] = None
 
     created_at: Optional[int]  # timestamp in epoch
     updated_at: Optional[int]  # timestamp in epoch
@@ -69,7 +65,7 @@ class FileMeta(BaseModel):
         """Sanitize metadata fields to handle malformed legacy data."""
         if not isinstance(data, dict):
             return data
-        
+
         # Handle content_type that may be a list like ['application/pdf', None]
         content_type = data.get("content_type")
         if isinstance(content_type, list):
@@ -79,7 +75,7 @@ class FileMeta(BaseModel):
             )
         elif content_type is not None and not isinstance(content_type, str):
             data["content_type"] = None
-        
+
         return data
 
 
@@ -113,7 +109,6 @@ class FileForm(BaseModel):
     path: str
     data: dict = {}
     meta: dict = {}
-    access_control: Optional[dict] = None
 
 
 class FileUpdateForm(BaseModel):

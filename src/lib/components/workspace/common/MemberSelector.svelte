@@ -5,7 +5,7 @@
 	const i18n = getContext('i18n');
 
 	import { user as _user } from '$lib/stores';
-	import { getUserById, searchUsers } from '$lib/apis/users';
+	import { getUserInfoById, searchUsers } from '$lib/apis/users';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -84,7 +84,7 @@
 
 		if (userIds.length > 0) {
 			userIds.forEach(async (id) => {
-				const res = await getUserById(localStorage.token, id).catch((error) => {
+				const res = await getUserInfoById(localStorage.token, id).catch((error) => {
 					console.error(error);
 					return null;
 				});

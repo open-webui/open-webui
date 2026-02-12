@@ -29,7 +29,6 @@ from fastapi import status
 
 from open_webui.utils.telemetry.constants import SPAN_REDIS_TYPE, SpanAttributes
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +59,7 @@ def response_hook(span: Span, request: PreparedRequest, response: Response):
     span.set_status(StatusCode.ERROR if response.status_code >= 400 else StatusCode.OK)
 
 
-def redis_request_hook(span: Span, instance: Union[Redis|RedisCluster], args, kwargs):
+def redis_request_hook(span: Span, instance: Union[Redis | RedisCluster], args, kwargs):
     """
     Redis Request Hook
     """
@@ -71,7 +70,7 @@ def redis_request_hook(span: Span, instance: Union[Redis|RedisCluster], args, kw
     # Instead of checking the type, we check if the instance has a nodes_manager attribute.
     try:
         db = ""
-        if hasattr(instance, 'nodes_manager'):
+        if hasattr(instance, "nodes_manager"):
             default_node = instance.nodes_manager.default_node
             if not default_node:
                 return

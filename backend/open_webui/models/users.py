@@ -12,9 +12,10 @@ from open_webui.models.groups import Groups, GroupMember
 from open_webui.models.channels import ChannelMember
 
 from open_webui.utils.misc import throttle
+from open_webui.utils.validate import validate_profile_image_url
 
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
     BigInteger,
     JSON,
@@ -154,6 +155,11 @@ class UpdateProfileForm(BaseModel):
     gender: Optional[str] = None
     date_of_birth: Optional[datetime.date] = None
 
+    @field_validator("profile_image_url")
+    @classmethod
+    def check_profile_image_url(cls, v: str) -> str:
+        return validate_profile_image_url(v)
+
 
 class UserGroupIdsModel(UserModel):
     group_ids: list[str] = []
@@ -184,6 +190,9 @@ class UserInfoResponse(UserStatus):
     name: str
     email: str
     role: str
+    bio: Optional[str] = None
+    groups: Optional[list] = []
+    is_active: bool = False
 
 
 class UserIdNameResponse(BaseModel):
@@ -233,6 +242,11 @@ class UserUpdateForm(BaseModel):
     email: str
     profile_image_url: str
     password: Optional[str] = None
+
+    @field_validator("profile_image_url")
+    @classmethod
+    def check_profile_image_url(cls, v: str) -> str:
+        return validate_profile_image_url(v)
 
 
 class UsersTable:

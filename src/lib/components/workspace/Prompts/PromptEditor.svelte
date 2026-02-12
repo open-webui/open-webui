@@ -18,6 +18,7 @@
 		setProductionPromptVersion,
 		deletePromptHistoryVersion,
 		updatePromptMetadata,
+		updatePromptAccessGrants,
 		getPromptTags
 	} from '$lib/apis/prompts';
 	import dayjs from 'dayjs';
@@ -46,7 +47,7 @@
 	let commitMessage = '';
 	let isProduction = true;
 
-	let accessControl = {};
+	let accessGrants = [];
 	let showAccessControlModal = false;
 	let hasManualEdit = false;
 
@@ -87,7 +88,7 @@
 				command,
 				content,
 				tags: tags.map((tag) => tag.name),
-				access_control: accessControl,
+				access_grants: accessGrants,
 				commit_message: commitMessage || undefined,
 				is_production: isProduction
 			});
@@ -213,14 +214,6 @@
 		}
 
 		debounceTimer = setTimeout(async () => {
-			// Skip if nothing changed
-			if (
-				name === originalName &&
-				command === originalCommand &&
-				JSON.stringify(tags) === JSON.stringify(originalTags)
-			)
-				return;
-
 			if (!validateCommandString(command)) {
 				toast.error(
 					$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
@@ -259,7 +252,7 @@
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 			tags = (prompt.tags || []).map((tag) => ({ name: tag }));
-			accessControl = prompt?.access_control === undefined ? {} : prompt?.access_control;
+			accessGrants = prompt?.access_grants === undefined ? [] : prompt?.access_grants;
 
 			// Store originals for revert on collision
 			originalName = name;
@@ -286,10 +279,20 @@
 
 <AccessControlModal
 	bind:show={showAccessControlModal}
-	bind:accessControl
+	bind:accessGrants
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
-	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
+	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin' || edit}
+	onChange={async () => {
+		if (edit && prompt?.id) {
+			try {
+				await updatePromptAccessGrants(localStorage.token, prompt.id, accessGrants);
+				toast.success($i18n.t('Saved'));
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+		}
+	}}
 />
 
 <!-- Edit Modal -->
@@ -435,6 +438,7 @@
 			<div class="flex-1 min-w-0">
 				<Tags
 					{tags}
+					{disabled}
 					{suggestionTags}
 					on:add={(e) => {
 						tags = [...tags, { name: e.detail }];

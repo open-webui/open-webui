@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
-	import { getSummary, getModelAnalytics, getUserAnalytics, getDailyStats, getTokenUsage } from '$lib/apis/analytics';
+	import {
+		getSummary,
+		getModelAnalytics,
+		getUserAnalytics,
+		getDailyStats,
+		getTokenUsage
+	} from '$lib/apis/analytics';
 	import { getGroups } from '$lib/apis/groups';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
@@ -16,7 +22,8 @@
 	const i18n = getContext('i18n');
 
 	// Time period - persist in localStorage
-	let selectedPeriod = (typeof localStorage !== 'undefined' && localStorage.getItem('analyticsPeriod')) || '7d';
+	let selectedPeriod =
+		(typeof localStorage !== 'undefined' && localStorage.getItem('analyticsPeriod')) || '7d';
 	const periods = [
 		{ value: '24h', label: 'Last 24 hours' },
 		{ value: '7d', label: 'Last 7 days' },
@@ -33,11 +40,16 @@
 		const now = Math.floor(Date.now() / 1000);
 		const day = 86400;
 		switch (period) {
-			case '24h': return { start: now - day, end: now };
-			case '7d': return { start: now - 7 * day, end: now };
-			case '30d': return { start: now - 30 * day, end: now };
-			case '90d': return { start: now - 90 * day, end: now };
-			default: return { start: null, end: null };
+			case '24h':
+				return { start: now - day, end: now };
+			case '7d':
+				return { start: now - 7 * day, end: now };
+			case '30d':
+				return { start: now - 30 * day, end: now };
+			case '90d':
+				return { start: now - 90 * day, end: now };
+			default:
+				return { start: null, end: null };
 		}
 	};
 
@@ -46,7 +58,10 @@
 	let modelStats: Array<{ model_id: string; count: number; name?: string }> = [];
 	let userStats: Array<{ user_id: string; name?: string; email?: string; count: number }> = [];
 	let dailyStats: Array<{ date: string; models: Record<string, number> }> = [];
-	let tokenStats: Record<string, { input_tokens: number; output_tokens: number; total_tokens: number }> = {};
+	let tokenStats: Record<
+		string,
+		{ input_tokens: number; output_tokens: number; total_tokens: number }
+	> = {};
 	let totalTokens = { input: 0, output: 0, total: 0 };
 
 	let loading = true;
@@ -141,9 +156,7 @@
 
 	$: sortedModels = [...modelStats].sort((a, b) => {
 		if (modelOrderBy === 'name') {
-			return modelDirection === 'asc'
-				? a.name.localeCompare(b.name)
-				: b.name.localeCompare(a.name);
+			return modelDirection === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
 		}
 		return modelDirection === 'asc' ? a.count - b.count : b.count - a.count;
 	});
@@ -152,9 +165,7 @@
 		if (userOrderBy === 'name') {
 			const nameA = a.name || a.user_id;
 			const nameB = b.name || b.user_id;
-			return userDirection === 'asc'
-				? nameA.localeCompare(nameB)
-				: nameB.localeCompare(nameA);
+			return userDirection === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
 		}
 		return userDirection === 'asc' ? a.count - b.count : b.count - a.count;
 	});
@@ -170,7 +181,9 @@
 </script>
 
 <!-- Header with title and period selector -->
-<div class="pt-0.5 pb-1 gap-1 flex flex-row justify-between items-center sticky top-0 z-10 bg-white dark:bg-gray-900">
+<div
+	class="pt-0.5 pb-1 gap-1 flex flex-row justify-between items-center sticky top-0 z-10 bg-white dark:bg-gray-900"
+>
 	<div class="text-lg font-medium px-0.5">
 		{$i18n.t('Analytics')}
 	</div>
@@ -208,27 +221,54 @@
 <!-- Summary stats -->
 {#if !loading}
 	<div class="flex gap-3 text-xs text-gray-500 dark:text-gray-400 px-0.5 pb-2">
-		<span><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_messages.toLocaleString()}</span> {$i18n.t('messages')}</span>
+		<span
+			><span class="font-medium text-gray-900 dark:text-gray-300"
+				>{summary.total_messages.toLocaleString()}</span
+			>
+			{$i18n.t('messages')}</span
+		>
 		<Tooltip content={$i18n.t('Token counts are estimates and may not reflect actual API usage')}>
-			<span class="cursor-help"><span class="font-medium text-gray-900 dark:text-gray-300">{formatNumber(totalTokens.total)}</span> {$i18n.t('tokens')}</span>
+			<span class="cursor-help"
+				><span class="font-medium text-gray-900 dark:text-gray-300"
+					>{formatNumber(totalTokens.total)}</span
+				>
+				{$i18n.t('tokens')}</span
+			>
 		</Tooltip>
-		<span><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_chats.toLocaleString()}</span> {$i18n.t('chats')}</span>
-		<span><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_users}</span> {$i18n.t('users')}</span>
+		<span
+			><span class="font-medium text-gray-900 dark:text-gray-300"
+				>{summary.total_chats.toLocaleString()}</span
+			>
+			{$i18n.t('chats')}</span
+		>
+		<span
+			><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_users}</span>
+			{$i18n.t('users')}</span
+		>
 	</div>
 
 	<!-- Daily usage chart -->
 	{#if dailyStats.length > 1}
-		{@const allModels = [...new Set(dailyStats.flatMap(d => Object.keys(d.models || {})))]}
+		{@const allModels = [...new Set(dailyStats.flatMap((d) => Object.keys(d.models || {})))]}
 		{@const topModels = allModels.slice(0, 8)}
-		{@const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']}
-		{@const periodMap = { '24h': 'hour', '7d': 'week', '30d': 'month', '90d': 'year', 'all': 'all' }}
+		{@const chartColors = [
+			'#3b82f6',
+			'#10b981',
+			'#f59e0b',
+			'#ef4444',
+			'#8b5cf6',
+			'#ec4899',
+			'#06b6d4',
+			'#84cc16'
+		]}
+		{@const periodMap = { '24h': 'hour', '7d': 'week', '30d': 'month', '90d': 'year', all: 'all' }}
 		<div class="mb-4">
 			<div class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 px-0.5">
 				{$i18n.t(selectedPeriod === '24h' ? 'Hourly Messages' : 'Daily Messages')}
 			</div>
-			<ChartLine 
-				data={dailyStats} 
-				models={topModels} 
+			<ChartLine
+				data={dailyStats}
+				models={topModels}
 				colors={chartColors}
 				height={200}
 				period={periodMap[selectedPeriod] || 'week'}
@@ -262,7 +302,9 @@
 									{$i18n.t('Model')}
 									{#if modelOrderBy === 'name'}
 										<span class="font-normal">
-											{#if modelDirection === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown className="size-2" />{/if}
+											{#if modelDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
 										</span>
 									{:else}
 										<span class="invisible"><ChevronUp className="size-2" /></span>
@@ -278,7 +320,9 @@
 									{$i18n.t('Messages')}
 									{#if modelOrderBy === 'count'}
 										<span class="font-normal">
-											{#if modelDirection === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown className="size-2" />{/if}
+											{#if modelDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
 										</span>
 									{:else}
 										<span class="invisible"><ChevronUp className="size-2" /></span>
@@ -292,9 +336,12 @@
 					<tbody>
 						{#each sortedModels as model, idx (model.model_id)}
 							<tr
-							class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-							on:click={() => { selectedModel = { id: model.model_id, name: model.name }; showModelModal = true; }}
-						>
+								class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+								on:click={() => {
+									selectedModel = { id: model.model_id, name: model.name };
+									showModelModal = true;
+								}}
+							>
 								<td class="px-3 py-1 text-gray-400">{idx + 1}</td>
 								<td class="px-3 py-1 font-medium text-gray-900 dark:text-white">
 									<div class="flex items-center gap-2">
@@ -307,14 +354,22 @@
 									</div>
 								</td>
 								<td class="px-3 py-1 text-right">{model.count.toLocaleString()}</td>
-								<td class="px-3 py-1 text-right">{formatNumber(tokenStats[model.model_id]?.total_tokens ?? 0)}</td>
+								<td class="px-3 py-1 text-right"
+									>{formatNumber(tokenStats[model.model_id]?.total_tokens ?? 0)}</td
+								>
 								<td class="px-3 py-1 text-right text-gray-400">
-									{totalModelMessages > 0 ? ((model.count / totalModelMessages) * 100).toFixed(1) : 0}%
+									{totalModelMessages > 0
+										? ((model.count / totalModelMessages) * 100).toFixed(1)
+										: 0}%
 								</td>
 							</tr>
 						{/each}
 						{#if sortedModels.length === 0}
-							<tr><td colspan="5" class="px-3 py-2 text-center text-gray-400">{$i18n.t('No data')}</td></tr>
+							<tr
+								><td colspan="5" class="px-3 py-2 text-center text-gray-400"
+									>{$i18n.t('No data')}</td
+								></tr
+							>
 						{/if}
 					</tbody>
 				</table>
@@ -340,7 +395,9 @@
 									{$i18n.t('User')}
 									{#if userOrderBy === 'name'}
 										<span class="font-normal">
-											{#if userDirection === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown className="size-2" />{/if}
+											{#if userDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
 										</span>
 									{:else}
 										<span class="invisible"><ChevronUp className="size-2" /></span>
@@ -356,7 +413,9 @@
 									{$i18n.t('Messages')}
 									{#if userOrderBy === 'count'}
 										<span class="font-normal">
-											{#if userDirection === 'asc'}<ChevronUp className="size-2" />{:else}<ChevronDown className="size-2" />{/if}
+											{#if userDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
 										</span>
 									{:else}
 										<span class="invisible"><ChevronUp className="size-2" /></span>
@@ -377,7 +436,9 @@
 											alt={user.name || 'User'}
 											class="size-5 rounded-full object-cover shrink-0"
 										/>
-										<span class="truncate max-w-[150px]">{user.name || user.email || user.user_id.substring(0, 8)}</span>
+										<span class="truncate max-w-[150px]"
+											>{user.name || user.email || user.user_id.substring(0, 8)}</span
+										>
 									</div>
 								</td>
 								<td class="px-3 py-1 text-right">{user.count.toLocaleString()}</td>
@@ -385,7 +446,11 @@
 							</tr>
 						{/each}
 						{#if sortedUsers.length === 0}
-							<tr><td colspan="4" class="px-3 py-2 text-center text-gray-400">{$i18n.t('No data')}</td></tr>
+							<tr
+								><td colspan="4" class="px-3 py-2 text-center text-gray-400"
+									>{$i18n.t('No data')}</td
+								></tr
+							>
 						{/if}
 					</tbody>
 				</table>

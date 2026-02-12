@@ -46,7 +46,11 @@
 	marked.use(footnoteExtension(options));
 	marked.use(disableSingleTilde);
 	marked.use({
-		extensions: [mentionExtension({ triggerChar: '@' }), mentionExtension({ triggerChar: '#' })]
+		extensions: [
+			mentionExtension({ triggerChar: '@' }),
+			mentionExtension({ triggerChar: '#' }),
+			mentionExtension({ triggerChar: '$' })
+		]
 	});
 
 	$: (async () => {
