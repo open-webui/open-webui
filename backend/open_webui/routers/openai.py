@@ -979,7 +979,7 @@ async def generate_chat_completion(
 
     # Check if model is already in app state cache to avoid expensive get_all_models() call
     models = request.app.state.OPENAI_MODELS
-    if not models or model not in models:
+    if not models or model_id not in models:
         await get_all_models(request, user=user)
         models = request.app.state.OPENAI_MODELS
     model = models.get(model_id)
