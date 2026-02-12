@@ -72,12 +72,11 @@
 
 	let searchDebounceTimer;
 
-	$: if (
-		page !== undefined &&
-		query !== undefined &&
-		selectedTag !== undefined &&
-		viewOption !== undefined
-	) {
+	$: if (page !== undefined && selectedTag !== undefined && viewOption !== undefined) {
+		getModelList();
+	}
+
+	$: if (query !== undefined) {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			getModelList();
@@ -239,6 +238,7 @@
 		let groups = await getGroups(localStorage.token);
 		groupIds = groups.map((group) => group.id);
 
+		await tick();
 		loaded = true;
 
 		const onKeyDown = (event) => {
