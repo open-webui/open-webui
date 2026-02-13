@@ -279,25 +279,30 @@ class ChatMessageTable:
         db: Optional[Session] = None,
     ) -> list[str]:
         """Get distinct chat_ids that used a specific model."""
-        from sqlalchemy import distinct
+        from sqlalchemy import func
 
         with get_db_context(db) as db:
-            query = db.query(distinct(ChatMessage.chat_id)).filter(
-                ChatMessage.model_id == model_id
-            )
+            query = db.query(
+                ChatMessage.chat_id,
+                func.max(ChatMessage.created_at).label("last_created_at"),
+            ).filter(ChatMessage.model_id == model_id)
+
             if start_date:
                 query = query.filter(ChatMessage.created_at >= start_date)
+
             if end_date:
                 query = query.filter(ChatMessage.created_at <= end_date)
 
-            # Order by most recent message in each chat
-            chat_ids = (
-                query.order_by(ChatMessage.created_at.desc())
+            query = (
+                query.group_by(ChatMessage.chat_id)
+                .order_by(func.max(ChatMessage.created_at).desc())
                 .offset(skip)
                 .limit(limit)
-                .all()
             )
-            return [chat_id for (chat_id,) in chat_ids]
+
+            results = query.all()
+
+            return [chat_id for chat_id, _ in results]
 
     def delete_messages_by_chat_id(
         self, chat_id: str, db: Optional[Session] = None
