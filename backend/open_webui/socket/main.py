@@ -12,6 +12,7 @@ import pycrdt as Y
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.models.spaces import Spaces
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.utils.redis import (
     get_sentinels_from_env,
@@ -167,6 +168,10 @@ else:
 
     aquire_func = release_func = renew_func = lambda: True
     session_aquire_func = session_release_func = session_renew_func = lambda: True
+
+# Reverse-index: user_id → set(sids) for O(1) lookup of a user's socket sessions.
+# Maintained alongside SESSION_POOL in connect(), user-join(), and disconnect().
+USER_POOL: dict[str, set[str]] = {}
 
 
 YDOC_MANAGER = YdocManager(
@@ -363,12 +368,12 @@ async def connect(sid, environ, auth):
                 ),
                 "last_seen_at": int(time.time()),
             }
+            USER_POOL.setdefault(user.id, set()).add(sid)
             await sio.enter_room(sid, f"user:{user.id}")
 
 
 @sio.on("user-join")
 async def user_join(sid, data):
-
     auth = data["auth"] if "auth" in data else None
     if not auth or "token" not in auth:
         return
@@ -393,6 +398,7 @@ async def user_join(sid, data):
         ),
         "last_seen_at": int(time.time()),
     }
+    USER_POOL.setdefault(user.id, set()).add(sid)
 
     await sio.enter_room(sid, f"user:{user.id}")
 
@@ -402,6 +408,12 @@ async def user_join(sid, data):
         log.debug(f"{channels=}")
         for channel in channels:
             await sio.enter_room(sid, f"channel:{channel.id}")
+
+    # Join all the spaces
+    spaces = Spaces.get_spaces_by_user_id(user.id)
+    log.debug(f"{spaces=}")
+    for space in spaces:
+        await sio.enter_room(sid, f"space:{space.id}")
 
     return {"id": user.id, "name": user.name}
 
@@ -434,6 +446,27 @@ async def join_channel(sid, data):
         log.debug(f"{channels=}")
         for channel in channels:
             await sio.enter_room(sid, f"channel:{channel.id}")
+
+
+@sio.on("join-spaces")
+async def join_spaces(sid, data):
+    auth = data["auth"] if "auth" in data else None
+    if not auth or "token" not in auth:
+        return
+
+    data = decode_token(auth["token"])
+    if data is None or "id" not in data:
+        return
+
+    user = Users.get_user_by_id(data["id"])
+    if not user:
+        return
+
+    # Join all the spaces
+    spaces = Spaces.get_spaces_by_user_id(user.id)
+    log.debug(f"{spaces=}")
+    for space in spaces:
+        await sio.enter_room(sid, f"space:{space.id}")
 
 
 @sio.on("join-note")
@@ -749,6 +782,35 @@ async def yjs_awareness_update(sid, data):
         log.error(f"Error in yjs_awareness_update: {e}")
 
 
+@sio.on("typing")
+async def typing_indicator(sid, data):
+    """Relay typing status to other space members viewing the same thread."""
+    user = SESSION_POOL.get(sid)
+    if not user:
+        return
+
+    chat_id = data.get("chat_id")
+    typing = data.get("typing", False)
+    if not chat_id:
+        return
+
+    chat = Chats.get_chat_by_id(chat_id)
+    if not chat or not chat.space_id:
+        return  # Only relay typing for space threads
+
+    sender_sids = list(USER_POOL.get(user["id"], set()))
+    await sio.emit(
+        "typing",
+        {
+            "chat_id": chat_id,
+            "user": {"id": user["id"], "name": user.get("name", "")},
+            "typing": typing,
+        },
+        room=f"space:{chat.space_id}",
+        skip_sid=sender_sids,
+    )
+
+
 @sio.event
 async def disconnect(sid):
     if sid in SESSION_POOL:
@@ -765,6 +827,13 @@ async def disconnect(sid):
                 else:
                     USAGE_POOL[model_id] = connections
 
+        # Clean up reverse-index
+        user_id = user.get("id")
+        if user_id and user_id in USER_POOL:
+            USER_POOL[user_id].discard(sid)
+            if not USER_POOL[user_id]:
+                del USER_POOL[user_id]
+
         await YDOC_MANAGER.remove_user_from_all_documents(sid)
     else:
         pass
@@ -777,21 +846,36 @@ def get_event_emitter(request_info, update_db=True):
         chat_id = request_info["chat_id"]
         message_id = request_info["message_id"]
 
+        event_payload = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "data": event_data,
+        }
+
         await sio.emit(
             "events",
-            {
-                "chat_id": chat_id,
-                "message_id": message_id,
-                "data": event_data,
-            },
+            event_payload,
             room=f"user:{user_id}",
         )
+
+        # Broadcast to space room for real-time collaboration in Space threads.
+        # The sender already receives the event via user:{user_id} room above,
+        # so skip ALL of the sender's socket sessions (handles multiple tabs)
+        # to prevent duplicate events — critical for delta/append event types.
+        space_id = request_info.get("space_id")
+        if space_id:
+            sender_sids = list(USER_POOL.get(user_id, set()))
+            await sio.emit(
+                "events",
+                event_payload,
+                room=f"space:{space_id}",
+                skip_sid=sender_sids,
+            )
         if (
             update_db
             and message_id
             and not request_info.get("chat_id", "").startswith("local:")
         ):
-
             if "type" in event_data and event_data["type"] == "status":
                 Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],

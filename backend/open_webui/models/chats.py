@@ -51,6 +51,9 @@ class Chat(Base):
 
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
+    space_id = Column(Text, nullable=True)
+
+    chat_version = Column(BigInteger, default=0, server_default="0")
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -64,6 +67,8 @@ class Chat(Base):
         Index("updated_at_user_id_idx", "updated_at", "user_id"),
         # WHERE folder_id = ... AND user_id = ...
         Index("folder_id_user_id_idx", "folder_id", "user_id"),
+        # WHERE space_id = ... AND user_id = ...
+        Index("space_id_user_id_idx", "space_id", "user_id"),
     )
 
 
@@ -84,6 +89,9 @@ class ChatModel(BaseModel):
 
     meta: dict = {}
     folder_id: Optional[str] = None
+    space_id: Optional[str] = None
+
+    chat_version: int = 0
 
 
 class ChatFile(Base):
@@ -126,6 +134,8 @@ class ChatFileModel(BaseModel):
 class ChatForm(BaseModel):
     chat: dict
     folder_id: Optional[str] = None
+    space_id: Optional[str] = None
+    chat_version: Optional[int] = None  # For optimistic locking; None = skip check
 
 
 class ChatImportForm(ChatForm):
@@ -160,6 +170,8 @@ class ChatResponse(BaseModel):
     pinned: Optional[bool] = False
     meta: dict = {}
     folder_id: Optional[str] = None
+    space_id: Optional[str] = None
+    chat_version: int = 0
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -167,6 +179,7 @@ class ChatTitleIdResponse(BaseModel):
     title: str
     updated_at: int
     created_at: int
+    space_id: Optional[str] = None
 
 
 class SharedChatResponse(BaseModel):
@@ -262,6 +275,18 @@ class ChatStatsExport(BaseModel):
     chat: ChatBody
 
 
+class ChatVersionConflictError(Exception):
+    """Raised when an optimistic-locking version check fails on chat update."""
+
+    def __init__(self, current_version: int, expected_version: int):
+        self.current_version = current_version
+        self.expected_version = expected_version
+        super().__init__(
+            f"Chat version conflict: expected {expected_version}, "
+            f"but current is {current_version}"
+        )
+
+
 class ChatTable:
     def _clean_null_bytes(self, obj):
         """Recursively remove null bytes from strings in dict/list structures."""
@@ -295,6 +320,13 @@ class ChatTable:
     ) -> Optional[ChatModel]:
         with get_db_context(db) as db:
             id = str(uuid.uuid4())
+
+            # If the chat is created inside a space, default to space-level
+            # visibility so all space contributors can see it immediately.
+            meta = {}
+            if form_data.space_id:
+                meta = {"thread_access_level": "space"}
+
             chat = ChatModel(
                 **{
                     "id": id,
@@ -305,7 +337,9 @@ class ChatTable:
                         else "New Chat"
                     ),
                     "chat": self._clean_null_bytes(form_data.chat),
+                    "meta": meta,
                     "folder_id": form_data.folder_id,
+                    "space_id": form_data.space_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -397,11 +431,27 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in chats]
 
     def update_chat_by_id(
-        self, id: str, chat: dict, db: Optional[Session] = None
+        self,
+        id: str,
+        chat: dict,
+        expected_version: Optional[int] = None,
+        db: Optional[Session] = None,
     ) -> Optional[ChatModel]:
         try:
             with get_db_context(db) as db:
                 chat_item = db.get(Chat, id)
+                if not chat_item:
+                    return None
+
+                # Optimistic locking: if caller provided an expected version,
+                # verify it matches the current version before writing.
+                current_version = chat_item.chat_version or 0
+                if expected_version is not None and current_version != expected_version:
+                    raise ChatVersionConflictError(
+                        current_version=current_version,
+                        expected_version=expected_version,
+                    )
+
                 chat_item.chat = self._clean_null_bytes(chat)
                 chat_item.title = (
                     self._clean_null_bytes(chat["title"])
@@ -410,11 +460,14 @@ class ChatTable:
                 )
 
                 chat_item.updated_at = int(time.time())
+                chat_item.chat_version = current_version + 1
 
                 db.commit()
                 db.refresh(chat_item)
 
                 return ChatModel.model_validate(chat_item)
+        except ChatVersionConflictError:
+            raise  # Re-raise version conflicts so the router can return 409
         except Exception:
             return None
 
@@ -714,7 +767,6 @@ class ChatTable:
         limit: int = 50,
         db: Optional[Session] = None,
     ) -> list[ChatModel]:
-
         with get_db_context(db) as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=True)
 
@@ -855,7 +907,7 @@ class ChatTable:
                 query = query.filter_by(archived=False)
 
             query = query.order_by(Chat.updated_at.desc()).with_entities(
-                Chat.id, Chat.title, Chat.updated_at, Chat.created_at
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.space_id
             )
 
             if skip:
@@ -865,7 +917,6 @@ class ChatTable:
 
             all_chats = query.all()
 
-            # result has to be destructured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
             return [
                 ChatTitleIdResponse.model_validate(
                     {
@@ -873,6 +924,7 @@ class ChatTable:
                         "title": chat[1],
                         "updated_at": chat[2],
                         "created_at": chat[3],
+                        "space_id": chat[4],
                     }
                 )
                 for chat in all_chats
@@ -1216,6 +1268,44 @@ class ChatTable:
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    def get_chats_by_space_id_and_user_id(
+        self,
+        space_id: str,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 60,
+        db: Optional[Session] = None,
+    ) -> list[ChatModel]:
+        with get_db_context(db) as db:
+            query = db.query(Chat).filter_by(space_id=space_id, archived=False)
+
+            dialect_name = db.bind.dialect.name
+            if dialect_name == "sqlite":
+                shared_filter = text(
+                    "json_extract(chat.meta, '$.thread_access_level') IN ('space', 'org', 'public')"
+                )
+            else:
+                shared_filter = text(
+                    "chat.meta->>'thread_access_level' IN ('space', 'org', 'public')"
+                )
+
+            query = query.filter(
+                or_(
+                    Chat.user_id == user_id,
+                    shared_filter,
+                )
+            )
+
+            query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            all_chats = query.all()
+            return [ChatModel.model_validate(chat) for chat in all_chats]
+
     def get_chats_by_folder_id_and_user_id(
         self,
         folder_id: str,
@@ -1268,6 +1358,34 @@ class ChatTable:
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
+
+    def update_chat_space_id(
+        self,
+        chat_id: str,
+        user_id: str,
+        space_id: Optional[str],
+        db: Optional[Session] = None,
+    ) -> Optional[ChatModel]:
+        with get_db_context(db) as db:
+            try:
+                chat = db.query(Chat).filter_by(id=chat_id, user_id=user_id).first()
+                if not chat:
+                    return None
+                chat.space_id = space_id
+                meta = chat.meta or {}
+                if space_id:
+                    meta["thread_access_level"] = "space"
+                else:
+                    meta.pop("thread_access_level", None)
+                    meta.pop("thread_access_control", None)
+                chat.meta = meta
+                chat.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
+            except Exception as e:
+                log.exception(f"Error updating chat space_id: {e}")
+                return None
 
     def get_chat_tags_by_id_and_user_id(
         self, id: str, user_id: str, db: Optional[Session] = None
@@ -1435,9 +1553,9 @@ class ChatTable:
             with get_db_context(db) as db:
                 db.query(ChatMessage).filter_by(chat_id=id).delete()
                 db.query(Chat).filter_by(id=id).delete()
+                db.query(Chat).filter_by(user_id=f"shared-{id}").delete()
                 db.commit()
-
-                return True and self.delete_shared_chat_by_chat_id(id, db=db)
+                return True
         except Exception:
             return False
 
@@ -1448,9 +1566,9 @@ class ChatTable:
             with get_db_context(db) as db:
                 db.query(ChatMessage).filter_by(chat_id=id).delete()
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
+                db.query(Chat).filter_by(user_id=f"shared-{id}").delete()
                 db.commit()
-
-                return True and self.delete_shared_chat_by_chat_id(id, db=db)
+                return True
         except Exception:
             return False
 

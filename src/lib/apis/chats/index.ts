@@ -1,7 +1,12 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getTimeRange } from '$lib/utils';
 
-export const createNewChat = async (token: string, chat: object, folderId: string | null) => {
+export const createNewChat = async (
+	token: string,
+	chat: object,
+	folderId: string | null,
+	spaceId: string | null = null
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/new`, {
@@ -13,7 +18,8 @@ export const createNewChat = async (token: string, chat: object, folderId: strin
 		},
 		body: JSON.stringify({
 			chat: chat,
-			folder_id: folderId ?? null
+			folder_id: folderId ?? null,
+			space_id: spaceId ?? null
 		})
 	})
 		.then(async (res) => {
@@ -410,6 +416,45 @@ export const getChatListByFolderId = async (token: string, folderId: string, pag
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/chats/folder/${folderId}/list?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getChatListBySpaceId = async (token: string, spaceId: string, page: number = 1) => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	if (page !== null) {
+		searchParams.append('page', `${page}`);
+	}
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/chats/space/${spaceId}/list?${searchParams.toString()}`,
 		{
 			method: 'GET',
 			headers: {
@@ -953,7 +998,12 @@ export const deleteSharedChatById = async (token: string, id: string) => {
 	return res;
 };
 
-export const updateChatById = async (token: string, id: string, chat: object) => {
+export const updateChatById = async (
+	token: string,
+	id: string,
+	chat: object,
+	chatVersion?: number
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
@@ -964,7 +1014,8 @@ export const updateChatById = async (token: string, id: string, chat: object) =>
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			chat: chat
+			chat: chat,
+			...(chatVersion !== undefined && { chat_version: chatVersion })
 		})
 	})
 		.then(async (res) => {
@@ -1313,5 +1364,71 @@ export const downloadChatStats = async (
 		throw error;
 	}
 
-	return [res, controller];
+	return res;
+};
+
+export const markChatAsViewed = async (token: string, id: string): Promise<boolean> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/view`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return false;
+		});
+
+	if (error) {
+		// Silently fail - marking as viewed is not critical
+		console.error('Failed to mark chat as viewed:', error);
+		return false;
+	}
+
+	return res;
+};
+
+export const updateChatSpaceId = async (
+	token: string,
+	chatId: string,
+	spaceId: string | null
+): Promise<object> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${chatId}/space`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({ space_id: spaceId })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };

@@ -7,13 +7,15 @@ from fastapi.responses import StreamingResponse
 
 
 from open_webui.utils.misc import get_message_list
-from open_webui.socket.main import get_event_emitter
+from open_webui.socket.main import get_event_emitter, sio, SESSION_POOL, USER_POOL
+from open_webui.models.users import UserNameResponse
 from open_webui.models.chats import (
     ChatForm,
     ChatImportForm,
     ChatUsageStatsListResponse,
     ChatsImportForm,
     ChatResponse,
+    ChatVersionConflictError,
     Chats,
     ChatTitleIdResponse,
     SharedChatResponse,
@@ -23,6 +25,7 @@ from open_webui.models.chats import (
     ChatHistoryStats,
     MessageStats,
 )
+from open_webui.models.chat_user_views import ChatUserViews
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
 from open_webui.internal.db import get_session
@@ -533,7 +536,6 @@ async def delete_all_user_chats(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-
     if user.role == "user" and not has_permission(
         user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
     ):
@@ -599,6 +601,30 @@ async def create_new_chat(
 ):
     try:
         chat = Chats.insert_new_chat(user.id, form_data, db=db)
+
+        # Emit real-time event to space members when a thread is created in a space
+        if form_data.space_id:
+            try:
+                await sio.emit(
+                    "events:space",
+                    {
+                        "space_id": form_data.space_id,
+                        "data": {
+                            "type": "thread:created",
+                            "data": {
+                                "id": chat.id,
+                                "title": chat.title,
+                                "updated_at": chat.updated_at,
+                                "user_id": user.id,
+                            },
+                        },
+                        "user": UserNameResponse(**user.model_dump()).model_dump(),
+                    },
+                    to=f"space:{form_data.space_id}",
+                )
+            except Exception as emit_err:
+                log.debug(f"Failed to emit space thread event: {emit_err}")
+
         return ChatResponse(**chat.model_dump())
     except Exception as e:
         log.exception(e)
@@ -668,6 +694,71 @@ def search_user_chats(
 ############################
 # GetChatsByFolderId
 ############################
+
+
+############################
+# GetChatsBySpaceId
+############################
+
+
+@router.get("/space/{space_id}/list")
+async def get_chat_list_by_space_id(
+    space_id: str,
+    page: Optional[int] = 1,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    try:
+        from open_webui.models.spaces import Spaces
+        from open_webui.utils.access_control import has_access
+        from open_webui.routers.spaces import is_space_contributor
+
+        space = Spaces.get_space_by_id(space_id, db=db)
+        if not space:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Space not found"
+            )
+
+        if not (
+            user.role == "admin"
+            or space.user_id == user.id
+            or has_access(user.id, "read", space.access_control, db=db)
+            or is_space_contributor(user.email, space.id, db)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+
+        limit = 20
+        skip = (page - 1) * limit
+
+        chats = Chats.get_chats_by_space_id_and_user_id(
+            space_id, user.id, skip=skip, limit=limit, db=db
+        )
+
+        views_map = ChatUserViews.get_views_map_by_user_id(user.id, db=db)
+
+        return [
+            {
+                "title": chat.title,
+                "id": chat.id,
+                "user_id": chat.user_id,
+                "updated_at": chat.updated_at,
+                "unread": chat.updated_at > views_map.get(chat.id, 0)
+                if chat.user_id != user.id
+                else False,
+            }
+            for chat in chats
+        ]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
 
 @router.get("/folder/{folder_id}", response_model=list[ChatResponse])
@@ -959,6 +1050,41 @@ async def get_user_chat_list_by_tag_name(
 
 
 ############################
+# UpdateChatSpace
+############################
+
+
+class UpdateChatSpaceForm(BaseModel):
+    space_id: Optional[str] = None
+
+
+@router.post("/{id}/space")
+async def update_chat_space(
+    id: str,
+    form_data: UpdateChatSpaceForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    """Add or remove a chat from a space."""
+    if form_data.space_id:
+        from open_webui.models.spaces import Spaces
+
+        space = Spaces.get_space_by_id(form_data.space_id, db=db)
+        if not space:
+            raise HTTPException(status_code=404, detail="Space not found")
+        if space.user_id != user.id and user.role != "admin":
+            from open_webui.utils.access_control import has_access
+
+            if not has_access(user.id, "write", space.access_control, db=db):
+                raise HTTPException(status_code=401, detail="No access to space")
+
+    result = Chats.update_chat_space_id(id, user.id, form_data.space_id, db=db)
+    if not result:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return result
+
+
+############################
 # GetChatById
 ############################
 
@@ -969,13 +1095,56 @@ async def get_chat_by_id(
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
+    if not chat:
+        chat = Chats.get_chat_by_id(id, db=db)
+        if chat and chat.space_id:
+            from open_webui.models.spaces import Spaces
+            from open_webui.utils.access_control import has_access
+            from open_webui.routers.spaces import is_space_contributor
+
+            meta = chat.meta or {}
+            access_level = meta.get("thread_access_level", "private")
+            if access_level == "private":
+                chat = None
+            else:
+                space = Spaces.get_space_by_id(chat.space_id, db=db)
+                if not space or not (
+                    user.role == "admin"
+                    or space.user_id == user.id
+                    or has_access(user.id, "read", space.access_control, db=db)
+                    or is_space_contributor(user.email, space.id, db)
+                ):
+                    chat = None
+        else:
+            chat = None
+
     if chat:
         return ChatResponse(**chat.model_dump())
 
-    else:
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+    )
+
+
+############################
+# MarkChatViewed
+############################
+
+
+@router.post("/{id}/view", response_model=bool)
+async def mark_chat_viewed(
+    id: str,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    chat = Chats.get_chat_by_id(id, db=db)
+    if not chat:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
+
+    result = ChatUserViews.upsert_view(user.id, id, db=db)
+    return result is not None
 
 
 ############################
@@ -991,15 +1160,76 @@ async def update_chat_by_id(
     db: Session = Depends(get_session),
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+
+    # If user doesn't own the chat, check if they have Space contributor access
+    if not chat:
+        chat = Chats.get_chat_by_id(id, db=db)
+        if chat and chat.space_id:
+            from open_webui.models.spaces import Spaces
+            from open_webui.utils.access_control import has_access
+            from open_webui.routers.spaces import is_space_contributor
+
+            meta = chat.meta or {}
+            access_level = meta.get("thread_access_level", "private")
+            if access_level == "private":
+                chat = None
+            else:
+                space = Spaces.get_space_by_id(chat.space_id, db=db)
+                if not space or not (
+                    user.role == "admin"
+                    or space.user_id == user.id
+                    or has_access(user.id, "write", space.access_control, db=db)
+                    or is_space_contributor(user.email, space.id, db)
+                ):
+                    chat = None
+        else:
+            chat = None
+
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
-        chat = Chats.update_chat_by_id(id, updated_chat, db=db)
+
+        try:
+            chat = Chats.update_chat_by_id(
+                id,
+                updated_chat,
+                expected_version=form_data.chat_version,
+                db=db,
+            )
+        except ChatVersionConflictError as e:
+            # 409 Conflict: another user saved first. Frontend should re-fetch and retry.
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Chat version conflict: your version ({e.expected_version}) "
+                f"is stale, current is {e.current_version}. Re-fetch and retry.",
+            )
+
+        # Notify other space members to sync their local chat state.
+        # This fires when the sender's frontend saves the chat (with new user message
+        # + empty assistant response) BEFORE streaming starts, so other viewers
+        # can re-fetch and pick up the new message_ids for incoming stream events.
+        if chat and getattr(chat, "space_id", None):
+            sender_sids = list(USER_POOL.get(user.id, set()))
+            asyncio.create_task(
+                sio.emit(
+                    "events",
+                    {
+                        "chat_id": id,
+                        "message_id": None,
+                        "data": {
+                            "type": "chat:thread:sync",
+                        },
+                    },
+                    room=f"space:{chat.space_id}",
+                    skip_sid=sender_sids,
+                )
+            )
+
         return ChatResponse(**chat.model_dump())
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+    )
 
 
 ############################
@@ -1045,6 +1275,7 @@ async def update_chat_message_by_id(
             "user_id": user.id,
             "chat_id": id,
             "message_id": message_id,
+            "space_id": getattr(chat, "space_id", None),
         },
         False,
     )
@@ -1099,6 +1330,7 @@ async def send_chat_message_event_by_id(
             "user_id": user.id,
             "chat_id": id,
             "message_id": message_id,
+            "space_id": getattr(chat, "space_id", None),
         }
     )
 
@@ -1261,7 +1493,6 @@ async def clone_chat_by_id(
 async def clone_shared_chat_by_id(
     id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
-
     if user.role == "admin":
         chat = Chats.get_chat_by_id(id, db=db)
     else:
@@ -1439,13 +1670,38 @@ async def get_chat_tags_by_id(
     id: str, user=Depends(get_verified_user), db: Session = Depends(get_session)
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+
+    # If user doesn't own the chat, check if they have Space contributor access
+    if not chat:
+        chat = Chats.get_chat_by_id(id, db=db)
+        if chat and chat.space_id:
+            from open_webui.models.spaces import Spaces
+            from open_webui.utils.access_control import has_access
+            from open_webui.routers.spaces import is_space_contributor
+
+            meta = chat.meta or {}
+            access_level = meta.get("thread_access_level", "private")
+            if access_level == "private":
+                chat = None
+            else:
+                space = Spaces.get_space_by_id(chat.space_id, db=db)
+                if not space or not (
+                    user.role == "admin"
+                    or space.user_id == user.id
+                    or has_access(user.id, "read", space.access_control, db=db)
+                    or is_space_contributor(user.email, space.id, db)
+                ):
+                    chat = None
+        else:
+            chat = None
+
     if chat:
         tags = chat.meta.get("tags", [])
         return Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
-        )
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+    )
 
 
 ############################
