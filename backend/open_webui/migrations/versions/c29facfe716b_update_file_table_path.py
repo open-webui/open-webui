@@ -12,7 +12,6 @@ import json
 from sqlalchemy.sql import table, column
 from sqlalchemy import String, Text, JSON, and_
 
-
 revision = "c29facfe716b"
 down_revision = "c69f45358db4"
 branch_labels = None

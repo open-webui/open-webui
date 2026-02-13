@@ -214,7 +214,6 @@ class FunctionsTable:
         except Exception:
             return []
 
-
     def get_functions(
         self, active_only=False, include_valves=False, db: Optional[Session] = None
     ) -> list[FunctionModel | FunctionWithValvesModel]:

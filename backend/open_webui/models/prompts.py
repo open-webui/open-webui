@@ -13,7 +13,6 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, or_, func, cast
 
-
 ####################
 # Prompts DB Schema
 ####################
@@ -146,7 +145,9 @@ class PromptsTable:
                         "data": form_data.data or {},
                         "meta": form_data.meta or {},
                         "tags": form_data.tags or [],
-                        "access_grants": [grant.model_dump() for grant in current_access_grants],
+                        "access_grants": [
+                            grant.model_dump() for grant in current_access_grants
+                        ],
                     }
 
                     history_entry = PromptHistories.create_history_entry(
@@ -345,7 +346,6 @@ class PromptsTable:
             return PromptListResponse(items=prompts, total=total)
 
     def update_prompt_by_command(
-
         self,
         command: str,
         form_data: PromptForm,
@@ -450,7 +450,7 @@ class PromptsTable:
                 prompt.content = form_data.content
                 prompt.data = form_data.data or prompt.data
                 prompt.meta = form_data.meta or prompt.meta
-                
+
                 if form_data.tags is not None:
                     prompt.tags = form_data.tags
 
@@ -459,7 +459,7 @@ class PromptsTable:
                         "prompt", prompt.id, form_data.access_grants, db=db
                     )
                     current_access_grants = self._get_access_grants(prompt.id, db=db)
-                    
+
                 prompt.updated_at = int(time.time())
 
                 db.commit()
@@ -504,22 +504,22 @@ class PromptsTable:
         tags: Optional[list[str]] = None,
         db: Optional[Session] = None,
     ) -> Optional[PromptModel]:
-        """Update only name and command (no history created)."""
+        """Update only name, command, and tags (no history created)."""
         try:
             with get_db_context(db) as db:
                 prompt = db.query(Prompt).filter_by(id=prompt_id).first()
                 if not prompt:
                     return None
-                
+
                 prompt.name = name
                 prompt.command = command
-                
+
                 if tags is not None:
                     prompt.tags = tags
-                    
+
                 prompt.updated_at = int(time.time())
                 db.commit()
-                
+
                 return self._to_prompt_model(prompt, db=db)
         except Exception:
             return None

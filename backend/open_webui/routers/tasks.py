@@ -36,7 +36,6 @@ from open_webui.config import (
     DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
 )
 
-
 log = logging.getLogger(__name__)
 
 router = APIRouter()

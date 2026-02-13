@@ -36,7 +36,6 @@ from open_webui.models.access_grants import AccessGrants, has_public_read_access
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.models.models import Models, ModelForm
 
-
 log = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -358,7 +357,7 @@ async def reindex_knowledge_base_metadata_embeddings(
     user=Depends(get_admin_user),
 ):
     """Batch embed all existing knowledge bases. Admin only.
-    
+
     NOTE: We intentionally do NOT use Depends(get_session) here.
     This endpoint loops through ALL knowledge bases and calls embed_knowledge_base_metadata()
     for each one, making N external embedding API calls. Holding a session during
@@ -499,6 +498,53 @@ async def update_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ID_TAKEN,
         )
+
+
+############################
+# UpdateKnowledgeAccessById
+############################
+
+
+class KnowledgeAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post("/{id}/access/update", response_model=Optional[KnowledgeFilesResponse])
+async def update_knowledge_access_by_id(
+    id: str,
+    form_data: KnowledgeAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    knowledge = Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        knowledge.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    AccessGrants.set_access_grants("knowledge", id, form_data.access_grants, db=db)
+
+    return KnowledgeFilesResponse(
+        **Knowledges.get_knowledge_by_id(id=id, db=db).model_dump(),
+        files=Knowledges.get_file_metadatas_by_id(id, db=db),
+    )
 
 
 ############################

@@ -90,6 +90,7 @@ from open_webui.routers import (
     knowledge,
     prompts,
     evaluations,
+    skills,
     tools,
     users,
     utils,
@@ -510,8 +511,8 @@ from open_webui.utils.models import (
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
     chat_completed as chat_completed_handler,
-    chat_action as chat_action_handler,
 )
+from open_webui.utils.actions import chat_action as chat_action_handler
 from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.middleware import (
     build_chat_response_context,
@@ -552,7 +553,6 @@ from open_webui.utils.redis import get_sentinels_from_env
 
 from open_webui.constants import ERROR_MESSAGES
 
-
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -576,8 +576,7 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-print(
-    rf"""
+print(rf"""
  ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
 ██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
 ██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
@@ -589,12 +588,15 @@ print(
 v{VERSION} - building the best AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
-"""
-)
+""")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Store reference to main event loop for sync->async calls (e.g., embedding generation)
+    # This allows sync functions to schedule work on the main loop without blocking health checks
+    app.state.main_loop = asyncio.get_running_loop()
+
     app.state.instance_id = INSTANCE_ID
     start_logger()
 
@@ -816,6 +818,21 @@ app.state.config.ENABLE_USER_STATUS = ENABLE_USER_STATUS
 
 app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
 app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
+
+# Migrate legacy access_control → access_grants on boot
+from open_webui.utils.access_control import migrate_access_control
+
+connections = app.state.config.TOOL_SERVER_CONNECTIONS
+if any("access_control" in c.get("config", {}) for c in connections):
+    for connection in connections:
+        migrate_access_control(connection.get("config", {}))
+    app.state.config.TOOL_SERVER_CONNECTIONS = connections
+
+arena_models = app.state.config.EVALUATION_ARENA_MODELS
+if any("access_control" in m.get("meta", {}) for m in arena_models):
+    for model in arena_models:
+        migrate_access_control(model.get("meta", {}))
+    app.state.config.EVALUATION_ARENA_MODELS = arena_models
 
 app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
@@ -1375,7 +1392,13 @@ app.add_middleware(APIKeyRestrictionMiddleware)
 async def commit_session_after_request(request: Request, call_next):
     response = await call_next(request)
     # log.debug("Commit session after request")
-    ScopedSession.commit()
+    try:
+        ScopedSession.commit()
+    finally:
+        # CRITICAL: remove() returns the connection to the pool.
+        # Without this, connections remain "checked out" and accumulate
+        # as "idle in transaction" in PostgreSQL.
+        ScopedSession.remove()
     return response
 
 
@@ -1456,6 +1479,7 @@ app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
+app.include_router(skills.router, prefix="/api/v1/skills", tags=["skills"])
 
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
@@ -1832,9 +1856,7 @@ async def chat_completion(
         # Emit chat:active=true when task starts
         event_emitter = get_event_emitter(metadata, update_db=False)
         if event_emitter:
-            await event_emitter(
-                {"type": "chat:active", "data": {"active": True}}
-            )
+            await event_emitter({"type": "chat:active", "data": {"active": True}})
         return {"status": True, "task_id": task_id}
     else:
         return await process_chat(request, form_data, user, metadata, model)

@@ -32,7 +32,6 @@ from open_webui.config import (
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.models.users import UserModel
 
-
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
@@ -340,12 +339,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
 def check_model_access(user, model, db=None):
     if model.get("arena"):
+        meta = model.get("info", {}).get("meta", {})
+        access_grants = meta.get("access_grants", [])
         if not has_access(
             user.id,
-            type="read",
-            access_control=model.get("info", {})
-            .get("meta", {})
-            .get("access_control", {}),
+            permission="read",
+            access_grants=access_grants,
             db=db,
         ):
             raise Exception("Model not found")
@@ -384,12 +383,12 @@ def get_filtered_models(models, user, db=None):
         }
         for model in models:
             if model.get("arena"):
+                meta = model.get("info", {}).get("meta", {})
+                access_grants = meta.get("access_grants", [])
                 if has_access(
                     user.id,
-                    type="read",
-                    access_control=model.get("info", {})
-                    .get("meta", {})
-                    .get("access_control", {}),
+                    permission="read",
+                    access_grants=access_grants,
                     user_group_ids=user_group_ids,
                 ):
                     filtered_models.append(model)

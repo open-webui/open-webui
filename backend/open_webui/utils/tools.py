@@ -48,6 +48,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
+    FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
 )
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.tools.builtin import (
@@ -77,6 +78,7 @@ from open_webui.tools.builtin import (
     search_knowledge_files,
     query_knowledge_files,
     view_knowledge_file,
+    view_skill,
 )
 
 import copy
@@ -149,8 +151,9 @@ def has_tool_server_access(
     if user_group_ids is None:
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
 
-    access_control = server_connection.get("config", {}).get("access_control", None)
-    return has_access(user.id, "read", access_control, user_group_ids)
+    server_config = server_connection.get("config", {})
+    access_grants = server_config.get("access_grants", [])
+    return has_access(user.id, "read", access_grants, user_group_ids)
 
 
 async def get_tools(
@@ -350,7 +353,13 @@ async def get_tools(
                             headers = include_user_info_headers(headers, user)
                             metadata = extra_params.get("__metadata__", {})
                             if metadata and metadata.get("chat_id"):
-                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get("chat_id")
+                                headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = (
+                                    metadata.get("chat_id")
+                                )
+                            if metadata and metadata.get("message_id"):
+                                headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = (
+                                    metadata.get("message_id")
+                                )
 
                         def make_tool_function(
                             function_name, tool_server_data, headers
@@ -414,9 +423,8 @@ def get_builtin_tools(
 
     # Helper to get model capabilities (defaults to True if not specified)
     def get_model_capability(name: str, default: bool = True) -> bool:
-        return (
-            (model.get("info", {}).get("meta", {}).get("capabilities") or {})
-            .get(name, default)
+        return (model.get("info", {}).get("meta", {}).get("capabilities") or {}).get(
+            name, default
         )
 
     # Helper to check if a builtin tool category is enabled via meta.builtinTools
@@ -489,13 +497,17 @@ def get_builtin_tools(
         builtin_functions.append(execute_code)
 
     # Notes tools - search, view, create, and update user's notes (if builtin category enabled AND notes enabled globally)
-    if is_builtin_tool_enabled("notes") and getattr(request.app.state.config, "ENABLE_NOTES", False):
+    if is_builtin_tool_enabled("notes") and getattr(
+        request.app.state.config, "ENABLE_NOTES", False
+    ):
         builtin_functions.extend(
             [search_notes, view_note, write_note, replace_note_content]
         )
 
     # Channels tools - search channels and messages (if builtin category enabled AND channels enabled globally)
-    if is_builtin_tool_enabled("channels") and getattr(request.app.state.config, "ENABLE_CHANNELS", False):
+    if is_builtin_tool_enabled("channels") and getattr(
+        request.app.state.config, "ENABLE_CHANNELS", False
+    ):
         builtin_functions.extend(
             [
                 search_channels,
@@ -504,6 +516,10 @@ def get_builtin_tools(
                 view_channel_message,
             ]
         )
+
+    # Skills tools - view_skill allows model to load full skill instructions on demand
+    if extra_params.get("__skill_ids__"):
+        builtin_functions.append(view_skill)
 
     for func in builtin_functions:
         callable = get_async_tool_function_and_apply_extra_params(

@@ -300,7 +300,6 @@ export const updateUserSettings = async (token: string, settings: object) => {
 	return res;
 };
 
-
 export const getUserInfoById = async (token: string, userId: string) => {
 	let error = null;
 

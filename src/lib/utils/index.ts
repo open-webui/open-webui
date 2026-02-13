@@ -29,7 +29,9 @@ import hljs from 'highlight.js';
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const formatNumber = (num: number): string => {
-	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(num);
+	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(
+		num
+	);
 };
 
 function escapeRegExp(string: string): string {
@@ -41,9 +43,7 @@ export const replaceOutsideCode = (content: string, replacer: (str: string) => s
 	return content
 		.split(/(```[\s\S]*?```|`[\s\S]*?`)/)
 		.map((segment) => {
-			return segment.startsWith('```') || segment.startsWith('`')
-				? segment
-				: replacer(segment);
+			return segment.startsWith('```') || segment.startsWith('`') ? segment : replacer(segment);
 		})
 		.join('');
 };
@@ -361,9 +361,9 @@ export const generateInitialsImage = (name) => {
 	const initials =
 		sanitizedName.length > 0
 			? sanitizedName[0] +
-			(sanitizedName.split(' ').length > 1
-				? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
-				: '')
+				(sanitizedName.split(' ').length > 1
+					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
+					: '')
 			: '';
 
 	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
@@ -519,10 +519,10 @@ export const compareVersion = (latest, current) => {
 	return current === '0.0.0'
 		? false
 		: current.localeCompare(latest, undefined, {
-			numeric: true,
-			sensitivity: 'case',
-			caseFirst: 'upper'
-		}) < 0;
+				numeric: true,
+				sensitivity: 'case',
+				caseFirst: 'upper'
+			}) < 0;
 };
 
 export const extractCurlyBraceWords = (text) => {
@@ -878,7 +878,7 @@ export const processDetails = (content) => {
 			}
 
 			if (attributes.result) {
-				content = content.replace(match, `"${attributes.result}"`);
+				content = content.replace(match, unescapeHtml(attributes.result));
 			}
 		}
 	}
@@ -1698,4 +1698,25 @@ export const getCodeBlockContents = (content: string): object => {
 		css: cssContent.trim(),
 		js: jsContent.trim()
 	};
+};
+export const parseFrontmatter = (content) => {
+	const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+	if (match) {
+		const frontmatter = {};
+		match[1].split('\n').forEach((line) => {
+			const [key, ...value] = line.split(':');
+			if (key && value) {
+				frontmatter[key.trim()] = value
+					.join(':')
+					.trim()
+					.replace(/^["']|["']$/g, '');
+			}
+		});
+		return frontmatter;
+	}
+	return {};
+};
+
+export const formatSkillName = (name) => {
+	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 };

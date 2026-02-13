@@ -165,19 +165,11 @@
 			{#each files ?? [] as file, idx}
 				{#if typeof file === 'string'}
 					{#if file.startsWith('data:image/')}
-						<Image
-							id={`${componentId}-tool-call-result-${idx}`}
-							src={file}
-							alt="Image"
-						/>
+						<Image id={`${componentId}-tool-call-result-${idx}`} src={file} alt="Image" />
 					{/if}
 				{:else if typeof file === 'object'}
 					{#if (file.type === 'image' || (file?.content_type ?? '').startsWith('image/')) && file.url}
-						<Image
-							id={`${componentId}-tool-call-result-${idx}`}
-							src={file.url}
-							alt="Image"
-						/>
+						<Image id={`${componentId}-tool-call-result-${idx}`} src={file.url} alt="Image" />
 					{/if}
 				{/if}
 			{/each}

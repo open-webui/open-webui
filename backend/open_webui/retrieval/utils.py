@@ -601,7 +601,10 @@ async def agenerate_openai_batch_embeddings(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         ) as session:
             async with session.post(
-                f"{url}/embeddings", headers=headers, json=form_data
+                f"{url}/embeddings",
+                headers=headers,
+                json=form_data,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 r.raise_for_status()
                 data = await r.json()
@@ -691,7 +694,12 @@ async def agenerate_azure_openai_batch_embeddings(
         async with aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         ) as session:
-            async with session.post(full_url, headers=headers, json=form_data) as r:
+            async with session.post(
+                full_url,
+                headers=headers,
+                json=form_data,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
                 r.raise_for_status()
                 data = await r.json()
                 if "data" in data:

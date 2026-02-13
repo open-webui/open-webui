@@ -98,26 +98,27 @@ def upgrade() -> None:
             # Could be Python None (SQL NULL) or string "null" (JSON null)
             # EXCEPTION: files with NULL are PRIVATE (owner-only), not public
             is_null = (
-                access_control_json is None or 
-                access_control_json == "null" or
-                (isinstance(access_control_json, str) and access_control_json.strip().lower() == "null")
+                access_control_json is None
+                or access_control_json == "null"
+                or (
+                    isinstance(access_control_json, str)
+                    and access_control_json.strip().lower() == "null"
+                )
             )
             if is_null:
                 # Files: NULL = private (no entry needed, owner has implicit access)
                 # Other resources: NULL = public (insert user:* for read)
                 if resource_type == "file":
                     continue  # Private - no entry needed
-                
+
                 key = (resource_type, resource_id, "user", "*", "read")
                 if key not in inserted:
                     try:
                         conn.execute(
-                            sa.text(
-                                """
+                            sa.text("""
                                 INSERT INTO access_grant (id, resource_type, resource_id, principal_type, principal_id, permission, created_at)
                                 VALUES (:id, :resource_type, :resource_id, :principal_type, :principal_id, :permission, :created_at)
-                            """
-                            ),
+                            """),
                             {
                                 "id": str(uuid.uuid4()),
                                 "resource_type": resource_type,
@@ -174,12 +175,10 @@ def upgrade() -> None:
                         continue
                     try:
                         conn.execute(
-                            sa.text(
-                                """
+                            sa.text("""
                                 INSERT INTO access_grant (id, resource_type, resource_id, principal_type, principal_id, permission, created_at)
                                 VALUES (:id, :resource_type, :resource_id, :principal_type, :principal_id, :permission, :created_at)
-                            """
-                            ),
+                            """),
                             {
                                 "id": str(uuid.uuid4()),
                                 "resource_type": resource_type,
@@ -200,12 +199,10 @@ def upgrade() -> None:
                         continue
                     try:
                         conn.execute(
-                            sa.text(
-                                """
+                            sa.text("""
                                 INSERT INTO access_grant (id, resource_type, resource_id, principal_type, principal_id, permission, created_at)
                                 VALUES (:id, :resource_type, :resource_id, :principal_type, :principal_id, :permission, :created_at)
-                            """
-                            ),
+                            """),
                             {
                                 "id": str(uuid.uuid4()),
                                 "resource_type": resource_type,
@@ -233,9 +230,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     import json
-    
+
     conn = op.get_bind()
-    
+
     # Resource tables mapping: (table_name, resource_type)
     resource_tables = [
         ("knowledge", "knowledge"),
@@ -265,7 +262,7 @@ def downgrade() -> None:
                     FROM access_grant
                     WHERE resource_type = :resource_type
                 """),
-                {"resource_type": resource_type}
+                {"resource_type": resource_type},
             )
             rows = result.fetchall()
         except Exception:
@@ -287,39 +284,61 @@ def downgrade() -> None:
                 }
 
             # Handle public access (user:* for read)
-            if principal_type == "user" and principal_id == "*" and permission == "read":
+            if (
+                principal_type == "user"
+                and principal_id == "*"
+                and permission == "read"
+            ):
                 resource_grants[resource_id]["is_public"] = True
                 continue
 
             # Add to appropriate list
             if permission in ["read", "write"]:
                 if principal_type == "group":
-                    if principal_id not in resource_grants[resource_id][permission]["group_ids"]:
-                        resource_grants[resource_id][permission]["group_ids"].append(principal_id)
+                    if (
+                        principal_id
+                        not in resource_grants[resource_id][permission]["group_ids"]
+                    ):
+                        resource_grants[resource_id][permission]["group_ids"].append(
+                            principal_id
+                        )
                 elif principal_type == "user":
-                    if principal_id not in resource_grants[resource_id][permission]["user_ids"]:
-                        resource_grants[resource_id][permission]["user_ids"].append(principal_id)
+                    if (
+                        principal_id
+                        not in resource_grants[resource_id][permission]["user_ids"]
+                    ):
+                        resource_grants[resource_id][permission]["user_ids"].append(
+                            principal_id
+                        )
 
         # Step 3: Update each resource with reconstructed JSON
         for resource_id, grants in resource_grants.items():
             if grants["is_public"]:
                 # Public = NULL
                 access_control_value = None
-            elif (not grants["read"]["group_ids"] and not grants["read"]["user_ids"] and
-                  not grants["write"]["group_ids"] and not grants["write"]["user_ids"]):
+            elif (
+                not grants["read"]["group_ids"]
+                and not grants["read"]["user_ids"]
+                and not grants["write"]["group_ids"]
+                and not grants["write"]["user_ids"]
+            ):
                 # No grants = should not happen (would mean no entries), default to {}
                 access_control_value = json.dumps({})
             else:
                 # Custom permissions
-                access_control_value = json.dumps({
-                    "read": grants["read"],
-                    "write": grants["write"],
-                })
+                access_control_value = json.dumps(
+                    {
+                        "read": grants["read"],
+                        "write": grants["write"],
+                    }
+                )
 
             try:
                 conn.execute(
-                    sa.text(f'UPDATE "{table_name}" SET access_control = :access_control WHERE id = :id'),
-                    {"access_control": access_control_value, "id": resource_id}
+                    sa.text(
+                        f'UPDATE "{table_name}" SET access_control = :access_control WHERE id = :id'
+                    ),
+                    {"access_control": access_control_value, "id": resource_id},
                 )
             except Exception:
                 pass
@@ -330,15 +349,15 @@ def downgrade() -> None:
         if resource_type != "file":
             try:
                 conn.execute(
-                    sa.text(f'''
+                    sa.text(f"""
                         UPDATE "{table_name}" 
                         SET access_control = :private_value
                         WHERE id NOT IN (
                             SELECT DISTINCT resource_id FROM access_grant WHERE resource_type = :resource_type
                         )
                         AND access_control IS NULL
-                    '''),
-                    {"private_value": json.dumps({}), "resource_type": resource_type}
+                    """),
+                    {"private_value": json.dumps({}), "resource_type": resource_type},
                 )
             except Exception:
                 pass

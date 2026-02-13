@@ -30,7 +30,6 @@ from sqlalchemy import (
     or_,
 )
 
-
 log = logging.getLogger(__name__)
 
 ####################
@@ -402,9 +401,7 @@ class KnowledgeTable:
         try:
             with get_db_context(db) as db:
                 knowledge = db.query(Knowledge).filter_by(id=id).first()
-                return (
-                    self._to_knowledge_model(knowledge, db=db) if knowledge else None
-                )
+                return self._to_knowledge_model(knowledge, db=db) if knowledge else None
         except Exception:
             return None
 
@@ -443,7 +440,10 @@ class KnowledgeTable:
                     .filter(KnowledgeFile.file_id == file_id)
                     .all()
                 )
-                return [self._to_knowledge_model(knowledge, db=db) for knowledge in knowledges]
+                return [
+                    self._to_knowledge_model(knowledge, db=db)
+                    for knowledge in knowledges
+                ]
         except Exception:
             return []
 
@@ -484,11 +484,17 @@ class KnowledgeTable:
                     is_asc = direction == "asc"
 
                     if order_by == "name":
-                        primary_sort = File.filename.asc() if is_asc else File.filename.desc()
+                        primary_sort = (
+                            File.filename.asc() if is_asc else File.filename.desc()
+                        )
                     elif order_by == "created_at":
-                        primary_sort = File.created_at.asc() if is_asc else File.created_at.desc()
+                        primary_sort = (
+                            File.created_at.asc() if is_asc else File.created_at.desc()
+                        )
                     elif order_by == "updated_at":
-                        primary_sort = File.updated_at.asc() if is_asc else File.updated_at.desc()
+                        primary_sort = (
+                            File.updated_at.asc() if is_asc else File.updated_at.desc()
+                        )
 
                 # Apply sort with secondary key for deterministic pagination
                 query = query.order_by(primary_sort, File.id.asc())

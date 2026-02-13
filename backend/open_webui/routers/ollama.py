@@ -38,7 +38,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, validator
-from starlette.background import BackgroundTask
+
 from sqlalchemy.orm import Session
 
 from open_webui.internal.db import get_session
@@ -46,8 +46,11 @@ from open_webui.internal.db import get_session
 
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import Groups
 from open_webui.utils.misc import (
     calculate_sha256,
+    cleanup_response,
+    stream_wrapper,
 )
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
@@ -102,16 +105,6 @@ async def send_get_request(url, key=None, user: UserModel = None):
         return None
 
 
-async def cleanup_response(
-    response: Optional[aiohttp.ClientResponse],
-    session: Optional[aiohttp.ClientSession],
-):
-    if response:
-        response.close()
-    if session:
-        await session.close()
-
-
 async def send_post_request(
     url: str,
     payload: Union[str, bytes],
@@ -123,6 +116,7 @@ async def send_post_request(
 ):
 
     r = None
+    streaming = False
     try:
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
@@ -167,13 +161,11 @@ async def send_post_request(
             if content_type:
                 response_headers["Content-Type"] = content_type
 
+            streaming = True
             return StreamingResponse(
-                r.content,
+                stream_wrapper(r, session),
                 status_code=r.status,
                 headers=response_headers,
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
             )
         else:
             res = await r.json()
@@ -189,7 +181,7 @@ async def send_post_request(
             detail=detail if e else "Open WebUI: Server Connection Error",
         )
     finally:
-        if not stream:
+        if not streaming:
             await cleanup_response(r, session)
 
 
@@ -425,15 +417,20 @@ async def get_all_models(request: Request, user: UserModel = None):
 
 async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
+    model_ids = [model["model"] for model in models.get("models", [])]
+    model_infos = {m.id: m for m in Models.get_models_by_ids(model_ids, db=db)}
+    user_group_ids = {g.id for g in Groups.get_groups_by_member_id(user.id, db=db)}
+
     filtered_models = []
     for model in models.get("models", []):
-        model_info = Models.get_model_by_id(model["model"], db=db)
+        model_info = model_infos.get(model["model"])
         if model_info:
             if user.id == model_info.user_id or AccessGrants.has_access(
                 user_id=user.id,
                 resource_type="model",
                 resource_id=model_info.id,
                 permission="read",
+                user_group_ids=user_group_ids,
                 db=db,
             ):
                 filtered_models.append(model)
@@ -1024,13 +1021,13 @@ async def embed(
     log.info(f"generate_ollama_batch_embeddings {form_data}")
 
     if url_idx is None:
-        await get_all_models(request, user=user)
-        models = request.app.state.OLLAMA_MODELS
-
         model = form_data.model
 
-        if ":" not in model:
-            model = f"{model}:latest"
+        # Check if model is already in app state cache to avoid expensive get_all_models() call
+        models = request.app.state.OLLAMA_MODELS
+        if not models or model not in models:
+            await get_all_models(request, user=user)
+            models = request.app.state.OLLAMA_MODELS
 
         if model in models:
             url_idx = random.choice(models[model]["urls"])
@@ -1109,13 +1106,13 @@ async def embeddings(
     log.info(f"generate_ollama_embeddings {form_data}")
 
     if url_idx is None:
-        await get_all_models(request, user=user)
-        models = request.app.state.OLLAMA_MODELS
-
         model = form_data.model
 
-        if ":" not in model:
-            model = f"{model}:latest"
+        # Check if model is already in app state cache to avoid expensive get_all_models() call
+        models = request.app.state.OLLAMA_MODELS
+        if not models or model not in models:
+            await get_all_models(request, user=user)
+            models = request.app.state.OLLAMA_MODELS
 
         if model in models:
             url_idx = random.choice(models[model]["urls"])
@@ -1204,10 +1201,6 @@ async def generate_completion(
         models = request.app.state.OLLAMA_MODELS
 
         model = form_data.model
-
-        if ":" not in model:
-            model = f"{model}:latest"
-
         if model in models:
             url_idx = random.choice(models[model]["urls"])
         else:
@@ -1643,15 +1636,20 @@ async def get_openai_models(
 
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
+        model_ids = [model["id"] for model in models]
+        model_infos = {m.id: m for m in Models.get_models_by_ids(model_ids, db=db)}
+        user_group_ids = {g.id for g in Groups.get_groups_by_member_id(user.id, db=db)}
+
         filtered_models = []
         for model in models:
-            model_info = Models.get_model_by_id(model["id"], db=db)
+            model_info = model_infos.get(model["id"])
             if model_info:
                 if user.id == model_info.user_id or AccessGrants.has_access(
                     user_id=user.id,
                     resource_type="model",
                     resource_id=model_info.id,
                     permission="read",
+                    user_group_ids=user_group_ids,
                     db=db,
                 ):
                     filtered_models.append(model)

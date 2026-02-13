@@ -301,6 +301,56 @@ async def update_note_by_id(
 
 
 ############################
+# UpdateNoteAccessById
+############################
+
+
+class NoteAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post("/{id}/access/update", response_model=Optional[NoteModel])
+async def update_note_access_by_id(
+    request: Request,
+    id: str,
+    form_data: NoteAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    note = Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role != "admin" and (
+        user.id != note.user_id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="note",
+            resource_id=note.id,
+            permission="write",
+            db=db,
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    AccessGrants.set_access_grants("note", id, form_data.access_grants, db=db)
+
+    return Notes.get_note_by_id(id, db=db)
+
+
+############################
 # DeleteNoteById
 ############################
 

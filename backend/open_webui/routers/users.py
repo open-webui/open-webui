@@ -41,7 +41,6 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.access_control import get_permissions, has_permission
 
-
 log = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -173,6 +172,7 @@ class WorkspacePermissions(BaseModel):
     knowledge: bool = False
     prompts: bool = False
     tools: bool = False
+    skills: bool = False
     models_import: bool = False
     models_export: bool = False
     prompts_import: bool = False

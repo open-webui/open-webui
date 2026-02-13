@@ -36,7 +36,6 @@ from open_webui.utils.tools import get_tool_servers
 from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 
-
 log = logging.getLogger(__name__)
 
 
@@ -77,12 +76,21 @@ async def get_tools(
         )
 
     # OpenAPI Tool Servers
+    server_access_grants = {}
     for server in await get_tool_servers(request):
+        connection = request.app.state.config.TOOL_SERVER_CONNECTIONS[
+            server.get("idx", 0)
+        ]
+        server_config = connection.get("config", {})
+
+        server_id = f"server:{server.get('id')}"
+        server_access_grants[server_id] = server_config.get("access_grants", [])
+
         tools.append(
             ToolUserResponse(
                 **{
-                    "id": f"server:{server.get('id')}",
-                    "user_id": f"server:{server.get('id')}",
+                    "id": server_id,
+                    "user_id": server_id,
                     "name": server.get("openapi", {})
                     .get("info", {})
                     .get("title", "Tool Server"),
@@ -91,11 +99,6 @@ async def get_tools(
                         .get("info", {})
                         .get("description", ""),
                     },
-                    "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                        server.get("idx", 0)
-                    ]
-                    .get("config", {})
-                    .get("access_control", None),
                     "updated_at": int(time.time()),
                     "created_at": int(time.time()),
                 }
@@ -119,20 +122,22 @@ async def get_tools(
                     )
                 )
 
+            server_config = server.get("config", {})
+
+            tool_id = f"server:mcp:{server.get('info', {}).get('id')}"
+            server_access_grants[tool_id] = server_config.get("access_grants", [])
+
             tools.append(
                 ToolUserResponse(
                     **{
-                        "id": f"server:mcp:{server.get('info', {}).get('id')}",
-                        "user_id": f"server:mcp:{server.get('info', {}).get('id')}",
+                        "id": tool_id,
+                        "user_id": tool_id,
                         "name": server.get("info", {}).get("name", "MCP Tool Server"),
                         "meta": {
                             "description": server.get("info", {}).get(
                                 "description", ""
                             ),
                         },
-                        "access_control": server.get("config", {}).get(
-                            "access_control", None
-                        ),
                         "updated_at": int(time.time()),
                         "created_at": int(time.time()),
                         **(
@@ -161,7 +166,7 @@ async def get_tools(
                 has_access(
                     user.id,
                     "read",
-                    getattr(tool, "access_control", None),
+                    server_access_grants.get(str(tool.id), []),
                     user_group_ids,
                     db=db,
                 )
@@ -508,6 +513,50 @@ async def update_tools_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(str(e)),
         )
+
+
+############################
+# UpdateToolAccessById
+############################
+
+
+class ToolAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post("/id/{id}/access/update", response_model=Optional[ToolModel])
+async def update_tool_access_by_id(
+    id: str,
+    form_data: ToolAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    tools = Tools.get_tool_by_id(id, db=db)
+    if not tools:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        tools.user_id != user.id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="tool",
+            resource_id=tools.id,
+            permission="write",
+            db=db,
+        )
+        and user.role != "admin"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    AccessGrants.set_access_grants("tool", id, form_data.access_grants, db=db)
+
+    return Tools.get_tool_by_id(id, db=db)
 
 
 ############################

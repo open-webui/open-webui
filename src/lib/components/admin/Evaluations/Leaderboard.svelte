@@ -183,7 +183,9 @@
 									class="size-5 rounded-full object-cover"
 								/>
 								<Tooltip content={`${model.name} (${model.id})`} placement="top-start">
-									<span class="font-medium text-gray-800 dark:text-gray-200 line-clamp-1">{model.name}</span>
+									<span class="font-medium text-gray-800 dark:text-gray-200 line-clamp-1"
+										>{model.name}</span
+									>
 								</Tooltip>
 							</div>
 						</td>
