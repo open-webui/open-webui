@@ -1,29 +1,25 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { pdfExportOverlay } from '$lib/utils/pdf';
+	import type i18nType from '$lib/i18n';
 
-	const i18n = getContext<any>('i18n');
+	const i18n = getContext<typeof i18nType>('i18n');
 
 	const onCancel = () => {
 		$pdfExportOverlay.onCancel?.();
 	};
 
-	$: exportTitle =
-		$pdfExportOverlay.stage === 'done' || $pdfExportOverlay.progress >= 100
-			? $i18n.t('Export to PDF')
-			: $i18n.t('Exporting PDF');
-
-	$: estimatedMinutes = $pdfExportOverlay.estimatedRemainingMinutes ?? '--';
-	$: exportStatus = $i18n.t('Exporting content. Estimated time: {{minutes}} min. Please wait...', {
+	$: estimatedMinutes = $pdfExportOverlay.estimatedRemainingMinutes;
+	$: exportStatus = estimatedMinutes ? $i18n.t('Exporting content. Estimated time: {{minutes}} min. Please wait...', {
 		minutes: estimatedMinutes
-	});
+	}) : $i18n.t('Exporting content. Please wait...');
 </script>
 
 {#if $pdfExportOverlay.show}
 	<div class="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-4">
 		<div class="w-full max-w-md rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-2xl p-5">
 			<div class="text-base font-medium text-gray-900 dark:text-gray-100">
-				{exportTitle}
+				{$i18n.t('Exporting PDF')}
 			</div>
 
 			<div class="mt-2 text-sm text-gray-600 dark:text-gray-300">
