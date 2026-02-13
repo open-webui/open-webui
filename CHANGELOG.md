@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🐛 **Sync modal unexpected appearance.** Fixed an issue where the Sync Modal would appear unexpectedly after enabling the "Community Sharing" feature if the user had previously visited the app with the sync parameter. [#21376](https://github.com/open-webui/open-webui/pull/21376)
 - 🎨 **Knowledge collection layout fix.** Fixed a layout issue in the Knowledge integration menu where long collection names caused indentation artifacts and now properly truncate with ellipsis. [#21374](https://github.com/open-webui/open-webui/pull/21374)
 - 📝 **Metadata processing crash fix.** Fixed a latent bug where processing document metadata containing certain keys (content, pages, tables, paragraphs, sections, figures) would cause a RuntimeError due to dictionary mutation during iteration. [#21105](https://github.com/open-webui/open-webui/pull/21105)
+- 🔑 **Password validation regex fix.** Fixed the password validation regex by adding the raw string prefix, ensuring escape sequences like \d and \w are interpreted correctly. [#21400](https://github.com/open-webui/open-webui/pull/21400), [#21399](https://github.com/open-webui/open-webui/issues/21399)
 
 ### Changed
 
