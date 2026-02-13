@@ -53,3 +53,5 @@ chromadb==1.4.1
 black==26.1.0
 pydub
 chardet==5.2.0
+
+torch<=2.9.1 # fix: pin torch - 2.10.0 aarch64 wheels cause SIGILL on ARM devices (RPi 4 Cortex-A72) #21349
