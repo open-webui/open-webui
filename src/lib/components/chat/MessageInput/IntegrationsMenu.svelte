@@ -115,7 +115,7 @@
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
 					{#if tools}
-						{#if Object.keys(tools).length > 0}
+						{#if Object.keys(tools).length > 0 && ($user?.role === 'admin' || ($user?.permissions?.chat?.tool_selection ?? true))}
 							<button
 								class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
 								on:click={() => {

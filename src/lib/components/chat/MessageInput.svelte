@@ -478,7 +478,9 @@
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
 	let showToolsButton = false;
-	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
+	$: showToolsButton =
+		(($tools ?? []).length > 0 || ($toolServers ?? []).length > 0) &&
+		($_user?.role === 'admin' || ($_user?.permissions?.chat?.tool_selection ?? true));
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =

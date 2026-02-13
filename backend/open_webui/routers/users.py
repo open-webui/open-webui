@@ -214,6 +214,7 @@ class ChatPermissions(BaseModel):
     multiple_models: bool = True
     temporary: bool = True
     temporary_enforced: bool = False
+    tool_selection: bool = True
 
 
 class FeaturesPermissions(BaseModel):
