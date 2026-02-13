@@ -6,7 +6,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { downloadChatPdf } from '$lib/utils/pdf';
+	import { exportPDF, exportPlainTextToPdf } from '$lib/utils/pdf';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
 	import {
@@ -78,24 +78,33 @@
 	};
 
 	const downloadPdf = async () => {
-		await downloadChatPdf({
-			title: chat.chat.title,
-			stylizedPdfExport: $settings?.stylizedPdfExport ?? true,
-			containerSelector: '#full-messages-container .all-messages-container',
-			chatText: await getChatAsText(),
-			async onBeforeRender() {
-				showFullMessages = true;
-				await tick();
-				try {
-					await exportMessagesRef?.waitForSettled?.();
-				} catch (error) {
-					console.warn('Timed out while waiting for async render tasks before PDF export:', error);
-				}
-			},
-			onAfterRender() {
-				showFullMessages = false;
+		try {
+			const filename = `chat-${chat.chat.title}.pdf`;
+			if ($settings?.stylizedPdfExport ?? true) {
+				await exportPDF({
+					filename,
+					containerSelector: '#full-messages-container .all-messages-container',
+					async onBeforeRender() {
+						showFullMessages = true;
+						await tick();
+						try {
+							await exportMessagesRef?.waitForSettled?.();
+						} catch (error) {
+							console.warn('Timed out while waiting for async render tasks before PDF export:', error);
+						}
+					},
+					onAfterRender() {
+						showFullMessages = false;
+					}
+				});
+			} else {
+				await exportPlainTextToPdf(await getChatAsText(), filename);
 			}
-		});
+			toast.success($i18n.t('PDF exported successfully.'));
+		} catch (e) {
+			console.error(e);
+			toast.error($i18n.t('Failed to export PDF.'));
+		}
 	};
 
 	const downloadJSONExport = async () => {

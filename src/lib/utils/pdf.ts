@@ -30,12 +30,8 @@ interface NoteData {
 interface ChatPdfOptions {
 	/** ID of the container element to render (for stylized mode) */
 	containerSelector?: string;
-	/** Plain text content (for plain text mode) */
-	chatText?: string;
-	/** PDF filename (without .pdf extension) */
-	title: string;
-	/** Whether to use stylized PDF export (default: true) */
-	stylizedPdfExport?: boolean;
+	/** PDF filename */
+	filename: string;
 	/** Optional callback before rendering (for showing full messages) */
 	onBeforeRender?: () => Promise<void> | void;
 	/** Optional callback after rendering (for hiding full messages) */
@@ -536,7 +532,7 @@ const createNoteNode = (note: NoteData, virtualWidth: number): HTMLElement => {
 	return node;
 };
 
-// ==================== Chat-specific Functions ====================
+// ==================== Export PDF Functions ====================
 
 /**
  * Clone and style an existing DOM element for PDF rendering
@@ -556,7 +552,7 @@ const cloneElementForRendering = (element: HTMLElement, virtualWidth: number): H
  * @param text - Plain text content to export
  * @param filename - Filename for the PDF file
  */
-const exportPlainTextToPdf = async (text: string, filename: string): Promise<void> => {
+export const exportPlainTextToPdf = async (text: string, filename: string): Promise<void> => {
 	const doc = await createPdfDocument();
 
 	// Margins
@@ -727,23 +723,22 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
 };
 
 /**
- * Download PDF from chat (supports stylized and plain text modes)
- *
- * Stylized mode: Renders the chat messages container as an image using html2canvas,
+ * Renders the element container as an image using html2canvas,
  * then converts it to PDF with proper pagination.
- *
- * Plain text mode: Exports chat content as plain text with basic formatting.
  *
  * @param options - Configuration object
  * @param options.containerSelector - ID of the container element to render (for stylized mode).
- * @param options.chatText - Plain text content (required for plain text mode)
- * @param options.title - PDF filename (without .pdf extension)
- * @param options.stylizedPdfExport - Whether to use stylized PDF export (default: true)
+ * @param options.filename - PDF filename
  * @param options.onBeforeRender - Optional callback before rendering (for showing full messages)
  * @param options.onAfterRender - Optional callback after rendering (for hiding full messages)
  * @throws Error if PDF generation fails or if chatText is missing in plain text mode
  */
-export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> => {
+export const exportPDF = async (options: ChatPdfOptions): Promise<void> => {
+	const { containerSelector } = options;
+	if (!containerSelector) {
+		throw new Error('containerSelector is required for stylized PDF export');
+	}
+
 	const internalAbortController = new AbortController();
 	const onAbortFromExternal = () => internalAbortController.abort();
 	options.signal?.addEventListener('abort', onAbortFromExternal);
@@ -781,54 +776,38 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 	});
 
 	try {
-		if ((options.stylizedPdfExport ?? true) && options.containerSelector) {
-			throwIfAborted(effectiveSignal);
-			await options.onBeforeRender?.();
+		throwIfAborted(effectiveSignal);
+		await options.onBeforeRender?.();
 
-			const containerElement = document.querySelector(options.containerSelector) as HTMLElement;
+		const containerElement = document.querySelector(containerSelector) as HTMLElement;
+		if (!containerElement) {
+			throw new Error(`Container element not found for selector: ${containerSelector}`);
+		}
+
+		try {
+			// Clone and style element for rendering
+			const clonedElement = cloneElementForRendering(containerElement, DEFAULT_VIRTUAL_WIDTH);
 			try {
-				if (containerElement) {
-					// Clone and style element for rendering
-					const clonedElement = cloneElementForRendering(containerElement, DEFAULT_VIRTUAL_WIDTH);
-					try {
-						await exportStyledElementToPdf(
-							clonedElement,
-							`chat-${options.title}.pdf`,
-							DEFAULT_VIRTUAL_WIDTH,
-							100,
-							(progress) => {
-								emitExportProgress(options.onProgress, progress);
-								updateOverlay(progress);
-							},
-							effectiveSignal
-						);
-					} finally {
-						// Clean up cloned element
-						if (clonedElement.parentNode) {
-							document.body.removeChild(clonedElement);
-						}
-					}
-				}
+				await exportStyledElementToPdf(
+					clonedElement,
+					options.filename,
+					DEFAULT_VIRTUAL_WIDTH,
+					100,
+					(progress) => {
+						emitExportProgress(options.onProgress, progress);
+						updateOverlay(progress);
+					},
+					effectiveSignal
+				);
 			} finally {
-				await options.onAfterRender?.();
+				// Clean up cloned element
+				if (clonedElement.parentNode) {
+					document.body.removeChild(clonedElement);
+				}
 			}
-
-			return;
+		} finally {
+			await options.onAfterRender?.();
 		}
-
-		if (options.chatText) {
-			throwIfAborted(effectiveSignal);
-			const preparingProgress: PdfExportProgress = { stage: 'preparing', percent: 0 };
-			emitExportProgress(options.onProgress, preparingProgress);
-			updateOverlay(preparingProgress);
-			await exportPlainTextToPdf(options.chatText, `chat-${options.title}.pdf`);
-			const doneProgress: PdfExportProgress = { stage: 'done', percent: 100 };
-			emitExportProgress(options.onProgress, doneProgress);
-			updateOverlay(doneProgress);
-			return;
-		}
-
-		throw new Error('Either containerSelector or chatText is required');
 	} catch (error) {
 		if (error instanceof Error && error.name === 'AbortError') {
 			return;
