@@ -56,9 +56,6 @@ chromadb==1.4.1
 weaviate-client==4.19.2
 opensearch-py==3.1.0
 
-torch<=2.9.1 # fix: pin torch - 2.10.0 aarch64 wheels cause SIGILL on ARM devices (RPi 4 Cortex-A72) #21349
-torchvision
-torchaudio
 transformers==5.1.0
 sentence-transformers==5.2.2
 accelerate
