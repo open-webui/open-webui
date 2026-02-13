@@ -211,8 +211,6 @@ def get_redis_connection(
                 "port": redis_config["port"],
                 "db": redis_config["db"],
                 "ssl": redis_config["ssl"],
-                "username": redis_config["username"],
-                "password": redis_config["password"],
                 "decode_responses": decode_responses,
                 "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT,
                 **sentinel_kwargs
@@ -248,8 +246,6 @@ def get_redis_connection(
                 "port": redis_config["port"],
                 "db": redis_config["db"],
                 "ssl": redis_config["ssl"],
-                "username": redis_config["username"],
-                "password": redis_config["password"],
                 "decode_responses": decode_responses,
                 "socket_connect_timeout": REDIS_SOCKET_CONNECT_TIMEOUT,
                 **sentinel_kwargs

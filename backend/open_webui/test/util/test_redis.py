@@ -45,8 +45,8 @@ class TestSentinelRedisProxy:
 
         result = parse_redis_service_url(url)
 
-        assert result["username"] is None
-        assert result["password"] is None
+        assert result["username"] == "user"
+        assert result["password"] == "password"
         assert result["service"] == "mymaster"
         assert result["port"] == 6379
         assert result["db"] == 0
