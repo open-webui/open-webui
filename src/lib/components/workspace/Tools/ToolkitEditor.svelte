@@ -192,7 +192,7 @@ class Tools:
 	bind:accessGrants
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.tools || $user?.role === 'admin'}
-	sharePublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin' || edit}
+	sharePublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
 	onChange={async () => {
 		if (edit && id) {
 			try {

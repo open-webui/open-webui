@@ -314,7 +314,13 @@ async def connect(sid, environ, auth):
 
         if user:
             SESSION_POOL[sid] = user.model_dump(
-                exclude=["date_of_birth", "bio", "gender"]
+                exclude=[
+                    "profile_image_url",
+                    "profile_banner_image_url",
+                    "date_of_birth",
+                    "bio",
+                    "gender",
+                ]
             )
             await sio.enter_room(sid, f"user:{user.id}")
 

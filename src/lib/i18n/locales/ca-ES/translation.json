@@ -1665,6 +1665,7 @@
 	"Skill Name": "Nom de l'habilitat",
 	"Skill updated successfully": "Habilitat actualitzada correctament",
 	"Skills": "Habilitats",
+	"Skills Access": "",
 	"Skip Cache": "Ometre la memòria cau",
 	"Skip the cache and re-run the inference. Defaults to False.": "Omet la memòria cai i torna a executar la inferència. Per defecte és Fals.",
 	"Something went wrong :/": "Quelcom no ha anat bé",

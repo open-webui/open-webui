@@ -72,16 +72,8 @@
 
 	let searchDebounceTimer;
 
-	$: if (
-		page !== undefined &&
-		query !== undefined &&
-		selectedTag !== undefined &&
-		viewOption !== undefined
-	) {
-		clearTimeout(searchDebounceTimer);
-		searchDebounceTimer = setTimeout(() => {
-			getModelList();
-		}, 300);
+	$: if (loaded && page !== undefined && selectedTag !== undefined && viewOption !== undefined) {
+		getModelList();
 	}
 
 	const getModelList = async () => {
@@ -239,6 +231,7 @@
 		let groups = await getGroups(localStorage.token);
 		groupIds = groups.map((group) => group.id);
 
+		await tick();
 		loaded = true;
 
 		const onKeyDown = (event) => {
@@ -404,6 +397,12 @@
 					bind:value={query}
 					placeholder={$i18n.t('Search Models')}
 					maxlength="500"
+					on:input={() => {
+						clearTimeout(searchDebounceTimer);
+						searchDebounceTimer = setTimeout(() => {
+							getModelList();
+						}, 300);
+					}}
 				/>
 
 				{#if query}
@@ -412,6 +411,7 @@
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:click={() => {
 								query = '';
+								getModelList();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />

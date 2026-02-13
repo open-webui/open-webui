@@ -1664,6 +1664,7 @@
 	"Skill Name": "",
 	"Skill updated successfully": "",
 	"Skills": "",
+	"Skills Access": "",
 	"Skip Cache": "Keshni o'tkazib yuborish",
 	"Skip the cache and re-run the inference. Defaults to False.": "Keshni o'tkazib yuboring va xulosani qayta ishga tushiring. Birlamchi parametrlar False.",
 	"Something went wrong :/": "",
