@@ -540,9 +540,7 @@ async def get_channel_members_by_id(
 
         return {
             "users": [
-                UserModelResponse(
-                    **user.model_dump(), is_active=Users.is_active(user)
-                )
+                UserModelResponse(**user.model_dump(), is_active=Users.is_active(user))
                 for user in users
             ],
             "total": total,
@@ -575,9 +573,7 @@ async def get_channel_members_by_id(
 
         return {
             "users": [
-                UserModelResponse(
-                    **user.model_dump(), is_active=Users.is_active(user)
-                )
+                UserModelResponse(**user.model_dump(), is_active=Users.is_active(user))
                 for user in users
             ],
             "total": total,
