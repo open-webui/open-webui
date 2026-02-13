@@ -38,7 +38,7 @@
 	export let paragraphTag = 'p';
 
 	export let editCodeBlock = true;
-export let exportMode = false;
+	export let exportMode = false;
 	export let topPadding = false;
 
 	export let onSave: Function = () => {};
@@ -330,7 +330,7 @@ export let exportMode = false;
 			.replace(/<summary>.*?<\/summary>/gi, '')
 			.trim()}
 
-		{#if exportMode && token?.attributes?.type === 'reasoning'}
+		{#if exportMode || token?.attributes?.type === 'reasoning'}
 			<!-- Hide reasoning/thinking blocks in export mode -->
 		{:else if token?.attributes?.type === 'tool_calls'}
 			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
@@ -343,7 +343,7 @@ export let exportMode = false;
 		{:else if textContent.length > 0}
 			<Collapsible
 				title={token.summary}
-				open={exportMode ? true : ($settings?.expandDetails ?? false)}
+				open={$settings?.expandDetails ?? false}
 				attributes={token?.attributes}
 				className="w-full space-y-1"
 				dir="auto"
