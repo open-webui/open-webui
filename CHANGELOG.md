@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🛠️ **Knowledge selector tooltip z-index.** Fixed an issue where tooltips in the "Select Knowledge" dropdown were hidden behind the menu, making it difficult to read knowledge item names and descriptions. [#21375](https://github.com/open-webui/open-webui/pull/21375)
 - 🐛 **Sync modal unexpected appearance.** Fixed an issue where the Sync Modal would appear unexpectedly after enabling the "Community Sharing" feature if the user had previously visited the app with the sync parameter. [#21376](https://github.com/open-webui/open-webui/pull/21376)
 - 🎨 **Knowledge integration menu truncation.** Fixed a layout issue in the Knowledge integration menu where long collection names caused indentation artifacts and now properly truncate with ellipsis. [#21374](https://github.com/open-webui/open-webui/pull/21374)
+- 🔍 **Web search result count.** The built-in search_web tool now respects the admin-configured "Search Result Count" setting instead of always returning 5 results when using Native Function Calling mode. [#21373](https://github.com/open-webui/open-webui/pull/21373), [#21371](https://github.com/open-webui/open-webui/issues/21371)
 
 ### Changed
 
