@@ -114,6 +114,17 @@ async def get_prompt_list(
         user.id, filter=filter, skip=skip, limit=limit, db=db
     )
 
+    # Batch-fetch writable prompt IDs in a single query instead of N has_access calls
+    prompt_ids = [prompt.id for prompt in result.items]
+    writable_prompt_ids = AccessGrants.get_accessible_resource_ids(
+        user_id=user.id,
+        resource_type="prompt",
+        resource_ids=prompt_ids,
+        permission="write",
+        user_group_ids=user_group_ids,
+        db=db,
+    )
+
     return PromptAccessListResponse(
         items=[
             PromptAccessResponse(
@@ -121,14 +132,7 @@ async def get_prompt_list(
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == prompt.user_id
-                    or AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type="prompt",
-                        resource_id=prompt.id,
-                        permission="write",
-                        user_group_ids=user_group_ids,
-                        db=db,
-                    )
+                    or prompt.id in writable_prompt_ids
                 ),
             )
             for prompt in result.items

@@ -418,21 +418,24 @@ async def get_all_models(request: Request, user: UserModel = None):
 async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     model_ids = [model["model"] for model in models.get("models", [])]
-    model_infos = {m.id: m for m in Models.get_models_by_ids(model_ids, db=db)}
-    user_group_ids = {g.id for g in Groups.get_groups_by_member_id(user.id, db=db)}
+    model_infos = {model_info.id: model_info for model_info in Models.get_models_by_ids(model_ids, db=db)}
+    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id, db=db)}
+
+    # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
+    accessible_model_ids = AccessGrants.get_accessible_resource_ids(
+        user_id=user.id,
+        resource_type="model",
+        resource_ids=list(model_infos.keys()),
+        permission="read",
+        user_group_ids=user_group_ids,
+        db=db,
+    )
 
     filtered_models = []
     for model in models.get("models", []):
         model_info = model_infos.get(model["model"])
         if model_info:
-            if user.id == model_info.user_id or AccessGrants.has_access(
-                user_id=user.id,
-                resource_type="model",
-                resource_id=model_info.id,
-                permission="read",
-                user_group_ids=user_group_ids,
-                db=db,
-            ):
+            if user.id == model_info.user_id or model_info.id in accessible_model_ids:
                 filtered_models.append(model)
     return filtered_models
 
@@ -1329,6 +1332,9 @@ async def generate_chat_completion(
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
+            user_group_ids = {
+                group.id for group in Groups.get_groups_by_member_id(user.id)
+            }
             if not (
                 user.id == model_info.user_id
                 or AccessGrants.has_access(
@@ -1336,6 +1342,7 @@ async def generate_chat_completion(
                     resource_type="model",
                     resource_id=model_info.id,
                     permission="read",
+                    user_group_ids=user_group_ids,
                 )
             ):
                 raise HTTPException(
@@ -1436,6 +1443,9 @@ async def generate_openai_completion(
 
         # Check if user has access to the model
         if user.role == "user":
+            user_group_ids = {
+                group.id for group in Groups.get_groups_by_member_id(user.id)
+            }
             if not (
                 user.id == model_info.user_id
                 or AccessGrants.has_access(
@@ -1443,6 +1453,7 @@ async def generate_openai_completion(
                     resource_type="model",
                     resource_id=model_info.id,
                     permission="read",
+                    user_group_ids=user_group_ids,
                 )
             ):
                 raise HTTPException(
@@ -1520,6 +1531,9 @@ async def generate_openai_chat_completion(
 
         # Check if user has access to the model
         if user.role == "user":
+            user_group_ids = {
+                group.id for group in Groups.get_groups_by_member_id(user.id)
+            }
             if not (
                 user.id == model_info.user_id
                 or AccessGrants.has_access(
@@ -1527,6 +1541,7 @@ async def generate_openai_chat_completion(
                     resource_type="model",
                     resource_id=model_info.id,
                     permission="read",
+                    user_group_ids=user_group_ids,
                 )
             ):
                 raise HTTPException(
@@ -1618,21 +1633,24 @@ async def get_openai_models(
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         model_ids = [model["id"] for model in models]
-        model_infos = {m.id: m for m in Models.get_models_by_ids(model_ids, db=db)}
-        user_group_ids = {g.id for g in Groups.get_groups_by_member_id(user.id, db=db)}
+        model_infos = {model_info.id: model_info for model_info in Models.get_models_by_ids(model_ids, db=db)}
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id, db=db)}
+
+        # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
+        accessible_model_ids = AccessGrants.get_accessible_resource_ids(
+            user_id=user.id,
+            resource_type="model",
+            resource_ids=list(model_infos.keys()),
+            permission="read",
+            user_group_ids=user_group_ids,
+            db=db,
+        )
 
         filtered_models = []
         for model in models:
             model_info = model_infos.get(model["id"])
             if model_info:
-                if user.id == model_info.user_id or AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type="model",
-                    resource_id=model_info.id,
-                    permission="read",
-                    user_group_ids=user_group_ids,
-                    db=db,
-                ):
+                if user.id == model_info.user_id or model_info.id in accessible_model_ids:
                     filtered_models.append(model)
         models = filtered_models
 

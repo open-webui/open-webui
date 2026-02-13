@@ -96,6 +96,17 @@ async def get_models(
 
     result = Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
 
+    # Batch-fetch writable model IDs in a single query instead of N has_access calls
+    model_ids = [model.id for model in result.items]
+    writable_model_ids = AccessGrants.get_accessible_resource_ids(
+        user_id=user.id,
+        resource_type="model",
+        resource_ids=model_ids,
+        permission="write",
+        user_group_ids=user_group_ids,
+        db=db,
+    )
+
     return ModelAccessListResponse(
         items=[
             ModelAccessResponse(
@@ -103,14 +114,7 @@ async def get_models(
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == model.user_id
-                    or AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type="model",
-                        resource_id=model.id,
-                        permission="write",
-                        user_group_ids=user_group_ids,
-                        db=db,
-                    )
+                    or model.id in writable_model_ids
                 ),
             )
             for model in result.items
