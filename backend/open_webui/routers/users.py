@@ -200,6 +200,7 @@ class ChatPermissions(BaseModel):
     system_prompt: bool = True
     params: bool = True
     file_upload: bool = True
+    web_page_upload: bool = True
     delete: bool = True
     delete_message: bool = True
     continue_response: bool = True

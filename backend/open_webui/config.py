@@ -1416,6 +1416,10 @@ USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
     os.environ.get("USER_PERMISSIONS_CHAT_FILE_UPLOAD", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_WEB_PAGE_UPLOAD = (
+    os.environ.get("USER_PERMISSIONS_CHAT_WEB_PAGE_UPLOAD", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_DELETE = (
     os.environ.get("USER_PERMISSIONS_CHAT_DELETE", "True").lower() == "true"
 )
@@ -1552,6 +1556,7 @@ DEFAULT_USER_PERMISSIONS = {
         "system_prompt": USER_PERMISSIONS_CHAT_SYSTEM_PROMPT,
         "params": USER_PERMISSIONS_CHAT_PARAMS,
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
+        "web_page_upload": USER_PERMISSIONS_CHAT_WEB_PAGE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "delete_message": USER_PERMISSIONS_CHAT_DELETE_MESSAGE,
         "continue_response": USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE,
