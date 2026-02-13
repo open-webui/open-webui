@@ -236,7 +236,9 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             code_output = item.get("output", "")
 
             if code:
-                pending_content.append(f"<code_interpreter>\n{code}\n</code_interpreter>")
+                pending_content.append(
+                    f"<code_interpreter>\n{code}\n</code_interpreter>"
+                )
 
             if code_output:
                 if isinstance(code_output, dict):
@@ -246,7 +248,9 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
                 else:
                     output_text = str(code_output)
                 if output_text:
-                    pending_content.append(f"<code_interpreter_output>\n{output_text}\n</code_interpreter_output>")
+                    pending_content.append(
+                        f"<code_interpreter_output>\n{output_text}\n</code_interpreter_output>"
+                    )
 
         elif item_type.startswith("open_webui:"):
             # Skip other extension types
