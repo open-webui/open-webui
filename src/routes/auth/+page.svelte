@@ -16,11 +16,14 @@
 		userSignUp,
 		updateUserTimezone
 	} from '$lib/apis/auths';
+	import { getPublicBrandingConfig } from '$lib/apis/configs';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 
 	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
+	import { applyBranding, getEffectiveBranding } from '$lib/utils/branding';
+	import type { BrandingConfig } from '$lib/utils/branding';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
@@ -147,14 +150,29 @@
 	};
 
 	let onboarding = false;
+	let brandingConfig: BrandingConfig | null = null;
+	let effectiveBranding: ReturnType<typeof getEffectiveBranding> | null = null;
 
 	async function setLogoImage() {
 		await tick();
-		const logo = document.getElementById('logo');
+		const logo = document.getElementById('logo') as HTMLImageElement | null;
 
 		if (logo) {
-			const isDarkMode = document.documentElement.classList.contains('dark');
+			// On login page, always prefer the colored logo (logo_url) for visibility on dark backgrounds
+			if (effectiveBranding?.logo_url) {
+				logo.src = effectiveBranding.logo_url;
+				logo.style.filter = '';
+				return;
+			}
 
+			// Fallback to dark logo if no colored logo available
+			if (effectiveBranding?.logo_dark_url) {
+				logo.src = effectiveBranding.logo_dark_url;
+				logo.style.filter = '';
+				return;
+			}
+
+			const isDarkMode = document.documentElement.classList.contains('dark');
 			if (isDarkMode) {
 				const darkImage = new Image();
 				darkImage.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
@@ -190,6 +208,18 @@
 		form = $page.url.searchParams.get('form');
 
 		loaded = true;
+
+		// Fetch and apply public branding (accent colors, favicon, login background)
+		try {
+			brandingConfig = await getPublicBrandingConfig();
+			if (brandingConfig) {
+				applyBranding(brandingConfig);
+				effectiveBranding = getEffectiveBranding(brandingConfig);
+			}
+		} catch (e) {
+			console.debug('Branding config not available:', e);
+		}
+
 		setLogoImage();
 
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
@@ -202,7 +232,7 @@
 
 <svelte:head>
 	<title>
-		{`${$WEBUI_NAME}`}
+		{effectiveBranding?.app_name || $WEBUI_NAME}
 	</title>
 </svelte:head>
 
@@ -215,7 +245,12 @@
 />
 
 <div class="w-full h-screen max-h-[100dvh] text-white relative" id="auth-page">
-	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
+	<div
+		class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"
+		style={effectiveBranding?.login_background_color || effectiveBranding?.login_background_url
+			? `${effectiveBranding.login_background_color ? `background-color: ${effectiveBranding.login_background_color};` : ''}${effectiveBranding.login_background_url ? ` background-image: url('${effectiveBranding.login_background_url}'); background-size: cover; background-position: center;` : ''}`
+			: ''}
+	></div>
 
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
@@ -242,17 +277,15 @@
 				{:else}
 					<div class="my-auto flex flex-col justify-center items-center">
 						<div class=" sm:max-w-md my-auto pb-10 w-full dark:text-gray-100">
-							{#if $config?.metadata?.auth_logo_position === 'center'}
-								<div class="flex justify-center mb-6">
-									<img
-										id="logo"
-										crossorigin="anonymous"
-										src="{WEBUI_BASE_URL}/static/favicon.png"
-										class="size-24 rounded-full"
-										alt=""
-									/>
-								</div>
-							{/if}
+							<div class="flex justify-center mb-8">
+								<img
+									id="logo"
+									crossorigin="anonymous"
+									src="{WEBUI_BASE_URL}/static/favicon.png"
+									class="h-16 max-w-[280px] object-contain"
+									alt={effectiveBranding?.app_name || 'Logo'}
+								/>
+							</div>
 							<form
 								class=" flex flex-col justify-center"
 								on:submit={(e) => {
@@ -263,13 +296,21 @@
 								<div class="mb-1">
 									<div class=" text-2xl font-medium">
 										{#if $config?.onboarding ?? false}
-											{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+											{$i18n.t(`Get started with {{WEBUI_NAME}}`, {
+												WEBUI_NAME: effectiveBranding?.app_name || $WEBUI_NAME
+											})}
 										{:else if mode === 'ldap'}
-											{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
+											{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, {
+												WEBUI_NAME: effectiveBranding?.app_name || $WEBUI_NAME
+											})}
 										{:else if mode === 'signin'}
-											{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+											{$i18n.t(`Sign in to {{WEBUI_NAME}}`, {
+												WEBUI_NAME: effectiveBranding?.app_name || $WEBUI_NAME
+											})}
 										{:else}
-											{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+											{$i18n.t(`Sign up to {{WEBUI_NAME}}`, {
+												WEBUI_NAME: effectiveBranding?.app_name || $WEBUI_NAME
+											})}
 										{/if}
 									</div>
 
@@ -378,14 +419,14 @@
 									{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 										{#if mode === 'ldap'}
 											<button
-												class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+												class="bg-accent-500/10 hover:bg-accent-500/20 dark:bg-accent-400/10 dark:hover:bg-accent-400/20 text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition w-full rounded-full font-medium text-sm py-2.5"
 												type="submit"
 											>
 												{$i18n.t('Authenticate')}
 											</button>
 										{:else}
 											<button
-												class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+												class="bg-accent-500/10 hover:bg-accent-500/20 dark:bg-accent-400/10 dark:hover:bg-accent-400/20 text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition w-full rounded-full font-medium text-sm py-2.5"
 												type="submit"
 											>
 												{mode === 'signin'
@@ -423,7 +464,7 @@
 
 							{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 								<div class="inline-flex items-center justify-center w-full">
-									<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
+									<hr class="w-32 h-px my-4 border-0 dark:bg-accent-400/20 bg-accent-500/20" />
 									{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 										<span
 											class="px-3 text-sm font-medium text-gray-900 dark:text-white bg-transparent"
@@ -431,12 +472,12 @@
 										>
 									{/if}
 
-									<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
+									<hr class="w-32 h-px my-4 border-0 dark:bg-accent-400/20 bg-accent-500/20" />
 								</div>
 								<div class="flex flex-col space-y-2">
 									{#if $config?.oauth?.providers?.google}
 										<button
-											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											class="flex justify-center items-center bg-accent-500/10 hover:bg-accent-500/20 dark:bg-accent-400/10 dark:hover:bg-accent-400/20 text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 											}}
@@ -465,7 +506,7 @@
 									{/if}
 									{#if $config?.oauth?.providers?.microsoft}
 										<button
-											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											class="flex justify-center items-center bg-accent-500/10 hover:bg-accent-500/20 dark:bg-accent-400/10 dark:hover:bg-accent-400/20 text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
 											}}
@@ -495,7 +536,7 @@
 									{/if}
 									{#if $config?.oauth?.providers?.github}
 										<button
-											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											class="flex justify-center items-center bg-accent-500/10 hover:bg-accent-500/20 dark:bg-accent-400/10 dark:hover:bg-accent-400/20 text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`;
 											}}
@@ -515,7 +556,7 @@
 									{/if}
 									{#if $config?.oauth?.providers?.oidc}
 										<button
-											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											class="flex justify-center items-center bg-accent-500/10 hover:bg-accent-500/20 dark:bg-accent-400/10 dark:hover:bg-accent-400/20 text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
 											}}
@@ -544,7 +585,7 @@
 									{/if}
 									{#if $config?.oauth?.providers?.feishu}
 										<button
-											class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+											class="flex justify-center items-center bg-accent-500/10 hover:bg-accent-500/20 dark:bg-accent-400/10 dark:hover:bg-accent-400/20 text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition w-full rounded-full font-medium text-sm py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/feishu/login`;
 											}}
@@ -586,21 +627,5 @@
 				{/if}
 			</div>
 		</div>
-
-		{#if !$config?.metadata?.auth_logo_position}
-			<div class="fixed m-10 z-50">
-				<div class="flex space-x-2">
-					<div class=" self-center">
-						<img
-							id="logo"
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" w-6 rounded-full"
-							alt=""
-						/>
-					</div>
-				</div>
-			</div>
-		{/if}
 	{/if}
 </div>

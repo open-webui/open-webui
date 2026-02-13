@@ -1776,6 +1776,52 @@ except Exception as e:
 
 WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
 
+####################################
+# Branding
+####################################
+
+DEFAULT_BRANDING_CONFIG = {
+    "app_name": "",
+    "accent_color": "#e3530f",
+    "accent_color_scale": {},
+    "logo_url": "",
+    "logo_dark_url": "",
+    "favicon_url": "",
+    "login_background_url": "",
+    "login_background_color": "",
+    "presets": [
+        {
+            "name": "Foundations",
+            "accent_color": "#e3530f",
+            "accent_color_scale": {},
+            "background_color": "#1a2744",
+            "logo_url": "",
+            "logo_dark_url": "",
+            "favicon_url": "",
+            "login_background_url": "",
+            "login_background_color": "#1a2744",
+        },
+        {
+            "name": "Magellan",
+            "accent_color": "#e3530f",
+            "accent_color_scale": {},
+            "background_color": "#000000",
+            "logo_url": "",
+            "logo_dark_url": "",
+            "favicon_url": "",
+            "login_background_url": "",
+            "login_background_color": "#000000",
+        },
+    ],
+    "domain_mappings": [],
+}
+
+BRANDING_CONFIG = PersistentConfig(
+    "BRANDING_CONFIG",
+    "ui.branding",
+    json.loads(os.environ.get("BRANDING_CONFIG", json.dumps(DEFAULT_BRANDING_CONFIG))),
+)
+
 
 SHOW_ADMIN_DETAILS = PersistentConfig(
     "SHOW_ADMIN_DETAILS",

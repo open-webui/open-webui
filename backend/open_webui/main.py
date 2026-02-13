@@ -374,6 +374,7 @@ from open_webui.config import (
     WEBUI_AUTH,
     WEBUI_NAME,
     WEBUI_BANNERS,
+    BRANDING_CONFIG,
     WEBHOOK_URL,
     ADMIN_EMAIL,
     SHOW_ADMIN_DETAILS,
@@ -854,6 +855,7 @@ app.state.config.RESPONSE_WATERMARK = RESPONSE_WATERMARK
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
+app.state.config.BRANDING_CONFIG = BRANDING_CONFIG
 
 
 app.state.config.ENABLE_FOLDERS = ENABLE_FOLDERS
@@ -2190,6 +2192,7 @@ async def get_app_config(request: Request):
                     "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
                     "response_watermark": app.state.config.RESPONSE_WATERMARK,
                 },
+                "branding": app.state.config.BRANDING_CONFIG,
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(
                     {

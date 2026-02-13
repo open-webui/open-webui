@@ -958,7 +958,7 @@
 											</div>
 											<div class="flex items-center gap-2 flex-shrink-0">
 												{#if thread.unread}
-													<div class="shrink-0 size-2 rounded-full bg-[#e3530f]"></div>
+													<div class="shrink-0 size-2 rounded-full bg-accent-500"></div>
 												{/if}
 												<span class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
 													{getRelativeTime(thread.updated_at)}

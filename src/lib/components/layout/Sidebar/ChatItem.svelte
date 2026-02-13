@@ -481,7 +481,7 @@
 					{title}
 				</div>
 				{#if unread && id !== $chatId}
-					<div class="shrink-0 size-2 rounded-full bg-[#e3530f]"></div>
+					<div class="shrink-0 size-2 rounded-full bg-accent-500"></div>
 				{/if}
 			</div>
 

@@ -540,3 +540,61 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# Branding Config
+############################
+
+
+class BrandingPreset(BaseModel):
+    name: str
+    accent_color: Optional[str] = "#e3530f"
+    accent_color_scale: Optional[dict] = {}
+    background_color: Optional[str] = ""
+    logo_url: Optional[str] = ""
+    logo_dark_url: Optional[str] = ""
+    favicon_url: Optional[str] = ""
+    login_background_url: Optional[str] = ""
+    login_background_color: Optional[str] = ""
+
+
+class DomainMapping(BaseModel):
+    domain: str
+    preset_name: str
+
+
+class BrandingConfigForm(BaseModel):
+    app_name: Optional[str] = ""
+    accent_color: Optional[str] = "#e3530f"
+    accent_color_scale: Optional[dict] = {}
+    logo_url: Optional[str] = ""
+    logo_dark_url: Optional[str] = ""
+    favicon_url: Optional[str] = ""
+    login_background_url: Optional[str] = ""
+    login_background_color: Optional[str] = ""
+    presets: Optional[list[BrandingPreset]] = []
+    domain_mappings: Optional[list[DomainMapping]] = []
+
+
+@router.get("/branding")
+async def get_branding_config(request: Request, user=Depends(get_admin_user)):
+    return request.app.state.config.BRANDING_CONFIG
+
+
+@router.post("/branding")
+async def set_branding_config(
+    request: Request,
+    form_data: BrandingConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.BRANDING_CONFIG = form_data.model_dump()
+    return request.app.state.config.BRANDING_CONFIG
+
+
+@router.get("/branding/public")
+async def get_public_branding_config(request: Request):
+    """Public endpoint - returns branding config for domain-based theming.
+    No auth required so the login page can apply the correct theme."""
+    branding = request.app.state.config.BRANDING_CONFIG
+    return branding

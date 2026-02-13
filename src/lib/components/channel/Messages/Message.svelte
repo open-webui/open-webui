@@ -100,7 +100,7 @@
 				} ${
 					(message?.reply_to_message?.meta?.model_id ?? message?.reply_to_message?.user_id) ===
 					$user?.id
-						? 'border-l-4 border-orange-500 bg-orange-100/10 dark:bg-orange-100/5 pl-4'
+						? 'border-l-4 border-accent-500 bg-accent-100/10 dark:bg-accent-100/5 pl-4'
 						: ''
 				} ${message?.is_pinned ? 'bg-yellow-100/20 dark:bg-yellow-100/5' : ''}`} {showUserProfile
 			? 'pt-1.5 pb-0.5'

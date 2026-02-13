@@ -9,18 +9,18 @@ export default {
 		extend: {
 			colors: {
 				accent: {
-					DEFAULT: '#e3530f',
-					50: '#fef3ed',
-					100: '#fde4d4',
-					200: '#fac5a8',
-					300: '#f6a071',
-					400: '#f17038',
-					500: '#e3530f',
-					600: '#d44409',
-					700: '#b0330a',
-					800: '#8c2a10',
-					900: '#722610',
-					950: '#3e1006'
+					DEFAULT: 'var(--accent-500, #e3530f)',
+					50: 'var(--accent-50, #fef3ed)',
+					100: 'var(--accent-100, #fde4d4)',
+					200: 'var(--accent-200, #fac5a8)',
+					300: 'var(--accent-300, #f6a071)',
+					400: 'var(--accent-400, #f17038)',
+					500: 'var(--accent-500, #e3530f)',
+					600: 'var(--accent-600, #d44409)',
+					700: 'var(--accent-700, #b0330a)',
+					800: 'var(--accent-800, #8c2a10)',
+					900: 'var(--accent-900, #722610)',
+					950: 'var(--accent-950, #3e1006)'
 				},
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',

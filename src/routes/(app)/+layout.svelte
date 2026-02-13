@@ -16,6 +16,7 @@
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
+	import { applyBranding } from '$lib/utils/branding';
 
 	import {
 		config,
@@ -160,6 +161,11 @@
 				await Promise.all([setModels(), setToolServers()]);
 			})
 		]);
+
+		// Apply branding/theming based on config and current domain
+		if ($config?.branding) {
+			applyBranding($config.branding);
+		}
 
 		// Helper function to check if the pressed keys match the shortcut definition
 		const isShortcutMatch = (event: KeyboardEvent, shortcut): boolean => {

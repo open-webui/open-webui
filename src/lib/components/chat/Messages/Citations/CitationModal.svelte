@@ -34,7 +34,7 @@
 		if (percentage >= 60)
 			return 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200';
 		if (percentage >= 40)
-			return 'bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200';
+			return 'bg-accent-200 dark:bg-accent-800 text-accent-800 dark:text-accent-200';
 		return 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200';
 	}
 

@@ -21,6 +21,7 @@
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
+	import Branding from './Settings/Branding.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
@@ -45,6 +46,7 @@
 			'web',
 			'code-execution',
 			'interface',
+			'branding',
 			'audio',
 			'images',
 			'pipelines',
@@ -199,6 +201,26 @@
 				'prompt suggestions',
 				'title generation',
 				'tags'
+			]
+		},
+		{
+			id: 'branding',
+			title: 'Branding',
+			route: '/admin/settings/branding',
+			keywords: [
+				'branding',
+				'theme',
+				'logo',
+				'favicon',
+				'accent',
+				'color',
+				'preset',
+				'domain',
+				'login',
+				'background',
+				'foundations',
+				'magellan',
+				'white label'
 			]
 		},
 		{
@@ -438,6 +460,17 @@
 								clip-rule="evenodd"
 							/>
 						</svg>
+					{:else if tab.id === 'branding'}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4"
+						>
+							<path
+								d="M2 3.5A1.5 1.5 0 0 1 3.5 2h2.879a1.5 1.5 0 0 1 1.06.44l1.122 1.12A1.5 1.5 0 0 0 9.62 4H12.5A1.5 1.5 0 0 1 14 5.5v1.401a2.986 2.986 0 0 0-1.5-.401h-9c-.546 0-1.059.146-1.5.401V3.5ZM2 9.5v3A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-3A1.5 1.5 0 0 0 12.5 8h-9A1.5 1.5 0 0 0 2 9.5Z"
+							/>
+						</svg>
 					{:else if tab.id === 'audio'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -559,6 +592,15 @@
 			<Interface
 				on:save={() => {
 					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'branding'}
+			<Branding
+				saveHandler={async () => {
+					toast.success($i18n.t('Settings saved successfully!'));
+
+					await tick();
+					await config.set(await getBackendConfig());
 				}}
 			/>
 		{:else if selectedTab === 'audio'}
