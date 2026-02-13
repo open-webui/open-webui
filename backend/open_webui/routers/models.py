@@ -15,7 +15,7 @@ from open_webui.models.models import (
     ModelAccessResponse,
     Models,
 )
-from open_webui.models.access_grants import AccessGrants
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 
 from pydantic import BaseModel
 from open_webui.constants import ERROR_MESSAGES
@@ -506,6 +506,7 @@ class ModelAccessGrantsForm(BaseModel):
 
 @router.post("/model/access/update", response_model=Optional[ModelModel])
 async def update_model_access_by_id(
+    request: Request,
     form_data: ModelAccessGrantsForm,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
@@ -532,6 +533,24 @@ async def update_model_access_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    # Strip public sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_public_read_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "sharing.public_models",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = [
+            g for g in form_data.access_grants
+            if not (
+                g.get("principal_type") == "user"
+                and g.get("principal_id") == "*"
+            )
+        ]
 
     AccessGrants.set_access_grants(
         "model", form_data.id, form_data.access_grants, db=db

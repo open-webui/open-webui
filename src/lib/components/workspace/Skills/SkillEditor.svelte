@@ -113,7 +113,7 @@
 	bind:accessGrants
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.skills || $user?.role === 'admin'}
-	sharePublic={$user?.permissions?.sharing?.public_skills || $user?.role === 'admin' || edit}
+	sharePublic={$user?.permissions?.sharing?.public_skills || $user?.role === 'admin'}
 	onChange={async () => {
 		if (edit && skill?.id) {
 			try {

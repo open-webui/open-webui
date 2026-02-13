@@ -9,7 +9,7 @@ from open_webui.models.prompts import (
     PromptModel,
     Prompts,
 )
-from open_webui.models.access_grants import AccessGrants
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import (
     PromptHistories,
@@ -436,6 +436,7 @@ class PromptAccessGrantsForm(BaseModel):
 
 @router.post("/id/{prompt_id}/access/update", response_model=Optional[PromptModel])
 async def update_prompt_access_by_id(
+    request: Request,
     prompt_id: str,
     form_data: PromptAccessGrantsForm,
     user=Depends(get_verified_user),
@@ -463,6 +464,24 @@ async def update_prompt_access_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    # Strip public sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_public_read_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "sharing.public_prompts",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = [
+            g for g in form_data.access_grants
+            if not (
+                g.get("principal_type") == "user"
+                and g.get("principal_id") == "*"
+            )
+        ]
 
     AccessGrants.set_access_grants("prompt", prompt_id, form_data.access_grants, db=db)
 
