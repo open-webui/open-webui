@@ -2040,6 +2040,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception:
         pass
 
+    # Enforce LLM proxy budget if enabled — blocks request if user exceeded budget
+    from open_webui.utils.llm_proxy_budget import enforce_budget
+    await enforce_budget(extra_params.get("__user__"))
+
     # Process the form_data through the pipeline
     try:
         form_data = await process_pipeline_inlet_filter(

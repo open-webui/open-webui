@@ -209,6 +209,45 @@ LLM_PROXY_SYNC_KEY_USER_ID = os.environ.get("LLM_PROXY_SYNC_KEY_USER_ID", "user_
 LLM_PROXY_SYNC_KEY_USER_EMAIL = os.environ.get("LLM_PROXY_SYNC_KEY_USER_EMAIL", "user_email")
 LLM_PROXY_SYNC_KEY_USER_ALIAS = os.environ.get("LLM_PROXY_SYNC_KEY_USER_ALIAS", "user_alias")
 
+####################################
+# LLM PROXY BUDGET ENFORCEMENT
+####################################
+
+LLM_PROXY_BUDGET_ENFORCE = (
+    os.environ.get("LLM_PROXY_BUDGET_ENFORCE", "False").lower() == "true"
+)
+
+LLM_PROXY_BUDGET_ENDPOINT = os.environ.get("LLM_PROXY_BUDGET_ENDPOINT", "/user/info")
+
+LLM_PROXY_BUDGET_HTTP_METHOD = os.environ.get("LLM_PROXY_BUDGET_HTTP_METHOD", "GET").upper()
+
+LLM_PROXY_BUDGET_TIMEOUT = int(os.environ.get("LLM_PROXY_BUDGET_TIMEOUT", "5"))
+
+LLM_PROXY_BUDGET_CACHE_TTL = int(os.environ.get("LLM_PROXY_BUDGET_CACHE_TTL", "60"))
+
+LLM_PROXY_BUDGET_JSON_PATH_SPEND = os.environ.get(
+    "LLM_PROXY_BUDGET_JSON_PATH_SPEND", "user_info.spend"
+)
+LLM_PROXY_BUDGET_JSON_PATH_MAX_BUDGET = os.environ.get(
+    "LLM_PROXY_BUDGET_JSON_PATH_MAX_BUDGET", "user_info.max_budget"
+)
+LLM_PROXY_BUDGET_JSON_PATH_BUDGET_RESET_AT = os.environ.get(
+    "LLM_PROXY_BUDGET_JSON_PATH_BUDGET_RESET_AT", "user_info.budget_reset_at"
+)
+
+LLM_PROXY_BUDGET_QUERY_PARAM = os.environ.get("LLM_PROXY_BUDGET_QUERY_PARAM", "user_id")
+
+LLM_PROXY_BUDGET_AUTH_HEADER = os.environ.get("LLM_PROXY_BUDGET_AUTH_HEADER", "x-litellm-api-key")
+
+LLM_PROXY_BUDGET_EXCEEDED_MSG = os.environ.get(
+    "LLM_PROXY_BUDGET_EXCEEDED_MSG",
+    "You have exceeded your usage budget. Please contact your administrator."
+)
+
+LLM_PROXY_BUDGET_BLOCK_ADMINS = (
+    os.environ.get("LLM_PROXY_BUDGET_BLOCK_ADMINS", "False").lower() == "true"
+)
+
 
 ####################################
 # ENABLE_FORWARD_USER_INFO_HEADERS
