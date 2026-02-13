@@ -82,6 +82,8 @@
 		guardrail_hard_fail: false
 	};
 
+	let showOpenRouterAdvanced = false;
+
 	const saveHandler = async () => {
 		saveSettings({
 			system: system !== '' ? system : undefined,
@@ -354,15 +356,6 @@
 			</div>
 
 			<div class="flex items-center justify-between">
-				<div class="text-xs font-medium">{$i18n.t('Provider sort')}</div>
-				<select class="text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-md px-2 py-1" bind:value={openrouter.provider_sort}>
-					<option value="latency">latency</option>
-					<option value="price">price</option>
-					<option value="throughput">throughput</option>
-				</select>
-			</div>
-
-			<div class="flex items-center justify-between">
 				<div class="text-xs font-medium">{$i18n.t('Enable ZDR for sensitive requests')}</div>
 				<input type="checkbox" bind:checked={openrouter.zdr_sensitive} />
 			</div>
@@ -378,50 +371,76 @@
 			</div>
 
 			<div class="flex items-center justify-between">
-				<div class="text-xs font-medium">{$i18n.t('Structured JSON output')}</div>
-				<input type="checkbox" bind:checked={openrouter.json_output} />
+				<button
+					type="button"
+					class="text-xs underline text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+					on:click={() => {
+						showOpenRouterAdvanced = !showOpenRouterAdvanced;
+					}}
+				>
+					{showOpenRouterAdvanced
+						? $i18n.t('Hide advanced OpenRouter options')
+						: $i18n.t('Show advanced OpenRouter options')}
+				</button>
 			</div>
 
-			{#if openrouter.json_output}
+			{#if showOpenRouterAdvanced}
 				<div class="flex items-center justify-between">
-					<div class="text-xs font-medium">{$i18n.t('Response healing')}</div>
-					<input type="checkbox" bind:checked={openrouter.response_healing} />
+					<div class="text-xs font-medium">{$i18n.t('Provider sort')}</div>
+					<select class="text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-md px-2 py-1" bind:value={openrouter.provider_sort}>
+						<option value="latency">latency</option>
+						<option value="price">price</option>
+						<option value="throughput">throughput</option>
+					</select>
 				</div>
 
-				<div>
-					<div class="text-xs font-medium mb-1">{$i18n.t('JSON Schema (optional)')}</div>
-					<Textarea
-						bind:value={openrouter.json_schema}
-						className={'w-full text-xs outline-hidden resize-vertical dark:text-gray-300'}
-						rows="5"
-						placeholder={`{ "type": "object", "properties": { "answer": { "type": "string" } }, "required": ["answer"] }`}
+				<div class="flex items-center justify-between">
+					<div class="text-xs font-medium">{$i18n.t('Structured JSON output')}</div>
+					<input type="checkbox" bind:checked={openrouter.json_output} />
+				</div>
+
+				{#if openrouter.json_output}
+					<div class="flex items-center justify-between">
+						<div class="text-xs font-medium">{$i18n.t('Response healing')}</div>
+						<input type="checkbox" bind:checked={openrouter.response_healing} />
+					</div>
+
+					<div>
+						<div class="text-xs font-medium mb-1">{$i18n.t('JSON Schema (optional)')}</div>
+						<Textarea
+							bind:value={openrouter.json_schema}
+							className={'w-full text-xs outline-hidden resize-vertical dark:text-gray-300'}
+							rows="5"
+							placeholder={`{ "type": "object", "properties": { "answer": { "type": "string" } }, "required": ["answer"] }`}
+						/>
+					</div>
+				{/if}
+
+				<div class="text-xs font-medium mt-2">{$i18n.t('Guardrails')}</div>
+				<input
+					class="w-full text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-md px-2 py-1"
+					bind:value={openrouter.guardrail_allowed_models}
+					placeholder={$i18n.t('Allowed models (comma separated)')}
+				/>
+				<input
+					class="w-full text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-md px-2 py-1"
+					bind:value={openrouter.guardrail_allowed_providers}
+					placeholder={$i18n.t('Allowed providers (comma separated)')}
+				/>
+
+				<div class="flex items-center justify-between gap-3">
+					<input
+						class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-md px-2 py-1"
+						bind:value={openrouter.guardrail_max_tokens}
+						placeholder={$i18n.t('Max tokens')}
 					/>
+					<div class="flex items-center gap-2">
+						<label class="text-xs">{$i18n.t('Hard fail')}</label>
+						<input type="checkbox" bind:checked={openrouter.guardrail_hard_fail} />
+					</div>
 				</div>
 			{/if}
-
-			<div class="text-xs font-medium mt-2">{$i18n.t('Guardrails')}</div>
-			<input
-				class="w-full text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-md px-2 py-1"
-				bind:value={openrouter.guardrail_allowed_models}
-				placeholder={$i18n.t('Allowed models (comma separated)')}
-			/>
-			<input
-				class="w-full text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-md px-2 py-1"
-				bind:value={openrouter.guardrail_allowed_providers}
-				placeholder={$i18n.t('Allowed providers (comma separated)')}
-			/>
-
-			<div class="flex items-center justify-between gap-3">
-				<input
-					class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-800 rounded-md px-2 py-1"
-					bind:value={openrouter.guardrail_max_tokens}
-					placeholder={$i18n.t('Max tokens')}
-				/>
-				<div class="flex items-center gap-2">
-					<label class="text-xs">{$i18n.t('Hard fail')}</label>
-					<input type="checkbox" bind:checked={openrouter.guardrail_hard_fail} />
-				</div>
-			</div>
+		</div>
 		</div>
 	</div>
 
