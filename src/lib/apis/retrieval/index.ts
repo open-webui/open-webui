@@ -530,3 +530,50 @@ export const resetVectorDB = async (token: string) => {
 
 	return res;
 };
+
+export interface ProcessFileResult {
+	status: boolean;
+	collection_name: string;
+	filename: string;
+	content: string;
+}
+
+/**
+ * Process a file for RAG - extracts content and creates embeddings in the vector database.
+ * Call this after downloading files from external sources (SharePoint, etc.) to enable RAG.
+ */
+export const processFile = async (
+	token: string,
+	fileId: string,
+	collectionName?: string
+): Promise<ProcessFileResult | null> => {
+	let error = null;
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/file`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			file_id: fileId,
+			collection_name: collectionName ?? null
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error('[processFile] Error:', err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

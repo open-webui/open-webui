@@ -300,13 +300,16 @@ async def verify_tool_servers_config(
                         "specs": specs,
                     }
                 except Exception as e:
-                    log.debug(f"Failed to create MCP client: {e}")
+                    log.error(f"Failed to create MCP client: {type(e).__name__}: {e}")
+                    import traceback
+
+                    log.error(f"MCP client traceback:\n{traceback.format_exc()}")
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Failed to create MCP client",
+                        detail=f"Failed to create MCP client: {type(e).__name__}: {e}",
                     )
                 finally:
-                    if client:
+                    if client and client.exit_stack:
                         await client.disconnect()
         else:  # openapi
             token = None
@@ -397,7 +400,6 @@ async def get_code_execution_config(request: Request, user=Depends(get_admin_use
 async def set_code_execution_config(
     request: Request, form_data: CodeInterpreterConfigForm, user=Depends(get_admin_user)
 ):
-
     request.app.state.config.ENABLE_CODE_EXECUTION = form_data.ENABLE_CODE_EXECUTION
 
     request.app.state.config.CODE_EXECUTION_ENGINE = form_data.CODE_EXECUTION_ENGINE

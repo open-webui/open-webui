@@ -1434,6 +1434,45 @@
 							<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />
 						</div>
 					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('SharePoint')}</div>
+						<div class="flex items-center relative">
+							<Switch bind:state={RAGConfig.ENABLE_SHAREPOINT_INTEGRATION} />
+						</div>
+					</div>
+
+					{#if RAGConfig.ENABLE_SHAREPOINT_INTEGRATION}
+						<div class="ml-4 mb-2.5 flex flex-col gap-2">
+							<div class="flex w-full gap-2">
+								<div class="flex-1">
+									<div class="mb-1 text-xs font-medium">{$i18n.t('Client ID')}</div>
+									<input
+										class="w-full text-sm bg-transparent outline-hidden border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+										placeholder={$i18n.t('Microsoft App Client ID')}
+										bind:value={RAGConfig.SHAREPOINT_CLIENT_ID}
+									/>
+								</div>
+								<div class="flex-1">
+									<div class="mb-1 text-xs font-medium">{$i18n.t('Tenant ID')}</div>
+									<input
+										class="w-full text-sm bg-transparent outline-hidden border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+										placeholder={$i18n.t('Azure AD Tenant ID')}
+										bind:value={RAGConfig.SHAREPOINT_TENANT_ID}
+									/>
+								</div>
+							</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<div class="mb-1 text-xs font-medium">{$i18n.t('Client Secret')}</div>
+									<SensitiveInput
+										placeholder={$i18n.t('Microsoft App Client Secret')}
+										bind:value={RAGConfig.SHAREPOINT_CLIENT_SECRET}
+									/>
+								</div>
+							</div>
+						</div>
+					{/if}
 				</div>
 
 				<div class="mb-3">

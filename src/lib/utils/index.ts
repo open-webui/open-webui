@@ -355,7 +355,7 @@ export const generateInitialsImage = (name) => {
 	ctx.fillStyle = '#FFFFFF';
 	ctx.font = '40px Helvetica';
 	ctx.textAlign = 'center';
-	ctx.textBaseline = 'middle';
+	ctx.textBaseline = 'alphabetic';
 
 	const sanitizedName = name.trim();
 	const initials =
@@ -366,7 +366,10 @@ export const generateInitialsImage = (name) => {
 					: '')
 			: '';
 
-	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
+	const metrics = ctx.measureText(initials.toUpperCase());
+	const textHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+	const yPos = (canvas.height + textHeight) / 2 - metrics.actualBoundingBoxDescent;
+	ctx.fillText(initials.toUpperCase(), canvas.width / 2, yPos);
 
 	return canvas.toDataURL();
 };

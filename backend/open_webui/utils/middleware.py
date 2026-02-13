@@ -28,6 +28,7 @@ from open_webui.utils.misc import is_string_allowed
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
+from open_webui.models.spaces import Spaces
 from open_webui.models.users import Users
 from open_webui.socket.main import (
     get_event_call,
@@ -150,6 +151,70 @@ DEFAULT_REASONING_TAGS = [
 ]
 DEFAULT_SOLUTION_TAGS = [("<|begin_of_solution|>", "<|end_of_solution|>")]
 DEFAULT_CODE_INTERPRETER_TAGS = [("<code_interpreter>", "</code_interpreter>")]
+
+SHAREPOINT_SYNC_INTERVAL_SECONDS = 3600
+
+
+def _get_stale_sharepoint_files(space_files: list) -> list:
+    now = int(time.time())
+    sharepoint_files = [
+        f for f in space_files if f.meta and f.meta.get("source") == "sharepoint"
+    ]
+    return [
+        f
+        for f in sharepoint_files
+        if not f.meta.get("last_synced_at")
+        or (now - f.meta.get("last_synced_at", 0)) > SHAREPOINT_SYNC_INTERVAL_SECONDS
+    ]
+
+
+async def _background_sharepoint_sync(request, space_id: str, user) -> None:
+    try:
+        from open_webui.routers.sharepoint import (
+            get_tokens,
+            graph_api_request,
+            ENABLE_SHAREPOINT_INTEGRATION,
+        )
+        from open_webui.models.files import Files
+
+        if not ENABLE_SHAREPOINT_INTEGRATION.value:
+            return
+
+        tokens = await get_tokens(user, request)
+        space_files = Spaces.get_files_by_space_id(space_id)
+        sharepoint_files = [
+            f
+            for f in space_files
+            if f.meta
+            and f.meta.get("source") == "sharepoint"
+            and f.meta.get("sharepoint_drive_id")
+            and f.meta.get("sharepoint_item_id")
+        ]
+
+        for file in sharepoint_files:
+            try:
+                meta = file.meta or {}
+                drive_id = meta.get("sharepoint_drive_id")
+                item_id = meta.get("sharepoint_item_id")
+                stored_modified_at = meta.get("sharepoint_modified_at")
+
+                endpoint = f"/drives/{drive_id}/items/{item_id}"
+                params = {"$select": "id,lastModifiedDateTime"}
+                current_metadata = await graph_api_request(
+                    "GET", endpoint, tokens, params=params
+                )
+                current_modified_at = current_metadata.get("lastModifiedDateTime")
+
+                if stored_modified_at != current_modified_at:
+                    log.info(
+                        f"[middleware] SharePoint file {file.filename} needs sync (background)"
+                    )
+            except Exception as e:
+                log.debug(
+                    f"[middleware] Background sync check failed for {file.filename}: {e}"
+                )
+    except Exception as e:
+        log.debug(f"[middleware] Background SharePoint sync failed: {e}")
 
 
 def output_id(prefix: str) -> str:
@@ -1019,7 +1084,7 @@ async def chat_completion_tools_handler(
 
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{get_content_from_message(message)}\"\"\""
+            f'{message["role"].upper()}: """{get_content_from_message(message)}"""'
             for message in recent_messages
         )
 
@@ -1132,6 +1197,7 @@ async def chat_completion_tools_handler(
                         tool_result = await tool_function(**tool_function_params)
 
                 except Exception as e:
+                    log.exception(f"Tool execution error: {tool_function_name}")
                     tool_result = str(e)
 
                 tool_result, tool_result_files, tool_result_embeds = (
@@ -1346,11 +1412,28 @@ async def chat_web_search_handler(
     )
 
     try:
-        results = await process_web_search(
-            request,
-            SearchForm(queries=queries),
-            user=user,
+        # Apply space domain filters for focused web search
+        space_domains = extra_params.get("__metadata__", {}).get(
+            "space_domain_filter", []
         )
+        _original_domain_filter = request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST
+        if space_domains:
+            existing = _original_domain_filter or []
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST = list(
+                set(list(existing) + space_domains)
+            )
+
+        try:
+            results = await process_web_search(
+                request,
+                SearchForm(queries=queries),
+                user=user,
+            )
+        finally:
+            # Always restore original domain filter
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST = (
+                _original_domain_filter
+            )
 
         if results:
             files = form_data.get("files", [])
@@ -1430,7 +1513,6 @@ def get_images_from_messages(message_list):
     images = []
 
     for message in reversed(message_list):
-
         message_images = []
         for file in message.get("files", []):
             if file.get("type") == "image":
@@ -1769,7 +1851,8 @@ async def chat_completion_files_handler(
                 request=request,
                 items=files,
                 queries=queries,
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                embedding_function=lambda query,
+                prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
                 k=request.app.state.config.TOP_K,
@@ -2073,6 +2156,102 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         *form_data.get("files", []),
                     ]
 
+        # Apply Space instructions if chat belongs to a space
+        if chat and chat.space_id:
+            space = Spaces.get_space_by_id(chat.space_id)
+            if space and space.instructions:
+                form_data = apply_system_prompt_to_body(
+                    space.instructions, form_data, metadata, user
+                )
+
+            # Inject space files as context
+            space_files = Spaces.get_files_by_space_id(chat.space_id)
+            if space_files:
+                if "files" not in form_data:
+                    form_data["files"] = []
+                for sf in space_files:
+                    if not any(
+                        f.get("id") == sf.id for f in form_data.get("files", [])
+                    ):
+                        form_data["files"].append({"type": "file", "id": sf.id})
+
+                sharepoint_files_needing_sync = _get_stale_sharepoint_files(space_files)
+                if sharepoint_files_needing_sync:
+                    asyncio.create_task(
+                        _background_sharepoint_sync(request, chat.space_id, user)
+                    )
+
+            # Inject space links as domain filters for focused web search
+            space_links = Spaces.get_links_by_space_id(chat.space_id)
+            if space_links:
+                from urllib.parse import urlparse as _urlparse
+
+                link_domains = []
+                for link in space_links:
+                    try:
+                        url = link.url
+                        if not url.startswith("http"):
+                            url = "https://" + url
+                        parsed = _urlparse(url)
+                        domain = parsed.netloc or parsed.path.split("/")[0]
+                        if domain:
+                            link_domains.append(domain)
+                    except Exception:
+                        pass
+                if link_domains:
+                    metadata["space_domain_filter"] = link_domains
+
+    # Multi-user identity injection for Space threads
+    # When a chat belongs to a Space, multiple users may be sending messages.
+    # Inject sender names so the LLM can distinguish between participants.
+    space_id = metadata.get("space_id")
+    if space_id:
+        messages = form_data.get("messages", [])
+        # Collect unique user_ids to detect multi-user conversations
+        user_ids = set()
+        for msg in messages:
+            uid = msg.get("user_id")
+            if uid:
+                user_ids.add(uid)
+
+        if len(user_ids) > 1:
+            # Add system instruction about multi-user collaboration
+            form_data["messages"] = add_or_update_system_message(
+                "This is a collaborative conversation in a shared Space. "
+                "Multiple users are participating. Each user message is prefixed "
+                "with the sender's name in square brackets (e.g. [Name]: message). "
+                "Address users by name when relevant and keep track of who said what.",
+                form_data["messages"],
+                append=True,
+            )
+
+        # Process each message: add name field, prefix content, strip non-standard fields
+        for msg in form_data["messages"]:
+            if msg.get("role") != "user":
+                continue
+            sender_name = msg.pop("user_name", None)
+            msg.pop("user_id", None)
+            if sender_name and len(user_ids) > 1:
+                # OpenAI 'name' field: alphanumeric, hyphens, underscores only
+                sanitized_name = re.sub(r"[^a-zA-Z0-9_-]", "_", sender_name).strip("_")
+                if sanitized_name:
+                    msg["name"] = sanitized_name[:64]
+                # Prefix content with sender name for universal LLM compatibility
+                content = msg.get("content")
+                if isinstance(content, str):
+                    msg["content"] = f"[{sender_name}]: {content}"
+                elif isinstance(content, list):
+                    # Multimodal content (text + images)
+                    for item in content:
+                        if item.get("type") == "text":
+                            item["text"] = f"[{sender_name}]: {item['text']}"
+                            break
+    else:
+        # Non-space chats: strip non-standard fields that frontend may have passed
+        for msg in form_data.get("messages", []):
+            msg.pop("user_id", None)
+            msg.pop("user_name", None)
+
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data["messages"])
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
@@ -2167,8 +2346,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if "web_search" in features and features["web_search"]:
-            # Skip forced RAG web search when native FC is enabled - model can use web_search tool
-            if metadata.get("params", {}).get("function_calling") != "native":
+            # Skip forced RAG web search when:
+            # 1. Native FC is enabled - model can use web_search tool
+            # 2. Anthropic models - they have built-in web search via server tools
+            is_anthropic = model.get("owned_by") == "anthropic"
+            is_native_fc = (
+                metadata.get("params", {}).get("function_calling") == "native"
+            )
+            if not is_native_fc and not is_anthropic:
                 form_data = await chat_web_search_handler(
                     request, form_data, extra_params, user
                 )
@@ -2350,7 +2535,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         for key, value in connection_headers.items():
                             headers[key] = value
 
-                    # Add user info headers if enabled
                     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
                         headers = include_user_info_headers(headers, user)
                         if metadata and metadata.get("chat_id"):
@@ -2362,9 +2546,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 metadata.get("message_id")
                             )
 
+                    mcp_url = mcp_server_connection.get("url", "")
+                    log.info(
+                        f"[MCP Middleware] Connecting to MCP server '{server_id}' at {mcp_url}"
+                    )
+                    log.info(
+                        f"[MCP Middleware] Connection config: {mcp_server_connection}"
+                    )
+
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(
-                        url=mcp_server_connection.get("url", ""),
+                        url=mcp_url,
                         headers=headers if headers else None,
                     )
 
@@ -2375,7 +2567,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     if isinstance(function_name_filter_list, str):
                         function_name_filter_list = function_name_filter_list.split(",")
 
+                    log.info(f"[MCP Debug] Listing tool specs from {server_id}...")
                     tool_specs = await mcp_clients[server_id].list_tool_specs()
+                    log.info(
+                        f"[MCP Debug] Got {len(tool_specs)} tool specs from {server_id}"
+                    )
                     for tool_spec in tool_specs:
 
                         def make_tool_function(client, function_name):
@@ -2398,7 +2594,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             mcp_clients[server_id], tool_spec["name"]
                         )
 
-                        mcp_tools_dict[f"{server_id}_{tool_spec['name']}"] = {
+                        tool_entry = {
                             "spec": {
                                 **tool_spec,
                                 "name": f"{server_id}_{tool_spec['name']}",
@@ -2408,8 +2604,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             "client": mcp_clients[server_id],
                             "direct": False,
                         }
+                        log.debug(
+                            f"[MCP Debug] Registered tool: {server_id}_{tool_spec['name']}"
+                        )
+                        mcp_tools_dict[f"{server_id}_{tool_spec['name']}"] = tool_entry
                 except Exception as e:
-                    log.debug(e)
+                    log.error(
+                        f"[MCP Middleware] Failed to connect to MCP server '{server_id}': {type(e).__name__}: {e}"
+                    )
+                    import traceback
+
+                    log.error(f"[MCP Middleware] Traceback:\n{traceback.format_exc()}")
                     if event_emitter:
                         await event_emitter(
                             {
@@ -2423,19 +2628,33 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         )
                     continue
 
-        tools_dict = await get_tools(
-            request,
-            tool_ids,
-            user,
-            {
-                **extra_params,
-                "__model__": models[task_model_id],
-                "__messages__": form_data["messages"],
-                "__files__": metadata.get("files", []),
-            },
-        )
+        log.info(f"[MCP Debug] Getting regular tools...")
+        try:
+            tools_dict = await get_tools(
+                request,
+                tool_ids,
+                user,
+                {
+                    **extra_params,
+                    "__model__": models[task_model_id],
+                    "__messages__": form_data["messages"],
+                    "__files__": metadata.get("files", []),
+                },
+            )
+            log.info(f"[MCP Debug] Got {len(tools_dict)} regular tools")
+        except Exception as e:
+            log.error(
+                f"[MCP Debug] Error getting regular tools: {type(e).__name__}: {e}"
+            )
+            import traceback
+
+            log.error(f"[MCP Debug] Traceback:\n{traceback.format_exc()}")
+            raise
 
         if mcp_tools_dict:
+            log.info(
+                f"[MCP Debug] Merging {len(mcp_tools_dict)} MCP tools into tools_dict"
+            )
             tools_dict = {**tools_dict, **mcp_tools_dict}
 
     if direct_tool_servers:
@@ -2450,7 +2669,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 }
 
     if mcp_clients:
+        print(f"[DEBUG MCP 1] Storing {len(mcp_clients)} MCP clients in metadata")
+        print(f"[DEBUG MCP 2] MCP client keys: {list(mcp_clients.keys())}")
+        for k, v in mcp_clients.items():
+            print(
+                f"[DEBUG MCP 3] Client '{k}' type: {type(v)}, has exit_stack: {hasattr(v, 'exit_stack')}"
+            )
         metadata["mcp_clients"] = mcp_clients
+        print(
+            f"[DEBUG MCP 4] metadata keys after storing mcp_clients: {list(metadata.keys())}"
+        )
 
     # Inject builtin tools for native function calling based on enabled features and model capability
     # Check if builtin_tools capability is enabled for this model (defaults to True if not specified)
@@ -3084,7 +3312,6 @@ async def streaming_chat_response_handler(response, ctx):
                     # Use the output item's own text for tag detection
                     item_text = get_last_text(output)
                     for start_tag, end_tag in tags:
-
                         start_tag_pattern = rf"{re.escape(start_tag)}"
                         if start_tag.startswith("<") and start_tag.endswith(">"):
                             start_tag_pattern = (
@@ -3304,7 +3531,9 @@ async def streaming_chat_response_handler(response, ctx):
             content = (
                 message.get("content", "")
                 if message
-                else last_assistant_message if last_assistant_message else ""
+                else last_assistant_message
+                if last_assistant_message
+                else ""
             )
 
             # Initialize output: use existing from message if continuing, else create new
@@ -3963,7 +4192,6 @@ async def streaming_chat_response_handler(response, ctx):
                     len(tool_calls) > 0
                     and tool_call_retries < CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES
                 ):
-
                     tool_call_retries += 1
 
                     response_tool_calls = tool_calls.pop(0)
@@ -4249,7 +4477,6 @@ async def streaming_chat_response_handler(response, ctx):
                         and output[-1].get("type") == "open_webui:code_interpreter"
                         and retries < MAX_RETRIES
                     ):
-
                         await event_emitter(
                             {
                                 "type": "chat:completion",
@@ -4341,7 +4568,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     if isinstance(stdout, str):
                                         stdoutLines = stdout.split("\n")
                                         for idx, line in enumerate(stdoutLines):
-
                                             if "data:image/png;base64" in line:
                                                 image_url = get_image_url_from_base64(
                                                     request,

@@ -1128,6 +1128,17 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 
 ####################################
+# ANTHROPIC_API (Claude OAuth)
+####################################
+
+ENABLE_ANTHROPIC_API = PersistentConfig(
+    "ENABLE_ANTHROPIC_API",
+    "anthropic.enable",
+    os.environ.get("ENABLE_ANTHROPIC_API", "True").lower() == "true",
+)
+
+
+####################################
 # MODELS
 ####################################
 
@@ -2574,6 +2585,39 @@ ONEDRIVE_SHAREPOINT_TENANT_ID = PersistentConfig(
     "ONEDRIVE_SHAREPOINT_TENANT_ID",
     "onedrive.sharepoint_tenant_id",
     os.environ.get("ONEDRIVE_SHAREPOINT_TENANT_ID", ""),
+)
+
+# SharePoint/OneDrive File Upload Integration (Microsoft Graph API)
+ENABLE_SHAREPOINT_INTEGRATION = PersistentConfig(
+    "ENABLE_SHAREPOINT_INTEGRATION",
+    "sharepoint.enable",
+    os.getenv("ENABLE_SHAREPOINT_INTEGRATION", "False").lower() == "true",
+)
+
+SHAREPOINT_CLIENT_ID = PersistentConfig(
+    "SHAREPOINT_CLIENT_ID",
+    "sharepoint.client_id",
+    os.environ.get("SHAREPOINT_CLIENT_ID", ""),
+)
+
+SHAREPOINT_CLIENT_SECRET = PersistentConfig(
+    "SHAREPOINT_CLIENT_SECRET",
+    "sharepoint.client_secret",
+    os.environ.get("SHAREPOINT_CLIENT_SECRET", ""),
+)
+
+SHAREPOINT_TENANT_ID = PersistentConfig(
+    "SHAREPOINT_TENANT_ID",
+    "sharepoint.tenant_id",
+    os.environ.get("SHAREPOINT_TENANT_ID", ""),
+)
+
+# Multi-tenant SharePoint configuration
+# JSON array of tenant configs: [{id, name, tenant_id, client_id, client_secret}, ...]
+SHAREPOINT_TENANTS = PersistentConfig(
+    "SHAREPOINT_TENANTS",
+    "sharepoint.tenants",
+    os.environ.get("SHAREPOINT_TENANTS", "[]"),
 )
 
 # RAG Content Extraction

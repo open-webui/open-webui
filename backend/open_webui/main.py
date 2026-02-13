@@ -70,6 +70,7 @@ from open_webui.socket.main import (
 )
 from open_webui.routers import (
     analytics,
+    anthropic,
     audio,
     images,
     ollama,
@@ -92,10 +93,12 @@ from open_webui.routers import (
     prompts,
     evaluations,
     skills,
+    spaces,
     tools,
     users,
     utils,
     scim,
+    sharepoint,
 )
 
 from open_webui.routers.retrieval import (
@@ -124,6 +127,8 @@ from open_webui.config import (
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
+    # Anthropic
+    ENABLE_ANTHROPIC_API,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Model list
@@ -346,6 +351,12 @@ from open_webui.config import (
     ONEDRIVE_SHAREPOINT_TENANT_ID,
     ENABLE_ONEDRIVE_PERSONAL,
     ENABLE_ONEDRIVE_BUSINESS,
+    # SharePoint/OneDrive file upload integration
+    ENABLE_SHAREPOINT_INTEGRATION,
+    SHAREPOINT_CLIENT_ID,
+    SHAREPOINT_CLIENT_SECRET,
+    SHAREPOINT_TENANT_ID,
+    SHAREPOINT_TENANTS,
     ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
     ENABLE_RAG_LOCAL_WEB_FETCH,
@@ -761,6 +772,16 @@ app.state.OPENAI_MODELS = {}
 
 ########################################
 #
+# ANTHROPIC
+#
+########################################
+
+app.state.config.ENABLE_ANTHROPIC_API = ENABLE_ANTHROPIC_API
+
+app.state.ANTHROPIC_MODELS = {}
+
+########################################
+#
 # TOOL SERVERS
 #
 ########################################
@@ -1024,6 +1045,11 @@ app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = BYPASS_WEB_SEARCH_WEB_LOADER
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
+app.state.config.ENABLE_SHAREPOINT_INTEGRATION = ENABLE_SHAREPOINT_INTEGRATION
+app.state.config.SHAREPOINT_CLIENT_ID = SHAREPOINT_CLIENT_ID
+app.state.config.SHAREPOINT_CLIENT_SECRET = SHAREPOINT_CLIENT_SECRET
+app.state.config.SHAREPOINT_TENANT_ID = SHAREPOINT_TENANT_ID
+app.state.config.SHAREPOINT_TENANTS = SHAREPOINT_TENANTS
 
 app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = OLLAMA_CLOUD_WEB_SEARCH_API_KEY
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
@@ -1481,6 +1507,38 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(anthropic.router, prefix="/anthropic", tags=["anthropic"])
+app.include_router(sharepoint.router, prefix="/api/v1/sharepoint", tags=["sharepoint"])
+
+
+# Root-level OAuth callback for Anthropic/Claude
+# Claude's OAuth client only accepts redirect URIs matching:
+# - https://platform.claude.com/oauth/code/callback (hosted)
+# - http://localhost:*/callback (local - just /callback, NOT /auth/callback)
+@app.get("/callback", tags=["anthropic"])
+async def oauth_callback(
+    request: Request,
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+    error_description: Optional[str] = None,
+):
+    """Delegates to Anthropic OAuth callback handler."""
+    import logging
+
+    log = logging.getLogger(__name__)
+    log.info(
+        f"[MAIN_CALLBACK] /callback hit! code={bool(code)}, state={state[:20] if state else None}..., error={error}"
+    )
+    log.info(f"[MAIN_CALLBACK] Session keys: {list(request.session.keys())}")
+    log.info(f"[MAIN_CALLBACK] Cookies: {request.cookies}")
+    return await anthropic.anthropic_auth_callback(
+        request=request,
+        code=code,
+        state=state,
+        error=error,
+        error_description=error_description,
+    )
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
@@ -1503,6 +1561,7 @@ app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
 
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
+app.include_router(spaces.router, prefix="/api/v1/spaces", tags=["spaces"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 app.include_router(skills.router, prefix="/api/v1/skills", tags=["skills"])
@@ -1744,14 +1803,43 @@ async def chat_completion(
             if not metadata["chat_id"].startswith(
                 "local:"
             ):  # temporary chats are not stored
-
-                # Verify chat ownership
+                # Verify chat ownership or Space contributor access
                 chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
                 if chat is None and user.role != "admin":  # admins can access any chat
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=ERROR_MESSAGES.DEFAULT(),
-                    )
+                    # Check if user has Space contributor access
+                    space_chat = Chats.get_chat_by_id(metadata["chat_id"])
+                    if space_chat and space_chat.space_id:
+                        from open_webui.models.spaces import Spaces
+                        from open_webui.utils.access_control import has_access
+                        from open_webui.routers.spaces import is_space_contributor
+                        from open_webui.internal.db import get_db
+
+                        meta = space_chat.meta or {}
+                        access_level = meta.get("thread_access_level", "private")
+                        if access_level != "private":
+                            space = Spaces.get_space_by_id(space_chat.space_id)
+                            if space:
+                                with get_db() as db:
+                                    if (
+                                        space.user_id == user.id
+                                        or has_access(
+                                            user.id, "write", space.access_control
+                                        )
+                                        or is_space_contributor(
+                                            user.email, space.id, db
+                                        )
+                                    ):
+                                        chat = space_chat
+
+                    if chat is None:
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=ERROR_MESSAGES.DEFAULT(),
+                        )
+
+                # Add space_id to metadata for real-time space thread collaboration
+                if chat and getattr(chat, "space_id", None):
+                    metadata["space_id"] = chat.space_id
 
                 # Insert chat files from parent message if any
                 parent_message = metadata.get("parent_message") or {}
@@ -2044,6 +2132,7 @@ async def get_app_config(request: Request):
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_sharepoint_integration": app.state.config.ENABLE_SHAREPOINT_INTEGRATION,
                     "enable_memories": app.state.config.ENABLE_MEMORIES,
                     **(
                         {

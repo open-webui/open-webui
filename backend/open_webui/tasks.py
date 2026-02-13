@@ -102,14 +102,28 @@ async def create_task(redis, coroutine, id=None):
     """
     Create a new asyncio task and add it to the global task dictionary.
     """
+    print(f"[DEBUG TASK 1] create_task called with redis={redis}, id={id}")
+    print(f"[DEBUG TASK 2] coroutine type: {type(coroutine)}")
+
     task_id = str(uuid4())  # Generate a unique ID for the task
-    task = asyncio.create_task(coroutine)  # Create the task
+    print(f"[DEBUG TASK 3] Generated task_id: {task_id}")
+
+    try:
+        task = asyncio.create_task(coroutine)  # Create the task
+        print(f"[DEBUG TASK 4] asyncio.create_task succeeded, task: {task}")
+    except Exception as e:
+        print(f"[DEBUG TASK ERROR] asyncio.create_task failed: {type(e).__name__}: {e}")
+        import traceback
+
+        print(f"[DEBUG TASK TRACEBACK] {traceback.format_exc()}")
+        raise
 
     # Add a done callback for cleanup
     task.add_done_callback(
         lambda t: asyncio.create_task(cleanup_task(redis, task_id, id))
     )
     tasks[task_id] = task
+    print(f"[DEBUG TASK 5] Task stored in tasks dict")
 
     # If an ID is provided, associate the task with that ID
     if item_tasks.get(id):
@@ -118,8 +132,11 @@ async def create_task(redis, coroutine, id=None):
         item_tasks[id] = [task_id]
 
     if redis:
+        print(f"[DEBUG TASK 6] About to call redis_save_task")
         await redis_save_task(redis, task_id, id)
+        print(f"[DEBUG TASK 7] redis_save_task completed")
 
+    print(f"[DEBUG TASK 8] Returning task_id={task_id}")
     return task_id, task
 
 

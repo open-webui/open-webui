@@ -183,6 +183,7 @@ class DoclingLoader:
 
 class Loader:
     def __init__(self, engine: str = "", **kwargs):
+        log.info(f"[DEBUG Loader] __init__ engine={engine}")
         self.engine = engine
         self.user = kwargs.get("user", None)
         self.kwargs = kwargs
@@ -190,8 +191,33 @@ class Loader:
     def load(
         self, filename: str, file_content_type: str, file_path: str
     ) -> list[Document]:
-        loader = self._get_loader(filename, file_content_type, file_path)
-        docs = loader.load()
+        log.info(
+            f"[DEBUG Loader] load() called: filename={filename}, content_type={file_content_type}, path={file_path}"
+        )
+        try:
+            loader = self._get_loader(filename, file_content_type, file_path)
+            log.info(f"[DEBUG Loader] _get_loader returned: {type(loader).__name__}")
+        except Exception as e:
+            log.error(f"[DEBUG Loader] _get_loader FAILED: {type(e).__name__}: {e}")
+            import traceback
+
+            log.error(f"[DEBUG Loader] Traceback: {traceback.format_exc()}")
+            raise
+
+        log.info(f"[DEBUG Loader] Calling {type(loader).__name__}.load()...")
+        try:
+            docs = loader.load()
+            log.info(
+                f"[DEBUG Loader] {type(loader).__name__}.load() returned {len(docs)} docs"
+            )
+        except Exception as e:
+            log.error(
+                f"[DEBUG Loader] {type(loader).__name__}.load() FAILED: {type(e).__name__}: {e}"
+            )
+            import traceback
+
+            log.error(f"[DEBUG Loader] Traceback: {traceback.format_exc()}")
+            raise
 
         return [
             Document(
@@ -210,6 +236,9 @@ class Loader:
 
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split(".")[-1].lower()
+        log.info(
+            f"[DEBUG Loader._get_loader] file_ext={file_ext}, engine={self.engine}"
+        )
 
         if (
             self.engine == "external"
@@ -331,7 +360,6 @@ class Loader:
         elif self.engine == "mineru" and file_ext in [
             "pdf"
         ]:  # MinerU currently only supports PDF
-
             mineru_timeout = self.kwargs.get("MINERU_API_TIMEOUT", 300)
             if mineru_timeout:
                 try:
@@ -402,4 +430,5 @@ class Loader:
             else:
                 loader = TextLoader(file_path, autodetect_encoding=True)
 
+        log.info(f"[DEBUG Loader._get_loader] Selected loader: {type(loader).__name__}")
         return loader

@@ -31,6 +31,10 @@ from open_webui.routers.ollama import (
     generate_chat_completion as generate_ollama_chat_completion,
 )
 
+from open_webui.routers.anthropic import (
+    generate_chat_completion as generate_anthropic_chat_completion,
+)
+
 from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
@@ -281,6 +285,13 @@ async def generate_chat_completion(
                 )
             else:
                 return convert_response_ollama_to_openai(response)
+        elif model.get("owned_by") == "anthropic":
+            # Using Anthropic API via OAuth
+            return await generate_anthropic_chat_completion(
+                request=request,
+                form_data=form_data,
+                user=user,
+            )
         else:
             return await generate_openai_chat_completion(
                 request=request,
@@ -317,12 +328,24 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     except Exception as e:
         raise Exception(f"Error: {e}")
 
+    # Look up space_id for real-time collaboration in Space threads
+    space_id = None
+    try:
+        from open_webui.models.chats import Chats as ChatsModel
+
+        chat_obj = ChatsModel.get_chat_by_id(data["chat_id"])
+        if chat_obj and getattr(chat_obj, "space_id", None):
+            space_id = chat_obj.space_id
+    except Exception:
+        pass
+
     metadata = {
         "chat_id": data["chat_id"],
         "message_id": data["id"],
         "filter_ids": data.get("filter_ids", []),
         "session_id": data["session_id"],
         "user_id": user.id,
+        "space_id": space_id,
     }
 
     extra_params = {

@@ -51,6 +51,8 @@ export const TTSWorker = writable(null);
 export const chatId = writable('');
 export const chatTitle = writable('');
 
+export const currentSpaceId = writable<string | null>(null);
+
 export const channels = writable([]);
 export const channelId = writable(null);
 
@@ -78,6 +80,7 @@ export const settings: Writable<Settings> = writable({});
 export const audioQueue = writable(null);
 
 export const sidebarWidth = writable(260);
+export const sidebarPinned = writable(false);
 
 export const showSidebar = writable(false);
 export const showSearch = writable(false);

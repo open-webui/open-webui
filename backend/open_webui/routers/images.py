@@ -475,7 +475,7 @@ class CreateImageForm(BaseModel):
 GenerateImageForm = CreateImageForm  # Alias for backward compatibility
 
 
-def get_image_data(data: str, headers=None):
+def get_image_data_sync(data: str, headers=None):
     try:
         if data.startswith("http://") or data.startswith("https://"):
             if headers:
@@ -502,6 +502,10 @@ def get_image_data(data: str, headers=None):
     except Exception as e:
         log.exception(f"Error loading image data: {e}")
         return None, None
+
+
+async def get_image_data(data: str, headers=None):
+    return await asyncio.to_thread(get_image_data_sync, data, headers)
 
 
 def upload_image(request, image_data, content_type, metadata, user, db=None):
@@ -589,7 +593,6 @@ async def image_generations(
     r = None
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == "openai":
-
             headers = {
                 "Authorization": f"Bearer {request.app.state.config.IMAGES_OPENAI_API_KEY}",
                 "Content-Type": "application/json",
@@ -641,9 +644,9 @@ async def image_generations(
 
             for image in res["data"]:
                 if image_url := image.get("url", None):
-                    image_data, content_type = get_image_data(image_url, headers)
+                    image_data, content_type = await get_image_data(image_url, headers)
                 else:
-                    image_data, content_type = get_image_data(image["b64_json"])
+                    image_data, content_type = await get_image_data(image["b64_json"])
 
                 _, url = upload_image(
                     request, image_data, content_type, {**data, **metadata}, user
@@ -694,7 +697,7 @@ async def image_generations(
 
             if model.endswith(":predict"):
                 for image in res["predictions"]:
-                    image_data, content_type = get_image_data(
+                    image_data, content_type = await get_image_data(
                         image["bytesBase64Encoded"]
                     )
                     _, url = upload_image(
@@ -705,7 +708,7 @@ async def image_generations(
                 for image in res["candidates"]:
                     for part in image["content"]["parts"]:
                         if part.get("inlineData", {}).get("data"):
-                            image_data, content_type = get_image_data(
+                            image_data, content_type = await get_image_data(
                                 part["inlineData"]["data"]
                             )
                             _, url = upload_image(
@@ -769,7 +772,7 @@ async def image_generations(
                         "Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"
                     }
 
-                image_data, content_type = get_image_data(image["url"], headers)
+                image_data, content_type = await get_image_data(image["url"], headers)
                 _, url = upload_image(
                     request,
                     image_data,
@@ -823,7 +826,7 @@ async def image_generations(
             images = []
 
             for image in res["images"]:
-                image_data, content_type = get_image_data(image)
+                image_data, content_type = await get_image_data(image)
                 _, url = upload_image(
                     request,
                     image_data,
@@ -993,9 +996,9 @@ async def image_edits(
             images = []
             for image in res["data"]:
                 if image_url := image.get("url", None):
-                    image_data, content_type = get_image_data(image_url, headers)
+                    image_data, content_type = await get_image_data(image_url, headers)
                 else:
-                    image_data, content_type = get_image_data(image["b64_json"])
+                    image_data, content_type = await get_image_data(image["b64_json"])
 
                 _, url = upload_image(
                     request, image_data, content_type, {**data, **metadata}, user
@@ -1049,7 +1052,7 @@ async def image_edits(
             for image in res["candidates"]:
                 for part in image["content"]["parts"]:
                     if part.get("inlineData", {}).get("data"):
-                        image_data, content_type = get_image_data(
+                        image_data, content_type = await get_image_data(
                             part["inlineData"]["data"]
                         )
                         _, url = upload_image(
@@ -1133,7 +1136,7 @@ async def image_edits(
                         "Authorization": f"Bearer {request.app.state.config.IMAGES_EDIT_COMFYUI_API_KEY}"
                     }
 
-                image_data, content_type = get_image_data(image_url, headers)
+                image_data, content_type = await get_image_data(image_url, headers)
                 _, url = upload_image(
                     request,
                     image_data,

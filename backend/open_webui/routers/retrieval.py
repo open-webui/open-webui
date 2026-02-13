@@ -520,6 +520,11 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Integration settings
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+        "ENABLE_SHAREPOINT_INTEGRATION": request.app.state.config.ENABLE_SHAREPOINT_INTEGRATION,
+        "SHAREPOINT_CLIENT_ID": request.app.state.config.SHAREPOINT_CLIENT_ID,
+        "SHAREPOINT_CLIENT_SECRET": request.app.state.config.SHAREPOINT_CLIENT_SECRET,
+        "SHAREPOINT_TENANT_ID": request.app.state.config.SHAREPOINT_TENANT_ID,
+        "SHAREPOINT_TENANTS": request.app.state.config.SHAREPOINT_TENANTS,
         # Web search settings
         "web": {
             "ENABLE_WEB_SEARCH": request.app.state.config.ENABLE_WEB_SEARCH,
@@ -726,6 +731,11 @@ class ConfigForm(BaseModel):
     # Integration settings
     ENABLE_GOOGLE_DRIVE_INTEGRATION: Optional[bool] = None
     ENABLE_ONEDRIVE_INTEGRATION: Optional[bool] = None
+    ENABLE_SHAREPOINT_INTEGRATION: Optional[bool] = None
+    SHAREPOINT_CLIENT_ID: Optional[str] = None
+    SHAREPOINT_CLIENT_SECRET: Optional[str] = None
+    SHAREPOINT_TENANT_ID: Optional[str] = None
+    SHAREPOINT_TENANTS: Optional[str] = None  # JSON array of tenant configs
 
     # Web search settings
     web: Optional[WebConfig] = None
@@ -1080,6 +1090,31 @@ async def update_rag_config(
         if form_data.ENABLE_ONEDRIVE_INTEGRATION is not None
         else request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION
     )
+    request.app.state.config.ENABLE_SHAREPOINT_INTEGRATION = (
+        form_data.ENABLE_SHAREPOINT_INTEGRATION
+        if form_data.ENABLE_SHAREPOINT_INTEGRATION is not None
+        else request.app.state.config.ENABLE_SHAREPOINT_INTEGRATION
+    )
+    request.app.state.config.SHAREPOINT_CLIENT_ID = (
+        form_data.SHAREPOINT_CLIENT_ID
+        if form_data.SHAREPOINT_CLIENT_ID is not None
+        else request.app.state.config.SHAREPOINT_CLIENT_ID
+    )
+    request.app.state.config.SHAREPOINT_CLIENT_SECRET = (
+        form_data.SHAREPOINT_CLIENT_SECRET
+        if form_data.SHAREPOINT_CLIENT_SECRET is not None
+        else request.app.state.config.SHAREPOINT_CLIENT_SECRET
+    )
+    request.app.state.config.SHAREPOINT_TENANT_ID = (
+        form_data.SHAREPOINT_TENANT_ID
+        if form_data.SHAREPOINT_TENANT_ID is not None
+        else request.app.state.config.SHAREPOINT_TENANT_ID
+    )
+    request.app.state.config.SHAREPOINT_TENANTS = (
+        form_data.SHAREPOINT_TENANTS
+        if form_data.SHAREPOINT_TENANTS is not None
+        else request.app.state.config.SHAREPOINT_TENANTS
+    )
 
     if form_data.web is not None:
         # Web search settings
@@ -1270,6 +1305,11 @@ async def update_rag_config(
         # Integration settings
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+        "ENABLE_SHAREPOINT_INTEGRATION": request.app.state.config.ENABLE_SHAREPOINT_INTEGRATION,
+        "SHAREPOINT_CLIENT_ID": request.app.state.config.SHAREPOINT_CLIENT_ID,
+        "SHAREPOINT_CLIENT_SECRET": request.app.state.config.SHAREPOINT_CLIENT_SECRET,
+        "SHAREPOINT_TENANT_ID": request.app.state.config.SHAREPOINT_TENANT_ID,
+        "SHAREPOINT_TENANTS": request.app.state.config.SHAREPOINT_TENANTS,
         # Web search settings
         "web": {
             "ENABLE_WEB_SEARCH": request.app.state.config.ENABLE_WEB_SEARCH,
@@ -1648,14 +1688,21 @@ def process_file(
     Note: granular session management is used to prevent connection pool exhaustion.
     The session is committed before external API calls, and updates use a fresh session.
     """
+    log.info(
+        f"[DEBUG process_file] START - file_id={form_data.file_id}, collection_name={form_data.collection_name}, has_content={bool(form_data.content)}"
+    )
+
     if user.role == "admin":
         file = Files.get_file_by_id(form_data.file_id, db=db)
     else:
         file = Files.get_file_by_id_and_user_id(form_data.file_id, user.id, db=db)
 
+    log.info(
+        f"[DEBUG process_file] File found: {file is not None}, filename={file.filename if file else 'N/A'}"
+    )
+
     if file:
         try:
-
             collection_name = form_data.collection_name
 
             if collection_name is None:
@@ -1723,8 +1770,16 @@ def process_file(
                 # Process the file and save the content
                 # Usage: /files/
                 file_path = file.path
+                log.info(f"[DEBUG process_file] Processing file from path: {file_path}")
                 if file_path:
                     file_path = Storage.get_file(file_path)
+                    log.info(
+                        f"[DEBUG process_file] Storage.get_file returned: {file_path}"
+                    )
+                    log.info(
+                        f"[DEBUG process_file] CONTENT_EXTRACTION_ENGINE: {request.app.state.config.CONTENT_EXTRACTION_ENGINE}"
+                    )
+                    log.info(f"[DEBUG process_file] Creating Loader...")
                     loader = Loader(
                         engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                         user=user,
@@ -1757,9 +1812,29 @@ def process_file(
                         MINERU_API_TIMEOUT=request.app.state.config.MINERU_API_TIMEOUT,
                         MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
-                    docs = loader.load(
-                        file.filename, file.meta.get("content_type"), file_path
+                    log.info(
+                        f"[DEBUG process_file] Loader created, calling loader.load()"
                     )
+                    log.info(
+                        f"[DEBUG process_file] filename={file.filename}, content_type={file.meta.get('content_type')}, file_path={file_path}"
+                    )
+                    try:
+                        docs = loader.load(
+                            file.filename, file.meta.get("content_type"), file_path
+                        )
+                        log.info(
+                            f"[DEBUG process_file] loader.load() returned {len(docs)} documents"
+                        )
+                    except Exception as loader_error:
+                        log.error(
+                            f"[DEBUG process_file] loader.load() FAILED: {type(loader_error).__name__}: {loader_error}"
+                        )
+                        import traceback
+
+                        log.error(
+                            f"[DEBUG process_file] Traceback: {traceback.format_exc()}"
+                        )
+                        raise
 
                     docs = [
                         Document(
@@ -2489,7 +2564,8 @@ async def query_doc_handler(
                 collection_name=form_data.collection_name,
                 collection_result=collection_results[form_data.collection_name],
                 query=form_data.query,
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                embedding_function=lambda query,
+                prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
@@ -2558,7 +2634,8 @@ async def query_collection_handler(
             return await query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                embedding_function=lambda query,
+                prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
@@ -2593,7 +2670,8 @@ async def query_collection_handler(
             return await query_collection(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                embedding_function=lambda query,
+                prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,

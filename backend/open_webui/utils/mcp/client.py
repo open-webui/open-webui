@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Optional
 from contextlib import AsyncExitStack
 
@@ -19,14 +20,29 @@ def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
     return client
 
 
+log = logging.getLogger(__name__)
+
+
 class MCPClient:
     def __init__(self):
         self.session: Optional[ClientSession] = None
         self.exit_stack = None
 
+    def __getstate__(self):
+        # MCPClient cannot be pickled - contains async objects
+        raise TypeError("MCPClient cannot be pickled - contains async objects")
+
+    def __reduce__(self):
+        # MCPClient cannot be pickled - contains async objects
+        raise TypeError("MCPClient cannot be pickled - contains async objects")
+
     async def connect(self, url: str, headers: Optional[dict] = None):
+        log.info(f"[MCP] Attempting connection to: {url}")
+        log.info(f"[MCP] Headers: {headers}")
+
         async with AsyncExitStack() as exit_stack:
             try:
+                log.debug(f"[MCP] Creating streamablehttp_client for {url}")
                 if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL:
                     self._streams_context = streamablehttp_client(url, headers=headers)
                 else:
@@ -36,20 +52,29 @@ class MCPClient:
                         httpx_client_factory=create_insecure_httpx_client,
                     )
 
+                log.debug("[MCP] Entering streams context...")
                 transport = await exit_stack.enter_async_context(self._streams_context)
                 read_stream, write_stream, _ = transport
+                log.debug("[MCP] Streams context entered successfully")
 
-                self._session_context = ClientSession(
-                    read_stream, write_stream
-                )  # pylint: disable=W0201
+                log.debug("[MCP] Creating ClientSession...")
+                self._session_context = ClientSession(read_stream, write_stream)  # pylint: disable=W0201
 
+                log.debug("[MCP] Entering session context...")
                 self.session = await exit_stack.enter_async_context(
                     self._session_context
                 )
+                log.debug("[MCP] Session context entered, initializing...")
+
                 with anyio.fail_after(10):
                     await self.session.initialize()
+                log.info(f"[MCP] Successfully connected to {url}")
                 self.exit_stack = exit_stack.pop_all()
             except Exception as e:
+                log.error(f"[MCP] Connection failed to {url}: {type(e).__name__}: {e}")
+                import traceback
+
+                log.error(f"[MCP] Traceback:\n{traceback.format_exc()}")
                 await asyncio.shield(self.disconnect())
                 raise e
 
@@ -120,7 +145,8 @@ class MCPClient:
 
     async def disconnect(self):
         # Clean up and close the session
-        await self.exit_stack.aclose()
+        if self.exit_stack:
+            await self.exit_stack.aclose()
 
     async def __aenter__(self):
         await self.exit_stack.__aenter__()

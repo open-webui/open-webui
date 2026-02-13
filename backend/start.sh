@@ -3,6 +3,16 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
 
+if [ -n "$VIRTUAL_ENV" ]; then
+    PYTHON_CMD="$VIRTUAL_ENV/bin/python"
+elif [ -f "../.venv/bin/python" ]; then
+    PYTHON_CMD="../.venv/bin/python"
+elif [ -f ".venv/bin/python" ]; then
+    PYTHON_CMD=".venv/bin/python"
+else
+    PYTHON_CMD=$(command -v python3 || command -v python)
+fi
+
 # Add conditional Playwright browser installation
 if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
     if [[ -z "${PLAYWRIGHT_WS_URL}" ]]; then
@@ -11,7 +21,7 @@ if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
         playwright install-deps chromium
     fi
 
-    python -c "import nltk; nltk.download('punkt_tab')"
+    $PYTHON_CMD -c "import nltk; nltk.download('punkt_tab')"
 fi
 
 if [ -n "${WEBUI_SECRET_KEY_FILE}" ]; then
@@ -50,7 +60,7 @@ if [ -n "$SPACE_ID" ]; then
   echo "Configuring for HuggingFace Space deployment"
   if [ -n "$ADMIN_USER_EMAIL" ] && [ -n "$ADMIN_USER_PASSWORD" ]; then
     echo "Admin user configured, creating"
-    WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
+    WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" $PYTHON_CMD -m uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
     webui_pid=$!
     echo "Waiting for webui to start..."
     while ! curl -s "http://localhost:${PORT}/health" > /dev/null; do
@@ -69,7 +79,6 @@ if [ -n "$SPACE_ID" ]; then
   export WEBUI_URL=${SPACE_HOST}
 fi
 
-PYTHON_CMD=$(command -v python3 || command -v python)
 UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 
 # If script is called with arguments, use them; otherwise use default workers
