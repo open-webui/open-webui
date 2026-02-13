@@ -23,6 +23,7 @@
 		tags as allTags,
 		settings,
 		showSidebar,
+		sidebarPinned,
 		WEBUI_NAME,
 		banners,
 		user,
@@ -42,7 +43,8 @@
 		functions,
 		selectedFolder,
 		pinnedChats,
-		showEmbeds
+		showEmbeds,
+		currentSpaceId
 	} from '$lib/stores';
 
 	import {
@@ -66,7 +68,8 @@
 		getPinnedChatList,
 		getTagsById,
 		updateChatById,
-		updateChatFolderIdById
+		updateChatFolderIdById,
+		markChatAsViewed
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
@@ -153,6 +156,31 @@
 	};
 
 	let taskIds = null;
+
+	// Real-time space collaboration: flag to prevent concurrent re-fetches
+	// when receiving events from other space members
+	let spaceSyncInProgress = false;
+	let spaceSyncPending = false;
+
+	// Typing indicator state for space threads.
+	// Maps user_id → { name, timeoutId } for users currently typing.
+	let typingUsers: Record<string, { name: string; timeoutId: ReturnType<typeof setTimeout> }> = {};
+	let typingDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	const TYPING_EXPIRE_MS = 3500; // auto-expire after 3.5s of no typing event
+	const TYPING_DEBOUNCE_MS = 2000; // emit at most once per 2s while typing
+
+	// Reactive: build display string from typingUsers
+	$: typingUserNames = Object.values(typingUsers).map((u) => u.name);
+	$: typingIndicatorText =
+		typingUserNames.length === 0
+			? ''
+			: typingUserNames.length === 1
+				? `${typingUserNames[0]} is typing`
+				: typingUserNames.length === 2
+					? `${typingUserNames[0]} and ${typingUserNames[1]} are typing`
+					: typingUserNames.length === 3
+						? `${typingUserNames[0]}, ${typingUserNames[1]}, and ${typingUserNames[2]} are typing`
+						: 'Several people are typing';
 
 	// Chat Input
 	let prompt = '';
@@ -381,15 +409,149 @@
 		saveChatHandler(_chatId, history);
 	};
 
+	// Re-fetch the chat from the API and rebuild local history so that
+	// streaming events from other space members can find their message_ids.
+	// Also updates the `chat` object so `chat_version` stays current.
+	const syncChatHistory = async () => {
+		if (!$chatId) return;
+		if (spaceSyncInProgress) {
+			// A sync is already running — mark pending so we re-sync after cooldown
+			spaceSyncPending = true;
+			return;
+		}
+		spaceSyncInProgress = true;
+		spaceSyncPending = false;
+		try {
+			const freshChat = await getChatById(localStorage.token, $chatId);
+			if (freshChat) {
+				// Update chat object (includes chat_version for optimistic locking)
+				chat = freshChat;
+
+				const chatContent = freshChat.chat;
+				if (chatContent) {
+					history =
+						(chatContent?.history ?? undefined) !== undefined
+							? chatContent.history
+							: convertMessagesToHistory(chatContent.messages);
+
+					// Mark all existing assistant messages as done (they're complete in DB)
+					// but leave any message currently streaming (content still empty) as not done
+					for (const msg of Object.values(history.messages)) {
+						if (msg && msg.role === 'assistant' && msg.content) {
+							msg.done = true;
+						}
+					}
+				}
+			}
+		} catch (e) {
+			console.error('Space sync: failed to re-fetch chat', e);
+		} finally {
+			// Cooldown to batch rapid events, then re-sync if anything was pending
+			setTimeout(() => {
+				spaceSyncInProgress = false;
+				if (spaceSyncPending) {
+					spaceSyncPending = false;
+					syncChatHistory();
+				}
+			}, 500);
+		}
+	};
+
+	// --- Typing indicator handlers ---
+
+	const typingEventHandler = (event: {
+		chat_id: string;
+		user: { id: string; name: string };
+		typing: boolean;
+	}) => {
+		if (event.chat_id !== $chatId) return;
+
+		const userId = event.user?.id;
+		if (!userId) return;
+
+		// Clear any existing expiry timer for this user
+		if (typingUsers[userId]) {
+			clearTimeout(typingUsers[userId].timeoutId);
+		}
+
+		if (event.typing) {
+			// Add/refresh this user's typing entry
+			typingUsers[userId] = {
+				name: event.user.name,
+				timeoutId: setTimeout(() => {
+					delete typingUsers[userId];
+					typingUsers = typingUsers; // trigger reactivity
+				}, TYPING_EXPIRE_MS)
+			};
+			typingUsers = typingUsers; // trigger reactivity
+		} else {
+			// Explicit stop
+			delete typingUsers[userId];
+			typingUsers = typingUsers;
+		}
+	};
+
+	const emitTyping = () => {
+		// Only emit for space threads
+		if (!chat?.space_id || !$chatId) return;
+
+		// Debounce: don't flood the socket
+		if (typingDebounceTimer) return;
+		typingDebounceTimer = setTimeout(() => {
+			typingDebounceTimer = null;
+		}, TYPING_DEBOUNCE_MS);
+
+		$socket?.emit('typing', { chat_id: $chatId, typing: true });
+	};
+
+	const emitStopTyping = () => {
+		if (!chat?.space_id || !$chatId) return;
+		if (typingDebounceTimer) {
+			clearTimeout(typingDebounceTimer);
+			typingDebounceTimer = null;
+		}
+		$socket?.emit('typing', { chat_id: $chatId, typing: false });
+	};
+
+	// Clear all typing indicators (e.g., on chat switch)
+	const clearTypingUsers = () => {
+		for (const entry of Object.values(typingUsers)) {
+			clearTimeout(entry.timeoutId);
+		}
+		typingUsers = {};
+	};
+
+	// --- End typing indicator handlers ---
+
 	const chatEventHandler = async (event, cb) => {
 		console.log(event);
 
 		if (event.chat_id === $chatId) {
 			await tick();
+
+			const type = event?.data?.type ?? null;
+
+			// Handle sync event from another space member saving the chat.
+			// This arrives BEFORE their streaming starts, so we re-fetch to
+			// get the new user message + empty assistant response in our history.
+			if (type === 'chat:thread:sync') {
+				await syncChatHistory();
+				return;
+			}
+
 			let message = history.messages[event.message_id];
 
+			// Reactive fallback: if we receive a streaming event for a message_id
+			// we don't have locally, another space member is generating a response
+			// and we missed the sync event. Re-fetch and retry once.
+			if (!message && event.message_id) {
+				await syncChatHistory();
+				await tick();
+				message = history.messages[event.message_id];
+				if (!message) return; // Still not found after sync — skip
+			}
+
 			if (message) {
-				const type = event?.data?.type ?? null;
 				const data = event?.data?.data ?? null;
 
 				if (type === 'status') {
@@ -586,6 +748,7 @@
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
+		$socket?.on('typing', typingEventHandler);
 
 		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
 
@@ -677,6 +840,8 @@
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
 			$socket?.off('events', chatEventHandler);
+			$socket?.off('typing', typingEventHandler);
+			clearTypingUsers();
 			$audioQueue?.destroy();
 		} catch (e) {
 			console.error(e);
@@ -925,6 +1090,7 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
+		clearTypingUsers();
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
 		}
@@ -1105,6 +1271,7 @@
 	};
 
 	const loadChat = async () => {
+		clearTypingUsers();
 		chatId.set(chatIdProp);
 
 		if ($temporaryChatEnabled) {
@@ -1167,6 +1334,8 @@
 				}
 
 				await tick();
+
+				markChatAsViewed(localStorage.token, $chatId);
 
 				return true;
 			} else {
@@ -1343,6 +1512,8 @@
 				parentId: parentMessage ? parentMessage.id : null,
 				childrenIds: [responseMessageId],
 				role: 'user',
+				user_id: $user.id,
+				user_name: $user.name,
 				content: userPrompt ? userPrompt : `[PROMPT] ${userMessageId}`,
 				timestamp: Math.floor(Date.now() / 1000)
 			};
@@ -1715,6 +1886,8 @@
 			parentId: messages.length !== 0 ? messages.at(-1).id : null,
 			childrenIds: [],
 			role: 'user',
+			user_id: $user.id,
+			user_name: $user.name,
 			content: userPrompt,
 			files: _files.length > 0 ? _files : undefined,
 			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
@@ -1984,6 +2157,8 @@
 
 				return {
 					role: message.role,
+					...(message.user_id && { user_id: message.user_id }),
+					...(message.user_name && { user_name: message.user_name }),
 					...(message.role === 'user' && imageFiles.length > 0
 						? {
 								content: [
@@ -2251,6 +2426,8 @@
 			parentId: parentId,
 			childrenIds: [],
 			role: 'user',
+			user_id: $user.id,
+			user_name: $user.name,
 			content: userPrompt,
 			models: selectedModels,
 			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
@@ -2409,8 +2586,14 @@
 					tags: [],
 					timestamp: Date.now()
 				},
-				$selectedFolder?.id
+				$selectedFolder?.id,
+				$currentSpaceId
 			);
+
+			// Clear space context after creating chat
+			if ($currentSpaceId) {
+				currentSpaceId.set(null);
+			}
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
@@ -2435,13 +2618,41 @@
 	const saveChatHandler = async (_chatId, history) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				const chatPayload = {
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
 					files: chatFiles
-				});
+				};
+
+				try {
+					chat = await updateChatById(localStorage.token, _chatId, chatPayload, chat?.chat_version);
+				} catch (err) {
+					// 409 Conflict = version mismatch (another user saved first).
+					// Re-fetch the latest state, merge our history on top, and retry once.
+					if (
+						err?.detail &&
+						typeof err.detail === 'string' &&
+						err.detail.includes('version conflict')
+					) {
+						console.warn('Chat version conflict — re-fetching and retrying save');
+						const freshChat = await getChatById(localStorage.token, _chatId);
+						if (freshChat) {
+							chat = freshChat;
+							// Retry with the updated version
+							chat = await updateChatById(
+								localStorage.token,
+								_chatId,
+								chatPayload,
+								chat?.chat_version
+							);
+						}
+					} else {
+						throw err;
+					}
+				}
+
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
@@ -2527,7 +2738,7 @@
 />
 
 <div
-	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$sidebarPinned
 		? '  md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ' '} w-full max-w-full flex flex-col"
 	id="chat-container"
@@ -2573,6 +2784,7 @@
 						{history}
 						title={$chatTitle}
 						bind:selectedModels
+						showModelSelector={false}
 						shareEnabled={!!history.currentId}
 						{initNewChat}
 						archiveChatHandler={() => {}}
@@ -2653,6 +2865,17 @@
 								</div>
 							</div>
 
+							{#if typingIndicatorText}
+								<div
+									class="px-5 py-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-0.5"
+								>
+									<span>{typingIndicatorText}</span>
+									<span class="typing-dots">
+										<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+									</span>
+								</div>
+							{/if}
+
 							<div class=" pb-2 z-10">
 								<MessageInput
 									bind:this={messageInput}
@@ -2706,8 +2929,10 @@
 										if (!$temporaryChatEnabled) {
 											saveDraft(data, $chatId);
 										}
+										emitTyping();
 									}}
 									on:submit={async (e) => {
+										emitStopTyping();
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
@@ -2748,8 +2973,10 @@
 										if (!$temporaryChatEnabled) {
 											saveDraft(data);
 										}
+										emitTyping();
 									}}
 									on:submit={async (e) => {
+										emitStopTyping();
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
@@ -2798,5 +3025,31 @@
 	::-webkit-scrollbar {
 		height: 0.5rem;
 		width: 0.5rem;
+	}
+
+	.typing-dots .dot {
+		animation: typingDot 1.4s infinite;
+		opacity: 0;
+	}
+	.typing-dots .dot:nth-child(1) {
+		animation-delay: 0s;
+	}
+	.typing-dots .dot:nth-child(2) {
+		animation-delay: 0.2s;
+	}
+	.typing-dots .dot:nth-child(3) {
+		animation-delay: 0.4s;
+	}
+	@keyframes typingDot {
+		0%,
+		20% {
+			opacity: 0;
+		}
+		50% {
+			opacity: 1;
+		}
+		100% {
+			opacity: 0;
+		}
 	}
 </style>

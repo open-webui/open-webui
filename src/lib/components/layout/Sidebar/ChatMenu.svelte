@@ -23,6 +23,8 @@
 		getChatPinnedStatusById,
 		toggleChatPinnedStatusById
 	} from '$lib/apis/chats';
+	import { getSpaces } from '$lib/apis/spaces';
+	import type { Space } from '$lib/apis/spaces';
 	import { chats, folders, settings, theme, user } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
@@ -34,6 +36,7 @@
 
 	export let shareHandler: Function;
 	export let moveChatHandler: Function;
+	export let spaceChatHandler: Function = () => {};
 
 	export let cloneChatHandler: Function;
 	export let archiveChatHandler: Function;
@@ -48,6 +51,9 @@
 
 	let chat = null;
 	let showFullMessages = false;
+
+	let spaces: Space[] = [];
+	let spacesLoaded = false;
 
 	const pinHandler = async () => {
 		await toggleChatPinnedStatusById(localStorage.token, chatId);
@@ -254,8 +260,21 @@
 		}
 	};
 
+	const loadSpaces = async () => {
+		if (!spacesLoaded) {
+			try {
+				const res = await getSpaces(localStorage.token);
+				spaces = res?.items ?? [];
+			} catch {
+				spaces = [];
+			}
+			spacesLoaded = true;
+		}
+	};
+
 	$: if (show) {
 		checkPinned();
+		loadSpaces();
 	}
 </script>
 
@@ -393,37 +412,91 @@
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</DropdownMenu.Item>
 
-			{#if chatId && $folders.length > 0}
-				<DropdownMenu.Sub>
-					<DropdownMenu.SubTrigger
-						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+		{#if chatId && $folders.length > 0}
+			<DropdownMenu.Sub>
+				<DropdownMenu.SubTrigger
+					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+				>
+					<Folder />
+
+					<div class="flex items-center">{$i18n.t('Move')}</div>
+				</DropdownMenu.SubTrigger>
+				<DropdownMenu.SubContent
+					class="w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100  dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
+					transition={flyAndScale}
+					sideOffset={8}
+				>
+					{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+							on:click={() => {
+								moveChatHandler(chatId, folder.id);
+							}}
+						>
+							<Folder />
+
+							<div class="flex items-center">{folder?.name ?? 'Folder'}</div>
+						</DropdownMenu.Item>
+					{/each}
+				</DropdownMenu.SubContent>
+			</DropdownMenu.Sub>
+		{/if}
+
+		{#if chatId && spaces.length > 0}
+			<DropdownMenu.Sub>
+				<DropdownMenu.SubTrigger
+					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+						<path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h2.879a1.5 1.5 0 0 1 1.06.44l1.122 1.12A1.5 1.5 0 0 0 9.62 4H12.5A1.5 1.5 0 0 1 14 5.5v1.401a2.986 2.986 0 0 0-1.5-.401h-9A2.986 2.986 0 0 0 2 6.901V3.5Z" />
+						<path d="M3.5 8A1.5 1.5 0 0 0 2 9.5v3A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-3A1.5 1.5 0 0 0 12.5 8h-9Z" />
+					</svg>
+
+					<div class="flex items-center">{$i18n.t('Space')}</div>
+				</DropdownMenu.SubTrigger>
+				<DropdownMenu.SubContent
+					class="w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100 dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
+					transition={flyAndScale}
+					sideOffset={8}
+				>
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl text-gray-500"
+						on:click={() => {
+							spaceChatHandler(chatId, null);
+						}}
 					>
-						<Folder />
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+							<path d="M3.28 2.22a.75.75 0 0 0-1.06 1.06L5.44 6.5H2.75a.75.75 0 0 0 0 1.5h3.94a.75.75 0 0 0 .75-.75V3.31a.75.75 0 0 0-1.5 0v2.69L2.22 2.28a.75.75 0 0 0-1.06 0ZM13.5 9.25a.75.75 0 0 0-1.5 0v2.69L9.28 9.22a.75.75 0 1 0-1.06 1.06l2.72 2.72H8.25a.75.75 0 0 0 0 1.5h3.94a.75.75 0 0 0 .75-.75V9.81a.75.75 0 0 0-.44-.56Z" />
+						</svg>
+						<div class="flex items-center">{$i18n.t('Remove from Space')}</div>
+					</DropdownMenu.Item>
 
-						<div class="flex items-center">{$i18n.t('Move')}</div>
-					</DropdownMenu.SubTrigger>
-					<DropdownMenu.SubContent
-						class="w-full rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100  dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
-						transition={flyAndScale}
-						sideOffset={8}
-					>
-						{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
-							<DropdownMenu.Item
-								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-								on:click={() => {
-									moveChatHandler(chatId, folder.id);
-								}}
-							>
-								<Folder />
+					<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
 
-								<div class="flex items-center">{folder?.name ?? 'Folder'}</div>
-							</DropdownMenu.Item>
-						{/each}
-					</DropdownMenu.SubContent>
-				</DropdownMenu.Sub>
-			{/if}
+					{#each spaces.sort((a, b) => b.updated_at - a.updated_at) as space}
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+							on:click={() => {
+								spaceChatHandler(chatId, space.id);
+							}}
+						>
+							{#if space.emoji}
+								<span class="text-sm">{space.emoji}</span>
+							{:else}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+									<path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h2.879a1.5 1.5 0 0 1 1.06.44l1.122 1.12A1.5 1.5 0 0 0 9.62 4H12.5A1.5 1.5 0 0 1 14 5.5v1.401a2.986 2.986 0 0 0-1.5-.401h-9A2.986 2.986 0 0 0 2 6.901V3.5Z" />
+									<path d="M3.5 8A1.5 1.5 0 0 0 2 9.5v3A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-3A1.5 1.5 0 0 0 12.5 8h-9Z" />
+								</svg>
+							{/if}
 
-			<DropdownMenu.Item
+							<div class="flex items-center">{space?.name ?? 'Space'}</div>
+						</DropdownMenu.Item>
+					{/each}
+				</DropdownMenu.SubContent>
+			</DropdownMenu.Sub>
+		{/if}
+
+		<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
 					archiveChatHandler();

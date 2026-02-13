@@ -44,12 +44,12 @@
 	import 'tippy.js/dist/tippy.css';
 
 	import { executeToolServer, getBackendConfig, getVersion } from '$lib/apis';
-	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { getSessionUser, userSignOut, updateUserProfile } from '$lib/apis/auths';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import { bestMatchingLanguage } from '$lib/utils';
+	import { bestMatchingLanguage, generateInitialsImage } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -492,6 +492,17 @@
 		}
 	};
 
+	const spaceEventHandler = async (event) => {
+		const type = event?.data?.type ?? null;
+		const data = event?.data?.data ?? null;
+		const userName = event?.user?.name ?? 'Someone';
+
+		// Only show notifications for thread:created events from other users
+		if (type === 'thread:created' && event?.user?.id !== $user?.id) {
+			toast.info(`${userName} started a new thread in a Space`);
+		}
+	};
+
 	const channelEventHandler = async (event) => {
 		console.log('channelEventHandler', event);
 		if (event.data?.type === 'typing') {
@@ -731,9 +742,11 @@
 			if (value) {
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('events:channel', channelEventHandler);
+				$socket?.off('events:space', spaceEventHandler);
 
 				$socket?.on('events', chatEventHandler);
 				$socket?.on('events:channel', channelEventHandler);
+				$socket?.on('events:space', spaceEventHandler);
 
 				const userSettings = await getUserSettings(localStorage.token);
 				if (userSettings) {
@@ -751,6 +764,7 @@
 			} else {
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('events:channel', channelEventHandler);
+				$socket?.off('events:space', spaceEventHandler);
 			}
 		});
 
@@ -795,10 +809,27 @@
 						return null;
 					});
 
-					if (sessionUser) {
-						await user.set(sessionUser);
-						await config.set(await getBackendConfig());
-					} else {
+				if (sessionUser) {
+					await user.set(sessionUser);
+					await config.set(await getBackendConfig());
+
+					if (
+						sessionUser.profile_image_url &&
+						sessionUser.profile_image_url.startsWith('data:image')
+					) {
+						const freshImage = generateInitialsImage(sessionUser.name);
+						if (freshImage !== sessionUser.profile_image_url) {
+							updateUserProfile(localStorage.token, {
+								name: sessionUser.name,
+								profile_image_url: freshImage
+							}).catch(() => {});
+						}
+					}
+
+					if (sessionUser.must_change_password && $page.url.pathname !== '/auth/reset-password') {
+						await goto('/auth/reset-password');
+					}
+				} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
 						await goto(`/auth?redirect=${encodedUrl}`);

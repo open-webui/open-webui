@@ -3,7 +3,7 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { showSidebar } from '$lib/stores';
+	import { showSidebar, sidebarPinned } from '$lib/stores';
 
 	import dayjs from '$lib/dayjs';
 	import { createNoteHandler } from '$lib/components/notes/utils';
@@ -20,7 +20,7 @@
 {#if loaded}
 	<div
 		id="note-container"
-		class="w-full h-full {$showSidebar ? 'md:max-w-[calc(100%-var(--sidebar-width))]' : ''}"
+		class="w-full h-full {$sidebarPinned ? 'md:max-w-[calc(100%-var(--sidebar-width))]' : ''}"
 	>
 		<NoteEditor id={$page.params.id} />
 	</div>

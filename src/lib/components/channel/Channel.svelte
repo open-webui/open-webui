@@ -11,6 +11,7 @@
 		channels,
 		channelId as _channelId,
 		showSidebar,
+		sidebarPinned,
 		socket,
 		user
 	} from '$lib/stores';
@@ -292,7 +293,7 @@
 </svelte:head>
 
 <div
-	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$sidebarPinned
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ''} w-full max-w-full flex flex-col"
 	id="channel-container"

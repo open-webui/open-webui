@@ -54,6 +54,7 @@
 	import { deleteFileById } from '$lib/apis/files';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
+	import { processFile } from '$lib/apis/retrieval';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -82,6 +83,7 @@
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
+	import SharePointFilePicker from './SharePointFilePicker.svelte';
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
@@ -91,6 +93,8 @@
 	import InputModal from '../common/InputModal.svelte';
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
+	import ModelSelector from './ModelSelector.svelte';
+	import Selector from './ModelSelector/Selector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -434,6 +438,7 @@
 	let inputFiles;
 
 	let showInputModal = false;
+	let showSharePointPicker = false;
 
 	let dragged = false;
 	let shiftKey = false;
@@ -1037,6 +1042,57 @@
 	}}
 />
 
+<SharePointFilePicker
+	bind:show={showSharePointPicker}
+	token={localStorage.token}
+	on:fileDownloaded={async (e) => {
+		console.log('[SharePoint] fileDownloaded event received:', e.detail);
+		const result = e.detail;
+		if (result && result.id) {
+			console.log('[SharePoint] Adding file to chat:', result.id, result.filename);
+
+			const fileEntry = {
+				type: 'file',
+				id: result.id,
+				name: result.filename,
+				collection_name: '',
+				status: 'processing',
+				url: result.id
+			};
+			files = [...files, fileEntry];
+
+			try {
+				console.log('[SharePoint] Processing file for RAG:', result.id);
+				const processResult = await processFile(localStorage.token, result.id);
+				console.log('[SharePoint] File processed:', processResult);
+
+				if (processResult && processResult.collection_name) {
+					files = files.map((f) =>
+						f.id === result.id
+							? { ...f, collection_name: processResult.collection_name, status: 'uploaded' }
+							: f
+					);
+					console.log(
+						'[SharePoint] File ready for RAG with collection:',
+						processResult.collection_name
+					);
+				} else {
+					files = files.map((f) => (f.id === result.id ? { ...f, status: 'uploaded' } : f));
+					console.warn('[SharePoint] File processed but no collection_name returned');
+				}
+			} catch (err) {
+				console.error('[SharePoint] Failed to process file for RAG:', err);
+				files = files.map((f) => (f.id === result.id ? { ...f, status: 'error' } : f));
+				toast.error(`Failed to process file: ${err}`);
+			}
+
+			console.log('[SharePoint] Files array now:', files);
+		} else {
+			console.error('[SharePoint] Invalid result - missing id:', result);
+		}
+	}}
+/>
+
 {#if loaded}
 	<div class="w-full font-primary">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
@@ -1481,8 +1537,8 @@
 								</div>
 							</div>
 
-							<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
-								<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
+							<div class="grid grid-cols-[1fr_auto] items-end mt-0.5 mb-1 mx-1 gap-2" dir="ltr">
+								<div class="flex items-center gap-0.5 overflow-x-auto scrollbar-hidden">
 									<InputMenu
 										bind:files
 										selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
@@ -1527,6 +1583,9 @@
 												console.error('OneDrive Error:', error);
 											}
 										}}
+										uploadSharePointHandler={() => {
+											showSharePointPicker = true;
+										}}
 										{onUpload}
 										onClose={async () => {
 											await tick();
@@ -1537,16 +1596,14 @@
 									>
 										<div
 											id="input-menu-button"
-											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+											class="bg-transparent hover:bg-gray-100 text-accent-500 dark:text-accent-400 dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 										>
 											<PlusAlt className="size-5.5" />
 										</div>
 									</InputMenu>
 
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
-										<div
-											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50"
-										/>
+										<div class="w-[1px] h-4 bg-gray-200/50 dark:bg-gray-800/50" />
 
 										<IntegrationsMenu
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
@@ -1576,7 +1633,7 @@
 										>
 											<div
 												id="integration-menu-button"
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+												class="bg-transparent hover:bg-gray-100 text-accent-500 dark:text-accent-400 dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
 												<Component className="size-4.5" strokeWidth="1.5" />
 											</div>
@@ -1584,12 +1641,12 @@
 									{/if}
 
 									{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}
-										<div class="ml-1 flex gap-1.5">
+										<div class="flex gap-1">
 											<Tooltip content={$i18n.t('Valves')} placement="top">
 												<button
 													type="button"
 													id="model-valves-button"
-													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+													class="bg-transparent hover:bg-gray-100 text-accent-500 dark:text-accent-400 dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 													on:click={() => {
 														selectedValvesType = 'function';
 														selectedValvesItemId = selectedModelIds[0]?.split('.')[0];
@@ -1602,7 +1659,7 @@
 										</div>
 									{/if}
 
-									<div class="ml-1 flex gap-1.5">
+									<div class="flex gap-1">
 										{#if (selectedToolIds ?? []).length > 0}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
@@ -1610,7 +1667,7 @@
 												})}
 											>
 												<button
-													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
+													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-accent-500 dark:text-accent-400 hover:text-accent-600 dark:hover:text-accent-300 rounded-lg self-center transition"
 													aria-label="Available Tools"
 													type="button"
 													on:click={() => {
@@ -1727,9 +1784,24 @@
 									</div>
 								</div>
 
-								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
+								<div class="flex items-center gap-1 justify-self-end">
+									<div class="flex items-center">
+										<Selector
+											id="compact-model"
+											placeholder={$i18n.t('Model')}
+											items={$models.map((model) => ({
+												value: model.id,
+												label: model.name,
+												model: model
+											}))}
+											bind:value={selectedModels[0]}
+											triggerClassName="text-xs"
+											className="w-[24rem]"
+										/>
+									</div>
+
 									{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
-										<div class=" flex items-center">
+										<div class="flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
 													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
@@ -1775,7 +1847,7 @@
 											<Tooltip content={$i18n.t('Dictate')}>
 												<button
 													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
+													class=" text-accent-500 dark:text-accent-400 hover:text-accent-600 dark:hover:text-accent-300 transition rounded-full p-1.5 self-center mr-0.5"
 													type="button"
 													on:click={async () => {
 														try {
@@ -1821,11 +1893,11 @@
 										{/if}
 
 										{#if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
-											<div class=" flex items-center">
+											<div class="flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>
 													<button
-														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
+														class=" bg-accent-500 text-white hover:bg-accent-600 dark:bg-accent-500 dark:text-white dark:hover:bg-accent-600 transition rounded-full p-1.5 self-center"
 														type="button"
 														on:click={async () => {
 															if (selectedModels.length > 1) {
@@ -1884,7 +1956,7 @@
 												</Tooltip>
 											</div>
 										{:else}
-											<div class=" flex items-center">
+											<div class="flex items-center">
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"

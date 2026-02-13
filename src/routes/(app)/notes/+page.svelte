@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 
 	import dayjs from '$lib/dayjs';
-	import { mobile, showArchivedChats, showSidebar, user } from '$lib/stores';
+	import { mobile, showArchivedChats, showSidebar, sidebarPinned, user } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -40,7 +40,7 @@
 
 {#if loaded}
 	<div
-		class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$sidebarPinned
 			? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 			: ''} max-w-full"
 	>

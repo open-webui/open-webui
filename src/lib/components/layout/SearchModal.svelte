@@ -297,7 +297,7 @@
 			<div
 				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1 pr-2"
 			>
-				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2 px-2">
+				<div class="w-full text-xs text-accent-500 dark:text-accent-400 font-medium pb-2 px-2">
 					{$i18n.t('Actions')}
 				</div>
 
@@ -339,7 +339,7 @@
 					{#each chatList as chat, idx (chat.id)}
 						{#if idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)}
 							<div
-								class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+								class="w-full text-xs text-accent-500 dark:text-accent-400 font-medium {idx === 0
 									? ''
 									: 'pt-5'} pb-2 px-2"
 							>

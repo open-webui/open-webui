@@ -9,7 +9,7 @@
 </script>
 
 <div class="mt-4">
-	<div class="text-sm font-medium">
+	<div class="text-sm font-medium text-accent-500 dark:text-accent-400">
 		{$i18n.t('Follow up')}
 	</div>
 

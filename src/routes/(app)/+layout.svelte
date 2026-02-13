@@ -34,7 +34,8 @@
 		temporaryChatEnabled,
 		toolServers,
 		showSearch,
-		showSidebar
+		showSidebar,
+		sidebarPinned
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -212,7 +213,13 @@
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.TOGGLE_SIDEBAR])) {
 					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
-					showSidebar.set(!$showSidebar);
+					if ($sidebarPinned) {
+						sidebarPinned.set(false);
+						showSidebar.set(false);
+					} else {
+						sidebarPinned.set(true);
+						showSidebar.set(true);
+					}
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.DELETE_CHAT])) {
 					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
@@ -385,17 +392,20 @@
 
 				<Sidebar />
 
-				{#if loaded}
-					<slot />
-				{:else}
-					<div
-						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
-							? '  md:max-w-[calc(100%-var(--sidebar-width))]'
-							: ' '}"
-					>
-						<Spinner className="size-5" />
-					</div>
-				{/if}
+				<!-- Main content area: offset by sidebar rail width (52px) on desktop -->
+				<div
+					class="flex-1 w-full h-full md:ml-[52px] {$sidebarPinned
+						? 'md:ml-[var(--sidebar-width)]'
+						: ''}"
+				>
+					{#if loaded}
+						<slot />
+					{:else}
+						<div class="w-full h-full flex items-center justify-center">
+							<Spinner className="size-5" />
+						</div>
+					{/if}
+				</div>
 			{/if}
 		</div>
 	</div>

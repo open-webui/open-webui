@@ -59,6 +59,33 @@
 		}
 	}
 
+	// Determine if this message was sent by another user (Space collaboration)
+	$: isOtherUser = message.user_id && message.user_id !== $_user?.id;
+	$: senderName = isOtherUser ? (message.user_name ?? 'Unknown') : null;
+	$: senderProfileImageUrl = isOtherUser ? `${WEBUI_API_BASE_URL}/users/${message.user_id}/profile/image` : undefined;
+	$: senderInitials = senderName
+		? senderName.split(' ').map((w: string) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
+		: '';
+
+	// Generate a consistent color from user_id so each user always gets the same hue
+	const USER_AVATAR_COLORS = [
+		'#E67E22', '#3498DB', '#2ECC71', '#9B59B6', '#1ABC9C',
+		'#E74C3C', '#F39C12', '#2980B9', '#27AE60', '#8E44AD',
+		'#16A085', '#C0392B', '#D35400', '#7F8C8D', '#2C3E50'
+	];
+	function getUserColor(userId: string): string {
+		let hash = 0;
+		for (let i = 0; i < userId.length; i++) {
+			hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
+		}
+		return USER_AVATAR_COLORS[Math.abs(hash) % USER_AVATAR_COLORS.length];
+	}
+	$: senderColor = isOtherUser && message.user_id ? getUserColor(message.user_id) : '#E67E22';
+
+	let senderImageFailed = false;
+	// Reset image failure state when user_id changes (different message/user)
+	$: if (message.user_id) senderImageFailed = false;
+
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
 		if (res) {
@@ -121,6 +148,192 @@
 	}}
 />
 
+{#if isOtherUser}
+<div
+	class="flex w-full user-message group {isFirstMessage && topPadding ? 'pt-6' : ''}"
+	dir={$settings.chatDirection}
+	id="message-{message.id}"
+>
+	<div class="shrink-0 ltr:mr-3 rtl:ml-3">
+		{#if senderProfileImageUrl && !senderImageFailed}
+			<img
+				aria-hidden="true"
+				src={senderProfileImageUrl}
+				class="size-8 object-cover rounded-full"
+				alt="{senderName}"
+				draggable="false"
+				on:error={() => { senderImageFailed = true; }}
+			/>
+		{:else}
+			<div
+				class="size-8 rounded-full flex items-center justify-center text-white text-xs font-semibold select-none"
+				style="background-color: {senderColor}"
+				title={senderName}
+			>
+				{senderInitials}
+			</div>
+		{/if}
+	</div>
+	<div class="flex-auto w-0 max-w-full pl-1">
+		<div>
+			<Name>
+				{senderName}
+
+				{#if message.timestamp}
+					<div
+						class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
+						false)
+							? 'dark:text-gray-900 text-gray-100'
+							: 'invisible group-hover:visible transition'}"
+					>
+						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
+							<span class="line-clamp-1"
+								>{$i18n.t(formatDate(message.timestamp * 1000), {
+									LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
+									LOCALIZED_DATE: dayjs(message.timestamp * 1000).format('L')
+								})}</span
+							>
+						</Tooltip>
+					</div>
+				{/if}
+			</Name>
+		</div>
+
+		<div class="chat-{message.role} w-full min-w-full markdown-prose">
+			{#if message.files}
+				<div
+					class="mb-1 w-full flex flex-col justify-start overflow-x-auto gap-1 flex-wrap"
+					dir={$settings?.chatDirection ?? 'auto'}
+				>
+					{#each message.files as file}
+						{@const fileUrl =
+							file.url?.startsWith('data') || file.url?.startsWith('http')
+								? file.url
+								: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
+						<div>
+							{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+								<Image src={fileUrl} imageClassName=" max-h-96 rounded-lg" />
+							{:else}
+								<FileItem
+									item={file}
+									url={file.url}
+									name={file.name}
+									type={file.type}
+									size={file?.size}
+									small={true}
+								/>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
+
+			{#if message.content !== ''}
+				<div class="w-full">
+					<div class="flex pb-1">
+						<div
+							class="rounded-3xl max-w-[90%] px-4 py-1.5 bg-gray-50 dark:bg-gray-850 {message.files ? 'rounded-tl-lg' : ''}"
+						>
+							{#if message.content}
+								<Markdown
+									id={`${chatId}-${message.id}`}
+									content={message.content}
+									{editCodeBlock}
+									{topPadding}
+								/>
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/if}
+
+			<div class="flex text-gray-600 dark:text-gray-500">
+				{#if siblings.length > 1}
+					<div class="flex self-center" dir="ltr">
+						<button
+							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+							on:click={() => {
+								showPreviousMessage(message);
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2.5"
+								class="size-3.5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M15.75 19.5 8.25 12l7.5-7.5"
+								/>
+							</svg>
+						</button>
+
+						<div
+							class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+						>
+							{siblings.indexOf(message.id) + 1}/{siblings.length}
+						</div>
+
+						<button
+							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+							on:click={() => {
+								showNextMessage(message);
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2.5"
+								class="size-3.5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="m8.25 4.5 7.5 7.5-7.5 7.5"
+								/>
+							</svg>
+						</button>
+					</div>
+				{/if}
+
+				{#if message?.content}
+					<Tooltip content={$i18n.t('Copy')} placement="bottom">
+						<button
+							class="{($settings?.highContrastMode ?? false)
+								? ''
+								: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+							on:click={() => {
+								copyToClipboard(message.content);
+							}}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2.3"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
+				{/if}
+			</div>
+		</div>
+	</div>
+</div>
+{:else}
 <div
 	class=" flex w-full user-message group"
 	dir={$settings.chatDirection}
@@ -664,3 +877,4 @@
 		</div>
 	</div>
 </div>
+{/if}

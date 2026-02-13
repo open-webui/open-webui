@@ -16,7 +16,8 @@
 		getChatListByTagName,
 		getPinnedChatList,
 		updateChatById,
-		updateChatFolderIdById
+		updateChatFolderIdById,
+		updateChatSpaceId
 	} from '$lib/apis/chats';
 	import {
 		chatId,
@@ -53,6 +54,8 @@
 
 	export let selected = false;
 	export let shiftKey = false;
+	export let isStreaming = false;
+	export let unread = false;
 
 	export let onDragEnd = () => {};
 
@@ -181,6 +184,23 @@
 			}
 		} else {
 			toast.error($i18n.t('Failed to move chat'));
+		}
+	};
+
+	const spaceChatHandler = async (chatId, spaceId) => {
+		const res = await updateChatSpaceId(localStorage.token, chatId, spaceId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+			dispatch('change');
+
+			toast.success(spaceId ? $i18n.t('Chat added to space') : $i18n.t('Chat removed from space'));
 		}
 	};
 
@@ -452,10 +472,17 @@
 				</div>
 			{/if}
 
-			<div class="flex self-center flex-1 w-full min-w-0">
-				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px] truncate">
+			<div class="flex self-center flex-1 w-full items-center gap-2 min-w-0">
+				<div
+					dir="auto"
+					class="text-left self-center overflow-hidden w-full h-[20px]"
+					style="mask-image: linear-gradient(to right, black 85%, transparent 98%); -webkit-mask-image: linear-gradient(to right, black 85%, transparent 98%);"
+				>
 					{title}
 				</div>
+				{#if unread && id !== $chatId}
+					<div class="shrink-0 size-2 rounded-full bg-[#e3530f]"></div>
+				{/if}
 			</div>
 
 			<!-- Time ago indicator -->
@@ -542,6 +569,7 @@
 						showShareChatModal = true;
 					}}
 					{moveChatHandler}
+					{spaceChatHandler}
 					archiveChatHandler={() => {
 						archiveChatHandler(id);
 					}}
