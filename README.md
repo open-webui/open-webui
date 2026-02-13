@@ -146,6 +146,55 @@ This will start the Open WebUI server, which you can access at [http://localhost
   docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
   ```
 
+### OpenRouter Production Core (Presets, Privacy, Streaming, Healing)
+
+If you're connecting through OpenRouter, Open WebUI supports policy-driven request defaults via environment variables.
+
+- **Enable OpenAI-compatible OpenRouter endpoint**:
+  - `ENABLE_OPENAI_API=true`
+  - `OPENAI_API_BASE_URL=https://openrouter.ai/api/v1`
+  - `OPENAI_API_KEY=<your_openrouter_key>`
+- **Choose default preset + model mapping**:
+  - `OPENROUTER_DEFAULT_PRESET=fast` (`fast`, `smart`, `code`)
+  - `OPENROUTER_PRESET_FAST_MODEL=google/gemini-3-flash-preview`
+  - `OPENROUTER_PRESET_SMART_MODEL=anthropic/claude-sonnet-4.5`
+  - `OPENROUTER_PRESET_CODE_MODEL=openai/gpt-5.2-codex`
+- **Streaming defaults**:
+  - `OPENROUTER_DEFAULT_STREAM=true`
+  - Per-request override with metadata: `non_stream=true`
+- **Privacy controls**:
+  - `OPENROUTER_DATA_COLLECTION=deny`
+  - `OPENROUTER_ENABLE_SENSITIVE_ZDR=true` (applies `provider.zdr=true` when request metadata is sensitive)
+- **Structured output + response healing**:
+  - `OPENROUTER_ENABLE_STRUCTURED_OUTPUTS=true`
+  - `OPENROUTER_ENABLE_RESPONSE_HEALING=true`
+- **Guardrails (optional hardening)**:
+  - `OPENROUTER_GUARDRAIL_ALLOWED_MODELS=<comma-separated model ids>`
+  - `OPENROUTER_GUARDRAIL_ALLOWED_PROVIDERS=<comma-separated providers>`
+  - `OPENROUTER_GUARDRAIL_MAX_TOKENS=<int>`
+  - `OPENROUTER_GUARDRAIL_HARD_FAIL=true|false`
+
+These defaults are safe to keep in `.env` and can still be overridden per request where supported.
+
+#### UI Configuration
+
+You can configure OpenRouter request policies directly from the chat UI.
+
+- Open **Settings** → **General**.
+- Find the **OpenRouter** section.
+- Configure:
+
+- **Preset**: `fast` / `smart` / `code`
+- **Provider sort**: `latency` / `price` / `throughput`
+- **Sensitive ZDR toggle** for privacy-sensitive prompts
+- **Streaming** toggle and non-stream fallback toggle
+- **Structured JSON output** + optional JSON Schema + **Response healing**
+- **Guardrails**: allowed models/providers, max tokens, hard-fail behavior
+
+- Click **Save**.
+
+When enabled, the UI sends OpenRouter metadata with each chat completion request, and the backend applies it via `openrouter_policy.py`.
+
 ### Installing Open WebUI with Bundled Ollama Support
 
 This installation method uses a single container image that bundles Open WebUI with Ollama, allowing for a streamlined setup via a single command. Choose the appropriate command based on your hardware setup:
