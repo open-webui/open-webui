@@ -100,8 +100,11 @@ async def get_prompt_list(
     if direction:
         filter["direction"] = direction
 
+    # Pre-fetch user group IDs once - used for both filter and write_access check
+    groups = Groups.get_groups_by_member_id(user.id, db=db)
+    user_group_ids = {group.id for group in groups}
+
     if not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL):
-        groups = Groups.get_groups_by_member_id(user.id, db=db)
         if groups:
             filter["group_ids"] = [group.id for group in groups]
 
@@ -123,6 +126,7 @@ async def get_prompt_list(
                         resource_type="prompt",
                         resource_id=prompt.id,
                         permission="write",
+                        user_group_ids=user_group_ids,
                         db=db,
                     )
                 ),

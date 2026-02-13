@@ -84,14 +84,18 @@ async def get_models(
     if direction:
         filter["direction"] = direction
 
+    # Pre-fetch user group IDs once - used for both filter and write_access check
+    groups = Groups.get_groups_by_member_id(user.id, db=db)
+    user_group_ids = {group.id for group in groups}
+
     if not user.role == "admin" or not BYPASS_ADMIN_ACCESS_CONTROL:
-        groups = Groups.get_groups_by_member_id(user.id, db=db)
         if groups:
             filter["group_ids"] = [group.id for group in groups]
 
         filter["user_id"] = user.id
 
     result = Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+
     return ModelAccessListResponse(
         items=[
             ModelAccessResponse(
@@ -104,6 +108,7 @@ async def get_models(
                         resource_type="model",
                         resource_id=model.id,
                         permission="write",
+                        user_group_ids=user_group_ids,
                         db=db,
                     )
                 ),
