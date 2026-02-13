@@ -653,10 +653,6 @@ async def unload_model(
     await get_all_models(request, user=user)
     models = request.app.state.OLLAMA_MODELS
 
-    # Canonicalize model name (if not supplied with version)
-    if ":" not in model_name:
-        model_name = f"{model_name}:latest"
-
     if model_name not in models:
         raise HTTPException(
             status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(model_name)
@@ -1353,9 +1349,6 @@ async def generate_chat_completion(
                 detail="Model not found",
             )
 
-    if ":" not in payload["model"]:
-        payload["model"] = f"{payload['model']}:latest"
-
     url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
         str(url_idx),
@@ -1432,9 +1425,6 @@ async def generate_openai_completion(
         del payload["metadata"]
 
     model_id = form_data.model
-    if ":" not in model_id:
-        model_id = f"{model_id}:latest"
-
     model_info = Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
@@ -1465,9 +1455,6 @@ async def generate_openai_completion(
                 status_code=403,
                 detail="Model not found",
             )
-
-    if ":" not in payload["model"]:
-        payload["model"] = f"{payload['model']}:latest"
 
     url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
@@ -1518,9 +1505,6 @@ async def generate_openai_chat_completion(
         del payload["metadata"]
 
     model_id = completion_form.model
-    if ":" not in model_id:
-        model_id = f"{model_id}:latest"
-
     model_info = Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
@@ -1555,9 +1539,6 @@ async def generate_openai_chat_completion(
                 status_code=403,
                 detail="Model not found",
             )
-
-    if ":" not in payload["model"]:
-        payload["model"] = f"{payload['model']}:latest"
 
     url, url_idx = await get_ollama_url(request, payload["model"], url_idx)
     api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(

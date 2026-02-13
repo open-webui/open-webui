@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-02-13
+
+### Fixed
+
+- 🔒 **Public sharing permission bypass fix.** Users with write access to knowledge bases, tools, skills, prompts, and models could previously see and use the "Public" sharing option regardless of their actual sharing permissions, and direct API calls could bypass frontend restrictions entirely; both frontend and backend now properly enforce `sharing.public_*` permissions, silently stripping public grants when users lack the corresponding permission. [#21356](https://github.com/open-webui/open-webui/issues/21356), [#21358](https://github.com/open-webui/open-webui/pull/21358)
+- 🐘 **PostgreSQL analytics query fix.** The `get_chat_ids_by_model_id` function now works correctly with PostgreSQL by using `GROUP BY` with aggregate ordering instead of `DISTINCT` with non-aggregate `ORDER BY`, which PostgreSQL does not support. [Commit](https://github.com/open-webui/open-webui/commit/7bda6bf767d5d5c4dc1111465096a88e10b5030e)
+- 🐘 **Skills PostgreSQL compatibility fix.** Skills now work correctly with PostgreSQL by using SQLAlchemy's native `JSON` column type instead of the custom `JSONField`, which caused compatibility issues. [Commit](https://github.com/open-webui/open-webui/commit/b4c3f54f9648c4232a0fd6557703ffa66fcf4caa)
+- 🔍 **Knowledge tooltip z-index fix.** Knowledge base tooltips in the model editor no longer render behind other UI elements. [#21375](https://github.com/open-webui/open-webui/pull/21375)
+- 📚 **Knowledge collection layout fix.** Knowledge collection names in the chat input menu no longer appear indented or truncated due to incorrect flex layout. [#21374](https://github.com/open-webui/open-webui/pull/21374)
+- 🎯 **Model selector scroll position fix.** The model selector dropdown now correctly scrolls to and centers the currently selected model when opened, and resets scroll position when reopened. [Commit](https://github.com/open-webui/open-webui/commit/0b05b2fc7ed4c38af158707438ff404d1beb7c91)
+- 🌐 **Translation updates.** Portuguese (Brazil) translations were updated. [#21345](https://github.com/open-webui/open-webui/pull/21345)
+
 ## [0.8.0] - 2026-02-12
 
 ### Added

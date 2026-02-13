@@ -476,11 +476,9 @@ async def update_prompt_access_by_id(
         )
     ):
         form_data.access_grants = [
-            g for g in form_data.access_grants
-            if not (
-                g.get("principal_type") == "user"
-                and g.get("principal_id") == "*"
-            )
+            grant
+            for grant in form_data.access_grants
+            if not (grant.get("principal_type") == "user" and grant.get("principal_id") == "*")
         ]
 
     AccessGrants.set_access_grants("prompt", prompt_id, form_data.access_grants, db=db)
