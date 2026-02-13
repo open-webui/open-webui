@@ -349,7 +349,7 @@
 					await updateModelAccessGrants(localStorage.token, model.id, accessGrants);
 					toast.success($i18n.t('Saved'));
 				} catch (error) {
-					toast.error(`${error}`);
+					toast.error(error?.detail ?? `${error}`);
 				}
 			}
 		}}
