@@ -468,6 +468,7 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     MAX_BODY_LOG_SIZE,
     SAFE_MODE,
+    ENABLE_FUNCTIONS,
     VERSION,
     DEPLOYMENT_ID,
     INSTANCE_ID,
@@ -551,7 +552,10 @@ from open_webui.utils.redis import get_sentinels_from_env
 
 from open_webui.constants import ERROR_MESSAGES
 
-if SAFE_MODE:
+if not ENABLE_FUNCTIONS:
+    print("FUNCTIONS DISABLED (ENABLE_FUNCTIONS=false)")
+    Functions.deactivate_all_functions()
+elif SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
 
@@ -612,8 +616,11 @@ async def lifespan(app: FastAPI):
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
-    log.info("Installing external dependencies of functions and tools...")
-    install_tool_and_function_dependencies()
+    if ENABLE_FUNCTIONS:
+        log.info("Installing external dependencies of functions and tools...")
+        install_tool_and_function_dependencies()
+    else:
+        log.info("Functions disabled, skipping function/tool dependency installation.")
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -1481,7 +1488,8 @@ app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"]
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
-app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])
+if ENABLE_FUNCTIONS:
+    app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])
 app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )

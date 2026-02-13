@@ -185,6 +185,30 @@ CHANGELOG = changelog_json
 
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
+####################################
+# FUNCTIONS SECURITY
+####################################
+
+ENABLE_FUNCTIONS = (
+    os.environ.get("ENABLE_FUNCTIONS", "True").lower() == "true"
+)
+
+ENABLE_FUNCTIONS_WRITE = (
+    os.environ.get("ENABLE_FUNCTIONS_WRITE", "True").lower() == "true"
+)
+
+ENABLE_FUNCTIONS_PIP_INSTALL = (
+    os.environ.get("ENABLE_FUNCTIONS_PIP_INSTALL", "True").lower() == "true"
+)
+
+ENABLE_FUNCTIONS_URL_LOAD = (
+    os.environ.get("ENABLE_FUNCTIONS_URL_LOAD", "True").lower() == "true"
+)
+
+ENABLE_TOOLS_CODE_EXECUTION = (
+    os.environ.get("ENABLE_TOOLS_CODE_EXECUTION", "True").lower() == "true"
+)
+
 
 ####################################
 # ENABLE_FORWARD_USER_INFO_HEADERS

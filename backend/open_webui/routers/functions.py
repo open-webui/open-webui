@@ -6,7 +6,7 @@ import aiohttp
 from pathlib import Path
 from typing import Optional
 
-from open_webui.env import AIOHTTP_CLIENT_TIMEOUT
+from open_webui.env import AIOHTTP_CLIENT_TIMEOUT, ENABLE_FUNCTIONS_URL_LOAD, ENABLE_FUNCTIONS_WRITE
 from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
@@ -99,6 +99,12 @@ def github_url_to_raw_url(url: str) -> str:
 async def load_function_from_url(
     request: Request, form_data: LoadUrlForm, user=Depends(get_admin_user)
 ):
+    if not ENABLE_FUNCTIONS_URL_LOAD:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Loading functions from URLs is disabled (ENABLE_FUNCTIONS_URL_LOAD=false)",
+        )
+
     # NOTE: This is NOT a SSRF vulnerability:
     # This endpoint is admin-only (see get_admin_user), meant for *trusted* internal use,
     # and does NOT accept untrusted user input. Access is enforced by authentication.
@@ -160,6 +166,12 @@ async def sync_functions(
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
+    if not ENABLE_FUNCTIONS_WRITE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Function creation/modification is disabled (ENABLE_FUNCTIONS_WRITE=false)",
+        )
+
     try:
         for function in form_data.functions:
             function.content = replace_imports(function.content)
@@ -201,6 +213,12 @@ async def create_new_function(
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
+    if not ENABLE_FUNCTIONS_WRITE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Function creation/modification is disabled (ENABLE_FUNCTIONS_WRITE=false)",
+        )
+
     if not form_data.id.isidentifier():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -283,6 +301,12 @@ async def get_function_by_id(
 async def toggle_function_by_id(
     id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
 ):
+    if not ENABLE_FUNCTIONS_WRITE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Function creation/modification is disabled (ENABLE_FUNCTIONS_WRITE=false)",
+        )
+
     function = Functions.get_function_by_id(id, db=db)
     if function:
         function = Functions.update_function_by_id(
@@ -312,6 +336,12 @@ async def toggle_function_by_id(
 async def toggle_global_by_id(
     id: str, user=Depends(get_admin_user), db: Session = Depends(get_session)
 ):
+    if not ENABLE_FUNCTIONS_WRITE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Function creation/modification is disabled (ENABLE_FUNCTIONS_WRITE=false)",
+        )
+
     function = Functions.get_function_by_id(id, db=db)
     if function:
         function = Functions.update_function_by_id(
@@ -345,6 +375,12 @@ async def update_function_by_id(
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
+    if not ENABLE_FUNCTIONS_WRITE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Function creation/modification is disabled (ENABLE_FUNCTIONS_WRITE=false)",
+        )
+
     try:
         form_data.content = replace_imports(form_data.content)
         function_module, function_type, frontmatter = load_function_module_by_id(
@@ -390,6 +426,12 @@ async def delete_function_by_id(
     user=Depends(get_admin_user),
     db: Session = Depends(get_session),
 ):
+    if not ENABLE_FUNCTIONS_WRITE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Function creation/modification is disabled (ENABLE_FUNCTIONS_WRITE=false)",
+        )
+
     result = Functions.delete_function_by_id(id, db=db)
 
     if result:

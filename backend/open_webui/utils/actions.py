@@ -14,13 +14,16 @@ from open_webui.utils.plugin import get_function_module_from_cache
 from open_webui.utils.models import get_all_models
 from open_webui.utils.middleware import process_tool_result
 
-from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL, ENABLE_FUNCTIONS
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
 async def chat_action(request: Request, action_id: str, form_data: dict, user: Any):
+    if not ENABLE_FUNCTIONS:
+        raise Exception("Functions are disabled (ENABLE_FUNCTIONS=false)")
+
     if "." in action_id:
         action_id, sub_action_id = action_id.split(".")
     else:

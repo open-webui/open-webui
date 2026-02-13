@@ -6,6 +6,7 @@ from open_webui.utils.plugin import (
     get_function_module_from_cache,
 )
 from open_webui.models.functions import Functions
+from open_webui.env import ENABLE_FUNCTIONS
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +22,9 @@ def get_function_module(request, function_id, load_from_db=True):
 
 
 def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None):
+    if not ENABLE_FUNCTIONS:
+        return []
+
     def get_priority(function_id):
         function = Functions.get_function_by_id(function_id)
         if function is not None:

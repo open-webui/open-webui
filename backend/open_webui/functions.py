@@ -36,7 +36,7 @@ from open_webui.utils.plugin import (
 )
 from open_webui.utils.tools import get_tools
 
-from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.env import GLOBAL_LOG_LEVEL, ENABLE_FUNCTIONS
 
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -76,6 +76,9 @@ def get_function_module_by_id(request: Request, pipe_id: str):
 
 
 async def get_function_models(request):
+    if not ENABLE_FUNCTIONS:
+        return []
+
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 

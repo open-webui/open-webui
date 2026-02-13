@@ -8,7 +8,7 @@ import tempfile
 import logging
 from typing import Any
 
-from open_webui.env import PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS, OFFLINE_MODE
+from open_webui.env import PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS, OFFLINE_MODE, ENABLE_FUNCTIONS, ENABLE_FUNCTIONS_PIP_INSTALL, ENABLE_TOOLS_CODE_EXECUTION
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
@@ -205,6 +205,8 @@ def replace_imports(content):
 
 
 def load_tool_module_by_id(tool_id, content=None):
+    if not ENABLE_TOOLS_CODE_EXECUTION:
+        raise Exception("Tool code execution is disabled (ENABLE_TOOLS_CODE_EXECUTION=false)")
 
     if content is None:
         tool = Tools.get_tool_by_id(tool_id)
@@ -252,6 +254,9 @@ def load_tool_module_by_id(tool_id, content=None):
 
 
 def load_function_module_by_id(function_id: str, content: str | None = None):
+    if not ENABLE_FUNCTIONS:
+        raise Exception("Functions are disabled (ENABLE_FUNCTIONS=false)")
+
     if content is None:
         function = Functions.get_function_by_id(function_id)
         if not function:
@@ -401,6 +406,10 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
 
 
 def install_frontmatter_requirements(requirements: str):
+    if not ENABLE_FUNCTIONS_PIP_INSTALL:
+        log.info("Function pip install disabled (ENABLE_FUNCTIONS_PIP_INSTALL=false), skipping.")
+        return
+
     if OFFLINE_MODE:
         log.info("Offline mode enabled, skipping installation of requirements.")
         return
@@ -431,7 +440,7 @@ def install_tool_and_function_dependencies():
     and then installing them using pip. Duplicates or similar version specifications are
     handled by pip as much as possible.
     """
-    function_list = Functions.get_functions(active_only=True)
+    function_list = Functions.get_functions(active_only=True) if ENABLE_FUNCTIONS else []
     tool_list = Tools.get_tools()
 
     all_dependencies = ""
