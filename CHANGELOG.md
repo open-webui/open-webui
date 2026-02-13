@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- ⚡ **Channel user active status.** Checking user active status in channels is now faster thanks to optimized database queries. [Commit](https://github.com/open-webui/open-webui/commit/ca6b18ab5cb94153a9dae233f975d36bf6b19b76)
+- 🚀 **Channel user active status.** Checking user active status in channels is now faster thanks to optimized database queries. [Commit](https://github.com/open-webui/open-webui/commit/ca6b18ab5cb94153a9dae233f975d36bf6b19b76)
 - ⚡ **Model and prompt list optimization.** Improved performance when loading models and prompts by pre-fetching user group IDs once instead of making multiple database queries. [Commit](https://github.com/open-webui/open-webui/commit/20de5a87da0c12e4052b50887a42ddd7228c5ef5)
-- ⚡ **Batch access control queries.** Improved performance when loading models, prompts, and knowledge bases by replacing multiple individual access checks with single batch queries, significantly reducing database load for large deployments. [Commit](https://github.com/open-webui/open-webui/commit/589c4e64c1b7bb7a7a5abc20382b92fb860e28c2)
-- ⚡ **Faster user list loading.** User lists now load significantly faster by deferring profile image loading; images are fetched separately in parallel by the browser, improving caching and reducing database load. [Commit](https://github.com/open-webui/open-webui/commit/b7549d2f6ca2843661ec79a5a1e55da9e7553368)
+- 🗄️ **Batch access control queries.** Improved performance when loading models, prompts, and knowledge bases by replacing multiple individual access checks with single batch queries, significantly reducing database load for large deployments. [Commit](https://github.com/open-webui/open-webui/commit/589c4e64c1b7bb7a7a5abc20382b92fb860e28c2)
+- 💨 **Faster user list loading.** User lists now load significantly faster by deferring profile image loading; images are fetched separately in parallel by the browser, improving caching and reducing database load. [Commit](https://github.com/open-webui/open-webui/commit/b7549d2f6ca2843661ec79a5a1e55da9e7553368)
 - 🌐 **Translation updates.** Portuguese (Brazil) translations were updated. [#21345](https://github.com/open-webui/open-webui/pull/21345)
 
 ### Fixed
