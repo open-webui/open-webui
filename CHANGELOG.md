@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- ⚠️ **IMPORTANT: Database Migration Required** — This release includes a database schema change adding a new `scim` column to the user table; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates.
+- ⚠️ **IMPORTANT: Database Migration Required** — This release includes a database schema change; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates.
 
 ## [0.8.0] - 2026-02-12
 
