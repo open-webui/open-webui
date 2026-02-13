@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - ⚡ **Channel user active status.** Checking user active status in channels is now faster thanks to optimized database queries. [Commit](https://github.com/open-webui/open-webui/commit/ca6b18ab5cb94153a9dae233f975d36bf6b19b76)
+- ⚡ **Model and prompt list optimization.** Improved performance when loading models and prompts by pre-fetching user group IDs once instead of making multiple database queries. [Commit](https://github.com/open-webui/open-webui/commit/20de5a87da0c12e4052b50887a42ddd7228c5ef5)
 
 ### Fixed
 
