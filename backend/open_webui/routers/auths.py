@@ -100,13 +100,6 @@ def create_session_response(
     """
     Create JWT token and build session response for a user.
     Shared helper for signin, signup, ldap_auth, add_user, and token_exchange endpoints.
-
-    Args:
-        request: FastAPI request object
-        user: User object
-        db: Database session
-        response: FastAPI response object (required if set_cookie is True)
-        set_cookie: Whether to set the auth cookie on the response
     """
     expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
     expires_at = None
@@ -150,6 +143,12 @@ def create_session_response(
     }
 
 
+def _must_change_password(user) -> bool:
+    if user.info and isinstance(user.info, dict):
+        return user.info.get("must_change_password", False)
+    return False
+
+
 ############################
 # GetSessionUser
 ############################
@@ -158,6 +157,7 @@ def create_session_response(
 class SessionUserResponse(Token, UserProfileImageResponse):
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
+    must_change_password: Optional[bool] = None
 
 
 class SessionUserInfoResponse(SessionUserResponse, UserStatus):
@@ -173,7 +173,6 @@ async def get_session_user(
     user=Depends(get_current_user),
     db: Session = Depends(get_session),
 ):
-
     auth_header = request.headers.get("Authorization")
     auth_token = get_http_authorization_cred(auth_header)
     token = auth_token.credentials
@@ -224,6 +223,7 @@ async def get_session_user(
         "status_message": user.status_message,
         "status_expires_at": user.status_expires_at,
         "permissions": user_permissions,
+        "must_change_password": _must_change_password(user),
     }
 
 
@@ -304,11 +304,57 @@ async def update_password(
             except Exception as e:
                 raise HTTPException(400, detail=str(e))
             hashed = get_password_hash(form_data.new_password)
-            return Auths.update_user_password_by_id(user.id, hashed, db=db)
+            result = Auths.update_user_password_by_id(user.id, hashed, db=db)
+            # Clear must_change_password flag if it was set
+            if result and _must_change_password(user):
+                info = user.info or {}
+                info.pop("must_change_password", None)
+                Users.update_user_by_id(user.id, {"info": info}, db=db)
+            return result
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INCORRECT_PASSWORD)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+
+############################
+# Force Reset Password (for must_change_password flow)
+############################
+
+
+class ForceResetPasswordForm(BaseModel):
+    new_password: str
+
+
+@router.post("/reset/password", response_model=bool)
+async def force_reset_password(
+    form_data: ForceResetPasswordForm,
+    session_user=Depends(get_current_user),
+    db: Session = Depends(get_session),
+):
+    """Allow a user with must_change_password flag to set a new password without knowing the old one."""
+    if not session_user:
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+    if not _must_change_password(session_user):
+        raise HTTPException(400, detail="Password reset not required.")
+
+    try:
+        validate_password(form_data.new_password)
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
+
+    hashed = get_password_hash(form_data.new_password)
+    result = Auths.update_user_password_by_id(session_user.id, hashed, db=db)
+
+    if result:
+        # Clear the flag
+        info = session_user.info or {}
+        info.pop("must_change_password", None)
+        Users.update_user_by_id(session_user.id, {"info": info}, db=db)
+        return True
+    else:
+        raise HTTPException(500, detail="Failed to update password.")
 
 
 ############################
@@ -674,7 +720,11 @@ async def signin(
         )
 
     if user:
-        return create_session_response(request, user, db, response, set_cookie=True)
+        session_data = create_session_response(
+            request, user, db, response, set_cookie=True
+        )
+        session_data["must_change_password"] = _must_change_password(user)
+        return session_data
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
@@ -798,7 +848,6 @@ async def signup(
 async def signout(
     request: Request, response: Response, db: Session = Depends(get_session)
 ):
-
     # get auth token from headers or cookies
     token = None
     auth_header = request.headers.get("Authorization")
@@ -912,6 +961,13 @@ async def add_user(
         )
 
         if user:
+            # Flag new admin-created users to change password on first login
+            Users.update_user_by_id(
+                user.id,
+                {"info": {"must_change_password": True}},
+                db=db,
+            )
+
             apply_default_group_assignment(
                 request.app.state.config.DEFAULT_GROUP_ID,
                 user.id,

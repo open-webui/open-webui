@@ -112,6 +112,28 @@ def has_access_to_file(
     if chats:
         return True
 
+    # Check if the file is associated with any spaces the user has access to
+    from open_webui.models.spaces import Spaces, SpaceFile
+    from open_webui.routers.spaces import is_space_contributor
+    from open_webui.internal.db import get_db
+
+    with get_db() as space_db:
+        space_files = space_db.query(SpaceFile).filter_by(file_id=file_id).all()
+        for sf in space_files:
+            space = Spaces.get_space_by_id(sf.space_id, db=space_db)
+            if space and (
+                space.user_id == user.id
+                or has_access(
+                    user.id,
+                    access_type,
+                    space.access_control,
+                    user_group_ids,
+                    db=space_db,
+                )
+                or is_space_contributor(user.email, space.id, space_db)
+            ):
+                return True
+
     return False
 
 
@@ -835,13 +857,9 @@ async def delete_file_by_id(
         or user.role == "admin"
         or has_access_to_file(id, "write", user, db=db)
     ):
-
-        # Clean up KB associations and embeddings before deleting
         knowledges = Knowledges.get_knowledges_by_file_id(id, db=db)
         for knowledge in knowledges:
-            # Remove KB-file relationship
             Knowledges.remove_file_from_knowledge_by_id(knowledge.id, id, db=db)
-            # Clean KB embeddings (same logic as /knowledge/{id}/file/remove)
             try:
                 VECTOR_DB_CLIENT.delete(
                     collection_name=knowledge.id, filter={"file_id": id}

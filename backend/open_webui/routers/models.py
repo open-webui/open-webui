@@ -1,5 +1,6 @@
 from typing import Optional
 import io
+import os
 import base64
 import json
 import asyncio
@@ -68,7 +69,6 @@ async def get_models(
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
-
     limit = PAGE_ITEM_COUNT
 
     page = max(1, page)
@@ -419,6 +419,34 @@ def get_model_profile_image(id: str, user=Depends(get_verified_user)):
 
         return FileResponse(f"{STATIC_DIR}/favicon.png")
     else:
+        # External model not in DB — try provider-specific icon
+        PROVIDER_PREFIXES = {
+            "claude": "anthropic",
+            "gpt": "openai",
+            "o1": "openai",
+            "o3": "openai",
+            "o4": "openai",
+            "chatgpt": "openai",
+            "gemini": "google",
+            "llama": "meta",
+            "mistral": "mistral",
+            "mixtral": "mistral",
+            "codestral": "mistral",
+            "command": "cohere",
+            "deepseek": "deepseek",
+        }
+        provider = None
+        model_id_lower = id.lower()
+        for prefix, prov in PROVIDER_PREFIXES.items():
+            if model_id_lower.startswith(prefix):
+                provider = prov
+                break
+
+        if provider:
+            provider_icon = os.path.join(STATIC_DIR, "providers", f"{provider}.png")
+            if os.path.exists(provider_icon):
+                return FileResponse(provider_icon)
+
         return FileResponse(f"{STATIC_DIR}/favicon.png")
 
 

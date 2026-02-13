@@ -250,6 +250,7 @@ class UserUpdateForm(BaseModel):
     email: str
     profile_image_url: str
     password: Optional[str] = None
+    info: Optional[dict] = None
 
     @field_validator("profile_image_url")
     @classmethod

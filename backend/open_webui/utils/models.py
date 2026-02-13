@@ -7,7 +7,7 @@ from aiocache import cached
 from fastapi import Request
 
 from open_webui.socket.utils import RedisDict
-from open_webui.routers import openai, ollama
+from open_webui.routers import openai, ollama, anthropic
 from open_webui.functions import get_function_models
 
 
@@ -58,6 +58,12 @@ async def fetch_openai_models(request: Request, user: UserModel = None):
     return openai_response["data"]
 
 
+async def fetch_anthropic_models(request: Request, user: UserModel = None):
+    """Fetch Anthropic models for users with valid OAuth sessions."""
+    anthropic_response = await anthropic.get_models(request, user=user)
+    return anthropic_response.get("data", [])
+
+
 async def get_all_base_models(request: Request, user: UserModel = None):
     openai_task = (
         fetch_openai_models(request, user)
@@ -69,13 +75,21 @@ async def get_all_base_models(request: Request, user: UserModel = None):
         if request.app.state.config.ENABLE_OLLAMA_API
         else asyncio.sleep(0, result=[])
     )
+    anthropic_task = (
+        fetch_anthropic_models(request, user)
+        if request.app.state.config.ENABLE_ANTHROPIC_API
+        else asyncio.sleep(0, result=[])
+    )
     function_task = get_function_models(request)
 
-    openai_models, ollama_models, function_models = await asyncio.gather(
-        openai_task, ollama_task, function_task
-    )
+    (
+        openai_models,
+        ollama_models,
+        anthropic_models,
+        function_models,
+    ) = await asyncio.gather(openai_task, ollama_task, anthropic_task, function_task)
 
-    return function_models + openai_models + ollama_models
+    return function_models + openai_models + ollama_models + anthropic_models
 
 
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):
@@ -152,12 +166,15 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         if custom_model.base_model_id is None:
             # Applied directly to a base model
             for model in models:
-                if custom_model.id == model["id"] or (
-                    model.get("owned_by") == "ollama"
-                    and custom_model.id
-                    == model["id"].split(":")[
-                        0
-                    ]  # Ollama may return model ids in different formats (e.g., 'llama3' vs. 'llama3:7b')
+                if (
+                    custom_model.id == model["id"]
+                    or (
+                        model.get("owned_by") == "ollama"
+                        and custom_model.id
+                        == model["id"].split(":")[
+                            0
+                        ]  # Ollama may return model ids in different formats (e.g., 'llama3' vs. 'llama3:7b')
+                    )
                 ):
                     if custom_model.is_active:
                         model["name"] = custom_model.name
@@ -375,7 +392,10 @@ def check_model_access(user, model, db=None):
     else:
         model_info = Models.get_model_by_id(model.get("id"), db=db)
         if not model_info:
-            raise Exception("Model not found")
+            # Model has no entry in Models table (e.g. dynamically
+            # fetched Anthropic/external models).  No access-control
+            # record means "open to all users" — allow access.
+            return
         elif not (
             user.id == model_info.user_id
             or AccessGrants.has_access(
@@ -439,6 +459,11 @@ def get_filtered_models(models, user, db=None):
                     or model["id"] in accessible_model_ids
                 ):
                     filtered_models.append(model)
+            else:
+                # Model has no entry in Models table (e.g. dynamically
+                # fetched Anthropic/external models).  No access-control
+                # record means "open to all users" — include by default.
+                filtered_models.append(model)
 
         return filtered_models
     else:
