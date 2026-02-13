@@ -622,8 +622,8 @@ class ChatTable:
         try:
             with get_db_context(db) as db:
                 # Use subquery to delete chat_messages for shared chats
-                shared_chat_subq = db.query(Chat.id).filter_by(user_id=f"shared-{chat_id}").subquery()
-                db.query(ChatMessage).filter(ChatMessage.chat_id.in_(shared_chat_subq)).delete(synchronize_session=False)
+                shared_chat_id_subquery = db.query(Chat.id).filter_by(user_id=f"shared-{chat_id}").subquery()
+                db.query(ChatMessage).filter(ChatMessage.chat_id.in_(shared_chat_id_subquery)).delete(synchronize_session=False)
                 db.query(Chat).filter_by(user_id=f"shared-{chat_id}").delete()
                 db.commit()
 
@@ -1441,8 +1441,8 @@ class ChatTable:
             with get_db_context(db) as db:
                 self.delete_shared_chats_by_user_id(user_id, db=db)
 
-                chat_id_subq = db.query(Chat.id).filter_by(user_id=user_id).subquery()
-                db.query(ChatMessage).filter(ChatMessage.chat_id.in_(chat_id_subq)).delete(synchronize_session=False)
+                chat_id_subquery = db.query(Chat.id).filter_by(user_id=user_id).subquery()
+                db.query(ChatMessage).filter(ChatMessage.chat_id.in_(chat_id_subquery)).delete(synchronize_session=False)
                 db.query(Chat).filter_by(user_id=user_id).delete()
                 db.commit()
 
@@ -1455,8 +1455,8 @@ class ChatTable:
     ) -> bool:
         try:
             with get_db_context(db) as db:
-                chat_id_subq = db.query(Chat.id).filter_by(user_id=user_id, folder_id=folder_id).subquery()
-                db.query(ChatMessage).filter(ChatMessage.chat_id.in_(chat_id_subq)).delete(synchronize_session=False)
+                chat_id_subquery = db.query(Chat.id).filter_by(user_id=user_id, folder_id=folder_id).subquery()
+                db.query(ChatMessage).filter(ChatMessage.chat_id.in_(chat_id_subquery)).delete(synchronize_session=False)
                 db.query(Chat).filter_by(user_id=user_id, folder_id=folder_id).delete()
                 db.commit()
 
