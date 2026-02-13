@@ -431,7 +431,9 @@ def serialize_output(output: list) -> str:
                 if isinstance(ci_output, dict):
                     output_json = json.dumps(ci_output, ensure_ascii=False)
                 else:
-                    output_json = json.dumps({"result": str(ci_output)}, ensure_ascii=False)
+                    output_json = json.dumps(
+                        {"result": str(ci_output)}, ensure_ascii=False
+                    )
                 output_attr = f' output="{html.escape(output_json)}"'
 
             if status == "completed" or duration is not None or not is_last_item:
@@ -3134,8 +3136,6 @@ async def streaming_chat_response_handler(response, ctx):
                     if re.search(end_tag_pattern, block_content):
                         end_flag = True
 
-
-
                         # Strip start and end tags from content
                         start_tag_pattern = rf"{re.escape(start_tag)}"
                         if start_tag.startswith("<") and start_tag.endswith(">"):
@@ -3683,12 +3683,16 @@ async def streaming_chat_response_handler(response, ctx):
                                         # output.
                                         last_item = output[-1] if output else None
                                         last_item_type = (
-                                            last_item.get("type", "") if last_item else ""
+                                            last_item.get("type", "")
+                                            if last_item
+                                            else ""
                                         )
                                         inside_tag_block = (
                                             last_item is not None
                                             and last_item.get("status") == "in_progress"
-                                            and last_item.get("attributes", {}).get("type")
+                                            and last_item.get("attributes", {}).get(
+                                                "type"
+                                            )
                                             != "reasoning_content"
                                             and (
                                                 last_item_type == "reasoning"
@@ -3704,7 +3708,10 @@ async def streaming_chat_response_handler(response, ctx):
 
                                         if inside_tag_block:
                                             # Append to the existing tag-based item
-                                            if last_item_type == "open_webui:code_interpreter":
+                                            if (
+                                                last_item_type
+                                                == "open_webui:code_interpreter"
+                                            ):
                                                 last_item["code"] = (
                                                     last_item.get("code", "") + value
                                                 )
@@ -3769,7 +3776,10 @@ async def streaming_chat_response_handler(response, ctx):
                                                 msg_parts[-1]["text"] += value
                                             else:
                                                 output[-1]["content"] = [
-                                                    {"type": "output_text", "text": value}
+                                                    {
+                                                        "type": "output_text",
+                                                        "text": value,
+                                                    }
                                                 ]
 
                                         if DETECT_REASONING_TAGS:
