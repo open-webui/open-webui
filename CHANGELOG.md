@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🛡️ Fixed a security issue where users with write access could see the Public sharing option regardless of their actual public sharing permission, and direct API calls could bypass frontend sharing restrictions. [#21358](https://github.com/open-webui/open-webui/pull/21358), [#21356](https://github.com/open-webui/open-webui/issues/21356)
 - 🗄️ Fixed an issue where retrieving chat IDs by model ID would fail on PostgreSQL due to incompatible DISTINCT ordering, while SQLite worked correctly. [Commit](https://github.com/open-webui/open-webui/commit/7bda6bf767d5d5c4dc1111465096a88e10b5030e)
 - 🛠️ Fixed an issue where tooltips in the "Select Knowledge" dropdown were hidden behind the menu, making it difficult to read knowledge item names and descriptions. [#21375](https://github.com/open-webui/open-webui/pull/21375)
 - 🐛 Fixed an issue where the Sync Modal would appear unexpectedly after enabling the "Community Sharing" feature if the user had previously visited the app with the sync parameter. [#21376](https://github.com/open-webui/open-webui/pull/21376)
