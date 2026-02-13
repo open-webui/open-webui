@@ -463,43 +463,95 @@ async def execute_code(
         else:
             return json.dumps({"error": f"Unknown code interpreter engine: {engine}"})
 
-        # Handle image outputs (base64 encoded) - replace with uploaded URLs
-        # Get actual user object for image upload (upload_image requires user.id attribute)
+        # Handle base64-encoded outputs - upload images inline, emit other files as attachments
         if __user__ and __user__.get("id"):
+            import re as _re
+
             from open_webui.models.users import Users
-            from open_webui.utils.files import get_image_url_from_base64
+            from open_webui.utils.files import get_file_url_from_base64
 
             user = Users.get_user_by_id(__user__["id"])
+            generated_files = []
 
-            # Extract and upload images from stdout
-            if stdout and isinstance(stdout, str):
-                stdout_lines = stdout.split("\n")
-                for idx, line in enumerate(stdout_lines):
-                    if "data:image/png;base64" in line:
-                        image_url = get_image_url_from_base64(
-                            __request__,
-                            line,
-                            __metadata__ or {},
-                            user,
-                        )
-                        if image_url:
-                            stdout_lines[idx] = f"![Output Image]({image_url})"
-                stdout = "\n".join(stdout_lines)
+            def _process_output_lines(text):
+                """Scan lines for data URIs, upload them, replace or collect."""
+                if not text or not isinstance(text, str):
+                    return text
+                lines = text.split("\n")
+                for idx, line in enumerate(lines):
+                    if "data:" not in line or ";base64" not in line:
+                        continue
+                    file_url = get_file_url_from_base64(
+                        __request__,
+                        line.strip(),
+                        __metadata__ or {},
+                        user,
+                    )
+                    if file_url:
+                        if "data:image/" in line:
+                            lines[idx] = f"![Output Image]({file_url})"
+                        else:
+                            # Non-image file: collect as attachment
+                            uri_match = _re.search(
+                                r"data:([^;]+?)(?:;|;base64)", line
+                            )
+                            content_type = (
+                                uri_match.group(1) if uri_match else "application/octet-stream"
+                            )
+                            import mimetypes
 
-            # Extract and upload images from result
-            if result and isinstance(result, str):
-                result_lines = result.split("\n")
-                for idx, line in enumerate(result_lines):
-                    if "data:image/png;base64" in line:
-                        image_url = get_image_url_from_base64(
-                            __request__,
-                            line,
-                            __metadata__ or {},
-                            user,
-                        )
-                        if image_url:
-                            result_lines[idx] = f"![Output Image]({image_url})"
-                result = "\n".join(result_lines)
+                            from open_webui.utils.files import MIME_EXTENSION_FALLBACK
+
+                            # Extract original filename if encoded in data URI
+                            fname_match = _re.search(
+                                r";filename=([^;]+)", line
+                            )
+                            if fname_match:
+                                name = fname_match.group(1)
+                            else:
+                                ext = mimetypes.guess_extension(
+                                    content_type
+                                ) or MIME_EXTENSION_FALLBACK.get(content_type, "")
+                                name = f"generated-file{ext}"
+                            # Frontend expects just the file ID, not the full
+                            # URL path. Extract the ID from paths like
+                            # /api/v1/files/{id}/content.
+                            file_id = file_url
+                            if "/files/" in file_url:
+                                parts = file_url.split("/files/")
+                                if len(parts) > 1:
+                                    file_id = parts[1].split("/")[0]
+                            generated_files.append(
+                                {
+                                    "type": "file",
+                                    "name": name,
+                                    "url": file_id,
+                                    "content_type": content_type,
+                                }
+                            )
+                            lines[idx] = ""
+                return "\n".join(lines)
+
+            stdout = _process_output_lines(stdout)
+            result = _process_output_lines(result)
+
+            # Emit non-image file attachments (same pattern as generate_image)
+            if generated_files:
+                if __chat_id__ and __message_id__:
+                    Chats.add_message_files_by_id_and_message_id(
+                        __chat_id__,
+                        __message_id__,
+                        generated_files,
+                    )
+                if __event_emitter__:
+                    await __event_emitter__(
+                        {
+                            "type": "chat:message:files",
+                            "data": {
+                                "files": generated_files,
+                            },
+                        }
+                    )
 
         response = {
             "status": "success",

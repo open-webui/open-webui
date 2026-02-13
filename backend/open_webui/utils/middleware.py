@@ -4189,42 +4189,68 @@ async def streaming_chat_response_handler(response, ctx):
                                 log.debug(f"Code interpreter output: {ci_output}")
 
                                 if isinstance(ci_output, dict):
-                                    stdout = ci_output.get("stdout", "")
 
-                                    if isinstance(stdout, str):
-                                        stdoutLines = stdout.split("\n")
-                                        for idx, line in enumerate(stdoutLines):
+                                    def _process_ci_lines(text):
+                                        if not isinstance(text, str):
+                                            return text
+                                        lines = text.split("\n")
+                                        for idx, line in enumerate(lines):
+                                            if (
+                                                "data:" not in line
+                                                or ";base64" not in line
+                                            ):
+                                                continue
+                                            file_url = get_file_url_from_base64(
+                                                request,
+                                                line.strip(),
+                                                metadata,
+                                                user,
+                                            )
+                                            if file_url:
+                                                if "data:image/" in line:
+                                                    lines[idx] = (
+                                                        f"![Output Image]({file_url})"
+                                                    )
+                                                else:
+                                                    import mimetypes
+                                                    import re as _re
 
-                                            if "data:image/png;base64" in line:
-                                                image_url = get_image_url_from_base64(
-                                                    request,
-                                                    line,
-                                                    metadata,
-                                                    user,
-                                                )
-                                                if image_url:
-                                                    stdoutLines[idx] = (
-                                                        f"![Output Image]({image_url})"
+                                                    from open_webui.utils.files import (
+                                                        MIME_EXTENSION_FALLBACK,
                                                     )
 
-                                        ci_output["stdout"] = "\n".join(stdoutLines)
+                                                    # Extract original filename if encoded in data URI
+                                                    fname_match = _re.search(
+                                                        r";filename=([^;]+)", line
+                                                    )
+                                                    if fname_match:
+                                                        name = fname_match.group(1)
+                                                    else:
+                                                        uri_match = _re.search(
+                                                            r"data:([^;]+?)(?:;|;base64)", line
+                                                        )
+                                                        ct = (
+                                                            uri_match.group(1)
+                                                            if uri_match
+                                                            else ""
+                                                        )
+                                                        ext = mimetypes.guess_extension(
+                                                            ct
+                                                        ) or MIME_EXTENSION_FALLBACK.get(
+                                                            ct, ""
+                                                        )
+                                                        name = f"generated-file{ext}"
+                                                    lines[idx] = (
+                                                        f"[Download {name}]({file_url})"
+                                                    )
+                                        return "\n".join(lines)
 
-                                    result = ci_output.get("result", "")
-
-                                    if isinstance(result, str):
-                                        resultLines = result.split("\n")
-                                        for idx, line in enumerate(resultLines):
-                                            if "data:image/png;base64" in line:
-                                                image_url = get_image_url_from_base64(
-                                                    request,
-                                                    line,
-                                                    metadata,
-                                                    user,
-                                                )
-                                                resultLines[idx] = (
-                                                    f"![Output Image]({image_url})"
-                                                )
-                                        ci_output["result"] = "\n".join(resultLines)
+                                    ci_output["stdout"] = _process_ci_lines(
+                                        ci_output.get("stdout", "")
+                                    )
+                                    ci_output["result"] = _process_ci_lines(
+                                        ci_output.get("result", "")
+                                    )
                         except Exception as e:
                             ci_output = str(e)
 

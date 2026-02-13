@@ -28,7 +28,36 @@ import re
 import requests
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r"data:image/\w+;base64,", re.IGNORECASE)
+BASE64_DATA_URI_PATTERN = re.compile(
+    r"data:([^;]+)((?:;(?!base64,)[^;]*)*);\s*base64,(.+)", re.DOTALL
+)
+DATA_URI_FILENAME_RE = re.compile(r";filename=([^;]+)")
 MARKDOWN_IMAGE_URL_PATTERN = re.compile(r"!\[(.*?)\]\((.+?)\)", re.IGNORECASE)
+
+# Register common office MIME types that may not be present on all systems
+mimetypes.add_type(
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx"
+)
+mimetypes.add_type(
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"
+)
+mimetypes.add_type(
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"
+)
+
+# Fallback extension map for MIME types that mimetypes.guess_extension() may not resolve
+MIME_EXTENSION_FALLBACK = {
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.ms-powerpoint": ".ppt",
+    "application/vnd.ms-excel": ".xls",
+    "application/vnd.ms-word": ".doc",
+    "text/csv": ".csv",
+    "application/pdf": ".pdf",
+    "application/zip": ".zip",
+    "application/json": ".json",
+}
 
 
 def get_image_base64_from_url(url: str) -> Optional[str]:
@@ -149,11 +178,56 @@ def get_audio_url_from_base64(request, base64_audio_string, metadata, user):
     return None
 
 
+def upload_file_from_base64(request, file_data, content_type, filename, metadata, user):
+    """Generic file upload from raw bytes. Follows the pattern of upload_audio()."""
+    file = UploadFile(
+        file=io.BytesIO(file_data),
+        filename=filename,
+        headers={
+            "content-type": content_type,
+        },
+    )
+    file_item = upload_file_handler(
+        request,
+        file=file,
+        metadata=metadata,
+        process=False,
+        user=user,
+    )
+    url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
+    return file_item, url
+
+
 def get_file_url_from_base64(request, base64_file_string, metadata, user):
-    if "data:image/png;base64" in base64_file_string:
+    # Preserve existing behavior for images and audio
+    if "data:image/" in base64_file_string:
         return get_image_url_from_base64(request, base64_file_string, metadata, user)
-    elif "data:audio/wav;base64" in base64_file_string:
+    elif "data:audio/" in base64_file_string:
         return get_audio_url_from_base64(request, base64_file_string, metadata, user)
+
+    # Generic handler for all other MIME types (PPTX, PDF, CSV, etc.)
+    match = BASE64_DATA_URI_PATTERN.search(base64_file_string)
+    if match:
+        content_type = match.group(1)
+        params = match.group(2) or ""
+        b64_data = match.group(3)
+        try:
+            file_data = base64.b64decode(b64_data)
+        except Exception:
+            return None
+        # Use embedded filename if present, otherwise generate one
+        fname_match = DATA_URI_FILENAME_RE.search(params)
+        if fname_match:
+            filename = fname_match.group(1)
+        else:
+            ext = mimetypes.guess_extension(content_type) or MIME_EXTENSION_FALLBACK.get(
+                content_type, ""
+            )
+            filename = f"generated-file{ext}"
+        _, url = upload_file_from_base64(
+            request, file_data, content_type, filename, metadata, user
+        )
+        return url
     return None
 
 
