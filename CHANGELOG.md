@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ⚡ **Channel user active status.** Checking user active status in channels is now faster thanks to optimized database queries. [Commit](https://github.com/open-webui/open-webui/commit/ca6b18ab5cb94153a9dae233f975d36bf6b19b76)
+
 ### Fixed
 
 - 🛡️ **Public sharing security fix.** Fixed a security issue where users with write access could see the Public sharing option regardless of their actual public sharing permission, and direct API calls could bypass frontend sharing restrictions. [#21358](https://github.com/open-webui/open-webui/pull/21358), [#21356](https://github.com/open-webui/open-webui/issues/21356)
