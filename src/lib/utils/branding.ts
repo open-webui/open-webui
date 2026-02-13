@@ -149,19 +149,16 @@ export function applyBranding(config: BrandingConfig): void {
 	const preset = findPresetForDomain(config);
 
 	// Determine which accent color + scale to use
-	const accentColor = preset?.accent_color || config.accent_color;
+	const accentColor = preset?.accent_color || config.accent_color || '#e3530f';
 	let accentScale = preset?.accent_color_scale || config.accent_color_scale;
 
-	if (accentColor && accentColor !== '#e3530f') {
-		// If we have a custom accent color but no scale, generate one
-		if (!accentScale || Object.keys(accentScale).length === 0) {
-			accentScale = generateColorScale(accentColor);
-		}
-		applyAccentColors(accentScale);
-	} else if (accentScale && Object.keys(accentScale).length > 0) {
-		applyAccentColors(accentScale);
+	// Always apply accent colors - CSS variables must be explicitly set for tailwind classes to work
+	if (!accentScale || Object.keys(accentScale).length === 0) {
+		// Use pre-defined default scale for default color, otherwise generate from accent
+		accentScale =
+			accentColor === '#e3530f' ? DEFAULT_ACCENT_SCALE : generateColorScale(accentColor);
 	}
-	// If default color, CSS variable fallbacks in tailwind handle it
+	applyAccentColors(accentScale);
 
 	// Apply favicon
 	const faviconUrl = preset?.favicon_url || config.favicon_url;
