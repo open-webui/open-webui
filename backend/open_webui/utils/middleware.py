@@ -2994,6 +2994,10 @@ async def streaming_chat_response_handler(response, ctx):
                             before_tag = content[: match.start()]
                             after_tag = content[match.end() :]
 
+                            # Strip the start tag from the content accumulator
+                            # so it won't be re-detected on subsequent calls
+                            content = after_tag
+
                             # Remove the start tag and everything after from last message
                             current_text = get_last_text(output)
                             set_last_text(
@@ -3674,7 +3678,31 @@ async def streaming_chat_response_handler(response, ctx):
                                             )
 
                                         content = f"{content}{value}"
+
+                                        # If inside an in-progress reasoning block
+                                        # from tag detection, append directly to the
+                                        # reasoning item instead of a message item
                                         if (
+                                            DETECT_REASONING_TAGS
+                                            and output
+                                            and output[-1].get("type") == "reasoning"
+                                            and output[-1].get("status") == "in_progress"
+                                            and output[-1].get("attributes", {}).get("type") != "reasoning_content"
+                                        ):
+                                            parts = output[-1].get("content", [])
+                                            if (
+                                                parts
+                                                and parts[-1].get("type") == "output_text"
+                                            ):
+                                                parts[-1]["text"] += value
+                                            else:
+                                                output[-1]["content"] = [
+                                                    {
+                                                        "type": "output_text",
+                                                        "text": value,
+                                                    }
+                                                ]
+                                        elif (
                                             not output
                                             or output[-1].get("type") != "message"
                                         ):
@@ -3694,17 +3722,19 @@ async def streaming_chat_response_handler(response, ctx):
                                             )
 
                                         # Append value to last message item's text
-                                        msg_parts = output[-1].get("content", [])
-                                        if (
-                                            msg_parts
-                                            and msg_parts[-1].get("type")
-                                            == "output_text"
-                                        ):
-                                            msg_parts[-1]["text"] += value
-                                        else:
-                                            output[-1]["content"] = [
-                                                {"type": "output_text", "text": value}
-                                            ]
+                                        # (only if not already appended to reasoning item above)
+                                        if output[-1].get("type") == "message":
+                                            msg_parts = output[-1].get("content", [])
+                                            if (
+                                                msg_parts
+                                                and msg_parts[-1].get("type")
+                                                == "output_text"
+                                            ):
+                                                msg_parts[-1]["text"] += value
+                                            else:
+                                                output[-1]["content"] = [
+                                                    {"type": "output_text", "text": value}
+                                                ]
 
                                         if DETECT_REASONING_TAGS:
                                             content, output, _ = tag_output_handler(
