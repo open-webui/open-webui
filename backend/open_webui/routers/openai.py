@@ -18,7 +18,7 @@ from fastapi.responses import (
     JSONResponse,
     PlainTextResponse,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from sqlalchemy.orm import Session
 
@@ -1220,27 +1220,41 @@ async def embeddings(request: Request, form_data: dict, user):
             await cleanup_response(r, session)
 
 
+class ResponsesForm(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    model: str
+    input: Optional[list | str] = None
+    instructions: Optional[str] = None
+    stream: Optional[bool] = None
+    temperature: Optional[float] = None
+    max_output_tokens: Optional[int] = None
+    top_p: Optional[float] = None
+    tools: Optional[list] = None
+    tool_choice: Optional[str | dict] = None
+    text: Optional[dict] = None
+    truncation: Optional[str] = None
+    metadata: Optional[dict] = None
+    store: Optional[bool] = None
+    reasoning: Optional[dict] = None
+    previous_response_id: Optional[str] = None
+
+
 @router.post("/responses")
-async def responses(request: Request, user=Depends(get_verified_user)):
+async def responses(
+    request: Request,
+    form_data: ResponsesForm,
+    user=Depends(get_verified_user),
+):
     """
     Forward requests to the OpenAI Responses API endpoint.
     Routes to the correct upstream backend based on the model field.
     """
-    body = await request.body()
-
-    try:
-        payload = json.loads(body)
-    except (json.JSONDecodeError, ValueError):
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
-
-    if not isinstance(payload, dict):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid payload: expected JSON object",
-        )
+    payload = form_data.model_dump(exclude_none=True)
+    body = json.dumps(payload)
 
     idx = 0
-    model_id = payload.get("model")
+    model_id = form_data.model
     if model_id:
         models = request.app.state.OPENAI_MODELS
         if not models or model_id not in models:
