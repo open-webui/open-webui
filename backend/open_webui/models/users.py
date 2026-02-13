@@ -762,6 +762,14 @@ class UsersTable:
             )
             return count
 
+    @staticmethod
+    def is_active(user: UserModel) -> bool:
+        """Compute active status from an already-loaded UserModel (no DB hit)."""
+        if user.last_active_at:
+            three_minutes_ago = int(time.time()) - 180
+            return user.last_active_at >= three_minutes_ago
+        return False
+
     def is_user_active(self, user_id: str, db: Optional[Session] = None) -> bool:
         with get_db_context(db) as db:
             user = db.query(User).filter_by(id=user_id).first()

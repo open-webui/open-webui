@@ -204,7 +204,7 @@ async def get_channels(
                 UserIdNameStatusResponse(
                     **{
                         **user.model_dump(),
-                        "is_active": Users.is_user_active(user.id, db=db),
+                        "is_active": Users.is_active(user),
                     }
                 )
                 for user in Users.get_users_by_user_ids(user_ids, db=db)
@@ -424,7 +424,7 @@ async def get_channel_by_id(
             UserIdNameStatusResponse(
                 **{
                     **user.model_dump(),
-                    "is_active": Users.is_user_active(user.id, db=db),
+                    "is_active": Users.is_active(user),
                 }
             )
             for user in Users.get_users_by_user_ids(user_ids, db=db)
@@ -541,7 +541,7 @@ async def get_channel_members_by_id(
         return {
             "users": [
                 UserModelResponse(
-                    **user.model_dump(), is_active=Users.is_user_active(user.id, db=db)
+                    **user.model_dump(), is_active=Users.is_active(user)
                 )
                 for user in users
             ],
@@ -576,7 +576,7 @@ async def get_channel_members_by_id(
         return {
             "users": [
                 UserModelResponse(
-                    **user.model_dump(), is_active=Users.is_user_active(user.id, db=db)
+                    **user.model_dump(), is_active=Users.is_active(user)
                 )
                 for user in users
             ],
