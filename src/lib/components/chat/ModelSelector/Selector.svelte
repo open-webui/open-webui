@@ -178,6 +178,16 @@
 			selectedModelIdx = 0;
 		}
 
+		// Set the virtual scroll position so the selected item is rendered and centered
+		const targetScrollTop = Math.max(0, selectedModelIdx * ITEM_HEIGHT - 128 + ITEM_HEIGHT / 2);
+		listScrollTop = targetScrollTop;
+
+		await tick();
+
+		if (listContainer) {
+			listContainer.scrollTop = targetScrollTop;
+		}
+
 		await tick();
 		const item = document.querySelector(`[data-arrow-selected="true"]`);
 		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
@@ -379,6 +389,7 @@
 	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
+		listScrollTop = 0;
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 
 		resetView();
