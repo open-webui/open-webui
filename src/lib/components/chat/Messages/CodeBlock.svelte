@@ -437,6 +437,7 @@
 					className=" rounded-2xl max-h-fit overflow-hidden"
 					svg={renderHTML}
 					content={_token.text}
+					hidebuttons={exportMode}
 				/>
 			{:else}
 				<div class="p-3">
