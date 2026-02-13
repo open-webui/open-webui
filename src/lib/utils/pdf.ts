@@ -3,7 +3,6 @@ import canvasSize from 'canvas-size';
 import html2canvas, { type Options as Html2CanvasOptions } from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import type JSPDF from 'jspdf';
-import i18n from 'i18next';
 import { writable } from 'svelte/store';
 
 // ==================== Type Definitions ====================
@@ -56,8 +55,6 @@ interface PdfAppendState {
 export type PdfExportOverlayState = {
 	show: boolean;
 	stage: PdfExportStage;
-	title: string;
-	stageText: string;
 	progress: number;
 	currentChunk: number;
 	totalChunks: number;
@@ -69,8 +66,6 @@ export type PdfExportOverlayState = {
 export const pdfExportOverlay = writable<PdfExportOverlayState>({
 	show: false,
 	stage: 'preparing',
-	title: 'Exporting PDF',
-	stageText: 'Preparing export...',
 	progress: 0,
 	currentChunk: 0,
 	totalChunks: 0,
@@ -148,13 +143,6 @@ const emitExportProgress = (
 	progress: PdfExportProgress
 ): void => {
 	callback?.(progress);
-};
-
-const getStageText = (stage: PdfExportStage): string => {
-	if (stage === 'preparing') return i18n.t('Preparing export...');
-	if (stage === 'rendering') return i18n.t('Rendering content...');
-	if (stage === 'saving') return i18n.t('Saving PDF...');
-	return i18n.t('Completed');
 };
 
 const getEstimatedRemainingMinutes = (startedAt: number, progressPercent: number): number | null => {
@@ -751,8 +739,6 @@ export const exportPDF = async (options: ChatPdfOptions): Promise<void> => {
 			...state,
 			show: true,
 			stage: progress.stage,
-			title: 'Exporting PDF',
-			stageText: getStageText(progress.stage),
 			progress: progress.percent,
 			currentChunk: progress.currentChunk ?? state.currentChunk,
 			totalChunks: progress.totalChunks ?? state.totalChunks,
@@ -765,8 +751,6 @@ export const exportPDF = async (options: ChatPdfOptions): Promise<void> => {
 	pdfExportOverlay.set({
 		show: true,
 		stage: 'preparing',
-		title: 'Exporting PDF',
-		stageText: 'Preparing export...',
 		progress: 0,
 		currentChunk: 0,
 		totalChunks: 0,
@@ -774,6 +758,8 @@ export const exportPDF = async (options: ChatPdfOptions): Promise<void> => {
 		estimatedRemainingMinutes: null,
 		onCancel: () => internalAbortController.abort()
 	});
+
+	await new Promise((resolve) => setTimeout(resolve, 20));
 
 	try {
 		throwIfAborted(effectiveSignal);
@@ -818,8 +804,6 @@ export const exportPDF = async (options: ChatPdfOptions): Promise<void> => {
 		pdfExportOverlay.set({
 			show: false,
 			stage: 'preparing',
-			title: 'Exporting PDF',
-			stageText: 'Preparing export...',
 			progress: 0,
 			currentChunk: 0,
 			totalChunks: 0,
