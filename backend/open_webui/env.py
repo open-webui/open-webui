@@ -248,6 +248,14 @@ ENABLE_STAR_SESSIONS_MIDDLEWARE = (
 ENABLE_EASTER_EGGS = os.environ.get("ENABLE_EASTER_EGGS", "True").lower() == "true"
 
 ####################################
+# API KEY SECURITY
+####################################
+
+API_KEY_LENGTH = int(os.environ.get("API_KEY_LENGTH", "32"))
+
+API_KEY_PREFIX = os.environ.get("API_KEY_PREFIX", "sk-")
+
+####################################
 # WEBUI_BUILD_HASH
 ####################################
 

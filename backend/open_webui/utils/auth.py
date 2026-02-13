@@ -1,4 +1,5 @@
 import logging
+import secrets
 import uuid
 import jwt
 import base64
@@ -258,8 +259,10 @@ def extract_token_from_auth_header(auth_header: str):
 
 
 def create_api_key():
-    key = str(uuid.uuid4()).replace("-", "")
-    return f"sk-{key}"
+    from open_webui.env import API_KEY_LENGTH, API_KEY_PREFIX
+    num_bytes = max(API_KEY_LENGTH // 2, 16)
+    key = secrets.token_hex(num_bytes)
+    return f"{API_KEY_PREFIX}{key}"
 
 
 def get_http_authorization_cred(auth_header: Optional[str]):
