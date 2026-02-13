@@ -354,7 +354,10 @@ async def update_skill_access_by_id(
         form_data.access_grants = [
             grant
             for grant in form_data.access_grants
-            if not (grant.get("principal_type") == "user" and grant.get("principal_id") == "*")
+            if not (
+                grant.get("principal_type") == "user"
+                and grant.get("principal_id") == "*"
+            )
         ]
 
     AccessGrants.set_access_grants("skill", id, form_data.access_grants, db=db)

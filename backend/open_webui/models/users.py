@@ -363,9 +363,7 @@ class UsersTable:
                 query = db.query(User)
                 if dialect_name == "sqlite":
                     query = query.filter(
-                        User.scim.contains(
-                            {provider: {"external_id": external_id}}
-                        )
+                        User.scim.contains({provider: {"external_id": external_id}})
                     )
                 elif dialect_name == "postgresql":
                     query = query.filter(
@@ -533,7 +531,12 @@ class UsersTable:
         self, user_ids: list[str], db: Optional[Session] = None
     ) -> list[UserStatusModel]:
         with get_db_context(db) as db:
-            users = db.query(User).options(defer(User.profile_image_url)).filter(User.id.in_(user_ids)).all()
+            users = (
+                db.query(User)
+                .options(defer(User.profile_image_url))
+                .filter(User.id.in_(user_ids))
+                .all()
+            )
             return [UserModel.model_validate(user) for user in users]
 
     def get_num_users(self, db: Optional[Session] = None) -> Optional[int]:

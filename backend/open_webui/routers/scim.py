@@ -329,9 +329,7 @@ def get_scim_provider() -> str:
     return SCIM_AUTH_PROVIDER
 
 
-def find_user_by_external_id(
-    external_id: str, db=None
-) -> Optional[UserModel]:
+def find_user_by_external_id(external_id: str, db=None) -> Optional[UserModel]:
     """Find a user by SCIM externalId, falling back to OAuth sub match."""
     provider = get_scim_provider()
     user = Users.get_user_by_scim_external_id(provider, external_id, db=db)
@@ -652,9 +650,7 @@ async def create_user(
     # Store externalId in the scim field
     if user_data.externalId:
         provider = get_scim_provider()
-        Users.update_user_scim_by_id(
-            user_id, provider, user_data.externalId, db=db
-        )
+        Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
         new_user = Users.get_user_by_id(user_id, db=db)
 
     return user_to_scim(new_user, request, db=db)
@@ -711,9 +707,7 @@ async def update_user(
     # Update externalId in the scim field
     if user_data.externalId:
         provider = get_scim_provider()
-        Users.update_user_scim_by_id(
-            user_id, provider, user_data.externalId, db=db
-        )
+        Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
         updated_user = Users.get_user_by_id(user_id, db=db)
 
     return user_to_scim(updated_user, request, db=db)
@@ -755,9 +749,7 @@ async def patch_user(
                 update_data["name"] = value
             elif path == "externalId":
                 provider = get_scim_provider()
-                Users.update_user_scim_by_id(
-                    user_id, provider, value, db=db
-                )
+                Users.update_user_scim_by_id(user_id, provider, value, db=db)
 
     # Update user
     if update_data:
