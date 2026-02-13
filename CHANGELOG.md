@@ -30,10 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎨 **Knowledge collection layout fix.** Fixed a layout issue in the Knowledge integration menu where long collection names caused indentation artifacts and now properly truncate with ellipsis. [#21374](https://github.com/open-webui/open-webui/pull/21374)
 - 📝 **Metadata processing crash fix.** Fixed a latent bug where processing document metadata containing certain keys (content, pages, tables, paragraphs, sections, figures) would cause a RuntimeError due to dictionary mutation during iteration. [#21105](https://github.com/open-webui/open-webui/pull/21105)
 
-### Changed
-
-- ⚠️ **IMPORTANT: Database Migration Required** — This release includes a database schema change adding a new `scim` column to the user table; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates.
-
 ## [0.8.0] - 2026-02-12
 
 ### Added
