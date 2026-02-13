@@ -185,6 +185,30 @@ CHANGELOG = changelog_json
 
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
+####################################
+# LLM PROXY USER SYNC
+####################################
+
+LLM_PROXY_SYNC_USERS = (
+    os.environ.get("LLM_PROXY_SYNC_USERS", "False").lower() == "true"
+)
+
+LLM_PROXY_API_BASE_URL = os.environ.get("LLM_PROXY_API_BASE_URL", "")
+
+LLM_PROXY_API_KEY = os.environ.get("LLM_PROXY_API_KEY", "")
+
+LLM_PROXY_SYNC_USER_ALIAS = (
+    os.environ.get("LLM_PROXY_SYNC_USER_ALIAS", "True").lower() == "true"
+)
+
+LLM_PROXY_SYNC_TIMEOUT = int(os.environ.get("LLM_PROXY_SYNC_TIMEOUT", "5"))
+
+LLM_PROXY_SYNC_ENDPOINT = os.environ.get("LLM_PROXY_SYNC_ENDPOINT", "/user/new")
+
+LLM_PROXY_SYNC_KEY_USER_ID = os.environ.get("LLM_PROXY_SYNC_KEY_USER_ID", "user_id")
+LLM_PROXY_SYNC_KEY_USER_EMAIL = os.environ.get("LLM_PROXY_SYNC_KEY_USER_EMAIL", "user_email")
+LLM_PROXY_SYNC_KEY_USER_ALIAS = os.environ.get("LLM_PROXY_SYNC_KEY_USER_ALIAS", "user_alias")
+
 
 ####################################
 # ENABLE_FORWARD_USER_INFO_HEADERS
