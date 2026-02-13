@@ -76,7 +76,7 @@
 	let chunkOverlap = 200;
 	let pdfExtractImages = false;  // CRITICAL: Default to false - image extraction causes 2+ minute slowdowns/hangs
 
-	let RAG_FULL_CONTEXT = false;
+	let RAG_FULL_CONTEXT = true;
 	let BYPASS_EMBEDDING_AND_RETRIEVAL = false;
 
 	let enableGoogleDriveIntegration = false;

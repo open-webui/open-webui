@@ -607,7 +607,7 @@ def get_sources_from_files(
     reranking_function,
     r,
     hybrid_search,
-    full_context=False,
+    full_context=True,
 ):
     log.debug(
         f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
