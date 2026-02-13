@@ -29,7 +29,7 @@ interface NoteData {
  */
 interface ChatPdfOptions {
 	/** ID of the container element to render (for stylized mode) */
-	containerElementId?: string;
+	containerSelector?: string;
 	/** Plain text content (for plain text mode) */
 	chatText?: string;
 	/** PDF filename (without .pdf extension) */
@@ -55,15 +55,6 @@ interface ElementRenderChunk {
 
 interface PdfAppendState {
 	pageCount: number;
-}
-
-interface AppendCanvasChunkOptions {
-	stopWhenEncounteringEmptySlice?: boolean;
-}
-
-interface AppendCanvasChunkResult {
-	pagesAdded: number;
-	encounteredEmptySlice: boolean;
 }
 
 export type PdfExportOverlayState = {
@@ -111,7 +102,6 @@ interface RenderElementToCanvasOptions {
 	elementHeight?: number;
 	onclone?: (document: Document, element: HTMLElement) => void;
 	ignoreElements?: (element: Element) => boolean;
-	lastElementY?: number;
 }
 
 // ==================== Shared Constants ====================
@@ -130,38 +120,10 @@ const JPEG_QUALITY = 0.95;
 const MAX_CANVAS_EDGE_PX = 16384;
 /** Conservative browser canvas area limit in pixels */
 const MAX_CANVAS_AREA_PX = 268_000_000;
-/** Extra tail guard height to avoid clipping final content */
-const RENDER_TAIL_GUARD_PX = 128;
 /** Step size used when probing canvas height fallback tests */
 const CANVAS_PROBE_STEP_PX = 1024;
 
 const canvasMaxHeightProbeCache = new Map<number, Promise<number | null>>();
-const sharedProbeCanvas = document.createElement('canvas');
-let sharedProbeContext: CanvasRenderingContext2D | null = null;
-
-/** Whether the current browser is little-endian */
-const IS_LITTLE_ENDIAN = new Uint8Array(new Uint32Array([0x01020304]).buffer)[0] === 0x04;
-const pixelDiffersFromBackground = IS_LITTLE_ENDIAN
-	? (pixel: number, bg: number, tolerance: number): boolean => {
-			const r = pixel & 0xff;
-			const g = (pixel >>> 8) & 0xff;
-			const b = (pixel >>> 16) & 0xff;
-			return (
-				Math.abs(r - bg) > tolerance ||
-				Math.abs(g - bg) > tolerance ||
-				Math.abs(b - bg) > tolerance
-			);
-		}
-	: (pixel: number, bg: number, tolerance: number): boolean => {
-			const r = (pixel >>> 24) & 0xff;
-			const g = (pixel >>> 16) & 0xff;
-			const b = (pixel >>> 8) & 0xff;
-			return (
-				Math.abs(r - bg) > tolerance ||
-				Math.abs(g - bg) > tolerance ||
-				Math.abs(b - bg) > tolerance
-			);
-		};
 
 // ==================== Shared Utility Functions ====================
 
@@ -251,109 +213,106 @@ const styleElementForRendering = (element: HTMLElement, virtualWidth: number): v
 
 /**
  * Render DOM element to canvas using html2canvas
- * @param element - DOM element to render
+ * @param element - DOM element to render (This is the cloned container)
  * @param virtualWidth - Virtual width in pixels
  * @returns Promise that resolves to a canvas element
  */
 const renderElementToCanvas = async (
 	element: HTMLElement,
 	virtualWidth: number,
-	options?: RenderElementToCanvasOptions,
-	elmChunks?: { y: number; height: number }[]
+	options?: RenderElementToCanvasOptions
 ): Promise<HTMLCanvasElement> => {
 	const isDark = isDarkMode();
 	const cropY = options?.y ?? 0;
-	// 确保至少渲染1px
-	const cropHeight = Math.max(1, Math.ceil(options?.height ?? 0));
-	const currentChunkEndY = cropY + cropHeight;
+	// Use explicit height or fallback to scrollHeight/client logic
+	const elementHeight =
+			options?.elementHeight ??
+			Math.max(1, Math.ceil(element.getBoundingClientRect().height), element.scrollHeight);
+	const cropHeight = Math.max(1, Math.ceil(options?.height ?? elementHeight));
+	const cropBottom = cropY + cropHeight;
 
-	// 1. 计算当前的“基准 Y (Base Y)”
-	// 基准 Y 指的是：在当前视口范围内，第一个“应该出现”的元素原本的 Y 坐标。
-	// 因为我们移除了它上面的所有元素，它在克隆 DOM 里会跑到顶部。
-	// 我们用这个基准 Y 来计算相对偏移量。
+	// =========================================================================
+	// Optimization Phase 1: Clean up "Past" Elements (Already Rendered)
+	// =========================================================================
+	// Since 'element' is a dedicated clone for PDF generation, we can destructively
+	// modify it. We replace elements fully above the current viewport with 
+	// empty spacers. This progressively reduces the DOM weight for subsequent chunks.
 	
-	let baseContentY = 0;
-	
-	// 为了快速判断，我们先处理 elmChunks（如果传了的话）
-	// 找到第一个与当前视图 [cropY, currentChunkEndY] 相交的 chunk
-	if (elmChunks && elmChunks.length > 0) {
-		const firstVisibleChunk = elmChunks.find(chunk => {
-			const chunkBottom = chunk.y + chunk.height;
-			// 排除掉：完全在上面 (bottom <= cropY) 或 完全在下面 (y >= endY) 的
-			return !(chunkBottom <= cropY || chunk.y >= currentChunkEndY);
-		});
-		
-		if (firstVisibleChunk) {
-			baseContentY = firstVisibleChunk.y;
-		} else {
-			// 如果没有找到相交的chunk（比如是纯空白区域），默认不对齐
-			// 或者如果 cropY 超过了所有内容，就以 cropY 为准
-			baseContentY = cropY; 
-		}
-	} else {
-		// 如果没传 elmChunks（比如 tail 渲染阶段），我们只能保守一点，
-		// 假设没有发生 DOM 塌缩，或者只能依赖 dataset 实时判断。
-		// 但根据你的逻辑，这里我们主要处理“正文”部分的逻辑。
-		// 如果不传 elmChunks，我们默认不进行坐标偏移（因为不知道原来在哪里），
-		// 但为了兼容性，建议尽可能传入 elmChunks。
-		baseContentY = 0; 
-	}
-	
-	// 特殊情况：如果实际上我们是从 0 开始截取的，基准肯定也是 0
-	if (cropY === 0) baseContentY = 0;
-
-	// 2. 计算修正后的 captureY
-	// 如果上面的元素被删了，当前内容跑到了 0 (或 padding 处)。
-	// 我们原本想在 cropY 处截图，现在应该在 (cropY - baseContentY) 处截图。
-	// 比如：想要截取 5000-6000。第一个元素从 4800 开始。
-    // 删掉 4800 以前的。该元素变到了 0。
-	// 我们需要截取该元素内部 200px 处开始的内容。即 5000 - 4800 = 200。
-	const captureY = Math.max(0, cropY - baseContentY);
-
-	const canvasOptions: Partial<Html2CanvasOptions> = {
-		useCORS: true,
-		allowTaint: true,
-		backgroundColor: isDark ? '#000' : '#fff',
-		scale: CANVAS_SCALE,
-		windowWidth: virtualWidth,
-		// 视口高度只需要覆盖我们要截取的部分即可，不用设太大，节省内存
-		windowHeight: Math.max(captureY + cropHeight + 100, 1000), 
-		x: options?.x || 0,
-		y: captureY, // 关键：使用计算后的相对坐标
-		width: options?.width ?? virtualWidth,
-		height: cropHeight,
-		canvas: options?.canvas,
-		ignoreElements(elm) {
-			// 1. 基础过滤
-			if (options?.ignoreElements && options.ignoreElements(elm)) {
-				return true;
-			}
-			if (elm.parentNode === document.body) {
-				return (elm as HTMLElement).dataset?.cloningElement !== 'true';
+	const children = Array.from(element.children) as HTMLElement[];
+	for (const child of children) {
+			// Optimization: Check if it's already a spacer to avoid re-processing
+			if (child.getAttribute('data-pdf-spacer') === 'true') {
+					continue;
 			}
 
-			// 2. 核心性能过滤逻辑
-			if (elm instanceof HTMLElement) {
-				const cloningHeightStr = elm.dataset.cloningHeight;
-				const cloningYStr = elm.dataset.cloningY;
+			// Use offsetTop/offsetHeight directly. Since 'element' is off-screen but 
+			// attached to DOM, these values are computed correctly by the browser.
+			const top = child.offsetTop;
+			const height = child.offsetHeight;
+			const bottom = top + height;
 
-				// 只有当元素有明确的坐标标记（即主要内容块）时，确实执行过滤
-				if (cloningHeightStr && cloningYStr) {
-					const elmY = parseInt(cloningYStr, 10);
-					const elmH = parseInt(cloningHeightStr, 10);
-					const elmBottom = elmY + elmH;
-
-					// 判断逻辑：
-					// 1. 元素底部 <= cropY：说明元素完全在当前视窗上方 -> 忽略 (return true)
-					// 2. 元素顶部 >= currentChunkEndY：说明元素完全在当前视窗下方 -> 忽略 (return true)
-					if (elmBottom <= cropY || elmY >= currentChunkEndY) {
-						return true; // 移除元素！性能极大提升
-					}
-				}
+			// Rule 2: If fully rendered (above current chunk), replace with spacer
+			// strictly < cropY ensures we don't remove elements intersecting the top edge
+			if (bottom <= cropY) {
+					const spacer = document.createElement('div');
+					spacer.style.height = `${height}px`;
+					spacer.style.width = '100%';
+					spacer.setAttribute('data-pdf-spacer', 'true');
+					// Replace the heavy content node with a lightweight spacer
+					element.replaceChild(spacer, child);
 			}
 			
-			return false;
-		}
+			// Optimization: If we reach an element that starts below the current chunk,
+			// we can stop checking the "replace" logic (assuming children are sorted visually).
+			// However, to be safe with absolute positioning/flexbox order, we iterate all.
+	}
+
+	// =========================================================================
+	// Optimization Phase 2: Ignore "Future" Elements (Not Yet Rendered)
+	// =========================================================================
+	const windowHeight = Math.max(elementHeight, Math.ceil(cropY + cropHeight));
+
+	const canvasOptions: Partial<Html2CanvasOptions> = {
+			useCORS: true,
+			allowTaint: true,
+			backgroundColor: isDark ? '#000' : '#fff',
+			scale: CANVAS_SCALE,
+			windowWidth: virtualWidth,
+			windowHeight,
+			x: options?.x || 0,
+			y: cropY,
+			width: options?.width ?? virtualWidth,
+			height: cropHeight,
+			canvas: options?.canvas,
+			onclone: options?.onclone,
+			removeContainer: false,
+			// Rule 3: Use ignoreElements to skip content below the viewport
+			ignoreElements: (node) => {
+					// Allow custom ignore logic to pass first
+					if (options?.ignoreElements?.(node)) return true;
+
+					// Ignore elements that are not part of the cloned container
+					if (node.parentNode === document.body) {
+						return (node as HTMLElement).dataset?.cloningElement !== 'true';
+					}
+					// Some browser plugin may add elements to the document.documentElement
+					if (node.parentNode === document.documentElement && (node !== document.body && node !== document.head)) {
+						return true;
+					}
+
+					// Only optimize based on the root container's direct children.
+					// Checking every single DOM node's offsetTop is expensive and incorrect 
+					// for nested elements (offsetTop is relative to offsetParent).
+					if (node.parentElement === element && node instanceof HTMLElement) {
+							const top = node.offsetTop;
+							// If the element starts AFTER the current chunk ends, ignore it completely.
+							// html2canvas won't traverse its children, saving massive time.
+							if (top >= cropBottom) {
+									return true;
+							}
+					}
+					return false;
+			},
 	};
 
 	const canvas = await html2canvas(element, canvasOptions);
@@ -442,41 +401,22 @@ const getSafeRenderChunkHeightPx = async (virtualWidth: number, scale: number): 
  */
 const buildElementRenderChunks = (
 	element: HTMLElement,
-	maxChunkHeightPx: number
+	maxChunkHeightPx: number,
 ): ElementRenderChunk[] => {
-	const splitRange = (startY: number, totalHeight: number): ElementRenderChunk[] => {
-		const chunks: ElementRenderChunk[] = [];
-		let offset = 0;
-		while (offset < totalHeight) {
-			const chunkHeight = Math.min(maxChunkHeightPx, totalHeight - offset);
-			chunks.push({
-				y: Math.max(0, Math.floor(startY + offset)),
-				height: Math.max(1, Math.ceil(chunkHeight))
-			});
-			offset += chunkHeight;
-		}
-		return chunks;
-	};
+	const totalHeight = element.getBoundingClientRect().height;
 
-	const rootRect = element.getBoundingClientRect();
-	const lastChildBottom =
-		element.lastElementChild instanceof HTMLElement
-			? Math.max(0, element.lastElementChild.getBoundingClientRect().bottom - rootRect.top)
-			: 0;
-	const fullHeight = Math.max(
-		1,
-		Math.ceil(
-			Math.max(
-				element.scrollHeight,
-				element.getBoundingClientRect().height,
-				element.offsetHeight,
-				element.clientHeight,
-				lastChildBottom
-			) + RENDER_TAIL_GUARD_PX
-		)
-	);
-	const fallbackChunks = splitRange(0, fullHeight);
-	return fallbackChunks;
+	const chunks: ElementRenderChunk[] = [];
+	let offset = 0;
+	while (offset < totalHeight) {
+		const chunkHeight = Math.min(maxChunkHeightPx, totalHeight - offset);
+		chunks.push({
+			y: Math.max(0, Math.floor(offset)),
+			height: Math.max(1, Math.ceil(chunkHeight))
+		});
+		offset += chunkHeight;
+	}
+
+	return chunks;
 };
 
 /**
@@ -488,9 +428,9 @@ const appendCanvasChunkToPdf = (
 	state: PdfAppendState,
 	pageWidthMM: number,
 	pageHeightMM: number,
+	chunkHeight: number,
 	isDark: boolean,
-	options?: AppendCanvasChunkOptions
-): AppendCanvasChunkResult => {
+): number => {
 	const pxPerPdfMM = canvas.width / pageWidthMM;
 	const pageSliceHeightPx = Math.max(1, Math.floor(pxPerPdfMM * pageHeightMM));
 	const pageCanvas = document.createElement('canvas');
@@ -501,15 +441,11 @@ const appendCanvasChunkToPdf = (
 	}
 	let pagesAdded = 0;
 
+	const actualChunkHeight = chunkHeight * CANVAS_SCALE;
+
 	let offsetY = 0;
-	while (offsetY < canvas.height) {
-		const sliceHeight = Math.min(pageSliceHeightPx, canvas.height - offsetY);
-		if (
-			options?.stopWhenEncounteringEmptySlice &&
-			!canvasRegionHasRenderableContent(canvas, 0, offsetY, canvas.width, sliceHeight, isDark)
-		) {
-			return { pagesAdded, encounteredEmptySlice: true };
-		}
+	while (offsetY < actualChunkHeight) {
+		const sliceHeight = Math.min(pageSliceHeightPx, actualChunkHeight - offsetY);
 
 		pageCanvas.height = sliceHeight;
 		pageCanvasContext.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
@@ -540,79 +476,7 @@ const appendCanvasChunkToPdf = (
 		offsetY += sliceHeight;
 	}
 
-	return { pagesAdded, encounteredEmptySlice: false };
-};
-
-/**
- * Check whether a rendered canvas contains non-background pixels.
- * Used to decide if we should continue rendering tail chunks.
- */
-const canvasRegionHasRenderableContent = (
-	canvas: HTMLCanvasElement,
-	sourceX: number,
-	sourceY: number,
-	sourceWidth: number,
-	sourceHeight: number,
-	isDark: boolean
-): boolean => {
-	const clampedWidth = Math.max(0, Math.floor(sourceWidth));
-	const clampedHeight = Math.max(0, Math.floor(sourceHeight));
-	if (clampedWidth <= 0 || clampedHeight <= 0) {
-		return false;
-	}
-
-	try {
-		// Downsample first to avoid reading a huge pixel buffer from a large canvas.
-		const probeMaxEdge = 128;
-		const probeWidth = Math.max(1, Math.min(clampedWidth, probeMaxEdge));
-		const probeHeight = Math.max(1, Math.min(clampedHeight, probeMaxEdge));
-		if (sharedProbeCanvas.width !== probeWidth) {
-			sharedProbeCanvas.width = probeWidth;
-		}
-		if (sharedProbeCanvas.height !== probeHeight) {
-			sharedProbeCanvas.height = probeHeight;
-		}
-		if (!sharedProbeContext) {
-			sharedProbeContext = sharedProbeCanvas.getContext('2d', { willReadFrequently: true });
-		}
-		const probeContext = sharedProbeContext;
-		if (!probeContext) {
-			return false;
-		}
-
-		probeContext.drawImage(
-			canvas,
-			Math.floor(sourceX),
-			Math.floor(sourceY),
-			clampedWidth,
-			clampedHeight,
-			0,
-			0,
-			probeWidth,
-			probeHeight
-		);
-		const imageData = probeContext.getImageData(0, 0, probeWidth, probeHeight).data;
-		const pixels = new Uint32Array(
-			imageData.buffer,
-			imageData.byteOffset,
-			Math.floor(imageData.byteLength / 4)
-		);
-		const bg = isDark ? 0 : 255;
-		const tolerance = 8;
-
-		for (let i = 0; i < pixels.length; i += 1) {
-			if (pixelDiffersFromBackground(pixels[i], bg, tolerance)) {
-				return true;
-			}
-		}
-	} catch (error) {
-		// If pixels are unreadable (e.g. browser security edge cases),
-		// keep existing behavior and avoid truncating by assuming content exists.
-		console.warn('Failed to inspect canvas pixels for tail continuation:', error);
-		return true;
-	}
-
-	return false;
+	return pagesAdded;
 };
 
 /**
@@ -735,22 +599,6 @@ const exportPlainTextToPdf = async (text: string, filename: string): Promise<voi
 	doc.save(filename);
 };
 
-const applyChunkSelector = (element: HTMLElement, chunkSelector?: string) => {
-	const chunks: { y: number, height: number }[] = [];
-	if (chunkSelector) {
-		element.querySelectorAll(chunkSelector).forEach((chunk) => {
-			const size = chunk.getBoundingClientRect();
-			(chunk as HTMLElement).dataset.cloningY = size.y.toString();
-			(chunk as HTMLElement).dataset.cloningHeight = size.height.toString();
-			chunks.push({
-				y: size.y,
-				height: size.height
-			});
-		});
-	}
-	return chunks;
-};
-
 /**
  * Export a styled DOM element to PDF using the shared canvas->slice pipeline.
  * Note and Chat stylized exports both use this path to keep behavior consistent.
@@ -762,7 +610,6 @@ const applyChunkSelector = (element: HTMLElement, chunkSelector?: string) => {
 const exportStyledElementToPdf = async (
 	element: HTMLElement,
 	filename: string,
-	chunkSelector?: string,
 	virtualWidth: number = DEFAULT_VIRTUAL_WIDTH,
 	waitBeforeRenderMs = 0,
 	onProgress?: (progress: PdfExportProgress) => void,
@@ -794,10 +641,7 @@ const exportStyledElementToPdf = async (
 		pagesGenerated: 0
 	});
 
-	const elmChunks = applyChunkSelector(element, chunkSelector);
-
 	let completedChunks = 0;
-	let shouldStopTailContinuation = false;
 	for (let index = 0; index < chunks.length; index += 1) {
 		throwIfAborted(signal);
 		const chunk = chunks[index];
@@ -805,29 +649,24 @@ const exportStyledElementToPdf = async (
 		chunkCanvas.width = Math.max(1, Math.floor(virtualWidth * CANVAS_SCALE));
 		chunkCanvas.height = Math.max(1, Math.floor(chunk.height * CANVAS_SCALE));
 
-		const prevChunk = chunks[index - 1];
-
 		const canvas = await renderElementToCanvas(element, virtualWidth, {
 			canvas: chunkCanvas,
 			x: 0,
 			y: chunk.y,
 			width: virtualWidth,
 			height: chunk.height,
-			elementHeight,
-			lastElementY: prevChunk ? (prevChunk.y + prevChunk.height) : undefined
-		}, elmChunks);
+			elementHeight
+		});
 		throwIfAborted(signal);
 
-		const appendResult = appendCanvasChunkToPdf(
+		appendCanvasChunkToPdf(
 			pdf,
 			canvas,
 			pdfState,
 			A4_PAGE_WIDTH_MM,
 			A4_PAGE_HEIGHT_MM,
+			chunk.height,
 			isDark,
-			{
-				stopWhenEncounteringEmptySlice: index === chunks.length - 1
-			}
 		);
 		completedChunks += 1;
 		const renderPercent = chunks.length > 0 ? 5 + (completedChunks / chunks.length) * 90 : 95;
@@ -838,63 +677,6 @@ const exportStyledElementToPdf = async (
 			totalChunks: chunks.length,
 			pagesGenerated: pdfState.pageCount
 		});
-
-		if (appendResult.encounteredEmptySlice) {
-			shouldStopTailContinuation = true;
-			break;
-		}
-	}
-
-	// Tail continuation: keep rendering forward while new chunks still contain content.
-	if (!shouldStopTailContinuation) {
-		let continuationY = chunks.length > 0 ? chunks[chunks.length - 1].y + chunks[chunks.length - 1].height : 0;
-		const maxContinuationChunks = 512;
-		for (let i = 0; i < maxContinuationChunks; i += 1) {
-			throwIfAborted(signal);
-			const chunkCanvas = document.createElement('canvas');
-			chunkCanvas.width = Math.max(1, Math.floor(virtualWidth * CANVAS_SCALE));
-			chunkCanvas.height = Math.max(1, Math.floor(safeRenderChunkHeightPx * CANVAS_SCALE));
-
-			const tailCanvas = await renderElementToCanvas(element, virtualWidth, {
-				canvas: chunkCanvas,
-				x: 0,
-				y: continuationY,
-				width: virtualWidth,
-				height: safeRenderChunkHeightPx,
-				elementHeight
-			}, elmChunks);
-
-			throwIfAborted(signal);
-			if (!canvasRegionHasRenderableContent(tailCanvas, 0, 0, tailCanvas.width, tailCanvas.height, isDark)) {
-				break;
-			}
-
-			const appendResult = appendCanvasChunkToPdf(
-				pdf,
-				tailCanvas,
-				pdfState,
-				A4_PAGE_WIDTH_MM,
-				A4_PAGE_HEIGHT_MM,
-				isDark,
-				{
-					stopWhenEncounteringEmptySlice: true
-				}
-			);
-			completedChunks += 1;
-			continuationY += safeRenderChunkHeightPx;
-
-			emitExportProgress(onProgress, {
-				stage: 'rendering',
-				percent: 95,
-				currentChunk: completedChunks,
-				totalChunks: chunks.length + i + 1,
-				pagesGenerated: pdfState.pageCount
-			});
-
-			if (appendResult.encounteredEmptySlice) {
-				break;
-			}
-		}
 	}
 
 	throwIfAborted(signal);
@@ -935,7 +717,7 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
 	);
 
 	try {
-		await exportStyledElementToPdf(node, `${note.title}.pdf`, undefined, DEFAULT_VIRTUAL_WIDTH, 0);
+		await exportStyledElementToPdf(node, `${note.title}.pdf`, DEFAULT_VIRTUAL_WIDTH, 0);
 	} finally {
 		// Clean up: remove hidden node if needed
 		if (shouldRemoveNode && node.parentNode) {
@@ -953,7 +735,7 @@ export const downloadNotePdf = async (note: NoteData): Promise<void> => {
  * Plain text mode: Exports chat content as plain text with basic formatting.
  *
  * @param options - Configuration object
- * @param options.containerElementId - ID of the container element to render (for stylized mode).
+ * @param options.containerSelector - ID of the container element to render (for stylized mode).
  * @param options.chatText - Plain text content (required for plain text mode)
  * @param options.title - PDF filename (without .pdf extension)
  * @param options.stylizedPdfExport - Whether to use stylized PDF export (default: true)
@@ -999,11 +781,11 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 	});
 
 	try {
-		if ((options.stylizedPdfExport ?? true) && options.containerElementId) {
+		if ((options.stylizedPdfExport ?? true) && options.containerSelector) {
 			throwIfAborted(effectiveSignal);
 			await options.onBeforeRender?.();
 
-			const containerElement = document.getElementById(options.containerElementId);
+			const containerElement = document.querySelector(options.containerSelector) as HTMLElement;
 			try {
 				if (containerElement) {
 					// Clone and style element for rendering
@@ -1012,7 +794,6 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 						await exportStyledElementToPdf(
 							clonedElement,
 							`chat-${options.title}.pdf`,
-							options.chunkSelector,
 							DEFAULT_VIRTUAL_WIDTH,
 							100,
 							(progress) => {
@@ -1047,7 +828,7 @@ export const downloadChatPdf = async (options: ChatPdfOptions): Promise<void> =>
 			return;
 		}
 
-		throw new Error('Either containerElementId or chatText is required');
+		throw new Error('Either containerSelector or chatText is required');
 	} catch (error) {
 		if (error instanceof Error && error.name === 'AbortError') {
 			return;
