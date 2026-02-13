@@ -1128,6 +1128,17 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 
 ####################################
+# Anthropic API Config
+####################################
+
+ENABLE_ANTHROPIC_API = PersistentConfig(
+    "ENABLE_ANTHROPIC_API",
+    "anthropic.enable",
+    os.environ.get("ENABLE_ANTHROPIC_API", "False").lower() == "true",
+)
+
+
+####################################
 # MODELS
 ####################################
 
