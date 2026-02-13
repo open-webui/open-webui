@@ -160,6 +160,9 @@
 	let files = [];
 	let params = {};
 
+	// Message queue for storing messages while generating
+	let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
+
 	$: if (chatIdProp) {
 		navigateHandler();
 	}
@@ -167,10 +170,16 @@
 	const navigateHandler = async () => {
 		loading = true;
 
+		// Save current queue to sessionStorage before navigating away
+		if (messageQueue.length > 0 && $chatId) {
+			sessionStorage.setItem(`chat-queue-${$chatId}`, JSON.stringify(messageQueue));
+		}
+
 		prompt = '';
 		messageInput?.setText('');
 
 		files = [];
+		messageQueue = [];
 		selectedToolIds = [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
@@ -186,6 +195,30 @@
 			window.setTimeout(() => scrollToBottom(), 0);
 
 			await tick();
+
+			// Restore queue from sessionStorage
+			const storedQueueData = sessionStorage.getItem(`chat-queue-${chatIdProp}`);
+			if (storedQueueData) {
+				try {
+					const restoredQueue = JSON.parse(storedQueueData);
+
+					if (restoredQueue.length > 0) {
+						sessionStorage.removeItem(`chat-queue-${chatIdProp}`);
+						// Check if there are pending tasks (still generating)
+						const hasPendingTask = taskIds !== null && taskIds.length > 0;
+						if (!hasPendingTask) {
+							// No pending tasks - process the queue
+							files = restoredQueue.flatMap((m) => m.files);
+							await tick();
+							const combinedPrompt = restoredQueue.map((m) => m.prompt).join('\n\n');
+							await submitPrompt(combinedPrompt);
+						} else {
+							// Has pending tasks - show as queued (chatCompletedHandler will process)
+							messageQueue = restoredQueue;
+						}
+					}
+				} catch (e) {}
+			}
 
 			if (storageChatInput) {
 				try {
@@ -1209,6 +1242,18 @@
 		}
 
 		taskIds = null;
+
+		// Process message queue - combine all queued messages and submit at once
+		if (messageQueue.length > 0) {
+			const combinedPrompt = messageQueue.map((m) => m.prompt).join('\n\n');
+			const combinedFiles = messageQueue.flatMap((m) => m.files);
+			messageQueue = [];
+
+			// Set the files and submit
+			files = combinedFiles;
+			await tick();
+			await submitPrompt(combinedPrompt);
+		}
 	};
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
@@ -1281,6 +1326,11 @@
 		} else {
 			const modelId = selectedModels[0];
 			const model = $models.filter((m) => m.id === modelId).at(0);
+
+			if (!model) {
+				toast.error($i18n.t('Model not found'));
+				return;
+			}
 
 			const messages = createMessagesList(history, history.currentId);
 			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
@@ -1398,7 +1448,12 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
+		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+
+		// Store raw OR-aligned output items from backend
+		if (output) {
+			message.output = output;
+		}
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1596,12 +1651,33 @@
 			return;
 		}
 
+		// Check if there are pending tasks (more reliable than lastMessage.done)
+		if (taskIds !== null && taskIds.length > 0) {
+			if ($settings?.enableMessageQueue ?? true) {
+				// Queue the message
+				const _files = JSON.parse(JSON.stringify(files));
+				messageQueue = [
+					...messageQueue,
+					{
+						id: uuidv4(),
+						prompt: userPrompt,
+						files: _files
+					}
+				];
+				// Clear input
+				messageInput?.setText('');
+				prompt = '';
+				files = [];
+				return;
+			} else {
+				// Interrupt: stop current generation and proceed
+				await stopResponse();
+				await tick();
+			}
+		}
+
 		if (history?.currentId) {
 			const lastMessage = history.messages[history.currentId];
-			if (lastMessage.done != true) {
-				// Response not done
-				return;
-			}
 
 			if (lastMessage.error && !lastMessage.content) {
 				// Error in response
@@ -1894,7 +1970,9 @@
 				: undefined,
 			..._messages.map((message) => ({
 				...message,
-				content: processDetails(message.content)
+				content: processDetails(message.content),
+				// Include output for temp chats (backend will use it and strip before LLM)
+				...(message.output ? { output: message.output } : {})
 			}))
 		].filter((message) => message);
 
@@ -1945,6 +2023,41 @@
 			}
 		}
 
+		// Parse skill mentions (<$skillId|label>) from user messages
+		const skillMentionRegex = /<\$([^|>]+)\|?[^>]*>/g;
+		const skillIds = [];
+		for (const message of messages) {
+			const content =
+				typeof message.content === 'string' ? message.content : (message.content?.[0]?.text ?? '');
+			for (const match of content.matchAll(skillMentionRegex)) {
+				if (!skillIds.includes(match[1])) {
+					skillIds.push(match[1]);
+				}
+			}
+		}
+
+		// Strip skill mentions from message content
+		if (skillIds.length > 0) {
+			messages = messages.map((message) => {
+				if (typeof message.content === 'string') {
+					return {
+						...message,
+						content: message.content.replace(/<\$[^>]+>/g, '').trim()
+					};
+				} else if (Array.isArray(message.content)) {
+					return {
+						...message,
+						content: message.content.map((part) =>
+							part.type === 'text'
+								? { ...part, text: part.text.replace(/<\$[^>]+>/g, '').trim() }
+								: part
+						)
+					};
+				}
+				return message;
+			});
+		}
+
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
@@ -1966,6 +2079,7 @@
 
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
+				skill_ids: skillIds.length > 0 ? skillIds : undefined,
 				tool_servers: ($toolServers ?? []).filter(
 					(server, idx) => toolServerIds.includes(idx) || toolServerIds.includes(server?.id)
 				),
@@ -2556,6 +2670,34 @@
 									{stopResponse}
 									{createMessagePair}
 									{onUpload}
+									{messageQueue}
+									onQueueSendNow={async (id) => {
+										const item = messageQueue.find((m) => m.id === id);
+										if (item) {
+											// Remove from queue
+											messageQueue = messageQueue.filter((m) => m.id !== id);
+											// Stop current generation first
+											await stopResponse();
+											await tick();
+											// Set files and submit
+											files = item.files;
+											await tick();
+											await submitPrompt(item.prompt);
+										}
+									}}
+									onQueueEdit={(id) => {
+										const item = messageQueue.find((m) => m.id === id);
+										if (item) {
+											// Remove from queue
+											messageQueue = messageQueue.filter((m) => m.id !== id);
+											// Set files and restore prompt to input
+											files = item.files;
+											messageInput?.setText(item.prompt);
+										}
+									}}
+									onQueueDelete={(id) => {
+										messageQueue = messageQueue.filter((m) => m.id !== id);
+									}}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data, $chatId);

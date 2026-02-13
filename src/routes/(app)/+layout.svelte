@@ -230,6 +230,10 @@
 					event.preventDefault();
 					showSettings.set(false);
 					showShortcuts.set(false);
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.OPEN_MODEL_SELECTOR])) {
+					console.log('Shortcut triggered: OPEN_MODEL_SELECTOR');
+					event.preventDefault();
+					document.getElementById('model-selector-0-button')?.click();
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_TEMPORARY_CHAT])) {
 					console.log('Shortcut triggered: NEW_TEMPORARY_CHAT');
 					event.preventDefault();

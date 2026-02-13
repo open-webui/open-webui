@@ -1397,7 +1397,7 @@
 													<div class="size-4">
 														<img
 															src={action.icon}
-															class="w-4 h-4 {action.icon.includes('svg')
+															class="w-4 h-4 {action.icon.includes('data:image/svg')
 																? 'dark:invert-[80%]'
 																: ''}"
 															style="fill: currentColor;"

@@ -40,7 +40,7 @@
 let profileImageUrl = `${WEBUI_BASE_URL}/static/swagger-ui/favicon.png`;
 	let filterMode = 'include';
 
-	let accessControl = {};
+	let accessGrants = [];
 
 	let imageInputElement;
 	let loading = false;
@@ -79,7 +79,7 @@ let profileImageUrl = `${WEBUI_BASE_URL}/static/swagger-ui/favicon.png`;
 				description: description || null,
 				model_ids: modelIds.length > 0 ? modelIds : null,
 				filter_mode: modelIds.length > 0 ? (filterMode ? filterMode : null) : null,
-				access_control: accessControl
+				access_grants: accessGrants
 			}
 		};
 
@@ -97,7 +97,7 @@ let profileImageUrl = `${WEBUI_BASE_URL}/static/swagger-ui/favicon.png`;
 			description = model.meta.description;
 			modelIds = model.meta.model_ids || [];
 			filterMode = model.meta?.filter_mode ?? 'include';
-			accessControl = 'access_control' in model.meta ? model.meta.access_control : {};
+			accessGrants = model.meta.access_grants ?? [];
 		}
 	};
 
@@ -283,7 +283,7 @@ let profileImageUrl = `${WEBUI_BASE_URL}/static/swagger-ui/favicon.png`;
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 						<div class="my-2">
-							<AccessControl bind:accessControl />
+							<AccessControl bind:accessGrants />
 						</div>
 
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />

@@ -194,10 +194,34 @@ ENABLE_FORWARD_USER_INFO_HEADERS = (
     os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
 )
 
+# Header names for user info forwarding (customizable via environment variables)
+FORWARD_USER_INFO_HEADER_USER_NAME = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_NAME", "X-OpenWebUI-User-Name"
+)
+FORWARD_USER_INFO_HEADER_USER_ID = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_ID", "X-OpenWebUI-User-Id"
+)
+FORWARD_USER_INFO_HEADER_USER_EMAIL = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_EMAIL", "X-OpenWebUI-User-Email"
+)
+FORWARD_USER_INFO_HEADER_USER_ROLE = os.environ.get(
+    "FORWARD_USER_INFO_HEADER_USER_ROLE", "X-OpenWebUI-User-Role"
+)
+
+# Header name for chat ID forwarding (customizable via environment variable)
+FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.environ.get(
+    "FORWARD_SESSION_INFO_HEADER_MESSAGE_ID", "X-OpenWebUI-Message-Id"
+)
+FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.environ.get(
+    "FORWARD_SESSION_INFO_HEADER_CHAT_ID", "X-OpenWebUI-Chat-Id"
+)
+
 # Experimental feature, may be removed in future
 ENABLE_STAR_SESSIONS_MIDDLEWARE = (
     os.environ.get("ENABLE_STAR_SESSIONS_MIDDLEWARE", "False").lower() == "true"
 )
+
+ENABLE_EASTER_EGGS = os.environ.get("ENABLE_EASTER_EGGS", "True").lower() == "true"
 
 ####################################
 # WEBUI_BUILD_HASH
@@ -391,6 +415,18 @@ try:
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
 
+REDIS_RECONNECT_DELAY = os.environ.get("REDIS_RECONNECT_DELAY", "")
+
+if REDIS_RECONNECT_DELAY == "":
+    REDIS_RECONNECT_DELAY = None
+else:
+    try:
+        REDIS_RECONNECT_DELAY = float(REDIS_RECONNECT_DELAY)
+        if REDIS_RECONNECT_DELAY < 0:
+            REDIS_RECONNECT_DELAY = None
+    except Exception:
+        REDIS_RECONNECT_DELAY = None
+
 ####################################
 # UVICORN WORKERS
 ####################################
@@ -454,6 +490,8 @@ except Exception as e:
     PASSWORD_VALIDATION_REGEX_PATTERN = re.compile(
         r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$"
     )
+
+PASSWORD_VALIDATION_HINT = os.environ.get("PASSWORD_VALIDATION_HINT", "")
 
 
 BYPASS_MODEL_ACCESS_CONTROL = (
@@ -519,6 +557,12 @@ OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
     "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY", WEBUI_SECRET_KEY
 )
 
+# Token Exchange Configuration
+# Allows external apps to exchange OAuth tokens for OpenWebUI tokens
+ENABLE_OAUTH_TOKEN_EXCHANGE = (
+    os.environ.get("ENABLE_OAUTH_TOKEN_EXCHANGE", "False").lower() == "true"
+)
+
 ####################################
 # SCIM Configuration
 ####################################
@@ -545,15 +589,11 @@ LICENSE_PUBLIC_KEY = os.environ.get("LICENSE_PUBLIC_KEY", "")
 
 pk = None
 if LICENSE_PUBLIC_KEY:
-    pk = serialization.load_pem_public_key(
-        f"""
+    pk = serialization.load_pem_public_key(f"""
 -----BEGIN PUBLIC KEY-----
 {LICENSE_PUBLIC_KEY}
 -----END PUBLIC KEY-----
-""".encode(
-            "utf-8"
-        )
-    )
+""".encode("utf-8"))
 
 
 ####################################
@@ -673,7 +713,11 @@ WEBSOCKET_SERVER_LOGGING = (
     os.environ.get("WEBSOCKET_SERVER_LOGGING", "False").lower() == "true"
 )
 WEBSOCKET_SERVER_ENGINEIO_LOGGING = (
-    os.environ.get("WEBSOCKET_SERVER_LOGGING", "False").lower() == "true"
+    os.environ.get(
+        "WEBSOCKET_SERVER_ENGINEIO_LOGGING",
+        os.environ.get("WEBSOCKET_SERVER_LOGGING", "False"),
+    ).lower()
+    == "true"
 )
 WEBSOCKET_SERVER_PING_TIMEOUT = os.environ.get("WEBSOCKET_SERVER_PING_TIMEOUT", "20")
 try:
@@ -737,6 +781,17 @@ else:
 AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
     os.environ.get("AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL", "True").lower() == "true"
 )
+
+
+RAG_EMBEDDING_TIMEOUT = os.environ.get("RAG_EMBEDDING_TIMEOUT", "")
+
+if RAG_EMBEDDING_TIMEOUT == "":
+    RAG_EMBEDDING_TIMEOUT = None
+else:
+    try:
+        RAG_EMBEDDING_TIMEOUT = int(RAG_EMBEDDING_TIMEOUT)
+    except Exception:
+        RAG_EMBEDDING_TIMEOUT = None
 
 
 ####################################

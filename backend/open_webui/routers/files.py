@@ -38,6 +38,7 @@ from open_webui.models.files import (
 from open_webui.models.chats import Chats
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
+from open_webui.models.access_grants import AccessGrants
 
 
 from open_webui.routers.retrieval import ProcessFileForm, process_file
@@ -47,7 +48,6 @@ from open_webui.storage.provider import Storage
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 
@@ -82,8 +82,13 @@ def has_access_to_file(
         group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
     }
     for knowledge_base in knowledge_bases:
-        if knowledge_base.user_id == user.id or has_access(
-            user.id, access_type, knowledge_base.access_control, user_group_ids, db=db
+        if knowledge_base.user_id == user.id or AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="knowledge",
+            resource_id=knowledge_base.id,
+            permission=access_type,
+            user_group_ids=user_group_ids,
+            db=db,
         ):
             return True
 
@@ -282,7 +287,11 @@ def upload_file_handler(
                     },
                     "meta": {
                         "name": name,
-                        "content_type": file.content_type,
+                        "content_type": (
+                            file.content_type
+                            if isinstance(file.content_type, str)
+                            else None
+                        ),
                         "size": len(contents),
                         "data": file_metadata,
                     },
@@ -332,6 +341,8 @@ def upload_file_handler(
                     detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
                 )
 
+    except HTTPException as e:
+        raise e
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -575,7 +586,7 @@ class ContentForm(BaseModel):
 
 
 @router.post("/{id}/data/content/update")
-async def update_file_data_content_by_id(
+def update_file_data_content_by_id(
     request: Request,
     id: str,
     form_data: ContentForm,
@@ -824,6 +835,23 @@ async def delete_file_by_id(
         or user.role == "admin"
         or has_access_to_file(id, "write", user, db=db)
     ):
+
+        # Clean up KB associations and embeddings before deleting
+        knowledges = Knowledges.get_knowledges_by_file_id(id, db=db)
+        for knowledge in knowledges:
+            # Remove KB-file relationship
+            Knowledges.remove_file_from_knowledge_by_id(knowledge.id, id, db=db)
+            # Clean KB embeddings (same logic as /knowledge/{id}/file/remove)
+            try:
+                VECTOR_DB_CLIENT.delete(
+                    collection_name=knowledge.id, filter={"file_id": id}
+                )
+                if file.hash:
+                    VECTOR_DB_CLIENT.delete(
+                        collection_name=knowledge.id, filter={"hash": file.hash}
+                    )
+            except Exception as e:
+                log.debug(f"KB embedding cleanup for {knowledge.id}: {e}")
 
         result = Files.delete_file_by_id(id, db=db)
         if result:

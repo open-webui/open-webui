@@ -39,7 +39,7 @@ from langchain_core.documents import Document
 from open_webui.models.files import FileModel, FileUpdateForm, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
-from open_webui.internal.db import get_session
+from open_webui.internal.db import get_session, get_db
 from sqlalchemy.orm import Session
 
 
@@ -76,6 +76,7 @@ from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
 from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.external import search_external
+from open_webui.retrieval.web.yandex import search_yandex
 
 from open_webui.retrieval.utils import (
     get_content_from_url,
@@ -109,6 +110,7 @@ from open_webui.config import (
 from open_webui.env import (
     DEVICE_TYPE,
     DOCKER,
+    RAG_EMBEDDING_TIMEOUT,
     SENTENCE_TRANSFORMERS_BACKEND,
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
@@ -468,6 +470,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "PDF_LOADER_MODE": request.app.state.config.PDF_LOADER_MODE,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
         "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
         "DATALAB_MARKER_ADDITIONAL_CONFIG": request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
@@ -577,6 +580,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "YOUTUBE_LOADER_LANGUAGE": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "YOUTUBE_LOADER_PROXY_URL": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
             "YOUTUBE_LOADER_TRANSLATION": request.app.state.YOUTUBE_LOADER_TRANSLATION,
+            "YANDEX_WEB_SEARCH_URL": request.app.state.config.YANDEX_WEB_SEARCH_URL,
+            "YANDEX_WEB_SEARCH_API_KEY": request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
+            "YANDEX_WEB_SEARCH_CONFIG": request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
         },
     }
 
@@ -640,6 +646,9 @@ class WebConfig(BaseModel):
     YOUTUBE_LOADER_LANGUAGE: Optional[List[str]] = None
     YOUTUBE_LOADER_PROXY_URL: Optional[str] = None
     YOUTUBE_LOADER_TRANSLATION: Optional[str] = None
+    YANDEX_WEB_SEARCH_URL: Optional[str] = None
+    YANDEX_WEB_SEARCH_API_KEY: Optional[str] = None
+    YANDEX_WEB_SEARCH_CONFIG: Optional[str] = None
 
 
 class ConfigForm(BaseModel):
@@ -659,6 +668,7 @@ class ConfigForm(BaseModel):
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
+    PDF_LOADER_MODE: Optional[str] = None
 
     DATALAB_MARKER_API_KEY: Optional[str] = None
     DATALAB_MARKER_API_BASE_URL: Optional[str] = None
@@ -785,6 +795,11 @@ async def update_rag_config(
         form_data.PDF_EXTRACT_IMAGES
         if form_data.PDF_EXTRACT_IMAGES is not None
         else request.app.state.config.PDF_EXTRACT_IMAGES
+    )
+    request.app.state.config.PDF_LOADER_MODE = (
+        form_data.PDF_LOADER_MODE
+        if form_data.PDF_LOADER_MODE is not None
+        else request.app.state.config.PDF_LOADER_MODE
     )
     request.app.state.config.DATALAB_MARKER_API_KEY = (
         form_data.DATALAB_MARKER_API_KEY
@@ -1006,6 +1021,11 @@ async def update_rag_config(
         if form_data.TEXT_SPLITTER is not None
         else request.app.state.config.TEXT_SPLITTER
     )
+    request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER = (
+        form_data.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER
+        if form_data.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER is not None
+        else request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER
+    )
     request.app.state.config.CHUNK_SIZE = (
         form_data.CHUNK_SIZE
         if form_data.CHUNK_SIZE is not None
@@ -1023,13 +1043,25 @@ async def update_rag_config(
     )
 
     # File upload settings
-    request.app.state.config.FILE_MAX_SIZE = form_data.FILE_MAX_SIZE
-    request.app.state.config.FILE_MAX_COUNT = form_data.FILE_MAX_COUNT
+    request.app.state.config.FILE_MAX_SIZE = (
+        form_data.FILE_MAX_SIZE
+        if form_data.FILE_MAX_SIZE is not None
+        else request.app.state.config.FILE_MAX_SIZE
+    )
+    request.app.state.config.FILE_MAX_COUNT = (
+        form_data.FILE_MAX_COUNT
+        if form_data.FILE_MAX_COUNT is not None
+        else request.app.state.config.FILE_MAX_COUNT
+    )
     request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH = (
         form_data.FILE_IMAGE_COMPRESSION_WIDTH
+        if form_data.FILE_IMAGE_COMPRESSION_WIDTH is not None
+        else request.app.state.config.FILE_IMAGE_COMPRESSION_WIDTH
     )
     request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT = (
         form_data.FILE_IMAGE_COMPRESSION_HEIGHT
+        if form_data.FILE_IMAGE_COMPRESSION_HEIGHT is not None
+        else request.app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT
     )
     request.app.state.config.ALLOWED_FILE_EXTENSIONS = (
         form_data.ALLOWED_FILE_EXTENSIONS
@@ -1164,6 +1196,15 @@ async def update_rag_config(
         request.app.state.YOUTUBE_LOADER_TRANSLATION = (
             form_data.web.YOUTUBE_LOADER_TRANSLATION
         )
+        request.app.state.config.YANDEX_WEB_SEARCH_URL = (
+            form_data.web.YANDEX_WEB_SEARCH_URL
+        )
+        request.app.state.config.YANDEX_WEB_SEARCH_API_KEY = (
+            form_data.web.YANDEX_WEB_SEARCH_API_KEY
+        )
+        request.app.state.config.YANDEX_WEB_SEARCH_CONFIG = (
+            form_data.web.YANDEX_WEB_SEARCH_CONFIG
+        )
 
     return {
         "status": True,
@@ -1180,6 +1221,7 @@ async def update_rag_config(
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "PDF_LOADER_MODE": request.app.state.config.PDF_LOADER_MODE,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
         "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
         "DATALAB_MARKER_ADDITIONAL_CONFIG": request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
@@ -1287,6 +1329,9 @@ async def update_rag_config(
             "YOUTUBE_LOADER_LANGUAGE": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "YOUTUBE_LOADER_PROXY_URL": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
             "YOUTUBE_LOADER_TRANSLATION": request.app.state.YOUTUBE_LOADER_TRANSLATION,
+            "YANDEX_WEB_SEARCH_URL": request.app.state.config.YANDEX_WEB_SEARCH_URL,
+            "YANDEX_WEB_SEARCH_API_KEY": request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
+            "YANDEX_WEB_SEARCH_CONFIG": request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
         },
     }
 
@@ -1417,8 +1462,16 @@ def save_docs_to_vector_db(
         if result is not None and result.ids and len(result.ids) > 0:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
-                log.info(f"Document with hash {metadata['hash']} already exists")
-                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+                # Check if the existing document belongs to the same file
+                # If same file_id, this is a re-add/reindex - allow it
+                # If different file_id, this is a duplicate - block it
+                existing_file_id = None
+                if result.metadatas and result.metadatas[0]:
+                    existing_file_id = result.metadatas[0][0].get("file_id")
+
+                if existing_file_id != metadata.get("file_id"):
+                    log.info(f"Document with hash {metadata['hash']} already exists")
+                    raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
         if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
@@ -1538,14 +1591,19 @@ def save_docs_to_vector_db(
             enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
         )
 
-        # Run async embedding in sync context
-        embeddings = asyncio.run(
+        # Run async embedding in sync context using the main event loop
+        # This allows the main loop to stay responsive to health checks during long operations
+        embedding_timeout = RAG_EMBEDDING_TIMEOUT
+
+        future = asyncio.run_coroutine_threadsafe(
             embedding_function(
                 list(map(lambda x: x.replace("\n", " "), texts)),
                 prefix=RAG_EMBEDDING_CONTENT_PREFIX,
                 user=user,
-            )
+            ),
+            request.app.state.main_loop,
         )
+        embeddings = future.result(timeout=embedding_timeout)
         log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
         items = [
@@ -1586,6 +1644,9 @@ def process_file(
 ):
     """
     Process a file and save its content to the vector database.
+    Process a file and save its content to the vector database.
+    Note: granular session management is used to prevent connection pool exhaustion.
+    The session is committed before external API calls, and updates use a fresh session.
     """
     if user.role == "admin":
         file = Files.get_file_by_id(form_data.file_id, db=db)
@@ -1747,6 +1808,12 @@ def process_file(
                 }
             else:
                 try:
+                    # Commit any pending changes before the slow embedding step.
+                    # Note: file is already a Pydantic model (not ORM), so no expunge needed.
+                    db.commit()
+
+                    # External embedding API takes time (5-60s+).
+                    # Subsequent updates use fresh sessions via get_db().
                     result = save_docs_to_vector_db(
                         request,
                         docs=docs,
@@ -1762,27 +1829,29 @@ def process_file(
                     log.info(f"added {len(docs)} items to collection {collection_name}")
 
                     if result:
-                        Files.update_file_metadata_by_id(
-                            file.id,
-                            {
+                        # Fresh session for the final update.
+                        with get_db() as session:
+                            Files.update_file_metadata_by_id(
+                                file.id,
+                                {
+                                    "collection_name": collection_name,
+                                },
+                                db=session,
+                            )
+
+                            Files.update_file_data_by_id(
+                                file.id,
+                                {"status": "completed"},
+                                db=session,
+                            )
+                            Files.update_file_hash_by_id(file.id, hash, db=session)
+
+                            return {
+                                "status": True,
                                 "collection_name": collection_name,
-                            },
-                            db=db,
-                        )
-
-                        Files.update_file_data_by_id(
-                            file.id,
-                            {"status": "completed"},
-                            db=db,
-                        )
-                        Files.update_file_hash_by_id(file.id, hash, db=db)
-
-                        return {
-                            "status": True,
-                            "collection_name": collection_name,
-                            "filename": file.filename,
-                            "content": text_content,
-                        }
+                                "filename": file.filename,
+                                "content": text_content,
+                            }
                     else:
                         raise Exception("Error saving document to vector database")
                 except Exception as e:
@@ -1790,13 +1859,15 @@ def process_file(
 
         except Exception as e:
             log.exception(e)
-            Files.update_file_data_by_id(
-                file.id,
-                {"status": "failed"},
-                db=db,
-            )
-            # Clear the hash so the file can be re-uploaded after fixing the issue
-            Files.update_file_hash_by_id(file.id, None, db=db)
+            # Fresh session for error status update.
+            with get_db() as session:
+                Files.update_file_data_by_id(
+                    file.id,
+                    {"status": "failed"},
+                    db=session,
+                )
+                # Clear the hash so the file can be re-uploaded after fixing the issue
+                Files.update_file_hash_by_id(file.id, None, db=session)
 
             if "No pandoc was found" in str(e):
                 raise HTTPException(
@@ -2201,6 +2272,17 @@ def search_web(
             request,
             request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
             request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            user=user,
+        )
+    elif engine == "yandex":
+        return search_yandex(
+            request,
+            request.app.state.config.YANDEX_WEB_SEARCH_URL,
+            request.app.state.config.YANDEX_WEB_SEARCH_API_KEY,
+            request.app.state.config.YANDEX_WEB_SEARCH_CONFIG,
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
@@ -2626,10 +2708,14 @@ async def process_files_batch(
     request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ) -> BatchProcessFilesResponse:
     """
     Process a batch of files and save them to the vector database.
+
+    NOTE: We intentionally do NOT use Depends(get_session) here.
+    The save_docs_to_vector_db() call makes external embedding API calls which
+    can take 5-60+ seconds for batch operations. Database operations after
+    embedding (Files.update_file_by_id) manage their own short-lived sessions.
     """
 
     collection_name = form_data.collection_name
@@ -2689,9 +2775,7 @@ async def process_files_batch(
 
             # Update all files with collection name
             for file_update, file_result in zip(file_updates, file_results):
-                Files.update_file_by_id(
-                    id=file_result.file_id, form_data=file_update, db=db
-                )
+                Files.update_file_by_id(id=file_result.file_id, form_data=file_update)
                 file_result.status = "completed"
 
         except Exception as e:
@@ -2701,7 +2785,9 @@ async def process_files_batch(
             for file_result in file_results:
                 file_result.status = "failed"
                 file_errors.append(
-                    BatchProcessFilesResult(file_id=file_result.file_id, error=str(e))
+                    BatchProcessFilesResult(
+                        file_id=file_result.file_id, status="failed", error=str(e)
+                    )
                 )
 
     return BatchProcessFilesResponse(results=file_results, errors=file_errors)

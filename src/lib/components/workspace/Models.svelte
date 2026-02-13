@@ -72,19 +72,13 @@
 
 	let searchDebounceTimer;
 
-	$: if (
-		page !== undefined &&
-		query !== undefined &&
-		selectedTag !== undefined &&
-		viewOption !== undefined
-	) {
-		clearTimeout(searchDebounceTimer);
-		searchDebounceTimer = setTimeout(() => {
-			getModelList();
-		}, 300);
+	$: if (loaded && page !== undefined && selectedTag !== undefined && viewOption !== undefined) {
+		getModelList();
 	}
 
 	const getModelList = async () => {
+		if (!loaded) return;
+
 		try {
 			const res = await getWorkspaceModels(
 				localStorage.token,
@@ -237,6 +231,7 @@
 		let groups = await getGroups(localStorage.token);
 		groupIds = groups.map((group) => group.id);
 
+		await tick();
 		loaded = true;
 
 		const onKeyDown = (event) => {
@@ -402,6 +397,12 @@
 					bind:value={query}
 					placeholder={$i18n.t('Search Models')}
 					maxlength="500"
+					on:input={() => {
+						clearTimeout(searchDebounceTimer);
+						searchDebounceTimer = setTimeout(() => {
+							getModelList();
+						}, 300);
+					}}
 				/>
 
 				{#if query}
@@ -410,6 +411,7 @@
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:click={() => {
 								query = '';
+								getModelList();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />
@@ -460,7 +462,7 @@
 						<div
 							class="flex transition rounded-2xl w-full p-2.5 {model.write_access
 								? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50'
-								: 'cursor-not-allowed opacity-60'}"
+								: 'dark:hover:bg-gray-850/50 hover:bg-gray-50'}"
 							id="model-item-{model.id}"
 							on:click={() => {
 								if (model.write_access) {
@@ -505,86 +507,83 @@
 														</div>
 													{/if}
 
-													{#if model.write_access || $user?.role === 'admin'}
-														<div class="flex {model.is_active ? '' : 'text-gray-500'}">
-															<div class="flex items-center gap-0.5">
-																{#if shiftKey}
-																	<Tooltip
-																		content={model?.meta?.hidden
-																			? $i18n.t('Show')
-																			: $i18n.t('Hide')}
-																	>
-																		<button
-																			class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																			type="button"
-																			on:click={(e) => {
-																				e.stopPropagation();
-																				hideModelHandler(model);
-																			}}
-																		>
-																			{#if model?.meta?.hidden}
-																				<EyeSlash />
-																			{:else}
-																				<Eye />
-																			{/if}
-																		</button>
-																	</Tooltip>
-
-																	<Tooltip content={$i18n.t('Delete')}>
-																		<button
-																			class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																			type="button"
-																			on:click={(e) => {
-																				e.stopPropagation();
-																				deleteModelHandler(model);
-																			}}
-																		>
-																			<GarbageBin />
-																		</button>
-																	</Tooltip>
-																{:else}
-																	<ModelMenu
-																		user={$user}
-																		{model}
-																		editHandler={() => {
-																			goto(
-																				`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
-																			);
-																		}}
-																		shareHandler={() => {
-																			shareModelHandler(model);
-																		}}
-																		cloneHandler={() => {
-																			cloneModelHandler(model);
-																		}}
-																		exportHandler={() => {
-																			exportModelHandler(model);
-																		}}
-																		hideHandler={() => {
+													<div class="flex {model.is_active ? '' : 'text-gray-500'}">
+														<div class="flex items-center gap-0.5">
+															{#if shiftKey && model.write_access}
+																<Tooltip
+																	content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}
+																>
+																	<button
+																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		type="button"
+																		on:click={(e) => {
+																			e.stopPropagation();
 																			hideModelHandler(model);
 																		}}
-																		pinModelHandler={() => {
-																			pinModelHandler(model.id);
-																		}}
-																		copyLinkHandler={() => {
-																			copyLinkHandler(model);
-																		}}
-																		deleteHandler={() => {
-																			selectedModel = model;
-																			showModelDeleteConfirm = true;
-																		}}
-																		onClose={() => {}}
 																	>
-																		<div
-																			class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																		>
-																			<EllipsisHorizontal className="size-5" />
-																		</div>
-																	</ModelMenu>
-																{/if}
-															</div>
+																		{#if model?.meta?.hidden}
+																			<EyeSlash />
+																		{:else}
+																			<Eye />
+																		{/if}
+																	</button>
+																</Tooltip>
+
+																<Tooltip content={$i18n.t('Delete')}>
+																	<button
+																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		type="button"
+																		on:click={(e) => {
+																			e.stopPropagation();
+																			deleteModelHandler(model);
+																		}}
+																	>
+																		<GarbageBin />
+																	</button>
+																</Tooltip>
+															{:else}
+																<ModelMenu
+																	user={$user}
+																	{model}
+																	writeAccess={model.write_access}
+																	editHandler={() => {
+																		goto(
+																			`/workspace/models/edit?id=${encodeURIComponent(model.id)}`
+																		);
+																	}}
+																	shareHandler={() => {
+																		shareModelHandler(model);
+																	}}
+																	cloneHandler={() => {
+																		cloneModelHandler(model);
+																	}}
+																	exportHandler={() => {
+																		exportModelHandler(model);
+																	}}
+																	hideHandler={() => {
+																		hideModelHandler(model);
+																	}}
+																	pinModelHandler={() => {
+																		pinModelHandler(model.id);
+																	}}
+																	copyLinkHandler={() => {
+																		copyLinkHandler(model);
+																	}}
+																	deleteHandler={() => {
+																		selectedModel = model;
+																		showModelDeleteConfirm = true;
+																	}}
+																	onClose={() => {}}
+																>
+																	<div
+																		class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																	>
+																		<EllipsisHorizontal className="size-5" />
+																	</div>
+																</ModelMenu>
+															{/if}
 														</div>
-													{/if}
+													</div>
 
 													{#if model.write_access}
 														<button

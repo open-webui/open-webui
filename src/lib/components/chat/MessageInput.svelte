@@ -90,6 +90,7 @@
 	import { goto } from '$app/navigation';
 	import InputModal from '../common/InputModal.svelte';
 	import Expand from '../icons/Expand.svelte';
+	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -121,6 +122,11 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
+	export let onQueueSendNow: (id: string) => void = () => {};
+	export let onQueueEdit: (id: string) => void = () => {};
+	export let onQueueDelete: (id: string) => void = () => {};
+
 	let inputContent = null;
 
 	let showInputVariablesModal = false;
@@ -145,7 +151,7 @@
 				return {
 					...file,
 					user: undefined,
-					access_control: undefined
+					access_grants: undefined
 				};
 			}),
 		selectedToolIds,
@@ -219,6 +225,14 @@
 		if (text.includes('{{USER_NAME}}')) {
 			const name = sessionUser?.name || 'User';
 			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (text.includes('{{USER_EMAIL}}')) {
+			const email = sessionUser?.email || '';
+
+			if (email) {
+				text = text.replaceAll('{{USER_EMAIL}}', email);
+			}
 		}
 
 		if (text.includes('{{USER_BIO}}')) {
@@ -376,7 +390,8 @@
 
 	let command = '';
 	export let showCommands = false;
-	$: showCommands = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
+	$: showCommands =
+		['/', '#', '@', '$'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
 	let suggestions = null;
 
 	let showTools = false;
@@ -727,9 +742,7 @@
 					let imageUrl = event.target.result;
 
 					// Compress the image if settings or config require it
-					if ($settings?.imageCompression && $settings?.imageCompressionInChannels) {
-						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
-					}
+					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
 					if ($temporaryChatEnabled) {
 						files = [
@@ -932,6 +945,18 @@
 						}
 					}
 				})
+			},
+			{
+				char: '$',
+				render: getSuggestionRenderer(CommandSuggestionList, {
+					i18n,
+					onSelect: (e) => {
+						document.getElementById('chat-input')?.focus();
+					},
+
+					insertTextHandler: insertTextAtCursor,
+					onUpload: () => {}
+				})
 			}
 		];
 		loaded = true;
@@ -1113,6 +1138,23 @@
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
 						/>
+
+						<!-- Queued messages display -->
+						{#if messageQueue.length > 0}
+							<div
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-gray-900/60 border border-gray-800/50 overflow-hidden"
+							>
+								{#each messageQueue as queuedMessage (queuedMessage.id)}
+									<QueuedMessageItem
+										id={queuedMessage.id}
+										content={queuedMessage.prompt}
+										onSendNow={onQueueSendNow}
+										onEdit={onQueueEdit}
+										onDelete={onQueueDelete}
+									/>
+								{/each}
+							</div>
+						{/if}
 
 						<div
 							id="message-input-container"
@@ -1603,7 +1645,7 @@
 															<div class="size-4 items-center flex justify-center">
 																<img
 																	src={filter.icon}
-																	class="size-3.5 {filter.icon.includes('svg')
+																	class="size-3.5 {filter.icon.includes('data:image/svg')
 																		? 'dark:invert-[80%]'
 																		: ''}"
 																	style="fill: currentColor;"
@@ -1715,7 +1757,7 @@
 											<!-- {$i18n.t('Create Note')}  -->
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
-													id="send-message-button"
+													id="create-note-button"
 													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
 													type="button"
 													disabled={prompt === '' && files.length === 0}
