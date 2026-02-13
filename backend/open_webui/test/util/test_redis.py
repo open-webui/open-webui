@@ -42,7 +42,6 @@ class TestSentinelRedisProxy:
         """Test parsing Redis service URL with params"""
         url = "rediss://user:password@mymaster:6379/0?ssl_cert_reqs=required&ssl_ca_certs=/etc/ssl-custom/certs/bundle.pem"
 
-
         result = parse_redis_service_url(url)
 
         assert result["username"] == "user"
