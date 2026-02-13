@@ -148,8 +148,8 @@ def parse_redis_service_url(redis_url):
     if parsed_url.scheme != "redis" and parsed_url.scheme != "rediss":
         raise ValueError("Invalid Redis URL scheme. Must be 'redis' or 'rediss'.")
 
-    sentinel_query_params = parse_qs(parsed_url.query)
-    sentinel_query_params = {k: v[0] for k, v in sentinel_query_params.items()}
+    redis_config_tmp = parse_qs(parsed_url.query)
+    redis_config = {k: v[0] for k, v in redis_config_tmp.items()}
 
     options = {
         "username": parsed_url.username or None,
@@ -158,9 +158,9 @@ def parse_redis_service_url(redis_url):
         "port": parsed_url.port or 6379,
         "db": int(parsed_url.path.lstrip("/") or 0),
         "ssl": parsed_url.scheme == "rediss",
-        **sentinel_query_params
+
     }
-    return options
+    return redis_config | options
 
 
 def get_redis_client(async_mode=False):
