@@ -342,7 +342,7 @@
 		bind:accessGrants
 		accessRoles={preset ? ['read', 'write'] : ['read']}
 		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
-		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin' || edit}
+		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
 		onChange={async () => {
 			if (edit && model?.id) {
 				try {
