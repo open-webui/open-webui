@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- ⚠️ **IMPORTANT: Database Migration Required** — This release includes a database schema change; multi-worker, multi-server, or load-balanced deployments must update all instances simultaneously rather than performing rolling updates.
+- ⚠️ **Database Migrations:** This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
 
 ## [0.8.0] - 2026-02-12
 
