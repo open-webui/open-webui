@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗄️ **Batch access control queries.** Improved performance when loading models, prompts, and knowledge bases by replacing multiple individual access checks with single batch queries, significantly reducing database load for large deployments. [Commit](https://github.com/open-webui/open-webui/commit/589c4e64c1b7bb7a7a5abc20382b92fb860e28c2)
 - 💨 **Faster user list loading.** User lists now load significantly faster by deferring profile image loading; images are fetched separately in parallel by the browser, improving caching and reducing database load. [Commit](https://github.com/open-webui/open-webui/commit/b7549d2f6ca2843661ec79a5a1e55da9e7553368)
 - 🔍 **Web search result count.** The built-in search_web tool now respects the admin-configured "Search Result Count" setting instead of always returning 5 results when using Native Function Calling mode. [#21373](https://github.com/open-webui/open-webui/pull/21373), [#21371](https://github.com/open-webui/open-webui/issues/21371)
-- 🌐 **Translation updates.** Portuguese (Brazil) translations were updated. [#21345](https://github.com/open-webui/open-webui/pull/21345)
 - 🔐 **SCIM externalId support.** SCIM-enabled deployments can now store and manage externalId for user provisioning, enabling better integration with identity providers like Microsoft Entra ID and Okta. [Commit](https://github.com/open-webui/open-webui/commit/d1d1efe212b16e0052359991d67fd813125077e8)
+- 🌐 **Translation updates.** Portuguese (Brazil) translations were updated. [#21345](https://github.com/open-webui/open-webui/pull/21345)
 
 ### Fixed
 
