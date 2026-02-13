@@ -549,6 +549,126 @@
 									</div>
 								</div>
 
+								<!-- Logos & Assets (collapsible) -->
+								<details class="border-t border-gray-100 dark:border-gray-800">
+									<summary
+										class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer select-none flex items-center gap-1"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-3.5 h-3.5"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+										{$i18n.t('Logos & Assets')}
+										{#if preset.logo_url || preset.favicon_url}
+											<span class="ml-1 text-[10px] text-green-600 dark:text-green-400"
+												>Configured</span
+											>
+										{/if}
+									</summary>
+									<div class="px-3 pb-3 space-y-2">
+										<div class="text-[10px] text-gray-400 mb-2">
+											{$i18n.t(
+												'Configure logos and assets for this preset. These will be used when a domain is mapped to this preset.'
+											)}
+										</div>
+										<div class="grid grid-cols-2 gap-2">
+											<div>
+												<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+													{$i18n.t('Logo (Light)')}
+												</div>
+												<input
+													class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700"
+													bind:value={preset.logo_url}
+													placeholder="https://..."
+												/>
+											</div>
+											<div>
+												<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+													{$i18n.t('Logo (Dark)')}
+												</div>
+												<input
+													class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700"
+													bind:value={preset.logo_dark_url}
+													placeholder="https://..."
+												/>
+											</div>
+										</div>
+										<div>
+											<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+												{$i18n.t('Favicon')}
+											</div>
+											<input
+												class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700"
+												bind:value={preset.favicon_url}
+												placeholder="https://..."
+											/>
+										</div>
+										<div class="grid grid-cols-2 gap-2">
+											<div>
+												<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+													{$i18n.t('Login Background')}
+												</div>
+												<input
+													class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700"
+													bind:value={preset.login_background_url}
+													placeholder="https://..."
+												/>
+											</div>
+											<div>
+												<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+													{$i18n.t('Login BG Color')}
+												</div>
+												<div class="flex gap-1">
+													<input
+														type="color"
+														class="w-8 h-7 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+														bind:value={preset.login_background_color}
+													/>
+													<input
+														class="flex-1 rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
+														bind:value={preset.login_background_color}
+														placeholder="#1a2744"
+													/>
+												</div>
+											</div>
+										</div>
+										{#if preset.logo_url || preset.logo_dark_url}
+											<div class="flex gap-2 mt-2">
+												{#if preset.logo_url}
+													<div
+														class="flex-1 p-2 rounded bg-white border border-gray-200 flex items-center justify-center"
+													>
+														<img
+															src={preset.logo_url}
+															alt="Light logo"
+															class="max-h-8 max-w-full object-contain"
+														/>
+													</div>
+												{/if}
+												{#if preset.logo_dark_url}
+													<div
+														class="flex-1 p-2 rounded bg-gray-900 border border-gray-700 flex items-center justify-center"
+													>
+														<img
+															src={preset.logo_dark_url}
+															alt="Dark logo"
+															class="max-h-8 max-w-full object-contain"
+														/>
+													</div>
+												{/if}
+											</div>
+										{/if}
+									</div>
+								</details>
+
 								<!-- Microsoft OAuth Settings (collapsible) -->
 								<details class="border-t border-gray-100 dark:border-gray-800">
 									<summary

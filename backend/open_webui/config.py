@@ -1788,15 +1788,15 @@ DEFAULT_BRANDING_CONFIG = {
     "logo_dark_url": "",
     "favicon_url": "",
     "login_background_url": "",
-    "login_background_color": "",
+    "login_background_color": "#1a2744",
     "presets": [
         {
             "name": "Foundations",
             "accent_color": "#e3530f",
             "accent_color_scale": {},
             "background_color": "#1a2744",
-            "logo_url": "",
-            "logo_dark_url": "",
+            "logo_url": "/static/branding/fia-logo-light.png",
+            "logo_dark_url": "/static/branding/fia-logo-light.png",
             "favicon_url": "",
             "login_background_url": "",
             "login_background_color": "#1a2744",
@@ -1809,17 +1809,20 @@ DEFAULT_BRANDING_CONFIG = {
             "accent_color": "#e3530f",
             "accent_color_scale": {},
             "background_color": "#000000",
-            "logo_url": "",
-            "logo_dark_url": "",
+            "logo_url": "/static/branding/magellan-arch-logo.jpg",
+            "logo_dark_url": "/static/branding/magellan-arch-logo.jpg",
             "favicon_url": "",
-            "login_background_url": "",
+            "login_background_url": "/static/branding/magellan-cover.jpg",
             "login_background_color": "#000000",
             "microsoft_client_id": "",
             "microsoft_client_secret": "",
             "microsoft_tenant_id": "",
         },
     ],
-    "domain_mappings": [],
+    "domain_mappings": [
+        {"domain": "chat.fiwealth.com", "preset_name": "Foundations"},
+        {"domain": "chat.magellanfinancial.com", "preset_name": "Magellan"},
+    ],
 }
 
 BRANDING_CONFIG = PersistentConfig(
