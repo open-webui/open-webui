@@ -238,7 +238,7 @@ class Tools:
 						<div class="flex-1">
 							<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 								<input
-									class="w-full text-2xl bg-transparent outline-hidden font-primary"
+									class="w-full text-2xl bg-transparent outline-hidden"
 									type="text"
 									placeholder={$i18n.t('Tool Name')}
 									bind:value={name}
