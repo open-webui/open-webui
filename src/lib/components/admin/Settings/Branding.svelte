@@ -92,7 +92,10 @@
 				logo_dark_url: '',
 				favicon_url: '',
 				login_background_url: '',
-				login_background_color: ''
+				login_background_color: '',
+				microsoft_client_id: '',
+				microsoft_client_secret: '',
+				microsoft_tenant_id: ''
 			}
 		];
 		newPresetName = '';
@@ -433,113 +436,182 @@
 					<div class="space-y-2 mb-3">
 						{#each brandingConfig.presets as preset, index}
 							<div
-								class="flex items-center gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-850 border border-gray-100 dark:border-gray-800"
+								class="rounded-lg bg-gray-50 dark:bg-gray-850 border border-gray-100 dark:border-gray-800"
 							>
-								<!-- Color swatch -->
-								<div
-									class="w-8 h-8 rounded-md shrink-0 border border-gray-200 dark:border-gray-700"
-									style="background: linear-gradient(135deg, {preset.accent_color ||
-										'#e3530f'} 50%, {preset.background_color ||
-										preset.login_background_color ||
-										'#1a2744'} 50%)"
-								/>
+								<div class="flex items-center gap-2 p-3">
+									<!-- Color swatch -->
+									<div
+										class="w-8 h-8 rounded-md shrink-0 border border-gray-200 dark:border-gray-700"
+										style="background: linear-gradient(135deg, {preset.accent_color ||
+											'#e3530f'} 50%, {preset.background_color ||
+											preset.login_background_color ||
+											'#1a2744'} 50%)"
+									/>
 
-								<div class="flex-1 min-w-0">
-									{#if editingPresetIndex === index}
-										<input
-											class="w-full rounded py-1 px-2 text-sm bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700"
-											bind:value={preset.name}
-											on:blur={() => {
-												editingPresetIndex = -1;
-												brandingConfig.presets = [...brandingConfig.presets];
-											}}
-											on:keydown={(e) => {
-												if (e.key === 'Enter') {
+									<div class="flex-1 min-w-0">
+										{#if editingPresetIndex === index}
+											<input
+												class="w-full rounded py-1 px-2 text-sm bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700"
+												bind:value={preset.name}
+												on:blur={() => {
 													editingPresetIndex = -1;
 													brandingConfig.presets = [...brandingConfig.presets];
-												}
-											}}
-										/>
-									{:else}
-										<button
-											type="button"
-											class="text-sm font-medium truncate text-left w-full hover:text-gray-600 dark:hover:text-gray-300"
-											on:click={() => {
-												editingPresetIndex = index;
-											}}
-										>
-											{preset.name}
-										</button>
-									{/if}
-									<div class="text-[10px] text-gray-400 font-mono mt-0.5">
-										{preset.accent_color || '#e3530f'}
-										{#if preset.login_background_color}
-											&middot; bg: {preset.login_background_color}
+												}}
+												on:keydown={(e) => {
+													if (e.key === 'Enter') {
+														editingPresetIndex = -1;
+														brandingConfig.presets = [...brandingConfig.presets];
+													}
+												}}
+											/>
+										{:else}
+											<button
+												type="button"
+												class="text-sm font-medium truncate text-left w-full hover:text-gray-600 dark:hover:text-gray-300"
+												on:click={() => {
+													editingPresetIndex = index;
+												}}
+											>
+												{preset.name}
+											</button>
 										{/if}
+										<div class="text-[10px] text-gray-400 font-mono mt-0.5">
+											{preset.accent_color || '#e3530f'}
+											{#if preset.login_background_color}
+												&middot; bg: {preset.login_background_color}
+											{/if}
+											{#if preset.microsoft_client_id}
+												&middot; <span class="text-blue-500">MS OAuth</span>
+											{/if}
+										</div>
+									</div>
+
+									<div class="flex items-center gap-1 shrink-0">
+										<Tooltip content={$i18n.t('Load this preset')}>
+											<button
+												type="button"
+												class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+												on:click={() => loadPreset(index)}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM8.5 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM15.5 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
+
+										<Tooltip content={$i18n.t('Save current settings to this preset')}>
+											<button
+												type="button"
+												class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+												on:click={() => saveToPreset(index)}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M13.75 7h-3v5.296l1.943-2.048a.75.75 0 0 1 1.114 1.004l-3.25 3.5a.75.75 0 0 1-1.114 0l-3.25-3.5a.75.75 0 1 1 1.114-1.004L9.25 12.296V7h-3a.75.75 0 0 1 0-1.5h7.5a.75.75 0 0 1 0 1.5Z"
+													/>
+													<path d="M4.25 15a.75.75 0 0 0 0 1.5h11.5a.75.75 0 0 0 0-1.5H4.25Z" />
+												</svg>
+											</button>
+										</Tooltip>
+
+										<Tooltip content={$i18n.t('Delete preset')}>
+											<button
+												type="button"
+												class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+												on:click={() => removePreset(index)}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022 1.005 11.36A2.75 2.75 0 0 0 7.76 20h4.48a2.75 2.75 0 0 0 2.742-2.53l1.005-11.36.149.022a.75.75 0 1 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
 									</div>
 								</div>
 
-								<div class="flex items-center gap-1 shrink-0">
-									<Tooltip content={$i18n.t('Load this preset')}>
-										<button
-											type="button"
-											class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-											on:click={() => loadPreset(index)}
+								<!-- Microsoft OAuth Settings (collapsible) -->
+								<details class="border-t border-gray-100 dark:border-gray-800">
+									<summary
+										class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer select-none flex items-center gap-1"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-3.5 h-3.5"
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
+											<path
+												fill-rule="evenodd"
+												d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+										{$i18n.t('Microsoft OAuth (SSO)')}
+										{#if preset.microsoft_client_id}
+											<span class="ml-1 text-[10px] text-green-600 dark:text-green-400"
+												>Configured</span
 											>
-												<path
-													d="M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM8.5 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM15.5 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-												/>
-											</svg>
-										</button>
-									</Tooltip>
-
-									<Tooltip content={$i18n.t('Save current settings to this preset')}>
-										<button
-											type="button"
-											class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-											on:click={() => saveToPreset(index)}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													d="M13.75 7h-3v5.296l1.943-2.048a.75.75 0 0 1 1.114 1.004l-3.25 3.5a.75.75 0 0 1-1.114 0l-3.25-3.5a.75.75 0 1 1 1.114-1.004L9.25 12.296V7h-3a.75.75 0 0 1 0-1.5h7.5a.75.75 0 0 1 0 1.5Z"
-												/>
-												<path d="M4.25 15a.75.75 0 0 0 0 1.5h11.5a.75.75 0 0 0 0-1.5H4.25Z" />
-											</svg>
-										</button>
-									</Tooltip>
-
-									<Tooltip content={$i18n.t('Delete preset')}>
-										<button
-											type="button"
-											class="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-											on:click={() => removePreset(index)}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													fill-rule="evenodd"
-													d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022 1.005 11.36A2.75 2.75 0 0 0 7.76 20h4.48a2.75 2.75 0 0 0 2.742-2.53l1.005-11.36.149.022a.75.75 0 1 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-										</button>
-									</Tooltip>
-								</div>
+										{/if}
+									</summary>
+									<div class="px-3 pb-3 space-y-2">
+										<div class="text-[10px] text-gray-400 mb-2">
+											{$i18n.t(
+												'Configure domain-specific Microsoft OAuth for this preset. When a domain is mapped to this preset, these credentials will be used instead of the global OAuth settings.'
+											)}
+										</div>
+										<div>
+											<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+												{$i18n.t('Client ID')}
+											</div>
+											<input
+												class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
+												bind:value={preset.microsoft_client_id}
+												placeholder="00000000-0000-0000-0000-000000000000"
+											/>
+										</div>
+										<div>
+											<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+												{$i18n.t('Client Secret')}
+											</div>
+											<input
+												type="password"
+												class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
+												bind:value={preset.microsoft_client_secret}
+												placeholder="••••••••••••••••"
+											/>
+										</div>
+										<div>
+											<div class="text-[10px] font-medium text-gray-500 mb-0.5">
+												{$i18n.t('Tenant ID')}
+											</div>
+											<input
+												class="w-full rounded py-1.5 px-2.5 text-xs bg-white dark:bg-gray-800 outline-hidden border border-gray-200 dark:border-gray-700 font-mono"
+												bind:value={preset.microsoft_tenant_id}
+												placeholder="00000000-0000-0000-0000-000000000000"
+											/>
+										</div>
+									</div>
+								</details>
 							</div>
 						{/each}
 					</div>

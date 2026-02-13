@@ -59,6 +59,11 @@ from open_webui.config import (
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
+    get_microsoft_oauth_for_domain,
+    MICROSOFT_CLIENT_LOGIN_BASE_URL,
+    MICROSOFT_OAUTH_SCOPE,
+    MICROSOFT_CLIENT_PICTURE_URL,
+    OAUTH_TIMEOUT,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -928,6 +933,8 @@ class OAuthManager:
         self.app = app
 
         self._clients = {}
+        # Store domain-specific Microsoft OAuth clients keyed by domain
+        self._domain_microsoft_clients = {}
 
         for name, provider_config in OAUTH_PROVIDERS.items():
             if "register" not in provider_config:
@@ -941,6 +948,89 @@ class OAuthManager:
         if provider_name not in self._clients:
             self._clients[provider_name] = self.oauth.create_client(provider_name)
         return self._clients[provider_name]
+
+    def get_or_create_microsoft_client_for_domain(self, domain: str):
+        """
+        Get or create a Microsoft OAuth client for a specific domain.
+        Uses branding config to look up domain-specific OAuth credentials.
+        Returns tuple of (client, redirect_uri, preset_name).
+        """
+        # Check if we already have a client for this domain
+        if domain in self._domain_microsoft_clients:
+            cached = self._domain_microsoft_clients[domain]
+            return cached["client"], cached["redirect_uri"], cached["preset_name"]
+
+        # Get OAuth config for this domain from branding config
+        oauth_config = get_microsoft_oauth_for_domain(domain)
+        client_id = oauth_config.get("client_id")
+        client_secret = oauth_config.get("client_secret")
+        tenant_id = oauth_config.get("tenant_id")
+        preset_name = oauth_config.get("preset_name")
+
+        if not client_id or not client_secret or not tenant_id:
+            # Fall back to default Microsoft client if no domain-specific config
+            log.debug(f"No domain-specific Microsoft OAuth for {domain}, using default")
+            return (
+                self.get_client("microsoft"),
+                OAUTH_PROVIDERS.get("microsoft", {}).get("redirect_uri"),
+                None,
+            )
+
+        # Generate a unique client name for this domain
+        client_name = f"microsoft_{domain.replace('.', '_')}"
+
+        # Check if client already exists in the OAuth registry
+        if client_name in self._clients:
+            cached = self._domain_microsoft_clients.get(domain)
+            if cached:
+                return cached["client"], cached["redirect_uri"], cached["preset_name"]
+
+        # Build the redirect URI for this specific domain
+        redirect_uri = f"https://{domain}/oauth/microsoft/callback"
+
+        # Build the server metadata URL
+        login_base_url = (
+            MICROSOFT_CLIENT_LOGIN_BASE_URL.value
+            if MICROSOFT_CLIENT_LOGIN_BASE_URL.value
+            else "https://login.microsoftonline.com"
+        )
+        server_metadata_url = f"{login_base_url}/{tenant_id}/v2.0/.well-known/openid-configuration?appid={client_id}"
+
+        # Get scope from config
+        scope = (
+            MICROSOFT_OAUTH_SCOPE.value
+            if MICROSOFT_OAUTH_SCOPE.value
+            else "openid email profile"
+        )
+
+        # Build client kwargs
+        client_kwargs = {"scope": scope}
+        if OAUTH_TIMEOUT.value:
+            client_kwargs["timeout"] = int(OAUTH_TIMEOUT.value)
+
+        # Register a new OAuth client for this domain
+        log.info(
+            f"Registering Microsoft OAuth client for domain {domain} (preset: {preset_name})"
+        )
+        client = self.oauth.register(
+            name=client_name,
+            client_id=client_id,
+            client_secret=client_secret,
+            server_metadata_url=server_metadata_url,
+            client_kwargs=client_kwargs,
+            redirect_uri=redirect_uri,
+        )
+
+        # Cache the client
+        self._clients[client_name] = client
+        self._domain_microsoft_clients[domain] = {
+            "client": client,
+            "redirect_uri": redirect_uri,
+            "preset_name": preset_name,
+            "client_name": client_name,
+        }
+
+        return client, redirect_uri, preset_name
 
     def get_server_metadata_url(self, provider_name):
         if provider_name in self._clients:
@@ -1385,7 +1475,39 @@ class OAuthManager:
     async def handle_login(self, request, provider):
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
-        # If the provider has a custom redirect URL, use that, otherwise automatically generate one
+
+        # For Microsoft OAuth, check if we have domain-specific credentials
+        if provider == "microsoft":
+            # Extract domain from request
+            host = request.headers.get("host", "")
+            domain = host.split(":")[0]  # Remove port if present
+
+            # Get or create domain-specific Microsoft client
+            client, redirect_uri, preset_name = (
+                self.get_or_create_microsoft_client_for_domain(domain)
+            )
+
+            if preset_name:
+                log.info(
+                    f"Using domain-specific Microsoft OAuth for {domain} (preset: {preset_name})"
+                )
+            else:
+                log.debug(f"Using default Microsoft OAuth for {domain}")
+
+            if client is None:
+                raise HTTPException(404)
+
+            kwargs = {}
+            if auth_manager_config.OAUTH_AUDIENCE:
+                kwargs["audience"] = auth_manager_config.OAUTH_AUDIENCE
+
+            # Store the domain in session state for callback to use
+            # This ensures the callback can find the correct client
+            request.session["oauth_domain"] = domain
+
+            return await client.authorize_redirect(request, redirect_uri, **kwargs)
+
+        # For other providers, use the standard flow
         redirect_uri = OAUTH_PROVIDERS[provider].get("redirect_uri") or request.url_for(
             "oauth_login_callback", provider=provider
         )
@@ -1405,7 +1527,27 @@ class OAuthManager:
 
         error_message = None
         try:
-            client = self.get_client(provider)
+            # For Microsoft OAuth, use domain-specific client
+            if provider == "microsoft":
+                # Get domain from session (stored during login) or from request
+                domain = request.session.get("oauth_domain")
+                if not domain:
+                    # Fallback to extracting from request host
+                    host = request.headers.get("host", "")
+                    domain = host.split(":")[0]
+
+                client, _, preset_name = self.get_or_create_microsoft_client_for_domain(
+                    domain
+                )
+
+                if preset_name:
+                    log.info(
+                        f"Using domain-specific Microsoft OAuth callback for {domain} (preset: {preset_name})"
+                    )
+                else:
+                    log.debug(f"Using default Microsoft OAuth callback for {domain}")
+            else:
+                client = self.get_client(provider)
 
             auth_params = {}
 

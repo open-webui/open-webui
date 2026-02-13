@@ -1800,6 +1800,9 @@ DEFAULT_BRANDING_CONFIG = {
             "favicon_url": "",
             "login_background_url": "",
             "login_background_color": "#1a2744",
+            "microsoft_client_id": "",
+            "microsoft_client_secret": "",
+            "microsoft_tenant_id": "",
         },
         {
             "name": "Magellan",
@@ -1811,6 +1814,9 @@ DEFAULT_BRANDING_CONFIG = {
             "favicon_url": "",
             "login_background_url": "",
             "login_background_color": "#000000",
+            "microsoft_client_id": "",
+            "microsoft_client_secret": "",
+            "microsoft_tenant_id": "",
         },
     ],
     "domain_mappings": [],
@@ -1821,6 +1827,44 @@ BRANDING_CONFIG = PersistentConfig(
     "ui.branding",
     json.loads(os.environ.get("BRANDING_CONFIG", json.dumps(DEFAULT_BRANDING_CONFIG))),
 )
+
+
+def get_microsoft_oauth_for_domain(domain: str) -> dict:
+    """
+    Get Microsoft OAuth configuration for a specific domain.
+    Returns preset OAuth config if domain is mapped, otherwise returns default global config.
+    """
+    config = BRANDING_CONFIG.value
+    domain_mappings = config.get("domain_mappings", [])
+    presets = config.get("presets", [])
+
+    preset_name = None
+    for mapping in domain_mappings:
+        mapped_domain = mapping.get("domain", "")
+        if domain == mapped_domain or domain.endswith("." + mapped_domain):
+            preset_name = mapping.get("preset_name")
+            break
+
+    if preset_name:
+        for preset in presets:
+            if preset.get("name") == preset_name:
+                client_id = preset.get("microsoft_client_id", "")
+                client_secret = preset.get("microsoft_client_secret", "")
+                tenant_id = preset.get("microsoft_tenant_id", "")
+                if client_id and client_secret and tenant_id:
+                    return {
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "tenant_id": tenant_id,
+                        "preset_name": preset_name,
+                    }
+
+    return {
+        "client_id": MICROSOFT_CLIENT_ID.value,
+        "client_secret": MICROSOFT_CLIENT_SECRET.value,
+        "tenant_id": MICROSOFT_CLIENT_TENANT_ID.value,
+        "preset_name": None,
+    }
 
 
 SHOW_ADMIN_DETAILS = PersistentConfig(
