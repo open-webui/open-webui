@@ -54,6 +54,12 @@ from open_webui.utils.misc import (
     stream_chunks_handler,
     stream_wrapper,
 )
+from open_webui.utils.openrouter_policy import (
+    OpenRouterRuntimeConfig,
+    apply_openrouter_policies,
+    build_attribution_headers,
+)
+from open_webui.utils.openrouter_observability import get_observability_adapter
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
@@ -123,15 +129,13 @@ async def get_headers_and_cookies(
     cookies = {}
     headers = {
         "Content-Type": "application/json",
-        **(
-            {
-                "HTTP-Referer": "https://openwebui.com/",
-                "X-Title": "Open WebUI",
-            }
-            if "openrouter.ai" in url
-            else {}
-        ),
     }
+
+    headers = build_attribution_headers(
+        url=url,
+        headers=headers,
+        cfg=OpenRouterRuntimeConfig.from_env(),
+    )
 
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
         headers = include_user_info_headers(headers, user)
@@ -935,7 +939,25 @@ async def generate_chat_completion(
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
 
-    model_id = form_data.get("model")
+    trace = {
+        "model": payload.get("model"),
+        "user_id": user.id,
+        "session_id": metadata.get("session_id") if isinstance(metadata, dict) else None,
+        "sensitive": bool(metadata.get("sensitive", False)) if isinstance(metadata, dict) else False,
+    }
+
+    observability_adapter = get_observability_adapter()
+
+    try:
+        payload, _ = apply_openrouter_policies(
+            payload=payload,
+            metadata=metadata,
+            cfg=OpenRouterRuntimeConfig.from_env(),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Open WebUI: {e}")
+
+    model_id = payload.get("model")
     model_info = Models.get_model_by_id(model_id)
 
     # Check model info and override the payload
@@ -1075,6 +1097,7 @@ async def generate_chat_completion(
     response = None
 
     try:
+        observability_adapter.on_request_start(trace)
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
@@ -1105,17 +1128,26 @@ async def generate_chat_completion(
 
             if r.status >= 400:
                 if isinstance(response, (dict, list)):
+                    observability_adapter.on_request_error(
+                        trace, f"upstream-status-{r.status}"
+                    )
                     return JSONResponse(status_code=r.status, content=response)
                 else:
+                    observability_adapter.on_request_error(
+                        trace, f"upstream-status-{r.status}"
+                    )
                     return PlainTextResponse(status_code=r.status, content=response)
 
             # Convert Responses API result to simple format
             if is_responses and isinstance(response, dict):
                 response = convert_responses_result(response)
 
+            observability_adapter.on_request_end(trace)
+            observability_adapter.on_request_end(trace)
             return response
     except Exception as e:
         log.exception(e)
+        observability_adapter.on_request_error(trace, str(e))
 
         raise HTTPException(
             status_code=r.status if r else 500,

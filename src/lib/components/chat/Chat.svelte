@@ -56,6 +56,7 @@
 		getCodeBlockContents,
 		isYoutubeUrl
 	} from '$lib/utils';
+	import { buildOpenRouterMetadata } from '$lib/utils/openrouter';
 	import { AudioQueue } from '$lib/utils/audio';
 
 	import {
@@ -1961,6 +1962,8 @@
 			params?.stream_response ??
 			true;
 
+		const openrouterMetadata = buildOpenRouterMetadata($settings?.openrouter);
+
 		let messages = [
 			params?.system || $settings.system
 				? {
@@ -2110,6 +2113,12 @@
 						: {}),
 					follow_up_generation: $settings?.autoFollowUps ?? true
 				},
+
+				...(openrouterMetadata
+					? {
+						metadata: openrouterMetadata
+					}
+					: {}),
 
 				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
 					? {
