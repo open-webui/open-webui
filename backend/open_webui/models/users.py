@@ -71,6 +71,7 @@ class User(Base):
     settings = Column(JSON, nullable=True)
 
     oauth = Column(JSON, nullable=True)
+    scim = Column(JSON, nullable=True)
 
     last_active_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -103,6 +104,7 @@ class UserModel(BaseModel):
     settings: Optional[UserSettings] = None
 
     oauth: Optional[dict] = None
+    scim: Optional[dict] = None
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -351,6 +353,29 @@ class UsersTable:
             # You may want to log the exception here
             return None
 
+    def get_user_by_scim_external_id(
+        self, provider: str, external_id: str, db: Optional[Session] = None
+    ) -> Optional[UserModel]:
+        try:
+            with get_db_context(db) as db:  # type: Session
+                dialect_name = db.bind.dialect.name
+
+                query = db.query(User)
+                if dialect_name == "sqlite":
+                    query = query.filter(
+                        User.scim.contains({provider: {"external_id": external_id}})
+                    )
+                elif dialect_name == "postgresql":
+                    query = query.filter(
+                        User.scim[provider].cast(JSONB)["external_id"].astext
+                        == external_id
+                    )
+
+                user = query.first()
+                return UserModel.model_validate(user) if user else None
+        except Exception:
+            return None
+
     def get_users(
         self,
         filter: Optional[dict] = None,
@@ -506,7 +531,12 @@ class UsersTable:
         self, user_ids: list[str], db: Optional[Session] = None
     ) -> list[UserStatusModel]:
         with get_db_context(db) as db:
-            users = db.query(User).options(defer(User.profile_image_url)).filter(User.id.in_(user_ids)).all()
+            users = (
+                db.query(User)
+                .options(defer(User.profile_image_url))
+                .filter(User.id.in_(user_ids))
+                .all()
+            )
             return [UserModel.model_validate(user) for user in users]
 
     def get_num_users(self, db: Optional[Session] = None) -> Optional[int]:
@@ -639,6 +669,38 @@ class UsersTable:
 
                 # Persist updated JSON
                 db.query(User).filter_by(id=id).update({"oauth": oauth})
+                db.commit()
+
+                return UserModel.model_validate(user)
+
+        except Exception:
+            return None
+
+    def update_user_scim_by_id(
+        self,
+        id: str,
+        provider: str,
+        external_id: str,
+        db: Optional[Session] = None,
+    ) -> Optional[UserModel]:
+        """
+        Update or insert a SCIM provider/external_id pair into the user's scim JSON field.
+        Example resulting structure:
+            {
+                "microsoft": { "external_id": "abc" },
+                "okta": { "external_id": "def" }
+            }
+        """
+        try:
+            with get_db_context(db) as db:
+                user = db.query(User).filter_by(id=id).first()
+                if not user:
+                    return None
+
+                scim = user.scim or {}
+                scim[provider] = {"external_id": external_id}
+
+                db.query(User).filter_by(id=id).update({"scim": scim})
                 db.commit()
 
                 return UserModel.model_validate(user)

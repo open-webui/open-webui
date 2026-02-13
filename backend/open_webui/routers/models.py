@@ -8,7 +8,9 @@ import logging
 from open_webui.models.groups import Groups
 from open_webui.models.models import (
     ModelForm,
+    ModelMeta,
     ModelModel,
+    ModelParams,
     ModelResponse,
     ModelListResponse,
     ModelAccessListResponse,
@@ -521,11 +523,30 @@ async def update_model_access_by_id(
     db: Session = Depends(get_session),
 ):
     model = Models.get_model_by_id(form_data.id, db=db)
+
+    # Non-preset models (e.g. direct Ollama/OpenAI models) may not have a DB
+    # entry yet. Create a minimal one so access grants can be stored.
     if not model:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        model = Models.insert_new_model(
+            ModelForm(
+                id=form_data.id,
+                name=form_data.id,
+                meta=ModelMeta(),
+                params=ModelParams(),
+            ),
+            user.id,
+            db=db,
         )
+        if not model:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT("Error creating model entry"),
+            )
 
     if (
         model.user_id != user.id
@@ -556,7 +577,10 @@ async def update_model_access_by_id(
         form_data.access_grants = [
             grant
             for grant in form_data.access_grants
-            if not (grant.get("principal_type") == "user" and grant.get("principal_id") == "*")
+            if not (
+                grant.get("principal_type") == "user"
+                and grant.get("principal_id") == "*"
+            )
         ]
 
     AccessGrants.set_access_grants(

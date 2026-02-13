@@ -418,8 +418,13 @@ async def get_all_models(request: Request, user: UserModel = None):
 async def get_filtered_models(models, user, db=None):
     # Filter models based on user access control
     model_ids = [model["model"] for model in models.get("models", [])]
-    model_infos = {model_info.id: model_info for model_info in Models.get_models_by_ids(model_ids, db=db)}
-    user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id, db=db)}
+    model_infos = {
+        model_info.id: model_info
+        for model_info in Models.get_models_by_ids(model_ids, db=db)
+    }
+    user_group_ids = {
+        group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
+    }
 
     # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
     accessible_model_ids = AccessGrants.get_accessible_resource_ids(
@@ -1633,8 +1638,13 @@ async def get_openai_models(
     if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         model_ids = [model["id"] for model in models]
-        model_infos = {model_info.id: model_info for model_info in Models.get_models_by_ids(model_ids, db=db)}
-        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id, db=db)}
+        model_infos = {
+            model_info.id: model_info
+            for model_info in Models.get_models_by_ids(model_ids, db=db)
+        }
+        user_group_ids = {
+            group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
+        }
 
         # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
         accessible_model_ids = AccessGrants.get_accessible_resource_ids(
@@ -1650,7 +1660,10 @@ async def get_openai_models(
         for model in models:
             model_info = model_infos.get(model["id"])
             if model_info:
-                if user.id == model_info.user_id or model_info.id in accessible_model_ids:
+                if (
+                    user.id == model_info.user_id
+                    or model_info.id in accessible_model_ids
+                ):
                     filtered_models.append(model)
         models = filtered_models
 
