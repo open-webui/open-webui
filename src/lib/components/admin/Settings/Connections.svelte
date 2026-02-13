@@ -6,6 +6,7 @@
 
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
+	import { getAnthropicConfig, updateAnthropicConfig } from '$lib/apis/anthropic';
 	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 
@@ -19,6 +20,7 @@
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
+	import AnthropicConnection from './Connections/AnthropicConnection.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -42,6 +44,7 @@
 
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
+	let ENABLE_ANTHROPIC_API: null | boolean = null;
 
 	let connectionsConfig = null;
 
@@ -118,6 +121,21 @@
 		}
 	};
 
+	const updateAnthropicHandler = async () => {
+		if (ENABLE_ANTHROPIC_API !== null) {
+			const res = await updateAnthropicConfig(localStorage.token, {
+				ENABLE_ANTHROPIC_API: ENABLE_ANTHROPIC_API
+			}).catch((error) => {
+				toast.error(`${error}`);
+			});
+
+			if (res) {
+				toast.success($i18n.t('Anthropic API settings updated'));
+				await models.set(await getModels());
+			}
+		}
+	};
+
 	const addOpenAIConnectionHandler = async (connection) => {
 		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
 		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
@@ -140,6 +158,7 @@
 		if ($user?.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
+			let anthropicConfig = {};
 
 			await Promise.all([
 				(async () => {
@@ -149,12 +168,16 @@
 					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})(),
 				(async () => {
+					anthropicConfig = await getAnthropicConfig(localStorage.token);
+				})(),
+				(async () => {
 					connectionsConfig = await getConnectionsConfig(localStorage.token);
 				})()
 			]);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
+			ENABLE_ANTHROPIC_API = anthropicConfig.ENABLE_ANTHROPIC_API;
 
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
 			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
@@ -217,7 +240,7 @@
 
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && ENABLE_ANTHROPIC_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
 				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
@@ -356,6 +379,37 @@
 								>
 									{$i18n.t('Click here for help.')}
 								</a>
+							</div>
+						</div>
+					{/if}
+				</div>
+
+				<div class="my-2">
+					<div class="flex justify-between items-center text-sm mb-2">
+						<div class="font-medium">{$i18n.t('Anthropic API (Claude)')}</div>
+
+						<div class="mt-1">
+							<Switch
+								bind:state={ENABLE_ANTHROPIC_API}
+								on:change={async () => {
+									updateAnthropicHandler();
+								}}
+							/>
+						</div>
+					</div>
+
+					{#if ENABLE_ANTHROPIC_API}
+						<div class="">
+							<div class="font-medium text-xs mb-1.5">{$i18n.t('Claude OAuth Connection')}</div>
+							<AnthropicConnection
+								onStatusChange={(authenticated) => {
+									if (authenticated) {
+										models.set(getModels());
+									}
+								}}
+							/>
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t('Connect your Claude Pro or Max account to use Claude models.')}
 							</div>
 						</div>
 					{/if}

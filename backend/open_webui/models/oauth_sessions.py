@@ -13,7 +13,7 @@ from open_webui.internal.db import Base, get_db, get_db_context
 from open_webui.env import OAUTH_SESSION_TOKEN_ENCRYPTION_KEY
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Index
+from sqlalchemy import BigInteger, Column, String, Text, Index, case
 
 log = logging.getLogger(__name__)
 
@@ -277,6 +277,85 @@ class OAuthSessionTable:
         except Exception as e:
             log.error(f"Error deleting OAuth sessions by user ID: {e}")
             return False
+
+    def get_all_sessions_by_provider(
+        self, provider: str, db: Optional[Session] = None
+    ) -> List[OAuthSessionModel]:
+        """
+        Get ALL active OAuth sessions for a provider, ordered by admin-first
+        then most recently updated.
+
+        Used for token pool rotation: returns all connected accounts
+        so the proxy can rotate between them on rate limits.
+        """
+        try:
+            from open_webui.models.users import User
+
+            with get_db_context(db) as db:
+                sessions = (
+                    db.query(OAuthSession)
+                    .join(User, OAuthSession.user_id == User.id)
+                    .filter(OAuthSession.provider == provider)
+                    .order_by(
+                        case(
+                            (User.role == "admin", 0),
+                            else_=1,
+                        ),
+                        OAuthSession.updated_at.desc(),
+                    )
+                    .all()
+                )
+
+                results = []
+                for session in sessions:
+                    try:
+                        session.token = self._decrypt_token(session.token)
+                        results.append(OAuthSessionModel.model_validate(session))
+                    except Exception as e:
+                        log.warning(
+                            f"Skipping session {session.id} (decrypt failed): {e}"
+                        )
+                return results
+        except Exception as e:
+            log.error(f"Error getting all OAuth sessions for provider {provider}: {e}")
+            return []
+
+    def get_org_session_by_provider(
+        self, provider: str, db: Optional[Session] = None
+    ) -> Optional[OAuthSessionModel]:
+        """
+        Get any active OAuth session for a provider, preferring admin users.
+
+        Used for org-wide token sharing: when a non-admin user doesn't have
+        their own session, they fall back to an admin's session.
+        """
+        try:
+            from open_webui.models.users import User
+
+            with get_db_context(db) as db:
+                # Query sessions for this provider, ordered: admins first, then most recently updated
+                session = (
+                    db.query(OAuthSession)
+                    .join(User, OAuthSession.user_id == User.id)
+                    .filter(OAuthSession.provider == provider)
+                    .order_by(
+                        case(
+                            (User.role == "admin", 0),
+                            else_=1,
+                        ),
+                        OAuthSession.updated_at.desc(),
+                    )
+                    .first()
+                )
+
+                if session:
+                    session.token = self._decrypt_token(session.token)
+                    return OAuthSessionModel.model_validate(session)
+
+                return None
+        except Exception as e:
+            log.error(f"Error getting org OAuth session for provider {provider}: {e}")
+            return None
 
     def delete_sessions_by_provider(
         self, provider: str, db: Optional[Session] = None

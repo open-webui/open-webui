@@ -59,6 +59,12 @@
 				updateUserTimezone(sessionUser.token, timezone);
 			}
 
+			// Force password change if required
+			if (sessionUser.must_change_password) {
+				goto('/auth/reset-password');
+				return;
+			}
+
 			if (!redirectPath) {
 				redirectPath = $page.url.searchParams.get('redirect') || '/';
 			}
