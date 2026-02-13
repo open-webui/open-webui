@@ -149,7 +149,7 @@
 						<div class="flex-1">
 							<Tooltip content={$i18n.t('e.g. Code Review Guidelines')} placement="top-start">
 								<input
-									class="w-full text-2xl font-medium bg-transparent outline-hidden font-primary"
+									class="w-full text-2xl bg-transparent outline-hidden font-primary"
 									type="text"
 									placeholder={$i18n.t('Skill Name')}
 									bind:value={name}
