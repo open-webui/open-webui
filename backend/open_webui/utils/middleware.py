@@ -4116,6 +4116,11 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         if isinstance(res, StreamingResponse):
+                            # Reset content accumulator for the new streaming round.
+                            # The previous round's content (including reasoning) is
+                            # already captured in the output items; keeping it would
+                            # cause tag_output_handler to re-detect old reasoning tags.
+                            content = ""
                             await stream_body_handler(res, new_form_data)
                         else:
                             break
@@ -4300,6 +4305,8 @@ async def streaming_chat_response_handler(response, ctx):
                             )
 
                             if isinstance(res, StreamingResponse):
+                                # Reset content accumulator for the new streaming round
+                                content = ""
                                 await stream_body_handler(res, new_form_data)
                             else:
                                 break
