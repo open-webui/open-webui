@@ -604,9 +604,12 @@ async def get_models(
                         if r.status != 200:
                             # Extract response error details if available
                             error_detail = f"HTTP Error: {r.status}"
-                            res = await r.json()
-                            if "error" in res:
-                                error_detail = f"External Error: {res['error']}"
+                            try:
+                                res = await r.json()
+                                if "error" in res:
+                                    error_detail = f"External Error: {res['error']}"
+                            except Exception:
+                                pass
                             raise Exception(error_detail)
 
                         response_data = await r.json()
