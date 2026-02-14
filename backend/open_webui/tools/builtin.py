@@ -167,6 +167,9 @@ async def search_web(
         engine = __request__.app.state.config.WEB_SEARCH_ENGINE
         user = UserModel(**__user__) if __user__ else None
 
+        # Use admin-configured result count if configured, falling back to model-provided count of provided, else default to 5
+        count = __request__.app.state.config.WEB_SEARCH_RESULT_COUNT or count
+
         results = await asyncio.to_thread(_search_web, __request__, engine, query, user)
 
         # Limit results

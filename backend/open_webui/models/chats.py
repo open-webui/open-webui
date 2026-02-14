@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
-from open_webui.models.chat_messages import ChatMessages
+from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
 
 from pydantic import BaseModel, ConfigDict
@@ -621,6 +621,13 @@ class ChatTable:
     ) -> bool:
         try:
             with get_db_context(db) as db:
+                # Use subquery to delete chat_messages for shared chats
+                shared_chat_id_subquery = (
+                    db.query(Chat.id).filter_by(user_id=f"shared-{chat_id}").subquery()
+                )
+                db.query(ChatMessage).filter(
+                    ChatMessage.chat_id.in_(shared_chat_id_subquery)
+                ).delete(synchronize_session=False)
                 db.query(Chat).filter_by(user_id=f"shared-{chat_id}").delete()
                 db.commit()
 
@@ -1410,6 +1417,7 @@ class ChatTable:
     def delete_chat_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
+                db.query(ChatMessage).filter_by(chat_id=id).delete()
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
 
@@ -1422,6 +1430,7 @@ class ChatTable:
     ) -> bool:
         try:
             with get_db_context(db) as db:
+                db.query(ChatMessage).filter_by(chat_id=id).delete()
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
 
@@ -1436,6 +1445,12 @@ class ChatTable:
             with get_db_context(db) as db:
                 self.delete_shared_chats_by_user_id(user_id, db=db)
 
+                chat_id_subquery = (
+                    db.query(Chat.id).filter_by(user_id=user_id).subquery()
+                )
+                db.query(ChatMessage).filter(
+                    ChatMessage.chat_id.in_(chat_id_subquery)
+                ).delete(synchronize_session=False)
                 db.query(Chat).filter_by(user_id=user_id).delete()
                 db.commit()
 
@@ -1448,6 +1463,14 @@ class ChatTable:
     ) -> bool:
         try:
             with get_db_context(db) as db:
+                chat_id_subquery = (
+                    db.query(Chat.id)
+                    .filter_by(user_id=user_id, folder_id=folder_id)
+                    .subquery()
+                )
+                db.query(ChatMessage).filter(
+                    ChatMessage.chat_id.in_(chat_id_subquery)
+                ).delete(synchronize_session=False)
                 db.query(Chat).filter_by(user_id=user_id, folder_id=folder_id).delete()
                 db.commit()
 
@@ -1481,6 +1504,15 @@ class ChatTable:
                 chats_by_user = db.query(Chat).filter_by(user_id=user_id).all()
                 shared_chat_ids = [f"shared-{chat.id}" for chat in chats_by_user]
 
+                # Use subquery to delete chat_messages for shared chats
+                shared_id_subq = (
+                    db.query(Chat.id)
+                    .filter(Chat.user_id.in_(shared_chat_ids))
+                    .subquery()
+                )
+                db.query(ChatMessage).filter(
+                    ChatMessage.chat_id.in_(shared_id_subq)
+                ).delete(synchronize_session=False)
                 db.query(Chat).filter(Chat.user_id.in_(shared_chat_ids)).delete()
                 db.commit()
 
