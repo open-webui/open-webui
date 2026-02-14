@@ -77,11 +77,10 @@
 
 	const downloadPdf = async () => {
 		try {
-			const filename = `chat-${chat.chat.title}.pdf`;
 			if ($settings?.stylizedPdfExport ?? true) {
 				await exportPDF({
-					filename,
-					containerSelector: '#full-messages-container .all-messages-container',
+					title: chat.chat.title,
+					containerElement: '#full-messages-container .all-messages-container',
 					async onBeforeRender() {
 						showFullMessages = true;
 						await tick();
@@ -96,7 +95,7 @@
 					}
 				});
 			} else {
-				await exportPlainTextToPdf(await getChatAsText(), filename);
+				await exportPlainTextToPdf(await getChatAsText(), `chat-${chat.chat.title}.pdf`);
 			}
 			toast.success($i18n.t('PDF exported successfully.'));
 		} catch (e) {
