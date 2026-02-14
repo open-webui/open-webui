@@ -437,25 +437,30 @@ const appendCanvasChunkToPdf = (
 	return pagesAdded;
 };
 
-/**
- * Create a styled container element for rendering
- * @param virtualWidth - Virtual width in pixels
- * @param padding - Optional padding CSS value (e.g., '40px 40px')
- */
-const styledContainer = (container: HTMLElement, virtualWidth: number, title?: string, padding?: string) => {
+/** Create a styled container element for rendering */
+const processContainer = (container: HTMLElement, virtualWidth: number, title?: string, padding = '32px') => {
+	if (container.dataset.exportPDFClonedContainer !== 'true') {
+		container = container.cloneNode(true) as HTMLElement;
+	}
+
 	styleElementForRendering(container, virtualWidth);
 	if (padding) {
 		container.style.padding = padding;
 	}
 	if (title) {
 		const titleNode = document.createElement('div');
+		titleNode.className = 'text-3xl font-bold text-black dark:text-white leading-tight text-balance break-words mb-5';
 		titleNode.textContent = title;
-		titleNode.style.fontSize = '24px';
-		titleNode.style.fontWeight = 'medium';
-		titleNode.style.paddingBottom = '20px';
-		titleNode.style.color = isDarkMode() ? 'white' : 'black';
 		container.insertBefore(titleNode, container.firstChild);
 	}
+	document.body.appendChild(container);
+
+	return {
+		element: container,
+		cleanup() {
+			document.body.removeChild(container);
+		}
+	};
 };
 
 // ==================== Export PDF Functions ====================
@@ -668,14 +673,11 @@ export const exportPDF = async (containerElement: string | HTMLElement, options:
 
 		try {
 			// Clone and style element for rendering
-			const clonedElement = containerElement.dataset.exportPDFClonedContainer === 'true'
-				? containerElement
-				: containerElement.cloneNode(true) as HTMLElement;
-			styledContainer(clonedElement, DEFAULT_VIRTUAL_WIDTH, options.title);
+			const { element, cleanup } = processContainer(containerElement, DEFAULT_VIRTUAL_WIDTH, options.title);
 
 			try {
 				await exportStyledElementToPdf(
-					clonedElement,
+					element,
 					options.filename || `export-${options.title || Date.now()}.pdf`,
 					DEFAULT_VIRTUAL_WIDTH,
 					100,
@@ -686,10 +688,7 @@ export const exportPDF = async (containerElement: string | HTMLElement, options:
 					effectiveSignal
 				);
 			} finally {
-				// Clean up cloned element
-				if (clonedElement.parentNode) {
-					document.body.removeChild(clonedElement);
-				}
+				cleanup();
 			}
 		} finally {
 			await options.onAfterRender?.();
