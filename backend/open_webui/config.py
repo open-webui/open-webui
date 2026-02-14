@@ -362,34 +362,105 @@ class UserScopedConfig:
     #         # Step 3: If still nothing, return default
     #     return self.default
         
+    def _get_for_user_direct(self, email: str, user) -> Any:
+        """
+        Get config for non-admin users by querying PostgreSQL directly.
+        Bypasses cache entirely to avoid cache hit/miss consistency issues
+        when users inherit API keys and settings from group admins.
+        """
+        logging.debug(
+            f"[RBAC_CONFIG_GET] _get_for_user_direct() entered: email={email}, "
+            f"user_id={user.id}, config_path={self.config_path}"
+        )
+        with get_db() as db:
+            # Step 1: Check user's own config in database
+            entry = db.query(Config).filter_by(email=email).first()
+            logging.debug(
+                f"[RBAC_CONFIG_GET] _get_for_user_direct() Step 1: "
+                f"user own config in DB: {'found' if entry and isinstance(entry.data, dict) else 'not found'}"
+            )
+            if entry and isinstance(entry.data, dict):
+                data = entry.data
+                final_value = self.default
+                for part in self.config_path.split("."):
+                    if isinstance(data, dict) and part in data:
+                        data = data[part]
+                        final_value = data
+                    else:
+                        final_value = self.default
+                        break
+                if final_value != self.default:
+                    logging.debug(
+                        f"[RBAC_CONFIG_GET] User {email} (ID: {user.id}) has personal config "
+                        f"for {self.config_path} (PostgreSQL direct)"
+                    )
+                    return final_value
+
+            # Step 2: Check group creator's config - always from PostgreSQL
+            user_groups = Groups.get_groups_by_member_id(user.id)
+            logging.debug(
+                f"[RBAC_CONFIG_GET] _get_for_user_direct() Step 2: "
+                f"user {email} in {len(user_groups)} group(s): "
+                f"{[(g.id, g.created_by) for g in user_groups]}"
+            )
+
+            for group in user_groups:
+                group_creator_email = group.created_by
+                if not group_creator_email:
+                    continue
+                creator_entry = db.query(Config).filter_by(email=group_creator_email).first()
+                if creator_entry and isinstance(creator_entry.data, dict):
+                    data = creator_entry.data
+                    final_value = self.default
+                    for part in self.config_path.split("."):
+                        if isinstance(data, dict) and part in data:
+                            data = data[part]
+                            final_value = data
+                        else:
+                            final_value = self.default
+                            break
+                    if final_value != self.default:
+                        is_api_key = "api_key" in self.config_path or "openai_api_key" in self.config_path
+                        if is_api_key:
+                            logging.debug(
+                                f"[RBAC_CONFIG_GET] User {email} inheriting API key from group admin "
+                                f"{group_creator_email} (group {group.id}) via PostgreSQL direct"
+                            )
+                        return final_value
+
+        logging.debug(
+            f"[RBAC_CONFIG_GET] _get_for_user_direct() returning default for email={email}, "
+            f"config_path={self.config_path}"
+        )
+        return self.default
+
     def get(self, email: str) -> Any:
-        from open_webui.utils.cache import get_cache_manager
-        
-        cache = get_cache_manager()
-        
-        # CRITICAL RBAC: Log the email being used for lookup
-        logging.info(f"[RBAC_CONFIG_GET] Looking up config {self.config_path} for email={email}")
-        
-        # Get user to check cache
+        logging.debug(f"[RBAC_CONFIG_GET] get() called: config_path={self.config_path}, email={email}")
+
         user = Users.get_user_by_email(email)
         if not user:
-            logging.warning(f"[RBAC_CONFIG_GET] User {email} not found, using default for {self.config_path}")
+            logging.debug(f"[RBAC_CONFIG_GET] User {email} not found, returning default for {self.config_path}")
             return self.default
-        
-        logging.info(f"[RBAC_CONFIG_GET] User {email} maps to user_id={user.id}")
-        
-        # Step 1: Check cache for user settings
-        # CRITICAL RBAC: Cache key includes user.id to ensure proper isolation
+
+        # NON-ADMIN: Bypass cache entirely - go straight to PostgreSQL
+        # Avoids cache hit/miss consistency issues for users inheriting from group admins
+        if user.role != "admin":
+            logging.debug(f"[RBAC_CONFIG_GET] User {email} (ID: {user.id}) is non-admin - using PostgreSQL direct")
+            return self._get_for_user_direct(email, user)
+
+        # ADMIN: Use cache (admins only see their own config, no group inheritance)
+        logging.debug(
+            f"[RBAC_CONFIG_GET] Admin path: checking cache for admin {email} "
+            f"(ID: {user.id}), config_path={self.config_path}"
+        )
+        from open_webui.utils.cache import get_cache_manager
+        cache = get_cache_manager()
+
         cached_value = cache.get_user_settings(user.id, self.config_path)
         if cached_value is not None:
-            logging.info(
-                f"[RBAC_CONFIG_GET] Cache hit for user {email} (ID: {user.id}) "
-                f"config {self.config_path}: {cached_value}"
-            )
+            logging.debug(f"[RBAC_CONFIG_GET] Cache hit for admin {email} config {self.config_path}")
             return cached_value
-        
-        # Step 2: Check user-specific config in database
-        # CRITICAL RBAC: Database query uses email to ensure proper isolation
+
         with get_db() as db:
             entry = db.query(Config).filter_by(email=email).first()
             if entry and isinstance(entry.data, dict):
@@ -403,103 +474,19 @@ class UserScopedConfig:
                         final_value = self.default
                         break
                 if final_value != self.default:
-                    logging.info(
-                        f"[RBAC_CONFIG_GET] User {email} (ID: {user.id}) has personal config "
-                        f"for {self.config_path}: {final_value}"
+                    logging.debug(
+                        f"[RBAC_CONFIG_GET] Admin {email}: found config in DB, "
+                        f"config_path={self.config_path}, caching and returning"
                     )
-                    # Cache the result with user.id to ensure proper isolation
                     cache.set_user_settings(user.id, self.config_path, final_value)
                     return final_value
 
-            # Step 3: Check group creator's config
-            # CRITICAL RBAC FIX: Admins should NOT inherit from other admins' groups
-            # Only regular users (non-admins) should inherit from their group admin's config
-            # This ensures proper isolation between different admins
-            if user.role == "admin":
-                logging.info(
-                    f"[RBAC_CONFIG_GET] User {email} (ID: {user.id}) is an admin. "
-                    f"Skipping group inheritance - admins only see their own config, not other admins' configs."
-                )
-            else:
-                logging.debug(f"User {email} maps to user_id={user.id}, role={user.role}")
-                
-                # Check cache for user groups
-                cached_groups = cache.get_user_groups(user.id)
-                if cached_groups is not None:
-                    # Reconstruct group objects from cached data
-                    from open_webui.models.groups import GroupModel
-                    user_groups = []
-                    for g_data in cached_groups:
-                        # Create a minimal GroupModel-like object
-                        class CachedGroup:
-                            def __init__(self, group_id, created_by):
-                                self.id = group_id
-                                self.created_by = created_by
-                        user_groups.append(CachedGroup(g_data["id"], g_data["created_by"]))
-                else:
-                    user_groups = Groups.get_groups_by_member_id(user.id)
-                    # Cache the groups
-                    groups_data = [{"id": g.id, "created_by": g.created_by} for g in user_groups]
-                    cache.set_user_groups(user.id, groups_data)
-                
-                    logging.debug(f"User {email} is part of groups: {[g.id for g in user_groups]}")
-                    
-                    for group in user_groups:
-                        group_creator_email = group.created_by
-                        logging.debug(f"Group {group.id} created by {group_creator_email}")
-                        if group_creator_email:
-                            # RBAC: Check if this is an API key lookup - log for audit
-                            is_api_key_lookup = "api_key" in self.config_path or "openai_api_key" in self.config_path
-                            if is_api_key_lookup:
-                                logging.info(
-                                    f"RBAC API Key Lookup: User {email} (ID: {user.id}) requesting API key. "
-                                    f"Checking group {group.id} created by admin {group_creator_email}. "
-                                    f"Key will only be accessible if user is in this admin's group."
-                                )
-                            
-                            # Check cache for group admin config
-                            cached_group_config = cache.get_group_admin_config(group.id, self.config_path)
-                            if cached_group_config is not None:
-                                logging.debug(f"Cache hit for group {group.id} admin config {self.config_path}: {cached_group_config}")
-                                if is_api_key_lookup:
-                                    logging.info(
-                                        f"RBAC API Key Access GRANTED: User {email} inheriting API key from "
-                                        f"group admin {group_creator_email} (group {group.id})"
-                                    )
-                                # Also cache for user
-                                cache.set_user_settings(user.id, self.config_path, cached_group_config)
-                                return cached_group_config
-                            
-                            # Query database for group admin config
-                            creator_entry = db.query(Config).filter_by(email=group_creator_email).first()
-                            if creator_entry and isinstance(creator_entry.data, dict):
-                                data = creator_entry.data
-                                final_value = self.default
-                                for part in self.config_path.split("."):
-                                    if isinstance(data, dict) and part in data:
-                                        data = data[part]
-                                        final_value = data
-                                    else:
-                                        final_value = self.default
-                                        break
-                                if final_value != self.default:
-                                    logging.debug(f"Group admin {group_creator_email} has config for {self.config_path}: {final_value}")
-                                    if is_api_key_lookup:
-                                        logging.info(
-                                            f"RBAC API Key Access GRANTED: User {email} inheriting API key from "
-                                            f"group admin {group_creator_email} (group {group.id}). "
-                                            f"This key is ONLY accessible to users in groups created by {group_creator_email}."
-                                        )
-                                    # Cache both group admin config and user settings
-                                    cache.set_group_admin_config(group.id, self.config_path, final_value)
-                                    cache.set_user_settings(user.id, self.config_path, final_value)
-                                    return final_value
-
-            # Step 4: Fallback to default
-            logging.info(f"[RBAC_CONFIG_GET] Using default for {email} for {self.config_path}")
-            # Cache the default value to avoid repeated DB queries
-            cache.set_user_settings(user.id, self.config_path, self.default)
-            return self.default
+        logging.debug(
+            f"[RBAC_CONFIG_GET] Admin {email}: no config in DB, "
+            f"returning default for config_path={self.config_path}"
+        )
+        cache.set_user_settings(user.id, self.config_path, self.default)
+        return self.default
 
     def set(self, email: str, value: Any):
         """
@@ -532,17 +519,14 @@ class UserScopedConfig:
         
         # RBAC: Log API key configuration for audit
         is_api_key = "api_key" in self.config_path or "openai_api_key" in self.config_path
-        logging.info(
-            f"===== CONFIG CHANGE START ===== "
-            f"User '{email}' is changing config '{self.config_path}' to value '{value}'. "
-            f"Called from: {caller}"
+        logging.debug(
+            f"[RBAC_CONFIG_SET] set() called: config_path={self.config_path}, email={email}, "
+            f"caller={caller}"
         )
         if is_api_key:
-            logging.info(
-                f"***** API KEY IS BEING CHANGED ***** "
-                f"Admin '{email}' is setting a NEW API KEY for '{self.config_path}'. "
-                f"New API Key = '{value}'. "
-                f"This change was triggered by: {caller}"
+            logging.debug(
+                f"[RBAC_CONFIG_SET] API key being changed for admin '{email}', "
+                f"config_path={self.config_path}, caller={caller}"
             )
         
         with get_db() as db:
@@ -557,8 +541,8 @@ class UserScopedConfig:
             old_data = entry.data
             data = copy.deepcopy(entry.data) if entry.data else {}
             
-            logging.info(
-                f"[CONFIG BEFORE] The CURRENT value in database for '{email}' before this change: {old_data}"
+            logging.debug(
+                f"[RBAC_CONFIG_SET] Current DB value for '{email}' before change: {old_data}"
             )
             
             current = data
@@ -569,11 +553,9 @@ class UserScopedConfig:
                 current = current[part]
             current[parts[-1]] = value
 
-            logging.info(
-                f"[CONFIG AFTER] The NEW value being saved for '{email}': "
-                f"'{self.config_path}' = '{value}'. "
-                f"Full updated config data: {data}. "
-                f"Called from: {caller}"
+            logging.debug(
+                f"[RBAC_CONFIG_SET] New value being saved for '{email}': "
+                f"config_path={self.config_path}, caller={caller}"
             )
 
             # Assign the new dict object (not the same reference)
@@ -582,10 +564,9 @@ class UserScopedConfig:
             flag_modified(entry, "data")
             db.commit()
             
-            logging.info(
-                f"===== CONFIG SAVED TO DATABASE ===== "
-                f"Successfully saved '{self.config_path}' = '{value}' for user '{email}'. "
-                f"Called from: {caller}"
+            logging.debug(
+                f"[RBAC_CONFIG_SET] Config saved to DB for '{email}': "
+                f"config_path={self.config_path}, caller={caller}"
             )
         
         # CRITICAL RBAC: Update cache with new value (write-through caching)
@@ -593,25 +574,25 @@ class UserScopedConfig:
         user = Users.get_user_by_email(email)
         if user:
             # Step 1: Invalidate old cache entries first (for this user and inherited groups)
-            logging.info(
-                f"[RBAC_CACHE_UPDATE] Updating cache for admin {email} (ID: {user.id}) "
+            logging.debug(
+                f"[RBAC_CONFIG_SET] Invalidating cache for admin {email} (ID: {user.id}), "
                 f"config_path={self.config_path}"
             )
             cache.invalidate_user_settings(user.id, self.config_path)
             
             # Step 2: Set the new value in cache (write-through)
             cache.set_user_settings(user.id, self.config_path, value)
-            logging.info(
-                f"[CACHE UPDATED] Cache now has '{self.config_path}' = '{value}' for user '{email}' (ID: {user.id}). "
-                f"Called from: {caller}"
+            logging.debug(
+                f"[RBAC_CONFIG_SET] Cache updated for user '{email}' (ID: {user.id}), "
+                f"config_path={self.config_path}"
             )
             
             # Step 3: Invalidate cache for all users who inherit from this admin (group members)
             # They need to re-fetch to get the new inherited value
             groups = Groups.get_groups(email)
             if is_api_key:
-                logging.info(
-                    f"[RBAC_CACHE_UPDATE] Invalidating inherited cache for admin {email}'s "
+                logging.debug(
+                    f"[RBAC_CONFIG_SET] Invalidating inherited cache for admin {email}'s "
                     f"{len(groups)} group(s) to propagate new API key"
                 )
             for group in groups:
@@ -619,8 +600,8 @@ class UserScopedConfig:
                 cache.invalidate_group_admin_config(group.id, self.config_path)
                 # Invalidate cache for all members of this group (they inherit from admin)
                 member_count = cache.invalidate_group_member_users(group.id)
-                logging.info(
-                    f"[RBAC_CACHE_UPDATE] Invalidated inherited cache for {member_count} member(s) "
+                logging.debug(
+                    f"[RBAC_CONFIG_SET] Invalidated cache for {member_count} member(s) "
                     f"of group {group.id} created by {email}"
                 )
 
