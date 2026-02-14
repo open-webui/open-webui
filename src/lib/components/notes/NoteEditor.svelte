@@ -38,8 +38,6 @@
 		WEBUI_NAME
 	} from '$lib/stores';
 
-	import { downloadNotePdf } from '$lib/utils/pdf';
-
 	import Controls from './NoteEditor/Controls.svelte';
 	import Chat from './NoteEditor/Chat.svelte';
 
@@ -600,7 +598,8 @@ ${content}
 			saveAs(blob, `${note.title}.md`);
 		} else if (type === 'pdf') {
 			try {
-				await downloadNotePdf(note);
+				const { exportPDFFromHTML } = await import('$lib/utils/pdf');
+				await exportPDFFromHTML(note.data?.content?.html || '', { title: note.title });
 			} catch (error) {
 				toast.error(`${error}`);
 			}

@@ -40,7 +40,6 @@
 	} from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 	import { createNoteHandler } from './utils';
-	import { downloadNotePdf } from '$lib/utils/pdf';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -96,7 +95,8 @@
 			saveAs(blob, `${note.title}.md`);
 		} else if (type === 'pdf') {
 			try {
-				await downloadNotePdf(selectedNote);
+				const { exportPDFFromHTML } = await import('$lib/utils/pdf');
+				await exportPDFFromHTML(selectedNote.data?.content?.html || '', { title: note.title });
 			} catch (error) {
 				toast.error(`${error}`);
 			}
