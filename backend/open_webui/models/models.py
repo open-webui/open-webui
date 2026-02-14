@@ -10,7 +10,6 @@ from open_webui.models.users import User, UserModel, Users, UserResponse
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 
 
-
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from sqlalchemy import String, cast, or_, and_, func
