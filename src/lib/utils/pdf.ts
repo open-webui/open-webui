@@ -3,7 +3,7 @@ import canvasSize from 'canvas-size';
 import html2canvas, { type Options as Html2CanvasOptions } from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import type JSPDF from 'jspdf';
-import { writable } from 'svelte/store';
+import { exportOverlay, type ExportOverlayStage } from '../stores';
 
 // ==================== Type Definitions ====================
 
@@ -50,32 +50,8 @@ interface PdfAppendState {
 	pageCount: number;
 }
 
-export type PdfExportOverlayState = {
-	show: boolean;
-	stage: PdfExportStage;
-	progress: number;
-	currentChunk: number;
-	totalChunks: number;
-	pagesGenerated: number;
-	estimatedRemainingMinutes: number | null;
-	onCancel?: () => void;
-};
-
-export const pdfExportOverlay = writable<PdfExportOverlayState>({
-	show: false,
-	stage: 'preparing',
-	progress: 0,
-	currentChunk: 0,
-	totalChunks: 0,
-	pagesGenerated: 0,
-	estimatedRemainingMinutes: null,
-	onCancel: undefined
-});
-
-type PdfExportStage = 'preparing' | 'rendering' | 'saving' | 'done';
-
 interface PdfExportProgress {
-	stage: PdfExportStage;
+	stage: ExportOverlayStage;
 	percent: number;
 	currentChunk?: number;
 	totalChunks?: number;
@@ -653,7 +629,7 @@ export const exportPDF = async (containerElement: string | HTMLElement, options:
 
 	const updateOverlay = (progress: PdfExportProgress): void => {
 		const estimatedRemainingMinutes = getEstimatedRemainingMinutes(exportStartedAt, progress.percent);
-		pdfExportOverlay.update((state) => ({
+		exportOverlay.update((state) => ({
 			...state,
 			show: true,
 			stage: progress.stage,
@@ -666,7 +642,7 @@ export const exportPDF = async (containerElement: string | HTMLElement, options:
 		}));
 	};
 
-	pdfExportOverlay.set({
+	exportOverlay.set({
 		show: true,
 		stage: 'preparing',
 		progress: 0,
@@ -725,7 +701,7 @@ export const exportPDF = async (containerElement: string | HTMLElement, options:
 		throw error;
 	} finally {
 		options.signal?.removeEventListener('abort', onAbortFromExternal);
-		pdfExportOverlay.set({
+		exportOverlay.set({
 			show: false,
 			stage: 'preparing',
 			progress: 0,

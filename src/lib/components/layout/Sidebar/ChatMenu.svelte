@@ -25,7 +25,6 @@
 	} from '$lib/apis/chats';
 	import { chats, folders, settings, theme, user } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
-	import { exportPDF, exportPlainTextToPdf } from '$lib/utils/pdf';
 	import Download from '$lib/components/icons/Download.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
@@ -88,6 +87,7 @@
 
 	const downloadPdf = async () => {
 		try {
+			const { exportPDF, exportPlainTextToPdf } = await import('$lib/utils/pdf');
 			if ($settings?.stylizedPdfExport ?? true) {
 				await exportPDF({
 					title: chat.chat.title,
