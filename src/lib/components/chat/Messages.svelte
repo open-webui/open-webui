@@ -63,8 +63,10 @@
 	export let messagesCount: number | null = 20;
 	let messagesLoading = false;
 
-	const asyncTaskTracker = setupContextAsyncTaskTracker();
+	let messagesContainerElement: HTMLElement | null = null;
+	export const getMessagesContainerElement = () => messagesContainerElement;
 
+	const asyncTaskTracker = setupContextAsyncTaskTracker();
 	export async function waitForSettled(options: WaitForSettledOptions = {}): Promise<void> {
 		await asyncTaskTracker.waitForSettled(options);
 	}
@@ -438,7 +440,7 @@
 							</div>
 						</Loader>
 					{/if}
-					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false" class="all-messages-container">
+					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false" bind:this={messagesContainerElement}>
 						{#each messages as message, messageIdx (message.id)}
 							<Message
 								{chatId}

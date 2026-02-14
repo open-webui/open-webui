@@ -52,9 +52,7 @@
 	export let onClose: Function = () => {};
 
 	let showFullMessages = false;
-	let exportMessagesRef: {
-		waitForSettled?: (options?: WaitForSettledOptions) => Promise<void>;
-	} | null = null;
+	let exportMessagesRef: Messages | null = null;
 
 	const getChatAsText = async () => {
 		const history = chat.chat.history;
@@ -80,11 +78,16 @@
 		try {
 			const { exportPDF, exportPlainTextToPdf } = await import('$lib/utils/pdf');
 			if ($settings?.stylizedPdfExport ?? true) {
-				await exportPDF('#full-messages-container .all-messages-container', {
+				showFullMessages = true;
+				await tick();
+				const messagesContainerElement = exportMessagesRef?.getMessagesContainerElement();
+				if (!messagesContainerElement) {
+					throw new Error('Messages container element not found');
+				}
+
+				await exportPDF(messagesContainerElement, {
 					title: chat.chat.title,
 					async onBeforeRender() {
-						showFullMessages = true;
-						await tick();
 						try {
 							await exportMessagesRef?.waitForSettled?.();
 						} catch (error) {
@@ -125,22 +128,20 @@
 
 {#if showFullMessages}
 	<div class="hidden w-full h-full flex-col">
-		<div id="full-messages-container">
-			<Messages
-				bind:this={exportMessagesRef}
-				className="h-full flex pt-4 pb-8 w-full"
-				chatId={`chat-preview-${chat?.id ?? ''}`}
-				user={$user}
-				exportMode
-				autoScroll
-				history={chat.chat.history}
-				messages={chat.chat.messages}
-				sendMessage={() => {}}
-				continueResponse={() => {}}
-				regenerateResponse={() => {}}
-				messagesCount={null}
-			/>
-		</div>
+		<Messages
+			bind:this={exportMessagesRef}
+			className="h-full flex pt-4 pb-8 w-full"
+			chatId={`chat-preview-${chat?.id ?? ''}`}
+			user={$user}
+			exportMode
+			autoScroll
+			history={chat.chat.history}
+			messages={chat.chat.messages}
+			sendMessage={() => {}}
+			continueResponse={() => {}}
+			regenerateResponse={() => {}}
+			messagesCount={null}
+		/>
 	</div>
 {/if}
 
