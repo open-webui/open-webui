@@ -290,6 +290,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         function_module, _, _ = get_function_module_from_cache(request, function_id)
         return function_module
 
+    # Pre-compute per-model action/filter ids and batch-load referenced functions
+    model_action_ids = {}
+    model_filter_ids = {}
+    all_action_ids = set()
+    all_filter_ids = set()
+
     for model in models:
         action_ids = [
             action_id
@@ -302,9 +308,26 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             if filter_id in enabled_filter_ids
         ]
 
+        model_action_ids[model["id"]] = action_ids
+        model_filter_ids[model["id"]] = filter_ids
+
+        all_action_ids.update(action_ids)
+        all_filter_ids.update(filter_ids)
+
+    functions_by_id = {
+        function.id: function
+        for function in Functions.get_functions_by_ids(
+            list(all_action_ids.union(all_filter_ids))
+        )
+    }
+
+    for model in models:
+        action_ids = model_action_ids.get(model["id"], [])
+        filter_ids = model_filter_ids.get(model["id"], [])
+
         model["actions"] = []
         for action_id in action_ids:
-            action_function = Functions.get_function_by_id(action_id)
+            action_function = functions_by_id.get(action_id)
             if action_function is None:
                 raise Exception(f"Action not found: {action_id}")
 
@@ -315,7 +338,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
         model["filters"] = []
         for filter_id in filter_ids:
-            filter_function = Functions.get_function_by_id(filter_id)
+            filter_function = functions_by_id.get(filter_id)
             if filter_function is None:
                 raise Exception(f"Filter not found: {filter_id}")
 
