@@ -243,7 +243,6 @@ const renderElementToCanvas = async (
 			height: cropHeight,
 			canvas: options?.canvas,
 			onclone: options?.onclone,
-			removeContainer: false,
 			// Rule 3: Use ignoreElements to skip content below the viewport
 			ignoreElements: (node) => {
 					// Allow custom ignore logic to pass first
