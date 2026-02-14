@@ -26,19 +26,17 @@ interface NoteData {
 /**
  * Options for downloading chat PDF
  */
-interface ChatPdfOptions {
-	/** ID of the container element to render (for stylized mode) */
-	containerSelector?: string;
+export interface ExportPDFOptions {
 	/** PDF filename */
-	filename: string;
+	filename?: string;
+	/** Optional title for the export (used in overlay) */
+	title?: string;
 	/** Optional callback before rendering (for showing full messages) */
 	onBeforeRender?: () => Promise<void> | void;
 	/** Optional callback after rendering (for hiding full messages) */
 	onAfterRender?: () => Promise<void> | void;
 	/** Optional callback for export progress updates */
 	onProgress?: (progress: PdfExportProgress) => void;
-	/** Optional chunk selector for stylized mode */
-	chunkSelector?: string;
 	/** Optional abort signal for cancellation */
 	signal?: AbortSignal;
 }
@@ -467,73 +465,24 @@ const appendCanvasChunkToPdf = (
  * Create a styled container element for rendering
  * @param virtualWidth - Virtual width in pixels
  * @param padding - Optional padding CSS value (e.g., '40px 40px')
- * @returns Styled container element
  */
-const createStyledContainer = (virtualWidth: number, padding?: string): HTMLElement => {
-	const container = document.createElement('div');
+const styledContainer = (container: HTMLElement, virtualWidth: number, title?: string, padding?: string) => {
 	styleElementForRendering(container, virtualWidth);
 	if (padding) {
 		container.style.padding = padding;
 	}
-	return container;
-};
-
-// ==================== Note-specific Functions ====================
-
-/**
- * Create DOM node from note HTML content
- * If the HTML is already an HTMLElement, returns it directly.
- * Otherwise, creates a new container with title and content nodes.
- * @param note - Note object containing title and HTML content
- * @param virtualWidth - Virtual width in pixels for the container
- * @returns DOM element ready for rendering
- */
-const createNoteNode = (note: NoteData, virtualWidth: number): HTMLElement => {
-	const htmlContent = note.data?.content?.html;
-	const html = typeof htmlContent === 'string' ? DOMPurify.sanitize(htmlContent) : '';
-	const isDark = isDarkMode();
-
-	// If html is already an HTMLElement, return it
-	if (htmlContent && typeof htmlContent === 'object' && htmlContent instanceof HTMLElement) {
-		return htmlContent;
+	if (title) {
+		const titleNode = document.createElement('div');
+		titleNode.textContent = title;
+		titleNode.style.fontSize = '24px';
+		titleNode.style.fontWeight = 'medium';
+		titleNode.style.paddingBottom = '20px';
+		titleNode.style.color = isDarkMode() ? 'white' : 'black';
+		container.insertBefore(titleNode, container.firstChild);
 	}
-
-	// Create container
-	const node = createStyledContainer(virtualWidth, '40px 40px');
-
-	// Create title node
-	const titleNode = document.createElement('div');
-	titleNode.textContent = note.title;
-	titleNode.style.fontSize = '24px';
-	titleNode.style.fontWeight = 'medium';
-	titleNode.style.paddingBottom = '20px';
-	titleNode.style.color = isDark ? 'white' : 'black';
-	node.appendChild(titleNode);
-
-	// Create content node
-	const contentNode = document.createElement('div');
-	contentNode.innerHTML = html;
-	node.appendChild(contentNode);
-
-	document.body.appendChild(node);
-
-	return node;
 };
 
 // ==================== Export PDF Functions ====================
-
-/**
- * Clone and style an existing DOM element for PDF rendering
- * @param element - DOM element to clone
- * @param virtualWidth - Virtual width in pixels for the cloned element
- * @returns Cloned and styled element
- */
-const cloneElementForRendering = (element: HTMLElement, virtualWidth: number): HTMLElement => {
-	const clonedElement = element.cloneNode(true) as HTMLElement;
-	styleElementForRendering(clonedElement, virtualWidth);
-	document.body.appendChild(clonedElement);
-	return clonedElement;
-};
 
 /**
  * Export plain text content to PDF
@@ -684,47 +633,16 @@ const exportStyledElementToPdf = async (
 // ==================== Public API Functions ====================
 
 /**
- * Download PDF from HTML content (for notes)
- * Creates a PDF from note content including title and HTML body.
- * Uses slice-based pagination for accurate page breaks.
- * @param note - Note object with title and data.content.html
- * @throws Error if PDF generation fails
- */
-export const downloadNotePdf = async (note: NoteData): Promise<void> => {
-	// Create DOM node from note content
-	const node = createNoteNode(note, DEFAULT_VIRTUAL_WIDTH);
-	const htmlContent = note.data?.content?.html;
-	const shouldRemoveNode = !(
-		htmlContent &&
-		typeof htmlContent === 'object' &&
-		htmlContent instanceof HTMLElement
-	);
-
-	try {
-		await exportStyledElementToPdf(node, `${note.title}.pdf`, DEFAULT_VIRTUAL_WIDTH, 0);
-	} finally {
-		// Clean up: remove hidden node if needed
-		if (shouldRemoveNode && node.parentNode) {
-			document.body.removeChild(node);
-		}
-	}
-};
-
-/**
  * Renders the element container as an image using html2canvas,
  * then converts it to PDF with proper pagination.
  *
+ * @param containerElement - Selector or HTMLElement for the container to render
  * @param options - Configuration object
- * @param options.containerSelector - ID of the container element to render (for stylized mode).
- * @param options.filename - PDF filename
- * @param options.onBeforeRender - Optional callback before rendering (for showing full messages)
- * @param options.onAfterRender - Optional callback after rendering (for hiding full messages)
  * @throws Error if PDF generation fails or if chatText is missing in plain text mode
  */
-export const exportPDF = async (options: ChatPdfOptions): Promise<void> => {
-	const { containerSelector } = options;
-	if (!containerSelector) {
-		throw new Error('containerSelector is required for stylized PDF export');
+export const exportPDF = async (containerElement: string | HTMLElement, options: ExportPDFOptions = {}): Promise<void> => {
+	if (!containerElement) {
+		throw new Error('containerElement is required for stylized PDF export');
 	}
 
 	const internalAbortController = new AbortController();
@@ -765,18 +683,24 @@ export const exportPDF = async (options: ChatPdfOptions): Promise<void> => {
 		throwIfAborted(effectiveSignal);
 		await options.onBeforeRender?.();
 
-		const containerElement = document.querySelector(containerSelector) as HTMLElement;
+		if (typeof containerElement === 'string') {
+			containerElement = document.querySelector(containerElement) as HTMLElement;
+		}
 		if (!containerElement) {
-			throw new Error(`Container element not found for selector: ${containerSelector}`);
+			throw new Error(`Container element not found for selector: ${containerElement}`);
 		}
 
 		try {
 			// Clone and style element for rendering
-			const clonedElement = cloneElementForRendering(containerElement, DEFAULT_VIRTUAL_WIDTH);
+			const clonedElement = containerElement.dataset.exportPDFClonedContainer === 'true'
+				? containerElement
+				: containerElement.cloneNode(true) as HTMLElement;
+			styledContainer(clonedElement, DEFAULT_VIRTUAL_WIDTH, options.title);
+
 			try {
 				await exportStyledElementToPdf(
 					clonedElement,
-					options.filename,
+					options.filename || `export-${options.title || Date.now()}.pdf`,
 					DEFAULT_VIRTUAL_WIDTH,
 					100,
 					(progress) => {
@@ -812,4 +736,18 @@ export const exportPDF = async (options: ChatPdfOptions): Promise<void> => {
 			onCancel: undefined
 		});
 	}
+};
+
+/**
+ * Create DOM node from note HTML content
+ *
+ * @param html - HTML content as string or HTMLElement
+ * @param options - Configuration object
+ * @returns DOM element ready for rendering
+ */
+export const exportPDFFromHTML = async (html: string, options: ExportPDFOptions = {}) => {
+	const contentNode = document.createElement('div');
+	contentNode.innerHTML = DOMPurify.sanitize(html);
+	contentNode.dataset.exportPDFClonedContainer = 'true';
+	await exportPDF(contentNode, options);
 };
