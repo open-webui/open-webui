@@ -1269,6 +1269,8 @@ def get_model_path(model: str, update_model: bool = False):
         return model_repo_path
     except Exception as e:
         log.exception(f"Cannot determine model snapshot path: {e}")
+        if OFFLINE_MODE:
+            raise
         return model
 
 
