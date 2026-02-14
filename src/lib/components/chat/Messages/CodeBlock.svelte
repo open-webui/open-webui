@@ -536,7 +536,7 @@
 			{/if}
 
 			<div
-				class="language-{lang} rounded-t-2xl -mt-8 {editorClassName
+				class="language-{lang} rounded-t-2xl {exportMode ? '' : '-mt-8'} {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
@@ -567,7 +567,7 @@
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 								class="language-{lang} rounded-t-none {exportMode
 									? 'whitespace-pre-wrap break-words'
-									: 'whitespace-pre'} text-sm"
+									: 'whitespace-pre'} {exportMode ? 'text-xs leading-normal' : 'text-sm'}"
 								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
 									code}</code
 							></pre>
