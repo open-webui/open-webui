@@ -230,25 +230,27 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
             # else: skip reasoning blocks for normal LLM messages
 
         elif item_type == "open_webui:code_interpreter":
-            if raw:
-                # Include code interpreter content for LLM re-processing
-                code = item.get("code", "")
-                code_output = item.get("output", "")
+            # Always include code interpreter content so the LLM knows
+            # the code was already executed and doesn't retry.
+            code = item.get("code", "")
+            code_output = item.get("output", "")
 
-                if code:
-                    lang = item.get("lang", "python")
-                    pending_content.append(f"```{lang}\n{code}\n```")
+            if code:
+                pending_content.append(
+                    f"<code_interpreter>\n{code}\n</code_interpreter>"
+                )
 
-                if code_output:
-                    if isinstance(code_output, dict):
-                        stdout = code_output.get("stdout", "")
-                        result = code_output.get("result", "")
-                        output_text = stdout or result
-                    else:
-                        output_text = str(code_output)
-                    if output_text:
-                        pending_content.append(f"Output:\n{output_text}")
-            # else: skip extension types
+            if code_output:
+                if isinstance(code_output, dict):
+                    stdout = code_output.get("stdout", "")
+                    result = code_output.get("result", "")
+                    output_text = stdout or result
+                else:
+                    output_text = str(code_output)
+                if output_text:
+                    pending_content.append(
+                        f"<code_interpreter_output>\n{output_text}\n</code_interpreter_output>"
+                    )
 
         elif item_type.startswith("open_webui:"):
             # Skip other extension types

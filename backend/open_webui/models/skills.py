@@ -3,13 +3,13 @@ import time
 from typing import Optional
 
 from sqlalchemy.orm import Session
-from open_webui.internal.db import Base, JSONField, get_db, get_db_context
+from open_webui.internal.db import Base, get_db, get_db_context
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, or_
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, or_
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class Skill(Base):
     name = Column(Text, unique=True)
     description = Column(Text, nullable=True)
     content = Column(Text)
-    meta = Column(JSONField)
+    meta = Column(JSON)
     is_active = Column(Boolean, default=True)
 
     updated_at = Column(BigInteger)
