@@ -89,9 +89,8 @@
 		try {
 			const { exportPDF, exportPlainTextToPdf } = await import('$lib/utils/pdf');
 			if ($settings?.stylizedPdfExport ?? true) {
-				await exportPDF({
+				await exportPDF('#full-messages-container .all-messages-container', {
 					title: chat.chat.title,
-					containerElement: '#full-messages-container .all-messages-container',
 					async onBeforeRender() {
 						showFullMessages = true;
 						await tick();
