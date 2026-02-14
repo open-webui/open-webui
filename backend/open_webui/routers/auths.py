@@ -145,7 +145,7 @@ def create_session_response(
         "email": user.email,
         "name": user.name,
         "role": user.role,
-        "profile_image_url": user.profile_image_url,
+        "profile_image_url": f"/api/v1/users/{user.id}/profile/image",
         "permissions": user_permissions,
     }
 
@@ -926,7 +926,7 @@ async def add_user(
                 "email": user.email,
                 "name": user.name,
                 "role": user.role,
-                "profile_image_url": user.profile_image_url,
+                "profile_image_url": f"/api/v1/users/{user.id}/profile/image",
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)

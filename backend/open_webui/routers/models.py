@@ -8,14 +8,16 @@ import logging
 from open_webui.models.groups import Groups
 from open_webui.models.models import (
     ModelForm,
+    ModelMeta,
     ModelModel,
+    ModelParams,
     ModelResponse,
     ModelListResponse,
     ModelAccessListResponse,
     ModelAccessResponse,
     Models,
 )
-from open_webui.models.access_grants import AccessGrants
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 
 from pydantic import BaseModel
 from open_webui.constants import ERROR_MESSAGES
@@ -84,14 +86,29 @@ async def get_models(
     if direction:
         filter["direction"] = direction
 
+    # Pre-fetch user group IDs once - used for both filter and write_access check
+    groups = Groups.get_groups_by_member_id(user.id, db=db)
+    user_group_ids = {group.id for group in groups}
+
     if not user.role == "admin" or not BYPASS_ADMIN_ACCESS_CONTROL:
-        groups = Groups.get_groups_by_member_id(user.id, db=db)
         if groups:
             filter["group_ids"] = [group.id for group in groups]
 
         filter["user_id"] = user.id
 
     result = Models.search_models(user.id, filter=filter, skip=skip, limit=limit, db=db)
+
+    # Batch-fetch writable model IDs in a single query instead of N has_access calls
+    model_ids = [model.id for model in result.items]
+    writable_model_ids = AccessGrants.get_accessible_resource_ids(
+        user_id=user.id,
+        resource_type="model",
+        resource_ids=model_ids,
+        permission="write",
+        user_group_ids=user_group_ids,
+        db=db,
+    )
+
     return ModelAccessListResponse(
         items=[
             ModelAccessResponse(
@@ -99,13 +116,7 @@ async def get_models(
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == model.user_id
-                    or AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type="model",
-                        resource_id=model.id,
-                        permission="write",
-                        db=db,
-                    )
+                    or model.id in writable_model_ids
                 ),
             )
             for model in result.items
@@ -506,16 +517,36 @@ class ModelAccessGrantsForm(BaseModel):
 
 @router.post("/model/access/update", response_model=Optional[ModelModel])
 async def update_model_access_by_id(
+    request: Request,
     form_data: ModelAccessGrantsForm,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
     model = Models.get_model_by_id(form_data.id, db=db)
+
+    # Non-preset models (e.g. direct Ollama/OpenAI models) may not have a DB
+    # entry yet. Create a minimal one so access grants can be stored.
     if not model:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=ERROR_MESSAGES.NOT_FOUND,
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        model = Models.insert_new_model(
+            ModelForm(
+                id=form_data.id,
+                name=form_data.id,
+                meta=ModelMeta(),
+                params=ModelParams(),
+            ),
+            user.id,
+            db=db,
         )
+        if not model:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT("Error creating model entry"),
+            )
 
     if (
         model.user_id != user.id
@@ -532,6 +563,25 @@ async def update_model_access_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    # Strip public sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_public_read_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "sharing.public_models",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = [
+            grant
+            for grant in form_data.access_grants
+            if not (
+                grant.get("principal_type") == "user"
+                and grant.get("principal_id") == "*"
+            )
+        ]
 
     AccessGrants.set_access_grants(
         "model", form_data.id, form_data.access_grants, db=db
