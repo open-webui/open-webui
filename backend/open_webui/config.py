@@ -2095,12 +2095,12 @@ ENABLE_RAG_HYBRID_SEARCH = UserScopedConfig("rag.enable_hybrid_search",os.enviro
 # RAG_FULL_CONTEXT = PersistentConfig(
 #     "RAG_FULL_CONTEXT",
 #     "rag.full_context",
-#     os.getenv("RAG_FULL_CONTEXT", "True").lower() == "true",
+#     os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true",
 # )
 
 RAG_FULL_CONTEXT = UserScopedConfig(
     "rag.full_context",
-    os.getenv("RAG_FULL_CONTEXT", "True").lower() == "true")
+    os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true")
 
 RAG_FILE_MAX_COUNT = PersistentConfig(
     "RAG_FILE_MAX_COUNT",

@@ -453,7 +453,7 @@ class _FallbackConfig:
         # ENABLE_RAG_HYBRID_SEARCH is used in retrieval queries
         self.ENABLE_RAG_HYBRID_SEARCH = MockUserScopedConfig(os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "False").lower() == "true")
         # RAG_FULL_CONTEXT is used in config endpoints
-        self.RAG_FULL_CONTEXT = MockUserScopedConfig(os.environ.get("RAG_FULL_CONTEXT", "True").lower() == "true")
+        self.RAG_FULL_CONTEXT = MockUserScopedConfig(os.environ.get("RAG_FULL_CONTEXT", "False").lower() == "true")
         # RELEVANCE_THRESHOLD is a PersistentConfig, not UserScopedConfig
         self.RELEVANCE_THRESHOLD = float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "1"))
         

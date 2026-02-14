@@ -147,7 +147,7 @@
 		}
 	};
 
-	const uploadFileHandler = async (file, fullContext: boolean = true) => {
+	const uploadFileHandler = async (file, fullContext: boolean = false) => {
 		// Check if user is loaded and has permissions
 		if (!$_user) {
 			toast.error($i18n.t('User not loaded. Please refresh the page.'));
