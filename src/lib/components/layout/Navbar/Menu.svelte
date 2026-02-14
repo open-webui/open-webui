@@ -6,7 +6,6 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { exportPDF, exportPlainTextToPdf } from '$lib/utils/pdf';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
 	import {
@@ -79,6 +78,7 @@
 
 	const downloadPdf = async () => {
 		try {
+			const { exportPDF, exportPlainTextToPdf } = await import('$lib/utils/pdf');
 			if ($settings?.stylizedPdfExport ?? true) {
 				await exportPDF({
 					title: chat.chat.title,
