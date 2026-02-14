@@ -373,7 +373,7 @@ class UserScopedConfig:
             f"user_id={user.id}, config_path={self.config_path}"
         )
         with get_db() as db:
-            # Step 1: Check user's own config in database
+            # Check user's own config in database
             entry = db.query(Config).filter_by(email=email).first()
             logging.debug(
                 f"[RBAC_CONFIG_GET] _get_for_user_direct() Step 1: "
@@ -396,7 +396,7 @@ class UserScopedConfig:
                     )
                     return final_value
 
-            # Step 2: Check group creator's config - always from PostgreSQL
+            # Check group creator's config
             user_groups = Groups.get_groups_by_member_id(user.id)
             logging.debug(
                 f"[RBAC_CONFIG_GET] _get_for_user_direct() Step 2: "
@@ -442,13 +442,11 @@ class UserScopedConfig:
             logging.debug(f"[RBAC_CONFIG_GET] User {email} not found, returning default for {self.config_path}")
             return self.default
 
-        # NON-ADMIN: Bypass cache entirely - go straight to PostgreSQL
         # Avoids cache hit/miss consistency issues for users inheriting from group admins
         if user.role != "admin":
             logging.debug(f"[RBAC_CONFIG_GET] User {email} (ID: {user.id}) is non-admin - using PostgreSQL direct")
             return self._get_for_user_direct(email, user)
 
-        # ADMIN: Use cache (admins only see their own config, no group inheritance)
         logging.debug(
             f"[RBAC_CONFIG_GET] Admin path: checking cache for admin {email} "
             f"(ID: {user.id}), config_path={self.config_path}"
