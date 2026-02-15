@@ -1158,6 +1158,16 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
 )
 
 ####################################
+# MCP APPS
+####################################
+
+ENABLE_MCP_APPS = PersistentConfig(
+    "ENABLE_MCP_APPS",
+    "mcp_apps.enable",
+    os.environ.get("ENABLE_MCP_APPS", "True").lower() == "true",
+)
+
+####################################
 # WEBUI
 ####################################
 

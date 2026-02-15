@@ -16,11 +16,13 @@
 
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
 	import { getToolServerConnections, setToolServerConnections } from '$lib/apis/configs';
+	import { getMcpAppsConfig, setMcpAppsConfig } from '$lib/apis/mcp';
 
 	export let saveSettings: Function;
 
 	let servers = null;
 	let showConnectionModal = false;
+	let enableMcpApps = true;
 
 	const addConnectionHandler = async (server) => {
 		servers = [...servers, server];
@@ -41,9 +43,30 @@
 		}
 	};
 
+	const updateMcpAppsConfig = async () => {
+		const res = await setMcpAppsConfig(localStorage.token, { enabled: enableMcpApps }).catch(
+			(err) => {
+				toast.error($i18n.t('Failed to save MCP Apps config'));
+				return null;
+			}
+		);
+
+		if (res) {
+			toast.success($i18n.t('MCP Apps config saved'));
+		}
+	};
+
 	onMount(async () => {
 		const res = await getToolServerConnections(localStorage.token);
 		servers = res.TOOL_SERVER_CONNECTIONS;
+
+		// Load MCP Apps config
+		try {
+			const mcpConfig = await getMcpAppsConfig(localStorage.token);
+			enableMcpApps = mcpConfig.enabled;
+		} catch (e) {
+			console.error('Failed to load MCP Apps config:', e);
+		}
 	});
 </script>
 
@@ -60,6 +83,24 @@
 			<div class="">
 				<div class="mb-3">
 					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+
+					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+					<div class="mb-3 flex w-full justify-between">
+						<div class="flex flex-col">
+							<div class="font-medium">{$i18n.t('Enable MCP Apps')}</div>
+							<div class="text-xs text-gray-500">
+								{$i18n.t('Allow MCP servers to provide interactive UI applications')}
+							</div>
+						</div>
+
+						<Switch
+							bind:state={enableMcpApps}
+							on:change={() => {
+								updateMcpAppsConfig();
+							}}
+						/>
+					</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 

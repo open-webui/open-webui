@@ -57,6 +57,7 @@
 	let oauthClientInfo = null;
 
 	let enable = true;
+	let enableMcpApps = true;
 	let loading = false;
 
 	const registerOAuthClientHandler = async () => {
@@ -305,7 +306,9 @@
 			config: {
 				enable: enable,
 				function_name_filter_list: functionNameFilterList,
-				access_grants: accessGrants
+				access_grants: accessGrants,
+				// MCP Apps per-server enable flag (only for MCP type)
+				...(type === 'mcp' ? { enable_mcp_apps: enableMcpApps } : {})
 			},
 			info: {
 				id: id,
@@ -338,6 +341,7 @@
 		oauthClientInfo = null;
 
 		enable = true;
+		enableMcpApps = true;
 		functionNameFilterList = '';
 		accessGrants = [];
 	};
@@ -362,6 +366,7 @@
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 
 			enable = connection.config?.enable ?? true;
+			enableMcpApps = connection.config?.enable_mcp_apps ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
 			accessGrants = connection.config?.access_grants ?? [];
 		}
@@ -825,8 +830,21 @@
 					</div>
 
 					{#if type === 'mcp'}
+						<div class="flex w-full justify-between py-2">
+							<div class="flex flex-col">
+								<div class="text-sm font-medium">{$i18n.t('Enable MCP Apps')}</div>
+								<div class="text-xs text-gray-500">
+									{$i18n.t('Allow this server to provide interactive UI applications')}
+								</div>
+							</div>
+
+							<Switch bind:state={enableMcpApps} />
+						</div>
+
+						<hr class=" border-gray-100 dark:border-gray-700/10 my-1 w-full" />
+
 						<div
-							class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-2xl text-xs px-4 py-3 mb-2"
+							class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-2xl text-xs px-4 py-3 my-2"
 						>
 							<span class="font-medium">
 								{$i18n.t('Warning')}:

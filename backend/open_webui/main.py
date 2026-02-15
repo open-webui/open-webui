@@ -71,6 +71,7 @@ from open_webui.routers import (
     analytics,
     audio,
     images,
+    mcp,
     ollama,
     openai,
     retrieval,
@@ -131,6 +132,8 @@ from open_webui.config import (
     THREAD_POOL_SIZE,
     # Tool Server Configs
     TOOL_SERVER_CONNECTIONS,
+    # MCP Apps
+    ENABLE_MCP_APPS,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -745,6 +748,14 @@ app.state.TOOL_SERVERS = []
 ########################################
 
 app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
+
+########################################
+#
+# MCP APPS
+#
+########################################
+
+app.state.config.ENABLE_MCP_APPS = ENABLE_MCP_APPS
 
 ########################################
 #
@@ -1476,6 +1487,7 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledg
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 app.include_router(skills.router, prefix="/api/v1/skills", tags=["skills"])
+app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])
 
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])

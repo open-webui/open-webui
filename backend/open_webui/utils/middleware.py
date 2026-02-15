@@ -356,8 +356,12 @@ def serialize_output(output: list) -> str:
                         result_text += out.get("text", "")
                 files = result_item.get("files")
                 embeds = result_item.get("embeds", "")
+                mcp_app = result_item.get("mcp_app")
 
-                content += f'<details type="tool_calls" done="true" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}" result="{html.escape(json.dumps(result_text, ensure_ascii=False))}" files="{html.escape(json.dumps(files)) if files else ""}" embeds="{html.escape(json.dumps(embeds))}">\n<summary>Tool Executed</summary>\n</details>\n'
+                # Build mcp_app attribute if present
+                mcp_app_attr = f' mcp_app="{html.escape(json.dumps(mcp_app))}"' if mcp_app else ""
+
+                content += f'<details type="tool_calls" done="true" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}" result="{html.escape(json.dumps(result_text, ensure_ascii=False))}" files="{html.escape(json.dumps(files)) if files else ""}" embeds="{html.escape(json.dumps(embeds))}"{mcp_app_attr}>\n<summary>Tool Executed</summary>\n</details>\n'
             else:
                 content += f'<details type="tool_calls" done="false" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
@@ -1022,6 +1026,7 @@ async def chat_completion_tools_handler(
 
     skip_files = False
     sources = []
+    mcp_app_outputs = []  # Collect MCP App outputs for inclusion in final response
 
     specs = [tool["spec"] for tool in tools.values()]
     tools_specs = json.dumps(specs, ensure_ascii=False)
@@ -1137,6 +1142,83 @@ async def chat_completion_tools_handler(
                             }
                         )
 
+                    # Handle MCP Apps for non-native function calling
+                    # Check if this is an MCP tool with UI resource
+                    mcp_app_meta = None
+                    mcp_apps_enabled = getattr(
+                        request.app.state.config, "ENABLE_MCP_APPS", True
+                    )
+                    if mcp_apps_enabled and tool_type == "mcp" and tool:
+                        spec = tool.get("spec", {})
+                        tool_meta = spec.get("_meta", {})
+                        ui_meta = tool_meta.get("ui", {})
+                        resource_uri = ui_meta.get("resourceUri", "")
+
+                        if resource_uri and resource_uri.startswith("ui://"):
+                            # Extract server_id from tool_function_name (format: serverId_toolName)
+                            parts = tool_function_name.split("_", 1)
+                            server_id = parts[0] if len(parts) > 1 else ""
+
+                            # Check per-server MCP Apps enable flag
+                            server_mcp_apps_enabled = True
+                            for server_conn in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+                                if (
+                                    server_conn.get("type", "") == "mcp"
+                                    and server_conn.get("config", {}).get("id", "") == server_id
+                                ):
+                                    server_mcp_apps_enabled = server_conn.get(
+                                        "config", {}
+                                    ).get("enable_mcp_apps", True)
+                                    break
+
+                            if server_mcp_apps_enabled:
+                                mcp_app_meta = {
+                                    "resourceUri": resource_uri,
+                                    "serverId": server_id,
+                                    "visibility": ui_meta.get("visibility", ["model", "app"]),
+                                    "permissions": ui_meta.get("permissions", {}),
+                                }
+
+                    # Emit function_call event for non-native tool execution
+                    # This allows the frontend to render MCP Apps
+                    # NOTE: serialize_output needs BOTH function_call AND function_call_output
+                    # NOTE: chatCompletionEventHandler expects choices[0].message.content format
+                    if mcp_app_meta:
+                        tool_call_id = tool_call.get("id") or str(uuid4())
+                        # Format tool_result as MCP content format
+                        result_text = str(tool_result) if tool_result else ""
+                        mcp_output = [
+                            {
+                                "type": "function_call",
+                                "call_id": tool_call_id,
+                                "name": tool_function_name,
+                                "arguments": tool_function_params,
+                            },
+                            {
+                                "type": "function_call_output",
+                                "call_id": tool_call_id,
+                                "output": [{"type": "text", "text": result_text}],
+                                "mcp_app": mcp_app_meta,
+                            }
+                        ]
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": {
+                                    "choices": [
+                                        {
+                                            "message": {
+                                                "content": serialized
+                                            }
+                                        }
+                                    ],
+                                    "output": mcp_output,
+                                },
+                            }
+                        )
+                        # Collect MCP app outputs for inclusion in final streaming response
+                        mcp_app_outputs.extend(mcp_output)
+
                 if tool_result:
                     tool = tools[tool_function_name]
                     tool_id = tool.get("tool_id", "")
@@ -1190,7 +1272,7 @@ async def chat_completion_tools_handler(
     if skip_files and "files" in body.get("metadata", {}):
         del body["metadata"]["files"]
 
-    return body, {"sources": sources}
+    return body, {"sources": sources, "mcp_app_outputs": mcp_app_outputs}
 
 
 async def chat_memory_handler(
@@ -2261,9 +2343,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             )
 
                     mcp_clients[server_id] = MCPClient()
+                    enable_mcp_apps = getattr(
+                        request.app.state.config, "ENABLE_MCP_APPS", True
+                    )
                     await mcp_clients[server_id].connect(
                         url=mcp_server_connection.get("url", ""),
                         headers=headers if headers else None,
+                        enable_mcp_apps=enable_mcp_apps,
                     )
 
                     function_name_filter_list = mcp_server_connection.get(
@@ -2394,6 +2480,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     request, form_data, extra_params, user, models, tools_dict
                 )
                 sources.extend(flags.get("sources", []))
+                # Pass MCP app outputs to streaming handler via metadata
+                if flags.get("mcp_app_outputs"):
+                    metadata["mcp_app_outputs"] = flags["mcp_app_outputs"]
             except Exception as e:
                 log.exception(e)
 
@@ -2836,6 +2925,13 @@ async def non_streaming_chat_response_handler(response, ctx):
                             }
                         ]
 
+                    # Prepend MCP app outputs from non-native tool handler
+                    mcp_app_outputs = metadata.get("mcp_app_outputs", [])
+                    if mcp_app_outputs:
+                        response_output = mcp_app_outputs + response_output
+                        # Serialize full output including MCP app for content
+                        content = serialize_output(response_output)
+
                     await event_emitter(
                         {
                             "type": "chat:completion",
@@ -3252,6 +3348,11 @@ async def streaming_chat_response_handler(response, ctx):
                     ]
                 else:
                     output = []
+
+            # Prepend MCP app outputs from non-native tool handler
+            mcp_app_outputs = metadata.get("mcp_app_outputs", [])
+            if mcp_app_outputs:
+                output = mcp_app_outputs + output
 
             usage = None
 
@@ -3971,22 +4072,67 @@ async def streaming_chat_response_handler(response, ctx):
                             except Exception as e:
                                 log.exception(f"Error extracting citation source: {e}")
 
-                        results.append(
-                            {
-                                "tool_call_id": tool_call_id,
-                                "content": tool_result or "",
-                                **(
-                                    {"files": tool_result_files}
-                                    if tool_result_files
-                                    else {}
-                                ),
-                                **(
-                                    {"embeds": tool_result_embeds}
-                                    if tool_result_embeds
-                                    else {}
-                                ),
-                            }
+                        # Extract MCP app metadata if this is an MCP tool with UI resource
+                        mcp_app_meta = None
+                        # Check global MCP Apps enable flag
+                        mcp_apps_enabled = getattr(
+                            request.app.state.config, "ENABLE_MCP_APPS", True
                         )
+
+                        if mcp_apps_enabled and tool_type == "mcp" and tool:
+                            spec = tool.get("spec", {})
+                            tool_meta = spec.get("_meta", {})
+                            # Check nested format: _meta.ui.resourceUri
+                            ui_meta = tool_meta.get("ui", {})
+                            resource_uri = ui_meta.get("resourceUri")
+                            # Check flat format: _meta["ui/resourceUri"]
+                            if not resource_uri:
+                                resource_uri = tool_meta.get("ui/resourceUri")
+                            if resource_uri and resource_uri.startswith("ui://"):
+                                # Extract server_id from tool name (format: server_id_tool_name)
+                                parts = tool_function_name.split("_", 1)
+                                server_id = parts[0] if len(parts) > 1 else ""
+
+                                # Check per-server MCP Apps enable flag
+                                server_mcp_apps_enabled = True
+                                for server_conn in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+                                    if (
+                                        server_conn.get("type", "") == "mcp"
+                                        and server_conn.get("config", {}).get("id", "") == server_id
+                                    ):
+                                        # Check per-server enable_mcp_apps flag (default True)
+                                        server_mcp_apps_enabled = server_conn.get(
+                                            "config", {}
+                                        ).get("enable_mcp_apps", True)
+                                        break
+
+                                if server_mcp_apps_enabled:
+                                    mcp_app_meta = {
+                                        "resourceUri": resource_uri,
+                                        "serverId": server_id,
+                                        "visibility": ui_meta.get("visibility", ["model", "app"]),
+                                        "permissions": ui_meta.get("permissions", {}),
+                                    }
+
+                        result_entry = {
+                            "tool_call_id": tool_call_id,
+                            "content": tool_result or "",
+                            **(
+                                {"files": tool_result_files}
+                                if tool_result_files
+                                else {}
+                            ),
+                            **(
+                                {"embeds": tool_result_embeds}
+                                if tool_result_embeds
+                                else {}
+                            ),
+                            **(
+                                {"mcp_app": mcp_app_meta}
+                                if mcp_app_meta
+                                else {}
+                            ),
+                        }
 
                     # Update function_call statuses and append function_call_output items
                     for tc in response_tool_calls:
@@ -4025,6 +4171,11 @@ async def streaming_chat_response_handler(response, ctx):
                                 **(
                                     {"embeds": result.get("embeds")}
                                     if result.get("embeds")
+                                    else {}
+                                ),
+                                **(
+                                    {"mcp_app": result.get("mcp_app")}
+                                    if result.get("mcp_app")
                                     else {}
                                 ),
                             }

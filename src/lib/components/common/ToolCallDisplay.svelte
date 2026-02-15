@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
 	import { v4 as uuidv4 } from 'uuid';
+	import { onMount } from 'svelte';
 
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
@@ -14,6 +15,10 @@
 	import Markdown from '../chat/Messages/Markdown.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
+	import MCPAppView from '../chat/Messages/MCPAppView.svelte';
+	import { readResource } from '$lib/apis/mcp';
+	import { createAppInstance, addApp } from '$lib/stores/mcpApps';
+	import type { MCPAppResource } from '$lib/types/mcpApps';
 
 	export let id: string = '';
 	export let attributes: {
@@ -25,6 +30,7 @@
 		files?: string;
 		embeds?: string;
 		done?: string;
+		mcp_app?: string;
 	} = {};
 
 	export let open = false;
@@ -65,10 +71,107 @@
 	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
 	$: isDone = attributes?.done === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
+
+	// MCP App state
+	let mcpApp: { resourceUri: string; serverId: string; visibility?: string[]; permissions?: Record<string, unknown> } | null = null;
+	let mcpResource: MCPAppResource | null = null;
+	let mcpInstanceId: string | null = null;
+	let mcpLoading = false;
+	let mcpError: string | null = null;
+
+	// Parse MCP app attribute
+	$: {
+		if (attributes?.mcp_app) {
+			try {
+				const parsed = JSON.parse(decode(attributes.mcp_app));
+				if (parsed?.resourceUri && parsed?.serverId) {
+					mcpApp = parsed;
+				}
+			} catch (e) {
+				console.error('Failed to parse mcp_app attribute:', e);
+			}
+		}
+	}
+
+	// Fetch MCP resource when mcpApp changes
+	async function loadMcpResource() {
+		if (!mcpApp) return;
+
+		mcpLoading = true;
+		mcpError = null;
+
+		try {
+			const token = localStorage.token;
+			if (!token) {
+				throw new Error('No auth token available');
+			}
+
+			const resource = await readResource(token, mcpApp.serverId, mcpApp.resourceUri);
+			mcpResource = resource;
+
+			// Create app instance
+			const instance = createAppInstance({
+				serverId: mcpApp.serverId,
+				toolName: attributes.name || 'MCP App',
+				resource: resource,
+				toolCallId: attributes.id
+			});
+
+			mcpInstanceId = instance.instanceId;
+			addApp(instance);
+		} catch (e) {
+			console.error('Failed to load MCP resource:', e);
+			mcpError = String(e);
+		} finally {
+			mcpLoading = false;
+		}
+	}
+
+	// Load resource when component mounts if mcpApp is present
+	onMount(() => {
+		if (mcpApp && isDone) {
+			loadMcpResource();
+		}
+	});
+
+	// Also react to mcpApp changes
+	$: if (mcpApp && isDone && !mcpResource && !mcpLoading && !mcpError) {
+		loadMcpResource();
+	}
 </script>
 
 <div {id} class={className}>
-	{#if embeds && Array.isArray(embeds) && embeds.length > 0}
+	{#if mcpApp && isDone}
+		<!-- MCP App Mode: Show MCP App UI -->
+		<div class="py-1 w-full">
+			<div class="w-full text-xs text-gray-500 mb-2">
+				<div class="">
+					{attributes.name}
+				</div>
+			</div>
+
+			{#if mcpLoading}
+				<div class="flex items-center justify-center p-4 text-gray-500 border border-gray-200 dark:border-gray-700 rounded-lg">
+					<Spinner className="size-4 mr-2" />
+					<span>{$i18n.t('Loading MCP App...')}</span>
+				</div>
+			{:else if mcpError}
+				<div class="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg border border-red-200 dark:border-red-800">
+					<strong>{$i18n.t('Failed to load app')}:</strong> {mcpError}
+				</div>
+			{:else if mcpResource && mcpInstanceId}
+				<MCPAppView
+					instanceId={mcpInstanceId}
+					resource={mcpResource}
+					toolName={attributes.name || 'MCP App'}
+					serverId={mcpApp.serverId}
+					toolResult={result ? parseJSONString(result) : null}
+					toolCallId={attributes.id}
+					token={localStorage.token || ''}
+				/>
+			{/if}
+		</div>
+	{:else if embeds && Array.isArray(embeds) && embeds.length > 0}
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
 			<div class="w-full text-xs text-gray-500">

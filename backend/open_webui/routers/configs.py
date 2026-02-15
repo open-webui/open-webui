@@ -293,7 +293,14 @@ async def verify_tool_servers_config(
                             headers = {}
                         headers.update(form_data.headers)
 
-                    await client.connect(form_data.url, headers=headers)
+                    enable_mcp_apps = getattr(
+                        request.app.state.config, "ENABLE_MCP_APPS", True
+                    )
+                    await client.connect(
+                        form_data.url,
+                        headers=headers,
+                        enable_mcp_apps=enable_mcp_apps,
+                    )
                     specs = await client.list_tool_specs()
                     return {
                         "status": True,
@@ -538,3 +545,31 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+############################
+# MCP Apps Config
+############################
+
+
+class MCPAppsConfigForm(BaseModel):
+    ENABLE_MCP_APPS: bool
+
+
+@router.get("/mcp_apps", response_model=MCPAppsConfigForm)
+async def get_mcp_apps_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "ENABLE_MCP_APPS": request.app.state.config.ENABLE_MCP_APPS,
+    }
+
+
+@router.post("/mcp_apps", response_model=MCPAppsConfigForm)
+async def set_mcp_apps_config(
+    request: Request,
+    form_data: MCPAppsConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.ENABLE_MCP_APPS = form_data.ENABLE_MCP_APPS
+    return {
+        "ENABLE_MCP_APPS": request.app.state.config.ENABLE_MCP_APPS,
+    }
