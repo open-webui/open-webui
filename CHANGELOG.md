@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 🌐 **Translation updates.** Translations for Spanish and German were enhanced and expanded.
+
 ### Fixed
 
 - 🔐 **OAuth session error handling.** Corrupted OAuth sessions are now gracefully handled and automatically cleaned up instead of causing errors. [Commit](https://github.com/open-webui/open-webui/commit/7e224e4a536b07ec008613f06592e34050e7067c)
