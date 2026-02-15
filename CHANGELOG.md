@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 🔐 **OAuth session error handling.** Corrupted OAuth sessions are now gracefully handled and automatically cleaned up instead of causing errors. [Commit](https://github.com/open-webui/open-webui/commit/7e224e4a536b07ec008613f06592e34050e7067c)
+- 🐛 **Task model selector validation.** The task model selector in admin settings now correctly accepts models based on the new access grants system instead of rejecting all models with an incorrect error. [Commit](https://github.com/open-webui/open-webui/commit/9a2595f0706d0c9d809ae7746001cf799f98db1d)
 
 ## [0.8.1] - 2026-02-14
 
