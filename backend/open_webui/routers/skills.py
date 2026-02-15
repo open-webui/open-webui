@@ -17,7 +17,7 @@ from open_webui.models.skills import (
     SkillAccessListResponse,
     Skills,
 )
-from open_webui.models.access_grants import AccessGrants
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
@@ -312,6 +312,7 @@ class SkillAccessGrantsForm(BaseModel):
 
 @router.post("/id/{id}/access/update", response_model=Optional[SkillModel])
 async def update_skill_access_by_id(
+    request: Request,
     id: str,
     form_data: SkillAccessGrantsForm,
     user=Depends(get_verified_user),
@@ -339,6 +340,25 @@ async def update_skill_access_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+
+    # Strip public sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_public_read_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "sharing.public_skills",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = [
+            grant
+            for grant in form_data.access_grants
+            if not (
+                grant.get("principal_type") == "user"
+                and grant.get("principal_id") == "*"
+            )
+        ]
 
     AccessGrants.set_access_grants("skill", id, form_data.access_grants, db=db)
 

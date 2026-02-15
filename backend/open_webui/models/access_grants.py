@@ -515,6 +515,62 @@ class AccessGrantsTable:
             )
             return exists is not None
 
+    def get_accessible_resource_ids(
+        self,
+        user_id: str,
+        resource_type: str,
+        resource_ids: list[str],
+        permission: str = "read",
+        user_group_ids: Optional[set[str]] = None,
+        db: Optional[Session] = None,
+    ) -> set[str]:
+        """
+        Batch check: return the subset of resource_ids that the user can access.
+
+        This replaces calling has_access() in a loop (N+1) with a single query.
+        """
+        if not resource_ids:
+            return set()
+
+        with get_db_context(db) as db:
+            conditions = [
+                and_(
+                    AccessGrant.principal_type == "user",
+                    AccessGrant.principal_id == "*",
+                ),
+                and_(
+                    AccessGrant.principal_type == "user",
+                    AccessGrant.principal_id == user_id,
+                ),
+            ]
+
+            if user_group_ids is None:
+                from open_webui.models.groups import Groups
+
+                user_groups = Groups.get_groups_by_member_id(user_id, db=db)
+                user_group_ids = {group.id for group in user_groups}
+
+            if user_group_ids:
+                conditions.append(
+                    and_(
+                        AccessGrant.principal_type == "group",
+                        AccessGrant.principal_id.in_(user_group_ids),
+                    )
+                )
+
+            rows = (
+                db.query(AccessGrant.resource_id)
+                .filter(
+                    AccessGrant.resource_type == resource_type,
+                    AccessGrant.resource_id.in_(resource_ids),
+                    AccessGrant.permission == permission,
+                    or_(*conditions),
+                )
+                .distinct()
+                .all()
+            )
+            return {row[0] for row in rows}
+
     def get_users_with_access(
         self,
         resource_type: str,

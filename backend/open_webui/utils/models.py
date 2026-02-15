@@ -377,10 +377,21 @@ def get_filtered_models(models, user, db=None):
             for model_info in Models.get_models_by_ids(model_ids)
         }
 
-        filtered_models = []
         user_group_ids = {
             group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
         }
+
+        # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
+        accessible_model_ids = AccessGrants.get_accessible_resource_ids(
+            user_id=user.id,
+            resource_type="model",
+            resource_ids=list(model_infos.keys()),
+            permission="read",
+            user_group_ids=user_group_ids,
+            db=db,
+        )
+
+        filtered_models = []
         for model in models:
             if model.get("arena"):
                 meta = model.get("info", {}).get("meta", {})
@@ -399,14 +410,7 @@ def get_filtered_models(models, user, db=None):
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == model_info.user_id
-                    or AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type="model",
-                        resource_id=model_info.id,
-                        permission="read",
-                        user_group_ids=user_group_ids,
-                        db=db,
-                    )
+                    or model_info.id in accessible_model_ids
                 ):
                     filtered_models.append(model)
 
