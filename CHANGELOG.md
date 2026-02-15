@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 🧠 **Skill content handling.** User-selected skills now have their full content injected into the chat, while model-attached skills only display name and description in the available skills list. This allows users to override skill behavior while model-attached skills remain flexible. [Commit](https://github.com/open-webui/open-webui/commit/393c0071dc612c5ac982fb37dfc0288cb9911439)
 - 🌐 **Translation updates.** Translations for Spanish and German were enhanced and expanded.
 
 ### Fixed
@@ -17,8 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🐛 **Task model selector validation.** The task model selector in admin settings now correctly accepts models based on the new access grants system instead of rejecting all models with an incorrect error. [Commit](https://github.com/open-webui/open-webui/commit/9a2595f0706d0c9d809ae7746001cf799f98db1d)
 
 ### Changed
-
-- 🧠 **Skill content handling.** User-selected skills now have their full content injected into the chat, while model-attached skills only display name and description in the available skills list. This allows users to override skill behavior while model-attached skills remain flexible. [Commit](https://github.com/open-webui/open-webui/commit/393c0071dc612c5ac982fb37dfc0288cb9911439)
 
 ## [0.8.1] - 2026-02-14
 
