@@ -30,6 +30,7 @@
 
 	let isPDF = false;
 	let isAudio = false;
+	let isImage = false;
 	let isExcel = false;
 
 	let selectedTab = '';
@@ -78,6 +79,18 @@
 		(item?.name && item?.name.toLowerCase().endsWith('.ogg')) ||
 		(item?.name && item?.name.toLowerCase().endsWith('.m4a')) ||
 		(item?.name && item?.name.toLowerCase().endsWith('.webm'));
+
+	$: isImage =
+		(item?.meta?.content_type ?? '').startsWith('image/') ||
+		(item?.name &&
+			(item.name.toLowerCase().endsWith('.png') ||
+				item.name.toLowerCase().endsWith('.jpg') ||
+				item.name.toLowerCase().endsWith('.jpeg') ||
+				item.name.toLowerCase().endsWith('.gif') ||
+				item.name.toLowerCase().endsWith('.webp') ||
+				item.name.toLowerCase().endsWith('.svg') ||
+				item.name.toLowerCase().endsWith('.bmp') ||
+				item.name.toLowerCase().endsWith('.ico')));
 
 	$: isExcel =
 		item?.meta?.content_type === 'application/vnd.ms-excel' ||
@@ -341,7 +354,16 @@
 					</div>
 				{/if}
 
-				{#if selectedTab === ''}
+				{#if isImage}
+					<div class="w-full max-h-[70vh] overflow-auto">
+						<img
+							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+							alt={item?.name ?? 'Image'}
+							class="w-full object-contain rounded-lg"
+							loading="lazy"
+						/>
+					</div>
+				{:else if selectedTab === ''}
 					{#if item?.file?.data}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
 							{(item?.file?.data?.content ?? '').trim() || 'No content'}
