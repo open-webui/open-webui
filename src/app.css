@@ -297,6 +297,10 @@ input[type='number'] {
 	width: 100%;
 }
 
+.cm-content {
+	font-family:'Fira Mono', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
+}
+
 .cm-scroller:active::-webkit-scrollbar-thumb,
 .cm-scroller:focus::-webkit-scrollbar-thumb,
 .cm-scroller:hover::-webkit-scrollbar-thumb {
