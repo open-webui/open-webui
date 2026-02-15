@@ -2136,11 +2136,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
 
-    # Skills: inject manifest only — model uses view_skill tool to load full content on-demand
-    user_skill_ids = form_data.pop("skill_ids", None) or []
-    model_skill_ids = model.get("info", {}).get("meta", {}).get("skillIds", [])
+    # Skills
+    user_skill_ids = set(form_data.pop("skill_ids", None) or [])
+    model_skill_ids = set(model.get("info", {}).get("meta", {}).get("skillIds", []))
 
-    all_skill_ids = list(set(user_skill_ids + model_skill_ids))
+    all_skill_ids = user_skill_ids | model_skill_ids
     available_skills = []
     if all_skill_ids:
         from open_webui.models.skills import Skills as SkillsModel
@@ -2156,13 +2156,24 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             and s.is_active
         ]
 
-        if available_skills:
-            manifest = "<available_skills>\n"
-            for skill in available_skills:
-                manifest += f"<skill>\n<name>{skill.name}</name>\n<description>{skill.description or ''}</description>\n</skill>\n"
-            manifest += "</available_skills>"
+        skill_descriptions = ""
+        for skill in available_skills:
+            if skill.id in user_skill_ids:
+                # User-selected: inject full content
+                form_data["messages"] = add_or_update_system_message(
+                    f"<skill name=\"{skill.name}\">\n{skill.content}\n</skill>",
+                    form_data["messages"],
+                    append=True,
+                )
+            else:
+                # Model-attached: name+description only
+                skill_descriptions += f"<skill>\n<name>{skill.name}</name>\n<description>{skill.description or ''}</description>\n</skill>\n"
+
+        if skill_descriptions:
             form_data["messages"] = add_or_update_system_message(
-                manifest, form_data["messages"], append=True
+                f"<available_skills>\n{skill_descriptions}</available_skills>",
+                form_data["messages"],
+                append=True,
             )
 
     prompt = get_last_user_message(form_data["messages"])
@@ -2399,7 +2410,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             {
                 **extra_params,
                 "__event_emitter__": event_emitter,
-                "__skill_ids__": [s.id for s in available_skills],
+                "__skill_ids__": [s.id for s in available_skills if s.id not in user_skill_ids],
             },
             features,
             model,
