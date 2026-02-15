@@ -1918,6 +1918,27 @@ async def convert_url_images_to_base64(form_data):
     return form_data
 
 
+def load_messages_from_db(
+    chat_id: str, message_id: str
+) -> Optional[list[dict]]:
+    """
+    Load the message chain from DB up to message_id,
+    keeping only LLM-relevant fields (role, content, output).
+    """
+    messages_map = Chats.get_messages_map_by_chat_id(chat_id)
+    if not messages_map:
+        return None
+
+    db_messages = get_message_list(messages_map, message_id)
+    if not db_messages:
+        return None
+
+    return [
+        {k: v for k, v in msg.items() if k in ("role", "content", "output")}
+        for msg in db_messages
+    ]
+
+
 def process_messages_with_output(messages: list[dict]) -> list[dict]:
     """
     Process messages with OR-aligned output items for LLM consumption.
@@ -1949,6 +1970,19 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
+
+    # Load messages from DB when available — DB preserves structured 'output' items
+    # which the frontend strips, causing tool calls to be merged into content.
+    chat_id = metadata.get("chat_id")
+    parent_message_id = metadata.get("parent_message_id")
+
+    if chat_id and parent_message_id and not chat_id.startswith("local:"):
+        db_messages = load_messages_from_db(chat_id, parent_message_id)
+        if db_messages:
+            system_message = get_system_message(form_data.get("messages", []))
+            form_data["messages"] = (
+                [system_message, *db_messages] if system_message else db_messages
+            )
 
     # Process messages with OR-aligned output items for clean LLM messages
     form_data["messages"] = process_messages_with_output(form_data.get("messages", []))
