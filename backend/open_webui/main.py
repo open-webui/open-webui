@@ -517,6 +517,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
+from open_webui.utils.tools import set_tool_servers
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -655,6 +656,32 @@ async def lifespan(app: FastAPI):
             ),
             None,
         )
+
+    # Pre-fetch tool server specs so the first request doesn't pay the latency cost
+    if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
+        log.info("Initializing tool servers...")
+        try:
+            mock_request = Request(
+                {
+                    "type": "http",
+                    "asgi.version": "3.0",
+                    "asgi.spec_version": "2.0",
+                    "method": "GET",
+                    "path": "/internal",
+                    "query_string": b"",
+                    "headers": Headers({}).raw,
+                    "client": ("127.0.0.1", 12345),
+                    "server": ("127.0.0.1", 80),
+                    "scheme": "http",
+                    "app": app,
+                }
+            )
+            await set_tool_servers(mock_request)
+            log.info(
+                f"Initialized {len(app.state.TOOL_SERVERS)} tool server(s)"
+            )
+        except Exception as e:
+            log.warning(f"Failed to initialize tool servers at startup: {e}")
 
     yield
 
