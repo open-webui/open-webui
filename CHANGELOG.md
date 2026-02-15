@@ -19,8 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔗 **Tool call message preservation.** Models no longer hallucinate tool outputs in multi-turn conversations because tool call history is now properly preserved instead of being merged into assistant messages. [#21098](https://github.com/open-webui/open-webui/discussions/21098), [#20600](https://github.com/open-webui/open-webui/issues/20600), [Commit](https://github.com/open-webui/open-webui/commit/f2aca781c87244cffc130aa2722e700c19a81d66)
 - 🔧 **Tool server startup initialization.** External tool servers configured via the "TOOL_SERVER_CONNECTIONS" environment variable now initialize automatically on startup, eliminating the need to manually visit the Admin Panel and save for tools to become available. This enables proper GitOps and containerized deployments. [#18140](https://github.com/open-webui/open-webui/issues/18140), [#20914](https://github.com/open-webui/open-webui/pull/20914), [Commit](https://github.com/open-webui/open-webui/commit/f20cc6d7e6da493eb75ca1618f5cbd068fa57684)
 
-### Fixed
-
 ## [0.8.1] - 2026-02-14
 
 ### Added
