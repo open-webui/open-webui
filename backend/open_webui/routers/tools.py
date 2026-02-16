@@ -580,6 +580,52 @@ async def update_tool_access_by_id(
 
 
 ############################
+# BatchUpdateToolAccess
+############################
+
+
+class BatchAccessForm(BaseModel):
+    ids: list[str]
+    access: Optional[str] = None  # "public" or "private"
+    access_grants: Optional[list[dict]] = None
+
+
+@router.post("/access/batch/update")
+async def batch_update_tool_access(
+    request: Request,
+    form_data: BatchAccessForm,
+    user=Depends(get_admin_user),
+    db: Session = Depends(get_session),
+):
+    if form_data.access_grants is not None:
+        access_grants = form_data.access_grants
+    elif form_data.access == "public":
+        access_grants = [
+            {
+                "principal_type": "user",
+                "principal_id": "*",
+                "permission": "read",
+            }
+        ]
+    elif form_data.access == "private":
+        access_grants = []
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either access ('public'/'private') or access_grants must be provided",
+        )
+
+    updated_ids = []
+    for tool_id in form_data.ids:
+        tool = Tools.get_tool_by_id(tool_id, db=db)
+        if tool:
+            AccessGrants.set_access_grants("tool", tool_id, access_grants, db=db)
+            updated_ids.append(tool_id)
+
+    return {"updated": updated_ids, "count": len(updated_ids)}
+
+
+############################
 # DeleteToolsById
 ############################
 

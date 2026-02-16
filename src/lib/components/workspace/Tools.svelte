@@ -16,7 +16,8 @@
 		exportTools,
 		getToolById,
 		getToolList,
-		getTools
+		getTools,
+		updateToolAccessGrantsBatch
 	} from '$lib/apis/tools';
 	import { capitalizeFirstLetter } from '$lib/utils';
 
@@ -38,6 +39,10 @@
 	import ImportModal from '../ImportModal.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import AccessControlModal from './common/AccessControlModal.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import { DropdownMenu } from 'bits-ui';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	let shiftKey = false;
 	let loaded = false;
@@ -62,6 +67,89 @@
 	let viewOption = '';
 
 	let showImportModal = false;
+
+	// Batch selection state
+	let selectionMode = false;
+	let selectedToolIds: Set<string> = new Set();
+
+	$: allSelected =
+		filteredItems.length > 0 && filteredItems.every((t) => selectedToolIds.has(t.id));
+
+	const toggleSelectAll = () => {
+		if (allSelected) {
+			selectedToolIds = new Set();
+		} else {
+			selectedToolIds = new Set(filteredItems.map((t) => t.id));
+		}
+	};
+
+	const toggleToolSelection = (id: string) => {
+		const next = new Set(selectedToolIds);
+		if (next.has(id)) {
+			next.delete(id);
+		} else {
+			next.add(id);
+		}
+		selectedToolIds = next;
+	};
+
+	let showBatchAccessControlModal = false;
+	let batchAccessGrants: any[] = [];
+
+	const batchSetAccess = async (access: 'public' | 'private') => {
+		const ids = Array.from(selectedToolIds);
+		if (ids.length === 0) return;
+
+		const res = await updateToolAccessGrantsBatch(localStorage.token, ids, access).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+
+		if (res) {
+			toast.success(
+				$i18n.t('{{count}} tool(s) updated to {{access}}', {
+					count: res.count,
+					access: access
+				})
+			);
+			selectedToolIds = new Set();
+			selectionMode = false;
+			await init();
+		}
+	};
+
+	const batchSetCustomAccessGrants = async () => {
+		const ids = Array.from(selectedToolIds);
+		if (ids.length === 0) return;
+
+		const res = await updateToolAccessGrantsBatch(
+			localStorage.token,
+			ids,
+			undefined,
+			batchAccessGrants
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success(
+				$i18n.t('{{count}} tool(s) access updated', {
+					count: res.count
+				})
+			);
+			selectedToolIds = new Set();
+			selectionMode = false;
+			await init();
+		}
+	};
+
+	const exitSelectionMode = () => {
+		selectionMode = false;
+		selectedToolIds = new Set();
+	};
 
 	$: if (query !== undefined) {
 		clearTimeout(searchDebounceTimer);
@@ -283,6 +371,25 @@
 				{/if}
 
 				{#if $user?.role === 'admin'}
+					<button
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl {selectionMode
+							? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+							: 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200'} transition"
+						on:click={() => {
+							if (selectionMode) {
+								exitSelectionMode();
+							} else {
+								selectionMode = true;
+							}
+						}}
+					>
+						<div class="self-center font-medium line-clamp-1">
+							{selectionMode ? $i18n.t('Cancel') : $i18n.t('Select')}
+						</div>
+					</button>
+				{/if}
+
+				{#if $user?.role === 'admin'}
 					<AddToolMenu
 						createHandler={() => {
 							goto('/workspace/tools/create');
@@ -366,16 +473,203 @@
 			</div>
 		</div>
 
+		{#if selectionMode && selectedToolIds.size > 0}
+			<div
+				class="flex items-center justify-between px-4 py-2 mx-3 mb-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800"
+			>
+				<div class="text-sm font-medium text-blue-700 dark:text-blue-300">
+					{$i18n.t('{{count}} selected', { count: selectedToolIds.size })}
+				</div>
+				<div class="flex gap-2">
+					<Dropdown>
+						<button
+							class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/50 dark:hover:bg-green-900/70 dark:text-green-300 transition"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="size-3.5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+								/>
+							</svg>
+							{$i18n.t('Make Public')}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="size-3"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="m19.5 8.25-7.5 7.5-7.5-7.5"
+								/>
+							</svg>
+						</button>
+						<div slot="content">
+							<DropdownMenu.Content
+								class="w-full max-w-[200px] rounded-xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+								sideOffset={4}
+								side="bottom"
+								align="start"
+								transition={flyAndScale}
+							>
+								<DropdownMenu.Item
+									class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+									on:click={() => batchSetAccess('public')}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-4"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+										/>
+									</svg>
+									<div>{$i18n.t('Make Public')}</div>
+								</DropdownMenu.Item>
+								<DropdownMenu.Item
+									class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+									on:click={() => {
+										batchAccessGrants = [];
+										showBatchAccessControlModal = true;
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-4"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"
+										/>
+									</svg>
+									<div>{$i18n.t('Access Control')}</div>
+								</DropdownMenu.Item>
+							</DropdownMenu.Content>
+						</div>
+					</Dropdown>
+					<button
+						class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-700 dark:bg-orange-900/50 dark:hover:bg-orange-900/70 dark:text-orange-300 transition"
+						on:click={() => batchSetAccess('private')}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="size-3.5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+							/>
+						</svg>
+						{$i18n.t('Make Private')}
+					</button>
+				</div>
+			</div>
+		{/if}
+
+		{#if selectionMode && (filteredItems ?? []).length > 0}
+			<div class="flex items-center gap-2 px-5 py-1">
+				<input
+					type="checkbox"
+					checked={allSelected}
+					on:change={toggleSelectAll}
+					class="accent-blue-600 cursor-pointer"
+				/>
+				<span class="text-xs text-gray-500 dark:text-gray-400">
+					{allSelected ? $i18n.t('Deselect All') : $i18n.t('Select All')}
+				</span>
+			</div>
+		{/if}
+
 		{#if (filteredItems ?? []).length !== 0}
 			<div class=" my-2 gap-2 grid px-3 lg:grid-cols-2">
 				{#each filteredItems as tool}
 					<Tooltip content={tool?.meta?.description ?? tool?.id}>
 						<div
-							class=" flex space-x-4 text-left w-full px-3 py-2.5 transition rounded-2xl {tool.write_access
-								? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50'
-								: 'cursor-not-allowed opacity-60'}"
+							class=" flex space-x-4 text-left w-full px-3 py-2.5 transition rounded-2xl {selectionMode
+								? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50'
+								: tool.write_access
+									? 'cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50'
+									: 'cursor-not-allowed opacity-60'} {selectionMode && selectedToolIds.has(tool.id)
+								? 'bg-blue-50/50 dark:bg-blue-900/20'
+								: ''}"
+							on:click={() => {
+								if (selectionMode) {
+									toggleToolSelection(tool.id);
+								}
+							}}
 						>
-							{#if tool.write_access}
+							{#if selectionMode}
+								<div class="flex items-center self-center mr-1">
+									<input
+										type="checkbox"
+										checked={selectedToolIds.has(tool.id)}
+										on:click|stopPropagation={() => toggleToolSelection(tool.id)}
+										class="accent-blue-600 cursor-pointer"
+									/>
+								</div>
+							{/if}
+							{#if selectionMode}
+								<div class=" flex flex-1 space-x-3.5 w-full">
+									<div class="flex items-center text-left">
+										<div class=" flex-1 self-center">
+											<Tooltip content={tool.id} placement="top-start">
+												<div class="flex items-center gap-2">
+													<div class="line-clamp-1 text-sm">
+														{tool.name}
+													</div>
+													{#if tool?.meta?.manifest?.version}
+														<div class=" text-gray-500 text-xs font-medium shrink-0">
+															v{tool?.meta?.manifest?.version ?? ''}
+														</div>
+													{/if}
+												</div>
+											</Tooltip>
+											<div class="px-0.5">
+												<div class="text-xs text-gray-500 shrink-0">
+													<Tooltip
+														content={tool?.user?.email ?? $i18n.t('Deleted User')}
+														className="flex shrink-0"
+														placement="top-start"
+													>
+														{$i18n.t('By {{name}}', {
+															name: capitalizeFirstLetter(
+																tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
+															)
+														})}
+													</Tooltip>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							{:else if tool.write_access}
 								<a
 									class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
 									href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
@@ -450,7 +744,7 @@
 									</div>
 								</div>
 							{/if}
-							{#if tool.write_access}
+							{#if !selectionMode && tool.write_access}
 								<div class="flex flex-row gap-0.5 self-center">
 									{#if shiftKey}
 										<Tooltip content={$i18n.t('Delete')}>
@@ -583,6 +877,17 @@
 			</a>
 		</div>
 	{/if}
+
+	<AccessControlModal
+		bind:show={showBatchAccessControlModal}
+		bind:accessGrants={batchAccessGrants}
+		accessRoles={['read', 'write']}
+		share={$user?.role === 'admin'}
+		sharePublic={$user?.role === 'admin'}
+		onChange={async () => {
+			await batchSetCustomAccessGrants();
+		}}
+	/>
 
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}

@@ -254,6 +254,47 @@ export const updateToolAccessGrants = async (token: string, id: string, accessGr
 	return res;
 };
 
+export const updateToolAccessGrantsBatch = async (
+	token: string,
+	ids: string[],
+	access?: 'public' | 'private',
+	accessGrants?: any[]
+) => {
+	let error = null;
+
+	const body: any = { ids };
+	if (accessGrants !== undefined) {
+		body.access_grants = accessGrants;
+	} else if (access) {
+		body.access = access;
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/access/batch/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(body)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const deleteToolById = async (token: string, id: string) => {
 	let error = null;
 
