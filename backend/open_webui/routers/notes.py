@@ -345,6 +345,25 @@ async def update_note_access_by_id(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
+    # Strip public sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_public_read_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "sharing.public_notes",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = [
+            grant
+            for grant in form_data.access_grants
+            if not (
+                grant.get("principal_type") == "user"
+                and grant.get("principal_id") == "*"
+            )
+        ]
+
     AccessGrants.set_access_grants("note", id, form_data.access_grants, db=db)
 
     return Notes.get_note_by_id(id, db=db)

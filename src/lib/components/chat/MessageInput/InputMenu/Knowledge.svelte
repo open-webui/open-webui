@@ -186,12 +186,16 @@
 						}}
 						data-selected={idx === selectedIdx}
 					>
-						<div class="  text-black dark:text-gray-100 flex items-center gap-1 shrink-0">
+						<div class="w-full text-left text-black dark:text-gray-100 flex items-center gap-1">
 							<Tooltip content={$i18n.t('Collection')} placement="top">
 								<Database className="size-4" />
 							</Tooltip>
 
-							<Tooltip content={item.description || decodeString(item?.name)} placement="top-start">
+							<Tooltip
+								content={item.description || decodeString(item?.name)}
+								placement="top-start"
+								className="flex flex-1 min-w-0"
+							>
 								<div class="line-clamp-1 flex-1 text-sm">
 									{decodeString(item?.name)}
 								</div>

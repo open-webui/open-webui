@@ -250,8 +250,12 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		// remove trailing slash from url
-		url = url.replace(/\/$/, '');
+		// remove trailing slash from url for non-MCP connections
+		// MCP servers may require a trailing slash; stripping it can cause
+		// 301 redirects that lose auth headers (see #21179)
+		if (type !== 'mcp') {
+			url = url.replace(/\/$/, '');
+		}
 		if (id.includes(':') || id.includes('|')) {
 			toast.error($i18n.t('ID cannot contain ":" or "|" characters'));
 			loading = false;

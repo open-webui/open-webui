@@ -868,9 +868,7 @@
 			bind:show={showAccessControlModal}
 			bind:accessGrants={knowledge.access_grants}
 			share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
-			sharePublic={$user?.permissions?.sharing?.public_knowledge ||
-				$user?.role === 'admin' ||
-				knowledge?.write_access}
+			sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
 			onChange={async () => {
 				try {
 					await updateKnowledgeAccessGrants(localStorage.token, id, knowledge.access_grants ?? []);
@@ -888,7 +886,7 @@
 						<div class="w-full flex justify-between items-center">
 							<input
 								type="text"
-								class="text-left w-full font-medium text-lg font-primary bg-transparent outline-hidden flex-1"
+								class="text-left w-full text-lg bg-transparent outline-hidden flex-1"
 								bind:value={knowledge.name}
 								placeholder={$i18n.t('Knowledge Name')}
 								disabled={!knowledge?.write_access}

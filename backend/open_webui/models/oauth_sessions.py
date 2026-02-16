@@ -102,7 +102,7 @@ class OAuthSessionTable:
             decrypted = self.fernet.decrypt(token.encode()).decode()
             return json.loads(decrypted)
         except Exception as e:
-            log.error(f"Error decrypting tokens: {e}")
+            log.error(f"Error decrypting tokens: {type(e).__name__}: {e}")
             raise
 
     def create_session(
@@ -209,8 +209,15 @@ class OAuthSessionTable:
 
                 results = []
                 for session in sessions:
-                    session.token = self._decrypt_token(session.token)
-                    results.append(OAuthSessionModel.model_validate(session))
+                    try:
+                        session.token = self._decrypt_token(session.token)
+                        results.append(OAuthSessionModel.model_validate(session))
+                    except Exception as e:
+                        log.warning(
+                            f"Skipping OAuth session {session.id} due to decryption failure, deleting corrupted session: {type(e).__name__}: {e}"
+                        )
+                        db.query(OAuthSession).filter_by(id=session.id).delete()
+                        db.commit()
 
                 return results
 

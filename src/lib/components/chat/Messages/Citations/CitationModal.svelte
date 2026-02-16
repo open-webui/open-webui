@@ -208,6 +208,9 @@
 	// Audio blob URLs for authenticated requests
 	let audioBlobUrls = {};
 
+	const CONTENT_PREVIEW_LIMIT = 10000;
+	let expandedDocs: Set<number> = new Set();
+
 	export let show = false;
 	export let citation;
 	export let showPercentage = false;
@@ -242,6 +245,7 @@
 	}
 
 	$: if (citation) {
+		expandedDocs = new Set();
 		mergedDocuments = citation.document?.map((c, i) => {
 			return {
 				source: citation.source,
@@ -622,9 +626,36 @@
 									<Markdown content={document.document} id={`citation-${documentIdx}`} />
 								</div>
 							{:else}
-								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">{document.document
-										.trim()
-										.replace(/\n\n+/g, '\n\n')}</pre>
+								{@const rawContent = document.document.trim().replace(/\n\n+/g, '\n\n')}
+								{@const isTruncated =
+									($settings?.renderMarkdownInPreviews ?? true) &&
+									rawContent.length > CONTENT_PREVIEW_LIMIT &&
+									!expandedDocs.has(documentIdx)}
+								{#if $settings?.renderMarkdownInPreviews ?? true}
+									<div class="text-sm prose dark:prose-invert max-w-full">
+										<Markdown
+											content={isTruncated
+												? rawContent.slice(0, CONTENT_PREVIEW_LIMIT)
+												: rawContent}
+											id="citation-{documentIdx}"
+										/>
+									</div>
+									{#if isTruncated}
+										<button
+											class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+											on:click={() => {
+												expandedDocs.add(documentIdx);
+												expandedDocs = expandedDocs;
+											}}
+										>
+											{$i18n.t('Show all ({{COUNT}} characters)', {
+												COUNT: rawContent.length.toLocaleString()
+											})}
+										</button>
+									{/if}
+								{:else}
+									<pre class="text-sm dark:text-gray-400 whitespace-pre-line">{rawContent}</pre>
+								{/if}
 							{/if}
 						</div>
 					</div>

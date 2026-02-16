@@ -12,6 +12,8 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
 	import Markdown from '../chat/Messages/Markdown.svelte';
+	import WrenchSolid from '../icons/WrenchSolid.svelte';
+	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 
@@ -45,20 +47,16 @@
 	function formatJSONString(str: string) {
 		try {
 			const parsed = parseJSONString(str);
-			// If parsed is an object/array, then it's valid JSON
 			if (typeof parsed === 'object') {
 				return JSON.stringify(parsed, null, 2);
 			} else {
-				// It's a primitive value like a number, boolean, etc.
 				return `${JSON.stringify(String(parsed))}`;
 			}
 		} catch (e) {
-			// Not valid JSON, return as-is
 			return str;
 		}
 	}
 
-	// Decode and parse attributes
 	$: args = decode(attributes?.arguments ?? '');
 	$: result = decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
@@ -72,11 +70,8 @@
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
 			<div class="w-full text-xs text-gray-500">
-				<div class="">
-					{attributes.name}
-				</div>
+				{attributes.name}
 			</div>
-
 			{#each embeds as embed, idx}
 				<div class="my-2" id={`${componentId}-tool-call-embed-${idx}`}>
 					<FullHeightIframe
@@ -91,24 +86,31 @@
 			{/each}
 		</div>
 	{:else}
-		<!-- Standard collapsible tool call display -->
+		<!-- Tool call display -->
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
 			class="{buttonClassName} cursor-pointer"
 			on:pointerup={() => {
 				open = !open;
 			}}
 		>
-			<div
-				class="w-full font-medium flex items-center justify-between gap-2 {isExecuting
-					? 'shimmer'
-					: ''}"
-			>
+			<div class="w-full font-medium flex items-center gap-1.5 {isExecuting ? 'shimmer' : ''}">
+				<!-- Status icon -->
 				{#if isExecuting}
 					<div>
 						<Spinner className="size-4" />
 					</div>
+				{:else if isDone}
+					<div class="text-emerald-500 dark:text-emerald-400">
+						<CheckCircle className="size-4" strokeWidth="2" />
+					</div>
+				{:else}
+					<div class="text-gray-400 dark:text-gray-500">
+						<WrenchSolid className="size-3.5" />
+					</div>
 				{/if}
 
+				<!-- Label -->
 				<div class="">
 					{#if isDone}
 						<Markdown
@@ -127,6 +129,7 @@
 					{/if}
 				</div>
 
+				<!-- Chevron -->
 				<div class="flex self-center translate-y-[1px]">
 					{#if open}
 						<ChevronUp strokeWidth="3.5" className="size-3.5" />
@@ -139,22 +142,41 @@
 
 		{#if open}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				{#if isDone}
-					<Markdown
-						id={`${componentId}-tool-call-result`}
-						content={`> \`\`\`json
-> ${formatJSONString(args)}
-> ${formatJSONString(result)}
-> \`\`\``}
-					/>
-				{:else}
-					<Markdown
-						id={`${componentId}-tool-call-args`}
-						content={`> \`\`\`json
-> ${formatJSONString(args)}
-> \`\`\``}
-					/>
-				{/if}
+				<div class="border border-gray-50 dark:border-gray-850/30 rounded-2xl my-1.5 p-3 space-y-3">
+					<!-- Input -->
+					{#if args}
+						<div>
+							<div
+								class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+							>
+								{$i18n.t('Input')}
+							</div>
+							<div class="tool-call-body w-full max-w-none!">
+								<Markdown
+									id={`${componentId}-tool-call-args`}
+									content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
+								/>
+							</div>
+						</div>
+					{/if}
+
+					<!-- Output -->
+					{#if isDone && result}
+						<div>
+							<div
+								class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+							>
+								{$i18n.t('Output')}
+							</div>
+							<div class="w-full max-w-none!">
+								<Markdown
+									id={`${componentId}-tool-call-result`}
+									content={`\`\`\`json\n${formatJSONString(result)}\n\`\`\``}
+								/>
+							</div>
+						</div>
+					{/if}
+				</div>
 			</div>
 		{/if}
 	{/if}

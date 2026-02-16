@@ -166,6 +166,9 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
             model, message_content, reasoning_content, openai_tool_calls, usage
         )
 
+        if done and openai_tool_calls:
+            data["choices"][0]["finish_reason"] = "tool_calls"
+
         line = f"data: {json.dumps(data)}\n\n"
         yield line
 

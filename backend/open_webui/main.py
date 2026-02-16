@@ -64,6 +64,7 @@ from open_webui.socket.main import (
     MODELS,
     app as socket_app,
     periodic_usage_pool_cleanup,
+    periodic_session_pool_cleanup,
     get_event_emitter,
     get_models_in_use,
 )
@@ -559,6 +560,7 @@ from open_webui.utils.middleware import (
 )
 from open_webui.utils.access_control import has_access
 from open_webui.utils.spend_limit import enforce_spend_limit
+from open_webui.utils.tools import set_tool_servers
 
 from open_webui.utils.auth import (
     get_license_data,
@@ -676,6 +678,7 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    asyncio.create_task(periodic_session_pool_cleanup())
 
     # Start temp file cleanup scheduler (critical for Render's 2GB /tmp limit)
     from open_webui.utils.temp_cleanup import periodic_temp_cleanup
@@ -722,6 +725,30 @@ async def lifespan(app: FastAPI):
             ),
             None,
         )
+
+    # Pre-fetch tool server specs so the first request doesn't pay the latency cost
+    if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
+        log.info("Initializing tool servers...")
+        try:
+            mock_request = Request(
+                {
+                    "type": "http",
+                    "asgi.version": "3.0",
+                    "asgi.spec_version": "2.0",
+                    "method": "GET",
+                    "path": "/internal",
+                    "query_string": b"",
+                    "headers": Headers({}).raw,
+                    "client": ("127.0.0.1", 12345),
+                    "server": ("127.0.0.1", 80),
+                    "scheme": "http",
+                    "app": app,
+                }
+            )
+            await set_tool_servers(mock_request)
+            log.info(f"Initialized {len(app.state.TOOL_SERVERS)} tool server(s)")
+        except Exception as e:
+            log.warning(f"Failed to initialize tool servers at startup: {e}")
 
     yield
 

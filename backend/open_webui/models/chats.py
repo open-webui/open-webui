@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.folders import Folders
-from open_webui.models.chat_messages import ChatMessages
+from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.tags import Tag, TagModel, Tags
 from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
 
@@ -1144,22 +1144,29 @@ class ChatTable:
     def update_chat_tags_by_id(
         self, id: str, tags: list[str], user
     ) -> Optional[ChatModel]:
-        chat = self.get_chat_by_id(id)
-        if chat is None:
-            return None
+        with get_db_context() as db:
+            chat = db.get(Chat, id)
+            if chat is None:
+                return None
 
-        self.delete_all_tags_by_id_and_user_id(id, user.id)
+            old_tags = chat.meta.get("tags", [])
+            new_tags = [t for t in tags if t.replace(" ", "_").lower() != "none"]
+            new_tag_ids = [t.replace(" ", "_").lower() for t in new_tags]
 
-        for tag in chat.meta.get("tags", []):
-            if self.count_chats_by_tag_name_and_user_id(tag, user.id) == 0:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+            # Single meta update
+            chat.meta = {**chat.meta, "tags": new_tag_ids}
+            db.commit()
+            db.refresh(chat)
 
-        for tag_name in tags:
-            if tag_name.lower() == "none":
-                continue
+            # Batch-create any missing tag rows
+            Tags.ensure_tags_exist(new_tags, user.id, db=db)
 
-            self.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, tag_name)
-        return self.get_chat_by_id(id)
+            # Clean up orphaned old tags in one query
+            removed = set(old_tags) - set(new_tag_ids)
+            if removed:
+                self.delete_orphan_tags_for_user(list(removed), user.id, db=db)
+
+            return ChatModel.model_validate(chat)
 
     def get_chat_title_by_id(self, id: str) -> Optional[str]:
         chat = self.get_chat_by_id(id)
@@ -1357,6 +1364,13 @@ class ChatTable:
     ) -> bool:
         try:
             with get_db_context(db) as db:
+                # Use subquery to delete chat_messages for shared chats
+                shared_chat_id_subquery = (
+                    db.query(Chat.id).filter_by(user_id=f"shared-{chat_id}").subquery()
+                )
+                db.query(ChatMessage).filter(
+                    ChatMessage.chat_id.in_(shared_chat_id_subquery)
+                ).delete(synchronize_session=False)
                 db.query(Chat).filter_by(user_id=f"shared-{chat_id}").delete()
                 db.commit()
 
@@ -2084,8 +2098,8 @@ class ChatTable:
         """
         with get_db_context(db) as db:
             chat = db.get(Chat, id)
-            tags = chat.meta.get("tags", [])
-            return [Tags.get_tag_by_name_and_user_id(tag, user_id) for tag in tags]
+            tag_ids = chat.meta.get("tags", [])
+            return Tags.get_tags_by_ids_and_user_id(tag_ids, user_id, db=db)
 
     def get_chat_list_by_user_id_and_tag_name(
         self,
@@ -2123,42 +2137,16 @@ class ChatTable:
     def add_chat_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str, db: Optional[Session] = None
     ) -> Optional[ChatModel]:
-        """
-        Add a tag to a chat, creating the tag if it doesn't exist.
-
-        This method provides intelligent tag management:
-        - Creates new tags automatically if they don't exist
-        - Prevents duplicate tags on the same chat
-        - Maintains tag consistency across the system
-        - Updates chat metadata atomically
-
-        Args:
-            id (str): Chat identifier
-            user_id (str): User identifier for tag ownership
-            tag_name (str): Human-readable tag name
-
-        Returns:
-            Optional[ChatModel]: Updated chat model or None if operation failed
-
-        Note:
-            - Tag names are normalized to lowercase with underscores
-            - Duplicate tags are automatically deduplicated
-            - Creates tag in global tag system if not exists
-        """
-        tag = Tags.get_tag_by_name_and_user_id(tag_name, user_id)
-        if tag is None:
-            tag = Tags.insert_new_tag(tag_name, user_id)
+        tag_id = tag_name.replace(" ", "_").lower()
+        Tags.ensure_tags_exist([tag_name], user_id, db=db)
         try:
             with get_db_context(db) as db:
                 chat = db.get(Chat, id)
-
-                tag_id = tag.id
                 if tag_id not in chat.meta.get("tags", []):
                     chat.meta = {
                         **chat.meta,
                         "tags": list(set(chat.meta.get("tags", []) + [tag_id])),
                     }
-
                 db.commit()
                 db.refresh(chat)
                 return ChatModel.model_validate(chat)
@@ -2168,37 +2156,51 @@ class ChatTable:
     def count_chats_by_tag_name_and_user_id(
         self, tag_name: str, user_id: str, db: Optional[Session] = None
     ) -> int:
-        with get_db_context(db) as db:  # Assuming `get_db()` returns a session object
+        with get_db_context(db) as db:
             query = db.query(Chat).filter_by(user_id=user_id, archived=False)
-
-            # Normalize the tag_name for consistency
             tag_id = tag_name.replace(" ", "_").lower()
 
             if db.bind.dialect.name == "sqlite":
-                # SQLite JSON1 support for querying the tags inside the `meta` JSON field
                 query = query.filter(
                     text(
-                        f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
+                        "EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
-
             elif db.bind.dialect.name == "postgresql":
                 # Use optimized single tag query
                 single_tag_query = self._build_tag_query(db, [tag_id])
                 query = query.filter(single_tag_query)
-
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
                 )
 
-            # Get the count of matching records
-            count = query.count()
+            return query.count()
 
-            # Debugging output for inspection
-            log.debug(f"Count of chats for tag '{tag_name}': {count}")
+    def delete_orphan_tags_for_user(
+        self,
+        tag_ids: list[str],
+        user_id: str,
+        threshold: int = 0,
+        db: Optional[Session] = None,
+    ) -> None:
+        """Delete tag rows from *tag_ids* that appear in at most *threshold*
+        non-archived chats for *user_id*.  One query to find orphans, one to
+        delete them.
 
-            return count
+        Use threshold=0 after a tag is already removed from a chat's meta.
+        Use threshold=1 when the chat itself is about to be deleted (the
+        referencing chat still exists at query time).
+        """
+        if not tag_ids:
+            return
+        with get_db_context(db) as db:
+            orphans = []
+            for tag_id in tag_ids:
+                count = self.count_chats_by_tag_name_and_user_id(tag_id, user_id, db=db)
+                if count <= threshold:
+                    orphans.append(tag_id)
+            Tags.delete_tags_by_ids_and_user_id(orphans, user_id, db=db)
 
     def count_chats_by_folder_id_and_user_id(
         self, folder_id: str, user_id: str, db: Optional[Session] = None
@@ -2250,6 +2252,7 @@ class ChatTable:
     def delete_chat_by_id(self, id: str, db: Optional[Session] = None) -> bool:
         try:
             with get_db_context(db) as db:
+                db.query(ChatMessage).filter_by(chat_id=id).delete()
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
 
@@ -2284,6 +2287,7 @@ class ChatTable:
         """
         try:
             with get_db_context(db) as db:
+                db.query(ChatMessage).filter_by(chat_id=id).delete()
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
 
@@ -2298,6 +2302,12 @@ class ChatTable:
             with get_db_context(db) as db:
                 self.delete_shared_chats_by_user_id(user_id, db=db)
 
+                chat_id_subquery = (
+                    db.query(Chat.id).filter_by(user_id=user_id).subquery()
+                )
+                db.query(ChatMessage).filter(
+                    ChatMessage.chat_id.in_(chat_id_subquery)
+                ).delete(synchronize_session=False)
                 db.query(Chat).filter_by(user_id=user_id).delete()
                 db.commit()
 
@@ -2310,6 +2320,14 @@ class ChatTable:
     ) -> bool:
         try:
             with get_db_context(db) as db:
+                chat_id_subquery = (
+                    db.query(Chat.id)
+                    .filter_by(user_id=user_id, folder_id=folder_id)
+                    .subquery()
+                )
+                db.query(ChatMessage).filter(
+                    ChatMessage.chat_id.in_(chat_id_subquery)
+                ).delete(synchronize_session=False)
                 db.query(Chat).filter_by(user_id=user_id, folder_id=folder_id).delete()
                 db.commit()
 
@@ -2343,6 +2361,15 @@ class ChatTable:
                 chats_by_user = db.query(Chat).filter_by(user_id=user_id).all()
                 shared_chat_ids = [f"shared-{chat.id}" for chat in chats_by_user]
 
+                # Use subquery to delete chat_messages for shared chats
+                shared_id_subq = (
+                    db.query(Chat.id)
+                    .filter(Chat.user_id.in_(shared_chat_ids))
+                    .subquery()
+                )
+                db.query(ChatMessage).filter(
+                    ChatMessage.chat_id.in_(shared_id_subq)
+                ).delete(synchronize_session=False)
                 db.query(Chat).filter(Chat.user_id.in_(shared_chat_ids)).delete()
                 db.commit()
 

@@ -9,7 +9,7 @@ from open_webui.models.prompts import (
     PromptModel,
     Prompts,
 )
-from open_webui.models.access_grants import AccessGrants
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import (
     PromptHistories,
@@ -100,8 +100,11 @@ async def get_prompt_list(
     if direction:
         filter["direction"] = direction
 
+    # Pre-fetch user group IDs once - used for both filter and write_access check
+    groups = Groups.get_groups_by_member_id(user.id, db=db)
+    user_group_ids = {group.id for group in groups}
+
     if not (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL):
-        groups = Groups.get_groups_by_member_id(user.id, db=db)
         if groups:
             filter["group_ids"] = [group.id for group in groups]
 
@@ -111,6 +114,17 @@ async def get_prompt_list(
         user.id, filter=filter, skip=skip, limit=limit, db=db
     )
 
+    # Batch-fetch writable prompt IDs in a single query instead of N has_access calls
+    prompt_ids = [prompt.id for prompt in result.items]
+    writable_prompt_ids = AccessGrants.get_accessible_resource_ids(
+        user_id=user.id,
+        resource_type="prompt",
+        resource_ids=prompt_ids,
+        permission="write",
+        user_group_ids=user_group_ids,
+        db=db,
+    )
+
     return PromptAccessListResponse(
         items=[
             PromptAccessResponse(
@@ -118,13 +132,7 @@ async def get_prompt_list(
                 write_access=(
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == prompt.user_id
-                    or AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type="prompt",
-                        resource_id=prompt.id,
-                        permission="write",
-                        db=db,
-                    )
+                    or prompt.id in writable_prompt_ids
                 ),
             )
             for prompt in result.items
@@ -436,6 +444,7 @@ class PromptAccessGrantsForm(BaseModel):
 
 @router.post("/id/{prompt_id}/access/update", response_model=Optional[PromptModel])
 async def update_prompt_access_by_id(
+    request: Request,
     prompt_id: str,
     form_data: PromptAccessGrantsForm,
     user=Depends(get_verified_user),
@@ -463,6 +472,25 @@ async def update_prompt_access_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    # Strip public sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_public_read_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "sharing.public_prompts",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = [
+            grant
+            for grant in form_data.access_grants
+            if not (
+                grant.get("principal_type") == "user"
+                and grant.get("principal_id") == "*"
+            )
+        ]
 
     AccessGrants.set_access_grants("prompt", prompt_id, form_data.access_grants, db=db)
 
