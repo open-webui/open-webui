@@ -810,7 +810,7 @@ def apply_source_context_to_messages(
     Build source context from citation sources and apply to messages.
     Uses RAG template to format context for model consumption.
     """
-    if not sources or not user_message:
+    if not sources:
         return messages
 
     context_string = ""
@@ -2442,7 +2442,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             log.exception(e)
 
     # If context is not empty, insert it into the messages
-    if sources and prompt:
+    if sources:
         form_data["messages"] = apply_source_context_to_messages(
             request, form_data["messages"], sources, prompt
         )
