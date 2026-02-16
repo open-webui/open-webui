@@ -283,6 +283,7 @@ async def generate_image(
 async def edit_image(
     prompt: str,
     image_urls: list[str],
+    background: str = None,
     __request__: Request = None,
     __user__: dict = None,
     __event_emitter__: callable = None,
@@ -294,6 +295,7 @@ async def edit_image(
 
     :param prompt: A description of the changes to make to the images
     :param image_urls: A list of URLs of the images to edit
+    :param background: Background type - "transparent", "opaque", or "auto" (default: None, uses API default)
     :return: Confirmation that the images were edited, or an error message
     """
     if __request__ is None:
@@ -304,7 +306,7 @@ async def edit_image(
 
         images = await image_edits(
             request=__request__,
-            form_data=EditImageForm(prompt=prompt, image=image_urls),
+            form_data=EditImageForm(prompt=prompt, image=image_urls, background=background),
             user=user,
         )
 
