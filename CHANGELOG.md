@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 📧 **USER_EMAIL variable fix.** The {{USER_EMAIL}} template variable now correctly returns the user's email address instead of "Unknown" in prompts. [#21479](https://github.com/open-webui/open-webui/pull/21479), [#21465](https://github.com/open-webui/open-webui/issues/21465)
+
 ### Changed
 
 ## [0.8.2] - 2026-02-16
