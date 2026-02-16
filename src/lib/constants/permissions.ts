@@ -4,6 +4,7 @@ export const DEFAULT_PERMISSIONS = {
 		knowledge: false,
 		prompts: false,
 		tools: false,
+		skills: false,
 		models_import: false,
 		models_export: false,
 		prompts_import: false,
@@ -20,6 +21,8 @@ export const DEFAULT_PERMISSIONS = {
 		public_prompts: false,
 		tools: false,
 		public_tools: false,
+		skills: false,
+		public_skills: false,
 		notes: false,
 		public_notes: false
 	},

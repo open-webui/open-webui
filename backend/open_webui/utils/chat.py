@@ -355,4 +355,3 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
         return result
     except Exception as e:
         raise Exception(f"Error: {e}")
-

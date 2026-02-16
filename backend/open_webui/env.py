@@ -209,6 +209,9 @@ FORWARD_USER_INFO_HEADER_USER_ROLE = os.environ.get(
 )
 
 # Header name for chat ID forwarding (customizable via environment variable)
+FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.environ.get(
+    "FORWARD_SESSION_INFO_HEADER_MESSAGE_ID", "X-OpenWebUI-Message-Id"
+)
 FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.environ.get(
     "FORWARD_SESSION_INFO_HEADER_CHAT_ID", "X-OpenWebUI-Chat-Id"
 )
@@ -475,7 +478,7 @@ ENABLE_PASSWORD_VALIDATION = (
 )
 PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
     "PASSWORD_VALIDATION_REGEX_PATTERN",
-    "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
 )
 
 
@@ -569,6 +572,14 @@ ENABLE_SCIM = (
     == "true"
 )
 SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
+SCIM_AUTH_PROVIDER = os.environ.get("SCIM_AUTH_PROVIDER", "")
+
+if ENABLE_SCIM and not SCIM_AUTH_PROVIDER:
+    log.warning(
+        "SCIM is enabled but SCIM_AUTH_PROVIDER is not set. "
+        "Set SCIM_AUTH_PROVIDER to the OAuth provider name (e.g. 'microsoft', 'oidc') "
+        "to enable externalId storage."
+    )
 
 ####################################
 # LICENSE_KEY
@@ -778,6 +789,17 @@ else:
 AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
     os.environ.get("AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL", "True").lower() == "true"
 )
+
+
+RAG_EMBEDDING_TIMEOUT = os.environ.get("RAG_EMBEDDING_TIMEOUT", "")
+
+if RAG_EMBEDDING_TIMEOUT == "":
+    RAG_EMBEDDING_TIMEOUT = None
+else:
+    try:
+        RAG_EMBEDDING_TIMEOUT = int(RAG_EMBEDDING_TIMEOUT)
+    except Exception:
+        RAG_EMBEDDING_TIMEOUT = None
 
 
 ####################################

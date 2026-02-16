@@ -110,6 +110,7 @@ from open_webui.config import (
 from open_webui.env import (
     DEVICE_TYPE,
     DOCKER,
+    RAG_EMBEDDING_TIMEOUT,
     SENTENCE_TRANSFORMERS_BACKEND,
     SENTENCE_TRANSFORMERS_MODEL_KWARGS,
     SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
@@ -1590,14 +1591,19 @@ def save_docs_to_vector_db(
             enable_async=request.app.state.config.ENABLE_ASYNC_EMBEDDING,
         )
 
-        # Run async embedding in sync context
-        embeddings = asyncio.run(
+        # Run async embedding in sync context using the main event loop
+        # This allows the main loop to stay responsive to health checks during long operations
+        embedding_timeout = RAG_EMBEDDING_TIMEOUT
+
+        future = asyncio.run_coroutine_threadsafe(
             embedding_function(
                 list(map(lambda x: x.replace("\n", " "), texts)),
                 prefix=RAG_EMBEDDING_CONTENT_PREFIX,
                 user=user,
-            )
+            ),
+            request.app.state.main_loop,
         )
+        embeddings = future.result(timeout=embedding_timeout)
         log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
         items = [
