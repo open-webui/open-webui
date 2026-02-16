@@ -375,18 +375,20 @@
 	{:else if token.type === 'html'}
 		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'iframe'}
-		<iframe
-			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
-			title={token.fileId}
-			width="100%"
-			frameborder="0"
-			on:load={(e) => {
-				try {
-					e.currentTarget.style.height =
-						e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
-				} catch {}
-			}}
-		></iframe>
+		{#if !exportMode}
+			<iframe
+				src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
+				title={token.fileId}
+				width="100%"
+				frameborder="0"
+				on:load={(e) => {
+					try {
+						e.currentTarget.style.height =
+							e.currentTarget.contentWindow.document.body.scrollHeight + 20 + 'px';
+					} catch {}
+				}}
+			></iframe>
+		{/if}
 	{:else if token.type === 'paragraph'}
 		{#if paragraphTag == 'span'}
 			<span dir="auto">
