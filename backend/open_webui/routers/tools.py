@@ -107,7 +107,9 @@ async def get_tools(
 
     # MCP Tool Servers
     for server in request.app.state.config.TOOL_SERVER_CONNECTIONS:
-        if server.get("type", "openapi") == "mcp":
+        if server.get("type", "openapi") == "mcp" and server.get("config", {}).get(
+            "enable"
+        ):
             server_id = server.get("info", {}).get("id")
             auth_type = server.get("auth_type", "none")
 

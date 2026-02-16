@@ -286,9 +286,23 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             }
         ]
 
-    def get_function_module_by_id(function_id):
-        function_module, _, _ = get_function_module_from_cache(request, function_id)
-        return function_module
+    # Batch-prefetch all needed function records to avoid N+1 queries
+    all_function_ids = set()
+    for model in models:
+        all_function_ids.update(model.get("action_ids", []))
+        all_function_ids.update(model.get("filter_ids", []))
+    all_function_ids.update(global_action_ids)
+    all_function_ids.update(global_filter_ids)
+
+    functions_by_id = {
+        f.id: f for f in Functions.get_functions_by_ids(list(all_function_ids))
+    }
+
+    # Pre-warm the function module cache once per unique function ID.
+    # This ensures each function's DB freshness check runs exactly once,
+    # not once per (model × function) pair.
+    for function_id in all_function_ids:
+        get_function_module_from_cache(request, function_id)
 
     for model in models:
         action_ids = [
@@ -304,15 +318,14 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
         model["actions"] = []
         for action_id in action_ids:
-            action_function = Functions.get_function_by_id(action_id)
+            action_function = functions_by_id.get(action_id)
             if action_function is None:
                 log.info(f"Action not found: {action_id}")
                 continue
 
-            try:
-                function_module = get_function_module_by_id(action_id)
-            except Exception as e:
-                log.info(f"Failed to load action module {action_id}: {e}")
+            function_module = request.app.state.FUNCTIONS.get(action_id)
+            if function_module is None:
+                log.info(f"Failed to load action module: {action_id}")
                 continue
             model["actions"].extend(
                 get_action_items_from_module(action_function, function_module)
@@ -320,17 +333,15 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
         model["filters"] = []
         for filter_id in filter_ids:
-            filter_function = Functions.get_function_by_id(filter_id)
+            filter_function = functions_by_id.get(filter_id)
             if filter_function is None:
                 log.info(f"Filter not found: {filter_id}")
                 continue
-
-            try:
-                function_module = get_function_module_by_id(filter_id)
-            except Exception as e:
-                log.info(f"Failed to load filter module {filter_id}: {e}")
+                
+            function_module = request.app.state.FUNCTIONS.get(filter_id)
+            if function_module is None:
+                log.info(f"Failed to load filter module: {filter_id}")
                 continue
-
             if getattr(function_module, "toggle", None):
                 model["filters"].extend(
                     get_filter_items_from_module(filter_function, function_module)

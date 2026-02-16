@@ -447,7 +447,7 @@ def openai_chat_completion_message_template(
             **({"tool_calls": tool_calls} if tool_calls else {}),
         }
 
-    template["choices"][0]["finish_reason"] = "stop"
+    template["choices"][0]["finish_reason"] = "tool_calls" if tool_calls else "stop"
 
     if usage:
         template["usage"] = usage

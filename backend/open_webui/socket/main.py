@@ -99,6 +99,7 @@ else:
 
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
+SESSION_POOL_TIMEOUT = 120  # seconds without heartbeat before session is reaped
 
 # Dictionary to maintain the user pool
 
@@ -147,6 +148,17 @@ if WEBSOCKET_MANAGER == "redis":
     aquire_func = clean_up_lock.aquire_lock
     renew_func = clean_up_lock.renew_lock
     release_func = clean_up_lock.release_lock
+
+    session_cleanup_lock = RedisLock(
+        redis_url=WEBSOCKET_REDIS_URL,
+        lock_name=f"{REDIS_KEY_PREFIX}:session_cleanup_lock",
+        timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+        redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+    )
+    session_aquire_func = session_cleanup_lock.aquire_lock
+    session_renew_func = session_cleanup_lock.renew_lock
+    session_release_func = session_cleanup_lock.release_lock
 else:
     MODELS = {}
 
@@ -154,12 +166,38 @@ else:
     USAGE_POOL = {}
 
     aquire_func = release_func = renew_func = lambda: True
+    session_aquire_func = session_release_func = session_renew_func = lambda: True
 
 
 YDOC_MANAGER = YdocManager(
     redis=REDIS,
     redis_key_prefix=f"{REDIS_KEY_PREFIX}:ydoc:documents",
 )
+
+
+async def periodic_session_pool_cleanup():
+    """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
+    if not session_aquire_func():
+        log.debug("Session cleanup lock held by another node. Skipping.")
+        return
+
+    try:
+        while True:
+            if not session_renew_func():
+                log.error("Unable to renew session cleanup lock. Exiting.")
+                return
+
+            now = int(time.time())
+            for sid in list(SESSION_POOL.keys()):
+                entry = SESSION_POOL.get(sid)
+                if entry and now - entry.get("last_seen_at", 0) > SESSION_POOL_TIMEOUT:
+                    log.warning(
+                        f"Reaping orphaned session {sid} (user {entry.get('id')})"
+                    )
+                    del SESSION_POOL[sid]
+            await asyncio.sleep(SESSION_POOL_TIMEOUT)
+    finally:
+        session_release_func()
 
 
 async def periodic_usage_pool_cleanup():
@@ -313,15 +351,18 @@ async def connect(sid, environ, auth):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-            SESSION_POOL[sid] = user.model_dump(
-                exclude=[
-                    "profile_image_url",
-                    "profile_banner_image_url",
-                    "date_of_birth",
-                    "bio",
-                    "gender",
-                ]
-            )
+            SESSION_POOL[sid] = {
+                **user.model_dump(
+                    exclude=[
+                        "profile_image_url",
+                        "profile_banner_image_url",
+                        "date_of_birth",
+                        "bio",
+                        "gender",
+                    ]
+                ),
+                "last_seen_at": int(time.time()),
+            }
             await sio.enter_room(sid, f"user:{user.id}")
 
 
@@ -340,15 +381,18 @@ async def user_join(sid, data):
     if not user:
         return
 
-    SESSION_POOL[sid] = user.model_dump(
-        exclude=[
-            "profile_image_url",
-            "profile_banner_image_url",
-            "date_of_birth",
-            "bio",
-            "gender",
-        ]
-    )
+    SESSION_POOL[sid] = {
+        **user.model_dump(
+            exclude=[
+                "profile_image_url",
+                "profile_banner_image_url",
+                "date_of_birth",
+                "bio",
+                "gender",
+            ]
+        ),
+        "last_seen_at": int(time.time()),
+    }
 
     await sio.enter_room(sid, f"user:{user.id}")
 
@@ -366,6 +410,7 @@ async def user_join(sid, data):
 async def heartbeat(sid, data):
     user = SESSION_POOL.get(sid)
     if user:
+        SESSION_POOL[sid] = {**user, "last_seen_at": int(time.time())}
         Users.update_last_active_by_id(user["id"])
 
 
@@ -709,6 +754,17 @@ async def disconnect(sid):
     if sid in SESSION_POOL:
         user = SESSION_POOL[sid]
         del SESSION_POOL[sid]
+
+        # Clean up USAGE_POOL entries for this session
+        for model_id in list(USAGE_POOL.keys()):
+            connections = USAGE_POOL.get(model_id)
+            if connections and sid in connections:
+                del connections[sid]
+                if not connections:
+                    del USAGE_POOL[model_id]
+                else:
+                    USAGE_POOL[model_id] = connections
+
         await YDOC_MANAGER.remove_user_from_all_documents(sid)
     else:
         pass
