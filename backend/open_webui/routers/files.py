@@ -229,6 +229,24 @@ def upload_file_handler(
 ):
     log.info(f"file.content_type: {file.content_type} {process}")
 
+    # Fix commonly misdetected MIME types based on file extension.
+    # For example, .ts (TypeScript) files are often detected as
+    # video/vnd.dlna.mpeg-tts or video/mp2t by browsers.
+    _MIME_OVERRIDES = {
+        ".ts": "text/plain",
+        ".mts": "text/plain",
+        ".cts": "text/plain",
+        ".tsx": "text/plain",
+    }
+    if file.filename:
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext in _MIME_OVERRIDES and (
+            file.content_type is None
+            or file.content_type.startswith("video/")
+        ):
+            file.content_type = _MIME_OVERRIDES[ext]
+            log.info(f"Corrected MIME type for {ext} file to {file.content_type}")
+
     if isinstance(metadata, str):
         try:
             metadata = json.loads(metadata)

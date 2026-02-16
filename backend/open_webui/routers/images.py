@@ -478,10 +478,10 @@ GenerateImageForm = CreateImageForm  # Alias for backward compatibility
 def get_image_data(data: str, headers=None):
     try:
         if data.startswith("http://") or data.startswith("https://"):
-            if headers:
-                r = requests.get(data, headers=headers)
-            else:
-                r = requests.get(data)
+            # Don't forward API-specific headers (Content-Type, Authorization)
+            # when fetching image URLs — the image may be hosted on a different
+            # domain (e.g. cloud storage) that rejects unexpected headers.
+            r = requests.get(data)
 
             r.raise_for_status()
             if r.headers["content-type"].split("/")[0] == "image":
