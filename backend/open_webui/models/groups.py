@@ -164,10 +164,7 @@ class GroupTable:
 
     def get_groups(self, filter, db: Optional[Session] = None) -> list[GroupResponse]:
         with get_db_context(db) as db:
-            member_count = func.count(GroupMember.user_id).label("member_count")
-            query = db.query(Group, member_count).outerjoin(
-                GroupMember, GroupMember.group_id == Group.id
-            )
+            query = db.query(Group)
 
             if filter:
                 if "query" in filter:
@@ -231,7 +228,6 @@ class GroupTable:
                 for group in groups
             ]
 
-
     def search_groups(
         self,
         filter: Optional[dict] = None,
@@ -253,7 +249,6 @@ class GroupTable:
                             )
                         )
                     )
-
 
                 if "share" in filter:
                     share_value = filter["share"]
