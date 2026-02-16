@@ -1366,6 +1366,10 @@ def merge_docs_to_target_size(
     Attempts to grow small chunks up to a desired minimum size,
     without exceeding the maximum size or crossing source/file
     boundaries.
+
+    Uses both forward and backward merging: undersized chunks first
+    try to absorb the next chunk (forward), and if that fails, try
+    to merge into the previously emitted chunk (backward).
     """
     min_chunk_size_target = request.app.state.config.CHUNK_MIN_SIZE_TARGET
     max_chunk_size = request.app.state.config.CHUNK_SIZE
@@ -1379,6 +1383,26 @@ def merge_docs_to_target_size(
             str(request.app.state.config.TIKTOKEN_ENCODING_NAME)
         )
         measure_chunk_size = lambda text: len(encoding.encode(text))
+
+    def try_merge_into_previous(
+        processed: list[Document],
+        content: str,
+        chunk: Document,
+    ) -> bool:
+        """Try to merge an undersized chunk backward into the last emitted chunk."""
+        if not processed:
+            return False
+        prev = processed[-1]
+        if not can_merge_chunks(prev, chunk):
+            return False
+        merged = f"{prev.page_content}\n\n{content}"
+        if measure_chunk_size(merged) <= max_chunk_size:
+            processed[-1] = Document(
+                page_content=merged,
+                metadata={**prev.metadata},
+            )
+            return True
+        return False
 
     processed_chunks: list[Document] = []
 
@@ -1402,22 +1426,36 @@ def merge_docs_to_target_size(
         if can_merge:
             current_content = proposed_content
         else:
+            # If current chunk is undersized and can't merge forward,
+            # try merging it backward into the previous emitted chunk.
+            if not (
+                measure_chunk_size(current_content) < min_chunk_size_target
+                and try_merge_into_previous(
+                    processed_chunks, current_content, current_chunk
+                )
+            ):
+                processed_chunks.append(
+                    Document(
+                        page_content=current_content,
+                        metadata={**current_chunk.metadata},
+                    )
+                )
+            current_chunk = next_chunk
+            current_content = next_chunk.page_content
+
+    if current_chunk is not None:
+        if not (
+            measure_chunk_size(current_content) < min_chunk_size_target
+            and try_merge_into_previous(
+                processed_chunks, current_content, current_chunk
+            )
+        ):
             processed_chunks.append(
                 Document(
                     page_content=current_content,
                     metadata={**current_chunk.metadata},
                 )
             )
-            current_chunk = next_chunk
-            current_content = next_chunk.page_content
-
-    if current_chunk is not None:
-        processed_chunks.append(
-            Document(
-                page_content=current_content,
-                metadata={**current_chunk.metadata},
-            )
-        )
 
     return processed_chunks
 
