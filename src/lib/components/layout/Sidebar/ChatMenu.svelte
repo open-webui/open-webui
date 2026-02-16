@@ -28,7 +28,7 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import type { WaitForSettledOptions } from '$lib/utils/AsyncTaskTracker';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -48,9 +48,7 @@
 
 	let chat = null;
 	let showFullMessages = false;
-	let exportMessagesRef: {
-		waitForSettled?: (options?: WaitForSettledOptions) => Promise<void>;
-	} | null = null;
+	let exportMessagesRef: Messages | null = null;
 
 	const pinHandler = async () => {
 		await toggleChatPinnedStatusById(localStorage.token, chatId);
@@ -89,28 +87,37 @@
 		try {
 			const { exportPDF, exportPlainTextToPdf } = await import('$lib/utils/pdf');
 			if ($settings?.stylizedPdfExport ?? true) {
-				showFullMessages = true;
-				await tick();
-				const messagesContainerElement = exportMessagesRef?.getMessagesContainerElement();
-				if (!messagesContainerElement) {
-					throw new Error('Messages container element not found');
-				}
+				await exportPDF(
+					async () => {
+						chat = await getChatById(localStorage.token, chatId);
+						if (!chat) {
+							throw new Error('Chat not found');
+						}
 
-				await exportPDF(messagesContainerElement, {
-					title: chat.chat.title,
-					async onBeforeRender() {
+						showFullMessages = true;
+						await tick();
+						const messagesContainerElement = exportMessagesRef?.getMessagesContainerElement();
+						if (!messagesContainerElement) {
+							throw new Error('Messages container element not found');
+						}
+
 						try {
 							await exportMessagesRef?.waitForSettled?.();
 						} catch (error) {
 							console.warn('Timed out while waiting for async render tasks before PDF export:', error);
 						}
-					},
-					onAfterRender() {
+
+						return messagesContainerElement;
+					}, {
+						get title() {
+							return chat?.chat?.title ?? '';
+						}
+					}).finally(() => {
 						showFullMessages = false;
-					}
-				});
+					});
 			} else {
-				await exportPlainTextToPdf(await getChatAsText(), `chat-${chat.chat.title}.pdf`);
+				chat = await getChatById(localStorage.token, chatId);
+				await exportPlainTextToPdf(await getChatAsText(chat), `chat-${chat.chat.title}.pdf`);
 			}
 			toast.success($i18n.t('PDF exported successfully.'));
 		} catch (e) {
