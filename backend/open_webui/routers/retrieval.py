@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import (
     Depends,
@@ -50,7 +51,7 @@ from open_webui.retrieval.loaders.main import Loader
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 
 # Web search engines
-from open_webui.retrieval.web.main import SearchResult
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.ollama import search_ollama_cloud
 from open_webui.retrieval.web.perplexity_search import search_perplexity_search
@@ -80,6 +81,7 @@ from open_webui.retrieval.web.yandex import search_yandex
 
 from open_webui.retrieval.utils import (
     get_content_from_url,
+    is_youtube_url,
     get_embedding_function,
     get_reranking_function,
     get_model_path,
@@ -1935,10 +1937,23 @@ async def process_web(
     process: bool = Query(True, description="Whether to process and save the content"),
     user=Depends(get_verified_user),
 ):
+    is_youtube_request = is_youtube_url(form_data.url)
+    youtube_timeout_seconds = max(
+        5, int(os.getenv("YOUTUBE_TRANSCRIPT_TIMEOUT_SECONDS", "25"))
+    )
+    youtube_fallback_enabled = (
+        os.getenv("YOUTUBE_ENABLE_FALLBACK_METADATA", "true").lower() == "true"
+    )
+
     try:
-        content, docs = await run_in_threadpool(
-            get_content_from_url, request, form_data.url
-        )
+        extraction_task = run_in_threadpool(get_content_from_url, request, form_data.url)
+        if is_youtube_request:
+            content, docs = await asyncio.wait_for(
+                extraction_task, timeout=youtube_timeout_seconds
+            )
+        else:
+            content, docs = await extraction_task
+
         log.debug(f"text_content: {content}")
 
         if process:
@@ -1977,7 +1992,49 @@ async def process_web(
                 "status": True,
                 "content": content,
             }
+    except asyncio.TimeoutError:
+        if is_youtube_request and youtube_fallback_enabled:
+            fallback_content = (
+                "YouTube transcript could not be fetched within timeout. "
+                "Returned metadata-only fallback."
+            )
+            return {
+                "status": True,
+                "collection_name": None,
+                "filename": form_data.url,
+                "file": {
+                    "data": {"content": fallback_content},
+                    "meta": {
+                        "name": form_data.url,
+                        "source": form_data.url,
+                        "fallback": "youtube-timeout",
+                    },
+                },
+            }
+
+        raise HTTPException(
+            status_code=status.HTTP_408_REQUEST_TIMEOUT,
+            detail=ERROR_MESSAGES.DEFAULT("YouTube transcript timed out"),
+        )
     except Exception as e:
+        if is_youtube_request and youtube_fallback_enabled:
+            fallback_content = (
+                "YouTube transcript unavailable. Returned metadata-only fallback."
+            )
+            return {
+                "status": True,
+                "collection_name": None,
+                "filename": form_data.url,
+                "file": {
+                    "data": {"content": fallback_content},
+                    "meta": {
+                        "name": form_data.url,
+                        "source": form_data.url,
+                        "fallback": "youtube-transcript-unavailable",
+                    },
+                },
+            }
+
         log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -2292,6 +2349,149 @@ def search_web(
         raise Exception("No search engine API key found in environment variables")
 
 
+def _normalize_search_url(url: Optional[str]) -> Optional[str]:
+    if not url:
+        return None
+
+    try:
+        parsed = urlsplit(url.strip())
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            return None
+
+        normalized = parsed._replace(fragment="")
+        normalized_url = urlunsplit(normalized)
+        if normalized_url.endswith("/"):
+            normalized_url = normalized_url[:-1]
+
+        return normalized_url
+    except Exception:
+        return None
+
+
+def _truncate_text(value: Optional[str], max_chars: int) -> Optional[str]:
+    if value is None:
+        return None
+    if max_chars <= 0 or len(value) <= max_chars:
+        return value
+    return value[:max_chars].rstrip()
+
+
+def apply_web_search_governance(
+    result_items: list[SearchResult],
+    domain_filter_list: list[str],
+    max_total_results: int,
+    snippet_max_chars: int,
+) -> list[SearchResult]:
+    """Apply deterministic governance for web search results.
+
+    - Deduplicate by normalized URL.
+    - Optionally enforce domain allow/block rules.
+    - Enforce global result cap.
+    - Truncate snippet to bounded size.
+    """
+    seen_links = set()
+    deduped_items: list[SearchResult] = []
+
+    for item in result_items:
+        normalized_link = _normalize_search_url(item.link)
+        if not normalized_link or normalized_link in seen_links:
+            continue
+
+        seen_links.add(normalized_link)
+        deduped_items.append(
+            SearchResult(
+                link=normalized_link,
+                title=item.title,
+                snippet=_truncate_text(item.snippet, snippet_max_chars),
+            )
+        )
+
+    if domain_filter_list:
+        filtered = get_filtered_results(
+            [item.model_dump() for item in deduped_items], domain_filter_list
+        )
+        allowed_links = {
+            _normalize_search_url(item.get("link"))
+            for item in filtered
+            if item.get("link")
+        }
+        deduped_items = [item for item in deduped_items if item.link in allowed_links]
+
+    if max_total_results > 0:
+        deduped_items = deduped_items[:max_total_results]
+
+    return deduped_items
+
+
+def apply_doc_content_cap(docs: list[Document], max_doc_chars: int) -> list[Document]:
+    if max_doc_chars <= 0:
+        return docs
+
+    return [
+        Document(
+            page_content=_truncate_text(doc.page_content, max_doc_chars) or "",
+            metadata={**doc.metadata},
+        )
+        for doc in docs
+    ]
+
+
+def apply_youtube_result_cap(
+    result_items: list[SearchResult], max_youtube_links: int
+) -> list[SearchResult]:
+    if max_youtube_links <= 0:
+        return result_items
+
+    youtube_count = 0
+    capped_items: list[SearchResult] = []
+    for item in result_items:
+        if is_youtube_url(item.link):
+            if youtube_count >= max_youtube_links:
+                continue
+            youtube_count += 1
+        capped_items.append(item)
+
+    return capped_items
+
+
+def _is_env_flag_enabled(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def build_web_search_fallback_response(
+    queries: list[str], reason: str
+) -> dict[str, Union[bool, str, int, None, list, dict]]:
+    safe_queries = [query.strip() for query in queries if query and query.strip()]
+    query_text = ", ".join(safe_queries) if safe_queries else "web search"
+
+    message_template = os.getenv(
+        "WEB_SEARCH_FALLBACK_MESSAGE",
+        "I couldn't fetch live web results right now. I can still answer from existing context. "
+        "Please try again in a moment.",
+    )
+
+    try:
+        message = message_template.format(reason=reason, queries=query_text)
+    except Exception:
+        message = message_template
+
+    return {
+        "status": True,
+        "collection_name": None,
+        "collection_names": [],
+        "filenames": [],
+        "items": [],
+        "docs": [],
+        "loaded_count": 0,
+        "warning": message,
+        "fallback": {
+            "type": "web-search",
+            "reason": reason,
+            "queries": safe_queries,
+        },
+    }
+
+
 @router.post("/process/web/search")
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
@@ -2312,6 +2512,18 @@ async def process_web_search(
 
     urls = []
     result_items = []
+
+    configured_result_count = int(request.app.state.config.WEB_SEARCH_RESULT_COUNT or 3)
+    max_total_results = max(
+        1,
+        int(os.getenv("WEB_SEARCH_MAX_TOTAL_RESULTS", str(configured_result_count))),
+    )
+    snippet_max_chars = max(120, int(os.getenv("WEB_SEARCH_MAX_SNIPPET_CHARS", "600")))
+    max_doc_chars = max(500, int(os.getenv("WEB_SEARCH_MAX_DOC_CHARS", "4000")))
+    max_youtube_links = max(1, int(os.getenv("YOUTUBE_MAX_VIDEOS_PER_REQUEST", "2")))
+    web_search_fallback_enabled = _is_env_flag_enabled(
+        "WEB_SEARCH_ENABLE_FALLBACK", "false"
+    )
 
     try:
         logging.debug(
@@ -2360,11 +2572,25 @@ async def process_web_search(
                         result_items.append(item)
                         urls.append(item.link)
 
-        urls = list(dict.fromkeys(urls))
+        result_items = apply_web_search_governance(
+            result_items,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            max_total_results,
+            snippet_max_chars,
+        )
+        result_items = apply_youtube_result_cap(result_items, max_youtube_links)
+
+        urls = [item.link for item in result_items]
         log.debug(f"urls: {urls}")
 
     except Exception as e:
         log.exception(e)
+
+        if web_search_fallback_enabled:
+            return build_web_search_fallback_response(
+                form_data.queries,
+                reason="search-provider-error",
+            )
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -2372,6 +2598,12 @@ async def process_web_search(
         )
 
     if len(urls) == 0:
+        if web_search_fallback_enabled:
+            return build_web_search_fallback_response(
+                form_data.queries,
+                reason="no-search-results",
+            )
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.DEFAULT("No results found from web search"),
@@ -2379,22 +2611,18 @@ async def process_web_search(
 
     try:
         if request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER:
-            search_results = [
-                item for result in search_results for item in result if result
-            ]
-
             docs = [
                 Document(
-                    page_content=result.snippet,
+                    page_content=item.snippet or "",
                     metadata={
-                        "source": result.link,
-                        "title": result.title,
-                        "snippet": result.snippet,
-                        "link": result.link,
+                        "source": item.link,
+                        "title": item.title,
+                        "snippet": item.snippet,
+                        "link": item.link,
                     },
                 )
-                for result in search_results
-                if hasattr(result, "snippet") and result.snippet is not None
+                for item in result_items
+                if item.snippet is not None
             ]
         else:
             loader = get_web_loader(
@@ -2404,6 +2632,8 @@ async def process_web_search(
                 trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
             )
             docs = await loader.aload()
+
+        docs = apply_doc_content_cap(docs, max_doc_chars)
 
         urls = [
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
@@ -2456,6 +2686,13 @@ async def process_web_search(
             }
     except Exception as e:
         log.exception(e)
+
+        if web_search_fallback_enabled:
+            return build_web_search_fallback_response(
+                form_data.queries,
+                reason="web-loader-error",
+            )
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
