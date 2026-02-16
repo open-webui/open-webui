@@ -8,22 +8,6 @@ import { exportOverlay, type ExportOverlayStage } from '../stores';
 // ==================== Type Definitions ====================
 
 /**
- * Note data structure
- */
-interface NoteData {
-	/** Note title */
-	title: string;
-	/** Note content data */
-	data?: {
-		/** Content object */
-		content?: {
-			/** HTML content (can be string or HTMLElement) */
-			html?: string | HTMLElement;
-		};
-	};
-}
-
-/**
  * Options for downloading chat PDF
  */
 export interface ExportPDFOptions {
@@ -31,10 +15,6 @@ export interface ExportPDFOptions {
 	filename?: string;
 	/** Optional title for the export (used in overlay) */
 	title?: string;
-	/** Optional callback before rendering (for showing full messages) */
-	onBeforeRender?: () => Promise<void> | void;
-	/** Optional callback after rendering (for hiding full messages) */
-	onAfterRender?: () => Promise<void> | void;
 	/** Optional callback for export progress updates */
 	onProgress?: (progress: PdfExportProgress) => void;
 	/** Optional abort signal for cancellation */
@@ -620,7 +600,10 @@ const exportStyledElementToPdf = async (
  * @param options - Configuration object
  * @throws Error if PDF generation fails or if chatText is missing in plain text mode
  */
-export const exportPDF = async (containerElement: string | HTMLElement, options: ExportPDFOptions = {}): Promise<void> => {
+export const exportPDF = async (
+	containerElement: string | HTMLElement | (() => HTMLElement | Promise<HTMLElement>),
+	options: ExportPDFOptions = {},
+): Promise<void> => {
 	if (!containerElement) {
 		throw new Error('containerElement is required for stylized PDF export');
 	}
@@ -661,36 +644,33 @@ export const exportPDF = async (containerElement: string | HTMLElement, options:
 
 	try {
 		throwIfAborted(effectiveSignal);
-		await options.onBeforeRender?.();
 
 		if (typeof containerElement === 'string') {
 			containerElement = document.querySelector(containerElement) as HTMLElement;
+		} else if (typeof containerElement === 'function') {
+			containerElement = await containerElement();
 		}
 		if (!containerElement) {
 			throw new Error(`Container element not found for selector: ${containerElement}`);
 		}
 
-		try {
-			// Clone and style element for rendering
-			const { element, cleanup } = processContainer(containerElement, DEFAULT_VIRTUAL_WIDTH, options.title);
+		// Clone and style element for rendering
+		const { element, cleanup } = processContainer(containerElement, DEFAULT_VIRTUAL_WIDTH, options.title);
 
-			try {
-				await exportStyledElementToPdf(
-					element,
-					options.filename || `export-${options.title || Date.now()}.pdf`,
-					DEFAULT_VIRTUAL_WIDTH,
-					100,
-					(progress) => {
-						emitExportProgress(options.onProgress, progress);
-						updateOverlay(progress);
-					},
-					effectiveSignal
-				);
-			} finally {
-				cleanup();
-			}
+		try {
+			await exportStyledElementToPdf(
+				element,
+				options.filename || `export-${options.title || Date.now()}.pdf`,
+				DEFAULT_VIRTUAL_WIDTH,
+				100,
+				(progress) => {
+					emitExportProgress(options.onProgress, progress);
+					updateOverlay(progress);
+				},
+				effectiveSignal
+			);
 		} finally {
-			await options.onAfterRender?.();
+			cleanup();
 		}
 	} catch (error) {
 		if (error instanceof Error && error.name === 'AbortError') {
