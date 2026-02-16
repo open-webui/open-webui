@@ -236,19 +236,31 @@
 	};
 
 	const loadMoreChats = async () => {
+		if (chatListLoading || allChatsLoaded) {
+			return;
+		}
+
 		chatListLoading = true;
 
-		currentChatPage.set($currentChatPage + 1);
+		try {
+			const nextPage = $currentChatPage + 1;
+			currentChatPage.set(nextPage);
 
-		let newChatList = [];
+			const fetchedChats = ((await getChatList(localStorage.token, nextPage)) ?? []).filter(
+				(chat) => chat?.id
+			);
+			const existingChatIds = new Set(($chats ?? []).map((chat) => chat?.id).filter(Boolean));
+			const newChatList = fetchedChats.filter((chat) => !existingChatIds.has(chat.id));
 
-		newChatList = await getChatList(localStorage.token, $currentChatPage);
+			// Stop pagination if API yields no additional unique chats.
+			allChatsLoaded = newChatList.length === 0;
 
-		// once the bottom of the list has been reached (no results) there is no need to continue querying
-		allChatsLoaded = newChatList.length === 0;
-		await chats.set([...($chats ? $chats : []), ...newChatList]);
-
-		chatListLoading = false;
+			if (newChatList.length > 0) {
+				await chats.set([...($chats ?? []), ...newChatList]);
+			}
+		} finally {
+			chatListLoading = false;
+		}
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
