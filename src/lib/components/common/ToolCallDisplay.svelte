@@ -30,6 +30,7 @@
 	} = {};
 
 	export let open = false;
+	export let showToolCallOutput: boolean = true;
 	export let className = '';
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
@@ -54,6 +55,25 @@
 			}
 		} catch (e) {
 			return str;
+		}
+	}
+
+	function formatKey(key: string): string {
+		return key
+			.replace(/([a-z])([A-Z])/g, '$1 $2')
+			.replace(/[_-]/g, ' ')
+			.replace(/\b\w/g, (c) => c.toUpperCase());
+	}
+
+	function tryParseArgs(str: string): Record<string, any> | null {
+		try {
+			const parsed = parseJSONString(str);
+			if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+				return parsed;
+			}
+			return null;
+		} catch {
+			return null;
 		}
 	}
 
@@ -151,17 +171,38 @@
 							>
 								{$i18n.t('Input')}
 							</div>
-							<div class="tool-call-body w-full max-w-none!">
-								<Markdown
-									id={`${componentId}-tool-call-args`}
-									content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
-								/>
-							</div>
+							{#if showToolCallOutput}
+								<div class="tool-call-body w-full max-w-none!">
+									<Markdown
+										id={`${componentId}-tool-call-args`}
+										content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
+									/>
+								</div>
+							{:else}
+								{@const parsedArgs = tryParseArgs(args)}
+								{#if parsedArgs}
+									<div class="px-1 space-y-0.5">
+										{#each Object.entries(parsedArgs) as [key, value]}
+											<div class="flex gap-2 text-xs py-0.5">
+												<span class="font-semibold text-gray-600 dark:text-gray-400 shrink-0">{formatKey(key)}</span>
+												<span class="text-gray-800 dark:text-gray-200 break-all">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</span>
+											</div>
+										{/each}
+									</div>
+								{:else}
+									<div class="tool-call-body w-full max-w-none!">
+										<Markdown
+											id={`${componentId}-tool-call-args`}
+											content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
+										/>
+									</div>
+								{/if}
+							{/if}
 						</div>
 					{/if}
 
 					<!-- Output -->
-					{#if isDone && result}
+					{#if showToolCallOutput && isDone && result}
 						<div>
 							<div
 								class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1.5 px-1"
