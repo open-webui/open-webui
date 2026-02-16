@@ -301,8 +301,13 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # Pre-warm the function module cache once per unique function ID.
     # This ensures each function's DB freshness check runs exactly once,
     # not once per (model × function) pair.
+    missing_function_ids = set()
     for function_id in all_function_ids:
-        get_function_module_from_cache(request, function_id)
+        try:
+            get_function_module_from_cache(request, function_id)
+        except Exception as e:
+            log.warning(f"Skipping missing function '{function_id}': {e}")
+            missing_function_ids.add(function_id)
 
     for model in models:
         action_ids = [
@@ -318,9 +323,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
         model["actions"] = []
         for action_id in action_ids:
+            if action_id in missing_function_ids:
+                continue
             action_function = functions_by_id.get(action_id)
             if action_function is None:
-                raise Exception(f"Action not found: {action_id}")
+                log.warning(f"Action function '{action_id}' not found, skipping")
+                continue
 
             function_module = request.app.state.FUNCTIONS.get(action_id)
             model["actions"].extend(
@@ -329,9 +337,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
         model["filters"] = []
         for filter_id in filter_ids:
+            if filter_id in missing_function_ids:
+                continue
             filter_function = functions_by_id.get(filter_id)
             if filter_function is None:
-                raise Exception(f"Filter not found: {filter_id}")
+                log.warning(f"Filter function '{filter_id}' not found, skipping")
+                continue
 
             function_module = request.app.state.FUNCTIONS.get(filter_id)
 
