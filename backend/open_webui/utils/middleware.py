@@ -1961,6 +1961,49 @@ def process_messages_with_output(messages: list[dict]) -> list[dict]:
     return processed
 
 
+def attach_parent_message_images(messages: list[dict], metadata: dict) -> list[dict]:
+    parent_message = metadata.get("parent_message") or {}
+    files = parent_message.get("files") or []
+
+    image_urls = []
+    for file in files:
+        if file.get("type") == "image" or file.get("content_type", "").startswith(
+            "image/"
+        ):
+            image_url = file.get("url") or file.get("id")
+            if image_url:
+                image_urls.append(image_url)
+
+    if not image_urls:
+        return messages
+
+    for message in reversed(messages):
+        if message.get("role") != "user":
+            continue
+
+        content = message.get("content", "")
+        if isinstance(content, list):
+            if any(item.get("type") == "image_url" for item in content if isinstance(item, dict)):
+                return messages
+            message["content"] = content + [
+                {"type": "image_url", "image_url": {"url": url}}
+                for url in image_urls
+            ]
+            return messages
+
+        text_value = content if isinstance(content, str) else str(content)
+        message["content"] = [
+            {"type": "text", "text": text_value},
+            *[
+                {"type": "image_url", "image_url": {"url": url}}
+                for url in image_urls
+            ],
+        ]
+        return messages
+
+    return messages
+
+
 async def process_chat_payload(request, form_data, user, metadata, model):
     # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
@@ -1980,6 +2023,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             system_message = get_system_message(form_data.get("messages", []))
             form_data["messages"] = (
                 [system_message, *db_messages] if system_message else db_messages
+            )
+            form_data["messages"] = attach_parent_message_images(
+                form_data.get("messages", []), metadata
             )
 
     # Process messages with OR-aligned output items for clean LLM messages
