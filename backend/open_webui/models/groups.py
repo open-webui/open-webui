@@ -211,9 +211,10 @@ class GroupTable:
                 else:
                     # Only apply member_id filter when share filter is NOT present
                     if "member_id" in filter:
-                        query = query.join(
-                            GroupMember, GroupMember.group_id == Group.id
-                        ).filter(GroupMember.user_id == filter["member_id"])
+                        member_groups = select(GroupMember.group_id).where(
+                            GroupMember.user_id == filter["member_id"]
+                        )
+                        query = query.filter(Group.id.in_(member_groups))
 
             groups = query.order_by(Group.updated_at.desc()).all()
             group_ids = [group.id for group in groups]
@@ -242,14 +243,14 @@ class GroupTable:
                 if "query" in filter:
                     query = query.filter(Group.name.ilike(f"%{filter['query']}%"))
                 if "member_id" in filter:
-                    query = query.join(
-                        GroupMember, GroupMember.group_id == Group.id
-                    ).filter(GroupMember.user_id == filter["member_id"])
+                    member_groups = select(GroupMember.group_id).where(
+                        GroupMember.user_id == filter["member_id"]
+                    )
+                    query = query.filter(Group.id.in_(member_groups))
 
                 if "share" in filter:
                     #  'share' is stored in data JSON, support both sqlite and postgres
                     share_value = filter["share"]
-                    print("Filtering by share:", share_value)
                     query = query.filter(
                         Group.data.op("->>")("share") == str(share_value)
                     )
@@ -263,8 +264,10 @@ class GroupTable:
             return {
                 "items": [
                     GroupResponse.model_validate(
-                        **GroupModel.model_validate(group).model_dump(),
-                        member_count=member_counts.get(group.id, 0),
+                        {
+                            **GroupModel.model_validate(group).model_dump(),
+                            "member_count": member_counts.get(group.id, 0),
+                        }
                     )
                     for group in groups
                 ],
@@ -275,11 +278,13 @@ class GroupTable:
         self, user_id: str, db: Optional[Session] = None
     ) -> list[GroupModel]:
         with get_db_context(db) as db:
+            member_groups = select(GroupMember.group_id).where(
+                GroupMember.user_id == user_id
+            )
             return [
                 GroupModel.model_validate(group)
                 for group in db.query(Group)
-                .join(GroupMember, GroupMember.group_id == Group.id)
-                .filter(GroupMember.user_id == user_id)
+                .filter(Group.id.in_(member_groups))
                 .order_by(Group.updated_at.desc())
                 .all()
             ]
@@ -440,23 +445,23 @@ class GroupTable:
     ) -> bool:
         with get_db_context(db) as db:
             try:
-                # Find all groups the user belongs to
-                groups = (
-                    db.query(Group)
-                    .join(GroupMember, GroupMember.group_id == Group.id)
-                    .filter(GroupMember.user_id == user_id)
-                    .all()
+                # Find group IDs the user belongs to
+                affected_group_ids = select(GroupMember.group_id).where(
+                    GroupMember.user_id == user_id
                 )
 
-                # Remove the user from each group
-                for group in groups:
-                    db.query(GroupMember).filter(
-                        GroupMember.group_id == group.id, GroupMember.user_id == user_id
-                    ).delete()
+                # Remove the user from all groups
+                db.query(GroupMember).filter(
+                    GroupMember.user_id == user_id
+                ).delete(synchronize_session=False)
 
-                    db.query(Group).filter_by(id=group.id).update(
-                        {"updated_at": int(time.time())}
-                    )
+                # Update timestamps on affected groups
+                db.query(Group).filter(
+                    Group.id.in_(affected_group_ids)
+                ).update(
+                    {"updated_at": int(time.time())},
+                    synchronize_session=False,
+                )
 
                 db.commit()
                 return True
@@ -511,11 +516,13 @@ class GroupTable:
                 target_group_ids = {g.id for g in target_groups}
 
                 # 2. Groups the user is CURRENTLY in
+                member_groups = select(GroupMember.group_id).where(
+                    GroupMember.user_id == user_id
+                )
                 existing_group_ids = {
                     g.id
                     for g in db.query(Group)
-                    .join(GroupMember, GroupMember.group_id == Group.id)
-                    .filter(GroupMember.user_id == user_id)
+                    .filter(Group.id.in_(member_groups))
                     .all()
                 }
 
