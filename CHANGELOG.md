@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🏷️ **Batch tag operations.** Tag creation, deletion, and orphan cleanup for chats now use batch database queries instead of per-tag loops, significantly reducing database round trips when updating, archiving, or deleting chats with multiple tags. [Commit](https://github.com/open-webui/open-webui/commit/c748c3ede)
 - 💨 **Faster group list loading.** Group lists and search results now load with a single database query that joins member counts, replacing the previous pattern of fetching groups first and then counting members in a separate batch query. [Commit](https://github.com/open-webui/open-webui/commit/33308022f)
 - 🔐 **Skills sharing permissions.** Administrators can now control skills sharing and public sharing permissions per-group, matching the existing capabilities for tools, knowledge, and prompts. [Commit](https://github.com/open-webui/open-webui/commit/88401e91c)
+- ⚡ **Long content truncation in preview modals.** Citation and file content modals now truncate markdown-rendered content at 10,000 characters with a "Show all" expansion button, preventing UI jank when previewing very large documents.
 - 🌐 **Translation updates.** Translations for Spanish and German were enhanced and expanded.
 
 ### Fixed
