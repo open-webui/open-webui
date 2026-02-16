@@ -14,7 +14,7 @@
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
-	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
+	import { pickAndDownloadFiles } from '$lib/utils/onedrive-file-picker';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	const dispatch = createEventDispatcher();
@@ -1514,17 +1514,32 @@
 										}}
 										uploadOneDriveHandler={async (authorityType) => {
 											try {
-												const fileData = await pickAndDownloadFile(authorityType);
-												if (fileData) {
-													const file = new File([fileData.blob], fileData.name, {
-														type: fileData.blob.type || 'application/octet-stream'
-													});
-													await uploadFileHandler(file);
+												const filesData = await pickAndDownloadFiles(authorityType);
+												if (filesData && filesData.length > 0) {
+													if (filesData.length > 1) {
+														toast.success(
+															$i18n.t('Uploading {{count}} files from OneDrive...', {
+																count: filesData.length
+															})
+														);
+													}
+
+													for (const fileData of filesData) {
+														const file = new File([fileData.blob], fileData.name, {
+															type: fileData.blob.type || 'application/octet-stream'
+														});
+														await uploadFileHandler(file);
+													}
 												} else {
-													console.log('No file was selected from OneDrive');
+													console.log('No files were selected from OneDrive');
 												}
 											} catch (error) {
 												console.error('OneDrive Error:', error);
+												toast.error(
+													$i18n.t('OneDrive Error: {{error}}', {
+														error: error.message
+													})
+												);
 											}
 										}}
 										{onUpload}
