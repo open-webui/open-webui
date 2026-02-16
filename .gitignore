@@ -8,6 +8,7 @@ node_modules
 .env
 .env.*
 !.env.example
+.secrets/
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Byte-compiled / optimized / DLL files
@@ -138,11 +139,13 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv311/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+test.db
 
 # Spyder project settings
 .spyderproject
