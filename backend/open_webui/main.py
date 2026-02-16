@@ -64,6 +64,7 @@ from open_webui.socket.main import (
     MODELS,
     app as socket_app,
     periodic_usage_pool_cleanup,
+    periodic_session_pool_cleanup,
     get_event_emitter,
     get_models_in_use,
 )
@@ -635,6 +636,7 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    asyncio.create_task(periodic_session_pool_cleanup())
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
