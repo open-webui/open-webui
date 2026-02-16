@@ -371,17 +371,29 @@
 				{:else if selectedTab === ''}
 					{#if item?.file?.data}
 						{@const rawContent = (item?.file?.data?.content ?? '').trim() || 'No content'}
-						{@const isTruncated = ($settings?.renderMarkdownInPreviews ?? true) && rawContent.length > CONTENT_PREVIEW_LIMIT && !expandedContent}
+						{@const isTruncated =
+							($settings?.renderMarkdownInPreviews ?? true) &&
+							rawContent.length > CONTENT_PREVIEW_LIMIT &&
+							!expandedContent}
 						{#if $settings?.renderMarkdownInPreviews ?? true}
-							<div class="max-h-96 overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full">
-								<Markdown content={isTruncated ? rawContent.slice(0, CONTENT_PREVIEW_LIMIT) : rawContent} id="file-preview" />
+							<div
+								class="max-h-96 overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full"
+							>
+								<Markdown
+									content={isTruncated ? rawContent.slice(0, CONTENT_PREVIEW_LIMIT) : rawContent}
+									id="file-preview"
+								/>
 							</div>
 							{#if isTruncated}
 								<button
 									class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
-									on:click={() => { expandedContent = true; }}
+									on:click={() => {
+										expandedContent = true;
+									}}
 								>
-									{$i18n.t('Show all ({{COUNT}} characters)', { COUNT: rawContent.length.toLocaleString() })}
+									{$i18n.t('Show all ({{COUNT}} characters)', {
+										COUNT: rawContent.length.toLocaleString()
+									})}
 								</button>
 							{/if}
 						{:else}
@@ -391,17 +403,29 @@
 						{/if}
 					{:else if item?.content}
 						{@const rawContent = (item?.content ?? '').trim() || 'No content'}
-						{@const isTruncated = ($settings?.renderMarkdownInPreviews ?? true) && rawContent.length > CONTENT_PREVIEW_LIMIT && !expandedContent}
+						{@const isTruncated =
+							($settings?.renderMarkdownInPreviews ?? true) &&
+							rawContent.length > CONTENT_PREVIEW_LIMIT &&
+							!expandedContent}
 						{#if $settings?.renderMarkdownInPreviews ?? true}
-							<div class="max-h-96 overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full">
-								<Markdown content={isTruncated ? rawContent.slice(0, CONTENT_PREVIEW_LIMIT) : rawContent} id="file-preview-content" />
+							<div
+								class="max-h-96 overflow-scroll scrollbar-hidden text-sm prose dark:prose-invert max-w-full"
+							>
+								<Markdown
+									content={isTruncated ? rawContent.slice(0, CONTENT_PREVIEW_LIMIT) : rawContent}
+									id="file-preview-content"
+								/>
 							</div>
 							{#if isTruncated}
 								<button
 									class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
-									on:click={() => { expandedContent = true; }}
+									on:click={() => {
+										expandedContent = true;
+									}}
 								>
-									{$i18n.t('Show all ({{COUNT}} characters)', { COUNT: rawContent.length.toLocaleString() })}
+									{$i18n.t('Show all ({{COUNT}} characters)', {
+										COUNT: rawContent.length.toLocaleString()
+									})}
 								</button>
 							{/if}
 						{:else}

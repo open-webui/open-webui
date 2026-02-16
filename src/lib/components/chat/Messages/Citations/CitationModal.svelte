@@ -211,37 +211,47 @@
 							</div>
 
 							{#if document.metadata?.html}
-						<iframe
-							class="w-full border-0 h-auto rounded-none"
-							sandbox="allow-scripts allow-forms{($settings?.iframeSandboxAllowSameOrigin ??
-							false)
-								? ' allow-same-origin'
-								: ''}"
-							srcdoc={document.document}
-							title={$i18n.t('Content')}
-						></iframe>
-					{:else}
-						{@const rawContent = document.document.trim().replace(/\n\n+/g, '\n\n')}
-						{@const isTruncated = ($settings?.renderMarkdownInPreviews ?? true) && rawContent.length > CONTENT_PREVIEW_LIMIT && !expandedDocs.has(documentIdx)}
-						{#if $settings?.renderMarkdownInPreviews ?? true}
-							<div class="text-sm prose dark:prose-invert max-w-full">
-								<Markdown content={isTruncated ? rawContent.slice(0, CONTENT_PREVIEW_LIMIT) : rawContent} id="citation-{documentIdx}" />
-							</div>
-							{#if isTruncated}
-								<button
-									class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
-									on:click={() => {
-										expandedDocs.add(documentIdx);
-										expandedDocs = expandedDocs;
-									}}
-								>
-									{$i18n.t('Show all ({{COUNT}} characters)', { COUNT: rawContent.length.toLocaleString() })}
-								</button>
+								<iframe
+									class="w-full border-0 h-auto rounded-none"
+									sandbox="allow-scripts allow-forms{($settings?.iframeSandboxAllowSameOrigin ??
+									false)
+										? ' allow-same-origin'
+										: ''}"
+									srcdoc={document.document}
+									title={$i18n.t('Content')}
+								></iframe>
+							{:else}
+								{@const rawContent = document.document.trim().replace(/\n\n+/g, '\n\n')}
+								{@const isTruncated =
+									($settings?.renderMarkdownInPreviews ?? true) &&
+									rawContent.length > CONTENT_PREVIEW_LIMIT &&
+									!expandedDocs.has(documentIdx)}
+								{#if $settings?.renderMarkdownInPreviews ?? true}
+									<div class="text-sm prose dark:prose-invert max-w-full">
+										<Markdown
+											content={isTruncated
+												? rawContent.slice(0, CONTENT_PREVIEW_LIMIT)
+												: rawContent}
+											id="citation-{documentIdx}"
+										/>
+									</div>
+									{#if isTruncated}
+										<button
+											class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+											on:click={() => {
+												expandedDocs.add(documentIdx);
+												expandedDocs = expandedDocs;
+											}}
+										>
+											{$i18n.t('Show all ({{COUNT}} characters)', {
+												COUNT: rawContent.length.toLocaleString()
+											})}
+										</button>
+									{/if}
+								{:else}
+									<pre class="text-sm dark:text-gray-400 whitespace-pre-line">{rawContent}</pre>
+								{/if}
 							{/if}
-						{:else}
-							<pre class="text-sm dark:text-gray-400 whitespace-pre-line">{rawContent}</pre>
-						{/if}
-					{/if}
 						</div>
 					</div>
 				{/each}
