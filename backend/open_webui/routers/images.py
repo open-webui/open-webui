@@ -849,6 +849,7 @@ class EditImageForm(BaseModel):
     size: Optional[str] = None
     n: Optional[int] = None
     negative_prompt: Optional[str] = None
+    background: Optional[str] = None  # "transparent", "opaque", or "auto"
 
 
 @router.post("/edit")
@@ -961,6 +962,7 @@ async def image_edits(
                     )
                     else {"response_format": "b64_json"}
                 ),
+                **({"background": form_data.background} if form_data.background else {}),
             }
 
             files = []
