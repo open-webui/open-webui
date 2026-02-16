@@ -263,16 +263,15 @@ class GroupTable:
 
             total = query.count()
 
-            member_count = func.count(GroupMember.user_id).label("member_count")
-            results = (
-                query.add_columns(member_count)
-                .outerjoin(GroupMember, GroupMember.group_id == Group.id)
-                .group_by(Group.id)
-                .order_by(Group.updated_at.desc())
+            groups = (
+                query.order_by(Group.updated_at.desc())
                 .offset(skip)
                 .limit(limit)
                 .all()
             )
+
+            group_ids = [group.id for group in groups]
+            member_counts = self.get_group_member_counts_by_ids(group_ids, db=db)
 
             return {
                 "items": [
@@ -282,7 +281,7 @@ class GroupTable:
                             "member_count": member_counts.get(group.id, 0),
                         }
                     )
-                    for group, count in results
+                    for group in groups
                 ],
                 "total": total,
             }
