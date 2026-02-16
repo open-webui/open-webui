@@ -20,8 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🚀 **Startup model pre-fetch error handling.** If model pre-fetching fails during app startup, the application now logs a warning and continues instead of crashing entirely. [Commit](https://github.com/open-webui/open-webui/commit/337109e99ce390f55a9085d0a301853637923779)
 - 🗄️ **PostgreSQL group query fix.** The `/api/v1/groups/` endpoint no longer fails with a GROUP BY error when using PostgreSQL; member counts are now calculated using correlated subqueries for better database compatibility. [#21458](https://github.com/open-webui/open-webui/pull/21458), [#21467](https://github.com/open-webui/open-webui/issues/21467)
 
-### Fixed
-
 ## [0.8.2] - 2026-02-16
 
 ### Added
