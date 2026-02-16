@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - 📧 **USER_EMAIL variable fix.** The {{USER_EMAIL}} template variable now correctly returns the user's email address instead of "Unknown" in prompts. [#21479](https://github.com/open-webui/open-webui/pull/21479), [#21465](https://github.com/open-webui/open-webui/issues/21465)
+- 🛡️ **Missing function error handling.** Models that reference deleted functions no longer cause the entire /api/models endpoint to crash; instead, the missing functions are skipped and logged, allowing the rest of the models to load successfully. [#21476](https://github.com/open-webui/open-webui/pull/21476), [#21464](https://github.com/open-webui/open-webui/issues/21464)
 
 ### Changed
 
