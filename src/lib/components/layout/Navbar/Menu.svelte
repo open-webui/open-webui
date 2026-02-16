@@ -35,7 +35,6 @@
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
-	import type { WaitForSettledOptions } from '$lib/utils/AsyncTaskTracker';
 
 	const i18n = getContext('i18n');
 
@@ -78,25 +77,23 @@
 		try {
 			const { exportPDF, exportPlainTextToPdf } = await import('$lib/utils/pdf');
 			if ($settings?.stylizedPdfExport ?? true) {
-				showFullMessages = true;
-				await tick();
-				const messagesContainerElement = exportMessagesRef?.getMessagesContainerElement();
-				if (!messagesContainerElement) {
-					throw new Error('Messages container element not found');
-				}
-
-				await exportPDF(messagesContainerElement, {
-					title: chat.chat.title,
-					async onBeforeRender() {
-						try {
-							await exportMessagesRef?.waitForSettled?.();
-						} catch (error) {
-							console.warn('Timed out while waiting for async render tasks before PDF export:', error);
-						}
-					},
-					onAfterRender() {
-						showFullMessages = false;
+				await exportPDF(async () => {
+					showFullMessages = true;
+					await tick();
+					const messagesContainerElement = exportMessagesRef?.getMessagesContainerElement();
+					if (!messagesContainerElement) {
+						throw new Error('Messages container element not found');
 					}
+
+					try {
+						await exportMessagesRef?.waitForSettled?.();
+					} catch (error) {
+						console.warn('Timed out while waiting for async render tasks before PDF export:', error);
+					}
+
+					return messagesContainerElement;
+				}, { title: chat.chat.title }).finally(() => {
+					showFullMessages = false;
 				});
 			} else {
 				await exportPlainTextToPdf(await getChatAsText(), `chat-${chat.chat.title}.pdf`);
