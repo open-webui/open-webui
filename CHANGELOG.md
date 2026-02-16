@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 🎨 **Image edit background control.** Users can now control background transparency when editing images, with options for "transparent", "opaque", or "auto" via the background parameter in the image edit tool. [#21459](https://github.com/open-webui/open-webui/pull/21459)
 - ✏️ **Model edit shortcut.** Users can now edit models directly from the model selector dropdown menu, making it faster to modify model settings without navigating to separate admin or workspace pages. [Commit](https://github.com/open-webui/open-webui/commit/519ff40cb69cdc1d215cee369e9db70ff7438153)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
