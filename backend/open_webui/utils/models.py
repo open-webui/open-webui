@@ -302,7 +302,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # This ensures each function's DB freshness check runs exactly once,
     # not once per (model × function) pair.
     for function_id in all_function_ids:
-        get_function_module_from_cache(request, function_id)
+        try:
+            get_function_module_from_cache(request, function_id)
+        except Exception as e:
+            log.info(f"Failed to load function module for {function_id}: {e}")
 
     for model in models:
         action_ids = [
@@ -337,7 +340,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             if filter_function is None:
                 log.info(f"Filter not found: {filter_id}")
                 continue
-                
+
             function_module = request.app.state.FUNCTIONS.get(filter_id)
             if function_module is None:
                 log.info(f"Failed to load filter module: {filter_id}")
