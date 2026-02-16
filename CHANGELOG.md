@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🧠 **Skill content handling.** User-selected skills now have their full content injected into the chat, while model-attached skills only display name and description in the available skills list. This allows users to override skill behavior while model-attached skills remain flexible. [Commit](https://github.com/open-webui/open-webui/commit/393c0071dc612c5ac982fb37dfc0288cb9911439)
 - ⚙️ **Chat toggles now control built-in tools.** Users can now disable web search, image generation, and code execution on a per-conversation basis, even when those tools are enabled as builtin tools on the model. [#20641](https://github.com/open-webui/open-webui/issues/20641), [#21318](https://github.com/open-webui/open-webui/discussions/21318), [Commit](https://github.com/open-webui/open-webui/commit/c46ef3b63bcc1e2e9adbdd18fab82c4bbe33ff6c), [Commit](https://github.com/open-webui/open-webui/commit/f1a1e64d2e9ad953b2bc2a9543e9a308b7c669c8)
+- 🖼️ **Image preview in file modal.** Images uploaded to chats can now be previewed directly in the file management modal, making it easier to identify and manage image files. [#21413](https://github.com/open-webui/open-webui/issues/21413), [Commit](https://github.com/open-webui/open-webui/commit/e1b3e7252c1896c04d498547908f0fce111434e1)
 - 🌐 **Translation updates.** Translations for Spanish and German were enhanced and expanded.
 
 ### Fixed
