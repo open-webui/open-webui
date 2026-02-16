@@ -1932,7 +1932,7 @@ def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]
         return None
 
     return [
-        {k: v for k, v in msg.items() if k in ("role", "content", "output")}
+        {k: v for k, v in msg.items() if k in ("role", "content", "output", "files")}
         for msg in db_messages
     ]
 
@@ -1981,6 +1981,31 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data["messages"] = (
                 [system_message, *db_messages] if system_message else db_messages
             )
+
+            # Inject image files into content as image_url parts (mirrors frontend logic)
+            for message in form_data["messages"]:
+                image_files = [
+                    f
+                    for f in message.get("files", [])
+                    if f.get("type") == "image"
+                    or (f.get("content_type") or "").startswith("image/")
+                ]
+                if message.get("role") == "user" and image_files:
+                    text_content = message.get("content", "")
+                    if isinstance(text_content, str):
+                        message["content"] = [
+                            {"type": "text", "text": text_content},
+                            *[
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f["url"]},
+                                }
+                                for f in image_files
+                                if f.get("url")
+                            ],
+                        ]
+                # Strip files field — it's been incorporated into content
+                message.pop("files", None)
 
     # Process messages with OR-aligned output items for clean LLM messages
     form_data["messages"] = process_messages_with_output(form_data.get("messages", []))

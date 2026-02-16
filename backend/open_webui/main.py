@@ -639,25 +639,28 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_session_pool_cleanup())
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
-        await get_all_models(
-            Request(
-                # Creating a mock request object to pass to get_all_models
-                {
-                    "type": "http",
-                    "asgi.version": "3.0",
-                    "asgi.spec_version": "2.0",
-                    "method": "GET",
-                    "path": "/internal",
-                    "query_string": b"",
-                    "headers": Headers({}).raw,
-                    "client": ("127.0.0.1", 12345),
-                    "server": ("127.0.0.1", 80),
-                    "scheme": "http",
-                    "app": app,
-                }
-            ),
-            None,
-        )
+        try:
+            await get_all_models(
+                Request(
+                    # Creating a mock request object to pass to get_all_models
+                    {
+                        "type": "http",
+                        "asgi.version": "3.0",
+                        "asgi.spec_version": "2.0",
+                        "method": "GET",
+                        "path": "/internal",
+                        "query_string": b"",
+                        "headers": Headers({}).raw,
+                        "client": ("127.0.0.1", 12345),
+                        "server": ("127.0.0.1", 80),
+                        "scheme": "http",
+                        "app": app,
+                    }
+                ),
+                None,
+            )
+        except Exception as e:
+            log.warning(f"Failed to pre-fetch models at startup: {e}")
 
     # Pre-fetch tool server specs so the first request doesn't pay the latency cost
     if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
