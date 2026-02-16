@@ -65,6 +65,19 @@
 			.replace(/\b\w/g, (c) => c.toUpperCase());
 	}
 
+	function formatValue(value: any): string {
+		if (value === null || value === undefined) return '—';
+		if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+		if (typeof value === 'string') return value;
+		if (typeof value === 'number') return String(value);
+		if (Array.isArray(value)) return `[${value.length} item${value.length !== 1 ? 's' : ''}]`;
+		if (typeof value === 'object') {
+			const keys = Object.keys(value);
+			return `{${keys.join(', ')}}`;
+		}
+		return String(value);
+	}
+
 	function tryParseArgs(str: string): Record<string, any> | null {
 		try {
 			const parsed = parseJSONString(str);
@@ -185,7 +198,7 @@
 										{#each Object.entries(parsedArgs) as [key, value]}
 											<div class="flex gap-2 text-xs py-0.5">
 												<span class="font-semibold text-gray-600 dark:text-gray-400 shrink-0">{formatKey(key)}</span>
-												<span class="text-gray-800 dark:text-gray-200 break-all">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</span>
+												<span class="text-gray-800 dark:text-gray-200 break-all">{formatValue(value)}</span>
 											</div>
 										{/each}
 									</div>
