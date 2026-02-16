@@ -613,6 +613,28 @@ def update_file_data_content_by_id(
                 user=user,
             )
             file = Files.get_file_by_id(id=id, db=db)
+
+            # Sync knowledge base collections that reference this file.
+            # The per-file collection (file-{id}) was just rebuilt above,
+            # but any knowledge collections still hold the old chunks.
+            knowledges = Knowledges.get_knowledges_by_file_id(id, db=db)
+            for knowledge in knowledges:
+                try:
+                    VECTOR_DB_CLIENT.delete(
+                        collection_name=knowledge.id,
+                        filter={"file_id": id},
+                    )
+                    process_file(
+                        request,
+                        ProcessFileForm(
+                            file_id=id, collection_name=knowledge.id
+                        ),
+                        user=user,
+                    )
+                except Exception as e:
+                    log.error(
+                        f"Error syncing knowledge {knowledge.id} for file {id}: {e}"
+                    )
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
