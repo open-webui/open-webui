@@ -96,7 +96,7 @@
 		} else if (type === 'pdf') {
 			try {
 				const { exportPDFFromHTML } = await import('$lib/utils/pdf');
-				await exportPDFFromHTML(selectedNote.data?.content?.html || '', { title: note.title });
+				await exportPDFFromHTML(selectedNote.data?.content?.html || '', { title: selectedNote.title });
 			} catch (error) {
 				toast.error(`${error}`);
 			}
