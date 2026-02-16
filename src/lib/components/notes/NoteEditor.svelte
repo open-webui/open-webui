@@ -600,8 +600,10 @@ ${content}
 			try {
 				const { exportPDFFromHTML } = await import('$lib/utils/pdf');
 				await exportPDFFromHTML(note.data?.content?.html || '', { title: note.title });
+				toast.success($i18n.t('PDF exported successfully.'));
 			} catch (error) {
-				toast.error(`${error}`);
+				console.error(error);
+				toast.error($i18n.t('Failed to export PDF.'));
 			}
 		}
 	};

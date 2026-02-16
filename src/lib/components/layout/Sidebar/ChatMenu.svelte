@@ -105,6 +105,7 @@
 							await exportMessagesRef?.waitForSettled?.();
 						} catch (error) {
 							console.warn('Timed out while waiting for async render tasks before PDF export:', error);
+							toast.warning($i18n.t('Timed out while waiting for async render tasks before PDF export.'));
 						}
 
 						return messagesContainerElement;
