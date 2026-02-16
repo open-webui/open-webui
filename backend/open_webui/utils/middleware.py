@@ -1922,6 +1922,8 @@ def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]
     """
     Load the message chain from DB up to message_id,
     keeping only LLM-relevant fields (role, content, output).
+    Also preserves image files as image_url content parts so that
+    vision-capable models receive the attached images.
     """
     messages_map = Chats.get_messages_map_by_chat_id(chat_id)
     if not messages_map:
@@ -1931,10 +1933,39 @@ def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]
     if not db_messages:
         return None
 
-    return [
-        {k: v for k, v in msg.items() if k in ("role", "content", "output")}
-        for msg in db_messages
-    ]
+    result = []
+    for msg in db_messages:
+        clean = {k: v for k, v in msg.items() if k in ("role", "content", "output")}
+
+        # Reconstruct image_url content parts from attached image files.
+        # The frontend builds these from message.files at request time, but
+        # since we replace the frontend messages with DB messages, we need
+        # to rebuild them here.
+        if clean.get("role") == "user" and msg.get("files"):
+            image_files = [
+                f
+                for f in msg["files"]
+                if f.get("type") == "image"
+                or (f.get("content_type") or "").startswith("image/")
+            ]
+            if image_files:
+                content = clean.get("content", "") or ""
+                # Build multipart content with text + image_url parts
+                clean["content"] = [
+                    {"type": "text", "text": content if isinstance(content, str) else ""},
+                    *[
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f.get("url", "")},
+                        }
+                        for f in image_files
+                        if f.get("url")
+                    ],
+                ]
+
+        result.append(clean)
+
+    return result
 
 
 def process_messages_with_output(messages: list[dict]) -> list[dict]:
