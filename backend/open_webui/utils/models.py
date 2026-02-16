@@ -306,9 +306,14 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         for action_id in action_ids:
             action_function = Functions.get_function_by_id(action_id)
             if action_function is None:
-                raise Exception(f"Action not found: {action_id}")
+                log.info(f"Action not found: {action_id}")
+                continue
 
-            function_module = get_function_module_by_id(action_id)
+            try:
+                function_module = get_function_module_by_id(action_id)
+            except Exception as e:
+                log.info(f"Failed to load action module {action_id}: {e}")
+                continue
             model["actions"].extend(
                 get_action_items_from_module(action_function, function_module)
             )
@@ -317,9 +322,14 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         for filter_id in filter_ids:
             filter_function = Functions.get_function_by_id(filter_id)
             if filter_function is None:
-                raise Exception(f"Filter not found: {filter_id}")
+                log.info(f"Filter not found: {filter_id}")
+                continue
 
-            function_module = get_function_module_by_id(filter_id)
+            try:
+                function_module = get_function_module_by_id(filter_id)
+            except Exception as e:
+                log.info(f"Failed to load filter module {filter_id}: {e}")
+                continue
 
             if getattr(function_module, "toggle", None):
                 model["filters"].extend(
