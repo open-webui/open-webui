@@ -451,9 +451,7 @@ class ChatTable:
             # Clean up orphaned old tags in one query
             removed = set(old_tags) - set(new_tag_ids)
             if removed:
-                self.delete_orphan_tags_for_user(
-                    list(removed), user.id, db=db
-                )
+                self.delete_orphan_tags_for_user(list(removed), user.id, db=db)
 
             return ChatModel.model_validate(chat)
 
@@ -1380,9 +1378,7 @@ class ChatTable:
         with get_db_context(db) as db:
             orphans = []
             for tag_id in tag_ids:
-                count = self.count_chats_by_tag_name_and_user_id(
-                    tag_id, user_id, db=db
-                )
+                count = self.count_chats_by_tag_name_and_user_id(tag_id, user_id, db=db)
                 if count <= threshold:
                     orphans.append(tag_id)
             Tags.delete_tags_by_ids_and_user_id(orphans, user_id, db=db)

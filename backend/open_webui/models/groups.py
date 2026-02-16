@@ -218,11 +218,7 @@ class GroupTable:
                             )
                         )
 
-            results = (
-                query.group_by(Group.id)
-                .order_by(Group.updated_at.desc())
-                .all()
-            )
+            results = query.group_by(Group.id).order_by(Group.updated_at.desc()).all()
 
             return [
                 GroupResponse.model_validate(

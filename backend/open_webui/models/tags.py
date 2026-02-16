@@ -123,9 +123,9 @@ class TagTable:
             return True
         try:
             with get_db_context(db) as db:
-                db.query(Tag).filter(
-                    Tag.id.in_(ids), Tag.user_id == user_id
-                ).delete(synchronize_session=False)
+                db.query(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id).delete(
+                    synchronize_session=False
+                )
                 db.commit()
                 return True
         except Exception as e:

@@ -679,9 +679,7 @@ async def lifespan(app: FastAPI):
                 }
             )
             await set_tool_servers(mock_request)
-            log.info(
-                f"Initialized {len(app.state.TOOL_SERVERS)} tool server(s)"
-            )
+            log.info(f"Initialized {len(app.state.TOOL_SERVERS)} tool server(s)")
         except Exception as e:
             log.warning(f"Failed to initialize tool servers at startup: {e}")
 

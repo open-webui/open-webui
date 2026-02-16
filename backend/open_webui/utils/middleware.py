@@ -1918,9 +1918,7 @@ async def convert_url_images_to_base64(form_data):
     return form_data
 
 
-def load_messages_from_db(
-    chat_id: str, message_id: str
-) -> Optional[list[dict]]:
+def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
     """
     Load the message chain from DB up to message_id,
     keeping only LLM-relevant fields (role, content, output).
@@ -2164,7 +2162,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 form_data["messages"] = add_or_update_user_message(
                     (
                         request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
-                        if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ""
+                        if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+                        != ""
                         else DEFAULT_CODE_INTERPRETER_PROMPT
                     ),
                     form_data["messages"],
@@ -2198,7 +2197,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if skill.id in user_skill_ids:
                 # User-selected: inject full content
                 form_data["messages"] = add_or_update_system_message(
-                    f"<skill name=\"{skill.name}\">\n{skill.content}\n</skill>",
+                    f'<skill name="{skill.name}">\n{skill.content}\n</skill>',
                     form_data["messages"],
                     append=True,
                 )
@@ -2447,7 +2446,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             {
                 **extra_params,
                 "__event_emitter__": event_emitter,
-                "__skill_ids__": [s.id for s in available_skills if s.id not in user_skill_ids],
+                "__skill_ids__": [
+                    s.id for s in available_skills if s.id not in user_skill_ids
+                ],
             },
             features,
             model,
