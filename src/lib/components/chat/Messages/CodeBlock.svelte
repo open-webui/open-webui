@@ -550,7 +550,7 @@
 					{/if}
 				{:else}
 					<div
-						class="bg-white dark:bg-black dark:text-white rounded-b-2xl! pt-0.5 pb-3 px-4 flex flex-col gap-2 text-xs"
+						class="bg-white dark:bg-black dark:text-white rounded-b-2xl! pt-0.5 pb-2 px-4 flex flex-col gap-2 text-xs"
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
