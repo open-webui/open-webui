@@ -31,7 +31,7 @@
 
 	import { goto } from '$app/navigation';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
-	import { createNewNote, deleteNoteById, getNoteList, searchNotes } from '$lib/apis/notes';
+	import { createNewNote, deleteNoteById, getNoteById, getNoteList, searchNotes } from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 	import { downloadPdf, createNoteHandler } from './utils';
 
@@ -73,15 +73,21 @@
 	let allItemsLoaded = false;
 
 	const downloadHandler = async (type) => {
+		const fullNote = await getNoteById(localStorage.token, selectedNote.id).catch((err) => {
+			toast.error(`Failed to load note: ${err}`);
+			return null;
+		});
+		if (!fullNote) return;
+
 		if (type === 'txt') {
-			const blob = new Blob([selectedNote.data.content.md], { type: 'text/plain' });
-			saveAs(blob, `${selectedNote.title}.txt`);
+			const blob = new Blob([fullNote.data.content.md], { type: 'text/plain' });
+			saveAs(blob, `${fullNote.title}.txt`);
 		} else if (type === 'md') {
-			const blob = new Blob([selectedNote.data.content.md], { type: 'text/markdown' });
-			saveAs(blob, `${selectedNote.title}.md`);
+			const blob = new Blob([fullNote.data.content.md], { type: 'text/markdown' });
+			saveAs(blob, `${fullNote.title}.md`);
 		} else if (type === 'pdf') {
 			try {
-				await downloadPdf(selectedNote);
+				await downloadPdf(fullNote);
 			} catch (error) {
 				toast.error(`${error}`);
 			}

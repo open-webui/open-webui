@@ -98,6 +98,34 @@ class NoteTable:
         note_data["access_grants"] = self._get_access_grants(note_data["id"], db=db)
         return NoteModel.model_validate(note_data)
 
+    def _to_note_models_batch(
+        self, notes: list[Note], db: Optional[Session] = None
+    ) -> list[NoteModel]:
+        """Convert a list of notes to NoteModels with a single grants query (avoids N+1)."""
+        if not notes:
+            return []
+        note_ids = [n.id for n in notes]
+        grants_map = AccessGrants.get_grants_by_resources("note", note_ids, db=db)
+        result = []
+        for note in notes:
+            note_data = NoteModel.model_validate(note).model_dump(
+                exclude={"access_grants"}
+            )
+            note_data["access_grants"] = grants_map.get(note.id, [])
+            result.append(NoteModel.model_validate(note_data))
+        return result
+
+    def _strip_data_for_list(self, note_model: NoteModel) -> NoteModel:
+        """Keep only a short preview of data.content.md for list/grid views (reduces payload)."""
+        if note_model.data and isinstance(note_model.data.get("content"), dict):
+            md = note_model.data["content"].get("md", "") or ""
+            note_model.data = {
+                "content": {"md": md[:200]}
+            }
+        else:
+            note_model.data = None
+        return note_model
+
     def _has_permission(self, db, query, filter: dict, permission: str = "read"):
         return AccessGrants.has_permission_filter(
             db=db,
@@ -142,7 +170,8 @@ class NoteTable:
             if limit is not None:
                 query = query.limit(limit)
             notes = query.all()
-            return [self._to_note_model(note, db=db) for note in notes]
+            batch = self._to_note_models_batch(notes, db=db)
+            return [self._strip_data_for_list(n) for n in batch]
 
     def search_notes(
         self,
@@ -227,11 +256,16 @@ class NoteTable:
 
             items = query.all()
 
+            raw_notes = [note for note, user in items]
+            note_models = self._to_note_models_batch(raw_notes, db=db)
+            note_model_map = {nm.id: nm for nm in note_models}
+
             notes = []
             for note, user in items:
+                nm = self._strip_data_for_list(note_model_map[note.id])
                 notes.append(
                     NoteUserResponse(
-                        **self._to_note_model(note, db=db).model_dump(),
+                        **nm.model_dump(),
                         user=(
                             UserResponse(**UserModel.model_validate(user).model_dump())
                             if user
@@ -266,7 +300,8 @@ class NoteTable:
                 query = query.limit(limit)
 
             notes = query.all()
-            return [self._to_note_model(note, db=db) for note in notes]
+            batch = self._to_note_models_batch(notes, db=db)
+            return [self._strip_data_for_list(n) for n in batch]
 
     def get_note_by_id(
         self, id: str, db: Optional[Session] = None

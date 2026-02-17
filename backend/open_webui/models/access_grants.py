@@ -456,6 +456,34 @@ class AccessGrantsTable:
             )
             return [AccessGrantModel.model_validate(g) for g in grants]
 
+    def get_grants_by_resources(
+        self,
+        resource_type: str,
+        resource_ids: list[str],
+        db: Optional[Session] = None,
+    ) -> dict[str, list[AccessGrantModel]]:
+        """Get all grants for multiple resources in one query.
+        Returns a dict mapping resource_id -> list of grants."""
+        if not resource_ids:
+            return {}
+
+        with get_db_context(db) as db:
+            grants = (
+                db.query(AccessGrant)
+                .filter(
+                    AccessGrant.resource_type == resource_type,
+                    AccessGrant.resource_id.in_(resource_ids),
+                )
+                .all()
+            )
+
+            result: dict[str, list[AccessGrantModel]] = {
+                rid: [] for rid in resource_ids
+            }
+            for g in grants:
+                result[g.resource_id].append(AccessGrantModel.model_validate(g))
+            return result
+
     def has_access(
         self,
         user_id: str,
