@@ -1495,7 +1495,7 @@ def save_docs_to_vector_db(
                     [
                         Document(
                             page_content=split_chunk.page_content,
-                            metadata={**doc.metadata},
+                            metadata={**doc.metadata, **split_chunk.metadata},
                         )
                         for split_chunk in markdown_splitter.split_text(
                             doc.page_content
