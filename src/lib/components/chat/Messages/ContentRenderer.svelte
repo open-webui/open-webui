@@ -1,6 +1,5 @@
 <script>
-	import { onDestroy, onMount, tick, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { onDestroy, onMount, tick } from 'svelte';
 
 	import Markdown from './Markdown.svelte';
 	import {
@@ -35,10 +34,12 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
-	export let onSave = (e) => {};
-	export let onSourceClick = (e) => {};
-	export let onTaskClick = (e) => {};
-	export let onAddMessages = (e) => {};
+	export let onSave = () => {};
+	export let onSourceClick = () => {};
+	export let onTaskClick = () => {};
+	export let onAddMessages = () => {};
+	export let onPinSelection = () => {};
+	export let enableTextPinning = false;
 
 	let contentContainerElement;
 	let floatingButtonsElement;
@@ -62,6 +63,11 @@
 
 			if (selection.toString().trim().length > 0) {
 				const range = selection.getRangeAt(0);
+				if (!contentContainerElement.contains(range.commonAncestorContainer)) {
+					closeFloatingButtons();
+					return;
+				}
+
 				const rect = range.getBoundingClientRect();
 
 				const parentRect = contentContainerElement.getBoundingClientRect();
@@ -88,6 +94,7 @@
 					}
 					buttonsContainerElement.style.top = `${top + 5}px`; // +5 to add some spacing
 				}
+
 			} else {
 				closeFloatingButtons();
 			}
@@ -108,6 +115,45 @@
 				floatingButtonsElement?.closeHandler();
 			}
 		}
+	};
+
+	const pinSelectedText = () => {
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) return;
+
+		const text = selection.toString().trim();
+		if (!text) return;
+
+		const range = selection.getRangeAt(0);
+		if (!contentContainerElement?.contains(range.commonAncestorContainer)) return;
+
+		const snippetId =
+			(typeof crypto !== 'undefined' && crypto.randomUUID?.()) ||
+			`${messageId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+		let hasAnchor = false;
+		try {
+			const marker = document.createElement('span');
+			marker.dataset.pinSnippetId = snippetId;
+			marker.className = 'rounded px-0.5 bg-blue-500/25';
+
+			const selectedContents = range.extractContents();
+			marker.appendChild(selectedContents);
+			range.insertNode(marker);
+			hasAnchor = true;
+		} catch (error) {
+			console.warn('Could not create pinned text anchor', error);
+		}
+
+		selection.removeAllRanges();
+		closeFloatingButtons();
+
+		onPinSelection({
+			id: snippetId,
+			messageId,
+			text,
+			hasAnchor
+		});
 	};
 
 	const keydownHandler = (e) => {
@@ -201,7 +247,7 @@
 	/>
 </div>
 
-{#if floatingButtons && model}
+{#if floatingButtons}
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
@@ -217,6 +263,10 @@
 			console.log(modelId, parentId, messages);
 			onAddMessages({ modelId, parentId, messages });
 			closeFloatingButtons();
+		}}
+		enablePinAction={enableTextPinning}
+		onPin={() => {
+			pinSelectedText();
 		}}
 	/>
 {/if}

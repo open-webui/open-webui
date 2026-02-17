@@ -22,6 +22,8 @@
 	export let messages = [];
 	export let actions = [];
 	export let onAdd = (e) => {};
+	export let enablePinAction = false;
+	export let onPin = () => {};
 
 	let floatingInput = false;
 	let selectedAction = null;
@@ -281,6 +283,34 @@
 						<div class="shrink-0">{action.label}</div>
 					</button>
 				{/each}
+
+				{#if enablePinAction}
+					<button
+						class="px-1.5 py-[1px] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
+						on:mousedown|preventDefault
+						on:click={() => {
+							onPin();
+						}}
+						aria-label={$i18n.t('Pin')}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="size-3 shrink-0"
+						>
+							<path d="M16 3l5 5" />
+							<path d="M9 7l8 8" />
+							<path d="M14 4l6 6-4 4-8-8z" />
+							<path d="M7 12l-4 9 9-4" />
+						</svg>
+						<div class="shrink-0">{$i18n.t('Pin')}</div>
+					</button>
+				{/if}
 			</div>
 		{:else}
 			<div

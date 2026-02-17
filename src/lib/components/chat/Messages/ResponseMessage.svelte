@@ -145,6 +145,7 @@
 	export let regenerateResponse: Function;
 
 	export let addMessages: Function;
+	export let onPinSelection: Function = () => {};
 
 	export let isLastMessage = true;
 	export let readOnly = false;
@@ -803,6 +804,8 @@
 									onAddMessages={({ modelId, parentId, messages }) => {
 										addMessages({ modelId, parentId, messages });
 									}}
+									{onPinSelection}
+									enableTextPinning={!readOnly}
 									onSave={({ raw, oldContent, newContent }) => {
 										history.messages[message.id].content = history.messages[
 											message.id

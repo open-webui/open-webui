@@ -39,6 +39,7 @@
 	export let mergeResponses;
 
 	export let addMessages;
+	export let onPinSelection: Function = () => {};
 	export let triggerScroll;
 	export let readOnly = false;
 	export let editCodeBlock = true;
@@ -95,6 +96,7 @@
 				{continueResponse}
 				{regenerateResponse}
 				{addMessages}
+				{onPinSelection}
 				{readOnly}
 				{editCodeBlock}
 				{topPadding}

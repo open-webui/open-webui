@@ -84,6 +84,15 @@
 	let showCreateFolderModal = false;
 
 	let pinnedModels = [];
+	type PinnedSnippet = {
+		id: string;
+		messageId: string;
+		text: string;
+		createdAt: number;
+	};
+	let pinnedSnippets: PinnedSnippet[] = [];
+	let pinnedSnippetsCollapsed = false;
+	let loadedPinnedSnippetChatId = '';
 
 	let showPinnedModels = false;
 	let showChannels = false;
@@ -93,6 +102,69 @@
 	let folderRegistry = {};
 
 	let newFolderId = null;
+
+	const getPinnedStorageKey = (id: string) => `chat-pinned-snippets-${id}`;
+
+	const loadPinnedSnippets = (id: string): PinnedSnippet[] => {
+		if (!id) return [];
+		try {
+			const raw = localStorage.getItem(getPinnedStorageKey(id));
+			if (!raw) return [];
+			const parsed = JSON.parse(raw);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch {
+			return [];
+		}
+	};
+
+	const savePinnedSnippets = (id: string, snippets: PinnedSnippet[]) => {
+		if (!id) return;
+		localStorage.setItem(getPinnedStorageKey(id), JSON.stringify(snippets));
+	};
+
+	$: if ($chatId && $chatId !== loadedPinnedSnippetChatId) {
+		pinnedSnippets = loadPinnedSnippets($chatId);
+		loadedPinnedSnippetChatId = $chatId;
+	}
+
+	$: if (!$chatId) {
+		pinnedSnippets = [];
+		loadedPinnedSnippetChatId = '';
+	}
+
+	const gotoPinnedSnippet = (snippet: PinnedSnippet) => {
+		window.dispatchEvent(
+			new CustomEvent('openwebui:pinned-snippet-navigate', {
+				detail: snippet
+			})
+		);
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+	};
+
+	const unpinSnippet = (snippetId: string) => {
+		if (!$chatId) return;
+		pinnedSnippets = pinnedSnippets.filter((snippet) => snippet.id !== snippetId);
+		savePinnedSnippets($chatId, pinnedSnippets);
+		window.dispatchEvent(
+			new CustomEvent('openwebui:pinned-snippet-updated', {
+				detail: { chatId: $chatId, snippets: pinnedSnippets }
+			})
+		);
+		window.dispatchEvent(
+			new CustomEvent('openwebui:pinned-snippet-unpin', {
+				detail: { id: snippetId }
+			})
+		);
+	};
+
+	const pinnedSnippetUpdatedHandler = (event: Event) => {
+		const customEvent = event as CustomEvent<{ chatId: string; snippets: PinnedSnippet[] }>;
+		if (customEvent?.detail?.chatId && customEvent.detail.chatId === $chatId) {
+			pinnedSnippets = customEvent.detail.snippets ?? [];
+		}
+	};
 
 	$: if ($selectedFolder) {
 		initFolders();
@@ -500,6 +572,7 @@
 
 		window.addEventListener('focus', onFocus);
 		window.addEventListener('blur', onBlur);
+		window.addEventListener('openwebui:pinned-snippet-updated', pinnedSnippetUpdatedHandler);
 
 		const dropZone = document.getElementById('sidebar');
 
@@ -549,6 +622,7 @@
 
 		window.removeEventListener('focus', onFocus);
 		window.removeEventListener('blur', onBlur);
+		window.removeEventListener('openwebui:pinned-snippet-updated', pinnedSnippetUpdatedHandler);
 
 		const dropZone = document.getElementById('sidebar');
 
@@ -1051,6 +1125,56 @@
 									<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
 								</div>
 							</a>
+						</div>
+					{/if}
+
+					{#if $chatId && pinnedSnippets.length > 0}
+						<div class="px-[0.4375rem] mt-1.5">
+							<div
+								class="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white/70 dark:bg-gray-900/50"
+							>
+								<div class="flex items-center justify-between px-2.5 py-2">
+									<div class="text-xs font-semibold text-gray-700 dark:text-gray-200">
+										{$i18n.t('Pinned Messages')}
+									</div>
+									<button
+										class="text-[11px] text-gray-500 hover:text-gray-900 dark:hover:text-white px-1"
+										on:click={() => {
+											pinnedSnippetsCollapsed = !pinnedSnippetsCollapsed;
+										}}
+									>
+										{pinnedSnippetsCollapsed ? '+' : '-'}
+									</button>
+								</div>
+
+								{#if !pinnedSnippetsCollapsed}
+									<div class="px-1.5 pb-1.5 max-h-36 overflow-y-auto space-y-1">
+										{#each pinnedSnippets as snippet (snippet.id)}
+											<div
+												class="group rounded-xl bg-black/5 dark:bg-white/5 px-1.5 py-1 flex items-start gap-1"
+											>
+												<button
+													class="flex-1 text-left text-[12px] line-clamp-2 text-gray-700 dark:text-gray-200"
+													on:click|stopPropagation={() => {
+														gotoPinnedSnippet(snippet);
+													}}
+												>
+													{snippet.text}
+												</button>
+												<button
+													class="text-gray-500 hover:text-red-600 dark:hover:text-red-400 text-[11px] px-1"
+													on:click|stopPropagation={() => {
+														unpinSnippet(snippet.id);
+													}}
+													aria-label={$i18n.t('Unpin')}
+												>
+													✕
+												</button>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
 						</div>
 					{/if}
 				</div>

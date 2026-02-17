@@ -108,6 +108,16 @@
 
 	let messageInput;
 
+	type PinnedSnippet = {
+		id: string;
+		messageId: string;
+		text: string;
+		createdAt: number;
+	};
+
+	let pinnedSnippets: PinnedSnippet[] = [];
+	let loadedPinnedChatId = '';
+
 	let autoScroll = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
@@ -285,6 +295,176 @@
 		resetInput();
 		oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModelIds));
 	};
+
+	const getPinnedStorageKey = (id: string) => `chat-pinned-snippets-${id}`;
+
+	const loadPinnedSnippets = (id: string): PinnedSnippet[] => {
+		if (!id) return [];
+		try {
+			const raw = localStorage.getItem(getPinnedStorageKey(id));
+			if (!raw) return [];
+			const parsed = JSON.parse(raw);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch {
+			return [];
+		}
+	};
+
+	const savePinnedSnippets = (id: string, snippets: PinnedSnippet[]) => {
+		if (!id) return;
+		localStorage.setItem(getPinnedStorageKey(id), JSON.stringify(snippets));
+	};
+
+	const unwrapPinnedAnchor = (snippetId: string) => {
+		const marker = document.querySelector(`[data-pin-snippet-id="${snippetId}"]`);
+		if (!(marker instanceof HTMLElement) || !marker.parentNode) return;
+
+		while (marker.firstChild) {
+			marker.parentNode.insertBefore(marker.firstChild, marker);
+		}
+		marker.parentNode.removeChild(marker);
+		marker.parentNode.normalize();
+	};
+
+	const unwrapElement = (element: HTMLElement) => {
+		if (!element.parentNode) return;
+		while (element.firstChild) {
+			element.parentNode.insertBefore(element.firstChild, element);
+		}
+		element.parentNode.removeChild(element);
+		element.parentNode.normalize();
+	};
+
+	const highlightSnippetTextInElement = (root: HTMLElement, snippetText: string) => {
+		const target = snippetText?.trim();
+		if (!target) return null;
+
+		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+			acceptNode(node) {
+				const text = node.textContent ?? '';
+				return text.trim().length > 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+			}
+		});
+
+		let node: Text | null = null;
+		while ((node = walker.nextNode() as Text | null)) {
+			if (!node?.textContent) continue;
+
+			const source = node.textContent;
+			const start = source.toLowerCase().indexOf(target.toLowerCase());
+			if (start === -1) continue;
+
+			const range = document.createRange();
+			range.setStart(node, start);
+			range.setEnd(node, start + target.length);
+
+			const span = document.createElement('span');
+			span.dataset.pinTempHighlight = 'true';
+			span.className = 'rounded px-0.5 bg-blue-500/30 ring-2 ring-blue-400';
+			range.surroundContents(span);
+			return span;
+		}
+
+		return null;
+	};
+
+	const onPinSelection = (payload: {
+		id: string;
+		messageId: string;
+		text: string;
+		hasAnchor: boolean;
+	}) => {
+		if (!$chatId || !payload?.text?.trim()) return;
+		const current = loadPinnedSnippets($chatId);
+
+		const alreadyPinned = current.some(
+			(item) => item.messageId === payload.messageId && item.text === payload.text
+		);
+		if (alreadyPinned) {
+			toast.info($i18n.t('This text is already pinned'));
+			return;
+		}
+
+		const next = [
+			{
+				id: payload.id,
+				messageId: payload.messageId,
+				text: payload.text,
+				createdAt: Date.now()
+			},
+			...current
+		].slice(0, 50);
+
+		pinnedSnippets = next;
+		savePinnedSnippets($chatId, next);
+		window.dispatchEvent(
+			new CustomEvent('openwebui:pinned-snippet-updated', {
+				detail: { chatId: $chatId, snippets: next }
+			})
+		);
+		toast.success($i18n.t('Pinned'));
+	};
+
+	const unpinSnippet = (snippetId: string) => {
+		if (!$chatId) return;
+		const current = loadPinnedSnippets($chatId);
+		unwrapPinnedAnchor(snippetId);
+		pinnedSnippets = current.filter((snippet) => snippet.id !== snippetId);
+		savePinnedSnippets($chatId, pinnedSnippets);
+		window.dispatchEvent(
+			new CustomEvent('openwebui:pinned-snippet-updated', {
+				detail: { chatId: $chatId, snippets: pinnedSnippets }
+			})
+		);
+	};
+
+	const scrollToSnippet = (snippet: PinnedSnippet) => {
+		const anchor = document.querySelector(`[data-pin-snippet-id="${snippet.id}"]`);
+		if (anchor instanceof HTMLElement) {
+			anchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			anchor.classList.add('ring-2', 'ring-blue-400');
+			setTimeout(() => {
+				anchor.classList.remove('ring-2', 'ring-blue-400');
+			}, 1500);
+			return;
+		}
+
+		const messageElement = document.getElementById(`message-${snippet.messageId}`);
+		if (messageElement instanceof HTMLElement) {
+			const contentRoot =
+				(messageElement.querySelector('#response-content-container') as HTMLElement | null) ??
+				messageElement;
+
+			const tempHighlight = highlightSnippetTextInElement(contentRoot, snippet.text);
+			if (tempHighlight instanceof HTMLElement) {
+				tempHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				setTimeout(() => {
+					unwrapElement(tempHighlight);
+				}, 1600);
+			} else {
+				messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			}
+		}
+	};
+
+	const onPinnedSnippetNavigate = (event: Event) => {
+		const customEvent = event as CustomEvent<PinnedSnippet>;
+		if (customEvent?.detail) {
+			scrollToSnippet(customEvent.detail);
+		}
+	};
+
+	const onPinnedSnippetUnpin = (event: Event) => {
+		const customEvent = event as CustomEvent<{ id: string }>;
+		if (customEvent?.detail?.id) {
+			unpinSnippet(customEvent.detail.id);
+		}
+	};
+
+	$: if ($chatId && $chatId !== loadedPinnedChatId) {
+		pinnedSnippets = loadPinnedSnippets($chatId);
+		loadedPinnedChatId = $chatId;
+	}
 
 	const resetInput = () => {
 		selectedToolIds = [];
@@ -585,6 +765,8 @@
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
+		window.addEventListener('openwebui:pinned-snippet-navigate', onPinnedSnippetNavigate);
+		window.addEventListener('openwebui:pinned-snippet-unpin', onPinnedSnippetUnpin);
 		$socket?.on('events', chatEventHandler);
 
 		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
@@ -676,6 +858,8 @@
 			selectedFolderSubscribe();
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
+			window.removeEventListener('openwebui:pinned-snippet-navigate', onPinnedSnippetNavigate);
+			window.removeEventListener('openwebui:pinned-snippet-unpin', onPinnedSnippetUnpin);
 			$socket?.off('events', chatEventHandler);
 			$audioQueue?.destroy();
 		} catch (e) {
@@ -2642,6 +2826,7 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
+										{onPinSelection}
 										topPadding={true}
 										bottomPadding={files.length > 0}
 										{onSelect}
