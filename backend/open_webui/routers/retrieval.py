@@ -2323,6 +2323,15 @@ async def process_web_search(
         # Set to 1 for sequential execution (rate-limited APIs like Brave free tier)
         concurrent_limit = request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS
 
+        # Brave free tier is strict (1 request/second). When concurrency is left at the
+        # default unlimited setting, query expansion can easily trigger 429 errors.
+        # Keep explicit admin configuration untouched, but make the Brave default safer.
+        if (
+            not concurrent_limit
+            and request.app.state.config.WEB_SEARCH_ENGINE == "brave"
+        ):
+            concurrent_limit = 1
+
         if concurrent_limit:
             # Limited concurrency with semaphore
             semaphore = asyncio.Semaphore(concurrent_limit)
