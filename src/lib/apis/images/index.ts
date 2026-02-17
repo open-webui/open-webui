@@ -241,7 +241,8 @@ export const imageEdits = async (
 	prompt: string,
 	model?: string,
 	size?: string,
-	n?: number
+	n?: number,
+	background?: string
 ) => {
 	let error = null;
 
@@ -258,7 +259,8 @@ export const imageEdits = async (
 				prompt,
 				...(model && { model }),
 				...(size && { size }),
-				...(n && { n })
+				...(n && { n }),
+				...(background && { background })
 			}
 		})
 	})

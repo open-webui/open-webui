@@ -54,7 +54,7 @@
 		align="end"
 		transition={flyAndScale}
 	>
-		{#if (model?.preset || model?.info?.base_model_id) ? model?.info?.user_id === $user?.id : $user?.role === 'admin'}
+		{#if model?.preset || model?.info?.base_model_id ? model?.info?.user_id === $user?.id : $user?.role === 'admin'}
 			<DropdownMenu.Item
 				type="button"
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
@@ -120,8 +120,6 @@
 
 			<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 		</DropdownMenu.Item>
-
-
 
 		{#if $config?.features.enable_community_sharing}
 			<hr class="border-gray-50 dark:border-gray-800/30 my-1" />
