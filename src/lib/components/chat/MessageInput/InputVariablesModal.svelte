@@ -21,7 +21,14 @@
 	let variableValues = {};
 
 	const submitHandler = async () => {
-		onSave(variableValues);
+		// Normalize Windows CRLF line endings to LF for consistent handling
+		const normalizedValues = Object.fromEntries(
+			Object.entries(variableValues).map(([key, value]) => [
+				key,
+				typeof value === 'string' ? value.replace(/\r\n/g, '\n') : value
+			])
+		);
+		onSave(normalizedValues);
 		show = false;
 	};
 

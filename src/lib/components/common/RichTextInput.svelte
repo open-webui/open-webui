@@ -501,7 +501,23 @@
 
 		// Apply replacements in reverse order to maintain correct positions
 		replacements.reverse().forEach(({ from, to, text }) => {
-			tr = tr.replaceWith(from, to, text !== '' ? state.schema.text(text) : []);
+			if (text === '') {
+				tr = tr.replaceWith(from, to, []);
+			} else {
+				// Normalize Windows line endings and split on newlines
+				// to preserve line breaks as hardBreak nodes in ProseMirror
+				const lines = text.replace(/\r\n/g, '\n').split('\n');
+				const nodes = [];
+				lines.forEach((line, i) => {
+					if (line) {
+						nodes.push(state.schema.text(line));
+					}
+					if (i < lines.length - 1) {
+						nodes.push(state.schema.nodes.hardBreak.create());
+					}
+				});
+				tr = tr.replaceWith(from, to, nodes);
+			}
 		});
 
 		// Only dispatch if there are changes
