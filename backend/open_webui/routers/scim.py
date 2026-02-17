@@ -804,6 +804,20 @@ async def get_groups(
     # Get all groups
     groups_list = Groups.get_all_groups(db=db)
 
+    # Apply filter if provided
+    if filter:
+        if "displayName eq" in filter:
+            display_name = filter.split('"')[1]
+            groups_list = [
+                g for g in groups_list if g.name.lower() == display_name.lower()
+            ]
+        elif "externalId eq" in filter:
+            external_id = filter.split('"')[1]
+            groups_list = [
+                g for g in groups_list
+                if (g.meta or {}).get("externalId") == external_id
+            ]
+
     # Apply pagination
     total = len(groups_list)
     start = startIndex - 1
