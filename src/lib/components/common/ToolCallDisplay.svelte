@@ -94,7 +94,11 @@
 				open = !open;
 			}}
 		>
-			<div class="w-full font-medium flex items-center gap-1.5 {isExecuting ? 'shimmer' : ''}">
+			<div
+				class="w-full max-w-full font-medium flex items-center gap-1.5 {isExecuting
+					? 'shimmer'
+					: ''}"
+			>
 				<!-- Status icon -->
 				{#if isExecuting}
 					<div>
@@ -111,26 +115,31 @@
 				{/if}
 
 				<!-- Label -->
-				<div class="">
-					{#if isDone}
-						<Markdown
-							id={`${componentId}-tool-call-title`}
-							content={$i18n.t('View Result from **{{NAME}}**', {
-								NAME: attributes.name
-							})}
-						/>
-					{:else}
-						<Markdown
-							id={`${componentId}-tool-call-executing`}
-							content={$i18n.t('Executing **{{NAME}}**...', {
-								NAME: attributes.name
-							})}
-						/>
-					{/if}
+				<div class="flex-1 line-clamp-1">
+					<!-- Short label (below md) -->
+					<span class="@md:hidden font-semibold text-black dark:text-white">{attributes.name}</span>
+					<!-- Full label (md and above) -->
+					<span class="hidden @md:inline">
+						{#if isDone}
+							<Markdown
+								id={`${componentId}-tool-call-title`}
+								content={$i18n.t('View Result from **{{NAME}}**', {
+									NAME: attributes.name
+								})}
+							/>
+						{:else}
+							<Markdown
+								id={`${componentId}-tool-call-executing`}
+								content={$i18n.t('Executing **{{NAME}}**...', {
+									NAME: attributes.name
+								})}
+							/>
+						{/if}
+					</span>
 				</div>
 
 				<!-- Chevron -->
-				<div class="flex self-center translate-y-[1px]">
+				<div class="flex shrink-0 self-center translate-y-[1px]">
 					{#if open}
 						<ChevronUp strokeWidth="3.5" className="size-3.5" />
 					{:else}
