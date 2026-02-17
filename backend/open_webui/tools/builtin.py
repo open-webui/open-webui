@@ -167,6 +167,9 @@ async def search_web(
         engine = __request__.app.state.config.WEB_SEARCH_ENGINE
         user = UserModel(**__user__) if __user__ else None
 
+        # Use admin-configured result count if configured, falling back to model-provided count of provided, else default to 5
+        count = __request__.app.state.config.WEB_SEARCH_RESULT_COUNT or count
+
         results = await asyncio.to_thread(_search_web, __request__, engine, query, user)
 
         # Limit results
@@ -1526,6 +1529,69 @@ async def search_knowledge_files(
         return json.dumps(files, ensure_ascii=False)
     except Exception as e:
         log.exception(f"search_knowledge_files error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+async def view_file(
+    file_id: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
+) -> str:
+    """
+    Get the full content of a file by its ID.
+
+    :param file_id: The ID of the file to retrieve
+    :return: JSON with the file's id, filename, and full text content
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if not __user__:
+        return json.dumps({"error": "User context not available"})
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.routers.files import has_access_to_file
+
+        user_id = __user__.get("id")
+        user_role = __user__.get("role", "user")
+
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            return json.dumps({"error": "File not found"})
+
+        if (
+            file.user_id != user_id
+            and user_role != "admin"
+            and not any(
+                item.get("type") == "file" and item.get("id") == file_id
+                for item in (__model_knowledge__ or [])
+            )
+            and not has_access_to_file(
+                file_id=file_id,
+                access_type="read",
+                user=UserModel(**__user__),
+            )
+        ):
+            return json.dumps({"error": "File not found"})
+
+        content = ""
+        if file.data:
+            content = file.data.get("content", "")
+
+        return json.dumps(
+            {
+                "id": file.id,
+                "filename": file.filename,
+                "content": content,
+                "updated_at": file.updated_at,
+                "created_at": file.created_at,
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f"view_file error: {e}")
         return json.dumps({"error": str(e)})
 
 

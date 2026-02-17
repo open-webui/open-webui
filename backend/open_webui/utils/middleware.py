@@ -411,6 +411,36 @@ def serialize_output(output: list) -> str:
             if content and not content.endswith("\n"):
                 content += "\n"
 
+            # Render the code_interpreter item as a <details> block
+            # so the frontend Collapsible renders "Analyzing..."/"Analyzed".
+            code = item.get("code", "").strip()
+            lang = item.get("lang", "python")
+            status = item.get("status", "in_progress")
+            duration = item.get("duration")
+            is_last_item = idx == len(output) - 1
+
+            # Build inner content: code block
+            display = ""
+            if code:
+                display = f"```{lang}\n{code}\n```"
+
+            # Build output attribute as HTML-escaped JSON for CodeBlock.svelte
+            ci_output = item.get("output")
+            output_attr = ""
+            if ci_output:
+                if isinstance(ci_output, dict):
+                    output_json = json.dumps(ci_output, ensure_ascii=False)
+                else:
+                    output_json = json.dumps(
+                        {"result": str(ci_output)}, ensure_ascii=False
+                    )
+                output_attr = f' output="{html.escape(output_json)}"'
+
+            if status == "completed" or duration is not None or not is_last_item:
+                content += f'<details type="code_interpreter" done="true" duration="{duration or 0}"{output_attr}>\n<summary>Analyzed</summary>\n{display}\n</details>\n'
+            else:
+                content += f'<details type="code_interpreter" done="false"{output_attr}>\n<summary>Analyzing…</summary>\n{display}\n</details>\n'
+
     return content.strip()
 
 
@@ -1888,6 +1918,25 @@ async def convert_url_images_to_base64(form_data):
     return form_data
 
 
+def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
+    """
+    Load the message chain from DB up to message_id,
+    keeping only LLM-relevant fields (role, content, output).
+    """
+    messages_map = Chats.get_messages_map_by_chat_id(chat_id)
+    if not messages_map:
+        return None
+
+    db_messages = get_message_list(messages_map, message_id)
+    if not db_messages:
+        return None
+
+    return [
+        {k: v for k, v in msg.items() if k in ("role", "content", "output", "files")}
+        for msg in db_messages
+    ]
+
+
 def process_messages_with_output(messages: list[dict]) -> list[dict]:
     """
     Process messages with OR-aligned output items for LLM consumption.
@@ -1919,6 +1968,44 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
+
+    # Load messages from DB when available — DB preserves structured 'output' items
+    # which the frontend strips, causing tool calls to be merged into content.
+    chat_id = metadata.get("chat_id")
+    parent_message_id = metadata.get("parent_message_id")
+
+    if chat_id and parent_message_id and not chat_id.startswith("local:"):
+        db_messages = load_messages_from_db(chat_id, parent_message_id)
+        if db_messages:
+            system_message = get_system_message(form_data.get("messages", []))
+            form_data["messages"] = (
+                [system_message, *db_messages] if system_message else db_messages
+            )
+
+            # Inject image files into content as image_url parts (mirrors frontend logic)
+            for message in form_data["messages"]:
+                image_files = [
+                    f
+                    for f in message.get("files", [])
+                    if f.get("type") == "image"
+                    or (f.get("content_type") or "").startswith("image/")
+                ]
+                if message.get("role") == "user" and image_files:
+                    text_content = message.get("content", "")
+                    if isinstance(text_content, str):
+                        message["content"] = [
+                            {"type": "text", "text": text_content},
+                            *[
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f["url"]},
+                                }
+                                for f in image_files
+                                if f.get("url")
+                            ],
+                        ]
+                # Strip files field — it's been incorporated into content
+                message.pop("files", None)
 
     # Process messages with OR-aligned output items for clean LLM messages
     form_data["messages"] = process_messages_with_output(form_data.get("messages", []))
@@ -2094,23 +2181,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if "code_interpreter" in features and features["code_interpreter"]:
-            form_data["messages"] = add_or_update_user_message(
-                (
-                    request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
-                    if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE != ""
-                    else DEFAULT_CODE_INTERPRETER_PROMPT
-                ),
-                form_data["messages"],
-            )
+            # Skip XML-tag prompt injection when native FC is enabled —
+            # execute_code will be injected as a builtin tool instead
+            if metadata.get("params", {}).get("function_calling") != "native":
+                form_data["messages"] = add_or_update_user_message(
+                    (
+                        request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+                        if request.app.state.config.CODE_INTERPRETER_PROMPT_TEMPLATE
+                        != ""
+                        else DEFAULT_CODE_INTERPRETER_PROMPT
+                    ),
+                    form_data["messages"],
+                )
 
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
 
-    # Skills: inject manifest only — model uses view_skill tool to load full content on-demand
-    user_skill_ids = form_data.pop("skill_ids", None) or []
-    model_skill_ids = model.get("info", {}).get("meta", {}).get("skillIds", [])
+    # Skills
+    user_skill_ids = set(form_data.pop("skill_ids", None) or [])
+    model_skill_ids = set(model.get("info", {}).get("meta", {}).get("skillIds", []))
 
-    all_skill_ids = list(set(user_skill_ids + model_skill_ids))
+    all_skill_ids = user_skill_ids | model_skill_ids
     available_skills = []
     if all_skill_ids:
         from open_webui.models.skills import Skills as SkillsModel
@@ -2126,13 +2217,24 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             and s.is_active
         ]
 
-        if available_skills:
-            manifest = "<available_skills>\n"
-            for skill in available_skills:
-                manifest += f"<skill>\n<name>{skill.name}</name>\n<description>{skill.description or ''}</description>\n</skill>\n"
-            manifest += "</available_skills>"
+        skill_descriptions = ""
+        for skill in available_skills:
+            if skill.id in user_skill_ids:
+                # User-selected: inject full content
+                form_data["messages"] = add_or_update_system_message(
+                    f'<skill name="{skill.name}">\n{skill.content}\n</skill>',
+                    form_data["messages"],
+                    append=True,
+                )
+            else:
+                # Model-attached: name+description only
+                skill_descriptions += f"<skill>\n<name>{skill.name}</name>\n<description>{skill.description or ''}</description>\n</skill>\n"
+
+        if skill_descriptions:
             form_data["messages"] = add_or_update_system_message(
-                manifest, form_data["messages"], append=True
+                f"<available_skills>\n{skill_descriptions}</available_skills>",
+                form_data["messages"],
+                append=True,
             )
 
     prompt = get_last_user_message(form_data["messages"])
@@ -2369,7 +2471,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             {
                 **extra_params,
                 "__event_emitter__": event_emitter,
-                "__skill_ids__": [s.id for s in available_skills],
+                "__skill_ids__": [
+                    s.id for s in available_skills if s.id not in user_skill_ids
+                ],
             },
             features,
             model,
@@ -2930,11 +3034,14 @@ async def streaming_chat_response_handler(response, ctx):
 
         # Handle as a background task
         async def response_handler(response, events):
-            def tag_output_handler(content_type, tags, content, output):
+            def tag_output_handler(content_type, tags, output):
                 """
                 Detect special tags (reasoning, solution, code_interpreter) in streaming
                 content and create corresponding OR-aligned output items directly.
                 Operates on output items instead of content_blocks.
+
+                Uses the text from the output items themselves for tag detection,
+                eliminating state divergence between accumulated content and items.
                 """
                 end_flag = False
 
@@ -2974,6 +3081,8 @@ async def streaming_chat_response_handler(response, ctx):
                 last_type = output[-1].get("type", "") if output else ""
 
                 if last_type == "message":
+                    # Use the output item's own text for tag detection
+                    item_text = get_last_text(output)
                     for start_tag, end_tag in tags:
 
                         start_tag_pattern = rf"{re.escape(start_tag)}"
@@ -2982,7 +3091,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
                             )
 
-                        match = re.search(start_tag_pattern, content)
+                        match = re.search(start_tag_pattern, item_text)
                         if match:
                             try:
                                 attr_content = match.group(1) if match.group(1) else ""
@@ -2991,20 +3100,13 @@ async def streaming_chat_response_handler(response, ctx):
 
                             attributes = extract_attributes(attr_content)
 
-                            before_tag = content[: match.start()]
-                            after_tag = content[match.end() :]
+                            before_tag = item_text[: match.start()]
+                            after_tag = item_text[match.end() :]
 
-                            # Remove the start tag and everything after from last message
-                            current_text = get_last_text(output)
-                            set_last_text(
-                                output,
-                                current_text.replace(match.group(0) + after_tag, ""),
-                            )
+                            # Keep only text before the tag in the message
+                            set_last_text(output, before_tag)
 
-                            if before_tag:
-                                set_last_text(output, before_tag)
-
-                            if not get_last_text(output).strip():
+                            if not before_tag.strip():
                                 # Remove empty message item
                                 if output and output[-1].get("type") == "message":
                                     output.pop()
@@ -3069,9 +3171,11 @@ async def streaming_chat_response_handler(response, ctx):
                                 else:
                                     set_last_text(output, after_tag)
 
-                                tag_output_handler(
-                                    content_type, tags, after_tag, output
+                                _, recursive_end = tag_output_handler(
+                                    content_type, tags, output
                                 )
+                                if recursive_end:
+                                    end_flag = True
 
                             break
 
@@ -3090,24 +3194,21 @@ async def streaming_chat_response_handler(response, ctx):
                     start_tag = item.get("start_tag", "")
                     end_tag = item.get("end_tag", "")
 
-                    if end_tag.startswith("<") and end_tag.endswith(">"):
-                        end_tag_pattern = rf"{re.escape(end_tag)}"
+                    end_tag_pattern = rf"{re.escape(end_tag)}"
+
+                    # Get the block content from the item itself
+                    if last_type == "reasoning":
+                        parts = item.get("content", [])
+                        block_content = ""
+                        if parts and parts[-1].get("type") == "output_text":
+                            block_content = parts[-1].get("text", "")
+                    elif last_type == "open_webui:code_interpreter":
+                        block_content = item.get("code", "")
                     else:
-                        end_tag_pattern = rf"{re.escape(end_tag)}"
+                        block_content = get_last_text(output)
 
-                    if re.search(end_tag_pattern, content):
+                    if re.search(end_tag_pattern, block_content):
                         end_flag = True
-
-                        # Get the block content
-                        if last_type == "reasoning":
-                            parts = item.get("content", [])
-                            block_content = ""
-                            if parts and parts[-1].get("type") == "output_text":
-                                block_content = parts[-1].get("text", "")
-                        elif last_type == "open_webui:code_interpreter":
-                            block_content = item.get("code", "")
-                        else:
-                            block_content = get_last_text(output)
 
                         # Strip start and end tags from content
                         start_tag_pattern = rf"{re.escape(start_tag)}"
@@ -3151,36 +3252,20 @@ async def streaming_chat_response_handler(response, ctx):
                                 item["ended_at"] = time.time()
 
                             # Reset by appending a new message item for leftover
-                            if content_type != "code_interpreter":
-                                output.append(
-                                    {
-                                        "type": "message",
-                                        "id": output_id("msg"),
-                                        "status": "in_progress",
-                                        "role": "assistant",
-                                        "content": [
-                                            {
-                                                "type": "output_text",
-                                                "text": leftover_content,
-                                            }
-                                        ],
-                                    }
-                                )
-                            else:
-                                output.append(
-                                    {
-                                        "type": "message",
-                                        "id": output_id("msg"),
-                                        "status": "in_progress",
-                                        "role": "assistant",
-                                        "content": [
-                                            {
-                                                "type": "output_text",
-                                                "text": leftover_content,
-                                            }
-                                        ],
-                                    }
-                                )
+                            output.append(
+                                {
+                                    "type": "message",
+                                    "id": output_id("msg"),
+                                    "status": "in_progress",
+                                    "role": "assistant",
+                                    "content": [
+                                        {
+                                            "type": "output_text",
+                                            "text": leftover_content,
+                                        }
+                                    ],
+                                }
+                            )
                         else:
                             # Remove the block if content is empty
                             output.pop()
@@ -3199,19 +3284,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 }
                             )
 
-                        # Clean processed content
-                        start_tag_clean = rf"{re.escape(start_tag)}"
-                        if start_tag.startswith("<") and start_tag.endswith(">"):
-                            start_tag_clean = rf"<{re.escape(start_tag[1:-1])}(\s.*?)?>"
-
-                        content = re.sub(
-                            rf"{start_tag_clean}(.|\n)*?{re.escape(end_tag)}",
-                            "",
-                            content,
-                            flags=re.DOTALL,
-                        )
-
-                return content, output, end_flag
+                return output, end_flag
 
             message = Chats.get_message_by_id_and_message_id(
                 metadata["chat_id"], metadata["message_id"]
@@ -3674,58 +3747,132 @@ async def streaming_chat_response_handler(response, ctx):
                                             )
 
                                         content = f"{content}{value}"
-                                        if (
-                                            not output
-                                            or output[-1].get("type") != "message"
-                                        ):
-                                            output.append(
-                                                {
-                                                    "type": "message",
-                                                    "id": output_id("msg"),
-                                                    "status": "in_progress",
-                                                    "role": "assistant",
-                                                    "content": [
+
+                                        # Check if we're inside a tag-based block
+                                        # (reasoning, code_interpreter, or solution).
+                                        # If so, append to the existing in-progress
+                                        # item instead of creating a new message —
+                                        # otherwise tag_output_handler re-detects the
+                                        # start tag on every chunk and fragments the
+                                        # output.
+                                        last_item = output[-1] if output else None
+                                        last_item_type = (
+                                            last_item.get("type", "")
+                                            if last_item
+                                            else ""
+                                        )
+                                        inside_tag_block = (
+                                            last_item is not None
+                                            and last_item.get("status") == "in_progress"
+                                            and last_item.get("attributes", {}).get(
+                                                "type"
+                                            )
+                                            != "reasoning_content"
+                                            and (
+                                                last_item_type == "reasoning"
+                                                or last_item_type
+                                                == "open_webui:code_interpreter"
+                                                or (
+                                                    last_item_type == "message"
+                                                    and last_item.get("_tag_type")
+                                                    is not None
+                                                )
+                                            )
+                                        )
+
+                                        if inside_tag_block:
+                                            # Append to the existing tag-based item
+                                            if (
+                                                last_item_type
+                                                == "open_webui:code_interpreter"
+                                            ):
+                                                last_item["code"] = (
+                                                    last_item.get("code", "") + value
+                                                )
+                                            elif last_item_type == "reasoning":
+                                                parts = last_item.get("content", [])
+                                                if (
+                                                    parts
+                                                    and parts[-1].get("type")
+                                                    == "output_text"
+                                                ):
+                                                    parts[-1]["text"] += value
+                                                else:
+                                                    last_item["content"] = [
                                                         {
                                                             "type": "output_text",
-                                                            "text": "",
+                                                            "text": value,
                                                         }
-                                                    ],
-                                                }
-                                            )
-
-                                        # Append value to last message item's text
-                                        msg_parts = output[-1].get("content", [])
-                                        if (
-                                            msg_parts
-                                            and msg_parts[-1].get("type")
-                                            == "output_text"
-                                        ):
-                                            msg_parts[-1]["text"] += value
+                                                    ]
+                                            else:
+                                                # solution or other _tag_type message
+                                                msg_parts = last_item.get("content", [])
+                                                if (
+                                                    msg_parts
+                                                    and msg_parts[-1].get("type")
+                                                    == "output_text"
+                                                ):
+                                                    msg_parts[-1]["text"] += value
+                                                else:
+                                                    last_item["content"] = [
+                                                        {
+                                                            "type": "output_text",
+                                                            "text": value,
+                                                        }
+                                                    ]
                                         else:
-                                            output[-1]["content"] = [
-                                                {"type": "output_text", "text": value}
-                                            ]
+                                            if (
+                                                not output
+                                                or output[-1].get("type") != "message"
+                                            ):
+                                                output.append(
+                                                    {
+                                                        "type": "message",
+                                                        "id": output_id("msg"),
+                                                        "status": "in_progress",
+                                                        "role": "assistant",
+                                                        "content": [
+                                                            {
+                                                                "type": "output_text",
+                                                                "text": "",
+                                                            }
+                                                        ],
+                                                    }
+                                                )
+
+                                            # Append value to last message item's text
+                                            msg_parts = output[-1].get("content", [])
+                                            if (
+                                                msg_parts
+                                                and msg_parts[-1].get("type")
+                                                == "output_text"
+                                            ):
+                                                msg_parts[-1]["text"] += value
+                                            else:
+                                                output[-1]["content"] = [
+                                                    {
+                                                        "type": "output_text",
+                                                        "text": value,
+                                                    }
+                                                ]
 
                                         if DETECT_REASONING_TAGS:
-                                            content, output, _ = tag_output_handler(
+                                            output, _ = tag_output_handler(
                                                 "reasoning",
                                                 reasoning_tags,
-                                                content,
                                                 output,
                                             )
 
-                                            content, output, _ = tag_output_handler(
+                                            output, _ = tag_output_handler(
                                                 "solution",
                                                 DEFAULT_SOLUTION_TAGS,
-                                                content,
                                                 output,
                                             )
 
                                         if DETECT_CODE_INTERPRETER:
-                                            content, output, end = tag_output_handler(
+                                            output, end = tag_output_handler(
                                                 "code_interpreter",
                                                 DEFAULT_CODE_INTERPRETER_TAGS,
-                                                content,
                                                 output,
                                             )
 

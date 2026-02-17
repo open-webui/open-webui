@@ -478,7 +478,7 @@ ENABLE_PASSWORD_VALIDATION = (
 )
 PASSWORD_VALIDATION_REGEX_PATTERN = os.environ.get(
     "PASSWORD_VALIDATION_REGEX_PATTERN",
-    "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$",
 )
 
 
@@ -572,6 +572,14 @@ ENABLE_SCIM = (
     == "true"
 )
 SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
+SCIM_AUTH_PROVIDER = os.environ.get("SCIM_AUTH_PROVIDER", "")
+
+if ENABLE_SCIM and not SCIM_AUTH_PROVIDER:
+    log.warning(
+        "SCIM is enabled but SCIM_AUTH_PROVIDER is not set. "
+        "Set SCIM_AUTH_PROVIDER to the OAuth provider name (e.g. 'microsoft', 'oidc') "
+        "to enable externalId storage."
+    )
 
 ####################################
 # LICENSE_KEY

@@ -849,7 +849,11 @@
 		}
 
 		// Auto-show SyncStatsModal when opened with ?sync=true (from community)
-		if ((window.opener ?? false) && $page.url.searchParams.get('sync') === 'true') {
+		if (
+			(window.opener ?? false) &&
+			$page.url.searchParams.get('sync') === 'true' &&
+			($config?.features?.enable_community_sharing ?? false)
+		) {
 			showSyncStatsModal = true;
 		}
 

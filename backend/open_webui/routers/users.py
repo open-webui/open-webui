@@ -190,6 +190,8 @@ class SharingPermissions(BaseModel):
     public_prompts: bool = False
     tools: bool = False
     public_tools: bool = True
+    skills: bool = False
+    public_skills: bool = False
     notes: bool = False
     public_notes: bool = True
 

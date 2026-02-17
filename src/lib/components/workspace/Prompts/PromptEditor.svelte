@@ -282,7 +282,7 @@
 	bind:accessGrants
 	accessRoles={['read', 'write']}
 	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
-	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin' || edit}
+	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
 	onChange={async () => {
 		if (edit && prompt?.id) {
 			try {
@@ -375,7 +375,7 @@
 		<div class="flex items-start justify-between gap-4 shrink-0">
 			<div class="min-w-0 flex-1">
 				<input
-					class="text-2xl font-medium w-full bg-transparent outline-hidden"
+					class="text-2xl w-full bg-transparent outline-hidden"
 					placeholder={$i18n.t('Prompt Name')}
 					bind:value={name}
 					on:input={debouncedSaveMetadata}
@@ -534,7 +534,7 @@
 					<div class="flex flex-col w-full">
 						<div class="flex items-center">
 							<input
-								class="text-2xl font-medium w-full bg-transparent outline-hidden"
+								class="text-2xl w-full bg-transparent outline-hidden"
 								placeholder={$i18n.t('Name')}
 								bind:value={name}
 								required
