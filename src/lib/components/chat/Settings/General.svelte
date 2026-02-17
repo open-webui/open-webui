@@ -42,6 +42,7 @@
 	let params = {
 		// Advanced
 		stream_response: null,
+		include_usage: null,
 		stream_delta_chunk_size: null,
 		function_calling: null,
 		seed: null,
@@ -72,6 +73,7 @@
 			system: system !== '' ? system : undefined,
 			params: {
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
+				include_usage: params.include_usage !== null ? params.include_usage : undefined,
 				stream_delta_chunk_size:
 					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,

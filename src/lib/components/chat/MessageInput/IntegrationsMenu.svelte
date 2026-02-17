@@ -21,6 +21,7 @@
 	import Terminal from '$lib/components/icons/Terminal.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import Brain from '$lib/components/icons/Brain.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,6 +40,7 @@
 	export let imageGenerationEnabled = false;
 	export let showCodeInterpreterButton = false;
 	export let codeInterpreterEnabled = false;
+	export let thinkingEnabled: boolean | null = null;
 
 	export let onShowValves: Function;
 	export let onClose: Function;
@@ -309,6 +311,40 @@
 							</button>
 						</Tooltip>
 					{/if}
+
+					<Tooltip content={$i18n.t('Toggle model thinking/reasoning')} placement="top-start">
+						<button
+							class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+							on:click={() => {
+								if (thinkingEnabled === null) {
+									thinkingEnabled = true;
+								} else if (thinkingEnabled) {
+									thinkingEnabled = false;
+								} else {
+									thinkingEnabled = null;
+								}
+							}}
+						>
+							<div class="flex-1 truncate">
+								<div class="flex flex-1 gap-2 items-center">
+									<div class="shrink-0">
+										<Brain className="size-4" strokeWidth="1.5" />
+									</div>
+									<div class="truncate">{$i18n.t('Thinking')}</div>
+								</div>
+							</div>
+
+							<div class="shrink-0 p-1 px-2 text-xs flex rounded-sm transition">
+								{#if thinkingEnabled === true}
+									<span class="text-purple-500 dark:text-purple-300 font-medium">{$i18n.t('On')}</span>
+								{:else if thinkingEnabled === false}
+									<span class="text-gray-400 dark:text-gray-500 font-medium">{$i18n.t('Off')}</span>
+								{:else}
+									<span class="text-gray-400 dark:text-gray-500">{$i18n.t('Default')}</span>
+								{/if}
+							</div>
+						</button>
+					</Tooltip>
 				</div>
 			{:else if tab === 'tools' && tools}
 				<div in:fly={{ x: 20, duration: 150 }}>

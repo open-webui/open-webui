@@ -1710,10 +1710,14 @@ async def chat_completion(
             "stream_delta_chunk_size"
         )
         reasoning_tags = form_data.get("params", {}).get("reasoning_tags")
+        include_usage = form_data.get("params", {}).get("include_usage")
 
         # Model Params
         if model_info_params.get("stream_response") is not None:
             form_data["stream"] = model_info_params.get("stream_response")
+
+        if model_info_params.get("include_usage") is not None:
+            include_usage = model_info_params.get("include_usage")
 
         if model_info_params.get("stream_delta_chunk_size"):
             stream_delta_chunk_size = model_info_params.get("stream_delta_chunk_size")
@@ -1739,6 +1743,7 @@ async def chat_completion(
             "params": {
                 "stream_delta_chunk_size": stream_delta_chunk_size,
                 "reasoning_tags": reasoning_tags,
+                "include_usage": include_usage,
                 "function_calling": (
                     "native"
                     if (
