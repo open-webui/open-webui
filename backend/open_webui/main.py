@@ -86,6 +86,7 @@ from open_webui.routers import (
     groups,
     files,
     functions,
+    hrms_callback,
     memories,
     models,
     knowledge,
@@ -1514,6 +1515,9 @@ app.include_router(
 )
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(
+    hrms_callback.router, prefix="/api/v1/hrms", tags=["hrms"]
+)
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
