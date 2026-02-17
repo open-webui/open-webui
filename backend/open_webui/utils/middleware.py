@@ -108,6 +108,9 @@ from open_webui.utils.filter import (
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.response import normalize_usage
+from open_webui.utils.chat_image_payload import (
+    append_chat_file_images_to_user_messages,
+)
 from open_webui.utils.mcp.client import MCPClient
 
 
@@ -1995,6 +1998,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             pass
 
     form_data = await convert_url_images_to_base64(form_data)
+    if chat_id and parent_message_id and not chat_id.startswith("local:"):
+        messages_map = Chats.get_messages_map_by_chat_id(chat_id)
+        if messages_map:
+            form_data = await append_chat_file_images_to_user_messages(
+                form_data=form_data,
+                messages_map=messages_map,
+                parent_message_id=parent_message_id,
+                image_loader=get_image_base64_from_url,
+                logger=log,
+            )
 
     event_emitter = get_event_emitter(metadata)
     event_caller = get_event_call(metadata)
