@@ -46,6 +46,7 @@
 	export let mergeResponses: Function;
 
 	export let addMessages: Function;
+	export let onPinSelection: Function = () => {};
 
 	export let triggerScroll: Function;
 
@@ -311,6 +312,7 @@
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
 									{addMessages}
+									{onPinSelection}
 									{readOnly}
 									{topPadding}
 								/>
@@ -367,6 +369,7 @@
 												groupedMessageIds[modelIdx].messageIds.length - 1;
 										}}
 										{addMessages}
+										{onPinSelection}
 										{readOnly}
 										{editCodeBlock}
 										{topPadding}

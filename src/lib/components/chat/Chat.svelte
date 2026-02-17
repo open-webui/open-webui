@@ -56,6 +56,13 @@
 		getCodeBlockContents,
 		isYoutubeUrl
 	} from '$lib/utils';
+	import {
+		MAX_PINNED_SNIPPET_LENGTH,
+		MAX_PINNED_SNIPPETS,
+		loadPinnedSnippets,
+		savePinnedSnippets,
+		type PinnedSnippet
+	} from '$lib/utils/pinnedSnippets';
 	import { AudioQueue } from '$lib/utils/audio';
 
 	import {
@@ -107,13 +114,6 @@
 	let controlPaneComponent;
 
 	let messageInput;
-
-	type PinnedSnippet = {
-		id: string;
-		messageId: string;
-		text: string;
-		createdAt: number;
-	};
 
 	let pinnedSnippets: PinnedSnippet[] = [];
 	let loadedPinnedChatId = '';
@@ -296,25 +296,6 @@
 		oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModelIds));
 	};
 
-	const getPinnedStorageKey = (id: string) => `chat-pinned-snippets-${id}`;
-
-	const loadPinnedSnippets = (id: string): PinnedSnippet[] => {
-		if (!id) return [];
-		try {
-			const raw = localStorage.getItem(getPinnedStorageKey(id));
-			if (!raw) return [];
-			const parsed = JSON.parse(raw);
-			return Array.isArray(parsed) ? parsed : [];
-		} catch {
-			return [];
-		}
-	};
-
-	const savePinnedSnippets = (id: string, snippets: PinnedSnippet[]) => {
-		if (!id) return;
-		localStorage.setItem(getPinnedStorageKey(id), JSON.stringify(snippets));
-	};
-
 	const unwrapPinnedAnchor = (snippetId: string) => {
 		const marker = document.querySelector(`[data-pin-snippet-id="${snippetId}"]`);
 		if (!(marker instanceof HTMLElement) || !marker.parentNode) return;
@@ -375,10 +356,11 @@
 		hasAnchor: boolean;
 	}) => {
 		if (!$chatId || !payload?.text?.trim()) return;
+		const normalizedText = payload.text.trim().slice(0, MAX_PINNED_SNIPPET_LENGTH);
 		const current = loadPinnedSnippets($chatId);
 
 		const alreadyPinned = current.some(
-			(item) => item.messageId === payload.messageId && item.text === payload.text
+			(item) => item.messageId === payload.messageId && item.text === normalizedText
 		);
 		if (alreadyPinned) {
 			toast.info($i18n.t('This text is already pinned'));
@@ -389,14 +371,17 @@
 			{
 				id: payload.id,
 				messageId: payload.messageId,
-				text: payload.text,
+				text: normalizedText,
 				createdAt: Date.now()
 			},
 			...current
-		].slice(0, 50);
+		].slice(0, MAX_PINNED_SNIPPETS);
 
 		pinnedSnippets = next;
-		savePinnedSnippets($chatId, next);
+		const saved = savePinnedSnippets($chatId, next);
+		if (!saved) {
+			toast.error($i18n.t('Unable to save pinned snippets. Your browser storage may be full.'));
+		}
 		window.dispatchEvent(
 			new CustomEvent('openwebui:pinned-snippet-updated', {
 				detail: { chatId: $chatId, snippets: next }
@@ -410,7 +395,10 @@
 		const current = loadPinnedSnippets($chatId);
 		unwrapPinnedAnchor(snippetId);
 		pinnedSnippets = current.filter((snippet) => snippet.id !== snippetId);
-		savePinnedSnippets($chatId, pinnedSnippets);
+		const saved = savePinnedSnippets($chatId, pinnedSnippets);
+		if (!saved) {
+			toast.error($i18n.t('Unable to save pinned snippets. Your browser storage may be full.'));
+		}
 		window.dispatchEvent(
 			new CustomEvent('openwebui:pinned-snippet-updated', {
 				detail: { chatId: $chatId, snippets: pinnedSnippets }

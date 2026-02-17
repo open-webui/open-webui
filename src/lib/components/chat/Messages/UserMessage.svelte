@@ -1,11 +1,11 @@
 <script lang="ts">
 	import dayjs from 'dayjs';
 	import { toast } from 'svelte-sonner';
-	import { tick, getContext, onMount } from 'svelte';
+	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
-	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
+	import { copyToClipboard as _copyToClipboard, formatDate, createMessagesList } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Name from './Name.svelte';
@@ -15,6 +15,7 @@
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
@@ -35,6 +36,7 @@
 
 	export let editMessage: Function;
 	export let deleteMessage: Function;
+	export let onPinSelection: Function = () => {};
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
@@ -51,6 +53,8 @@
 
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 	let editScrollContainer: HTMLDivElement;
+	let contentContainerElement: HTMLDivElement;
+	let floatingButtonsElement;
 
 	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
@@ -108,8 +112,127 @@
 		deleteMessage(message.id);
 	};
 
+	const updateButtonPosition = (event) => {
+		const buttonsContainerElement = document.getElementById(
+			`floating-buttons-user-${chatId}-${message.id}`
+		);
+		if (
+			!contentContainerElement?.contains(event.target) &&
+			!buttonsContainerElement?.contains(event.target)
+		) {
+			closeFloatingButtons();
+			return;
+		}
+
+		setTimeout(async () => {
+			await tick();
+
+			if (!contentContainerElement?.contains(event.target)) return;
+
+			const selection = window.getSelection();
+			if (!selection || selection.toString().trim().length === 0) {
+				closeFloatingButtons();
+				return;
+			}
+
+			const range = selection.getRangeAt(0);
+			if (!contentContainerElement.contains(range.commonAncestorContainer)) {
+				closeFloatingButtons();
+				return;
+			}
+
+			const rect = range.getBoundingClientRect();
+			const parentRect = contentContainerElement.getBoundingClientRect();
+			const top = rect.bottom - parentRect.top;
+			const left = rect.left - parentRect.left;
+
+			if (buttonsContainerElement) {
+				buttonsContainerElement.style.display = 'block';
+
+				const spaceOnRight = parentRect.width - left;
+				const halfScreenWidth = window.innerWidth / 3;
+
+				if (spaceOnRight < halfScreenWidth) {
+					const right = parentRect.right - rect.right;
+					buttonsContainerElement.style.right = `${right}px`;
+					buttonsContainerElement.style.left = 'auto';
+				} else {
+					buttonsContainerElement.style.left = `${left}px`;
+					buttonsContainerElement.style.right = 'auto';
+				}
+
+				buttonsContainerElement.style.top = `${top + 5}px`;
+			}
+		}, 0);
+	};
+
+	const closeFloatingButtons = () => {
+		const buttonsContainerElement = document.getElementById(
+			`floating-buttons-user-${chatId}-${message.id}`
+		);
+		if (buttonsContainerElement) {
+			buttonsContainerElement.style.display = 'none';
+		}
+		if (floatingButtonsElement && typeof floatingButtonsElement?.closeHandler === 'function') {
+			floatingButtonsElement?.closeHandler();
+		}
+	};
+
+	const pinSelectedText = () => {
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) return;
+
+		const text = selection.toString().trim();
+		if (!text) return;
+
+		const range = selection.getRangeAt(0);
+		if (!contentContainerElement?.contains(range.commonAncestorContainer)) return;
+
+		const snippetId =
+			(typeof crypto !== 'undefined' && crypto.randomUUID?.()) ||
+			`${message.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+		let hasAnchor = false;
+		try {
+			const marker = document.createElement('span');
+			marker.dataset.pinSnippetId = snippetId;
+			marker.className = 'rounded px-0.5 bg-blue-500/25';
+
+			const selectedContents = range.extractContents();
+			marker.appendChild(selectedContents);
+			range.insertNode(marker);
+			hasAnchor = true;
+		} catch (error) {
+			console.warn('Could not create pinned text anchor', error);
+		}
+
+		selection.removeAllRanges();
+		closeFloatingButtons();
+
+		onPinSelection({
+			id: snippetId,
+			messageId: message.id,
+			text,
+			hasAnchor
+		});
+	};
+
+	const keydownHandler = (e) => {
+		if (e.key === 'Escape') {
+			closeFloatingButtons();
+		}
+	};
+
 	onMount(() => {
-		// console.log('UserMessage mounted');
+		contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+		document.addEventListener('mouseup', updateButtonPosition);
+		document.addEventListener('keydown', keydownHandler);
+	});
+
+	onDestroy(() => {
+		contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
+		document.removeEventListener('mouseup', updateButtonPosition);
+		document.removeEventListener('keydown', keydownHandler);
 	});
 </script>
 
@@ -356,10 +479,11 @@
 						</div>
 					</div>
 				</div>
-			{:else if message.content !== ''}
-				<div class="w-full">
+				{:else if message.content !== ''}
+					<div class="w-full">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
+							bind:this={contentContainerElement}
 							class="rounded-3xl {($settings?.chatBubble ?? true)
 								? `max-w-[90%] px-4 py-1.5  bg-gray-50 dark:bg-gray-850 ${
 										message.files ? 'rounded-tr-lg' : ''
@@ -368,7 +492,7 @@
 						>
 							{#if message.content}
 								<Markdown
-									id={`${chatId}-${message.id}`}
+									id={`user-${chatId}-${message.id}`}
 									content={message.content}
 									{editCodeBlock}
 									{topPadding}
@@ -376,10 +500,25 @@
 							{/if}
 						</div>
 					</div>
-				</div>
-			{/if}
+					</div>
+				{/if}
 
-			{#if edit !== true}
+				{#if edit !== true && !readOnly}
+					<FloatingButtons
+						bind:this={floatingButtonsElement}
+						id={`user-${chatId}-${message.id}`}
+						messageId={message.id}
+						actions={$settings?.floatingActionButtons ?? []}
+						model={(message.models ?? []).at(0) ?? $models.at(0)?.id ?? ''}
+						messages={createMessagesList(history, message.id)}
+						enablePinAction={true}
+						onPin={() => {
+							pinSelectedText();
+						}}
+					/>
+				{/if}
+
+				{#if edit !== true}
 				<div
 					class=" flex {($settings?.chatBubble ?? true)
 						? 'justify-end'

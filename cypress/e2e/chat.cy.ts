@@ -102,5 +102,96 @@ describe('Settings', () => {
 			// Wait for image to be visible
 			cy.get('img[data-cy="image"]', { timeout: 60_000 }).should('be.visible');
 		});
+
+		it('user can pin, navigate, persist, and unpin conversation anchors', () => {
+			// Select a model first
+			cy.get('button[aria-label="Select a model"]').click();
+			cy.get('button[aria-roledescription="model-item"]').first().click();
+
+			// Send a prompt and wait for assistant response
+			cy.get('#chat-input').type('Reply in one short paragraph about cypress testing.', {
+				force: true
+			});
+			cy.get('button[type="submit"]').click();
+			cy.get('.chat-assistant', { timeout: 10_000 }).should('exist');
+			cy.get('div[aria-label="Generation Info"]', { timeout: 120_000 }).should('exist');
+
+			let selectedSnippet = '';
+
+			// Programmatically select text inside the first assistant response and trigger mouseup
+				cy.window().then((win) => {
+					const responseRoot = win.document.querySelector(
+						'.chat-assistant #response-content-container'
+					) as HTMLElement | null;
+					if (!responseRoot) {
+						throw new Error('Assistant response container not found');
+					}
+
+					const walker = win.document.createTreeWalker(responseRoot, win.NodeFilter.SHOW_TEXT, {
+						acceptNode: (node: Node) =>
+							(node.textContent ?? '').trim().length > 20
+								? win.NodeFilter.FILTER_ACCEPT
+								: win.NodeFilter.FILTER_SKIP
+					});
+
+					const textNode = walker.nextNode() as Text | null;
+					if (!textNode) {
+						throw new Error('No assistant text node found for selection');
+					}
+
+				selectedSnippet = (textNode.textContent ?? '').trim().slice(0, 16);
+				expect(selectedSnippet.length).to.be.greaterThan(5);
+
+				const range = win.document.createRange();
+				range.setStart(textNode, 0);
+				range.setEnd(textNode, selectedSnippet.length);
+
+				const selection = win.getSelection();
+				selection?.removeAllRanges();
+				selection?.addRange(range);
+
+				responseRoot.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+			});
+
+			// Pin selected snippet from floating actions
+			cy.contains('button', 'Pin', { timeout: 10_000 }).click();
+
+			// Verify pinned section and item
+			cy.contains('Pinned Messages').should('exist');
+			cy.contains('Pinned Messages')
+				parents('div')
+				.first()
+				within(() => {
+					cy.contains(selectedSnippet).should('exist');
+				});
+
+			// Reload and verify persistence
+			cy.reload();
+			cy.contains('Pinned Messages').should('exist');
+			cy.contains('Pinned Messages')
+				parents('div')
+				.first()
+				within(() => {
+					cy.contains(selectedSnippet).should('exist');
+				});
+
+			// Click pinned item and verify target highlight behavior appears
+			cy.contains(selectedSnippet).click();
+			cy.get('[data-pin-snippet-id]', { timeout: 5_000 }).should('exist');
+
+			// Unpin from sidebar
+			cy.contains('Pinned Messages')
+				parents('div')
+				.first()
+				.within(() => {
+					cy.contains(selectedSnippet).should('exist');
+					cy.get('button[aria-label="Unpin"]').first().click({ force: true });
+				});
+			cy.contains('Pinned Messages').should('not.exist');
+
+			// Reload and ensure unpinned state persists
+			cy.reload();
+			cy.contains('Pinned Messages').should('not.exist');
+		});
 	});
 });

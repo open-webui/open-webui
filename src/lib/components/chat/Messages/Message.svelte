@@ -70,6 +70,7 @@
 				{showNextMessage}
 				{editMessage}
 				{deleteMessage}
+				{onPinSelection}
 				{readOnly}
 				{editCodeBlock}
 				{topPadding}
@@ -122,6 +123,7 @@
 					{mergeResponses}
 					{triggerScroll}
 					{addMessages}
+					{onPinSelection}
 					{readOnly}
 					{editCodeBlock}
 					{topPadding}

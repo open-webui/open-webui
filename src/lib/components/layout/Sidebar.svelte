@@ -66,6 +66,11 @@
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
+	import {
+		loadPinnedSnippets,
+		savePinnedSnippets,
+		type PinnedSnippet
+	} from '$lib/utils/pinnedSnippets';
 
 	const BREAKPOINT = 768;
 
@@ -84,12 +89,6 @@
 	let showCreateFolderModal = false;
 
 	let pinnedModels = [];
-	type PinnedSnippet = {
-		id: string;
-		messageId: string;
-		text: string;
-		createdAt: number;
-	};
 	let pinnedSnippets: PinnedSnippet[] = [];
 	let pinnedSnippetsCollapsed = false;
 	let loadedPinnedSnippetChatId = '';
@@ -102,25 +101,6 @@
 	let folderRegistry = {};
 
 	let newFolderId = null;
-
-	const getPinnedStorageKey = (id: string) => `chat-pinned-snippets-${id}`;
-
-	const loadPinnedSnippets = (id: string): PinnedSnippet[] => {
-		if (!id) return [];
-		try {
-			const raw = localStorage.getItem(getPinnedStorageKey(id));
-			if (!raw) return [];
-			const parsed = JSON.parse(raw);
-			return Array.isArray(parsed) ? parsed : [];
-		} catch {
-			return [];
-		}
-	};
-
-	const savePinnedSnippets = (id: string, snippets: PinnedSnippet[]) => {
-		if (!id) return;
-		localStorage.setItem(getPinnedStorageKey(id), JSON.stringify(snippets));
-	};
 
 	$: if ($chatId && $chatId !== loadedPinnedSnippetChatId) {
 		pinnedSnippets = loadPinnedSnippets($chatId);
@@ -146,7 +126,10 @@
 	const unpinSnippet = (snippetId: string) => {
 		if (!$chatId) return;
 		pinnedSnippets = pinnedSnippets.filter((snippet) => snippet.id !== snippetId);
-		savePinnedSnippets($chatId, pinnedSnippets);
+		const saved = savePinnedSnippets($chatId, pinnedSnippets);
+		if (!saved) {
+			toast.error($i18n.t('Unable to save pinned snippets. Your browser storage may be full.'));
+		}
 		window.dispatchEvent(
 			new CustomEvent('openwebui:pinned-snippet-updated', {
 				detail: { chatId: $chatId, snippets: pinnedSnippets }
@@ -1137,14 +1120,18 @@
 									<div class="text-xs font-semibold text-gray-700 dark:text-gray-200">
 										{$i18n.t('Pinned Messages')}
 									</div>
-									<button
-										class="text-[11px] text-gray-500 hover:text-gray-900 dark:hover:text-white px-1"
-										on:click={() => {
-											pinnedSnippetsCollapsed = !pinnedSnippetsCollapsed;
-										}}
-									>
-										{pinnedSnippetsCollapsed ? '+' : '-'}
-									</button>
+										<button
+											class="text-[11px] text-gray-500 hover:text-gray-900 dark:hover:text-white px-1"
+											on:click={() => {
+												pinnedSnippetsCollapsed = !pinnedSnippetsCollapsed;
+											}}
+											aria-label={pinnedSnippetsCollapsed
+												? $i18n.t('Expand pinned messages')
+												: $i18n.t('Collapse pinned messages')}
+											aria-expanded={!pinnedSnippetsCollapsed}
+										>
+											{pinnedSnippetsCollapsed ? '+' : '-'}
+										</button>
 								</div>
 
 								{#if !pinnedSnippetsCollapsed}
