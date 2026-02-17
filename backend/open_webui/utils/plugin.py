@@ -401,6 +401,7 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
 
 
 def install_frontmatter_requirements(requirements: str):
+    return
     if OFFLINE_MODE:
         log.info("Offline mode enabled, skipping installation of requirements.")
         return
@@ -424,6 +425,7 @@ def install_frontmatter_requirements(requirements: str):
 
 
 def install_tool_and_function_dependencies():
+    return
     """
     Install all dependencies for all admin tools and active functions.
 

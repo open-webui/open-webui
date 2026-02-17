@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  web:
+    image: python:3.10-slim
+    container_name: openwebui_dev
+    network_mode: host
+
+    volumes:
+      - ./:/app/backend:rw
+
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PORT: "8503"
+      HOST: "0.0.0.0"
+
+    working_dir: /app/backend/backend
+    command: >
+      bash -lc '
+      set -e
+
+      if [ ! -d venv_docker ]; then
+        python3 -m venv venv_docker
+      fi
+  
+      ./venv_docker/bin/python3 -m pip install -r requirements.txt
+
+      if [ ! -f .webui_secret_key ]; then
+        head -c 12 /dev/random | base64 > .webui_secret_key
+      fi
+
+      export PYTHONPATH=.
+      export WEBUI_SECRET_KEY="$(cat .webui_secret_key)"
+
+      exec ./venv_docker/bin/python3 -m uvicorn open_webui.main:app \
+        --host 0.0.0.0 \
+        --port 8503 \
+        --reload
+      '
+
+    restart: unless-stopped

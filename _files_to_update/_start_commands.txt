@@ -1,0 +1,43 @@
+cd backend
+python3.10 -m venv venv
+./venv/bin/python3.10 -m pip install -r requirements.txt
+
+
+echo $(head -c 12 /dev/random | base64) > .webui_secret_key
+export PORT=8000
+export HOST=0.0.0.0  212.41.21.72
+
+PYTHONPATH=. WEBUI_SECRET_KEY=$(cat .webui_secret_key)  ./venv/bin/python3.10 -m uvicorn open_webui.main:app --host=212.41.21.72 --port 8503 --reload
+
+export PYTHONPATH=. && export WEBUI_SECRET_KEY=$(cat .webui_secret_key) && export PYTHONUNBUFFERED=1 && exec ./venv/bin/python3.10 -u -m uvicorn open_webui.main:app --host 212.41.21.72 --port 8503 --reload > webui.log 2>&1
+
+
+
+./venv/bin/python3.10 -m pip install youtube-transcript-api scholarly habanero arxiv openrouteservice pygments yfinance>=0.2.66 pandas>=2.2.0 pydantic>=2.0.0 requests>=2.28.0
+
+
+docker compose -f _docker-compose.local.yml restart
+
+docker compose -f _docker-compose.local.yml up --build
+
+// background
+
+RUN INSIDE CONTAINER!!
+
+
+
+
+
+
+
+
+
+
+
+docker run -d --name balabanov_open_web_main_new --net=host -v /home/balabanov/:/home/ python:3.10 bash -c "
+cd /home/open_webui_server/open-webui/backend &&
+export PYTHONPATH=. &&
+export WEBUI_SECRET_KEY=\$(cat .webui_secret_key) &&
+export PYTHONUNBUFFERED=1 &&
+exec ./venv/bin/python3.10 -u -m uvicorn open_webui.main:app --host 212.41.21.72 --port 8503 --reload
+"
