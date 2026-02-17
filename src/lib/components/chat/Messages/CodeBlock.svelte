@@ -12,6 +12,7 @@
 		renderMermaidDiagram,
 		renderVegaVisualization
 	} from '$lib/utils';
+	import { getContextAsyncTaskTracker } from '$lib/utils/AsyncTaskTracker';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -36,6 +37,7 @@
 	export let run = true;
 	export let preview = false;
 	export let collapsed = false;
+	export let exportMode = false;
 
 	export let token;
 	export let lang = '';
@@ -47,6 +49,7 @@
 	export let stickyButtonsClassName = 'top-0';
 
 	let pyodideWorker = null;
+	const asyncTaskTracker = getContextAsyncTaskTracker();
 
 	let _code = '';
 	$: if (code) {
@@ -76,6 +79,10 @@
 	const collapseCodeBlock = () => {
 		collapsed = !collapsed;
 	};
+
+	$: if (exportMode && collapsed) {
+		collapsed = false;
+	}
 
 	const saveCode = () => {
 		saved = true;
@@ -340,7 +347,9 @@
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			try {
-				renderHTML = await renderMermaid(code);
+				renderHTML = asyncTaskTracker
+					? await asyncTaskTracker.track(() => renderMermaid(code), 'mermaid-render')
+					: await renderMermaid(code);
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
@@ -352,7 +361,9 @@
 			(token?.raw ?? '').slice(-4).includes('```')
 		) {
 			try {
-				renderHTML = await renderVegaVisualization(code);
+				renderHTML = asyncTaskTracker
+					? await asyncTaskTracker.track(() => renderVegaVisualization(code), 'vega-render')
+					: await renderVegaVisualization(code);
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
@@ -426,10 +437,11 @@
 					className=" rounded-2xl max-h-fit overflow-hidden"
 					svg={renderHTML}
 					content={_token.text}
+					hideButtons={exportMode}
 				/>
 			{:else}
 				<div class="p-3">
-					{#if renderError}
+					{#if renderError && !exportMode}
 						<div
 							class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
 						>
@@ -446,10 +458,11 @@
 				{lang}
 			</div>
 
-			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 pr-3 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white"
-			>
-				<div class="flex items-center gap-0.5">
+			{#if !exportMode}
+				<div
+					class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 pr-3 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white"
+				>
+					<div class="flex items-center gap-0.5">
 					<button
 						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 						on:click={collapseCodeBlock}
@@ -510,11 +523,12 @@
 							</div>
 						</button>
 					{/if}
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			<div
-				class="language-{lang} rounded-t-2xl -mt-8 {editorClassName
+				class="language-{lang} rounded-t-2xl {exportMode ? '' : '-mt-8'} {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
@@ -543,7 +557,9 @@
 								stderr ||
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
-								class="language-{lang} rounded-t-none whitespace-pre text-sm"
+								class="language-{lang} rounded-t-none {exportMode
+									? 'whitespace-pre-wrap break-words'
+									: 'whitespace-pre'} {exportMode ? 'text-xs leading-normal' : 'text-sm'}"
 								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
 									code}</code
 							></pre>

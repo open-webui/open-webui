@@ -149,6 +149,7 @@
 	export let isLastMessage = true;
 	export let readOnly = false;
 	export let editCodeBlock = true;
+export let exportMode = false;
 	export let topPadding = false;
 
 	let citationsElement: HTMLDivElement;
@@ -781,10 +782,12 @@
 									sources={message.sources}
 									floatingButtons={message?.done &&
 										!readOnly &&
+										!exportMode &&
 										($settings?.showFloatingActionButtons ?? true)}
 									save={!readOnly}
 									preview={!readOnly}
 									{editCodeBlock}
+									{exportMode}
 									{topPadding}
 									done={($settings?.chatFadeStreamingText ?? true)
 										? (message?.done ?? false)
@@ -834,7 +837,7 @@
 					</div>
 				</div>
 
-				{#if !edit}
+				{#if !edit && !exportMode}
 					<div
 						bind:this={buttonsContainerElement}
 						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
@@ -1437,7 +1440,7 @@
 						/>
 					{/if}
 
-					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+					{#if !exportMode && (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
 						<div class="mt-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}

@@ -30,6 +30,7 @@
 	export let isLastMessage;
 	export let readOnly = false;
 	export let editCodeBlock = true;
+export let exportMode = false;
 
 	export let setInputText: Function = () => {};
 	export let updateChat: Function;
@@ -240,10 +241,12 @@
 {#if parentMessage}
 	<div>
 		<div
-			class="flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden"
+			class={exportMode
+				? 'flex flex-col gap-3'
+				: 'flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden'}
 			id="responses-container-{chatId}-{parentMessage.id}"
 		>
-			{#if $settings?.displayMultiModelResponsesInTabs ?? false}
+			{#if !exportMode && ($settings?.displayMultiModelResponsesInTabs ?? false)}
 				<div class="w-full">
 					<div class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850">
 						<div
@@ -312,6 +315,8 @@
 									}}
 									{addMessages}
 									{readOnly}
+									{editCodeBlock}
+									{exportMode}
 									{topPadding}
 								/>
 							{/if}
@@ -369,6 +374,7 @@
 										{addMessages}
 										{readOnly}
 										{editCodeBlock}
+										{exportMode}
 										{topPadding}
 									/>
 								{/if}
@@ -407,7 +413,7 @@
 									{#if (message?.content ?? '') === ''}
 										<Skeleton />
 									{:else}
-										<Markdown id={`merged`} content={message.content ?? ''} />
+										<Markdown id={`merged`} content={message.content ?? ''} {exportMode} />
 									{/if}
 								</div>
 							</div>

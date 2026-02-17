@@ -33,7 +33,7 @@
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 	import { createNewNote, deleteNoteById, getNoteList, searchNotes } from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
-	import { downloadPdf, createNoteHandler } from './utils';
+	import { createNoteHandler } from './utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -81,9 +81,12 @@
 			saveAs(blob, `${selectedNote.title}.md`);
 		} else if (type === 'pdf') {
 			try {
-				await downloadPdf(selectedNote);
+				const { exportPDFFromHTML } = await import('$lib/utils/pdf');
+				await exportPDFFromHTML(selectedNote.data?.content?.html || '', { title: selectedNote.title });
+				toast.success($i18n.t('PDF exported successfully.'));
 			} catch (error) {
-				toast.error(`${error}`);
+				console.error(error);
+				toast.error($i18n.t('Failed to export PDF.'));
 			}
 		}
 	};
