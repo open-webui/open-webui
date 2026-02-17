@@ -97,6 +97,7 @@
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
+	import Brain from '../icons/Brain.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
 	import Note from '../icons/Note.svelte';
 	import { goto } from '$app/navigation';
@@ -142,6 +143,7 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+	export let thinkingEnabled: boolean | null = null;
 
 	export let pendingOAuthTools = [];
 
@@ -186,7 +188,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		thinkingEnabled
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -1747,14 +1750,14 @@
 										</button>
 									</InputMenu>
 
-									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
+									{#if true || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 										<div
 											class="flex self-center w-[1px] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50 shrink-0"
 										/>
 									{/if}
 
 									<div class="flex flex-1 items-center min-w-0 overflow-x-auto scrollbar-none">
-										{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
+										{#if true || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 											<IntegrationsMenu
 												selectedModels={selectedModelIds}
 												{toggleFilters}
@@ -1767,6 +1770,7 @@
 												bind:webSearchEnabled
 												bind:imageGenerationEnabled
 												bind:codeInterpreterEnabled
+												bind:thinkingEnabled
 												{onWebSearchToggle}
 												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 												onShowValves={(e) => {
@@ -1934,6 +1938,25 @@
 														<div class="hidden group-hover:block">
 															<XMark className="size-4" strokeWidth="1.75" />
 														</div>
+													</button>
+												</Tooltip>
+											{/if}
+
+											{#if thinkingEnabled !== null}
+												<Tooltip
+													content={thinkingEnabled
+														? $i18n.t('Thinking Enabled')
+														: $i18n.t('Thinking Disabled')}
+													placement="top"
+												>
+													<button
+														on:click|preventDefault={() => (thinkingEnabled = !thinkingEnabled)}
+														type="button"
+														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {thinkingEnabled
+															? 'text-purple-500 dark:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-400/10 dark:hover:bg-purple-600/10 border border-purple-200/40 dark:border-purple-500/20'
+															: 'text-gray-400 dark:text-gray-500 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700 border border-gray-200/40 dark:border-gray-600/20'}"
+													>
+														<Brain className="size-4" strokeWidth="1.75" />
 													</button>
 												</Tooltip>
 											{/if}

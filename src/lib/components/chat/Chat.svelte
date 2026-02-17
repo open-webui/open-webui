@@ -162,6 +162,7 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+	let thinkingEnabled: boolean | null = null;
 	let webSearchActive = false;
 	let showWebSearchConfirm = false;
 	let pendingWebSearchPrompt: string | null = null;
@@ -301,6 +302,7 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						thinkingEnabled = input.thinkingEnabled ?? null;
 					}
 				} catch (e) {}
 			} else {
@@ -1020,6 +1022,7 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						thinkingEnabled = input.thinkingEnabled ?? null;
 					}
 				} catch (e) {}
 			}
@@ -2554,7 +2557,15 @@
 				params: {
 					...$settings?.params,
 					...params,
-					stop: getStopTokens()
+					stop: getStopTokens(),
+					...(thinkingEnabled === true
+						? {
+								reasoning_effort:
+									params?.reasoning_effort ?? $settings?.params?.reasoning_effort ?? 'medium'
+							}
+						: thinkingEnabled === false
+							? { reasoning_effort: 'off' }
+							: {})
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
@@ -3301,6 +3312,7 @@
 										bind:codeInterpreterEnabled
 										{pendingOAuthTools}
 										bind:webSearchEnabled
+										bind:thinkingEnabled
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
@@ -3384,6 +3396,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:thinkingEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									bind:dragged
