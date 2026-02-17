@@ -27,7 +27,8 @@ from open_webui.constants import ERROR_MESSAGES
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import has_permission
+from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 from open_webui.internal.db import get_session
 from sqlalchemy.orm import Session
 
@@ -200,8 +201,12 @@ async def get_note_by_id(
     if user.role != "admin" and (
         user.id != note.user_id
         and (
-            not has_access(
-                user.id, type="read", access_control=note.access_control, db=db
+            not AccessGrants.has_access(
+                user_id=user.id,
+                resource_type="note",
+                resource_id=note.id,
+                permission="read",
+                db=db,
             )
         )
     ):
@@ -212,13 +217,14 @@ async def get_note_by_id(
     write_access = (
         user.role == "admin"
         or (user.id == note.user_id)
-        or has_access(
-            user.id,
-            type="write",
-            access_control=note.access_control,
-            strict=False,
+        or AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="note",
+            resource_id=note.id,
+            permission="write",
             db=db,
         )
+        or has_public_read_access_grant(note.access_grants)
     )
 
     return NoteResponse(**note.model_dump(), write_access=write_access)
@@ -253,8 +259,12 @@ async def update_note_by_id(
 
     if user.role != "admin" and (
         user.id != note.user_id
-        and not has_access(
-            user.id, type="write", access_control=note.access_control, db=db
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="note",
+            resource_id=note.id,
+            permission="write",
+            db=db,
         )
     ):
         raise HTTPException(
@@ -264,7 +274,7 @@ async def update_note_by_id(
     # Check if user can share publicly
     if (
         user.role != "admin"
-        and form_data.access_control == None
+        and has_public_read_access_grant(form_data.access_grants)
         and not has_permission(
             user.id,
             "sharing.public_notes",
@@ -272,7 +282,7 @@ async def update_note_by_id(
             db=db,
         )
     ):
-        form_data.access_control = {}
+        form_data.access_grants = []
 
     try:
         note = Notes.update_note_by_id(id, form_data, db=db)
@@ -288,6 +298,75 @@ async def update_note_by_id(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
+
+
+############################
+# UpdateNoteAccessById
+############################
+
+
+class NoteAccessGrantsForm(BaseModel):
+    access_grants: list[dict]
+
+
+@router.post("/{id}/access/update", response_model=Optional[NoteModel])
+async def update_note_access_by_id(
+    request: Request,
+    id: str,
+    form_data: NoteAccessGrantsForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS, db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    note = Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if user.role != "admin" and (
+        user.id != note.user_id
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="note",
+            resource_id=note.id,
+            permission="write",
+            db=db,
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    # Strip public sharing if user lacks permission
+    if (
+        user.role != "admin"
+        and has_public_read_access_grant(form_data.access_grants)
+        and not has_permission(
+            user.id,
+            "sharing.public_notes",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_grants = [
+            grant
+            for grant in form_data.access_grants
+            if not (
+                grant.get("principal_type") == "user"
+                and grant.get("principal_id") == "*"
+            )
+        ]
+
+    AccessGrants.set_access_grants("note", id, form_data.access_grants, db=db)
+
+    return Notes.get_note_by_id(id, db=db)
 
 
 ############################
@@ -318,8 +397,12 @@ async def delete_note_by_id(
 
     if user.role != "admin" and (
         user.id != note.user_id
-        and not has_access(
-            user.id, type="write", access_control=note.access_control, db=db
+        and not AccessGrants.has_access(
+            user_id=user.id,
+            resource_type="note",
+            resource_id=note.id,
+            permission="write",
+            db=db,
         )
     ):
         raise HTTPException(

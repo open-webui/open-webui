@@ -25,6 +25,9 @@ from open_webui.utils.auth import (
 )
 from open_webui.constants import ERROR_MESSAGES
 
+from open_webui.config import OAUTH_PROVIDERS
+from open_webui.env import SCIM_AUTH_PROVIDER
+
 
 from sqlalchemy.orm import Session
 from open_webui.internal.db import get_session
@@ -300,6 +303,43 @@ def get_scim_auth(
         )
 
 
+def get_external_id(user: UserModel) -> Optional[str]:
+    """Extract externalId from a user's scim data.
+
+    Checks all stored provider entries and returns the first external_id found.
+    """
+    if not user.scim:
+        return None
+    for provider_data in user.scim.values():
+        if isinstance(provider_data, dict) and "external_id" in provider_data:
+            return provider_data["external_id"]
+    return None
+
+
+def get_scim_provider() -> str:
+    """Return the configured SCIM auth provider.
+
+    Requires SCIM_AUTH_PROVIDER env var to be set (e.g. 'microsoft', 'oidc').
+    """
+    if not SCIM_AUTH_PROVIDER:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="SCIM_AUTH_PROVIDER environment variable is required when SCIM is enabled",
+        )
+    return SCIM_AUTH_PROVIDER
+
+
+def find_user_by_external_id(external_id: str, db=None) -> Optional[UserModel]:
+    """Find a user by SCIM externalId, falling back to OAuth sub match."""
+    provider = get_scim_provider()
+    user = Users.get_user_by_scim_external_id(provider, external_id, db=db)
+    if user:
+        return user
+
+    # Fallback: check if externalId matches an existing OAuth sub (account linking)
+    return Users.get_user_by_oauth_sub(provider, external_id, db=db)
+
+
 def user_to_scim(user: UserModel, request: Request, db=None) -> SCIMUser:
     """Convert internal User model to SCIM User"""
     # Parse display name into name components
@@ -321,6 +361,7 @@ def user_to_scim(user: UserModel, request: Request, db=None) -> SCIMUser:
 
     return SCIMUser(
         id=user.id,
+        externalId=get_external_id(user),
         userName=user.email,
         name=SCIMName(
             formatted=user.name,
@@ -352,18 +393,17 @@ def user_to_scim(user: UserModel, request: Request, db=None) -> SCIMUser:
 def group_to_scim(group: GroupModel, request: Request, db=None) -> SCIMGroup:
     """Convert internal Group model to SCIM Group"""
     member_ids = Groups.get_group_user_ids_by_id(group.id, db) or []
-    members = []
 
-    for user_id in member_ids:
-        user = Users.get_user_by_id(user_id, db=db)
-        if user:
-            members.append(
-                SCIMGroupMember(
-                    value=user.id,
-                    ref=f"{request.base_url}api/v1/scim/v2/Users/{user.id}",
-                    display=user.name,
-                )
-            )
+    # Batch-fetch all users to avoid N+1 queries
+    users = Users.get_users_by_user_ids(member_ids, db=db) if member_ids else []
+    members = [
+        SCIMGroupMember(
+            value=user.id,
+            ref=f"{request.base_url}api/v1/scim/v2/Users/{user.id}",
+            display=user.name,
+        )
+        for user in users
+    ]
 
     return SCIMGroup(
         id=group.id,
@@ -495,11 +535,15 @@ async def get_users(
 
     # Get users from database
     if filter:
-        # Simple filter parsing - supports userName eq "email"
-        # In production, you'd want a more robust filter parser
+        # Simple filter parsing - supports userName eq, externalId eq
         if "userName eq" in filter:
             email = filter.split('"')[1]
             user = Users.get_user_by_email(email, db=db)
+            users_list = [user] if user else []
+            total = 1 if user else 0
+        elif "externalId eq" in filter:
+            external_id = filter.split('"')[1]
+            user = find_user_by_external_id(external_id, db=db)
             users_list = [user] if user else []
             total = 1 if user else 0
         else:
@@ -547,17 +591,33 @@ async def create_user(
     db: Session = Depends(get_session),
 ):
     """Create SCIM User"""
-    # Check if user already exists
-    existing_user = Users.get_user_by_email(user_data.userName, db=db)
+    # Check for duplicate by externalId
+    if user_data.externalId:
+        existing_user = find_user_by_external_id(user_data.externalId, db=db)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"User with externalId {user_data.externalId} already exists",
+            )
+
+    # Determine primary email (lowercased per RFC 5321)
+    email = user_data.userName
+    for entry in user_data.emails:
+        if entry.primary:
+            email = entry.value
+            break
+    email = email.lower()
+
+    # Check for duplicate by email
+    existing_user = Users.get_user_by_email(email, db=db)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"User with email {user_data.userName} already exists",
+            detail=f"User with email {email} already exists",
         )
 
     # Create user
     user_id = str(uuid.uuid4())
-    email = user_data.emails[0].value if user_data.emails else user_data.userName
 
     # Parse name if provided
     name = user_data.displayName
@@ -572,7 +632,6 @@ async def create_user(
     if user_data.photos and len(user_data.photos) > 0:
         profile_image = user_data.photos[0].value
 
-    # Create user
     new_user = Users.insert_new_user(
         id=user_id,
         name=name,
@@ -587,6 +646,12 @@ async def create_user(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create user",
         )
+
+    # Store externalId in the scim field
+    if user_data.externalId:
+        provider = get_scim_provider()
+        Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
+        new_user = Users.get_user_by_id(user_id, db=db)
 
     return user_to_scim(new_user, request, db=db)
 
@@ -632,13 +697,18 @@ async def update_user(
     if user_data.photos and len(user_data.photos) > 0:
         update_data["profile_image_url"] = user_data.photos[0].value
 
-    # Update user
     updated_user = Users.update_user_by_id(user_id, update_data, db=db)
     if not updated_user:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update user",
         )
+
+    # Update externalId in the scim field
+    if user_data.externalId:
+        provider = get_scim_provider()
+        Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
+        updated_user = Users.get_user_by_id(user_id, db=db)
 
     return user_to_scim(updated_user, request, db=db)
 
@@ -677,6 +747,9 @@ async def patch_user(
                 update_data["email"] = value
             elif path == "name.formatted":
                 update_data["name"] = value
+            elif path == "externalId":
+                provider = get_scim_provider()
+                Users.update_user_scim_by_id(user_id, provider, value, db=db)
 
     # Update user
     if update_data:

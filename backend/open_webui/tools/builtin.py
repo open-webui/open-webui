@@ -36,6 +36,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.channels import Channels, ChannelMember, Channel
 from open_webui.models.messages import Messages, Message
 from open_webui.models.groups import Groups
+from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
 
@@ -166,7 +167,10 @@ async def search_web(
         engine = __request__.app.state.config.WEB_SEARCH_ENGINE
         user = UserModel(**__user__) if __user__ else None
 
-        results = _search_web(__request__, engine, query, user)
+        # Use admin-configured result count if configured, falling back to model-provided count of provided, else default to 5
+        count = __request__.app.state.config.WEB_SEARCH_RESULT_COUNT or count
+
+        results = await asyncio.to_thread(_search_web, __request__, engine, query, user)
 
         # Limit results
         results = results[:count] if results else []
@@ -338,6 +342,178 @@ async def edit_image(
         return json.dumps({"status": "success", "images": images}, ensure_ascii=False)
     except Exception as e:
         log.exception(f"edit_image error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+# =============================================================================
+# CODE INTERPRETER TOOLS
+# =============================================================================
+
+
+async def execute_code(
+    code: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __event_emitter__: callable = None,
+    __event_call__: callable = None,
+    __chat_id__: str = None,
+    __message_id__: str = None,
+    __metadata__: dict = None,
+) -> str:
+    """
+    Execute Python code in a sandboxed environment and return the output.
+    Use this to perform calculations, data analysis, generate visualizations,
+    or run any Python code that would help answer the user's question.
+
+    :param code: The Python code to execute
+    :return: JSON with stdout, stderr, and result from execution
+    """
+    from uuid import uuid4
+
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    try:
+        # Sanitize code (strips ANSI codes and markdown fences)
+        code = sanitize_code(code)
+
+        # Import blocked modules from config (same as middleware)
+        from open_webui.config import CODE_INTERPRETER_BLOCKED_MODULES
+
+        # Add import blocking code if there are blocked modules
+        if CODE_INTERPRETER_BLOCKED_MODULES:
+            import textwrap
+
+            blocking_code = textwrap.dedent(f"""
+                import builtins
+
+                BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
+
+                _real_import = builtins.__import__
+                def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
+                    if name.split('.')[0] in BLOCKED_MODULES:
+                        importer_name = globals.get('__name__') if globals else None
+                        if importer_name == '__main__':
+                            raise ImportError(
+                                f"Direct import of module {{name}} is restricted."
+                            )
+                    return _real_import(name, globals, locals, fromlist, level)
+
+                builtins.__import__ = restricted_import
+                """)
+            code = blocking_code + "\n" + code
+
+        engine = getattr(
+            __request__.app.state.config, "CODE_INTERPRETER_ENGINE", "pyodide"
+        )
+        if engine == "pyodide":
+            # Execute via frontend pyodide using bidirectional event call
+            if __event_call__ is None:
+                return json.dumps(
+                    {
+                        "error": "Event call not available. WebSocket connection required for pyodide execution."
+                    }
+                )
+
+            output = await __event_call__(
+                {
+                    "type": "execute:python",
+                    "data": {
+                        "id": str(uuid4()),
+                        "code": code,
+                        "session_id": (
+                            __metadata__.get("session_id") if __metadata__ else None
+                        ),
+                    },
+                }
+            )
+
+            # Parse the output - pyodide returns dict with stdout, stderr, result
+            if isinstance(output, dict):
+                stdout = output.get("stdout", "")
+                stderr = output.get("stderr", "")
+                result = output.get("result", "")
+            else:
+                stdout = ""
+                stderr = ""
+                result = str(output) if output else ""
+
+        elif engine == "jupyter":
+            from open_webui.utils.code_interpreter import execute_code_jupyter
+
+            output = await execute_code_jupyter(
+                __request__.app.state.config.CODE_INTERPRETER_JUPYTER_URL,
+                code,
+                (
+                    __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                    == "token"
+                    else None
+                ),
+                (
+                    __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD
+                    if __request__.app.state.config.CODE_INTERPRETER_JUPYTER_AUTH
+                    == "password"
+                    else None
+                ),
+                __request__.app.state.config.CODE_INTERPRETER_JUPYTER_TIMEOUT,
+            )
+
+            stdout = output.get("stdout", "")
+            stderr = output.get("stderr", "")
+            result = output.get("result", "")
+
+        else:
+            return json.dumps({"error": f"Unknown code interpreter engine: {engine}"})
+
+        # Handle image outputs (base64 encoded) - replace with uploaded URLs
+        # Get actual user object for image upload (upload_image requires user.id attribute)
+        if __user__ and __user__.get("id"):
+            from open_webui.models.users import Users
+            from open_webui.utils.files import get_image_url_from_base64
+
+            user = Users.get_user_by_id(__user__["id"])
+
+            # Extract and upload images from stdout
+            if stdout and isinstance(stdout, str):
+                stdout_lines = stdout.split("\n")
+                for idx, line in enumerate(stdout_lines):
+                    if "data:image/png;base64" in line:
+                        image_url = get_image_url_from_base64(
+                            __request__,
+                            line,
+                            __metadata__ or {},
+                            user,
+                        )
+                        if image_url:
+                            stdout_lines[idx] = f"![Output Image]({image_url})"
+                stdout = "\n".join(stdout_lines)
+
+            # Extract and upload images from result
+            if result and isinstance(result, str):
+                result_lines = result.split("\n")
+                for idx, line in enumerate(result_lines):
+                    if "data:image/png;base64" in line:
+                        image_url = get_image_url_from_base64(
+                            __request__,
+                            line,
+                            __metadata__ or {},
+                            user,
+                        )
+                        if image_url:
+                            result_lines[idx] = f"![Output Image]({image_url})"
+                result = "\n".join(result_lines)
+
+        response = {
+            "status": "success",
+            "stdout": stdout,
+            "stderr": stderr,
+            "result": result,
+        }
+
+        return json.dumps(response, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f"execute_code error: {e}")
         return json.dumps({"error": str(e)})
 
 
@@ -579,10 +755,14 @@ async def view_note(
         user_id = __user__.get("id")
         user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
 
-        from open_webui.utils.access_control import has_access
+        from open_webui.models.access_grants import AccessGrants
 
-        if note.user_id != user_id and not has_access(
-            user_id, "read", note.access_control, user_group_ids
+        if note.user_id != user_id and not AccessGrants.has_access(
+            user_id=user_id,
+            resource_type="note",
+            resource_id=note.id,
+            permission="read",
+            user_group_ids=set(user_group_ids),
         ):
             return json.dumps({"error": "Access denied"})
 
@@ -633,7 +813,7 @@ async def write_note(
         form = NoteForm(
             title=title,
             data={"content": {"md": content}},
-            access_control={},  # Private by default - only owner can access
+            access_grants=[],  # Private by default - only owner can access
         )
 
         new_note = Notes.insert_new_note(user_id, form)
@@ -688,10 +868,14 @@ async def replace_note_content(
         user_id = __user__.get("id")
         user_group_ids = [group.id for group in Groups.get_groups_by_member_id(user_id)]
 
-        from open_webui.utils.access_control import has_access
+        from open_webui.models.access_grants import AccessGrants
 
-        if note.user_id != user_id and not has_access(
-            user_id, "write", note.access_control, user_group_ids
+        if note.user_id != user_id and not AccessGrants.has_access(
+            user_id=user_id,
+            resource_type="note",
+            resource_id=note.id,
+            permission="write",
+            user_group_ids=set(user_group_ids),
         ):
             return json.dumps({"error": "Write access denied"})
 
@@ -732,6 +916,7 @@ async def search_chats(
     end_timestamp: Optional[int] = None,
     __request__: Request = None,
     __user__: dict = None,
+    __chat_id__: str = None,
 ) -> str:
     """
     Search the user's previous chat conversations by title and message content.
@@ -761,6 +946,10 @@ async def search_chats(
 
         results = []
         for chat in chats:
+            # Skip the current chat to avoid showing it in search results
+            if __chat_id__ and chat.id == __chat_id__:
+                continue
+
             # Apply date filters (updated_at is in seconds)
             if start_timestamp and chat.updated_at < start_timestamp:
                 continue
@@ -1343,6 +1532,69 @@ async def search_knowledge_files(
         return json.dumps({"error": str(e)})
 
 
+async def view_file(
+    file_id: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
+) -> str:
+    """
+    Get the full content of a file by its ID.
+
+    :param file_id: The ID of the file to retrieve
+    :return: JSON with the file's id, filename, and full text content
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if not __user__:
+        return json.dumps({"error": "User context not available"})
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.routers.files import has_access_to_file
+
+        user_id = __user__.get("id")
+        user_role = __user__.get("role", "user")
+
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            return json.dumps({"error": "File not found"})
+
+        if (
+            file.user_id != user_id
+            and user_role != "admin"
+            and not any(
+                item.get("type") == "file" and item.get("id") == file_id
+                for item in (__model_knowledge__ or [])
+            )
+            and not has_access_to_file(
+                file_id=file_id,
+                access_type="read",
+                user=UserModel(**__user__),
+            )
+        ):
+            return json.dumps({"error": "File not found"})
+
+        content = ""
+        if file.data:
+            content = file.data.get("content", "")
+
+        return json.dumps(
+            {
+                "id": file.id,
+                "filename": file.filename,
+                "content": content,
+                "updated_at": file.updated_at,
+                "created_at": file.created_at,
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f"view_file error: {e}")
+        return json.dumps({"error": str(e)})
+
+
 async def view_knowledge_file(
     file_id: str,
     __request__: Request = None,
@@ -1363,7 +1615,7 @@ async def view_knowledge_file(
     try:
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
-        from open_webui.utils.access_control import has_access
+        from open_webui.models.access_grants import AccessGrants
 
         user_id = __user__.get("id")
         user_role = __user__.get("role", "user")
@@ -1382,8 +1634,12 @@ async def view_knowledge_file(
             if (
                 user_role == "admin"
                 or knowledge_base.user_id == user_id
-                or has_access(
-                    user_id, "read", knowledge_base.access_control, user_group_ids
+                or AccessGrants.has_access(
+                    user_id=user_id,
+                    resource_type="knowledge",
+                    resource_id=knowledge_base.id,
+                    permission="read",
+                    user_group_ids=set(user_group_ids),
                 )
             ):
                 has_knowledge_access = True
@@ -1424,8 +1680,7 @@ async def query_knowledge_files(
     __model_knowledge__: list[dict] = None,
 ) -> str:
     """
-    Search knowledge base files using semantic/vector search. This should be your first
-    choice for finding information before searching the web. Searches across collections (KBs),
+    Search knowledge base files using semantic/vector search. Searches across collections (KBs),
     individual files, and notes that the user has access to.
 
     :param query: The search query to find semantically relevant content
@@ -1439,12 +1694,31 @@ async def query_knowledge_files(
     if not __user__:
         return json.dumps({"error": "User context not available"})
 
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        try:
+            count = int(count)
+        except ValueError:
+            count = 5  # Default fallback
+
+    # Handle knowledge_ids being string "None", "null", or empty
+    if isinstance(knowledge_ids, str):
+        if knowledge_ids.lower() in ("none", "null", ""):
+            knowledge_ids = None
+        else:
+            # Try to parse as JSON array if it looks like one
+            try:
+                knowledge_ids = json.loads(knowledge_ids)
+            except json.JSONDecodeError:
+                # Treat as single ID
+                knowledge_ids = [knowledge_ids]
+
     try:
         from open_webui.models.knowledge import Knowledges
         from open_webui.models.files import Files
         from open_webui.models.notes import Notes
         from open_webui.retrieval.utils import query_collection
-        from open_webui.utils.access_control import has_access
+        from open_webui.models.access_grants import AccessGrants
 
         user_id = __user__.get("id")
         user_role = __user__.get("role", "user")
@@ -1469,8 +1743,12 @@ async def query_knowledge_files(
                     if knowledge and (
                         user_role == "admin"
                         or knowledge.user_id == user_id
-                        or has_access(
-                            user_id, "read", knowledge.access_control, user_group_ids
+                        or AccessGrants.has_access(
+                            user_id=user_id,
+                            resource_type="knowledge",
+                            resource_id=knowledge.id,
+                            permission="read",
+                            user_group_ids=set(user_group_ids),
                         )
                     ):
                         collection_names.append(item_id)
@@ -1487,7 +1765,12 @@ async def query_knowledge_files(
                     if note and (
                         user_role == "admin"
                         or note.user_id == user_id
-                        or has_access(user_id, "read", note.access_control)
+                        or AccessGrants.has_access(
+                            user_id=user_id,
+                            resource_type="note",
+                            resource_id=note.id,
+                            permission="read",
+                        )
                     ):
                         content = note.data.get("content", {}).get("md", "")
                         note_results.append(
@@ -1506,8 +1789,12 @@ async def query_knowledge_files(
                 if knowledge and (
                     user_role == "admin"
                     or knowledge.user_id == user_id
-                    or has_access(
-                        user_id, "read", knowledge.access_control, user_group_ids
+                    or AccessGrants.has_access(
+                        user_id=user_id,
+                        resource_type="knowledge",
+                        resource_id=knowledge.id,
+                        permission="read",
+                        user_group_ids=set(user_group_ids),
                     )
                 ):
                     collection_names.append(knowledge_id)
@@ -1668,4 +1955,66 @@ async def query_knowledge_bases(
 
     except Exception as e:
         log.exception(f"query_knowledge_bases error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+# =============================================================================
+# SKILLS TOOLS
+# =============================================================================
+
+
+async def view_skill(
+    name: str,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Load the full instructions of a skill by its name from the available skills manifest.
+    Use this when you need detailed instructions for a skill listed in <available_skills>.
+
+    :param name: The name of the skill to load (as shown in the manifest)
+    :return: The full skill instructions as markdown content
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if not __user__:
+        return json.dumps({"error": "User context not available"})
+
+    try:
+        from open_webui.models.skills import Skills
+        from open_webui.models.access_grants import AccessGrants
+
+        user_id = __user__.get("id")
+
+        # Direct DB lookup by unique name
+        skill = Skills.get_skill_by_name(name)
+
+        if not skill or not skill.is_active:
+            return json.dumps({"error": f"Skill '{name}' not found"})
+
+        # Check user access
+        user_role = __user__.get("role", "user")
+        if user_role != "admin" and skill.user_id != user_id:
+            user_group_ids = [
+                group.id for group in Groups.get_groups_by_member_id(user_id)
+            ]
+            if not AccessGrants.has_access(
+                user_id=user_id,
+                resource_type="skill",
+                resource_id=skill.id,
+                permission="read",
+                user_group_ids=set(user_group_ids),
+            ):
+                return json.dumps({"error": "Access denied"})
+
+        return json.dumps(
+            {
+                "name": skill.name,
+                "content": skill.content,
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f"view_skill error: {e}")
         return json.dumps({"error": str(e)})

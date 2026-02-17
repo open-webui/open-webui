@@ -31,6 +31,7 @@
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
+		updateKnowledgeAccessGrants,
 		searchKnowledgeFilesById
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
@@ -75,6 +76,8 @@
 			file_ids: string[];
 		};
 		files: any[];
+		access_grants?: any[];
+		write_access?: boolean;
 	};
 
 	let id = null;
@@ -88,6 +91,8 @@
 	let inputFiles = null;
 
 	let query = '';
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+
 	let viewOption = null;
 	let sortKey = null;
 	let direction = null;
@@ -105,9 +110,18 @@
 		await getItemsPage();
 	};
 
+	// Debounce only query changes
+	$: if (query !== undefined) {
+		clearTimeout(searchDebounceTimer);
+
+		searchDebounceTimer = setTimeout(() => {
+			getItemsPage();
+		}, 300);
+	}
+
+	// Immediate response to filter/pagination changes
 	$: if (
 		knowledgeId !== null &&
-		query !== undefined &&
 		viewOption !== undefined &&
 		sortKey !== undefined &&
 		direction !== undefined &&
@@ -603,7 +617,7 @@
 				...knowledge,
 				name: knowledge.name,
 				description: knowledge.description,
-				access_control: knowledge.access_control
+				access_grants: knowledge.access_grants ?? []
 			}).catch((e) => {
 				toast.error(`${e}`);
 			});
@@ -734,6 +748,9 @@
 
 		if (res) {
 			knowledge = res;
+			if (!Array.isArray(knowledge?.access_grants)) {
+				knowledge.access_grants = [];
+			}
 			knowledgeId = knowledge?.id;
 		} else {
 			goto('/workspace/knowledge');
@@ -746,6 +763,7 @@
 	});
 
 	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 		mediaQuery?.removeEventListener('change', handleMediaQuery);
 		const dropZone = document.querySelector('body');
 		dropZone?.removeEventListener('dragover', onDragOver);
@@ -816,11 +834,16 @@
 	{#if id && knowledge}
 		<AccessControlModal
 			bind:show={showAccessControlModal}
-			bind:accessControl={knowledge.access_control}
+			bind:accessGrants={knowledge.access_grants}
 			share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
 			sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
-			onChange={() => {
-				changeDebounceHandler();
+			onChange={async () => {
+				try {
+					await updateKnowledgeAccessGrants(localStorage.token, id, knowledge.access_grants ?? []);
+					toast.success($i18n.t('Saved'));
+				} catch (error) {
+					toast.error(`${error}`);
+				}
 			}}
 			accessRoles={['read', 'write']}
 		/>
@@ -831,7 +854,7 @@
 						<div class="w-full flex justify-between items-center">
 							<input
 								type="text"
-								class="text-left w-full font-medium text-lg font-primary bg-transparent outline-hidden flex-1"
+								class="text-left w-full text-lg bg-transparent outline-hidden flex-1"
 								bind:value={knowledge.name}
 								placeholder={$i18n.t('Knowledge Name')}
 								disabled={!knowledge?.write_access}

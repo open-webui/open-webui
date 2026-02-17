@@ -287,7 +287,13 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Returns:
         dict: A modified payload compatible with the Ollama API.
     """
-    openai_payload = copy.deepcopy(openai_payload)
+    # Shallow copy metadata separately (may contain non-picklable objects)
+    metadata = openai_payload.get("metadata")
+    openai_payload = copy.deepcopy(
+        {k: v for k, v in openai_payload.items() if k != "metadata"}
+    )
+    if metadata is not None:
+        openai_payload["metadata"] = dict(metadata)
     ollama_payload = {}
 
     # Mapping basic model and message details
@@ -387,6 +393,32 @@ def convert_embedding_payload_openai_to_ollama(openai_payload: dict) -> dict:
 
     # Optionally forward other fields if present
     for optional_key in ("options", "truncate", "keep_alive"):
+        if optional_key in openai_payload:
+            ollama_payload[optional_key] = openai_payload[optional_key]
+
+    return ollama_payload
+
+
+def convert_embed_payload_openai_to_ollama(openai_payload: dict) -> dict:
+    """
+    Convert an embeddings request payload from OpenAI format to Ollama's
+    /api/embed format, which supports batch input natively.
+
+    Args:
+        openai_payload (dict): The original payload designed for OpenAI API usage.
+            Expected keys: "model", "input" (str or list[str]).
+
+    Returns:
+        dict: A payload compatible with the Ollama /api/embed endpoint.
+    """
+    ollama_payload = {"model": openai_payload.get("model")}
+    input_value = openai_payload.get("input")
+
+    # /api/embed accepts 'input' as a string or list of strings directly
+    ollama_payload["input"] = input_value
+
+    # Optionally forward other fields if present
+    for optional_key in ("truncate", "options", "keep_alive"):
         if optional_key in openai_payload:
             ollama_payload[optional_key] = openai_payload[optional_key]
 

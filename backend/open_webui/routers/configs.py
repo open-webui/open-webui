@@ -224,7 +224,7 @@ async def verify_tool_servers_config(
     try:
         if form_data.type == "mcp":
             if form_data.auth_type == "oauth_2.1":
-                discovery_urls = get_discovery_urls(form_data.url)
+                discovery_urls = await get_discovery_urls(form_data.url)
                 for discovery_url in discovery_urls:
                     log.debug(
                         f"Trying to fetch OAuth 2.1 discovery document from {discovery_url}"

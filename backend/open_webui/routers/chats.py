@@ -16,6 +16,7 @@ from open_webui.models.chats import (
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
+    SharedChatResponse,
     ChatStatsExport,
     AggregateChatStats,
     ChatBody,
@@ -357,9 +358,7 @@ def _process_chat_for_export(chat) -> Optional[ChatStatsExport]:
         return None
 
 
-def calculate_chat_stats(
-    user_id, skip=0, limit=10, filter=None, db: Optional[Session] = None
-):
+def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
     if filter is None:
         filter = {}
 
@@ -368,7 +367,6 @@ def calculate_chat_stats(
         skip=skip,
         limit=limit,
         filter=filter,
-        db=db,
     )
 
     chat_stats_export_list = []
@@ -424,7 +422,6 @@ async def export_chat_stats(
     page: Optional[int] = 1,
     stream: bool = False,
     user=Depends(get_verified_user),
-    db: Session = Depends(get_session),
 ):
     # Check if the user has permission to share/export chats
     if (user.role != "admin") and (
@@ -455,7 +452,7 @@ async def export_chat_stats(
             skip = (page - 1) * limit
 
             chat_stats_export_list, total = await asyncio.to_thread(
-                calculate_chat_stats, user.id, skip, limit, filter, db=db
+                calculate_chat_stats, user.id, skip, limit, filter
             )
 
             return ChatStatsExportList(
@@ -863,6 +860,48 @@ async def unarchive_all_chats(
 
 
 ############################
+# GetSharedChats
+############################
+
+
+@router.get("/shared", response_model=list[SharedChatResponse])
+async def get_shared_session_user_chat_list(
+    page: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    if page is None:
+        page = 1
+
+    limit = 60
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    chat_list = [
+        SharedChatResponse(**chat.model_dump())
+        for chat in Chats.get_shared_chat_list_by_user_id(
+            user.id,
+            filter=filter,
+            skip=skip,
+            limit=limit,
+            db=db,
+        )
+    ]
+
+    return chat_list
+
+
+############################
 # GetSharedChatById
 ############################
 
@@ -1092,9 +1131,9 @@ async def delete_chat_by_id(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id, db=db) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id, db=db)
+        Chats.delete_orphan_tags_for_user(
+            chat.meta.get("tags", []), user.id, threshold=1, db=db
+        )
 
         result = Chats.delete_chat_by_id(id, db=db)
 
@@ -1114,9 +1153,9 @@ async def delete_chat_by_id(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id, db=db) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id, db=db)
+        Chats.delete_orphan_tags_for_user(
+            chat.meta.get("tags", []), user.id, threshold=1, db=db
+        )
 
         result = Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
         return result
@@ -1278,21 +1317,13 @@ async def archive_chat_by_id(
     if chat:
         chat = Chats.toggle_chat_archive_by_id(id, db=db)
 
-        # Delete tags if chat is archived
+        tag_ids = chat.meta.get("tags", [])
         if chat.archived:
-            for tag_id in chat.meta.get("tags", []):
-                if (
-                    Chats.count_chats_by_tag_name_and_user_id(tag_id, user.id, db=db)
-                    == 0
-                ):
-                    log.debug(f"deleting tag: {tag_id}")
-                    Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
+            # Archived chats are excluded from count — clean up orphans
+            Chats.delete_orphan_tags_for_user(tag_ids, user.id, db=db)
         else:
-            for tag_id in chat.meta.get("tags", []):
-                tag = Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db)
-                if tag is None:
-                    log.debug(f"inserting tag: {tag_id}")
-                    tag = Tags.insert_new_tag(tag_id, user.id, db=db)
+            # Unarchived — ensure tag rows exist
+            Tags.ensure_tags_exist(tag_ids, user.id, db=db)
 
         return ChatResponse(**chat.model_dump())
     else:
@@ -1498,11 +1529,9 @@ async def delete_all_tags_by_id(
 ):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
+        old_tags = chat.meta.get("tags", [])
         Chats.delete_all_tags_by_id_and_user_id(id, user.id, db=db)
-
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id, db=db) == 0:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id, db=db)
+        Chats.delete_orphan_tags_for_user(old_tags, user.id, db=db)
 
         return True
     else:

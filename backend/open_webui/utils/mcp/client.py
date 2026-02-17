@@ -8,6 +8,15 @@ from mcp import ClientSession
 from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
+import httpx
+from mcp.shared._httpx_utils import create_mcp_http_client
+from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+
+
+def create_insecure_httpx_client(headers=None, timeout=None, auth=None):
+    client = create_mcp_http_client(headers=headers, timeout=timeout, auth=auth)
+    client.verify = False
+    return client
 
 
 class MCPClient:
@@ -18,7 +27,14 @@ class MCPClient:
     async def connect(self, url: str, headers: Optional[dict] = None):
         async with AsyncExitStack() as exit_stack:
             try:
-                self._streams_context = streamablehttp_client(url, headers=headers)
+                if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL:
+                    self._streams_context = streamablehttp_client(url, headers=headers)
+                else:
+                    self._streams_context = streamablehttp_client(
+                        url,
+                        headers=headers,
+                        httpx_client_factory=create_insecure_httpx_client,
+                    )
 
                 transport = await exit_stack.enter_async_context(self._streams_context)
                 read_stream, write_stream, _ = transport
