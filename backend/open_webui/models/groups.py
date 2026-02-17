@@ -164,10 +164,14 @@ class GroupTable:
 
     def get_groups(self, filter, db: Optional[Session] = None) -> list[GroupResponse]:
         with get_db_context(db) as db:
-            member_count = func.count(GroupMember.user_id).label("member_count")
-            query = db.query(Group, member_count).outerjoin(
-                GroupMember, GroupMember.group_id == Group.id
+            member_count = (
+                select(func.count(GroupMember.user_id))
+                .where(GroupMember.group_id == Group.id)
+                .correlate(Group)
+                .scalar_subquery()
+                .label("member_count")
             )
+            query = db.query(Group, member_count)
 
             if filter:
                 if "query" in filter:
@@ -218,7 +222,7 @@ class GroupTable:
                             )
                         )
 
-            results = query.group_by(Group.id).order_by(Group.updated_at.desc()).all()
+            results = query.order_by(Group.updated_at.desc()).all()
 
             return [
                 GroupResponse.model_validate(
@@ -260,11 +264,15 @@ class GroupTable:
 
             total = query.count()
 
-            member_count = func.count(GroupMember.user_id).label("member_count")
+            member_count = (
+                select(func.count(GroupMember.user_id))
+                .where(GroupMember.group_id == Group.id)
+                .correlate(Group)
+                .scalar_subquery()
+                .label("member_count")
+            )
             results = (
                 query.add_columns(member_count)
-                .outerjoin(GroupMember, GroupMember.group_id == Group.id)
-                .group_by(Group.id)
                 .order_by(Group.updated_at.desc())
                 .offset(skip)
                 .limit(limit)

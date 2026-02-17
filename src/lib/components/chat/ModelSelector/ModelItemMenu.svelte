@@ -3,13 +3,15 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { getContext } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Pin from '$lib/components/icons/Pin.svelte';
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
-	import { config, settings } from '$lib/stores';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import { config, settings, user } from '$lib/stores';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
 	const i18n = getContext('i18n');
@@ -52,6 +54,30 @@
 		align="end"
 		transition={flyAndScale}
 	>
+		{#if model?.preset || model?.info?.base_model_id ? model?.info?.user_id === $user?.id : $user?.role === 'admin'}
+			<DropdownMenu.Item
+				type="button"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+				on:click={(e) => {
+					e.stopPropagation();
+					e.preventDefault();
+
+					goto(
+						model?.preset || model?.info?.base_model_id
+							? `/workspace/models/edit?id=${encodeURIComponent(model?.id ?? '')}`
+							: `/admin/settings/models?id=${encodeURIComponent(model?.id ?? '')}`
+					);
+					show = false;
+				}}
+			>
+				<Pencil className="size-4" />
+
+				<div class="flex items-center">{$i18n.t('Edit')}</div>
+			</DropdownMenu.Item>
+
+			<hr class="border-gray-50 dark:border-gray-800/30 my-1" />
+		{/if}
+
 		<DropdownMenu.Item
 			type="button"
 			aria-pressed={($settings?.pinnedModels ?? []).includes(model?.id)}
@@ -96,7 +122,7 @@
 		</DropdownMenu.Item>
 
 		{#if $config?.features.enable_community_sharing}
-			<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+			<hr class="border-gray-50 dark:border-gray-800/30 my-1" />
 
 			<DropdownMenu.Item
 				type="button"

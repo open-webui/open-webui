@@ -306,7 +306,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         try:
             get_function_module_from_cache(request, function_id)
         except Exception as e:
-            log.warning(f"Skipping missing function '{function_id}': {e}")
+            log.info(f"Failed to load function module for {function_id}: {e}")
             missing_function_ids.add(function_id)
 
     for model in models:
@@ -327,10 +327,13 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 continue
             action_function = functions_by_id.get(action_id)
             if action_function is None:
-                log.warning(f"Action function '{action_id}' not found, skipping")
+                log.info(f"Action not found: {action_id}")
                 continue
 
             function_module = request.app.state.FUNCTIONS.get(action_id)
+            if function_module is None:
+                log.info(f"Failed to load action module: {action_id}")
+                continue
             model["actions"].extend(
                 get_action_items_from_module(action_function, function_module)
             )
@@ -341,11 +344,13 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 continue
             filter_function = functions_by_id.get(filter_id)
             if filter_function is None:
-                log.warning(f"Filter function '{filter_id}' not found, skipping")
+                log.info(f"Filter not found: {filter_id}")
                 continue
 
             function_module = request.app.state.FUNCTIONS.get(filter_id)
-
+            if function_module is None:
+                log.info(f"Failed to load filter module: {filter_id}")
+                continue
             if getattr(function_module, "toggle", None):
                 model["filters"].extend(
                     get_filter_items_from_module(filter_function, function_module)
@@ -396,11 +401,13 @@ def get_filtered_models(models, user, db=None):
         user.role == "user"
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
-        model_ids = [model["id"] for model in models if not model.get("arena")]
-        model_infos = {
-            model_info.id: model_info
-            for model_info in Models.get_models_by_ids(model_ids)
-        }
+        model_infos = {}
+        for model in models:
+            if model.get("arena"):
+                continue
+            info = model.get("info")
+            if info:
+                model_infos[model["id"]] = info
 
         user_group_ids = {
             group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
@@ -430,12 +437,12 @@ def get_filtered_models(models, user, db=None):
                     filtered_models.append(model)
                 continue
 
-            model_info = model_infos.get(model["id"], None)
+            model_info = model_infos.get(model["id"])
             if model_info:
                 if (
                     (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model_info.user_id
-                    or model_info.id in accessible_model_ids
+                    or user.id == model_info["user_id"]
+                    or model["id"] in accessible_model_ids
                 ):
                     filtered_models.append(model)
 

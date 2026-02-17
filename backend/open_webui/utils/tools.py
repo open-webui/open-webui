@@ -77,6 +77,7 @@ from open_webui.tools.builtin import (
     query_knowledge_bases,
     search_knowledge_files,
     query_knowledge_files,
+    view_file,
     view_knowledge_file,
     view_skill,
 )
@@ -445,6 +446,12 @@ def get_builtin_tools(
         if model_knowledge:
             # Model has attached knowledge - only allow semantic search within it
             builtin_functions.append(query_knowledge_files)
+
+            knowledge_types = {item.get("type") for item in model_knowledge}
+            if "file" in knowledge_types or "collection" in knowledge_types:
+                builtin_functions.append(view_file)
+            if "note" in knowledge_types:
+                builtin_functions.append(view_note)
         else:
             # No model knowledge - allow full KB browsing
             builtin_functions.extend(
