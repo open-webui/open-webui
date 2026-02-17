@@ -25,7 +25,8 @@
 		name: '',
 		email: '',
 		password: '',
-		role: 'user'
+		role: 'user',
+		must_change_password: true
 	};
 
 	$: if (show) {
@@ -33,7 +34,8 @@
 			name: '',
 			email: '',
 			password: '',
-			role: 'user'
+			role: 'user',
+			must_change_password: true
 		};
 	}
 
@@ -52,7 +54,8 @@
 				_user.email,
 				_user.password,
 				_user.role,
-				generateInitialsImage(_user.name)
+				generateInitialsImage(_user.name),
+				_user.must_change_password
 			).catch((error) => {
 				toast.error(`${error}`);
 			});
@@ -236,6 +239,21 @@
 										required
 									/>
 								</div>
+							</div>
+
+							<div class="flex items-center w-full mt-3">
+								<input
+									type="checkbox"
+									bind:checked={_user.must_change_password}
+									id="must-change-password"
+									class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+								/>
+								<label
+									for="must-change-password"
+									class="ml-2 text-sm text-gray-500 dark:text-gray-400"
+								>
+									{$i18n.t('Require password change on first login')}
+								</label>
 							</div>
 						{:else if tab === 'import'}
 							<div>

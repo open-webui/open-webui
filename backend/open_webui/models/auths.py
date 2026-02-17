@@ -85,6 +85,7 @@ class SignupForm(BaseModel):
 
 class AddUserForm(SignupForm):
     role: Optional[str] = "pending"
+    must_change_password: Optional[bool] = True
 
 
 class AuthsTable:

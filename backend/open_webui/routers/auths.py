@@ -961,12 +961,13 @@ async def add_user(
         )
 
         if user:
-            # Flag new admin-created users to change password on first login
-            Users.update_user_by_id(
-                user.id,
-                {"info": {"must_change_password": True}},
-                db=db,
-            )
+            # Flag new admin-created users to change password on first login (if enabled)
+            if form_data.must_change_password:
+                Users.update_user_by_id(
+                    user.id,
+                    {"info": {"must_change_password": True}},
+                    db=db,
+                )
 
             apply_default_group_assignment(
                 request.app.state.config.DEFAULT_GROUP_ID,

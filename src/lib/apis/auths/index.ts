@@ -358,7 +358,8 @@ export const addUser = async (
 	email: string,
 	password: string,
 	role: string = 'pending',
-	profile_image_url: null | string = null
+	profile_image_url: null | string = null,
+	must_change_password: boolean = true
 ) => {
 	let error = null;
 
@@ -373,6 +374,7 @@ export const addUser = async (
 			email: email,
 			password: password,
 			role: role,
+			must_change_password: must_change_password,
 			...(profile_image_url && { profile_image_url: profile_image_url })
 		})
 	})
