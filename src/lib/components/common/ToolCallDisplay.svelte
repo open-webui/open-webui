@@ -57,12 +57,26 @@
 		}
 	}
 
+	function parseArguments(str: string): Record<string, unknown> | null {
+		try {
+			const parsed = parseJSONString(str);
+			if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+				return parsed as Record<string, unknown>;
+			}
+			return null;
+		} catch {
+			return null;
+		}
+	}
+
 	$: args = decode(attributes?.arguments ?? '');
 	$: result = decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
 	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
 	$: isDone = attributes?.done === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
+
+	$: parsedArgs = parseArguments(args);
 </script>
 
 <div {id} class={className}>
@@ -156,16 +170,30 @@
 					{#if args}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Input')}
 							</div>
-							<div class="tool-call-body w-full max-w-none!">
-								<Markdown
-									id={`${componentId}-tool-call-args`}
-									content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
-								/>
-							</div>
+
+							{#if parsedArgs}
+								<div class="px-1 space-y-0.5">
+									{#each Object.entries(parsedArgs) as [key, value]}
+										<div class="flex gap-2 text-xs py-0.5">
+											<span class="font-medium text-gray-600 dark:text-gray-400 shrink-0"
+												>{key}</span
+											>
+											<span class="text-gray-800 dark:text-gray-200 break-all">{typeof value === 'object' ? JSON.stringify(value) : value}</span>
+										</div>
+									{/each}
+								</div>
+							{:else}
+								<div class="tool-call-body w-full max-w-none!">
+									<Markdown
+										id={`${componentId}-tool-call-args`}
+										content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
+									/>
+								</div>
+							{/if}
 						</div>
 					{/if}
 
@@ -173,7 +201,7 @@
 					{#if isDone && result}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Output')}
 							</div>
