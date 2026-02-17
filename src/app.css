@@ -90,6 +90,29 @@ input::placeholder {
 	direction: auto;
 }
 
+/* Prevent browser autofill from overriding input backgrounds */
+#auth-page input:-webkit-autofill,
+#auth-page input:-webkit-autofill:hover,
+#auth-page input:-webkit-autofill:focus,
+#auth-page input:-webkit-autofill:active {
+	-webkit-box-shadow: 0 0 0 9999px transparent inset !important;
+	-webkit-background-clip: text !important;
+	-webkit-text-fill-color: white !important;
+	transition: background-color 9999s ease-in-out 0s;
+	caret-color: white;
+}
+
+#auth-page input:-moz-autofill {
+	filter: none !important;
+	background-color: transparent !important;
+	color: white !important;
+}
+
+/* Force password inputs to have transparent background (Firefox applies an opaque UA background to type=password) */
+#auth-page input[type='password'] {
+	background-color: transparent !important;
+}
+
 textarea::placeholder {
 	direction: auto;
 }

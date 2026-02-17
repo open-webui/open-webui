@@ -7,6 +7,7 @@
 
 export interface BrandingPreset {
 	name: string;
+	app_name?: string;
 	accent_color?: string;
 	accent_color_scale?: Record<string, string>;
 	background_color?: string;
@@ -198,6 +199,6 @@ export function getEffectiveBranding(config: BrandingConfig): {
 		favicon_url: preset?.favicon_url || config.favicon_url || '',
 		login_background_url: preset?.login_background_url || config.login_background_url || '',
 		login_background_color: preset?.login_background_color || config.login_background_color || '',
-		app_name: config.app_name || ''
+		app_name: preset?.app_name || config.app_name || ''
 	};
 }

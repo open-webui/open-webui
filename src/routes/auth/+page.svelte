@@ -277,14 +277,24 @@
 				{:else}
 					<div class="my-auto flex flex-col justify-center items-center">
 						<div class=" sm:max-w-md my-auto pb-10 w-full dark:text-gray-100">
-							<div class="flex justify-center mb-8">
-								<img
-									id="logo"
-									crossorigin="anonymous"
-									src="{WEBUI_BASE_URL}/static/favicon.png"
-									class="h-16 max-w-[280px] object-contain"
-									alt={effectiveBranding?.app_name || 'Logo'}
-								/>
+							<div class="flex justify-center mb-8 h-24">
+								{#if effectiveBranding?.logo_url}
+									<img
+										id="logo"
+										crossorigin="anonymous"
+										src={effectiveBranding.logo_url}
+										class="h-24 max-w-[400px] object-contain"
+										alt={effectiveBranding?.app_name || 'Logo'}
+									/>
+								{:else if effectiveBranding !== null}
+									<img
+										id="logo"
+										crossorigin="anonymous"
+										src="{WEBUI_BASE_URL}/static/favicon.png"
+										class="h-24 max-w-[400px] object-contain"
+										alt={effectiveBranding?.app_name || 'Logo'}
+									/>
+								{/if}
 							</div>
 							<form
 								class=" flex flex-col justify-center"
@@ -335,7 +345,7 @@
 													bind:value={name}
 													type="text"
 													id="name"
-													class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+													class="my-0.5 w-full text-sm outline-none bg-white/10 dark:bg-white/5 border border-white/20 rounded-xl px-4 py-2.5 placeholder:text-gray-400 dark:placeholder:text-gray-500"
 													autocomplete="name"
 													placeholder={$i18n.t('Enter Your Full Name')}
 													required
@@ -351,7 +361,7 @@
 												<input
 													bind:value={ldapUsername}
 													type="text"
-													class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+													class="my-0.5 w-full text-sm outline-none bg-white/10 dark:bg-white/5 border border-white/20 rounded-xl px-4 py-2.5 placeholder:text-gray-400 dark:placeholder:text-gray-500"
 													autocomplete="username"
 													name="username"
 													id="username"
@@ -368,7 +378,7 @@
 													bind:value={email}
 													type="email"
 													id="email"
-													class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+													class="my-0.5 w-full text-sm outline-none bg-white/10 dark:bg-white/5 border border-white/20 rounded-xl px-4 py-2.5 placeholder:text-gray-400 dark:placeholder:text-gray-500"
 													autocomplete="email"
 													name="email"
 													placeholder={$i18n.t('Enter Your Email')}
@@ -385,7 +395,8 @@
 												bind:value={password}
 												type="password"
 												id="password"
-												class="my-0.5 w-full text-sm outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+												outerClassName="my-0.5 w-full flex items-center bg-white/10 dark:bg-white/5 border border-white/20 rounded-xl px-4 py-2.5"
+												inputClassName="text-sm outline-none bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 flex-1"
 												placeholder={$i18n.t('Enter Your Password')}
 												autocomplete={mode === 'signup' ? 'new-password' : 'current-password'}
 												name="password"
@@ -405,7 +416,8 @@
 													bind:value={confirmPassword}
 													type="password"
 													id="confirm-password"
-													class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+													outerClassName="my-0.5 w-full flex items-center bg-white/10 dark:bg-white/5 border border-white/20 rounded-xl px-4 py-2.5"
+													inputClassName="text-sm outline-none bg-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 flex-1"
 													placeholder={$i18n.t('Confirm Your Password')}
 													autocomplete="new-password"
 													name="confirm-password"
