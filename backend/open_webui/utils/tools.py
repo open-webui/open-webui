@@ -444,7 +444,7 @@ def get_builtin_tools(
     if is_builtin_tool_enabled("knowledge"):
         if model_knowledge:
             # Model has attached knowledge - only allow semantic search within it
-            builtin_functions.append(query_knowledge_files)
+            builtin_functions.extend([query_knowledge_files, view_knowledge_file])
         else:
             # No model knowledge - allow full KB browsing
             builtin_functions.extend(
