@@ -373,37 +373,13 @@ class UserScopedConfig:
             f"user_id={user.id}, config_path={self.config_path}"
         )
         with get_db() as db:
-            # Check user's own config in database
-            entry = db.query(Config).filter_by(email=email).first()
-            logging.debug(
-                f"[RBAC_CONFIG_GET] _get_for_user_direct() Step 1: "
-                f"user own config in DB: {'found' if entry and isinstance(entry.data, dict) else 'not found'}"
-            )
-            if entry and isinstance(entry.data, dict):
-                data = entry.data
-                final_value = self.default
-                for part in self.config_path.split("."):
-                    if isinstance(data, dict) and part in data:
-                        data = data[part]
-                        final_value = data
-                    else:
-                        final_value = self.default
-                        break
-                if final_value != self.default:
-                    logging.debug(
-                        f"[RBAC_CONFIG_GET] User {email} (ID: {user.id}) has personal config "
-                        f"for {self.config_path} (PostgreSQL direct)"
-                    )
-                    return final_value
-
             # Check group creator's config
             user_groups = Groups.get_groups_by_member_id(user.id)
             logging.debug(
-                f"[RBAC_CONFIG_GET] _get_for_user_direct() Step 2: "
+                f"[RBAC_CONFIG_GET] _get_for_user_direct() group admin: "
                 f"user {email} in {len(user_groups)} group(s): "
                 f"{[(g.id, g.created_by) for g in user_groups]}"
             )
-
             for group in user_groups:
                 group_creator_email = group.created_by
                 if not group_creator_email:
