@@ -5,7 +5,12 @@ import os
 import uuid
 import html
 import base64
+import warnings
 from functools import lru_cache
+
+# Suppress SyntaxWarning from pydub's invalid escape sequences on Python 3.12+
+# upstream issue: https://github.com/jiaaro/pydub/issues/801
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
