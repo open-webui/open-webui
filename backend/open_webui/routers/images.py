@@ -954,7 +954,9 @@ async def image_edits(
                 "prompt": form_data.prompt,
                 **({"n": form_data.n} if form_data.n else {}),
                 **({"size": size} if size else {}),
-                **({"background": form_data.background} if form_data.background else {}),
+                **(
+                    {"background": form_data.background} if form_data.background else {}
+                ),
                 **(
                     {}
                     if re.match(
