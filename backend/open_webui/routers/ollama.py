@@ -60,6 +60,7 @@ from open_webui.utils.payload import (
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import (
     UPLOAD_DIR,
+    OLLAMA_PRELOAD_ON_SWITCH,
 )
 from open_webui.env import (
     ENV,
@@ -1278,6 +1279,38 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
     return url, url_idx
 
 
+def is_model_loaded(url: str, model_name: str) -> bool:
+    """Check if a model is currently loaded in Ollama by querying /api/ps."""
+    try:
+        response = requests.get(f"{url}/api/ps", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            for model in data.get("models", []):
+                if model.get("name") == model_name or model.get("model") == model_name:
+                    return True
+        return False
+    except Exception:
+        return False
+
+
+async def wait_for_model_loaded(
+    url: str, model_name: str, max_wait_seconds: int = 180
+) -> bool:
+    """Poll /api/ps until the model is loaded or timeout is reached."""
+    import asyncio
+
+    elapsed = 0
+    poll_interval = 2
+    while elapsed < max_wait_seconds:
+        if is_model_loaded(url, model_name):
+            log.info(f"Model {model_name} is loaded and ready")
+            return True
+        await asyncio.sleep(poll_interval)
+        elapsed += poll_interval
+    log.warning(f"Timeout waiting for model {model_name} to load after {max_wait_seconds}s")
+    return False
+
+
 @router.post("/api/chat")
 @router.post("/api/chat/{url_idx}")
 async def generate_chat_completion(
@@ -1370,6 +1403,47 @@ async def generate_chat_completion(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+
+    # Wait for model to be loaded before sending request
+    if OLLAMA_PRELOAD_ON_SWITCH:
+        model_name = payload["model"]
+        last_model_key = f"last_model_{url_idx or url}"
+        last_model = getattr(request.app.state, last_model_key, None)
+        # Only check if model changed
+        if last_model != model_name:
+            log.info(f"Model changed: {last_model} -> {model_name}")
+            if not is_model_loaded(url, model_name):
+                log.info(f"Model {model_name} not loaded, triggering load...")
+                # Trigger model load with a minimal request
+                try:
+                    import threading
+
+                    def trigger_load():
+                        try:
+                            requests.post(
+                                f"{url}/api/generate",
+                                json={
+                                    "model": model_name,
+                                    "keep_alive": "-1m",
+                                    "options": {"num_predict": 0},
+                                },
+                                timeout=300,
+                            )
+                        except Exception:
+                            pass
+
+                    threading.Thread(target=trigger_load, daemon=True).start()
+                except Exception:
+                    pass
+                # Now wait for model to load
+                if not await wait_for_model_loaded(
+                    url, model_name, max_wait_seconds=180
+                ):
+                    raise HTTPException(
+                        status_code=504,
+                        detail=f"Timeout waiting for model {model_name} to load",
+                    )
+            setattr(request.app.state, last_model_key, model_name)
 
     return await send_post_request(
         url=f"{url}/api/chat",
