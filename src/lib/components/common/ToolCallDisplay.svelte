@@ -57,12 +57,26 @@
 		}
 	}
 
+	function parseArguments(str: string): Record<string, unknown> | null {
+		try {
+			const parsed = parseJSONString(str);
+			if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+				return parsed as Record<string, unknown>;
+			}
+			return null;
+		} catch {
+			return null;
+		}
+	}
+
 	$: args = decode(attributes?.arguments ?? '');
 	$: result = decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
 	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
 	$: isDone = attributes?.done === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
+
+	$: parsedArgs = parseArguments(args);
 </script>
 
 <div {id} class={className}>
@@ -94,7 +108,11 @@
 				open = !open;
 			}}
 		>
-			<div class="w-full font-medium flex items-center gap-1.5 {isExecuting ? 'shimmer' : ''}">
+			<div
+				class="w-full max-w-full font-medium flex items-center gap-1.5 {isExecuting
+					? 'shimmer'
+					: ''}"
+			>
 				<!-- Status icon -->
 				{#if isExecuting}
 					<div>
@@ -111,26 +129,31 @@
 				{/if}
 
 				<!-- Label -->
-				<div class="">
-					{#if isDone}
-						<Markdown
-							id={`${componentId}-tool-call-title`}
-							content={$i18n.t('View Result from **{{NAME}}**', {
-								NAME: attributes.name
-							})}
-						/>
-					{:else}
-						<Markdown
-							id={`${componentId}-tool-call-executing`}
-							content={$i18n.t('Executing **{{NAME}}**...', {
-								NAME: attributes.name
-							})}
-						/>
-					{/if}
+				<div class="flex-1 line-clamp-1">
+					<!-- Short label (below md) -->
+					<span class="@md:hidden font-semibold text-black dark:text-white">{attributes.name}</span>
+					<!-- Full label (md and above) -->
+					<span class="hidden @md:inline">
+						{#if isDone}
+							<Markdown
+								id={`${componentId}-tool-call-title`}
+								content={$i18n.t('View Result from **{{NAME}}**', {
+									NAME: attributes.name
+								})}
+							/>
+						{:else}
+							<Markdown
+								id={`${componentId}-tool-call-executing`}
+								content={$i18n.t('Executing **{{NAME}}**...', {
+									NAME: attributes.name
+								})}
+							/>
+						{/if}
+					</span>
 				</div>
 
 				<!-- Chevron -->
-				<div class="flex self-center translate-y-[1px]">
+				<div class="flex shrink-0 self-center translate-y-[1px]">
 					{#if open}
 						<ChevronUp strokeWidth="3.5" className="size-3.5" />
 					{:else}
@@ -147,16 +170,32 @@
 					{#if args}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Input')}
 							</div>
-							<div class="tool-call-body w-full max-w-none!">
-								<Markdown
-									id={`${componentId}-tool-call-args`}
-									content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
-								/>
-							</div>
+
+							{#if parsedArgs}
+								<div class="px-1 space-y-0.5">
+									{#each Object.entries(parsedArgs) as [key, value]}
+										<div class="flex gap-2 text-xs py-0.5">
+											<span class="font-medium text-gray-600 dark:text-gray-400 shrink-0"
+												>{key}</span
+											>
+											<span class="text-gray-800 dark:text-gray-200 break-all"
+												>{typeof value === 'object' ? JSON.stringify(value) : value}</span
+											>
+										</div>
+									{/each}
+								</div>
+							{:else}
+								<div class="tool-call-body w-full max-w-none!">
+									<Markdown
+										id={`${componentId}-tool-call-args`}
+										content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
+									/>
+								</div>
+							{/if}
 						</div>
 					{/if}
 
@@ -164,7 +203,7 @@
 					{#if isDone && result}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Output')}
 							</div>

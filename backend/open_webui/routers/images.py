@@ -849,6 +849,7 @@ class EditImageForm(BaseModel):
     size: Optional[str] = None
     n: Optional[int] = None
     negative_prompt: Optional[str] = None
+    background: Optional[str] = None
 
 
 @router.post("/edit")
@@ -953,6 +954,9 @@ async def image_edits(
                 "prompt": form_data.prompt,
                 **({"n": form_data.n} if form_data.n else {}),
                 **({"size": size} if size else {}),
+                **(
+                    {"background": form_data.background} if form_data.background else {}
+                ),
                 **(
                     {}
                     if re.match(

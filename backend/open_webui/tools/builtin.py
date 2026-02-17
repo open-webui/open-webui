@@ -1532,6 +1532,69 @@ async def search_knowledge_files(
         return json.dumps({"error": str(e)})
 
 
+async def view_file(
+    file_id: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
+) -> str:
+    """
+    Get the full content of a file by its ID.
+
+    :param file_id: The ID of the file to retrieve
+    :return: JSON with the file's id, filename, and full text content
+    """
+    if __request__ is None:
+        return json.dumps({"error": "Request context not available"})
+
+    if not __user__:
+        return json.dumps({"error": "User context not available"})
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.routers.files import has_access_to_file
+
+        user_id = __user__.get("id")
+        user_role = __user__.get("role", "user")
+
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            return json.dumps({"error": "File not found"})
+
+        if (
+            file.user_id != user_id
+            and user_role != "admin"
+            and not any(
+                item.get("type") == "file" and item.get("id") == file_id
+                for item in (__model_knowledge__ or [])
+            )
+            and not has_access_to_file(
+                file_id=file_id,
+                access_type="read",
+                user=UserModel(**__user__),
+            )
+        ):
+            return json.dumps({"error": "File not found"})
+
+        content = ""
+        if file.data:
+            content = file.data.get("content", "")
+
+        return json.dumps(
+            {
+                "id": file.id,
+                "filename": file.filename,
+                "content": content,
+                "updated_at": file.updated_at,
+                "created_at": file.created_at,
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f"view_file error: {e}")
+        return json.dumps({"error": str(e)})
+
+
 async def view_knowledge_file(
     file_id: str,
     __request__: Request = None,
