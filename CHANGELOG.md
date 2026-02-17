@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ✏️ **Model edit shortcut.** Users can now edit models directly from the model selector dropdown menu, making it faster to modify model settings without navigating to separate admin or workspace pages. [Commit](https://github.com/open-webui/open-webui/commit/519ff40cb69cdc1d215cee369e9db70ff7438153)
 - 🎨 **Image edit API background support.** The image edit API now supports the background parameter for OpenAI's gpt-image-1 model, enabling background transparency control ("transparent", "opaque", "auto") when the feature is exposed in the UI. [#21459](https://github.com/open-webui/open-webui/pull/21459)
+- ⚡ **Faster model filtering.** Model access control filtering no longer makes a redundant database query to re-fetch model info that is already available in memory, reducing latency when loading model lists for non-admin users. [Commit](https://github.com/open-webui/open-webui/commit/34cd3d79e8688f589e3dd2f03415f8a8f9a13115)
+- 🔧 **Tool call display improvements.** Tool call results now display arguments in a cleaner key-value format instead of raw JSON, with a responsive layout that shows only the tool name on narrow screens and the full label on wider screens, preventing text wrapping to multiple lines. [Commit](https://github.com/open-webui/open-webui/commit/2ce935bdb10d2b26b230cd54cb649f5c667ed96a)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 Translations for Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
