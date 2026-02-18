@@ -425,24 +425,19 @@ def install_frontmatter_requirements(requirements: str):
                             + req_list
                             + PIP_PACKAGE_INDEX_OPTIONS
                         )
+                        return
                 except Timeout:
                     log.warning(
-                        "Could not acquire pip install lock after 120s; proceeding anyway (may conflict)."
+                        "Could not acquire pip install lock after 120s; proceeding without lock (may conflict)."
                     )
-                    subprocess.check_call(
-                        [sys.executable, "-m", "pip", "install"]
-                        + PIP_OPTIONS
-                        + req_list
-                        + PIP_PACKAGE_INDEX_OPTIONS
-                    )
-            else:
-                # Fallback if filelock not available
-                subprocess.check_call(
-                    [sys.executable, "-m", "pip", "install"]
-                    + PIP_OPTIONS
-                    + req_list
-                    + PIP_PACKAGE_INDEX_OPTIONS
-                )
+
+            # Fallback: FileLock not available or timed out - proceed without locking
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install"]
+                + PIP_OPTIONS
+                + req_list
+                + PIP_PACKAGE_INDEX_OPTIONS
+            )
         except subprocess.CalledProcessError as e:
             log.error(f"pip install failed (exit %s): %s", e.returncode, e)
         except OSError as e:
