@@ -261,6 +261,22 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     return messages
 
 
+def filter_output_by_content(output: list, content: str) -> list:
+    """
+    Drop function_call and function_call_output items from output for any
+    tool call block removed from the message content.
+    """
+    present_call_ids = set(
+        re.findall(r'<details\s[^>]*\btype="tool_calls"[^>]*\bid="([^"]+)"', content)
+    )
+    return [
+        item
+        for item in output
+        if item.get("type") not in ("function_call", "function_call_output")
+        or item.get("call_id", "") in present_call_ids
+    ]
+
+
 def get_last_user_message(messages: list[dict]) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:
