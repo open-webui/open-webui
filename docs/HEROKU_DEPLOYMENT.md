@@ -1,6 +1,6 @@
 # Heroku Deployment Guide
 
-**Last Updated**: 2026-02-05  
+**Last Updated**: 2026-02-17  
 **Project**: DSL KidsGPT Open WebUI
 
 This document consolidates all Heroku deployment configuration, debugging history, and troubleshooting for this project.
@@ -10,12 +10,13 @@ This document consolidates all Heroku deployment configuration, debugging histor
 ## Table of Contents
 
 1. [Deployment Options](#deployment-options)
-2. [Configuration Files](#configuration-files)
-3. [Environment Variables](#environment-variables)
-4. [Optional Packages (Lazy Imports)](#optional-packages-lazy-imports)
-5. [Debugging History](#debugging-history)
-6. [Troubleshooting](#troubleshooting)
-7. [Known Heroku Apps](#known-heroku-apps)
+2. [GitHub Actions Automated Deployment](#github-actions-automated-deployment)
+3. [Configuration Files](#configuration-files)
+4. [Environment Variables](#environment-variables)
+5. [Optional Packages (Lazy Imports)](#optional-packages-lazy-imports)
+6. [Debugging History](#debugging-history)
+7. [Troubleshooting](#troubleshooting)
+8. [Known Heroku Apps](#known-heroku-apps)
 
 ---
 
@@ -51,6 +52,62 @@ git push heroku main
 **Important**: `NPM_CONFIG_PRODUCTION=false` ensures devDependencies (vite, svelte, etc.) are installed for the frontend build.
 
 **Key files**: `Procfile`, `app.json`, `requirements.txt` (root)
+
+---
+
+## GitHub Actions Automated Deployment
+
+The repository includes a GitHub Actions workflow (`.github/workflows/heroku-deploy.yaml`) that automatically deploys to different Heroku apps based on the branch using container deployment:
+
+- **Main branch** → `dsl-kidsgpt-pilot` (container deployment)
+- **Dev branch** → `dsl-kidsgpt-pilot-alt` (container deployment)
+
+### App Configuration
+
+| Branch | App Name | Stack | Deployment Method |
+|--------|----------|-------|-------------------|
+| main | dsl-kidsgpt-pilot | container | Docker container registry |
+| dev | dsl-kidsgpt-pilot-alt | container | Docker container registry |
+
+### Setup Instructions
+
+**Required GitHub Secret:**
+- Go to GitHub repository → Settings → Secrets and variables → Actions
+- Add: `HEROKU_API_KEY` (get from: `heroku auth:token`)
+
+**Configure environment variables** on Heroku apps:
+```bash
+# For main app (dsl-kidsgpt-pilot)
+heroku config:set WEBUI_SECRET_KEY=$(openssl rand -hex 32) -a dsl-kidsgpt-pilot
+heroku config:set OPENAI_API_KEY=your-openai-key -a dsl-kidsgpt-pilot
+heroku config:set CORS_ALLOW_ORIGIN="https://dsl-kidsgpt-pilot.herokuapp.com" -a dsl-kidsgpt-pilot
+heroku config:set VECTOR_DB=pgvector -a dsl-kidsgpt-pilot
+
+# For dev app (dsl-kidsgpt-pilot-alt)
+heroku config:set WEBUI_SECRET_KEY=$(openssl rand -hex 32) -a dsl-kidsgpt-pilot-alt
+heroku config:set OPENAI_API_KEY=your-openai-key -a dsl-kidsgpt-pilot-alt
+heroku config:set CORS_ALLOW_ORIGIN="https://dsl-kidsgpt-pilot-alt.herokuapp.com" -a dsl-kidsgpt-pilot-alt
+heroku config:set VECTOR_DB=pgvector -a dsl-kidsgpt-pilot-alt
+```
+
+### Workflow Behavior
+
+**Both branches use the same container deployment strategy:**
+
+- **Triggers**: Pushes to `main` or `dev` branch, or manual workflow_dispatch
+- **Process**:
+  1. Checks out the repository
+  2. Installs Heroku CLI
+  3. Logs into Heroku Container Registry
+  4. Builds Docker image with BUILD_HASH
+  5. Pushes to Heroku Container Registry
+  6. Releases the container to Heroku app
+
+### Manual Deployment
+
+You can trigger deployment manually from GitHub:
+- Go to Actions → Deploy to Heroku → Run workflow
+- Select the branch (main or dev) to deploy
 
 ---
 
@@ -260,6 +317,11 @@ heroku logs --tail -a YOUR_APP_NAME
 
 ## Known Heroku Apps
 
+| App | Stack | Branch | Deployment Method | Notes |
+|-----|-------|--------|-------------------|-------|
+| `dsl-kidsgpt-pilot` | container | main | Container registry (GitHub Actions) | Production app - Docker container |
+| `dsl-kidsgpt-pilot-alt` | container | dev | Container registry (GitHub Actions) | Development app - Docker container |
+| `contextquiz-openwebui-kidsgpt` | container (Docker) | - | Manual | Legacy production app |
 | App                             | Stack                 | Notes                       |
 | ------------------------------- | --------------------- | --------------------------- |
 | `contextquiz-openwebui-kidsgpt` | container (Docker)    | Primary production app      |
