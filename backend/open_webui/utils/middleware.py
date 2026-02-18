@@ -2272,16 +2272,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tool_ids = metadata.get("tool_ids", None)
     # Client side tools
     direct_tool_servers = metadata.get("tool_servers", None)
+    client_supplied_tools = "tools" in form_data
 
     log.debug(f"{tool_ids=}")
     log.debug(f"{direct_tool_servers=}")
+    log.debug(f"{client_supplied_tools=}")
+    if client_supplied_tools:
+        log.debug("Skipping server-side tool resolution because request includes tools")
 
     tools_dict = {}
 
     mcp_clients = {}
     mcp_tools_dict = {}
 
-    if tool_ids:
+    if tool_ids and not client_supplied_tools:
         for tool_id in tool_ids:
             if tool_id.startswith("server:mcp:"):
                 try:
@@ -2438,7 +2442,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if mcp_tools_dict:
             tools_dict = {**tools_dict, **mcp_tools_dict}
 
-    if direct_tool_servers:
+    if direct_tool_servers and not client_supplied_tools:
         for tool_server in direct_tool_servers:
             tool_specs = tool_server.pop("specs", [])
 
@@ -2458,7 +2462,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         model.get("info", {}).get("meta", {}).get("capabilities") or {}
     ).get("builtin_tools", True)
     if (
-        metadata.get("params", {}).get("function_calling") == "native"
+        not client_supplied_tools
+        and metadata.get("params", {}).get("function_calling") == "native"
         and builtin_tools_enabled
     ):
         # Add file context to user messages
