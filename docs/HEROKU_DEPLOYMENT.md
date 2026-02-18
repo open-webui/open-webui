@@ -64,18 +64,20 @@ The repository includes a GitHub Actions workflow (`.github/workflows/heroku-dep
 
 ### App Configuration
 
-| Branch | App Name | Stack | Deployment Method |
-|--------|----------|-------|-------------------|
-| main | dsl-kidsgpt-pilot | container | Docker container registry |
-| dev | dsl-kidsgpt-pilot-alt | container | Docker container registry |
+| Branch | App Name              | Stack     | Deployment Method         |
+| ------ | --------------------- | --------- | ------------------------- |
+| main   | dsl-kidsgpt-pilot     | container | Docker container registry |
+| dev    | dsl-kidsgpt-pilot-alt | container | Docker container registry |
 
 ### Setup Instructions
 
 **Required GitHub Secret:**
+
 - Go to GitHub repository → Settings → Secrets and variables → Actions
 - Add: `HEROKU_API_KEY` (get from: `heroku auth:token`)
 
 **Configure environment variables** on Heroku apps:
+
 ```bash
 # For main app (dsl-kidsgpt-pilot)
 heroku config:set WEBUI_SECRET_KEY=$(openssl rand -hex 32) -a dsl-kidsgpt-pilot
@@ -106,6 +108,7 @@ heroku config:set VECTOR_DB=pgvector -a dsl-kidsgpt-pilot-alt
 ### Manual Deployment
 
 You can trigger deployment manually from GitHub:
+
 - Go to Actions → Deploy to Heroku → Run workflow
 - Select the branch (main or dev) to deploy
 
@@ -317,11 +320,11 @@ heroku logs --tail -a YOUR_APP_NAME
 
 ## Known Heroku Apps
 
-| App | Stack | Branch | Deployment Method | Notes |
-|-----|-------|--------|-------------------|-------|
-| `dsl-kidsgpt-pilot` | container | main | Container registry (GitHub Actions) | Production app - Docker container |
-| `dsl-kidsgpt-pilot-alt` | container | dev | Container registry (GitHub Actions) | Development app - Docker container |
-| `contextquiz-openwebui-kidsgpt` | container (Docker) | - | Manual | Legacy production app |
+| App                             | Stack                 | Branch                      | Deployment Method                   | Notes                              |
+| ------------------------------- | --------------------- | --------------------------- | ----------------------------------- | ---------------------------------- |
+| `dsl-kidsgpt-pilot`             | container             | main                        | Container registry (GitHub Actions) | Production app - Docker container  |
+| `dsl-kidsgpt-pilot-alt`         | container             | dev                         | Container registry (GitHub Actions) | Development app - Docker container |
+| `contextquiz-openwebui-kidsgpt` | container (Docker)    | -                           | Manual                              | Legacy production app              |
 | App                             | Stack                 | Notes                       |
 | ------------------------------- | --------------------- | --------------------------- |
 | `contextquiz-openwebui-kidsgpt` | container (Docker)    | Primary production app      |
