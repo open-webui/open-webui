@@ -411,10 +411,9 @@ def install_frontmatter_requirements(requirements: str):
         return
 
     if requirements:
-        req_list = [req.strip() for req in requirements.split(",")]
-        log.info(f"Installing requirements: {' '.join(req_list)}")
-
         try:
+            req_list = [req.strip() for req in requirements.split(",")]
+            log.info(f"Installing requirements: {' '.join(req_list)}")
             if FileLock:
                 lock = FileLock(PIP_INSTALL_LOCK_FILE, timeout=120)
                 try:
@@ -438,10 +437,9 @@ def install_frontmatter_requirements(requirements: str):
                 + req_list
                 + PIP_PACKAGE_INDEX_OPTIONS
             )
-        except subprocess.CalledProcessError as e:
-            log.error(f"pip install failed (exit %s): %s", e.returncode, e)
-        except OSError as e:
-            log.error("pip install failed (pip not found or subprocess error): %s", e)
+        except Exception as e:
+            log.error(f"Error installing packages: {' '.join(req_list)}")
+            raise e
     else:
         log.info("No requirements found in frontmatter.")
 
