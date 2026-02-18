@@ -1746,6 +1746,7 @@ def process_file(
                         DOCLING_API_KEY=request.app.state.config.DOCLING_API_KEY,
                         DOCLING_PARAMS=request.app.state.config.DOCLING_PARAMS,
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                        PDF_LOADER_MODE=request.app.state.config.PDF_LOADER_MODE,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                         DOCUMENT_INTELLIGENCE_MODEL=request.app.state.config.DOCUMENT_INTELLIGENCE_MODEL,
