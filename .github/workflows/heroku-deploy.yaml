@@ -1,4 +1,4 @@
-name: Deploy to Heroku
+name: Deploy to Heroku dsl-kidsgpt-pilot
 
 # This workflow deploys to different Heroku apps based on branch using container deployment:
 # - main branch → dsl-kidsgpt-pilot (container deployment using heroku.yml)

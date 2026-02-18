@@ -1,4 +1,4 @@
-name: Deploy to Heroku Container Registry
+name: Deploy to Heroku dsl-kidsgpt-pilot-alt
 
 on:
   push:
