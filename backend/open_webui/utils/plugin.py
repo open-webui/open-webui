@@ -209,7 +209,8 @@ def replace_imports(content):
     return content
 
 
-def load_tool_module_by_id(tool_id, content=None, install_requirements: bool = True):
+def load_tool_module_by_id(tool_id, content=None):
+
     if content is None:
         tool = Tools.get_tool_by_id(tool_id)
         if not tool:
@@ -219,8 +220,7 @@ def load_tool_module_by_id(tool_id, content=None, install_requirements: bool = T
 
         content = replace_imports(content)
         Tools.update_tool_by_id(tool_id, {"content": content})
-        install_requirements = False  # Loading from DB; don't install on request
-    if install_requirements:
+    else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
         install_frontmatter_requirements(frontmatter.get("requirements", ""))
@@ -256,9 +256,7 @@ def load_tool_module_by_id(tool_id, content=None, install_requirements: bool = T
         os.unlink(temp_file.name)
 
 
-def load_function_module_by_id(
-    function_id: str, content: str | None = None, install_requirements: bool = True
-):
+def load_function_module_by_id(function_id: str, content: str | None = None):
     if content is None:
         function = Functions.get_function_by_id(function_id)
         if not function:
@@ -267,8 +265,7 @@ def load_function_module_by_id(
 
         content = replace_imports(content)
         Functions.update_function_by_id(function_id, {"content": content})
-        install_requirements = False  # Loading from DB; don't install on request
-    if install_requirements:
+    else:
         frontmatter = extract_frontmatter(content)
         install_frontmatter_requirements(frontmatter.get("requirements", ""))
 
@@ -333,9 +330,7 @@ def get_tool_module_from_cache(request, tool_id, load_from_db=True):
             if request.app.state.TOOL_CONTENTS[tool_id] == content:
                 return request.app.state.TOOLS[tool_id], None
 
-        tool_module, frontmatter = load_tool_module_by_id(
-            tool_id, content, install_requirements=False
-        )
+        tool_module, frontmatter = load_tool_module_by_id(tool_id, content)
     else:
         if hasattr(request.app.state, "TOOLS") and tool_id in request.app.state.TOOLS:
             return request.app.state.TOOLS[tool_id], None
@@ -382,7 +377,7 @@ def get_function_module_from_cache(request, function_id, load_from_db=True):
                 return request.app.state.FUNCTIONS[function_id], None, None
 
         function_module, function_type, frontmatter = load_function_module_by_id(
-            function_id, content, install_requirements=False
+            function_id, content
         )
     else:
         # Load from cache (e.g. "stream" hook)
@@ -459,8 +454,12 @@ def install_frontmatter_requirements(requirements: str):
 def install_tool_and_function_dependencies():
     """
     Install all dependencies for all admin tools and active functions.
+
+    By first collecting all dependencies from the frontmatter of each tool and function,
+    and then installing them using pip. Duplicates or similar version specifications are
+    handled by pip as much as possible.
     """
-    function_list = Functions.get_functions(active_only=False)
+    function_list = Functions.get_functions(active_only=True)
     tool_list = Tools.get_tools()
 
     all_dependencies = ""
