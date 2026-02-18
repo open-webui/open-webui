@@ -440,6 +440,7 @@ def install_frontmatter_requirements(requirements: str):
         except Exception as e:
             log.error(f"Error installing packages: {' '.join(req_list)}")
             raise e
+
     else:
         log.info("No requirements found in frontmatter.")
 
