@@ -3,6 +3,7 @@ uvicorn[standard]==0.40.0
 pydantic==2.12.5
 python-multipart==0.0.22
 itsdangerous==2.2.0
+filelock==3.24.2
 
 python-socketio==5.16.1
 python-jose==3.5.0
