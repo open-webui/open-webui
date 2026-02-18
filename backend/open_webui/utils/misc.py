@@ -270,6 +270,59 @@ def convert_output_to_messages(output: list, raw: bool = False) -> list[dict]:
     return messages
 
 
+def filter_output_by_content(output: list, content: str) -> list:
+    """
+    Drop output items whose <details> block was removed from content.
+    Matches by id attribute for all details-backed types.
+    For legacy content that lacks id= on a given type, all items of
+    that type are kept (safe default).
+    """
+    # All IDs present in remaining <details> blocks
+    present_ids = set(re.findall(r'<details\s[^>]*\bid="([^"]+)"', content))
+
+    # Which <details> types exist in content at all
+    types_present = set(
+        m.group(1) for m in re.finditer(r'<details\s[^>]*\btype="(\w+)"', content)
+    )
+
+    # Of those, which carry id= attributes (post-fix content).
+    # Legacy content without id= on a given type → keep all items of that type.
+    types_with_ids = set()
+    for m in re.finditer(r'<details\s[^>]*\btype="(\w+)"[^>]*\bid=', content):
+        types_with_ids.add(m.group(1))
+    for m in re.finditer(r'<details\s[^>]*\bid=[^>]*\btype="(\w+)"', content):
+        types_with_ids.add(m.group(1))
+
+    # Map output item type → <details> type attribute value
+    DETAILS_TYPE = {
+        "function_call": "tool_calls",
+        "function_call_output": "tool_calls",
+        "reasoning": "reasoning",
+        "open_webui:code_interpreter": "code_interpreter",
+    }
+
+    filtered = []
+    for item in output:
+        item_type = item.get("type", "")
+        details_type = DETAILS_TYPE.get(item_type)
+
+        if details_type is None:
+            # Not a details-backed type (e.g. message) — pass through
+            filtered.append(item)
+        elif details_type not in types_present:
+            pass  # type completely gone from content — drop
+        elif details_type not in types_with_ids:
+            # Legacy content — has <details> but no id= — keep all
+            filtered.append(item)
+        else:
+            item_id = item.get("call_id") or item.get("id", "")
+            if item_id in present_ids:
+                filtered.append(item)
+            # else: user deleted the <details> block — drop
+
+    return filtered
+
+
 def get_last_user_message(messages: list[dict]) -> Optional[str]:
     message = get_last_user_message_item(messages)
     if message is None:
