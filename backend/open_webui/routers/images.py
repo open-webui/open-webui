@@ -69,6 +69,24 @@ def set_image_model(request: Request, model: str):
                 )
         except Exception as e:
             log.debug(f"{e}")
+    elif request.app.state.config.IMAGE_GENERATION_ENGINE == "drawthings":
+        api_auth = get_drawthings_api_auth(request)
+
+        try:
+            r = requests.get(
+                url=f"{request.app.state.config.DRAWTHINGS_BASE_URL}/sdapi/v1/options",
+                headers={"authorization": api_auth},
+            )
+            options = r.json()
+            if model != options["sd_model_checkpoint"]:
+                options["sd_model_checkpoint"] = model
+                r = requests.post(
+                    url=f"{request.app.state.config.DRAWTHINGS_BASE_URL}/sdapi/v1/options",
+                    json=options,
+                    headers={"authorization": api_auth},
+                )
+        except Exception as e:
+            log.debug(f"{e}")
 
     return request.app.state.config.IMAGE_GENERATION_MODEL
 
@@ -92,6 +110,17 @@ def get_image_model(request):
             if request.app.state.config.IMAGE_GENERATION_MODEL
             else ""
         )
+    elif request.app.state.config.IMAGE_GENERATION_ENGINE == "drawthings":
+        try:
+            r = requests.get(
+                url=f"{request.app.state.config.DRAWTHINGS_BASE_URL}/sdapi/v1/options",
+                headers={"authorization": get_drawthings_api_auth(request)},
+            )
+            options = r.json()
+            return options["sd_model_checkpoint"]
+        except Exception as e:
+            request.app.state.config.ENABLE_IMAGE_GENERATION = False
+            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
     elif (
         request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111"
         or request.app.state.config.IMAGE_GENERATION_ENGINE == ""
@@ -125,6 +154,10 @@ class ImagesConfig(BaseModel):
     AUTOMATIC1111_BASE_URL: str
     AUTOMATIC1111_API_AUTH: Optional[dict | str]
     AUTOMATIC1111_PARAMS: Optional[dict | str]
+
+    DRAWTHINGS_BASE_URL: str
+    DRAWTHINGS_API_AUTH: Optional[dict | str]
+    DRAWTHINGS_PARAMS: Optional[dict | str]
 
     COMFYUI_BASE_URL: str
     COMFYUI_API_KEY: str
@@ -167,6 +200,9 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "AUTOMATIC1111_BASE_URL": request.app.state.config.AUTOMATIC1111_BASE_URL,
         "AUTOMATIC1111_API_AUTH": request.app.state.config.AUTOMATIC1111_API_AUTH,
         "AUTOMATIC1111_PARAMS": request.app.state.config.AUTOMATIC1111_PARAMS,
+        "DRAWTHINGS_BASE_URL": request.app.state.config.DRAWTHINGS_BASE_URL,
+        "DRAWTHINGS_API_AUTH": request.app.state.config.DRAWTHINGS_API_AUTH,
+        "DRAWTHINGS_PARAMS": request.app.state.config.DRAWTHINGS_PARAMS,
         "COMFYUI_BASE_URL": request.app.state.config.COMFYUI_BASE_URL,
         "COMFYUI_API_KEY": request.app.state.config.COMFYUI_API_KEY,
         "COMFYUI_WORKFLOW": request.app.state.config.COMFYUI_WORKFLOW,
@@ -249,6 +285,10 @@ async def update_config(
     request.app.state.config.AUTOMATIC1111_API_AUTH = form_data.AUTOMATIC1111_API_AUTH
     request.app.state.config.AUTOMATIC1111_PARAMS = form_data.AUTOMATIC1111_PARAMS
 
+    request.app.state.config.DRAWTHINGS_BASE_URL = form_data.DRAWTHINGS_BASE_URL
+    request.app.state.config.DRAWTHINGS_API_AUTH = form_data.DRAWTHINGS_API_AUTH
+    request.app.state.config.DRAWTHINGS_PARAMS = form_data.DRAWTHINGS_PARAMS
+
     request.app.state.config.COMFYUI_BASE_URL = form_data.COMFYUI_BASE_URL.strip("/")
     request.app.state.config.COMFYUI_API_KEY = form_data.COMFYUI_API_KEY
     request.app.state.config.COMFYUI_WORKFLOW = form_data.COMFYUI_WORKFLOW
@@ -312,6 +352,9 @@ async def update_config(
         "AUTOMATIC1111_BASE_URL": request.app.state.config.AUTOMATIC1111_BASE_URL,
         "AUTOMATIC1111_API_AUTH": request.app.state.config.AUTOMATIC1111_API_AUTH,
         "AUTOMATIC1111_PARAMS": request.app.state.config.AUTOMATIC1111_PARAMS,
+        "DRAWTHINGS_BASE_URL": request.app.state.config.DRAWTHINGS_BASE_URL,
+        "DRAWTHINGS_API_AUTH": request.app.state.config.DRAWTHINGS_API_AUTH,
+        "DRAWTHINGS_PARAMS": request.app.state.config.DRAWTHINGS_PARAMS,
         "COMFYUI_BASE_URL": request.app.state.config.COMFYUI_BASE_URL,
         "COMFYUI_API_KEY": request.app.state.config.COMFYUI_API_KEY,
         "COMFYUI_WORKFLOW": request.app.state.config.COMFYUI_WORKFLOW,
@@ -347,6 +390,16 @@ def get_automatic1111_api_auth(request: Request):
         return f"Basic {auth1111_base64_encoded_string}"
 
 
+def get_drawthings_api_auth(request: Request):
+    if request.app.state.config.DRAWTHINGS_API_AUTH is None:
+        return ""
+    else:
+        auth_byte_string = request.app.state.config.DRAWTHINGS_API_AUTH.encode("utf-8")
+        auth_base64_encoded_bytes = base64.b64encode(auth_byte_string)
+        auth_base64_encoded_string = auth_base64_encoded_bytes.decode("utf-8")
+        return f"Basic {auth_base64_encoded_string}"
+
+
 @router.get("/config/url/verify")
 async def verify_url(request: Request, user=Depends(get_admin_user)):
     if request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111":
@@ -370,6 +423,17 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
             r = requests.get(
                 url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info",
                 headers=headers,
+            )
+            r.raise_for_status()
+            return True
+        except Exception:
+            request.app.state.config.ENABLE_IMAGE_GENERATION = False
+            raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
+    elif request.app.state.config.IMAGE_GENERATION_ENGINE == "drawthings":
+        try:
+            r = requests.get(
+                url=f"{request.app.state.config.DRAWTHINGS_BASE_URL}/sdapi/v1/options",
+                headers={"authorization": get_drawthings_api_auth(request)},
             )
             r.raise_for_status()
             return True
@@ -455,6 +519,18 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             return list(
                 map(
                     lambda model: {"id": model["title"], "name": model["model_name"]},
+                    models,
+                )
+            )
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == "drawthings":
+            r = requests.get(
+                url=f"{request.app.state.config.DRAWTHINGS_BASE_URL}/sdapi/v1/sd-models",
+                headers={"authorization": get_drawthings_api_auth(request)},
+            )
+            models = r.json()
+            return list(
+                map(
+                    lambda model: {"id": model["model_name"], "name": model["title"]},
                     models,
                 )
             )
@@ -775,6 +851,56 @@ async def image_generations(
                     image_data,
                     content_type,
                     {**form_data.model_dump(exclude_none=True), **metadata},
+                    user,
+                )
+                images.append({"url": url})
+            return images
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == "drawthings":
+            if form_data.model:
+                set_image_model(request, form_data.model)
+
+            data = {
+                "prompt": form_data.prompt,
+                "batch_size": form_data.n,
+                "width": width,
+                "height": height,
+            }
+
+            if (
+                request.app.state.config.IMAGE_STEPS is not None
+                or form_data.steps is not None
+            ):
+                data["steps"] = (
+                    form_data.steps
+                    if form_data.steps is not None
+                    else request.app.state.config.IMAGE_STEPS
+                )
+
+            if form_data.negative_prompt is not None:
+                data["negative_prompt"] = form_data.negative_prompt
+
+            if request.app.state.config.DRAWTHINGS_PARAMS:
+                data = {**data, **request.app.state.config.DRAWTHINGS_PARAMS}
+
+            r = await asyncio.to_thread(
+                requests.post,
+                url=f"{request.app.state.config.DRAWTHINGS_BASE_URL}/sdapi/v1/txt2img",
+                json=data,
+                headers={"authorization": get_drawthings_api_auth(request)},
+            )
+
+            res = r.json()
+            log.debug(f"res: {res}")
+
+            images = []
+
+            for image in res["images"]:
+                image_data, content_type = get_image_data(image)
+                _, url = upload_image(
+                    request,
+                    image_data,
+                    content_type,
+                    {**data, "info": res["info"], **metadata},
                     user,
                 )
                 images.append({"url": url})

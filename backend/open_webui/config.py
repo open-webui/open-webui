@@ -3554,6 +3554,30 @@ AUTOMATIC1111_PARAMS = PersistentConfig(
     automatic1111_params,
 )
 
+DRAWTHINGS_BASE_URL = PersistentConfig(
+    "DRAWTHINGS_BASE_URL",
+    "image_generation.drawthings.base_url",
+    os.getenv("DRAWTHINGS_BASE_URL", ""),
+)
+
+DRAWTHINGS_API_AUTH = PersistentConfig(
+    "DRAWTHINGS_API_AUTH",
+    "image_generation.drawthings.api_auth",
+    os.getenv("DRAWTHINGS_API_AUTH", ""),
+)
+
+drawthings_params = os.getenv("DRAWTHINGS_PARAMS", "")
+try:
+    drawthings_params = json.loads(drawthings_params)
+except json.JSONDecodeError:
+    drawthings_params = {}
+
+DRAWTHINGS_PARAMS = PersistentConfig(
+    "DRAWTHINGS_PARAMS",
+    "image_generation.drawthings.api_params",
+    drawthings_params,
+)
+
 COMFYUI_BASE_URL = PersistentConfig(
     "COMFYUI_BASE_URL",
     "image_generation.comfyui.base_url",

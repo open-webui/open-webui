@@ -107,6 +107,11 @@
 			config.ENABLE_IMAGE_GENERATION = false;
 
 			return null;
+		} else if (config.IMAGE_GENERATION_ENGINE === 'drawthings' && config.DRAWTHINGS_BASE_URL === '') {
+			toast.error($i18n.t('Draw Things Base URL is required.'));
+			config.ENABLE_IMAGE_GENERATION = false;
+
+			return null;
 		} else if (config.IMAGE_GENERATION_ENGINE === 'comfyui' && config.COMFYUI_BASE_URL === '') {
 			toast.error($i18n.t('ComfyUI Base URL is required.'));
 			config.ENABLE_IMAGE_GENERATION = false;
@@ -129,6 +134,10 @@
 			AUTOMATIC1111_PARAMS:
 				typeof config.AUTOMATIC1111_PARAMS === 'string' && config.AUTOMATIC1111_PARAMS.trim() !== ''
 					? JSON.parse(config.AUTOMATIC1111_PARAMS)
+					: {},
+			DRAWTHINGS_PARAMS:
+				typeof config.DRAWTHINGS_PARAMS === 'string' && config.DRAWTHINGS_PARAMS.trim() !== ''
+					? JSON.parse(config.DRAWTHINGS_PARAMS)
 					: {},
 			IMAGES_OPENAI_API_PARAMS:
 				typeof config.IMAGES_OPENAI_API_PARAMS === 'string' &&
@@ -264,6 +273,11 @@
 					? JSON.stringify(config.AUTOMATIC1111_PARAMS ?? {}, null, 2)
 					: config.AUTOMATIC1111_PARAMS;
 
+			config.DRAWTHINGS_PARAMS =
+				typeof config.DRAWTHINGS_PARAMS === 'object'
+					? JSON.stringify(config.DRAWTHINGS_PARAMS ?? {}, null, 2)
+					: config.DRAWTHINGS_PARAMS;
+
 			REQUIRED_EDIT_WORKFLOW_NODES = REQUIRED_EDIT_WORKFLOW_NODES.map((node) => {
 				const n =
 					config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
@@ -356,7 +370,7 @@
 							</div>
 						</div>
 
-						{#if ['comfyui', 'automatic1111', ''].includes(config?.IMAGE_GENERATION_ENGINE)}
+						{#if ['comfyui', 'automatic1111', 'drawthings', ''].includes(config?.IMAGE_GENERATION_ENGINE)}
 							<div class="mb-2.5">
 								<div class="flex w-full justify-between items-center">
 									<div class="text-xs pr-2">
@@ -409,6 +423,7 @@
 								<option value="openai">{$i18n.t('Default (Open AI)')}</option>
 								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 								<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
+								<option value="drawthings">{$i18n.t('Draw Things')}</option>
 								<option value="gemini">{$i18n.t('Gemini')}</option>
 							</select>
 						</div>
@@ -603,6 +618,104 @@
 									<Textarea
 										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={config.AUTOMATIC1111_PARAMS}
+										placeholder={$i18n.t('Enter additional parameters in JSON format')}
+										minSize={100}
+									/>
+								</div>
+							</div>
+						</div>
+					{:else if config?.IMAGE_GENERATION_ENGINE === 'drawthings'}
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('Draw Things Base URL')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1 mr-2">
+										<input
+											class="w-full text-sm bg-transparent outline-hidden text-right"
+											placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
+											bind:value={config.DRAWTHINGS_BASE_URL}
+										/>
+									</div>
+									<button
+										class="  transition"
+										type="button"
+										aria-label="verify connection"
+										on:click={async () => {
+											await updateConfigHandler();
+											const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+												toast.error(`${error}`);
+												return null;
+											});
+
+											if (res) {
+												toast.success($i18n.t('Server connection verified'));
+											}
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</button>
+								</div>
+							</div>
+
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t('Use the Draw Things HTTP API server base URL')}
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('Draw Things Api Auth String')}
+									</div>
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<SensitiveInput
+											inputClassName="text-right w-full"
+											placeholder={$i18n.t('Enter api auth string (e.g. username:password)')}
+											bind:value={config.DRAWTHINGS_API_AUTH}
+											required={false}
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+								{$i18n.t('Optional Basic auth, if your server requires it')}
+							</div>
+						</div>
+
+						<div class="mb-2.5">
+							<div class="flex w-full justify-between items-center">
+								<div class="text-xs pr-2 shrink-0">
+									<div class="">
+										{$i18n.t('Additional Parameters')}
+									</div>
+								</div>
+							</div>
+							<div class="mt-1.5 flex w-full">
+								<div class="flex-1 mr-2">
+									<Textarea
+										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={config.DRAWTHINGS_PARAMS}
 										placeholder={$i18n.t('Enter additional parameters in JSON format')}
 										minSize={100}
 									/>
