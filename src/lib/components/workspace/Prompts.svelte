@@ -10,6 +10,7 @@
 	import {
 		createNewPrompt,
 		deletePromptById,
+		togglePromptById,
 		getPrompts,
 		getPromptItems,
 		getPromptTags
@@ -31,6 +32,7 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import Switch from '../common/Switch.svelte';
 	import Pagination from '../common/Pagination.svelte';
 
 	let shiftKey = false;
@@ -398,6 +400,9 @@
 									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 										/{prompt.command}
 									</div>
+									{#if prompt.is_active === false}
+										<Badge type="muted" content={$i18n.t('Inactive')} />
+									{/if}
 								</div>
 								{#if !prompt.write_access}
 									<Badge type="muted" content={$i18n.t('Read Only')} />
@@ -484,6 +489,17 @@
 										<EllipsisHorizontal className="size-5" />
 									</button>
 								</PromptMenu>
+
+								<button on:click|stopPropagation|preventDefault>
+									<Tooltip content={prompt.is_active !== false ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+										<Switch
+											bind:state={prompt.is_active}
+											on:change={async () => {
+												togglePromptById(localStorage.token, prompt.id);
+											}}
+										/>
+									</Tooltip>
+								</button>
 							{/if}
 						</div>
 					</a>
