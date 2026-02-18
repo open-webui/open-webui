@@ -402,7 +402,7 @@ class AccessGrantsTable:
             results = []
             for grant_dict in normalized_grants:
                 grant = AccessGrant(
-                    id=grant_dict["id"],
+                    id=str(uuid.uuid4()),
                     resource_type=resource_type,
                     resource_id=resource_id,
                     principal_type=grant_dict["principal_type"],
