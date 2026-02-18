@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-02-18
+
+### Added
+
+- 🛜 **Provider URL suggestions.** The connection form now displays a dropdown with suggested URLs for popular AI providers, making it easier to configure connections. [Commit](https://github.com/open-webui/open-webui/commit/49c36238d01aaff5466344ecd316a6dd3edd74a3)
+- ☁️ **Anthropic model fetching.** The system now properly fetches available models from the Anthropic API, ensuring all Anthropic models are accessible. [Commit](https://github.com/open-webui/open-webui/commit/e9d852545cc17f0eeb8bdcfa77575a80fed8706d)
+- 💡 **No models prompt.** When no models are available, a helpful prompt now guides users to manage their provider connections. [Commit](https://github.com/open-webui/open-webui/commit/a0195cd5ae9b9915295839cd0a5fbac5a1b0bfa2)
+- ⚙️ **Connection enable/disable toggles.** Individual provider connections can now be enabled or disabled from both admin and user settings. [Commit](https://github.com/open-webui/open-webui/commit/990c638f6cf91507b61898f454c26f9516114c36)
+- ⏸️ **Prompt enable/disable toggle.** Users can now enable or disable prompts directly from the prompts list using a toggle switch, without needing to delete and recreate them. Inactive prompts display an "Inactive" badge and are still visible in the list. [Commit](https://github.com/open-webui/open-webui/commit/094ed0b48cb86b9b6aff3c93f522072d11230761)
+
 ## [0.8.3] - 2026-02-17
 
 ### Added
